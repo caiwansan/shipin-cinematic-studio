@@ -1,7 +1,10 @@
 // ============================================================
 // Platform Event Types — unified event definitions for all Runtimes
 // ARCH-001-D: Platform Event Review — unified event model
+// ARCH-002: All events carry PlatformContext
 // ============================================================
+
+import { PlatformContext } from '../context/platform-context.js'
 
 /**
  * Standard platform event type categories.
@@ -10,11 +13,13 @@
 export enum PlatformEventCategory {
   Created   = 'Created',
   Loaded    = 'Loaded',
+  Validated = 'Validated',
   Updated   = 'Updated',
   Deleted   = 'Deleted',
   Started   = 'Started',
   Completed = 'Completed',
   Failed    = 'Failed',
+  Disposed  = 'Disposed',
   Cancelled = 'Cancelled',
   Published = 'Published',
   Archived  = 'Archived',
@@ -68,11 +73,15 @@ export type PlatformEventType =
 
 /**
  * Standard platform event payload.
+ * Every event carries a context for cross-cutting concerns.
  */
 export interface PlatformEvent {
   type: PlatformEventType
   source: string        // runtime name e.g. 'asset', 'semantic', 'goal', 'capability'
   timestamp: string
+  /** Full PlatformContext for traceability */
+  context?: PlatformContext
+  /** Backwards-compatible shortcut fields */
   traceId?: string
   entityId?: string
   projectId?: string

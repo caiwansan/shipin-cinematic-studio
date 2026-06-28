@@ -1,10 +1,13 @@
 // ============================================================
 // Goal Runtime — Full lifecycle management
-// Events: GoalCreated, StrategyGenerated, TaskCreated, ExecutionCompleted, ReviewApproved
-// Methods: createGoal, generateStrategy, generateWorkflow, execute, review, close
+// Lifecycle: RuntimeLifecycle (Init → Load → Validate → Execute → Update → Dispose)
+// Events: Created, Updated, Deleted, Started, Completed, Failed (via PlatformEventBus)
 // Repository pattern: Service never directly touches Prisma
 // ============================================================
 
+import { PlatformContext, createContext } from '@platform/context/platform-context.js'
+import type { RuntimeLifecycle } from '@platform/lifecycle/runtime-lifecycle.js'
+import { IEventBus, platformEventBus } from '@platform/events/event-bus.js'
 import { goalRepository } from '../repositories/goal.repository.js'
 import { strategyRepository } from '../repositories/strategy.repository.js'
 import { workflowRepository } from '../repositories/workflow.repository.js'
@@ -25,52 +28,101 @@ import type {
   TaskData,
   ExecutionData,
   ReviewData,
-  GoalEvent,
-  GoalEventType,
   GoalFilter,
 } from '../types.js'
+import { NotFoundError } from '@platform/errors/platform-errors.js'
 
-// Simple event bus
-const eventListeners: Map<GoalEventType, Array<(event: GoalEvent) => void>> = new Map()
-
-function emitEvent(type: GoalEventType, projectId: string, data?: Record<string, unknown>) {
-  const event: GoalEvent = { type, projectId, timestamp: new Date(), data }
-  const listeners = eventListeners.get(type) || []
-  for (const listener of listeners) {
-    try { listener(event) } catch { /* swallow */ }
-  }
+export interface GoalInput {
+  projectId: string
+  title?: string
+  description?: string
+  successCriteria?: string
+  targetMetric?: string
+  deadline?: string
+  priority?: number
+  metadata?: string
+  status?: string
+  goalId?: string
 }
 
-export function onGoalEvent(type: GoalEventType, listener: (event: GoalEvent) => void) {
-  if (!eventListeners.has(type)) eventListeners.set(type, [])
-  eventListeners.get(type)!.push(listener)
+export interface GoalOutput {
+  goal?: GoalData
+  strategies?: StrategyData[]
+  workflows?: Array<{ strategy: StrategyData; workflows: Array<{ workflow: WorkflowData; stages: WorkflowStageData[] }> }>
+  tasks?: TaskData[]
+  execution?: ExecutionData
+  results?: any[]
+  review?: ReviewData
 }
 
-export function offGoalEvent(type: GoalEventType, listener: (event: GoalEvent) => void) {
-  const listeners = eventListeners.get(type)
-  if (listeners) {
-    const idx = listeners.indexOf(listener)
-    if (idx >= 0) listeners.splice(idx, 1)
-  }
-}
-
-class GoalRuntime {
+class GoalRuntime implements RuntimeLifecycle<GoalInput, GoalOutput> {
   private initialized = false
+  private eventBus: IEventBus
 
-  async initialize() {
+  constructor(eventBus: IEventBus = platformEventBus) {
+    this.eventBus = eventBus
+  }
+
+  async init(ctx: PlatformContext, config?: Record<string, any>): Promise<void> {
     if (this.initialized) return
     this.initialized = true
     console.log('[GoalRuntime] Runtime initialized')
   }
 
+  async load(ctx: PlatformContext, id: string): Promise<GoalInput> {
+    const goal = await goalRepository.findById(id)
+    if (!goal) throw new NotFoundError('Goal not found', { goalId: id })
+    return { projectId: goal.projectId, goalId: id, title: goal.title, status: goal.status }
+  }
+
+  async validate(ctx: PlatformContext, input: GoalInput): Promise<boolean> {
+    if (!input.projectId) return false
+    if (input.goalId) {
+      const existing = await goalRepository.findById(input.goalId)
+      if (!existing) return false
+      // Check if goal is in executable state
+      if (input.status === 'active' && existing.status === 'completed') return false
+      if (input.status === 'completed' && existing.status === 'cancelled') return false
+    }
+    return true
+  }
+
+  async execute(ctx: PlatformContext, input: GoalInput): Promise<GoalOutput> {
+    return this.runFullPipeline(input.goalId!, ctx)
+  }
+
+  async update(ctx: PlatformContext, id: string, data: Partial<GoalInput>): Promise<GoalOutput> {
+    const goal = await goalRepository.update(id, data)
+    this.eventBus.emit({
+      type: 'goal:Updated',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: id,
+      projectId: goal.projectId,
+      payload: { updates: Object.keys(data) },
+    })
+    return { goal }
+  }
+
+  async dispose(ctx: PlatformContext): Promise<void> {
+    this.initialized = false
+    console.log('[GoalRuntime] Disposed')
+  }
+
   // ─── Goal CRUD ───
 
   async createGoal(data: GoalData): Promise<GoalData> {
+    const ctx = createContext({ projectId: data.projectId })
     const goal = await goalRepository.create(data)
-    emitEvent('goal:created', data.projectId, {
-      goalId: goal.id,
-      title: data.title,
-      status: goal.status,
+    this.eventBus.emit({
+      type: 'goal:Created',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: goal.id,
+      projectId: data.projectId,
+      payload: { title: data.title, status: goal.status },
     })
     return goal
   }
@@ -85,10 +137,17 @@ class GoalRuntime {
 
   async updateGoal(id: string, data: Partial<GoalData>): Promise<GoalData> {
     const goal = await goalRepository.update(id, data)
-    if (data.status === 'active') emitEvent('goal:activated', goal.projectId, { goalId: id })
-    if (data.status === 'completed') emitEvent('goal:completed', goal.projectId, { goalId: id })
-    if (data.status === 'cancelled') emitEvent('goal:cancelled', goal.projectId, { goalId: id })
-    emitEvent('goal:updated', goal.projectId, { goalId: id })
+    const ctx = createContext({ projectId: goal.projectId })
+    if (data.status === 'active') {
+      this.eventBus.emit({ type: 'goal:Activated', source: 'goal', timestamp: new Date().toISOString(), traceId: ctx.traceId, entityId: id, projectId: goal.projectId })
+    }
+    if (data.status === 'completed') {
+      this.eventBus.emit({ type: 'goal:Completed', source: 'goal', timestamp: new Date().toISOString(), traceId: ctx.traceId, entityId: id, projectId: goal.projectId })
+    }
+    if (data.status === 'cancelled') {
+      this.eventBus.emit({ type: 'goal:Cancelled', source: 'goal', timestamp: new Date().toISOString(), traceId: ctx.traceId, entityId: id, projectId: goal.projectId })
+    }
+    this.eventBus.emit({ type: 'goal:Updated', source: 'goal', timestamp: new Date().toISOString(), traceId: ctx.traceId, entityId: id, projectId: goal.projectId })
     return goal
   }
 
@@ -96,7 +155,8 @@ class GoalRuntime {
     const goal = await goalRepository.findById(id)
     if (goal) {
       await goalRepository.delete(id)
-      emitEvent('goal:deleted', goal.projectId, { goalId: id })
+      const ctx = createContext({ projectId: goal.projectId })
+      this.eventBus.emit({ type: 'goal:Deleted', source: 'goal', timestamp: new Date().toISOString(), traceId: ctx.traceId, entityId: id, projectId: goal.projectId })
     }
   }
 
@@ -104,19 +164,22 @@ class GoalRuntime {
 
   async generateStrategies(goalId: string): Promise<StrategyData[]> {
     const goal = await goalRepository.findById(goalId)
-    if (!goal) throw new Error(`Goal not found: ${goalId}`)
+    if (!goal) throw new NotFoundError('Goal not found', { goalId })
 
-    // Delete existing strategies (replace)
     await strategyRepository.deleteByGoal(goalId)
 
-    // Generate new strategies
     const strategies = await strategyEngine.generateStrategies(goal)
     const created = await strategyRepository.createMany(strategies)
 
-    emitEvent('strategy:generated', goal.projectId, {
-      goalId,
-      strategyCount: created.length,
-      strategies: created.map(s => ({ id: s.id, type: s.type, name: s.name })),
+    const ctx = createContext({ projectId: goal.projectId })
+    this.eventBus.emit({
+      type: 'strategy:Generated',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: goalId,
+      projectId: goal.projectId,
+      payload: { strategyCount: created.length },
     })
 
     return created
@@ -126,30 +189,29 @@ class GoalRuntime {
 
   async generateWorkflows(strategyId: string): Promise<Array<{ workflow: WorkflowData; stages: WorkflowStageData[] }>> {
     const strategy = await strategyRepository.findById(strategyId)
-    if (!strategy) throw new Error(`Strategy not found: ${strategyId}`)
+    if (!strategy) throw new NotFoundError('Strategy not found', { strategyId })
 
     const plans = await workflowPlanner.planWorkflows(strategy)
     const results: Array<{ workflow: WorkflowData; stages: WorkflowStageData[] }> = []
 
     for (const plan of plans) {
-      // Create workflow
-      const workflow = await workflowRepository.create({
-        ...plan.workflow,
-        strategyId,
-      })
-
-      // Create stages
+      const workflow = await workflowRepository.create({ ...plan.workflow, strategyId })
       const stages = await workflowRepository.createStages(
         plan.stages.map(s => ({ ...s, workflowId: workflow.id! }))
       )
-
       results.push({ workflow, stages })
     }
 
     const goal = await goalRepository.findById(strategy.goalId)
-    emitEvent('workflow:generated', goal?.projectId || '', {
-      strategyId,
-      workflowCount: results.length,
+    const ctx = createContext({ projectId: goal?.projectId })
+    this.eventBus.emit({
+      type: 'workflow:Generated',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: strategyId,
+      projectId: goal?.projectId,
+      payload: { workflowCount: results.length },
     })
 
     return results
@@ -159,11 +221,10 @@ class GoalRuntime {
 
   async generateTasks(strategyId: string, workflowId?: string): Promise<TaskData[]> {
     const strategy = await strategyRepository.findById(strategyId)
-    if (!strategy) throw new Error(`Strategy not found: ${strategyId}`)
+    if (!strategy) throw new NotFoundError('Strategy not found', { strategyId })
 
     let allTasks: TaskData[] = []
 
-    // If workflow specified, generate for that workflow only
     const workflows = workflowId
       ? [await workflowRepository.findById(workflowId)].filter(Boolean) as WorkflowData[]
       : await workflowRepository.listByStrategy(strategyId)
@@ -176,44 +237,41 @@ class GoalRuntime {
     }
 
     const goal = await goalRepository.findById(strategy.goalId)
-    emitEvent('task:created', goal?.projectId || '', {
-      strategyId,
-      taskCount: allTasks.length,
+    const ctx = createContext({ projectId: goal?.projectId })
+    this.eventBus.emit({
+      type: 'task:Created',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: strategyId,
+      projectId: goal?.projectId,
+      payload: { taskCount: allTasks.length },
     })
 
     return allTasks
   }
 
-  // ─── Full Pipeline: Goal → Strategy → Workflow → Tasks ───
+  // ─── Full Pipeline ───
 
-  async runFullPipeline(goalId: string): Promise<{
-    goal: GoalData
-    strategies: StrategyData[]
-    workflows: Array<{ strategy: StrategyData; workflows: Array<{ workflow: WorkflowData; stages: WorkflowStageData[] }> }>
-    tasks: TaskData[]
-  }> {
+  async runFullPipeline(goalId: string, ctx?: PlatformContext): Promise<GoalOutput> {
+    const context = ctx || createContext()
     const goal = await goalRepository.findById(goalId)
-    if (!goal) throw new Error(`Goal not found: ${goalId}`)
+    if (!goal) throw new NotFoundError('Goal not found', { goalId })
 
-    // 1. Generate strategies
     const strategies = await this.generateStrategies(goalId)
 
-    // 2. Generate workflows for each strategy
     const allWorkflowData: Array<{ strategy: StrategyData; workflows: Array<{ workflow: WorkflowData; stages: WorkflowStageData[] }> }> = []
     const allTasks: TaskData[] = []
 
     for (const strategy of strategies) {
       const workflows = await this.generateWorkflows(strategy.id!)
       allWorkflowData.push({ strategy, workflows })
-
-      // 3. Generate tasks for each workflow
       for (const { workflow } of workflows) {
         const tasks = await this.generateTasks(strategy.id!, workflow.id)
         allTasks.push(...tasks)
       }
     }
 
-    // Mark goal as active
     if (goal.status === 'draft') {
       await goalRepository.update(goalId, { status: 'active' })
     }
@@ -230,16 +288,28 @@ class GoalRuntime {
 
   async executeTask(taskId: string): Promise<{ execution: ExecutionData; results: any[] }> {
     const task = await taskRepository.findById(taskId)
-    if (!task) throw new Error(`Task not found: ${taskId}`)
+    if (!task) throw new NotFoundError('Task not found', { taskId })
 
-    emitEvent('execution:started', '', { taskId, actionType: task.actionType })
+    const ctx = createContext()
+    this.eventBus.emit({
+      type: 'execution:Started',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: taskId,
+      payload: { actionType: task.actionType },
+    })
 
     const result = await executor.executeTask(task)
 
-    emitEvent('execution:completed', '', {
-      taskId,
-      executionId: result.execution.id,
-      status: result.execution.status,
+    const eventType = result.execution.status === 'failed' ? 'execution:Failed' as any : 'execution:Completed' as any
+    this.eventBus.emit({
+      type: eventType,
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: taskId,
+      payload: { executionId: result.execution.id, status: result.execution.status },
     })
 
     return result
@@ -259,24 +329,41 @@ class GoalRuntime {
   // ─── Review ───
 
   async createReview(executionId: string): Promise<ReviewData> {
-    emitEvent('review:created', '', { executionId })
+    const ctx = createContext()
+    this.eventBus.emit({
+      type: 'review:Created',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: executionId,
+    })
     return reviewLoop.createReview(executionId)
   }
 
   async approveReview(reviewId: string, comments?: string, score?: number): Promise<any> {
     const result = await reviewLoop.approve(reviewId, comments, score)
-    emitEvent('review:approved', '', {
-      reviewId,
-      executionId: result.review.executionId,
+    const ctx = createContext()
+    this.eventBus.emit({
+      type: 'review:Approved',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: reviewId,
+      payload: { executionId: result.review.executionId },
     })
     return result
   }
 
   async rejectReview(reviewId: string, comments?: string): Promise<any> {
     const result = await reviewLoop.reject(reviewId, comments)
-    emitEvent('review:rejected', '', {
-      reviewId,
-      executionId: result.review.executionId,
+    const ctx = createContext()
+    this.eventBus.emit({
+      type: 'review:Rejected',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: reviewId,
+      payload: { executionId: result.review.executionId },
     })
     return result
   }
@@ -284,12 +371,10 @@ class GoalRuntime {
   // ─── Close Goal ───
 
   async closeGoal(goalId: string): Promise<GoalData> {
-    // Check all tasks are completed or cancelled
     const tasks = await taskRepository.listByGoal(goalId)
     const pendingTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
 
     if (pendingTasks.length > 0) {
-      // Cancel remaining tasks
       for (const task of pendingTasks) {
         if (task.status === 'pending' || task.status === 'ready') {
           await taskRepository.update(task.id!, { status: 'cancelled' })
@@ -298,9 +383,15 @@ class GoalRuntime {
     }
 
     const goal = await goalRepository.update(goalId, { status: 'completed' })
-    emitEvent('goal:closed', goal.projectId, {
-      goalId,
-      cancelledTasks: pendingTasks.length,
+    const ctx = createContext({ projectId: goal.projectId })
+    this.eventBus.emit({
+      type: 'goal:Closed',
+      source: 'goal',
+      timestamp: new Date().toISOString(),
+      traceId: ctx.traceId,
+      entityId: goalId,
+      projectId: goal.projectId,
+      payload: { cancelledTasks: pendingTasks.length },
     })
 
     return goal
@@ -327,7 +418,6 @@ class GoalRuntime {
       goalRepository.countByStatus(projectId, 'completed'),
     ])
 
-    // Count tasks by status
     const allTasks = await taskRepository.list({})
     const pendingTasks = allTasks.items.filter(t => t.status === 'pending' || t.status === 'ready').length
     const runningTasks = allTasks.items.filter(t => t.status === 'running').length
@@ -343,7 +433,7 @@ class GoalRuntime {
       totalGoals,
       activeGoals,
       completedGoals,
-      totalStrategies: 0, // Could be optimized with a count query
+      totalStrategies: 0,
       totalTasks: allTasks.total,
       pendingTasks,
       runningTasks,
@@ -354,14 +444,14 @@ class GoalRuntime {
     }
   }
 
-  // ─── Event Subscription ───
+  // ─── Event Subscription (legacy compat) ───
 
-  on(eventType: GoalEventType, listener: (event: GoalEvent) => void) {
-    onGoalEvent(eventType, listener)
+  on(eventType: string, listener: (event: any) => void) {
+    this.eventBus.on(eventType as any, listener)
   }
 
-  off(eventType: GoalEventType, listener: (event: GoalEvent) => void) {
-    offGoalEvent(eventType, listener)
+  off(eventType: string, listener: (event: any) => void) {
+    this.eventBus.off(eventType as any, listener)
   }
 }
 

@@ -1,6 +1,7 @@
 // ============================================================
 // Platform SDK — single entry point for all Runtime operations
 // ARCH-001-J: Workspace code must NOT access Runtime directly; use this SDK
+// ARCH-002: All SDK methods accept and forward PlatformContext
 // ============================================================
 
 import type { PlatformContext } from '../context/platform-context.js'
@@ -79,7 +80,7 @@ export interface ExecuteResult {
   }
 }
 
-// ─── Service Interfaces ───
+// ─── Service Interfaces (all accept PlatformContext) ───
 
 export interface AssetService {
   create(data: AssetData, ctx?: PlatformContext): Promise<AssetData>
@@ -130,15 +131,20 @@ export class PlatformSDK {
       async importFromHtml(projectId, url, html, ctx) { return assetRuntime.importFromHtml(projectId, url, html) },
     }
 
-    // Semantic Service
     const { semanticRuntime } = await import('../../backend/src/services/semantic/runtime/semantic.runtime.js')
     this.semanticService = {
-      async extract(projectId, content, ctx) { await semanticRuntime.load(projectId, { content } as any) },
-      async listEntities(projectId, filter, ctx) { return semanticRuntime.listEntities({ projectId, ...filter } as any) },
-      async deleteEntity(id, ctx) { await semanticRuntime.delete(id) },
+      async extract(projectId, content, ctx) {
+        if (ctx) {
+          await semanticRuntime.init(ctx)
+          await semanticRuntime.execute(ctx, { projectId, content })
+        } else {
+          await (semanticRuntime as any).loadFromContent(projectId, { content })
+        }
+      },
+      async listEntities(projectId, filter, ctx) { return semanticRuntime.listEntities({ projectId, ...filter } as any) as any },
+      async deleteEntity(id, ctx) { await (semanticRuntime as any).deleteEntity(id) },
     }
 
-    // Goal Service
     const { goalRuntime } = await import('../../backend/src/services/goal/runtime/goal.runtime.js')
     this.goalService = {
       async create(data, ctx) { return goalRuntime.createGoal(data) as any },
@@ -155,10 +161,9 @@ export class PlatformSDK {
         }
       },
       async generateStrategies(goalId, ctx) { return goalRuntime.generateStrategies(goalId) as any },
-      async runFullPipeline(goalId, ctx) { return goalRuntime.runFullPipeline(goalId) as any },
+      async runFullPipeline(goalId, ctx) { return goalRuntime.runFullPipeline(goalId, ctx) as any },
     }
 
-    // Capability Service
     const { capabilityRuntime } = await import('../../backend/src/services/platform/capability/runtime/capability.runtime.js')
     this.capabilityService = {
       async get(name, ctx) { return capabilityRuntime.getCapability(name) as any },
