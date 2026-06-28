@@ -1,0 +1,50 @@
+{
+  "title": "黄昏书房 — 光照连续性",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "人物在书房中连续活动，主光源始终来自左侧窗户的自然光",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "傍晚时分，一个人坐在窗边的书桌前看书。主光源来自左侧窗户的暖色自然光。人物面部左侧受光，右侧有柔和阴影。房间内光线温暖柔和。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["reading"],
+          "camera": "medium shot from right side",
+          "lighting": "warm evening natural light from left window",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_2",
+          "description": "同一个人站起身，走到窗边给植物浇水。仍然在窗户附近，主光源仍然来自左侧。房间内光线保持一致。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["watering plants"],
+          "camera": "wide shot from room corner",
+          "lighting": "warm evening natural light from left window",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_3",
+          "description": "同一个人走向房间另一侧的书架，离窗户稍远。主光源仍然来自左侧，光线略微变暗但仍然温暖柔和。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["walking to bookshelf"],
+          "camera": "medium shot from right side",
+          "lighting": "warm evening natural light from left window, slightly dimmer",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "人",
+      "gender": "male",
+      "appearance": "穿休闲服的年轻男性",
+      "reference_images": []
+    }
+  ]
+}

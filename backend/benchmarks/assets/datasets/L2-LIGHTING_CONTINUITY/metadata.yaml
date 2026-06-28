@@ -1,0 +1,39 @@
+# L2-LIGHTING_CONTINUITY
+# 光照连续性 — 跨镜头保持光源方向、强度、色温、阴影一致
+#
+# Wave 2（电影语言）基准能力。
+# 验证系统是否能在多镜头场景中保持光线设计的连续性。
+#
+# 五个子维度：
+# 1. Direction（光向）— 主光方向跨镜头保持一致
+# 2. Intensity（光强）— 亮度水平保持合理一致
+# 3. Color Temperature（色温）— 色温跨镜头稳定
+# 4. Shadow Consistency（阴影一致性）— 阴影方向和存在性合理
+# 5. Exposure Continuity（曝光连续性）— 无无故的曝光跳跃
+#
+# 与 Wave 1 的区别：
+#   Wave 1 关注时空一致性
+#   Wave 2 关注电影语言是否达成预期创作意图
+#
+
+id: L2-LIGHTING_CONTINUITY
+primaryCapability: LIGHT_CONTINUITY
+secondaryCapabilities:
+  - TEMPORAL_CONSISTENCY
+  - SPATIAL_LAYOUT
+difficulty: L2
+stage: full
+name: Lighting Continuity — Direction, Intensity, Temperature, Shadow, Exposure
+description: Verifies lighting design continuity across shots — direction, intensity, color temperature, shadow consistency, and exposure stability. Tests whether the system can maintain a coherent lighting design across camera cuts.
+scenario: |
+  一个安静的室内房间，傍晚时分，人物坐在窗边看书、起身给植物浇水、走向书架的连续动作。
+  主光源来自左侧窗户的自然光。
+  切镜后光向应保持左侧为主。
+  色温保持暖色调。
+  阴影方向合理。
+  曝光水平稳定。
+
+cinematicIntent: establish_intimate_evening_mood
+lightingIntent: soft_warm_side_light
+visualIntent: cozy_natural_realism
+created: 2026-06-28

@@ -1,0 +1,34 @@
+- id: EC-LC-01
+  name: Light Direction
+  description: Key light direction remains consistent across shots (±15° tolerance)
+  weight: 0.25
+  passThreshold: 90
+  intentType: lighting
+
+- id: EC-LC-02
+  name: Exposure Stability
+  description: No unexplained exposure jumps; exposure variation < 0.5 EV across shots
+  weight: 0.20
+  passThreshold: 90
+  intentType: technical
+
+- id: EC-LC-03
+  name: Color Temperature
+  description: Color temperature remains consistent (±500K) across shots; shift must be motivated
+  weight: 0.20
+  passThreshold: 85
+  intentType: lighting
+
+- id: EC-LC-04
+  name: Shadow Consistency
+  description: Shadow direction and presence consistent with key light; no contradictory shadows
+  weight: 0.20
+  passThreshold: 85
+  intentType: visual
+
+- id: EC-LC-05
+  name: Cinematic Intent
+  description: Overall lighting mood matches the declared cinematicIntent (establish_intimate_evening_mood)
+  weight: 0.15
+  passThreshold: 80
+  intentType: cinematic

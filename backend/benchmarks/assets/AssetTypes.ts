@@ -24,6 +24,12 @@ export interface AssetMetadata {
   description: string
   /** 场景说明（中文剧情描述） */
   scenario: string
+  /** Wave 2+: 电影创作意图（emphasize_subject, create_tension, establish_mood 等） */
+  cinematicIntent?: string
+  /** Wave 2+: 灯光设计意图 */
+  lightingIntent?: string
+  /** Wave 2+: 视觉效果意图 */
+  visualIntent?: string
 }
 
 // ─── Failure Mode ────────────────────────────────
@@ -43,6 +49,8 @@ export interface EvaluationCriterion {
   description: string
   weight: number // 0-1, sum of weights should = 1
   passThreshold: number // 0-100
+  /** Wave 2+: 该标准对应的创作意图标签 */
+  intentType?: 'cinematic' | 'lighting' | 'visual' | 'technical'
 }
 
 // ─── Gold Reference ──────────────────────────────

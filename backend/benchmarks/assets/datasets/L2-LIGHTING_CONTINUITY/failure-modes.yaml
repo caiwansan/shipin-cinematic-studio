@@ -1,0 +1,35 @@
+- id: FM-LC-001
+  category: lighting_direction_changed
+  description: Key light direction shifts across shots without justification (e.g., left-side key light becomes right-side)
+  expectedBehavior: Primary light source direction should remain consistent across shots in the same scene
+  severity: high
+
+- id: FM-LC-002
+  category: exposure_jump
+  description: Exposure level changes abruptly across shots (e.g., normal exposure → overexposed → normal)
+  expectedBehavior: Exposure should remain stable; gradual changes only if motivated by lighting change
+  severity: high
+
+- id: FM-LC-003
+  category: color_temperature_shift
+  description: Color temperature shifts substantially across shots without narrative justification (e.g., warm → cool → warm)
+  expectedBehavior: Color temperature should be consistent across shots; shift requires narrative motivation
+  severity: medium
+
+- id: FM-LC-004
+  category: shadow_inconsistent
+  description: Shadow direction or presence contradicts the established key light direction
+  expectedBehavior: Shadow direction must be consistent with established light source; shadows should exist where physically expected
+  severity: medium
+
+- id: FM-LC-005
+  category: illumination_break
+  description: An object or character appears incorrectly lit (e.g., shadow side brightly lit with no fill source)
+  expectedBehavior: Lighting on all objects must be physically plausible given the established lighting setup
+  severity: medium
+
+- id: FM-LC-006
+  category: intent_mismatch
+  description: The overall lighting mood contradicts the specified cinematic/lighitng/visual intent
+  expectedBehavior: Light setup should align with the declared cinematicIntent, lightingIntent, and visualIntent
+  severity: low

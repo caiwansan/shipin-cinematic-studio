@@ -1,0 +1,54 @@
+{
+  "scenario": "一个安静的室内房间，傍晚时分，人物坐在窗边看书、起身给植物浇水、走向书架的连续动作。主光源来自左侧窗户的自然光。",
+  "cinematicIntent": "establish_intimate_evening_mood",
+  "lightingIntent": "soft_warm_side_light",
+  "visualIntent": "cozy_natural_realism",
+  "expectedPlanning": {
+    "lightingSetup": {
+      "keyLight": { "source": "window", "direction": "left", "color": "warm" },
+      "fillLight": { "source": "ambient_indirect", "intensity": "soft" },
+      "colorTemperature": { "expected": "warm (~3500K)", "tolerance": 500 },
+      "exposure": { "target": "normal", "maxVariationEV": 0.5 }
+    },
+    "shots": [
+      {
+        "id": "shot_1",
+        "description": "Sitting by window reading, key light from window (left side)",
+        "lightingConstraints": { "keyDirection": "left", "colorTemp": "warm", "shadowDirection": "right" }
+      },
+      {
+        "id": "shot_2",
+        "description": "Standing up, walking to water a plant, near window — key light still from left",
+        "lightingConstraints": { "keyDirection": "left", "colorTemp": "warm", "shadowDirection": "right" }
+      },
+      {
+        "id": "shot_3",
+        "description": "Walking to bookshelf, further from window — key light from left, slightly dimmer ambient",
+        "lightingConstraints": { "keyDirection": "left", "colorTemp": "warm", "shadowDirection": "right", "intensityShift": "slight_dim" }
+      }
+    ],
+    "intentAlignment": {
+      "intimate_mood": "warm_tone_maintained",
+      "natural_realism": "no_unrealistic_lighting",
+      "cozy_atmosphere": "soft_shadows_no_harsh_contrast"
+    }
+  },
+  "expectedNegotiation": {
+    "lightingContinuityCheck": true,
+    "keyLightFixed": true,
+    "colorTemperatureEnforced": true,
+    "exposureStabilized": true
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalShots": 3,
+    "lightingConsistency": true
+  },
+  "expectedEvaluation": {
+    "lightDirectionScore": { "min": 90 },
+    "exposureStabilityScore": { "min": 90 },
+    "colorTemperatureScore": { "min": 85 },
+    "shadowConsistencyScore": { "min": 85 },
+    "cinematicIntentScore": { "min": 80 }
+  }
+}

@@ -1,0 +1,8 @@
+compileSuccess: true
+minSps: 0.85
+minCapabilityCoverage: 0.75
+compilerDeterminism: 0.90
+maxPipelineDurationMs: 8000
+maxDriftCount: 2
+# Wave 2: Intent-awareness check added
+intentAlignmentRequired: true

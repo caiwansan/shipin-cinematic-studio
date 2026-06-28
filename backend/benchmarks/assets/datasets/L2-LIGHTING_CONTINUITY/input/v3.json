@@ -1,0 +1,41 @@
+{
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "Evening study — warm lighting from left window, person reads, waters plants, walks to bookshelf",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "A cozy study room in the evening. A young man in casual clothes sits at a desk reading. Warm evening sunlight comes from a window on the left side. His face is lit from the left with soft shadows on the right. Warm, intimate atmosphere, photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "harsh lighting, cold blue light, right-side key light, flat lighting, overexposed, underexposed"
+        },
+        {
+          "id": "shot_2",
+          "prompt": "The same young man stands up and waters a potted plant near the window. Warm evening light still comes from the left window. The warm cozy atmosphere is maintained. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "harsh lighting, cold blue light, right-side key light, different lighting direction, overexposed"
+        },
+        {
+          "id": "shot_3",
+          "prompt": "The same young man walks toward a bookshelf on the far side of the room. Warm light from the left window still illuminates the scene, slightly dimmer as he moves away from the window but color remains warm. Intimate warm mood preserved. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "cold blue light, right-side key light, harsh shadows, dark scene, different lighting mood"
+        }
+      ],
+      "characters": [
+        { "id": "char_1", "name": "人", "gender": "male", "appearance": "穿休闲服的年轻男性" }
+      ],
+      "lighting_intent": {
+        "keyLightDirection": "left",
+        "colorTemperature": "warm",
+        "ambientMood": "cozy_evening"
+      }
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}
