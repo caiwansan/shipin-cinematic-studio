@@ -7,11 +7,16 @@ name: Dialogue — Two Characters
 description: Pipeline integration validation. Two characters, brief dialogue, 5 shots alternating.
 shots: 5
 characters: 2
+primaryCapability: CHARACTER_REFERENCE
 capabilities:
-  - film.character.reference
-  - film.keyframe
-  - film.render.shot
-  - film.temporal.consistency
-difficulty: basic
+  - CHARACTER_REFERENCE
+  - RENDER_KEYFRAME
+  - RENDER_SHOT
+  - SHOT_TRANSITION
+  - SPATIAL_LAYOUT
+  - TEMPORAL_CONSISTENCY
+  - CAMERA_COMPOSITION
+difficulty: L1
+stage: full
 created: 2026-06-29
 hash: "sha256:placeholder"

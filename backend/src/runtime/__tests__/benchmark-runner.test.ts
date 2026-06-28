@@ -26,7 +26,7 @@ describe('Dataset Loader', () => {
     expect(ds.id).toBe('L1-001')
     expect(ds.level).toBe('L1')
     expect(ds.complexity.shots).toBeGreaterThanOrEqual(5)
-    expect(ds.metadata.capabilities).toContain('film.temporal.consistency')
+    expect(ds.metadata.capabilities).toContain('TEMPORAL_CONSISTENCY')
   })
 
   test('加载不存在的 Dataset 抛出异常', () => {

@@ -7,10 +7,13 @@ name: Single Shot — Basic
 description: Minimum pipeline validation. One shot, one character, simple description.
 shots: 1
 characters: 1
+primaryCapability: CHARACTER_REFERENCE
 capabilities:
-  - film.character.reference
-  - film.keyframe
-  - film.render.shot
-difficulty: basic
+  - CHARACTER_REFERENCE
+  - RENDER_KEYFRAME
+  - RENDER_SHOT
+  - SPATIAL_LAYOUT
+difficulty: L0
+stage: full
 created: 2026-06-29
 hash: "sha256:placeholder"
