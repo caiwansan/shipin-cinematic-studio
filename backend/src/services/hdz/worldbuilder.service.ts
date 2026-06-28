@@ -15,9 +15,11 @@
 
 import { prisma } from '../../utils/index.js'
 import { callLLM } from './llm.client.js'
+import { fetchUrlContent } from './fetch-url-content.js'
 import type { LLMConfig, OrchestratorContext } from './llm.client.js'
 
 const MAX_HISTORY_TURNS = 10
+const MAX_FETCH_ROUNDS = 1
 
 // ★ system prompt 完全静态，没有任何变量
 const STATIC_SYSTEM_PROMPT = `你是文曲星，一位温润如玉的文学创作顾问。
@@ -103,7 +105,20 @@ const STATIC_SYSTEM_PROMPT = `你是文曲星，一位温润如玉的文学创�
 - 每章都要有标题和详细大纲描述
 - 根据小说篇幅长度生成合理章节数（长篇小说建议 20-50 章）
 - 大纲内容要体现起承转合、主要角色的成长线和核心冲突
-- JSON 块放在回复末尾，前面仍然用自然语言向作者解释大纲思路`
+- JSON 块放在回复末尾，前面仍然用自然语言向作者解释大纲思路
+
+## 在线小说阅读
+你可以请求读取线上小说内容来进行分析。当用户提供了小说链接时，使用 ===FETCH_URL=== 请求格式：
+
+===FETCH_URL_START===
+{"url": "用户提供的小说URL"}
+===FETCH_URL_END===
+
+注意：
+- 只有用户在对话中主动提供了链接时才需要请求读取
+- 请求时必须使用用户提供的完整 URL
+- 读取到内容后，基于原文进行分析：风格特征、描写手法、句式特点、叙事节奏等
+- 分析结果用自然语言反馈给作者`
 
 class WorldbuilderService {
   async execute(ctx: OrchestratorContext, llmCfg: LLMConfig): Promise<string> {
@@ -202,7 +217,7 @@ ${currentMsg}`
     )
     const maxTokens = needLargeTokens ? 8192 : 4096
 
-    const text = await callLLM(llmCfg, STATIC_SYSTEM_PROMPT, userMessage, { maxTokens, temperature: 0.8 })
+    const text = await this.callWithFetch(ctx, llmCfg, STATIC_SYSTEM_PROMPT, userMessage, maxTokens, 0)
 
     // 清洗
     let cleaned = text
@@ -216,6 +231,53 @@ ${currentMsg}`
     console.log(`[HDZ/Worldbuilder] userInput=${(ctx.userInput || '').slice(0, 50)}, response=${text.slice(0, 60)}...`)
 
     return cleaned
+  }
+
+  /**
+   * 带 URL 抓取支持的 LLM 调用
+   * 如果 LLM 回复中包含 ===FETCH_URL_START=== 标记，则解析 URL，抓取内容后重新调用
+   */
+  private async callWithFetch(
+    ctx: OrchestratorContext,
+    llmCfg: LLMConfig,
+    systemPrompt: string,
+    userMessage: string,
+    maxTokens: number,
+    fetchRound: number
+  ): Promise<string> {
+    const text = await callLLM(llmCfg, systemPrompt, userMessage, { maxTokens, temperature: 0.8 })
+
+    // 检测是否请求抓取 URL
+    const fetchMatch = text.match(/===FETCH_URL_START===\s*(\{[\s\S]*?\})\s*===FETCH_URL_END===/i)
+    if (fetchMatch && fetchRound < MAX_FETCH_ROUNDS) {
+      try {
+        const { url } = JSON.parse(fetchMatch[1])
+        if (url && typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) {
+          const result = await fetchUrlContent(url)
+          if (result.success) {
+            // 追加抓取内容到对话中，重新调用
+            const continuation = `[系统消息] 已读取小说内容，以下是原文摘要（${result.content.length} 字）${result.title ? '，标题：' + result.title : ''}：
+
+${result.content}
+
+请基于以上原文进行分析：风格特征、描写手法、句式特点、叙事节奏等。用自然语言反馈给作者。`
+
+            const newUserMessage = userMessage + '\n\n' + continuation
+            return this.callWithFetch(ctx, llmCfg, systemPrompt, newUserMessage, maxTokens, fetchRound + 1)
+          } else {
+            // 抓取失败，告诉 LLM 并让它回复用户
+            const errorMsg = `[系统消息] 无法读取该 URL 的内容（${result.error || '未知错误'}）。请礼貌地告诉用户无法访问该链接，并询问是否确认链接正确。`
+            const newUserMessage = userMessage + '\n\n' + errorMsg
+            return this.callWithFetch(ctx, llmCfg, systemPrompt, newUserMessage, maxTokens, fetchRound + 1)
+          }
+        }
+      } catch (e: any) {
+        // JSON 解析失败，忽略标记，返回原始回复
+        console.warn(`[HDZ/Worldbuilder] fetch URL parse error: ${e?.message || e}`)
+      }
+    }
+
+    return text
   }
 }
 
