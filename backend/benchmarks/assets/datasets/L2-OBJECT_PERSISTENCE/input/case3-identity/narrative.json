@@ -1,0 +1,35 @@
+{
+  "title": "物体持久性 Case 3 — 相机身份测试",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "书架上的黑色单反相机",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "一面书架，上面放着几本书和一架黑色单反相机（DSLR），相机镜头朝外。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "close-up of shelf",
+          "lighting": "soft warm light",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_2",
+          "description": "同一书架，稍远角度。书架上仍然是那架黑色单反相机。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "medium shot of bookshelf",
+          "lighting": "soft warm light",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [],
+  "persistent_objects": [
+    { "name": "相机", "color": "black", "type": "DSLR camera" }
+  ]
+}

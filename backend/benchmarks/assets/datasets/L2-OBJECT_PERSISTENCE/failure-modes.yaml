@@ -1,0 +1,35 @@
+- id: FM-OP-001
+  category: object_removed
+  description: A persistent object that exists in one shot is absent in a subsequent shot without justification
+  expectedBehavior: All persistent objects present in initial shot should remain present in subsequent shots of the same scene
+  severity: high
+
+- id: FM-OP-002
+  category: object_inserted
+  description: A new object appears in a subsequent shot that was not present in the initial shot, without justification
+  expectedBehavior: Object count should remain consistent unless scene explicitly adds new objects
+  severity: high
+
+- id: FM-OP-003
+  category: identity_changed
+  description: An object's core identity attributes (color, model, type) change across shots (e.g., black DSLR → silver mirrorless)
+  expectedBehavior: Object identity attributes should remain stable across shots in the same scene
+  severity: high
+
+- id: FM-OP-004
+  category: geometry_changed
+  description: An object's geometric form changes across shots (e.g., round table → square table)
+  expectedBehavior: Object geometry should remain consistent unless explicitly modified
+  severity: medium
+
+- id: FM-OP-005
+  category: appearance_changed
+  description: An object's appearance details (texture, pattern, material) change subtly across shots
+  expectedBehavior: Appearance should remain consistent; minor lighting variation allowed but material/pattern should not change
+  severity: medium
+
+- id: FM-OP-006
+  category: count_changed
+  description: Multi-object sets change count across shots (e.g., one chair becomes two chairs)
+  expectedBehavior: Object count should be preserved unless scene explicitly adds or removes objects
+  severity: high

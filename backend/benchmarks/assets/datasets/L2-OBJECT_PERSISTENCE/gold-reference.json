@@ -1,0 +1,72 @@
+{
+  "scenario": "一个安静的下午书房。四种场景用于验证物体的身份连续性：Case 1 红杯消失 / Case 2 椅子新增 / Case 3 相机身份 / Case 4 桌子形状。",
+  "expectedPlanning": {
+    "cases": [
+      {
+        "id": "case1-deletion",
+        "description": "Red mug on table next to book, person reading. Shot 1 and Shot 2 should both contain the mug.",
+        "persistentObjects": [
+          { "name": "红色马克杯", "count": 1, "attributes": { "color": "red", "type": "mug", "location": "on table" } },
+          { "name": "书本", "count": 1, "attributes": { "location": "open on table" } },
+          { "name": "人", "count": 1, "attributes": { "action": "reading" } }
+        ],
+        "expectedConstraints": {
+          "noDeletion": ["红色马克杯", "书本"],
+          "noInsertion": true
+        }
+      },
+      {
+        "id": "case2-insertion",
+        "description": "One wooden chair in a room. Second shot should still have exactly one chair.",
+        "persistentObjects": [
+          { "name": "木椅", "count": 1, "attributes": { "type": "wooden chair", "color": "brown" } }
+        ],
+        "expectedConstraints": {
+          "noDeletion": ["木椅"],
+          "noInsertion": true,
+          "countPreserved": true
+        }
+      },
+      {
+        "id": "case3-identity",
+        "description": "Black DSLR camera on bookshelf. Shot 2 must keep same camera (black DSLR, not silver mirrorless).",
+        "persistentObjects": [
+          { "name": "相机", "count": 1, "attributes": { "color": "black", "type": "DSLR" } }
+        ],
+        "expectedConstraints": {
+          "identityPreserved": true,
+          "attributesStable": ["color", "type"]
+        }
+      },
+      {
+        "id": "case4-geometry",
+        "description": "Round wooden table with lamp. Shot 2 must keep round table (not square).",
+        "persistentObjects": [
+          { "name": "桌子", "count": 1, "attributes": { "shape": "round", "material": "wood" } },
+          { "name": "台灯", "count": 1, "attributes": { "location": "on table" } }
+        ],
+        "expectedConstraints": {
+          "geometryPreserved": true,
+          "attributesStable": ["shape", "material"]
+        }
+      }
+    ]
+  },
+  "expectedNegotiation": {
+    "persistenceCheck": true,
+    "identityBindingEnabled": true,
+    "attributeStability": "strict"
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalCases": 4,
+    "crossShotConsistency": true
+  },
+  "expectedEvaluation": {
+    "identityPreservationScore": { "min": 90 },
+    "objectPresenceScore": { "min": 95 },
+    "countConsistencyScore": { "min": 95 },
+    "geometryConsistencyScore": { "min": 85 },
+    "appearanceConsistencyScore": { "min": 80 }
+  }
+}

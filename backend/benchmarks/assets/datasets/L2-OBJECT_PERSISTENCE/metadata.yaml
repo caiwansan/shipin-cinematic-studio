@@ -1,0 +1,49 @@
+# L2-OBJECT_PERSISTENCE
+# 对象持久性 — 跨镜头、跨时间、跨机位的身份保持
+#
+# 核心关注：逻辑对象 Identity 的连续性。
+# 验证系统是否能够保证同一逻辑对象在场景变化后仍然保持正确身份。
+#
+# 四个验证场景（跨越镜头切换）：
+#
+# Case 1 — 无故消失（Deletion）:
+#   镜头 1：桌子上有一只红色马克杯，一个人在看书。
+#   镜头 2：同一张桌子，同样角度，杯子无故消失。
+#   期望：杯子存在且位置合理。
+#
+# Case 2 — 无故新增（Insertion）:
+#   镜头 1：只有一把木椅。
+#   镜头 2：同一房间，突然出现第二把一模一样的椅子。
+#   期望：物体数量保持一致。
+#
+# Case 3 — Identity Drift:
+#   镜头 1：一台黑色单反相机在书架上。
+#   镜头 2：同一书架，相机变成银色微单。
+#   期望：同款相机颜色、型号保持跨镜头一致。
+#
+# Case 4 — Geometry Drift:
+#   镜头 1：一张圆形木桌，桌上有一盏台灯。
+#   镜头 2：同一房间，圆桌变成方桌。
+#   期望：桌子形状保持圆桌。
+#
+# 与 SPATIAL_RELATION 的区分：
+#   OBJECT_PERSISTENCE 验证"物体本身是否一致"
+#   SPATIAL_RELATION 验证"物体之间的空间关系是否正确"
+#
+
+id: L2-OBJECT_PERSISTENCE
+primaryCapability: OBJECT_PERSISTENCE
+secondaryCapabilities:
+  - SPATIAL_LAYOUT
+  - RENDER_MULTI_SHOT
+difficulty: L2
+stage: full
+name: Object Persistence — Identity Across Shots
+description: Verifies logical object identity persistence across cuts — no deletion, insertion, identity drift, or geometry drift. Four cases spanning common failure modes.
+scenario: |
+  一个安静的下午书房。四种场景验证物体的身份连续性：
+  Case 1: 红杯消失测试 — 确认物体不会被错误删减。
+  Case 2: 椅子新增测试 — 确认不会凭空增加物体。
+  Case 3: 相机身份测试 — 确认物体属性跨镜头稳定。
+  Case 4: 桌子形状测试 — 确认物体几何形态保持。
+created: 2026-06-28

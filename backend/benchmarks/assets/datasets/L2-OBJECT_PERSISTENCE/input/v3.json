@@ -1,0 +1,101 @@
+{
+  "scenes": [
+    {
+      "id": "case1-deletion",
+      "summary": "Red mug on desk with book, person reading — mug must persist across two angles",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "A wooden desk with an open book and a red ceramic mug next to it. A young man in a shirt sits at the desk reading. Warm afternoon light through a window. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "empty desk, missing mug, blurry"
+        },
+        {
+          "id": "shot_2",
+          "prompt": "Same wooden desk, same open book and red ceramic mug visible. The young man in a shirt looks up from reading. Over-the-shoulder angle, warm afternoon light. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "missing mug, different mug, empty desk"
+        }
+      ],
+      "persistent_objects": [
+        { "name": "红色马克杯", "expected": "must appear in both shots", "color": "red", "type": "mug" },
+        { "name": "书本", "expected": "must appear in both shots", "state": "open" }
+      ],
+      "characters": [
+        { "id": "char_1", "name": "人", "gender": "male", "appearance": "年轻男性，白衬衫" }
+      ]
+    },
+    {
+      "id": "case2-insertion",
+      "summary": "Empty room with one wooden chair — count must stay at 1",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "An empty room with a single brown wooden chair in the center. Fluorescent ceiling lighting, plain white walls. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "extra furniture, second chair, multiple chairs, people"
+        },
+        {
+          "id": "shot_2",
+          "prompt": "Same empty room, same brown wooden chair seen from a different corner angle. Still exactly one chair in the room. Fluorescent lighting. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "extra chair, missing chair, furniture, clutter"
+        }
+      ],
+      "persistent_objects": [
+        { "name": "木椅", "expected": "exactly one in each shot", "count": 1, "color": "brown" }
+      ],
+      "characters": []
+    },
+    {
+      "id": "case3-identity",
+      "summary": "Black DSLR camera on bookshelf — identity must stay consistent",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "A wooden bookshelf with several books and a black DSLR camera with lens pointing outward. Soft warm lighting. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "silver camera, mirrorless camera, different camera model, compact camera"
+        },
+        {
+          "id": "shot_2",
+          "prompt": "Same wooden bookshelf, slightly wider angle. The same black DSLR camera is still on the shelf. Soft warm lighting. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "silver camera, mirrorless camera, different camera, missing camera"
+        }
+      ],
+      "persistent_objects": [
+        { "name": "相机", "expected": "black DSLR in both shots", "color": "black", "type": "DSLR" }
+      ],
+      "characters": []
+    },
+    {
+      "id": "case4-geometry",
+      "summary": "Round wooden table with lamp — geometry must stay round",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "A round wooden table with a classic desk lamp on it. The lamp is on, casting warm yellow light. Cozy study room atmosphere. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "square table, rectangular table, different table shape"
+        },
+        {
+          "id": "shot_2",
+          "prompt": "Same round wooden table from a side angle. The same desk lamp is still on the table. Warm lamp light. Cozy study atmosphere. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "square table, rectangular table, different table, missing lamp"
+        }
+      ],
+      "persistent_objects": [
+        { "name": "桌子", "expected": "round in both shots", "shape": "round", "material": "wood" },
+        { "name": "台灯", "expected": "present in both shots", "type": "desk lamp", "state": "on" }
+      ],
+      "characters": []
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}

@@ -1,0 +1,6 @@
+compileSuccess: true
+minSps: 0.80
+minCapabilityCoverage: 0.70
+compilerDeterminism: 0.90
+maxPipelineDurationMs: 8000
+maxDriftCount: 2

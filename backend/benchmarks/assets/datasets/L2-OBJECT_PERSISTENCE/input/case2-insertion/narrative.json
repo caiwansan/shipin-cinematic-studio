@@ -1,0 +1,35 @@
+{
+  "title": "物体持久性 Case 2 — 椅子新增测试",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "空房间内只有一把木椅",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "一个空荡荡的房间，房间中央有一把棕色木椅。没有其他家具。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "wide shot from doorway",
+          "lighting": "cool fluorescent light",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_2",
+          "description": "同一房间，从对角方向拍摄。仍然只有那一把棕色木椅。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "medium shot from corner",
+          "lighting": "cool fluorescent light",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [],
+  "persistent_objects": [
+    { "name": "木椅", "count": 1, "color": "brown", "type": "wooden chair" }
+  ]
+}

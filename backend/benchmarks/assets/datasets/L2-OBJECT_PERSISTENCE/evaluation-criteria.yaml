@@ -1,0 +1,29 @@
+- id: EC-OP-01
+  name: Identity Preservation
+  description: Object identity attributes (color, model, type) remain stable across shots
+  weight: 0.30
+  passThreshold: 90
+
+- id: EC-OP-02
+  name: Object Presence
+  description: No unjustified deletion or insertion of persistent objects across shots
+  weight: 0.25
+  passThreshold: 95
+
+- id: EC-OP-03
+  name: Count Consistency
+  description: Object count remains stable across shots for the same scene
+  weight: 0.20
+  passThreshold: 95
+
+- id: EC-OP-04
+  name: Geometry Consistency
+  description: Object geometric form (shape, proportions) remains consistent across shots
+  weight: 0.15
+  passThreshold: 85
+
+- id: EC-OP-05
+  name: Appearance Consistency
+  description: Object appearance details (texture, material, pattern) remain stable
+  weight: 0.10
+  passThreshold: 80

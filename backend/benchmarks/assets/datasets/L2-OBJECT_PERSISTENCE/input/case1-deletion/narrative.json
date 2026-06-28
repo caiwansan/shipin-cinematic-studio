@@ -1,0 +1,44 @@
+{
+  "title": "物体持久性 Case 1 — 红杯消失测试",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "桌子上有一个红色马克杯和一本打开的书，有一个人在看书",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "一张书桌上放着一本打开的书，旁边有一个红色马克杯。一个人坐在桌旁低头看书。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["reading"],
+          "camera": "medium shot from side",
+          "lighting": "warm afternoon natural light",
+          "duration_seconds": 5
+        },
+        {
+          "id": "shot_2",
+          "description": "同一个场景，从另一角度拍摄。桌上仍然有那本打开的书和红色马克杯。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["reading", "reach for mug"],
+          "camera": "over-the-shoulder shot",
+          "lighting": "warm afternoon natural light",
+          "duration_seconds": 5
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "人",
+      "gender": "male",
+      "appearance": "穿着衬衫的年轻男性",
+      "reference_images": []
+    }
+  ],
+  "persistent_objects": [
+    { "name": "红色马克杯", "color": "red", "type": "mug" },
+    { "name": "书本", "type": "book", "state": "open" }
+  ]
+}

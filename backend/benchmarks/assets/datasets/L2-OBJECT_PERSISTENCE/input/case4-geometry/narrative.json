@@ -1,0 +1,36 @@
+{
+  "title": "物体持久性 Case 4 — 桌子形状测试",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "圆形木桌上有一盏台灯",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "一张圆形木桌，桌面上放着一盏老式台灯。台灯开着，发出温暖的黄光。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "medium shot from front",
+          "lighting": "warm lamp light",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_2",
+          "description": "同一张圆形木桌，从侧面拍摄。台灯仍然在桌上。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "side angle",
+          "lighting": "warm lamp light",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [],
+  "persistent_objects": [
+    { "name": "桌子", "shape": "round", "material": "wood" },
+    { "name": "台灯", "type": "lamp", "state": "on" }
+  ]
+}
