@@ -218,57 +218,101 @@ V3 → Normalizer → Compiler → FilmIR（冻结 ✓）
 
 A4 架构设计已完成。当前最大风险不是架构设计，而是**工程验证风险**——需要在真实短剧项目上持续验证整条生产流水线的稳定性、可量化和可回归性。
 
-### 五步验证方案
+### 执行顺序：P2 → P1 → P3
 
-#### P1: Pipeline Benchmark（最高优先级）
+---
 
-建立固定 Benchmark 集：
-- Benchmark-001: 50 Shot Drama（主测试）
-- Benchmark-002: Single Character
-- Benchmark-003: Dialogue
-- Benchmark-004: Action
-- Benchmark-005: Multi Scene
+#### P2: Pipeline Metrics（第一优先级 — 可观测性）
 
-每次 Kernel 升级，全部跑通。
+先建立统一可观测层，所有后续工作自动获得完整数据。
 
-#### P2: Pipeline Metrics
-
-每个阶段的耗时监控：
-| 指标 | 说明 |
-| --- | --- |
-| Compile Time | Compiler 耗时 |
-| Graph Build Time | 图构建耗时 |
-| Negotiation Time | 能力协商耗时 |
-| DAG Build Time | DAG 构建耗时 |
-| Bridge Time | Bridge 耗时 |
-| Worker Time | Worker 执行耗时 |
-| End-to-End Time | 总耗时 |
-
-#### P3: Quality Metrics
-
-能力覆盖率：
+**统一 StageMetrics Schema：**
+```typescript
+interface StageMetrics {
+  stage: string              // 阶段名（Compiler / Graph / Planner / Negotiation / DAG / Bridge / Worker）
+  startTime: number          // 开始时间戳 (ms)
+  endTime: number            // 结束时间戳 (ms)
+  duration: number           // 时长 (ms)
+  inputSize?: number         // 输入大小
+  outputSize?: number        // 输出大小
+  diagnostics: {
+    warnings: number
+    errors: number
+  }
+}
 ```
-Requested Capability → Negotiated → Executed → Succeeded
+
+**Stage 覆盖：** Normalizer → Compiler → Graph Builder → Graph Validator → Planner → Negotiator → DAG Builder → Bridge → Worker
+
+**四类 Metrics 全面采集：**
+| 类别 | 指标 | 说明 |
+| --- | --- | --- |
+| Performance | Compile / Graph / Planner / DAG / Bridge Time | 每阶段耗时 |
+| Quality | Capability Coverage | Requested → Negotiated → Executed → Succeeded |
+| Stability | Compiler Determinism | 100次 Compiler Hash 一致率 |
+| Architecture | Drift Statistics | SSOT Violation / Kernel Leak / Mutation 为零 |
+
+**关键指标 — Semantic Preservation Score（SPS）**
 ```
-例如：
-- film.camera.path requested: 100 executed: 82
-- film.keyframe requested: 50 executed: 50
+Character 100% → Negotiated 100% → Executed 98%
+```
+衡量电影语义在 Pipeline 中的保留率。
 
-#### P4: Replay Validation
+---
 
-Replay 全链路：
+#### P1: Golden Dataset + Benchmark（第二优先级）
+
+建立在 P2 Metrics 之上的 Benchmark 体系。
+
+**四级 Golden Dataset：**
+| Level | 规模 | 用途 |
+| ----- | ---- | ---- |
+| L0 | 1 Shot | 单元测试 |
+| L1 | 5 Shot | Pipeline 调试 |
+| L2 | 20 Shot | 集成验证 |
+| L3 | 50~100 Shot | Production Benchmark |
+
+**目录结构：**
+```
+benchmarks/
+├── benchmark-manifest.yaml
+├── golden/
+│   ├── L0-single-shot/
+│   ├── L1-five-shot/
+│   ├── L2-twenty-shot/
+│   └── L3-fifty-shot/
+├── metrics/
+├── reports/
+└── replay/
+```
+
+每次 Kernel 升级自动跑 Golden Dataset 回归。
+
+---
+
+#### P3: Replay Validation（第三优先级）
+
+基于 Execution Trace 的 Production Replay：
 ```
 FilmIR → Replay → Graph → Replay → Negotiation → Replay → DAG → Replay
 ```
-最终 Hash 一致。
+全部 Hash 一致，Replay 才算通过。不依赖 Worker。
 
-#### P5: Golden Dataset
+---
 
-建立官方 Golden Dataset：
-- 50 Shot Drama
-- 100 Shot Drama
-- Romance / Suspense / Dialogue / Action
-- 每次升级自动回归测试
+### 验收标准
+
+全部满足才算 A4.5 完成：
+
+- [ ] P2: 统一 StageMetrics Schema 实现 + 所有 Stage Metrics Collector
+- [ ] P2: SPS（Semantic Preservation Score）指标就位
+- [ ] P2: Pipeline Report 输出完整
+- [ ] P1: 四级 Golden Dataset（L0/L1/L2/L3）建立
+- [ ] P1: Benchmark Runner 自动回归
+- [ ] P1: Compiler 100 次 Hash 一致率 100%
+- [ ] P3: Replay 全链路 Hash 一致验证
+- [ ] Legacy Pipeline 与 New Pipeline 一致或差异可解释
+- [ ] Production Baseline v1.0 发布
 
 ### 验收标准
 
