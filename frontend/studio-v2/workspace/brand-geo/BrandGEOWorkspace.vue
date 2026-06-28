@@ -86,6 +86,12 @@
           @navigate="onNavigate"
         />
 
+        <!-- Phase 3: Semantic Explorer -->
+        <SemanticExplorer
+          v-else-if="activePanelId === 'semantic-explorer'"
+          :project-id="selectedV2ProjectId"
+        />
+
         <!-- Placeholder panels for Phase 1 items -->
         <GeoPlaceholderPanel
           v-else
@@ -111,6 +117,7 @@ import BrandProfilePage from '~/studio-v2/workspace/brand-geo/pages/BrandProfile
 import WebsiteScannerPage from '~/studio-v2/workspace/brand-geo/pages/WebsiteScannerPage.vue'
 import KnowledgeGraphPage from '~/studio-v2/workspace/brand-geo/pages/KnowledgeGraphPage.vue'
 import AssetCenterPage from '~/studio-v2/workspace/brand-geo/pages/AssetCenterPage.vue'
+import SemanticExplorer from '~/studio-v2/workspace/brand-geo/pages/SemanticExplorer.vue'
 import type { GeoPanelId } from '~/studio-v2/types/geo'
 
 const runtime = useBrandGEORuntime()

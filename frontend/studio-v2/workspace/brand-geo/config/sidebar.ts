@@ -36,6 +36,12 @@ export const GEO_SIDEBAR_MENU: SidebarMenuItem[] = [
     route: '/workspace/geo?panel=knowledge-graph',
   },
   {
+    id: 'semantic-explorer',
+    label: '语义管理器',
+    icon: '🧠',
+    route: '/workspace/geo?panel=semantic-explorer',
+  },
+  {
     id: 'entities',
     label: '实体图谱',
     icon: '🔗',

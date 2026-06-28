@@ -52,7 +52,8 @@ export type GeoPanelId =
   | 'website-scanner'
   | 'knowledge-graph'
   // Phase 2.5
-  | 'asset-center'
+  // Phase 3: Semantic Explorer
+  | 'semantic-explorer'
 
 /** GEO Runtime */
 export interface BrandGEORuntime {

@@ -1,11 +1,14 @@
 // ============================================================
 // Brand GEO — Graph Service
 // CRUD operations for GeoGraphNode and GeoGraphEdge
-// Phase 2.5: Graph Builder reads Assets for entity creation
+// Phase 3: Graph Builder upgraded — consumes Semantic Runtime instead of raw Assets
+// Flow: Semantic Runtime → Knowledge Graph (Node = Entity, Edge = SemanticRelation)
+// Graph no longer self-identifies entities
 // ============================================================
 
 import { prisma } from '../../utils/index.js'
-import { assetRepository } from '../asset/repositories/asset.repository.js'
+import { entityRepository } from '../semantic/repositories/entity.repository.js'
+import { relationRepository } from '../semantic/repositories/relation.repository.js'
 
 export const geoGraphService = {
   // ─── Nodes ───
@@ -87,127 +90,112 @@ export const geoGraphService = {
     return prisma.geoGraphEdge.delete({ where: { id } })
   },
 
-  // ─── Phase 2.5: Build graph from assets ───
+  // ─── Phase 3: Build graph from Semantic Runtime ───
 
   /**
-   * Build knowledge graph nodes from Unified Assets
-   * Each asset type becomes a node type
+   * Build knowledge graph from Semantic Runtime data
+   * Nodes = SemanticEntity, Edges = SemanticRelation
+   * Graph no longer self-identifies entities
    */
-  async buildFromAssets(projectId: string) {
-    const { items: assets } = await assetRepository.list({ projectId, limit: 500 })
+  async buildFromSemantic(projectId: string) {
+    // 1. Get all entities for the project
+    const { items: entities } = await entityRepository.list({ projectId, limit: 1000 })
 
-    const nodeMap = new Map<string, string>() // assetId -> nodeId
+    const entityNodeMap = new Map<string, string>() // entityId -> nodeId
 
-    for (const asset of assets) {
-      // Convert asset type to graph node type
-      const nodeType = this.assetTypeToNodeType(asset.type)
-      const nodeLabel = asset.title
+    for (const entity of entities) {
+      const nodeType = this.entityTypeToNodeType(entity.type)
+      const nodeLabel = entity.name
 
-      // Check if node already exists for this asset
+      // Check if node already exists
       const existingNode = await prisma.geoGraphNode.findFirst({
         where: { projectId, label: nodeLabel, type: nodeType },
       })
 
       if (existingNode) {
-        nodeMap.set(asset.id, existingNode.id)
+        entityNodeMap.set(entity.id, existingNode.id)
         continue
       }
 
-      // Create new node
+      // Create new node from semantic entity
       const node = await prisma.geoGraphNode.create({
         data: {
           projectId,
           type: nodeType,
           label: nodeLabel,
           properties: JSON.stringify({
-            assetId: asset.id,
-            source: asset.source,
-            sourceUrl: asset.sourceUrl,
-            summary: asset.summary,
-            language: asset.language,
-            status: asset.status,
+            entityId: entity.id,
+            description: entity.description,
+            confidence: entity.confidence,
+            aliases: (entity as any).aliases?.map((a: any) => a.alias) || [],
           }),
           schemaVersion: 1,
         },
       })
-      nodeMap.set(asset.id, node.id)
+      entityNodeMap.set(entity.id, node.id)
     }
 
-    // Create edges between related assets (by source domain)
-    await this.buildEdgesFromAssets(projectId, assets, nodeMap)
-
-    return { nodeCount: nodeMap.size }
-  },
-
-  async buildEdgesFromAssets(projectId: string, assets: any[], nodeMap: Map<string, string>) {
-    // Group assets by source domain
-    const domainGroups = new Map<string, string[]>()
-    for (const asset of assets) {
-      if (!asset.sourceUrl) continue
-      try {
-        const domain = new URL(asset.sourceUrl).hostname
-        if (!domainGroups.has(domain)) domainGroups.set(domain, [])
-        domainGroups.get(domain)!.push(asset.id)
-      } catch {
-        // Skip invalid URLs
-      }
-    }
-
-    // Create edges between assets sharing the same domain
+    // 2. Create edges from semantic relations
+    const { items: relations } = await relationRepository.list({ projectId, limit: 1000 })
     let edgeCount = 0
-    for (const [, assetIds] of domainGroups) {
-      if (assetIds.length < 2) continue
-      for (let i = 1; i < assetIds.length && edgeCount < 100; i++) {
-        const fromNodeId = nodeMap.get(assetIds[0])
-        const toNodeId = nodeMap.get(assetIds[i])
-        if (fromNodeId && toNodeId) {
-          try {
-            await prisma.geoGraphEdge.create({
-              data: {
-                sourceId: fromNodeId,
-                targetId: toNodeId,
-                type: 'related_to',
-                properties: JSON.stringify({ domain: domainGroups }),
-                schemaVersion: 1,
-              },
-            })
-            edgeCount++
-          } catch {
-            // Skip duplicates
-          }
+
+    for (const rel of relations) {
+      if (!rel.fromEntityId || !rel.toEntityId) continue
+      const sourceNodeId = entityNodeMap.get(rel.fromEntityId)
+      const targetNodeId = entityNodeMap.get(rel.toEntityId)
+      if (sourceNodeId && targetNodeId) {
+        try {
+          await prisma.geoGraphEdge.create({
+            data: {
+              sourceId: sourceNodeId,
+              targetId: targetNodeId,
+              type: rel.relation || 'related_to',
+              properties: JSON.stringify({
+                relationId: rel.id,
+                confidence: rel.confidence,
+              }),
+              schemaVersion: 1,
+            },
+          })
+          edgeCount++
+        } catch {
+          // Skip duplicates
         }
       }
     }
+
+    return {
+      nodeCount: entityNodeMap.size,
+      edgeCount,
+    }
   },
 
-  assetTypeToNodeType(type: string): string {
+  /**
+   * Legacy build from assets — now delegates to semantic build
+   * @deprecated Use buildFromSemantic instead
+   */
+  async buildFromAssets(projectId: string) {
+    return this.buildFromSemantic(projectId)
+  },
+
+  entityTypeToNodeType(type: string): string {
     const map: Record<string, string> = {
       Brand: 'brand',
-      Website: 'page',
-      LandingPage: 'page',
-      Article: 'article',
-      Blog: 'article',
-      News: 'article',
-      FAQ: 'faq',
-      Glossary: 'concept',
-      WhitePaper: 'document',
-      CaseStudy: 'case_study',
-      Guide: 'guide',
-      Tutorial: 'guide',
+      Company: 'organization',
+      Organization: 'organization',
+      Person: 'person',
+      Product: 'product',
+      Service: 'service',
+      Feature: 'feature',
+      Capability: 'capability',
+      Workflow: 'process',
+      Prompt: 'prompt',
       API: 'api',
       Document: 'document',
-      Feature: 'product',
-      Pricing: 'page',
-      Service: 'service',
-      Product: 'product',
-      Image: 'image',
-      Video: 'media',
-      Logo: 'brand',
-      Schema: 'schema',
-      JSONLD: 'schema',
-      SocialPost: 'social',
-      PDF: 'document',
-      Markdown: 'document',
+      Technology: 'technology',
+      Concept: 'concept',
+      Location: 'location',
+      Event: 'event',
     }
     return map[type] || 'concept'
   },

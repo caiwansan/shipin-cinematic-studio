@@ -194,21 +194,42 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
           "try { document.cookie = 'auth_token=" + token + "; path=/; max-age=2592000'; } catch(e){}\n" +
           "try { window.close(); } catch(e){}\n" +
           // 如果 window.close 失败（某些浏览器限制），fallback 跳回首页
-          "setTimeout(function(){ window.location.href='/'; }, 500);\n" +
+          "setTimeout(function(){ window.location.href='/user/bind-phone'; }, 500);\n" +
           '</script></body></html>')
       } else {
-        // 新用户 — 需要在 30 分钟内绑定手机号
-        const BIND_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
-        const bindToken = jwt.sign(
-          { type: 'qq_bind', qqOpenId, nickname, avatarUrl, exp: Math.floor(Date.now() / 1000) + 30 * 60 },
-          BIND_SECRET
+        // 新用户 — QQ 授权直接注册，无需绑手机号
+        const bcrypt = await import('bcryptjs')
+        const crypto = await import('crypto')
+        const email = `qq_${qqOpenId}@aigc.fushtn.com`
+        user = await prisma.user.create({
+          data: {
+            email,
+            username: nickname || 'QQ用户',
+            qqOpenId,
+            passwordHash: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10),
+            memberTier: 'free',
+          },
+        })
+
+        // 赠送体验积分
+        await prisma.membership.create({
+          data: { userId: user.id, tier: 'free', credits: 100, totalCredits: 100 },
+        }).catch(() => {})
+
+        const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
+        const token = jwt.sign(
+          { id: user.id, email: user.email, role: 'user', tokenVersion: 1 },
+          JWT_SECRET,
+          { expiresIn: '30d' }
         )
 
-        // localStorage 方式——弹窗写入 bind token 后关闭，原页面用 storage 事件或轮询检测
+        const safeUser = JSON.stringify({ id: user.id, nickname }).replace(/</g, '\\u003C')
         return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
-          "try { localStorage.setItem('qq_bind_token', '" + bindToken + "'); } catch(e){}\n" +
-          "try { localStorage.setItem('qq_bind_nick', '" + encodeURIComponent(nickname) + "'); } catch(e){}\n" +
-          "try { localStorage.setItem('oauth_bind_at', Date.now()+''); } catch(e){}\n" +
+          "var keys = ['auth_token','accessToken','token'];\n" +
+          "for (var i=0;i<keys.length;i++) { try { localStorage.setItem(keys[i], '" + token + "'); } catch(e){} }\n" +
+          "try { localStorage.setItem('auth_user','" + safeUser.replace(/'/g, "\\'") + "'); } catch(e){}\n" +
+          "try { localStorage.setItem('oauth_login_at',Date.now()+''); } catch(e){}\n" +
+          "try { document.cookie = 'auth_token=" + token + "; path=/; max-age=2592000'; } catch(e){}\n" +
           "try { window.close(); } catch(e){}\n" +
           "setTimeout(function(){ window.location.href='/'; }, 500);\n" +
           '</script></body></html>')

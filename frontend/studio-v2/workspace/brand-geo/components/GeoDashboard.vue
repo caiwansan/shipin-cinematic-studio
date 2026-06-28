@@ -149,6 +149,61 @@
       </div>
     </div>
 
+    <!-- Semantic Stats Section (Phase 3) -->
+    <div class="geo-dashboard-section">
+      <h3 class="geo-section-title">🧠 语义概览</h3>
+      <div class="geo-asset-mini-stats" v-if="Object.keys(semanticStats).length > 0 && semanticStats.entityCount > 0">
+        <div class="geo-asset-mini-card" style="border-left-color: #6366f1">
+          <span class="geo-asset-mini-icon">🏷️</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ semanticStats.entityCount }}</span>
+            <span class="geo-asset-mini-label">实体</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #06b6d4">
+          <span class="geo-asset-mini-icon">📌</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ semanticStats.topicCount }}</span>
+            <span class="geo-asset-mini-label">主题</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #10b981">
+          <span class="geo-asset-mini-icon">🌳</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ semanticStats.taxonomyCount }}</span>
+            <span class="geo-asset-mini-label">分类</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #f59e0b">
+          <span class="geo-asset-mini-icon">🔀</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ semanticStats.aliasCount }}</span>
+            <span class="geo-asset-mini-label">别名</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #ec4899">
+          <span class="geo-asset-mini-icon">🔑</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ semanticStats.keywordCount }}</span>
+            <span class="geo-asset-mini-label">关键词</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #8b5cf6">
+          <span class="geo-asset-mini-icon">🔗</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ semanticStats.relationCount }}</span>
+            <span class="geo-asset-mini-label">关系</span>
+          </div>
+        </div>
+      </div>
+      <div v-else class="geo-asset-no-data">
+        <p>暂无语义数据</p>
+        <button class="geo-btn-small" @click="navigateToPanel('semantic-explorer')">
+          前往语义管理器
+        </button>
+      </div>
+    </div>
+
     <!-- Bottom Panels -->
     <div class="geo-dashboard-panels">
       <div class="geo-panel geo-panel-recent">
@@ -232,6 +287,7 @@ import type { GeoPanelId, GeoTask, WebsiteSnapshot, WorkspaceFlowStage } from '~
 import { useBrandGeoStore } from '~/studio-v2/workspace/brand-geo/stores/useBrandGeoStore'
 import { useBrandGEORuntime } from '~/studio-v2/workspace/brand-geo/composables/useBrandGEORuntime'
 import { assetService } from '~/modules/asset/services/asset.service'
+import { semanticService } from '~/modules/semantic/services/semantic.service'
 
 interface FeatureCard {
   id: string
@@ -361,6 +417,16 @@ const assetStatCards = computed(() => {
   ]
 })
 
+// ── Semantic Stats (Phase 3) ──
+const semanticStats = ref<Record<string, number>>({
+  entityCount: 0,
+  topicCount: 0,
+  taxonomyCount: 0,
+  aliasCount: 0,
+  keywordCount: 0,
+  relationCount: 0,
+})
+
 watch(() => store.selectedV2ProjectId.value, async (newId) => {
   if (newId) {
     try {
@@ -368,6 +434,21 @@ watch(() => store.selectedV2ProjectId.value, async (newId) => {
       assetStats.value = stats
     } catch {
       assetStats.value = { total: 0 }
+    }
+    try {
+      const sStats = await semanticService.getStats(newId)
+      if (sStats) {
+        semanticStats.value = {
+          entityCount: sStats.entityCount,
+          topicCount: sStats.topicCount,
+          taxonomyCount: sStats.taxonomyCount,
+          aliasCount: sStats.aliasCount,
+          keywordCount: sStats.keywordCount,
+          relationCount: sStats.relationCount,
+        }
+      }
+    } catch {
+      // Semantics not available yet
     }
   }
 })

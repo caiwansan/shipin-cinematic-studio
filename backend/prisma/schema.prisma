@@ -3756,3 +3756,102 @@ model RawDocument {
   @@index([projectId])
   @@map("raw_documents")
 }
+
+// ===== Unified Semantic Runtime (Platform Level) =====
+
+model SemanticEntity {
+  id          String   @id @default(uuid())
+  projectId   String
+  assetId     String?
+  type        String   // Brand, Company, Organization, Person, Product, Service, Feature, etc.
+  name        String   // Canonical name
+  description String?
+  confidence  Float    @default(0.0)
+  metadata    String?  // JSON
+  schemaVersion Int    @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  aliases         SemanticAlias[]
+  topics          SemanticEntityTopic[]
+  sourceKeywords  SemanticKeyword[]
+}
+
+model SemanticTopic {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  confidence  Float    @default(0.0)
+  metadata    String?  // JSON
+  schemaVersion Int    @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entities    SemanticEntityTopic[]
+}
+
+model SemanticEntityTopic {
+  entityId String
+  topicId  String
+  entity   SemanticEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  topic    SemanticTopic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([entityId, topicId])
+}
+
+model SemanticRelation {
+  id          String   @id @default(uuid())
+  projectId   String
+  fromEntityId String?
+  fromTopicId  String?
+  toEntityId   String?
+  toTopicId    String?
+  relation    String   // is_a, part_of, related_to, belongs_to, mentions, references, etc.
+  confidence  Float    @default(0.0)
+  metadata    String?  // JSON
+  schemaVersion Int    @default(1)
+  createdAt   DateTime @default(now())
+}
+
+model SemanticAlias {
+  id        String   @id @default(uuid())
+  entityId  String
+  alias     String
+  language  String   @default("zh")
+  confidence Float   @default(1.0)
+  entity    SemanticEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, alias])
+}
+
+model SemanticTaxonomy {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String
+  parentId    String?  // Self-referencing for hierarchy
+  description String?
+  path        String?  // Materialized path: "AI/Video/Generation"
+  depth       Int      @default(0)
+  metadata    String?  // JSON
+  schemaVersion Int    @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent    SemanticTaxonomy? @relation("TaxonomyHierarchy", fields: [parentId], references: [id])
+  children  SemanticTaxonomy[] @relation("TaxonomyHierarchy")
+}
+
+model SemanticKeyword {
+  id          String   @id @default(uuid())
+  projectId   String
+  keyword     String
+  entityId    String?  // Associated entity
+  language    String   @default("zh")
+  confidence  Float    @default(0.0)
+  metadata    String?  // JSON
+  schemaVersion Int    @default(1)
+  createdAt   DateTime @default(now())
+  entity      SemanticEntity? @relation(fields: [entityId], references: [id])
+}

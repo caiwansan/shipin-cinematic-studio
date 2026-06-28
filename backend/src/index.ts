@@ -526,6 +526,23 @@ await app.register(projectV2Routes)
     console.warn('[AssetRuntime] Failed to initialize:', (err as Error).message)
   }
 
+  // Semantic Runtime routes (Phase 3 — Platform Level Unified Semantic Layer)
+  await app.register(await import('./routes/semantic/entity.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/topic.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/taxonomy.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/alias.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/keyword.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/semantic.route.js').then(m => m.default))
+
+  // 初始化 Semantic Runtime（Phase 3 平台级语义层）
+  try {
+    const { semanticRuntime } = await import('./services/semantic/runtime/semantic.runtime.js')
+    await semanticRuntime.initialize()
+    console.log('[SemanticRuntime] ✅ Unified Semantic Runtime initialized')
+  } catch (err) {
+    console.warn('[SemanticRuntime] Failed to initialize:', (err as Error).message)
+  }
+
   // F6 System Dashboard
   // REMOVED: systemDashboardRoutes
 
