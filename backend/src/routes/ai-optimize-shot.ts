@@ -1,5 +1,4 @@
-import { FilmLanguageIR, freezeFilmIR } from "../runtime/film-language-ir.js";
-import { createFilmIRMetadata } from '../runtime/film-language-ir.js'
+import { FilmLanguageIR, freezeFilmIR, createFilmIRMetadata } from "../runtime/film-language-ir.js";
 /**
  * POST /api/ai/optimize-shot-script
  * AI 优化视频脚本 — 逐秒优化镜头语言、角色动作、微表情、特效音效
