@@ -1,0 +1,31 @@
+# L2-SHOT_SCALE
+# 景别 — 镜头尺度服务于叙事意图
+#
+# Wave 2 电影语言能力。验证景别选择是否与导演意图一致，
+# 而非仅判断"景别类型正确"。
+#
+# 五类核心景别：
+# 1. Extreme Close-up（特写）— 突出细节/情绪
+# 2. Close-up（近景）— 面部信息/情绪
+# 3. Medium Shot（中景）— 动作/对话
+# 4. Wide Shot（远景）— 空间/环境
+# 5. Establishing Shot（建立镜头）— 场景建立
+#
+
+id: L2-SHOT_SCALE
+primaryCapability: SHOT_TRANSITION
+secondaryCapabilities:
+  - CAMERA_COMPOSITION
+  - RENDER_SHOT
+difficulty: L2
+stage: full
+name: Shot Scale — Narrative Framing Distance
+description: Verifies that shot scale choices (ECU/CU/MS/WS/ES) serve the narrative purpose and emotional intent of each scene. Measures scale accuracy, subject framing, context preservation, and emotion alignment.
+scenario: |
+  一个咖啡馆场景。先以建立镜头展示环境，推进到中景展示人物与咖啡师互动，
+  再次推进到近景展示人物面部表情变化——从平静到微笑。
+  每个镜头的景别变化都有叙事情感动机。
+cinematicIntent: build_intimacy
+narrativePurpose: reveal_emotion_progression
+visualIntent: gradual_emotional_intimacy
+created: 2026-06-28

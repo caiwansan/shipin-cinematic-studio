@@ -1,0 +1,35 @@
+- id: FM-SS-001
+  category: incorrect_scale
+  description: Shot scale does not match the intended framing distance (e.g., close-up intended but wide shot produced)
+  expectedBehavior: Actual shot scale must match the planned scale category
+  severity: high
+
+- id: FM-SS-002
+  category: excessive_crop
+  description: Subject is excessively cropped for the intended scale (e.g., top of head cut off in medium shot, or chin cut off in close-up)
+  expectedBehavior: Subject framing should respect standard boundaries for each scale
+  severity: medium
+
+- id: FM-SS-003
+  category: subject_too_small
+  description: Subject occupies too little of the frame for the intended scale (e.g., small figure in a wide shot that should be a medium)
+  expectedBehavior: Subject should occupy the expected portion of frame for the intended scale
+  severity: medium
+
+- id: FM-SS-004
+  category: missing_context
+  description: Establishing shot or wide shot fails to provide sufficient environmental context for subsequent shots
+  expectedBehavior: Establishing shots should clearly establish the spatial environment
+  severity: medium
+
+- id: FM-SS-005
+  category: emotion_scale_mismatch
+  description: Shot scale contradicts the emotional/narrative intent (e.g., wide shot for an intimate emotional reveal)
+  expectedBehavior: Scale should match the declared cinematicIntent and narrativePurpose
+  severity: high
+
+- id: FM-SS-006
+  category: abrupt_scale_jump
+  description: Shot scale transitions too abruptly without narrative motivation (e.g., extreme wide to extreme close-up with no intermediate)
+  expectedBehavior: Scale transitions should be motivated by narrative; jump cuts in scale require justification
+  severity: low

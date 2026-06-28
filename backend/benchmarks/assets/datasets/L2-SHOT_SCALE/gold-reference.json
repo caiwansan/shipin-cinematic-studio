@@ -1,0 +1,74 @@
+{
+  "scenario": "咖啡馆场景。建立镜头展示环境 → 中景展示对话 → 近景展示情绪变化。",
+  "cinematicIntent": "build_intimacy",
+  "narrativePurpose": "reveal_emotion_progression",
+  "visualIntent": "gradual_emotional_intimacy",
+  "expectedPlanning": {
+    "scaleSequence": [
+      { "scale": "establishing", "description": "Cafe interior, establish space and atmosphere" },
+      { "scale": "medium", "description": "Barista counter, character interaction" },
+      { "scale": "close_up", "description": "Character's face, emotional reveal" }
+    ],
+    "shots": [
+      {
+        "id": "shot_1",
+        "scale": "establishing",
+        "description": "Wide view of cozy cafe interior with warm lighting, bustling atmosphere",
+        "narrativeIntent": "establish_environment",
+        "scaleConstraints": {
+          "expectedScale": "establishing",
+          "subjectSizeInFrame": 5,
+          "contextVisible": true
+        }
+      },
+      {
+        "id": "shot_2",
+        "scale": "medium",
+        "description": "Character standing at counter talking to barista, visible from waist up",
+        "narrativeIntent": "show_interaction",
+        "scaleConstraints": {
+          "expectedScale": "medium",
+          "subjectSizeInFrame": 30,
+          "faceVisible": true,
+          "gestureVisible": true
+        }
+      },
+      {
+        "id": "shot_3",
+        "scale": "close_up",
+        "description": "Character's face, eyes and smile as reaction unfolds",
+        "narrativeIntent": "reveal_emotion",
+        "scaleConstraints": {
+          "expectedScale": "close_up",
+          "subjectSizeInFrame": 60,
+          "eyesVisible": true,
+          "expressionReadable": true
+        }
+      }
+    ],
+    "transitionIntent": {
+      "establishing_to_medium": "narrowing_focus_from_environment_to_character",
+      "medium_to_closeup": "emotional_intimacy_building"
+    },
+    "intentAlignment": {
+      "intimacy_built": "progressive_narrowing_of_scale",
+      "emotion_revealed": "ending_on_face_for_emotional_punch"
+    }
+  },
+  "expectedNegotiation": {
+    "scaleSequenceValidated": true,
+    "transitionMotivated": true,
+    "emotionAlignmentChecked": true
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalShots": 3
+  },
+  "expectedEvaluation": {
+    "scaleAccuracyScore": { "min": 95 },
+    "subjectFramingScore": { "min": 90 },
+    "contextPreservationScore": { "min": 85 },
+    "transitionScore": { "min": 85 },
+    "emotionAlignmentScore": { "min": 80 }
+  }
+}

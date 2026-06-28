@@ -1,0 +1,34 @@
+- id: EC-SS-01
+  name: Scale Accuracy
+  description: Shot scale matches the planned category (ECU/CU/MS/WS/ES)
+  weight: 0.25
+  passThreshold: 95
+  intentType: technical
+
+- id: EC-SS-02
+  name: Subject Framing
+  description: Subject is properly framed within the intended scale (no excessive crop, no unnecessary empty space)
+  weight: 0.20
+  passThreshold: 90
+  intentType: technical
+
+- id: EC-SS-03
+  name: Context Preservation
+  description: Establishing and wide shots provide adequate spatial/environmental context
+  weight: 0.15
+  passThreshold: 85
+  intentType: visual
+
+- id: EC-SS-04
+  name: Scale Transition
+  description: Shot scale transitions are narratively motivated, not abrupt or random
+  weight: 0.15
+  passThreshold: 85
+  intentType: visual
+
+- id: EC-SS-05
+  name: Emotion Alignment
+  description: Shot scale supports the declared cinematicIntent and narrativePurpose
+  weight: 0.25
+  passThreshold: 80
+  intentType: cinematic

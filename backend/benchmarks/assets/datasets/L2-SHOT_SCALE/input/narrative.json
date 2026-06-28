@@ -1,0 +1,50 @@
+{
+  "title": "咖啡馆 — 景别推进",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "咖啡馆场景，景别从建立镜头逐步推进到近景，验证叙事意图的尺度表达",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "一间温暖的咖啡店内，傍晚的黄色灯光，几张木桌，吧台在后方。顾客三三两两。建立镜头，展现咖啡馆整体空间和氛围。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "wide establishing shot from corner",
+          "lighting": "warm interior cafe lighting",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_2",
+          "description": "一个年轻人在吧台前与咖啡师交谈，中景画面，人物从腰部以上可见，表情和手势都清楚。吧台环境在背景中清晰可见。",
+          "characters": ["顾客"],
+          "dialogues": [],
+          "actions": ["talking to barista"],
+          "camera": "medium shot from front angle",
+          "lighting": "warm interior cafe lighting",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_3",
+          "description": "近景，特写年轻人的面部。他露出微笑，眼神中有温暖的笑意。背景虚化，焦点在面部。情绪表达清晰。",
+          "characters": ["顾客"],
+          "dialogues": [],
+          "actions": ["smiling"],
+          "camera": "close-up on face",
+          "lighting": "warm interior lighting, slight catchlight in eyes",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "顾客",
+      "gender": "male",
+      "appearance": "穿深色外套的年轻男性",
+      "reference_images": []
+    }
+  ]
+}

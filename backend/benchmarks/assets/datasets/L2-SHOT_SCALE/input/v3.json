@@ -1,0 +1,41 @@
+{
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "Cafe scene — progressive shot scale from establishing to close-up, building intimacy",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "Wide establishing shot of a cozy cafe interior at sunset. Warm yellow pendant lights, wooden tables, barista counter in background. A few customers. Establishes the intimate, warm atmosphere. Cinemaic, photorealistic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "empty room, harsh lighting, cold blue light, cluttered frame"
+        },
+        {
+          "id": "shot_2",
+          "prompt": "Medium shot of a young man in a dark coat standing at the cafe counter talking to a barista. Waist up visible, his expression and gestures clear. Background shows the cozy cafe environment. Warm lighting. Cinematic, photorealistic 24fps.",
+          "character_mapping": { "顾客": "char_1" },
+          "negative_prompt": "close-up, extreme wide shot, cold lighting, expressionless face"
+        },
+        {
+          "id": "shot_3",
+          "prompt": "Close-up of a young man's face in a warm-lit cafe. He is smiling warmly, eyes slightly crinkled. Background is softly blurred, creating emotional intimacy. Catchlight visible in eyes. Warm, intimate atmosphere. Cinematic, photorealistic 24fps.",
+          "character_mapping": { "顾客": "char_1" },
+          "negative_prompt": "wide shot, medium shot, blurred face, emotionless expression, cold light"
+        }
+      ],
+      "characters": [
+        { "id": "char_1", "name": "顾客", "gender": "male", "appearance": "深色外套年轻男性" }
+      ],
+      "scale_intent": {
+        "progression": ["establishing", "medium", "close_up"],
+        "narrativePurpose": ["establish_environment", "show_interaction", "reveal_emotion"],
+        "cinematicMood": "build_intimacy"
+      }
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}
