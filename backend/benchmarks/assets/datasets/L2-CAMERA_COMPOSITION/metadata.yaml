@@ -1,0 +1,32 @@
+# L2-CAMERA_COMPOSITION
+# 画面构图 — 主体位置、留白、视线空间、画面平衡、遮挡控制
+#
+# Wave 2 核心能力。验证镜头是否正确地表达了导演意图，
+# 而非仅仅"构图是否美观"。
+#
+# 五个子维度：
+# 1. Subject Placement（主体位置）— 三分法/中心/对称等规则
+# 2. Headroom（头顶空间）— 不裁切、不过多留白
+# 3. Look Room（视线空间）— 人物朝向方向保留合理空间
+# 4. Balance（画面平衡）— 左右视觉重量、前后层次
+# 5. Occlusion（主体遮挡）— 无意义遮挡控制
+#
+
+id: L2-CAMERA_COMPOSITION
+primaryCapability: CAMERA_COMPOSITION
+secondaryCapabilities:
+  - SPATIAL_LAYOUT
+  - CHARACTER_POSE
+  - RENDER_SHOT
+difficulty: L2
+stage: full
+name: Camera Composition — Subject Placement, Headroom, Look Room, Balance, Occlusion
+description: Verifies that shot composition follows cinematic rules—subject placement (rule of thirds, center, symmetry), adequate headroom, proper look room direction, visual balance, and absence of unintentional occlusion. Measures whether the composition correctly expresses the director's visual intent.
+scenario: |
+  一个宽阔的公园场景，傍晚时分。人物站在长椅前，望着右侧的湖面。
+  他向前走了几步坐在长椅上，然后转头看向左侧的路人。
+  需要验证构图是否在每个镜头中都遵循了导演意图。
+cinematicIntent: emphasize_character_isolation
+compositionRule: rule_of_thirds
+visualIntent: wide_open_composition
+created: 2026-06-28

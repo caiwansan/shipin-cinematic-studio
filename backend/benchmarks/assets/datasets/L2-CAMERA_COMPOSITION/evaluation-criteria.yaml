@@ -1,0 +1,41 @@
+- id: EC-CC-01
+  name: Subject Placement
+  description: Subject positioned according to specified composition rule (rule_of_thirds)
+  weight: 0.25
+  passThreshold: 90
+  intentType: visual
+
+- id: EC-CC-02
+  name: Headroom
+  description: Headroom within acceptable range (10-20% frame height above crown for medium shot)
+  weight: 0.15
+  passThreshold: 90
+  intentType: technical
+
+- id: EC-CC-03
+  name: Look Room
+  description: Adequate space maintained ahead of subject's gaze direction (≥30% frame width)
+  weight: 0.25
+  passThreshold: 90
+  intentType: visual
+
+- id: EC-CC-04
+  name: Visual Balance
+  description: Frame is visually balanced according to composition rule; no accidental imbalance
+  weight: 0.15
+  passThreshold: 85
+  intentType: visual
+
+- id: EC-CC-05
+  name: Occlusion Control
+  description: No unintentional occlusion of subject's face or key body parts
+  weight: 0.10
+  passThreshold: 90
+  intentType: technical
+
+- id: EC-CC-06
+  name: Cinematic Intent
+  description: Composition supports the declared cinematicIntent (emphasize_character_isolation)
+  weight: 0.10
+  passThreshold: 80
+  intentType: cinematic

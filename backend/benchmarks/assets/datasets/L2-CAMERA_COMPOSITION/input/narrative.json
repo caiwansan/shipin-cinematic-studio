@@ -1,0 +1,40 @@
+{
+  "title": "黄昏公园 — 构图连续性",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "公园长椅场景，验证三分法构图、视线空间、头顶空间、画面平衡与遮挡",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "傍晚的公园，湖面在右侧反射着金色阳光。一个人站在长椅前，面朝右侧望向湖面。三分法构图，人物位于画面左侧三分之一处，右侧保留充足的视线空间。头顶空间适中。画面开阔，远处天空和湖水占据了大部分画面。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["standing", "looking right at lake"],
+          "camera": "wide shot from slight left angle",
+          "lighting": "golden hour warm light from right",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_2",
+          "description": "同一个人坐在长椅上，身体稍微转向左侧，看着左侧方向的路人。三分法构图，人物仍保持在画面左侧三分之一处。头顶空间略微缩小但仍合理。视线方向为左侧。画面仍然保持开阔。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["sitting", "looking left at passerby"],
+          "camera": "medium shot from front-right",
+          "lighting": "golden hour warm light from right",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "人",
+      "gender": "male",
+      "appearance": "穿米色风衣的年轻男性",
+      "reference_images": []
+    }
+  ]
+}

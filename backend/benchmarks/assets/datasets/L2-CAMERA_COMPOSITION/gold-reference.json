@@ -1,0 +1,66 @@
+{
+  "scenario": "宽广的公园场景，傍晚。人物站在长椅前，望向右侧湖面。向前坐下，转头看向左侧路人。",
+  "cinematicIntent": "emphasize_character_isolation",
+  "compositionRule": "rule_of_thirds",
+  "visualIntent": "wide_open_composition",
+  "expectedPlanning": {
+    "compositionSetup": {
+      "rule": "rule_of_thirds",
+      "subjectPosition": "left_third",
+      "lookRoomDirection": "right",
+      "headroomType": "medium",
+      "depthLayers": ["background_sky", "mid_ground_lake", "foreground_bench"],
+      "intentAlignment": {
+        "isolation": "subject_placed_in_wide_frame_with_empty_space",
+        "openness": "background_visible_no_clutter"
+      }
+    },
+    "shots": [
+      {
+        "id": "shot_1",
+        "description": "Person standing before bench, looking right at the lake — subject on left third, look room on right",
+        "compositionConstraints": {
+          "rule": "rule_of_thirds",
+          "subjectGridPosition": "left_third",
+          "lookRoomDirection": "right",
+          "lookRoomPercent": 35,
+          "headroomPercent": 15
+        }
+      },
+      {
+        "id": "shot_2",
+        "description": "Person sitting on bench — subject still left third, headroom slightly reduced, looking left at passerby",
+        "compositionConstraints": {
+          "rule": "rule_of_thirds",
+          "subjectGridPosition": "left_third",
+          "lookRoomDirection": "left",
+          "lookRoomPercent": 30,
+          "headroomPercent": 12
+        }
+      }
+    ],
+    "intentAlignment": {
+      "isolation_emphasized": "subject_small_in_frame_surrounded_by_empty_space",
+      "composition_rule_applied": "subject_on_grid_lines_not_center"
+    }
+  },
+  "expectedNegotiation": {
+    "compositionRuleEnforced": true,
+    "headroomChecked": true,
+    "lookRoomChecked": true,
+    "occlusionChecked": true
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalShots": 2,
+    "shotPlanValidated": true
+  },
+  "expectedEvaluation": {
+    "subjectPlacementScore": { "min": 90 },
+    "headroomScore": { "min": 90 },
+    "lookRoomScore": { "min": 90 },
+    "balanceScore": { "min": 85 },
+    "occlusionScore": { "min": 90 },
+    "cinematicIntentScore": { "min": 80 }
+  }
+}

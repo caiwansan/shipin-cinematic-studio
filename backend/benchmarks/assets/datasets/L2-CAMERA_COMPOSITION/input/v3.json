@@ -1,0 +1,36 @@
+{
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "Park at golden hour — person stands by bench looking at lake, then sits and looks at passerby",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "Wide shot of a park at sunset. A young man in a beige coat stands in front of a bench facing right, looking at a lake. Composition follows rule of thirds: subject on left third, ample space on right for his gaze direction. Golden hour light from right. Open landscape with sky and lake. Cinematic, photorealistic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "subject centered, tight crop, bad headroom, occlusion, cluttered frame, flat lighting"
+        },
+        {
+          "id": "shot_2",
+          "prompt": "Medium shot of the same young man sitting on a park bench. He has turned slightly left, looking at a passerby. Rule of thirds composition: subject on left third, facing left with adequate look room. Golden hour lighting from right. Open background. Cinematic, photorealistic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "center composition, insufficient headroom, gaze space cut off, occlusion by foreground elements"
+        }
+      ],
+      "characters": [
+        { "id": "char_1", "name": "人", "gender": "male", "appearance": "穿米色风衣的年轻男性" }
+      ],
+      "composition_intent": {
+        "rule": "rule_of_thirds",
+        "subjectPosition": "left_third",
+        "lookRoomDirection": "alternating",
+        "cinematicMood": "isolation"
+      }
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}

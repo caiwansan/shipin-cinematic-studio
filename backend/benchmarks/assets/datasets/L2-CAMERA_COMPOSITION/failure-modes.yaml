@@ -1,0 +1,41 @@
+- id: FM-CC-001
+  category: subject_off_target
+  description: Subject is not positioned according to the specified composition rule (e.g., rule of thirds subject placed in center, or vice versa)
+  expectedBehavior: Subject position must match the intended composition rule within reasonable tolerance
+  severity: high
+
+- id: FM-CC-002
+  category: bad_headroom
+  description: Headroom is too tight (crown cut off) or too excessive (too much space above head)
+  expectedBehavior: Headroom should be appropriate (10-20% of frame height above crown, depending on shot type)
+  severity: medium
+
+- id: FM-CC-003
+  category: insufficient_lookroom
+  description: Subject's gaze direction runs into the edge of frame with insufficient space ahead
+  expectedBehavior: At least 30% of frame width should be ahead of the subject's gaze direction
+  severity: high
+
+- id: FM-CC-004
+  category: composition_unbalanced
+  description: Frame is visually unbalanced—one side overwhelms the other without narrative intent
+  expectedBehavior: Visual weight should be distributed according to composition rule; intentional imbalance must be justified
+  severity: medium
+
+- id: FM-CC-005
+  category: important_occlusion
+  description: Subject's face or key body parts are obscured by foreground elements (poles, trees, passers-by) without narrative purpose
+  expectedBehavior: No unintentional occlusion of the subject's face or key action areas
+  severity: high
+
+- id: FM-CC-006
+  category: intent_occlusion_break
+  description: An intentional occlusion (framing/composition device) is missing or misplaced
+  expectedBehavior: Intentional occlusion elements should be correctly positioned relative to the subject
+  severity: low
+
+- id: FM-CC-007
+  category: intent_composition_mismatch
+  description: Composition contradicts the declared cinematicIntent (e.g., isolation intent but subject is crowded)
+  expectedBehavior: Composition should support the declared cinematic intent
+  severity: medium
