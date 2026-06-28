@@ -4471,3 +4471,178 @@ model AgentArtifact {
 
   @@map("agent_artifact")
 }
+
+// ===== Workflow Runtime (KMKI-PLAT-011) =====
+
+model WorkflowDefinition {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  version     String
+  description String?
+  trigger     String?  // manual, event, schedule, webhook
+  graph       String   // JSON — DAG definition (nodes + edges)
+  variables   String?  // JSON — default variables
+  permissions String?  // JSON — required permissions
+  status      String   @default("active") // active, deprecated, disabled
+  category    String?  // short_drama, novel, ppt, geo, seo, research, translation, marketing
+  metadata    String?  // JSON
+  schemaVersion Int    @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  instances   WorkflowInstance[]
+  templates   WorkflowTemplate[]
+
+  @@map("workflow_definition")
+}
+
+model WorkflowInstance {
+  id           String   @id @default(uuid())
+  workflowId   String
+  workspaceId  String
+  status       String   // pending, running, paused, completed, failed, cancelled
+  currentNode  String?  // current node id in graph
+  input        String?  // JSON
+  output       String?  // JSON
+  result       String?  // JSON
+  cost         Float?
+  error        String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workflow     WorkflowDefinition @relation(fields: [workflowId], references: [id])
+  nodes        WorkflowNode[]
+  edges        WorkflowEdge[]
+  checkpoints  WorkflowCheckpoint[]
+  executions   WorkflowExecution[]
+  variables    WorkflowVariable[]
+  events       WorkflowEvent[]
+
+  @@map("workflow_instance")
+}
+
+model WorkflowNode {
+  id           String   @id @default(uuid())
+  instanceId   String
+  nodeId       String   // id within the DAG
+  type         String   // start, agent, capability, condition, parallel, loop, merge, delay, event, humanApproval, humanEdit, humanReview, humanUpload, humanDecision, end
+  name         String
+  config       String?  // JSON — node-specific configuration
+  status       String   @default("pending") // pending, running, completed, failed, skipped, paused
+  input        String?  // JSON
+  output       String?  // JSON
+  error        String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  retryCount   Int      @default(0)
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+
+  instance     WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_node")
+}
+
+model WorkflowEdge {
+  id           String   @id @default(uuid())
+  instanceId   String
+  edgeId       String   // id within the DAG
+  sourceNodeId String
+  targetNodeId String
+  condition    String?  // expression for conditional edges
+  label        String?
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+
+  instance     WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_edge")
+}
+
+model WorkflowCheckpoint {
+  id           String   @id @default(uuid())
+  instanceId   String
+  nodeId       String
+  snapshot     String   // JSON — workflow state at checkpoint
+  variables    String?  // JSON — variable state
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+
+  instance     WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, nodeId])
+  @@map("workflow_checkpoint")
+}
+
+model WorkflowExecution {
+  id           String   @id @default(uuid())
+  instanceId   String
+  nodeId       String
+  executionType String  // agent, capability, tool, human
+  executionId  String   // link to AgentSession or ExecutionPlan
+  status       String   // pending, running, completed, failed
+  input        String?  // JSON
+  output       String?  // JSON
+  cost         Float?
+  latencyMs    Int?
+  error        String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+
+  instance     WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_execution")
+}
+
+model WorkflowVariable {
+  id           String   @id @default(uuid())
+  instanceId   String
+  scope        String   // global, workflow, node, output, environment
+  name         String
+  value        String   // JSON
+  nodeId       String?  // for node-scoped variables
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  instance     WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, scope, name])
+  @@map("workflow_variable")
+}
+
+model WorkflowEvent {
+  id           String   @id @default(uuid())
+  instanceId   String
+  type         String   // workflowStarted, nodeStarted, nodeCompleted, nodeFailed, paused, resumed, cancelled, finished
+  nodeId       String?
+  data         String?  // JSON
+  timestamp    DateTime @default(now())
+
+  instance     WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_event")
+}
+
+model WorkflowTemplate {
+  id             String   @id @default(uuid())
+  workflowId     String
+  code           String   @unique
+  name           String
+  description    String?
+  category       String?  // short_drama, novel, ppt, geo, etc.
+  template       String   // JSON — graph template
+  defaultVariables String? // JSON
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  workflow       WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_template")
+}

@@ -1,6 +1,6 @@
 # Kunlun Mirror Platform Architecture Health Dashboard
 
-## Freeze Version: V3 (2025-06-28)
+## Freeze Version: V4 (2025-06-30)
 
 ### Runtime Compliance
 - Scanner Runtime: ✅ External, runs as pipeline
@@ -10,10 +10,11 @@
 - Capability Platform: ✅ Implements RuntimeLifecycle, uses PlatformContext, PlatformEventBus
 - Workspace Runtime: ✅ KMKI-PLAT-009 — ARCH-002 lifecycle, Snapshot recovery, unified Operation Log, Runtime-level AutoSave
 - Agent Runtime: ✅ KMKI-PLAT-010 — Agent Registry, Contract (BaseAgent), Dispatcher, Scheduler, Memory, Tool Adapter, Workspace integration, ARCH-002 lifecycle
+- Workflow Runtime: ✅ KMKI-PLAT-011 — DAG execution graph, Checkpoint Runtime, Replay Runtime (4 modes), Human-in-the-Loop (5 node types), Unified Variable System, Workflow Studio (frontend), ARCH-002 lifecycle, Platform SDK integration
 
 ### Platform Specification Compliance
 - Platform Context: ✅ No private Context defined in Runtime interfaces
-- Runtime Lifecycle: ✅ All 4 Runtimes implement RuntimeLifecycle (Init → Load → Validate → Execute → Update → Dispose)
+- Runtime Lifecycle: ✅ All 5 Runtimes implement RuntimeLifecycle (Init → Load → Validate → Execute → Update → Dispose)
 - Event Bus: ✅ No `new EventEmitter` in Runtime code; all use IEventBus
 - Error Model: ✅ Runtime code throws PlatformError subclasses with statusCode
 - Plugin Registry: ✅ PluginRegistry available; no hardcoded switch/case dispatch in core Runtimes
@@ -48,6 +49,7 @@
 | ADR-013 | (reserved) | — |
 | ADR-014 | Workspace Runtime | Accepted |
 | ADR-015 | Agent Runtime | Accepted |
+| ADR-016 | Workflow Runtime | Accepted |
 
 ### Merge Gate
 - Last Check: 2025-06-28

@@ -368,6 +368,24 @@ await app.register(projectV2Routes)
   await app.register(agentMemoryRoutes)
   await app.register(agentToolRoutes)
 
+  // Workflow Runtime routes (KMKI-PLAT-011)
+  await app.register(await import('./routes/platform/workflow/definition.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/instance.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/execution.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/checkpoint.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/replay.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/template.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/human.route.js').then(m => m.default))
+
+  // Initialize Workflow Runtime
+  try {
+    const { workflowRuntime } = await import('./services/platform/workflow/runtime/workflow.runtime.js')
+    await workflowRuntime.init({})
+    console.log('[WorkflowRuntime] ✅ Workflow Runtime initialized (KMKI-PLAT-011)')
+  } catch (err) {
+    console.warn('[WorkflowRuntime] Failed to initialize:', (err as Error).message)
+  }
+
   // Admin Customer Service settings
   await app.register(adminCustomerServiceRoutes)
 

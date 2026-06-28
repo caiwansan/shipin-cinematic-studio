@@ -288,6 +288,15 @@ export class PlatformSDK {
     } catch (err) {
       console.warn('[PlatformSDK] Failed to init Execution Runtime:', (err as Error).message)
     }
+
+    // Initialize Workflow Runtime (KMKI-PLAT-011)
+    try {
+      const { workflowRuntime } = await import('../../backend/src/services/platform/workflow/runtime/workflow.runtime.js')
+      await workflowRuntime.init({})
+      console.log('[PlatformSDK] Workflow Runtime initialized')
+    } catch (err) {
+      console.warn('[PlatformSDK] Failed to init Workflow Runtime:', (err as Error).message)
+    }
   }
 
   // ─── Public API ───
@@ -420,6 +429,87 @@ export class PlatformSDK {
       this.workspaceService = this._createWorkspaceService()
     }
     return this.workspaceService
+  }
+
+  // ─── Workflow Runtime (KMKI-PLAT-011) ───
+
+  private workflowService?: any
+
+  /**
+   * Get the Workflow service for managing and executing workflows.
+   */
+  workflow(): any {
+    if (!this.workflowService) {
+      this.workflowService = this._createWorkflowService_lazy()
+    }
+    return this.workflowService
+  }
+
+  private _createWorkflowService_lazy(): any {
+    const that = this
+    return {
+      async execute(code: string, input: any, workspaceId?: string, ctx?: any) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        // Create instance then execute
+        const instance = await workflowService.createInstance(code, workspaceId || 'default', input)
+        if (instance.id) {
+          await workflowService.execute(instance.id, ctx)
+        }
+        return instance
+      },
+      async pause(instanceId: string) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.pause(instanceId)
+      },
+      async resume(instanceId: string, ctx?: any) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.resume(instanceId, ctx)
+      },
+      async replay(instanceId: string, options?: { fromNode?: string; failedOnly?: boolean }) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.replay(instanceId, options)
+      },
+      async cancel(instanceId: string) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.cancel(instanceId)
+      },
+      async listDefinitions(filter?: { status?: string; category?: string }) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.listDefinitions(filter)
+      },
+      async getDefinition(code: string) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.getDefinition(code)
+      },
+      async createDefinition(data: any) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.createDefinition(data)
+      },
+      async getInstance(instanceId: string) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.getInstance(instanceId)
+      },
+      async describeInstance(instanceId: string) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.describeInstance(instanceId)
+      },
+      async submitHumanResponse(instanceId: string, nodeType: string, action: string, data?: any) {
+        const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+        return workflowService.submitHumanResponse(instanceId, nodeType, action, data)
+      },
+      health() {
+        return that._workflowHealth()
+      },
+    }
+  }
+
+  private async _workflowHealth() {
+    try {
+      const { workflowService } = await import('../../backend/src/services/platform/workflow/workflow.service.js')
+      return workflowService.health()
+    } catch {
+      return { status: 'unavailable' }
+    }
   }
 
   private _createWorkspaceService(): WorkspaceService {
