@@ -1,0 +1,24 @@
+- id: FM-CP-001
+  description: Camera path contains spatial discontinuity (sudden jump in position)
+  expectedBehavior: Camera position should change smoothly; no jump > 0.5 unit per frame
+  severity: high
+
+- id: FM-CP-002
+  description: Camera clips through scene geometry during path traversal
+  expectedBehavior: Camera should maintain collision-free trajectory; no intersection with scene objects
+  severity: high
+
+- id: FM-CP-003
+  description: Camera path fails to maintain subject in frame
+  expectedBehavior: Subject (主角) should remain visible within 20% margin of frame edges at all times
+  severity: high
+
+- id: FM-CP-004
+  description: Camera angle transition is jerky or inconsistent with planned path
+  expectedBehavior: Camera angle should change smoothly along the planned arc (push-in → crane-up → overhead → descend)
+  severity: medium
+
+- id: FM-CP-005
+  description: Camera elevation change is too fast or too slow relative to path progression
+  expectedBehavior: Elevation change rate should be consistent with path timing (±20% tolerance)
+  severity: medium

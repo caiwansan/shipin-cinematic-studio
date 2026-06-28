@@ -1,0 +1,29 @@
+- id: EC-CP-01
+  name: Spatial Continuity
+  description: Camera path must be spatially continuous — no frame-to-frame position jump > 0.5 units
+  weight: 0.35
+  passThreshold: 90
+
+- id: EC-CP-02
+  name: Subject Framing
+  description: Subject must stay within center 60% of frame throughout the entire shot
+  weight: 0.25
+  passThreshold: 85
+
+- id: EC-CP-03
+  name: Path Adherence
+  description: Actual camera trajectory must match planned path (push-in → crane-up → overhead → descend) within 10% deviation
+  weight: 0.20
+  passThreshold: 80
+
+- id: EC-CP-04
+  name: Collision Avoidance
+  description: No geometry clipping during camera movement
+  weight: 0.15
+  passThreshold: 95
+
+- id: EC-CP-05
+  name: Temporal Smoothness
+  description: Elevation change rate must be consistent (±20% tolerance relative to path progression)
+  weight: 0.05
+  passThreshold: 75

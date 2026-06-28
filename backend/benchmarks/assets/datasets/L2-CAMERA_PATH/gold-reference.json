@@ -1,0 +1,38 @@
+{
+  "scenario": "主角在清晨的街道上缓步前行。摄像机从正面15度跟拍，前推，匀速上升至俯拍45度，保持3秒后下降回初始高度。全程主角保持在画面中心区域。",
+  "expectedPlanning": {
+    "camera": {
+      "path": [
+        { "type": "push-in", "from": { "x": 5, "y": 1.6, "z": -3 }, "to": { "x": 3, "y": 1.6, "z": -1 }, "duration": 2.0 },
+        { "type": "crane-up", "from": { "x": 3, "y": 1.6, "z": -1 }, "to": { "x": 1.5, "y": 4.0, "z": 0.5 }, "duration": 2.5 },
+        { "type": "overhead", "position": { "x": 0, "y": 5.0, "z": 1 }, "duration": 3.0 },
+        { "type": "descend", "from": { "x": -1, "y": 4.0, "z": 1.5 }, "to": { "x": -3, "y": 1.6, "z": 2.0 }, "duration": 2.5 }
+      ],
+      "subject": "主角",
+      "subjectOffset": { "x": 0, "y": 0.5, "z": 0 }
+    },
+    "continuity": {
+      "maxFrameJump": 0.5,
+      "collisionCheck": true
+    }
+  },
+  "expectedNegotiation": {
+    "resolvedPath": "push-in-crane-up-overhead-descend",
+    "pathKeyframes": 4,
+    "deviationTolerance": 0.1,
+    "collisionAvoidanceEnabled": true
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalFrames": 240,
+    "cameraCuts": 0,
+    "pathInterpolation": "smooth-catmull-rom"
+  },
+  "expectedEvaluation": {
+    "spatialContinuityScore": { "min": 90 },
+    "subjectFramingScore": { "min": 85 },
+    "pathAdherenceScore": { "min": 80 },
+    "collisionScore": { "min": 95 },
+    "temporalSmoothnessScore": { "min": 75 }
+  }
+}

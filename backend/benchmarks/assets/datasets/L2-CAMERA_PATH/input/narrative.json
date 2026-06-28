@@ -1,0 +1,30 @@
+{
+  "title": "街道跟拍",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "主角在清晨的街道上行走，摄像机沿复杂轨迹跟拍",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "主角在清晨的街道上缓步前行。摄像机从正面15度角跟拍，前推接近，匀速上升至俯拍45度，保持俯拍3秒后匀速下降回到水平高度。全程主角保持在画面中心区域。",
+          "characters": ["主角"],
+          "dialogues": [],
+          "actions": ["walking"],
+          "camera": "dynamic tracking — push-in to crane-up to overhead to descend",
+          "lighting": "natural morning sunlight",
+          "duration_seconds": 10
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "主角",
+      "gender": "male",
+      "appearance": "穿着浅色外套的年轻男性",
+      "reference_images": []
+    }
+  ]
+}

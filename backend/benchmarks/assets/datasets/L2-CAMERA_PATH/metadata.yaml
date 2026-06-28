@@ -1,0 +1,28 @@
+# L2-CAMERA_PATH
+# 摄像机路径 — 镜头在三维空间中沿指定轨迹运动
+#
+# 场景：主角沿着一条长街行走，摄像机沿轨道从正面跟拍，逐步上升至俯拍再下降回到水平。
+# 关键点：
+#   1. 摄像机轨迹必须在 3D 空间中连续
+#   2. 轨迹不能发生突然跳跃或抖动
+#   3. 摄像机角度变化应与路径匹配（前推 → 上升 → 俯拍 → 下降）
+#   4. 被摄主体（主角）应在画面中保持可见
+#
+
+id: L2-CAMERA_PATH
+primaryCapability: CAMERA_PATH
+secondaryCapabilities:
+  - CAMERA_COMPOSITION
+  - SPATIAL_LAYOUT
+  - RENDER_SHOT
+difficulty: L2
+stage: full
+name: Camera Path — Tracking Walk
+description: Camera follows a character walking along a street with a planned trajectory (push-in → crane-up → overhead → descend). Verifies spatial continuity of camera path planning, negotiation, and runtime execution.
+scenario: |
+  主角在清晨的街道上缓步前行。
+  摄像机从正面 15 度跟拍，同步前推。
+  随后摄像机匀速上升至俯拍 45 度，
+  保持俯拍 3 秒后匀速下降至初始高度。
+  全程主角保持在画面中心区域。
+created: 2026-06-28

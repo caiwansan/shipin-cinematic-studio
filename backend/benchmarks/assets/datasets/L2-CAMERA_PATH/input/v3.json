@@ -1,0 +1,32 @@
+{
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "主角在清晨的街道上行走，摄像机沿复杂轨迹跟拍",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "A young man in a light coat walks slowly down a sunlit street in the early morning. The camera tracks him from a 15-degree frontal angle, pushing in as he walks. The camera smoothly cranes up to a 45-degree overhead angle, holds for 3 seconds, then descends back to eye level. The subject stays centered in frame throughout. Cinematic 24fps, natural lighting, photorealistic.",
+          "character_mapping": {
+            "主角": "char_1"
+          },
+          "negative_prompt": "jerky camera, sudden cuts, camera clipping through objects, subject out of frame, unstable motion"
+        }
+      ],
+      "characters": [
+        {
+          "id": "char_1",
+          "name": "主角",
+          "gender": "male",
+          "appearance": "年轻男性，浅色外套",
+          "reference_images": []
+        }
+      ]
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}
