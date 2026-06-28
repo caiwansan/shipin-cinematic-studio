@@ -3560,6 +3560,93 @@ model PromptVariant {
 }
 
 // ============================================================
+
+// ============================================================
+// KMKI-GEO — Knowledge Skeleton (Sprint 1A)
+// ============================================================
+
+model GEOProject {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  topic     String?
+  industry  String?
+  language  String   @default("zh")
+  country   String?
+  status    String   @default("draft")
+  config    Json     @default("{}")
+  workspaceId String? @map("workspace_id")
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entities  GEOEntity[]
+  relations GEOEntityRelation[]
+  versions  GEOProjectVersion[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("kmki_geo_projects")
+}
+
+model GEOEntity {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String
+  type        String   @default("Concept")
+  description String?
+  metadata    Json?    @default("{}")
+  provenance  Json     @default("{}")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project  GEOProject          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  outgoing GEOEntityRelation[] @relation("outgoing")
+  incoming GEOEntityRelation[] @relation("incoming")
+
+  @@index([projectId])
+  @@index([projectId, type])
+  @@map("kmki_geo_entities")
+}
+
+model GEOEntityRelation {
+  id        String   @id @default(uuid())
+  projectId String
+  sourceId  String
+  targetId  String
+  type      String   @default("related_to")
+  lineage   Json     @default("{}")
+  metadata  Json?    @default("{}")
+  createdAt DateTime @default(now())
+
+  project GEOProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  source  GEOEntity  @relation("outgoing", fields: [sourceId], references: [id], onDelete: Cascade)
+  target  GEOEntity  @relation("incoming", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([sourceId])
+  @@index([targetId])
+  @@map("kmki_geo_entity_relations")
+}
+
+model GEOProjectVersion {
+  id         String   @id @default(uuid())
+  projectId  String
+  version    Int
+  label      String?
+  graphData  Json     @default("{}")
+  metadata   Json?    @default("{}")
+  snapshotId String?
+  createdAt  DateTime @default(now())
+
+  project GEOProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, version])
+  @@index([projectId])
+  @@map("kmki_geo_project_versions")
+}
+
 // Brand GEO — Phase 2 Models
 // ============================================================
 
