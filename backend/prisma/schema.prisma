@@ -4319,3 +4319,155 @@ model WorkspaceExecution {
 
   runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
+
+// ===== Agent Runtime (KMKI-PLAT-010) =====
+
+model AgentDefinition {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  version         String
+  description     String?
+  capabilities    String   // JSON — capability names this agent can handle
+  supportedResources String? // JSON — resource types this agent can use
+  inputSchema     String?  // JSON
+  outputSchema    String?  // JSON
+  executionMode   String   // sync, async, streaming
+  permissions     String?  // JSON — required permissions
+  category        String?  // official, enterprise, private
+  status          String   @default("active") // active, deprecated, disabled
+  metadata        String?  // JSON
+  schemaVersion   Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  sessions        AgentSession[]
+  queues          AgentQueue[]
+  agentPerms     AgentPermission[]
+
+  @@map("agent_definition")
+}
+
+model AgentSession {
+  id             String   @id @default(uuid())
+  workspaceId    String
+  agentId        String
+  sessionType    String   // manual, scheduled, workflow, dispatch
+  status         String   // pending, planning, executing, streaming, paused, completed, failed, cancelled
+  input          String?  // JSON
+  output         String?  // JSON
+  runtimeState   String?  // JSON — for resume
+  error          String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  executedBy     String?  // userId or agentId (for collaboration)
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  agent          AgentDefinition @relation(fields: [agentId], references: [id])
+  stepExecutions AgentStepExecution[]
+  events         AgentEvent[]
+  artifactOutputs      AgentArtifact[]
+
+  @@map("agent_session")
+}
+
+model AgentStepExecution {
+  id             String   @id @default(uuid())
+  sessionId      String
+  stepName       String
+  planId         String   // link to ExecutionPlan
+  executionId    String   // link to ExecutionRuntime execution
+  capability     String
+  status         String   // pending, running, completed, failed, skipped
+  input          String?  // JSON
+  output         String?  // JSON
+  cost           Float?
+  tokenCount     Int?
+  latencyMs      Int?
+  error          String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  session        AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("agent_step_execution")
+}
+
+model AgentEvent {
+  id             String   @id @default(uuid())
+  sessionId      String
+  type           String   // planning, executing, streaming, completed, failed, paused, resumed, cancelled, toolCalled
+  data           String?  // JSON
+  timestamp      DateTime @default(now())
+
+  session        AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("agent_event")
+}
+
+model AgentContextMemory {
+  id             String   @id @default(uuid())
+  sessionId      String
+  type           String   // shortTerm, workspace, knowledge, summary
+  content        String   // JSON
+  relevanceScore Float?   // 0-1
+  ttl            Int?     // time-to-live in seconds
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime?
+
+  @@map("agent_context_memory")
+}
+
+model AgentQueue {
+  id             String   @id @default(uuid())
+  agentId        String
+  workspaceId    String
+  priority       Int      @default(0)
+  status         String   // queued, running, completed, failed
+  input          String?  // JSON
+  scheduledAt    DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  agent          AgentDefinition @relation(fields: [agentId], references: [id])
+
+  @@map("agent_queue")
+}
+
+model AgentPermission {
+  id             String   @id @default(uuid())
+  agentId        String
+  resource       String   // capability, resource, workspace, asset, etc.
+  action         String   // read, write, execute, admin
+  scope          String?  // global, tenant, workspace
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  agent          AgentDefinition @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("agent_permission")
+}
+
+model AgentArtifact {
+  id             String   @id @default(uuid())
+  sessionId      String
+  name           String
+  type           String   // file, data, reference, output
+  content        String?  // JSON or file reference
+  mimeType       String?
+  size           Int?
+  hash           String?
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  session        AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("agent_artifact")
+}

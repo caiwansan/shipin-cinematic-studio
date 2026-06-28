@@ -359,6 +359,55 @@ export class PlatformSDK {
     return this.executionRuntime.execute(ctx || {}, plan) as any
   }
 
+  // ─── Agent Runtime (KMKI-PLAT-010) ───
+
+  private agentService?: any
+
+  /**
+   * Get the Agent service for managing and dispatching agents.
+   */
+  agent(): any {
+    if (!this.agentService) {
+      this.agentService = this._createAgentService_lazy()
+    }
+    return this.agentService
+  }
+
+  private _createAgentService_lazy(): any {
+    const that = this
+    return {
+      async execute(code: string, input: any, ctx?: any) {
+        const { agentService } = await import('../../backend/src/services/platform/agent/agent.service.js')
+        return agentService.execute(code, input, ctx)
+      },
+      async dispatch(code: string, input: any, ctx?: any) {
+        const { agentService } = await import('../../backend/src/services/platform/agent/agent.service.js')
+        return agentService.dispatch({ agentCode: code, input }, ctx)
+      },
+      async schedule(plan: any, ctx?: any) {
+        const { agentService } = await import('../../backend/src/services/platform/agent/agent.service.js')
+        return agentService.schedule(plan, ctx)
+      },
+      async register(definition: any, executor?: any) {
+        const { agentService } = await import('../../backend/src/services/platform/agent/agent.service.js')
+        return agentService.register(definition, executor)
+      },
+      async unregister(code: string) {
+        const { agentService } = await import('../../backend/src/services/platform/agent/agent.service.js')
+        return agentService.unregister(code)
+      },
+      listAgents() {
+        return []
+      },
+      getAgent(code: string) {
+        return null
+      },
+      health() {
+        return { status: 'ok' }
+      },
+    }
+  }
+
   // ─── Workspace Runtime (KMKI-PLAT-009) ───
 
   private workspaceService?: WorkspaceService

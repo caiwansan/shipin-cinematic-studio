@@ -81,6 +81,19 @@ export type PlatformEventType =
   | 'credential:Rotated'
   // Cost Domain
   | 'cost:ThresholdExceeded'
+  // Agent Domain (KMKI-PLAT-010)
+  | 'agent:Registered'
+  | 'agent:Unregistered'
+  | 'agent:SessionCreated'
+  | 'agent:Planning'
+  | 'agent:Executing'
+  | 'agent:Streaming'
+  | 'agent:Completed'
+  | 'agent:Failed'
+  | 'agent:Paused'
+  | 'agent:Resumed'
+  | 'agent:Cancelled'
+  | 'agent:ToolCalled'
 
 /**
  * Standard platform event payload.

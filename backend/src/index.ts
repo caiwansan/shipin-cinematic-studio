@@ -47,6 +47,12 @@ import adminMembersStorageRoutes from './routes/admin-members-storage.js'
 import adminAgentRoutes from './routes/admin-agents.js'
 import adminMarketAgentRoutes from './routes/admin-market-agents.js'
 import agentPlanRoutes from './routes/agent-plan.js'
+import agentDefinitionRoutes from './routes/platform/agent/agent.route.js'
+import agentSessionRoutes from './routes/platform/agent/session.route.js'
+import agentDispatchRoutes from './routes/platform/agent/dispatch.route.js'
+import agentScheduleRoutes from './routes/platform/agent/schedule.route.js'
+import agentMemoryRoutes from './routes/platform/agent/memory.route.js'
+import agentToolRoutes from './routes/platform/agent/tool.route.js'
 import adminCustomerServiceRoutes from './routes/admin-customer-service.js'
 import modelRoutes from './routes/models.js'
 import styleProfileRoutes from './routes/style-profiles.js'
@@ -354,6 +360,13 @@ await app.register(projectV2Routes)
 
   // Agent Plans (前台+后台)
   await app.register(agentPlanRoutes)
+  // Agent Runtime routes (KMKI-PLAT-010)
+  await app.register(agentDefinitionRoutes)
+  await app.register(agentSessionRoutes)
+  await app.register(agentDispatchRoutes)
+  await app.register(agentScheduleRoutes)
+  await app.register(agentMemoryRoutes)
+  await app.register(agentToolRoutes)
 
   // Admin Customer Service settings
   await app.register(adminCustomerServiceRoutes)
