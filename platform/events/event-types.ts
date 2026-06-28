@@ -94,6 +94,25 @@ export type PlatformEventType =
   | 'agent:Resumed'
   | 'agent:Cancelled'
   | 'agent:ToolCalled'
+  // Governance Domain (KMKI-PLAT-012)
+  | 'governance:TenantCreated'
+  | 'governance:TenantActivated'
+  | 'governance:TenantDeactivated'
+  | 'governance:SubscriptionChanged'
+  | 'governance:SubscriptionCancelled'
+  | 'governance:SubscriptionExpired'
+  | 'governance:QuotaExceeded'
+  | 'governance:QuotaWarning'
+  | 'governance:CapabilityAuthorized'
+  | 'governance:CapabilityDenied'
+  | 'governance:AuditLogged'
+  | 'governance:PolicyEvaluated'
+  | 'governance:PolicyViolated'
+  | 'governance:LicenseExpired'
+  | 'governance:BillingThresholdExceeded'
+  | 'governance:BillingRecorded'
+  | 'governance:RoleCreated'
+  | 'governance:RoleAssigned'
 
 /**
  * Standard platform event payload.

@@ -4646,3 +4646,259 @@ model WorkflowTemplate {
 
   @@map("workflow_template")
 }
+
+// ===== Platform Governance (KMKI-PLAT-012) =====
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   // personal, team, enterprise
+  status      String   @default("active")
+  metadata    String?  // JSON
+  schemaVersion Int    @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizations        GovOrganization[]
+  subscriptions        Subscription[]
+  quota                Quota?
+  usageRecords         UsageRecord[]
+  billingRecords       BillingRecord[]
+  auditLogs            AuditLog[]
+  roles                Role[]
+  users                GovUser[]
+  policies             Policy[]
+  licenses             License[]
+  analyticsDaily       AnalyticsDaily[]
+
+  @@map("governance_tenant")
+}
+
+model GovOrganization {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  type        String   // personal, team, enterprise, department
+  parentId    String?
+  status      String   @default("active")
+  metadata    String?  // JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent      GovOrganization? @relation("GovOrgHierarchy", fields: [parentId], references: [id])
+  children    GovOrganization[] @relation("GovOrgHierarchy")
+
+  @@map("governance_organization")
+}
+
+model GovUser {
+  id          String   @id @default(uuid())
+  tenantId    String
+  email       String?
+  name        String
+  role        String?  // reference to Role.id
+  status      String   @default("active")
+  metadata    String?  // JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("governance_user")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  tenantId    String
+  code        String   // owner, admin, manager, operator, reviewer, member, guest
+  name        String
+  description String?
+  capabilities String  // JSON — granted capability codes
+  metadata    String?  // JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, code])
+
+  @@map("governance_role")
+}
+
+model SubscriptionPlan {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  description  String?
+  price        Float?
+  currency     String   @default("USD")
+  billingCycle String   // monthly, yearly, once
+  capabilities String   // JSON — granted capabilities and limits
+  metadata     String?  // JSON
+  schemaVersion Int     @default(1)
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions Subscription[]
+  grants         CapabilityGrant[]
+
+  @@map("governance_subscription_plan")
+}
+
+model Subscription {
+  id             String   @id @default(uuid())
+  tenantId       String
+  planId         String
+  status         String   // active, expired, cancelled, suspended
+  startDate      DateTime
+  endDate        DateTime?
+  autoRenew      Boolean  @default(false)
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan           SubscriptionPlan   @relation(fields: [planId], references: [id])
+
+  @@map("governance_subscription")
+}
+
+model CapabilityGrant {
+  id             String   @id @default(uuid())
+  planId         String
+  capability     String   // capability code (video.generate, geo.optimize, etc.)
+  limits         String?  // JSON — specific limits for this capability
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  plan           SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  @@unique([planId, capability])
+
+  @@map("governance_capability_grant")
+}
+
+model Quota {
+  id             String   @id @default(uuid())
+  tenantId       String
+  dailyTokens    Int      @default(0)
+  monthlyTokens  Int      @default(0)
+  imageCredits   Int      @default(0)
+  videoMinutes   Int      @default(0)
+  speechMinutes  Int      @default(0)
+  concurrentJobs Int      @default(1)
+  workflowRuns   Int      @default(0)
+  agentSessions  Int      @default(0)
+  storage        Int      @default(0)
+  workspaceCount Int      @default(1)
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([tenantId])
+
+  @@map("governance_quota")
+}
+
+model UsageRecord {
+  id             String   @id @default(uuid())
+  tenantId       String
+  resourceType   String   // token, image, video, audio, workflow, agent, storage
+  amount         Float
+  unit           String   // tokens, credits, minutes, bytes, count
+  capability     String?
+  source         String   // execution, workflow, agent, tool
+  sourceId       String?  // link to execution/workflow/agent session
+  metadata       String?  // JSON
+  recordedAt     DateTime @default(now())
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("governance_usage_record")
+}
+
+model BillingRecord {
+  id             String   @id @default(uuid())
+  tenantId       String
+  type           String   // subscription, usage, overage, refund
+  amount         Float
+  currency       String   @default("USD")
+  description    String?
+  source         String   // execution, ai_resource, workflow, storage
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("governance_billing_record")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  tenantId       String
+  userId         String?
+  action         String   // login, capabilityUsed, workflowExecuted, agentDispatched, workspaceCreated, resourceConfigured, export, publish, billing, permissionChanged, adminAction
+  resource       String   // what was acted upon
+  resourceId     String?
+  details        String?  // JSON
+  ipAddress      String?
+  userAgent      String?
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("governance_audit_log")
+}
+
+model Policy {
+  id             String   @id @default(uuid())
+  tenantId       String?
+  code           String   @unique
+  name           String
+  type           String   // quota, security, region, rateLimit, approval, compliance, content
+  rules          String   // JSON — policy rules
+  enabled        Boolean  @default(true)
+  priority       Int      @default(0)
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@map("governance_policy")
+}
+
+model License {
+  id             String   @id @default(uuid())
+  tenantId       String
+  licenseKey     String   @unique
+  status         String   // active, expired, revoked
+  seats          Int
+  modules        String   // JSON — licensed modules
+  startDate      DateTime
+  endDate        DateTime?
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("governance_license")
+}
+
+model AnalyticsDaily {
+  id             String   @id @default(uuid())
+  tenantId       String
+  date           DateTime
+  metric         String   // dailyActiveUsers, tokenCount, workflowCount, cost, agentSessions, successRate, failureRate, latencyAvg
+  value          Float
+  metadata       String?  // JSON
+  createdAt      DateTime @default(now())
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, date, metric])
+
+  @@map("governance_analytics_daily")
+}

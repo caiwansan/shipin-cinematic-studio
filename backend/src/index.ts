@@ -12,6 +12,8 @@ import runtimeContextPlugin from './plugins/runtime-context.js'
 import projectV2Routes from './routes/projects-v2.js'
 import systemVersionRoutes from './routes/system-version.js'
 import workbenchProjectRoutes from './routes/workbench-project.js'
+// Platform Governance routes (KMKI-PLAT-012)
+import governanceMainRoute from './routes/platform/governance/governance-main.route.js'
 // Route imports
 import communityCategoryRoutes from './routes/community/categories.js'
 import communityPostRoutes from './routes/community/posts.js'
@@ -532,7 +534,8 @@ await app.register(projectV2Routes)
   // REMOVED: clusterRoutes
   // REMOVED: globalRoutes
   // REMOVED: autonomousRoutes
-  // REMOVED: governanceRoutes
+  // Platform Governance routes (KMKI-PLAT-012)
+await app.register(governanceMainRoute)
   await app.register(workbenchProjectRoutes)
 
   // ⭐ 行政区划 API
