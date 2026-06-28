@@ -1,37 +1,72 @@
 {
-  "plotSummary": "主角在清晨的街道上漫步",
-  "scenes": [
-    {
-      "id": "scene_1",
-      "description": "清晨街道，主角独自散步",
-      "shots": [
-        {
-          "id": "shot_1",
-          "type": "shot",
-          "description": "主角在清晨的街道上漫步，阳光透过树叶洒下斑驳光影。",
-          "characters": ["主角"],
-          "dialogue": [],
-          "action": "walking",
-          "camera": {
-            "position": "medium shot",
-            "movement": "static"
-          },
-          "lighting": "natural sunlight",
-          "duration_seconds": 5,
-          "visual_cues": ["阳光", "树叶", "斑驳光影", "清晨街道"]
-        }
-      ]
+  "title": "小场景",
+  "storyArc": {
+    "logline": "主角在清晨的街道上漫步",
+    "actStructure": {
+      "act1": {
+        "incitingIncident": "scene_1"
+      }
     }
-  ],
+  },
   "characters": [
     {
+      "id": "char_1",
       "name": "主角",
+      "species": "human",
       "gender": "male",
       "age": "young adult",
       "appearance": "穿着休闲服，短发，约25岁",
-      "features": [],
-      "clothing": "休闲服"
+      "personality": "平静"
     }
   ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "title": "清晨街道",
+      "timeOfDay": "dawn",
+      "location": "街道",
+      "description": "清晨的街道，阳光透过树叶洒下斑驳光影。"
+    }
+  ],
+  "segments": [
+    {
+      "id": "seg_001",
+      "sceneId": "scene_1",
+      "segmentNumber": 1,
+      "duration": 5,
+      "characters": [
+        {
+          "characterId": "char_1",
+          "presence": "appears",
+          "position": "center",
+          "mainAction": "walking"
+        }
+      ],
+      "environment": {
+        "overall": "outdoor",
+        "weather": "sunny",
+        "timeOfDay": "dawn",
+        "lightingCondition": "sunlight through trees",
+        "locationTags": ["street", "urban"]
+      },
+      "camera": {
+        "position": "medium shot",
+        "movement": "static",
+        "focus": "character"
+      },
+      "action": {
+        "summary": "主角在清晨的街道上漫步",
+        "focus": "character"
+      },
+      "emotion": {
+        "mood": "peaceful",
+        "intensity": "low"
+      }
+    }
+  ],
+  "soundDesign": [],
+  "effectsDesign": [],
+  "voices": [],
+  "props": [],
   "global_mood": "平静"
 }

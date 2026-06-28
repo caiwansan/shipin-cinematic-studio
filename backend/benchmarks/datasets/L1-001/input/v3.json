@@ -1,105 +1,196 @@
 {
-  "plotSummary": "Alice 和 Bob 在咖啡馆见面交谈",
-  "scenes": [
-    {
-      "id": "scene_1",
-      "description": "咖啡馆内，Alice 先到，Bob 后到，两人简短对话",
-      "shots": [
-        {
-          "id": "shot_1",
-          "type": "shot",
-          "description": "Alice 坐在咖啡馆窗边，看向窗外",
-          "characters": ["Alice"],
-          "dialogue": [],
-          "action": "sitting, looking out window",
-          "camera": {
-            "position": "medium shot",
-            "movement": "static"
-          },
-          "lighting": "warm indoor lighting",
-          "duration_seconds": 3,
-          "visual_cues": ["咖啡馆", "窗边", "窗外"]
-        },
-        {
-          "id": "shot_2",
-          "type": "shot",
-          "description": "Bob 走进咖啡馆，看到了 Alice",
-          "characters": ["Bob"],
-          "dialogue": [],
-          "action": "entering, spotting Alice",
-          "camera": {
-            "position": "medium shot",
-            "movement": "static"
-          },
-          "lighting": "warm indoor lighting",
-          "duration_seconds": 3,
-          "visual_cues": ["门", "走进", "看到"]
-        },
-        {
-          "id": "shot_3",
-          "type": "shot",
-          "description": "Alice 抬头对 Bob 微笑",
-          "characters": ["Alice"],
-          "dialogue": ["你来了。"],
-          "action": "looking up, smiling",
-          "camera": {
-            "position": "close-up",
-            "movement": "static"
-          },
-          "lighting": "warm indoor lighting",
-          "duration_seconds": 3,
-          "visual_cues": ["抬头", "微笑"]
-        },
-        {
-          "id": "shot_4",
-          "type": "shot",
-          "description": "Bob 坐下，两人对视",
-          "characters": ["Alice", "Bob"],
-          "dialogue": ["今天天气真好。"],
-          "action": "sitting down, looking at each other",
-          "camera": {
-            "position": "two-shot",
-            "movement": "static"
-          },
-          "lighting": "warm indoor lighting",
-          "duration_seconds": 3,
-          "visual_cues": ["坐下", "对视"]
-        },
-        {
-          "id": "shot_5",
-          "type": "shot",
-          "description": "Alice 笑着回答，窗外阳光洒进来",
-          "characters": ["Alice"],
-          "dialogue": ["是啊，最适合出来走走了。"],
-          "action": "laughing, talking",
-          "camera": {
-            "position": "medium shot",
-            "movement": "static"
-          },
-          "lighting": "warm indoor lighting with sunlight",
-          "duration_seconds": 4,
-          "visual_cues": ["笑", "阳光", "窗边"]
-        }
-      ]
+  "title": "两段对话",
+  "storyArc": {
+    "logline": "Alice 和 Bob 在咖啡馆见面交谈",
+    "actStructure": {
+      "act1": {
+        "incitingIncident": "scene_1"
+      }
     }
-  ],
+  },
   "characters": [
     {
+      "id": "char_alice",
       "name": "Alice",
+      "species": "human",
       "gender": "female",
       "age": "young adult",
       "appearance": "长发，穿白色衬衫，约25岁",
-      "features": [],
-      "clothing": "白色衬衫"
+      "personality": "开朗"
     },
     {
+      "id": "char_bob",
       "name": "Bob",
+      "species": "human",
       "gender": "male",
       "age": "young adult",
       "appearance": "短发，穿深色夹克，约28岁",
-      "features": [],
-      "clothing": "深色夹克"
+      "personality": "沉稳"
     }
   ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "title": "咖啡馆",
+      "timeOfDay": "afternoon",
+      "location": "室内·咖啡馆",
+      "description": "温馨的小咖啡馆，光线温暖。"
+    }
+  ],
+  "segments": [
+    {
+      "id": "seg_001",
+      "sceneId": "scene_1",
+      "segmentNumber": 1,
+      "duration": 3,
+      "characters": [
+        {
+          "characterId": "char_alice",
+          "presence": "appears",
+          "position": "left",
+          "mainAction": "sitting, looking out window"
+        }
+      ],
+      "environment": {
+        "overall": "indoor",
+        "weather": "fair",
+        "timeOfDay": "afternoon",
+        "lightingCondition": "warm indoor lighting",
+        "locationTags": ["cafe", "indoor"]
+      },
+      "camera": {
+        "position": "medium shot",
+        "movement": "static",
+        "focus": "character"
+      },
+      "action": { "summary": "Alice 坐在咖啡馆窗边，看向窗外", "focus": "character" },
+      "emotion": { "mood": "calm", "intensity": "low" }
+    },
+    {
+      "id": "seg_002",
+      "sceneId": "scene_1",
+      "segmentNumber": 2,
+      "duration": 3,
+      "characters": [
+        {
+          "characterId": "char_bob",
+          "presence": "appears",
+          "position": "right",
+          "mainAction": "entering, spotting Alice"
+        }
+      ],
+      "environment": {
+        "overall": "indoor",
+        "weather": "fair",
+        "timeOfDay": "afternoon",
+        "lightingCondition": "warm indoor lighting",
+        "locationTags": ["cafe", "indoor"]
+      },
+      "camera": {
+        "position": "medium shot",
+        "movement": "static",
+        "focus": "character"
+      },
+      "action": { "summary": "Bob 走进咖啡馆，看到了 Alice", "focus": "character" },
+      "emotion": { "mood": "neutral", "intensity": "low" }
+    },
+    {
+      "id": "seg_003",
+      "sceneId": "scene_1",
+      "segmentNumber": 3,
+      "duration": 3,
+      "characters": [
+        {
+          "characterId": "char_alice",
+          "presence": "appears",
+          "position": "left",
+          "mainAction": "looking up, smiling"
+        }
+      ],
+      "environment": {
+        "overall": "indoor",
+        "weather": "fair",
+        "timeOfDay": "afternoon",
+        "lightingCondition": "warm indoor lighting",
+        "locationTags": ["cafe", "indoor"]
+      },
+      "camera": {
+        "position": "close-up",
+        "movement": "static",
+        "focus": "character"
+      },
+      "action": { "summary": "Alice 抬头对 Bob 微笑", "focus": "character" },
+      "emotion": { "mood": "happy", "intensity": "medium" },
+      "dialogue": "你来了。"
+    },
+    {
+      "id": "seg_004",
+      "sceneId": "scene_1",
+      "segmentNumber": 4,
+      "duration": 3,
+      "characters": [
+        {
+          "characterId": "char_alice",
+          "presence": "appears",
+          "position": "left",
+          "mainAction": "looking at Bob"
+        },
+        {
+          "characterId": "char_bob",
+          "presence": "appears",
+          "position": "right",
+          "mainAction": "sitting down, looking at Alice"
+        }
+      ],
+      "environment": {
+        "overall": "indoor",
+        "weather": "fair",
+        "timeOfDay": "afternoon",
+        "lightingCondition": "warm indoor lighting",
+        "locationTags": ["cafe", "indoor"]
+      },
+      "camera": {
+        "position": "two-shot",
+        "movement": "static",
+        "focus": "characters"
+      },
+      "action": { "summary": "Bob 坐下，两人对视", "focus": "dialogue" },
+      "emotion": { "mood": "warm", "intensity": "medium" },
+      "dialogue": "今天天气真好。"
+    },
+    {
+      "id": "seg_005",
+      "sceneId": "scene_1",
+      "segmentNumber": 5,
+      "duration": 4,
+      "characters": [
+        {
+          "characterId": "char_alice",
+          "presence": "appears",
+          "position": "left",
+          "mainAction": "laughing, talking"
+        }
+      ],
+      "environment": {
+        "overall": "indoor",
+        "weather": "fair",
+        "timeOfDay": "afternoon",
+        "lightingCondition": "warm indoor lighting with sunlight",
+        "locationTags": ["cafe", "indoor"]
+      },
+      "camera": {
+        "position": "medium shot",
+        "movement": "static",
+        "focus": "character"
+      },
+      "action": { "summary": "Alice 笑着回答，窗外阳光洒进来", "focus": "character" },
+      "emotion": { "mood": "happy", "intensity": "medium" },
+      "dialogue": "是啊，最适合出来走走了。"
+    }
+  ],
+  "soundDesign": [],
+  "effectsDesign": [],
+  "voices": [],
+  "props": [],
   "global_mood": "温暖"
 }
