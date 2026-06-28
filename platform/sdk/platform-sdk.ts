@@ -80,6 +80,55 @@ export interface ExecuteResult {
   }
 }
 
+// ─── Execution Runtime Types (KMKI-PLAT-007) ───
+
+export interface ExecutionStepDTO {
+  id: string
+  type: string
+  name: string
+  inputs?: Record<string, any>
+  outputs?: Record<string, string>
+  dependencies?: string[]
+  timeout?: number
+  retry?: { maxAttempts: number; backoffMs: number }
+  metadata?: Record<string, any>
+}
+
+export interface ExecutionPlanDTO {
+  id: string
+  capabilityId: string
+  version: string
+  steps: ExecutionStepDTO[]
+  dependencies?: Record<string, string[]>
+  parallelGroups?: string[][]
+  metadata?: Record<string, any>
+  schemaVersion: string
+}
+
+export interface ExecutionResultDTO {
+  planId: string
+  capabilityId: string
+  status: 'completed' | 'failed' | 'cancelled'
+  startedAt: string
+  completedAt?: string
+  durationMs?: number
+  stepResults: Array<{
+    stepId: string
+    stepType: string
+    status: string
+    durationMs?: number
+    error?: { code: string; message: string }
+  }>
+  error?: { code: string; message: string }
+  metrics: {
+    totalSteps: number
+    completedSteps: number
+    failedSteps: number
+    totalDurationMs: number
+  }
+  schemaVersion: string
+}
+
 // ─── Service Interfaces (all accept PlatformContext) ───
 
 export interface AssetService {
@@ -119,6 +168,7 @@ export class PlatformSDK {
   private semanticService?: SemanticService
   private goalService?: GoalService
   private capabilityService?: CapabilityService
+  private executionRuntime?: any
 
   async initialize(): Promise<void> {
     const { assetRuntime } = await import('../../backend/src/services/asset/runtime/asset.runtime.js')
@@ -172,6 +222,16 @@ export class PlatformSDK {
       async register(input, ctx) { return capabilityRuntime.register(input as any) as any },
       list(ctx) { return capabilityRuntime.listCapabilities() as any },
     }
+
+    // Initialize Execution Runtime (KMKI-PLAT-007)
+    try {
+      const { executionRuntime } = await import('../../backend/src/services/platform/execution/runtime/execution.runtime.js')
+      this.executionRuntime = executionRuntime
+      await executionRuntime.init({})
+      console.log('[PlatformSDK] Execution Runtime initialized')
+    } catch (err) {
+      console.warn('[PlatformSDK] Failed to init Execution Runtime:', (err as Error).message)
+    }
   }
 
   // ─── Public API ───
@@ -204,6 +264,43 @@ export class PlatformSDK {
   async execute(request: ExecuteRequest, ctx?: PlatformContext): Promise<ExecuteResult> {
     if (!this.capabilityService) throw new Error('SDK not initialized. Call platformSDK.initialize() first.')
     return this.capabilityService.resolve(request, ctx)
+  }
+
+  // ─── Execution Runtime Methods (KMKI-PLAT-007) ───
+
+  /**
+   * Compile a capability into an execution plan.
+   */
+  async compile(capabilityId: string, ctx?: PlatformContext): Promise<ExecutionPlanDTO> {
+    if (!this.executionRuntime) throw new Error('Execution Runtime not available')
+
+    const { executionCompiler } = await import('../../backend/src/services/platform/execution/compiler/execution-compiler.js')
+    const compiled = await executionCompiler.compile({
+      id: capabilityId,
+      name: capabilityId,
+      displayName: capabilityId,
+      description: null,
+      category: 'general',
+      version: '1.0.0',
+      status: 'active',
+    }, undefined, ctx as any)
+
+    return compiled.plan as any
+  }
+
+  /**
+   * Create an execution plan from a capability.
+   */
+  async plan(capabilityId: string, _input: any, ctx?: PlatformContext): Promise<ExecutionPlanDTO> {
+    return this.compile(capabilityId, ctx)
+  }
+
+  /**
+   * Execute an execution plan and return results.
+   */
+  async executePlan(plan: ExecutionPlanDTO, ctx?: PlatformContext): Promise<ExecutionResultDTO> {
+    if (!this.executionRuntime) throw new Error('Execution Runtime not available')
+    return this.executionRuntime.execute(ctx || {}, plan) as any
   }
 }
 

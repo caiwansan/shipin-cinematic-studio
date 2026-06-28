@@ -582,6 +582,18 @@ await app.register(projectV2Routes)
   await app.register(await import('./routes/goal/review.route.js').then(m => m.default))
   await app.register(await import('./routes/goal/goal-main.route.js').then(m => m.default))
 
+  // Execution Runtime routes (KMKI-PLAT-007 — Platform Execution Kernel)
+  await app.register(await import('./routes/platform/execution/execution-main.route.js').then(m => m.default))
+
+  // Initialize Execution Runtime (KMKI-PLAT-007 — Platform Execution Kernel)
+  try {
+    const { executionRuntime } = await import('./services/platform/execution/runtime/execution.runtime.js')
+    await executionRuntime.init({})
+    console.log('[ExecutionRuntime] ✅ Execution Runtime initialized')
+  } catch (err) {
+    console.warn('[ExecutionRuntime] Failed to initialize:', (err as Error).message)
+  }
+
   // 初始化 Goal Runtime（Phase 4 平台级增长执行层）
   try {
     const { goalRuntime } = await import('./services/goal/runtime/goal.runtime.js')
