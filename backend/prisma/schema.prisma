@@ -4047,3 +4047,125 @@ model CapabilityProviderMapping {
   capability     CapabilityContract @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
   @@unique([capabilityId, provider])
 }
+
+// ===== AI Resource Runtime (KMKI-PLAT-008) =====
+
+model ResourceContract {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  type           String
+  vendor         String
+  description    String?
+  capabilities   String?
+  models         String?
+  endpoints      String?
+  authentication String?
+  pricing        String?
+  limits         String?
+  metadata       String?
+  schemaVersion  Int      @default(1)
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  credentials    ResourceCredential[]
+  healthRecords  ResourceHealth[]
+  capabilityMatrix ResourceCapabilityMatrix[]
+  costRecords    ResourceCost[]
+}
+
+model ResourceCredential {
+  id             String   @id @default(uuid())
+  resourceId     String
+  tenantId       String
+  workspaceId    String?
+  name           String
+  encryptedKey   String
+  endpoint       String?
+  models         String?
+  status         String   @default("active")
+  rotationPolicy String?
+  lastRotated    DateTime?
+  expiresAt      DateTime?
+  metadata       String?
+  schemaVersion  Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  resource      ResourceContract @relation(fields: [resourceId], references: [id])
+  usageRecords  ResourceUsage[]
+  @@unique([resourceId, tenantId, workspaceId])
+}
+
+model ResourceHealth {
+  id                 String   @id @default(uuid())
+  resourceId         String
+  credentialId       String?
+  status             String
+  latencyMs          Float?
+  errorRate          Float?
+  rateLimitRemaining Int?
+  quotaRemaining     Int?
+  lastSuccessAt      DateTime?
+  lastFailureAt      DateTime?
+  failureReason      String?
+  metadata           String?
+  checkedAt          DateTime @default(now())
+
+  resource ResourceContract @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+}
+
+model ResourceCapabilityMatrix {
+  id             String   @id @default(uuid())
+  resourceId     String
+  capabilityId   String
+  supported      Boolean  @default(false)
+  qualityScore   Float?
+  costMultiplier Float?
+  metadata       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  resource ResourceContract @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  @@unique([resourceId, capabilityId])
+}
+
+model ResourceUsage {
+  id               String   @id @default(uuid())
+  credentialId     String
+  tenantId         String
+  workspaceId      String?
+  resourceType     String
+  model            String?
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  latencyMs        Int?
+  estimatedCost    Float?
+  actualCost       Float?
+  currency         String   @default("USD")
+  status           String
+  executionId      String?
+  metadata         String?
+  createdAt        DateTime @default(now())
+
+  credential ResourceCredential @relation(fields: [credentialId], references: [id])
+}
+
+model ResourceCost {
+  id            String   @id @default(uuid())
+  resourceId    String
+  tenantId      String
+  workspaceId   String?
+  billingPeriod String
+  totalCost     Float
+  currency      String   @default("USD")
+  metadata      String?
+  periodStart   DateTime
+  periodEnd     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  resource ResourceContract @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  @@unique([resourceId, tenantId, workspaceId, billingPeriod, periodStart])
+}

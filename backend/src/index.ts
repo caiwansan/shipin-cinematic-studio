@@ -551,6 +551,16 @@ await app.register(projectV2Routes)
   await app.register(await import('./routes/platform/capability/catalog.route.js').then(m => m.default))
   await app.register(await import('./routes/platform/capability/capability-main.route.js').then(m => m.default))
 
+  // Resource Platform routes (KMKI-PLAT-008 — AI Resource Runtime)
+  await app.register(await import('./routes/platform/resource/contract.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/credential.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/resolver.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/health.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/usage.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/cost.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/matrix.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/resource-main.route.js').then(m => m.default))
+
   // 初始化 Capability Runtime（Phase 6 平台级能力契约层）
   try {
     const { capabilityRuntime } = await import('./services/platform/capability/runtime/capability.runtime.js')
@@ -570,6 +580,18 @@ await app.register(projectV2Routes)
     console.log('[CapabilityRuntime] ✅ Capability Runtime initialized with 4 routing strategies')
   } catch (err) {
     console.warn('[CapabilityRuntime] Failed to initialize:', (err as Error).message)
+  }
+
+  // 初始化 Resource Runtime（KMKI-PLAT-008 — AI Resource Runtime）
+  try {
+    const { resourceRuntime } = await import('./services/platform/resource/runtime/resource.runtime.js')
+    await resourceRuntime.init({})
+    // Register default streaming adapters
+    const { registerDefaultAdapters } = await import('./services/platform/resource/streaming/streaming-adapter.js')
+    registerDefaultAdapters()
+    console.log('[ResourceRuntime] ✅ AI Resource Runtime initialized with streaming adapters')
+  } catch (err) {
+    console.warn('[ResourceRuntime] Failed to initialize:', (err as Error).message)
   }
 
   // Goal Runtime routes (Phase 4 — Platform Level Growth Execution Layer)

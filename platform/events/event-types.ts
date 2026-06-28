@@ -70,6 +70,17 @@ export type PlatformEventType =
   | 'capability:Removed'
   | 'capability:Validated'
   | 'capability:Resolved'
+  // Resource Domain
+  | 'resource:Registered'
+  | 'resource:Updated'
+  | 'resource:Degraded'
+  | 'resource:Down'
+  | 'resource:Recovered'
+  // Credential Domain
+  | 'credential:Expiring'
+  | 'credential:Rotated'
+  // Cost Domain
+  | 'cost:ThresholdExceeded'
 
 /**
  * Standard platform event payload.
