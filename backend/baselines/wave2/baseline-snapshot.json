@@ -1,0 +1,35 @@
+{
+  "generated": "2026-06-28T15:35:00Z",
+  "baselineVersion": "benchmark-wave2-v1",
+  "previousBaseline": "benchmark-wave1-v1",
+  "coverageScore": 55,
+  "healthScore": 55,
+  "totalCapabilities": 31,
+  "coveredCapabilities": 17,
+  "p0Gaps": 14,
+  "wave2CapabilitiesMet": true,
+  "totalTests": 405,
+  "totalDatasetAssets": 12,
+  "layers": {
+    "infrastructure": ["Registry", "Validation", "Coverage Index", "Analytics", "Asset Factory"],
+    "wave1Consistency": ["CAMERA_PATH", "CAMERA_MOTION", "OBJECT_PERSISTENCE", "SPATIAL_RELATIONSHIP", "TEMPORAL_CONSISTENCY"],
+    "wave2Cinematic": ["LIGHT_CONTINUITY", "CAMERA_COMPOSITION", "SHOT_TRANSITION", "CAMERA_FOCUS"]
+  },
+  "intentFields": ["cinematicIntent", "lightingIntent", "visualIntent", "storyIntent", "narrativePurpose", "focusStrategy"],
+  "directorPlanSchema": {
+    "lighting": null,
+    "composition": null,
+    "shotScale": null,
+    "shotAngle": null,
+    "focus": null,
+    "storyIntent": null,
+    "cinematicIntent": null
+  },
+  "summary": {
+    "total": 31,
+    "healthy": 17,
+    "critical": 14,
+    "healthScore": 55,
+    "averageCoverage": 55
+  }
+}

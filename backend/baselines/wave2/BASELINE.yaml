@@ -1,0 +1,97 @@
+# Wave 2 Baseline — 电影语言层
+#
+# 版本: benchmark-wave2-v1
+# 冻结时间: 2026-06-28
+# 前一个基线: benchmark-wave1-v1（+8 个 Dataset，+12 个 Capability 覆盖，
+#                                         Capability Coverage 从 39% → 55%）
+
+# ─── 元信息 ──────────────────────────────
+baseline_version: benchmark-wave2-v1
+frozen_at: 2026-06-28T15:35:00Z
+previous_baseline: benchmark-wave1-v1
+
+# ─── 覆盖概览 ────────────────────────────
+coverage:
+  total_capabilities: 31
+  covered: 17
+  coverage_percent: 55
+  p0_gaps: 14
+  wave2_target_met: true
+
+# ─── 测试统计 ────────────────────────────
+testing:
+  test_files: 35
+  total_tests: 405
+  passed: 405
+  failed: 0
+
+# ─── 能力层 ──────────────────────────────
+layers:
+  infrastructure:
+    - Registry
+    - Validation
+    - Coverage Index
+    - Analytics
+    - Asset Factory
+
+  wave1_consistency:
+    - CAMERA_PATH
+    - CAMERA_MOTION
+    - OBJECT_PERSISTENCE
+    - SPATIAL_RELATIONSHIP
+    - TEMPORAL_CONSISTENCY
+
+  wave2_cinematic_language:
+    - LIGHT_CONTINUITY
+    - CAMERA_COMPOSITION
+    - SHOT_TRANSITION  # SHOT_SCALE + SHOT_ANGLE
+    - CAMERA_FOCUS
+
+# ─── Wave 2 Dataset 清单 ─────────────────
+datasets:
+  # Wave 1（重复，供参考）
+  - id: L0-001
+    primaryCapability: CHARACTER_REFERENCE
+  - id: L1-001
+    primaryCapability: CHARACTER_REFERENCE
+  - id: L2-CAMERA_PATH
+    primaryCapability: CAMERA_PATH
+  - id: L2-CAMERA_MOTION
+    primaryCapability: CAMERA_MOTION
+  - id: L2-OBJECT_PERSISTENCE
+    primaryCapability: OBJECT_PERSISTENCE
+  - id: L2-SPATIAL_RELATION
+    primaryCapability: SPATIAL_RELATIONSHIP
+  - id: L2-TEMPORAL_CONTINUITY
+    primaryCapability: TEMPORAL_CONSISTENCY
+
+  # Wave 2（新增）
+  - id: L2-LIGHTING_CONTINUITY
+    primaryCapability: LIGHT_CONTINUITY
+  - id: L2-CAMERA_COMPOSITION
+    primaryCapability: CAMERA_COMPOSITION
+  - id: L2-SHOT_SCALE
+    primaryCapability: SHOT_TRANSITION
+  - id: L2-SHOT_ANGLE
+    primaryCapability: SHOT_TRANSITION
+  - id: L2-FOCUS_CONTROL
+    primaryCapability: CAMERA_FOCUS
+
+# ─── Wave 2 关键升级 ─────────────────────
+wave2_upgrades:
+  - cinematicIntent 字段加入 Asset 模板
+  - lightingIntent / visualIntent 意图分层
+  - storyIntent 与 cinematicIntent 分离（叙事意图 vs 导演语言）
+  - narrativePurpose 字段
+  - EvaluationCriterion.intentType（cinematic/lighting/visual/technical）
+  - Intent Preservation Score 指标设计
+
+# ─── Director Agent 输出结构（定型）────────
+director_plan_schema:
+  lighting: null
+  composition: null
+  shotScale: null
+  shotAngle: null
+  focus: null
+  storyIntent: null
+  cinematicIntent: null
