@@ -370,6 +370,16 @@ await app.register(projectV2Routes)
   await app.register(agentMemoryRoutes)
   await app.register(agentToolRoutes)
 
+  // GEO Agent registration (Sprint 1A Knowledge Skeleton)
+  try {
+    await (await import('./services/geo/agents/research.agent.js')).registerResearchAgent()
+    await (await import('./services/geo/agents/entity.agent.js')).registerEntityAgent()
+    await (await import('./services/geo/agents/knowledge-graph.agent.js')).registerKGAgent()
+    console.log('[startup] ✅ 3 GEO agents registered (research, entity, knowledge-graph)')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO agent registration skipped (non-fatal):', (err as Error).message)
+  }
+
   // Workflow Runtime routes (KMKI-PLAT-011)
   await app.register(await import('./routes/platform/workflow/definition.route.js').then(m => m.default))
   await app.register(await import('./routes/platform/workflow/instance.route.js').then(m => m.default))
@@ -505,13 +515,10 @@ await app.register(projectV2Routes)
   await app.register(desktopComfyRoutes)
   // Desktop video routes（本地视频引擎检测）
   await app.register(desktopVideoRoutes)
-  // Brand GEO routes (Phase 2)
-  await app.register(await import('./routes/geo/geo-project.js').then(m => m.default))
-  await app.register(await import('./routes/geo/geo-brand.js').then(m => m.default))
-  await app.register(await import('./routes/geo/geo-scanner.js').then(m => m.default))
-  await app.register(await import('./routes/geo/geo-graph.js').then(m => m.default))
-
-  // Unified Asset Runtime routes (Platform Level, Phase 2.5)
+  // Brand GEO routes (Phase 2) / Sprint 1A Knowledge Skeleton
+  await app.register(await import('./services/geo/routes/geo-project.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-entity.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-graph.route.js').then(m => m.default))
   await app.register(await import('./routes/asset/asset.route.js').then(m => m.default))
   await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default))
   await app.register(await import('./routes/asset/asset-scanner.route.js').then(m => m.default))

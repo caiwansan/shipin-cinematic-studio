@@ -302,8 +302,11 @@ export class PlatformSDK {
   // ─── Public API ───
 
   async scan(url: string, ctx?: PlatformContext): Promise<ScanResult> {
-    const { runScannerPipeline } = await import('../../backend/src/services/geo/scanner/pipeline.js')
-    return runScannerPipeline({ url, projectId: ctx?.projectId || '' }) as any
+    // NOTE: Scanner module removed per Architecture Freeze (ARCH-002).
+    // AI modules must NOT self-maintain assets or re-scan websites.
+    // This method is preserved for future Platform-level scanner integration.
+    console.warn('[PlatformSDK] scan() is not available — scanner module removed')
+    return { success: false, error: 'Scanner not available (Architecture Freeze)' } as any
   }
 
   asset(): AssetService {

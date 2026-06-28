@@ -9,23 +9,12 @@
     "outDir": "dist",
     "resolveJsonModule": true,
     "declaration": true,
-    "forceConsistentCasingInFileNames": true,
     "noEmit": false,
-    "noEmitOnError": false,
-    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
-    "paths": {
-      "@platform/*": ["../platform/*"]
-    }
+    "noEmitOnError": false
   },
   "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/scripts",
-    "src/runtime/legacy",
-    "src/archive"
+    "src/services/geo/**/*",
+    "src/routes/geo/**/*"
   ]
 }
