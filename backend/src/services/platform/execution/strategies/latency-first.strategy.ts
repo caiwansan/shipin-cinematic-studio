@@ -3,8 +3,8 @@
 // ============================================================
 
 import type { IExecutionStrategy } from './execution-strategy.interface.js'
-import type { ExecutionPlan, ExecutionResult, ExecutionStep } from '../types.js'
-import { StepType } from '../types.js'
+import type { ExecutionPlan, ExecutionResult, ExecutionStep, ExecutionDecision } from '../types.js'
+import { StepType, ExecutionStrategy } from '../types.js'
 import type { PlatformContext } from '@platform/context/platform-context'
 
 export const latencyFirstStrategy: IExecutionStrategy = {
@@ -39,5 +39,22 @@ export const latencyFirstStrategy: IExecutionStrategy = {
       latencyScore: result.durationMs ? Math.max(0, 1 - result.durationMs / 10000) : 0,
     }
     return result
+  },
+
+  getDecisions(_plan: ExecutionPlan, _ctx?: PlatformContext): ExecutionDecision[] {
+    return [
+      {
+        id: 'decision-latency-first-strategy',
+        stepId: '__strategy__',
+        reason: 'Latency-First strategy selected for maximum execution speed',
+        decision: ExecutionStrategy.LatencyFirst,
+        alternatives: [ExecutionStrategy.QualityFirst, ExecutionStrategy.CostFirst, ExecutionStrategy.Balanced],
+        rejectedAlternatives: [ExecutionStrategy.QualityFirst, ExecutionStrategy.CostFirst],
+        chosenStrategy: ExecutionStrategy.LatencyFirst,
+        qualityTradeoff: 'Lower quality, deferred validation, minimal retries',
+        costTradeoff: 'Higher cost due to aggressive parallelism',
+        latencyTradeoff: 'Minimal latency',
+      },
+    ]
   },
 }

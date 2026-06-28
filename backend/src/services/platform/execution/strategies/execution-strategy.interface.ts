@@ -1,8 +1,9 @@
 // ============================================================
 // Execution Strategy Interface — pluggable execution strategies
+// KMKI-KERNEL-001: Added decision support for explainability
 // ============================================================
 
-import type { ExecutionPlan, ExecutionStep, ExecutionResult } from '../types.js'
+import type { ExecutionPlan, ExecutionStep, ExecutionResult, ExecutionDecision } from '../types.js'
 import type { PlatformContext } from '@platform/context/platform-context'
 
 export interface IExecutionStrategy {
@@ -34,4 +35,10 @@ export interface IExecutionStrategy {
    * Post-process execution result based on strategy.
    */
   postProcess(result: ExecutionResult, plan: ExecutionPlan, ctx?: PlatformContext): Promise<ExecutionResult>
+
+  /**
+   * Return strategy decisions for explainability.
+   * Each strategy should document why it made certain choices.
+   */
+  getDecisions(plan: ExecutionPlan, ctx?: PlatformContext): ExecutionDecision[]
 }

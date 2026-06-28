@@ -48,6 +48,21 @@
 - Last Check: 2025-06-28
 - Result: ✅ All 10 mandatory checks passed
 
+### Kernel Compliance (KMKI-KERNEL-001)
+| Dimension | Status | Notes |
+|---|---|---|
+| IR Compliance | ✅ | ExecutionPlan is provider-agnostic, fully versioned |
+| Step Taxonomy | ✅ | Steps classified by action type (Acquire/Transform/Reason/Execute/Persist/Notify/Wait/Control) |
+| Replay Ready | ✅ | replayEngine with replay/dryRun/simulate/resume |
+| Explain Ready | ✅ | ExecutionDecision on plan, steps, strategies |
+| Provider Coupling | ✅ | Zero provider-specific fields in IR |
+| Determinism | ✅ | Planner uses deterministic step IDs (no Math.random/Date.now) |
+| Engine Stateless | ✅ | Engine functions are pure; state via ExecutionContext |
+| Graph Integrity | ✅ | graphValidator with cycle/dead/unreachable/parallel safety checks |
+| Planner/Compiler Separation | ✅ | Planner → LogicalPlan; Compiler → ExecutionPlan |
+| IR Specification | ✅ | docs/platform/ExecutionIR.md |
+| Version Compliance | ✅ | 5 version fields (schema, planner, compiler, contract, strategy) |
+
 ### Platform Directory Structure
 ```
 platform/

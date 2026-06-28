@@ -253,22 +253,18 @@ export const executionValidator = {
 
   /**
    * Validate timeout configuration.
+   * Timeout is derived from step-level timeouts, not a plan-level profile.
+   * Step timeouts are validated individually in _validateSteps.
    */
   _validateTimeouts(
     plan: ExecutionPlan,
-    errors: string[],
-    _warnings: string[],
+    _errors: string[],
+    warnings: string[],
   ): void {
-    if (plan.timeoutProfile) {
-      if (plan.timeoutProfile.stepTimeout < 100) {
-        errors.push('Plan step timeout too low: must be >= 100ms')
-      }
-      if (plan.timeoutProfile.planTimeout < plan.timeoutProfile.stepTimeout) {
-        errors.push('Plan timeout must be >= step timeout')
-      }
-      if (plan.timeoutProfile.executionTimeout < plan.timeoutProfile.planTimeout) {
-        errors.push('Execution timeout must be >= plan timeout')
-      }
+    // Validate that at least one step has a timeout
+    const stepsWithoutTimeout = plan.steps.filter(s => !s.timeout || s.timeout <= 0)
+    if (stepsWithoutTimeout.length > 0) {
+      warnings.push(`Plan has ${stepsWithoutTimeout.length} step(s) without timeout configuration`)
     }
   },
 

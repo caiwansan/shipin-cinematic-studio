@@ -1,6 +1,7 @@
 // ============================================================
 // Step Plugin Registry — Plugin-based step executor registration
 // All step execution dispatch goes through here; no switch/case.
+// KMKI-KERNEL-001: Added new step types (CALL_TOOL, CALL_MCP, CALL_HUMAN, WAIT_EVENT, RUN_SCRIPT, CACHE, VECTOR_SEARCH, CONDITION)
 // ============================================================
 
 import { PluginRegistry, type Plugin } from '@platform/plugins/plugin-registry'
@@ -46,19 +47,17 @@ export const stepPluginRegistry = new PluginRegistry<StepPlugin>()
 export async function registerDefaultStepPlugins(): Promise<void> {
   const { createAssetLoaderStep } = await import('./steps/asset-loader.step.js')
   const { createSemanticLoaderStep } = await import('./steps/semantic-loader.step.js')
-  const { createPromptBuilderStep } = await import('./steps/prompt-builder.step.js')
   const { createEventEmitterStep } = await import('./steps/event-emitter.step.js')
   const { createValidatorOutputStep } = await import('./steps/validator-ouput.step.js')
   const { createAssetSaverStep } = await import('./steps/asset-saver.step.js')
 
   stepPluginRegistry.register(createAssetLoaderStep())
   stepPluginRegistry.register(createSemanticLoaderStep())
-  stepPluginRegistry.register(createPromptBuilderStep())
   stepPluginRegistry.register(createEventEmitterStep())
   stepPluginRegistry.register(createValidatorOutputStep())
   stepPluginRegistry.register(createAssetSaverStep())
 
-  // Provider call is a plugin interface only — no default implementation
+  // Provider call (REASON) is interface-only — no default implementation
 }
 
 /**
@@ -71,6 +70,13 @@ export function resolveStepExecutor(stepType: StepType): StepPlugin {
     throw new Error(`No step plugin registered for type: ${stepType}`)
   }
   return plugin
+}
+
+/**
+ * Check if a step executor is registered for a given step type.
+ */
+export function hasStepExecutor(stepType: StepType): boolean {
+  return stepPluginRegistry.discover('step').some((p: StepPlugin) => p.stepType === stepType)
 }
 
 /**

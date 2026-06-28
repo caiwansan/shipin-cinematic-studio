@@ -1,6 +1,6 @@
 // ============================================================
 // Execution Runtime — lifecycle management
-// ARCH-002: Init → Load Plan → Validate → Schedule → Execute → Finalize → Dispose
+// ARCH-002: Init → Load → Validate → Schedule → Execute → Finalize → Dispose
 // Uses PlatformContext, IEventBus, PlatformError
 // ============================================================
 
@@ -26,6 +26,10 @@ export interface RuntimeConfig {
   autoRegisterPlugins?: boolean
 }
 
+/**
+ * ExecutionRuntime — lifecycle manager for Execution Plans.
+ * Fully stateless: all state lives in Repository or ExecutionContext.
+ */
 class ExecutionRuntime implements RuntimeLifecycle<ExecutionPlan, ExecutionResult> {
   private initialized = false
   private config: RuntimeConfig = {}
@@ -69,7 +73,6 @@ class ExecutionRuntime implements RuntimeLifecycle<ExecutionPlan, ExecutionResul
   async execute(ctx: PlatformContext, plan: ExecutionPlan): Promise<ExecutionResult> {
     this._requireInit()
 
-    // Full lifecycle within execute:
     // 1. Validate the plan
     const validationResult = await executionValidator.validate(plan, ctx)
     if (!validationResult.valid) {
@@ -105,7 +108,7 @@ class ExecutionRuntime implements RuntimeLifecycle<ExecutionPlan, ExecutionResul
   }
 
   /**
-   * Convenience: compile → plan → execute in one step.
+   * Convenience: compile → execute in one step.
    */
   async compileAndExecute(
     capabilityConfig: Parameters<typeof executionCompiler.compile>[0],
@@ -113,7 +116,7 @@ class ExecutionRuntime implements RuntimeLifecycle<ExecutionPlan, ExecutionResul
     ctx?: PlatformContext,
   ): Promise<ExecutionResult> {
     this._requireInit()
-    const context = ctx || {}
+    const context = ctx || ({} as PlatformContext)
 
     // Compile
     const compiled = await executionCompiler.compile(capabilityConfig, options, context)
