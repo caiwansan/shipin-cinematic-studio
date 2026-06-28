@@ -1,0 +1,35 @@
+- id: FM-FC-001
+  category: incorrect_focus_target
+  description: Focus is on the wrong subject — background is sharp while the intended subject is soft
+  expectedBehavior: Focus must be on the intended subject for each shot segment
+  severity: high
+
+- id: FM-FC-002
+  category: rack_focus_failed
+  description: Rack focus is missing, mistimed, or executed unclearly (e.g., focus shifts before the cue, or never shifts)
+  expectedBehavior: Rack focus must occur at the narratively cued moment and transition smoothly
+  severity: high
+
+- id: FM-FC-003
+  category: depth_of_field_mismatch
+  description: Depth of field contradicts the intended narrative focus (e.g., deep DOF for an intimate emotional moment, shallow DOF for an establishing shot)
+  expectedBehavior: DOF should match the narrative purpose — shallow for emphasis, deep for context
+  severity: medium
+
+- id: FM-FC-004
+  category: attention_not_guided
+  description: Viewer attention is not drawn to the intended narrative element despite focus strategy
+  expectedBehavior: Focus and composition should combine to guide attention to the intended subject
+  severity: high
+
+- id: FM-FC-005
+  category: focus_jump
+  description: Focus logic breaks between shots — a subject that was in focus becomes inexplicably soft across the cut
+  expectedBehavior: Focus state should be logically continuous across cuts unless motivated
+  severity: medium
+
+- id: FM-FC-006
+  category: focus_intent_mismatch
+  description: Overall focus strategy contradicts the declared cinematicIntent/focusStrategy
+  expectedBehavior: Focus decisions across shots must align with the declared attention-guidance strategy
+  severity: high

@@ -1,0 +1,69 @@
+{
+  "scenario": "双人谈话。前景人物说话时焦点在其面部。当提到关键线索时，移焦转向背景中的一张照片。",
+  "storyIntent": "reveal_clue_through_focus_shift",
+  "cinematicIntent": "direct_attention",
+  "focusStrategy": "subject_face_to_background_detail",
+  "expectedPlanning": {
+    "focusSetup": {
+      "initialFocus": "subject_face",
+      "rackFocusCue": "character_mentions_key_clue",
+      "targetFocus": "photograph_in_background",
+      "depthOfFieldInitial": "shallow",
+      "depthOfFieldAfterRack": "shallow_on_target"
+    },
+    "shots": [
+      {
+        "id": "shot_1a",
+        "focusTarget": "face_of_speaker",
+        "depthOfField": "shallow",
+        "backgroundStatus": "soft_blur",
+        "attentionIntent": "viewer_should_focus_on_speaker",
+        "focusConstraints": {
+          "expectedFocusSubject": "speaker_face",
+          "depthOfField": "shallow",
+          "backgroundDefocused": true
+        }
+      },
+      {
+        "id": "shot_1b",
+        "focusTarget": "photograph_in_background",
+        "rackCue": "key_clue_mentioned",
+        "depthOfField": "shallow",
+        "foregroundStatus": "soft_blur",
+        "attentionIntent": "viewer_should_notice_the_clue",
+        "focusConstraints": {
+          "expectedFocusSubject": "photograph",
+          "rackTransition": "smooth",
+          "foregroundDefocused": true
+        }
+      }
+    ],
+    "rackTiming": {
+      "cue": "dialogue_reference_to_clue",
+      "transitionDuration": "smooth_0.5_to_1_seconds",
+      "backToSubject": false
+    },
+    "intentAlignment": {
+      "attention_guided": "shot_1a_focuses_on_speaker_then_shot_1b_shifts_to_clue",
+      "clue_revealed": "rack_focus_physically_moves_attention_to_photograph"
+    }
+  },
+  "expectedNegotiation": {
+    "focusSequenceValidated": true,
+    "rackFocusCued": true,
+    "dofMatchedIntent": true
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalShots": 2,
+    "rackFocusRequired": true
+  },
+  "expectedEvaluation": {
+    "subjectFocusScore": { "min": 95 },
+    "rackFocusScore": { "min": 90 },
+    "depthOfFieldScore": { "min": 85 },
+    "attentionGuidanceScore": { "min": 85 },
+    "focusContinuityScore": { "min": 90 },
+    "intentAlignmentScore": { "min": 80 }
+  }
+}

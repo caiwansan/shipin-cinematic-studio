@@ -1,0 +1,44 @@
+{
+  "title": "线索转移 — 焦点引导",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "双人室内谈话，通过移焦引导观众注意背景中的线索照片",
+      "shots": [
+        {
+          "id": "shot_1a",
+          "description": "室内书房，一人坐在桌前说话。浅景深，焦点在其面部，背景书籍和物品模糊。画面结构让观众自然关注说话者的表情和话语。",
+          "characters": ["说话者"],
+          "dialogues": [],
+          "actions": ["talking"],
+          "camera": "medium close-up from front",
+          "lighting": "warm desk lamp lighting",
+          "focus": "sharp_on_face",
+          "depth_of_field": "shallow",
+          "duration_seconds": 5
+        },
+        {
+          "id": "shot_1b",
+          "description": "同一场景，移焦转向背景墙上的一张照片。说话者的面部转为虚化，照片变得清晰。焦点平滑转移。观众的目光自然被引导到照片上。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "same position, focus racked",
+          "lighting": "warm desk lamp lighting",
+          "focus": "sharp_on_photograph",
+          "depth_of_field": "shallow_on_target",
+          "duration_seconds": 3
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "说话者",
+      "gender": "male",
+      "appearance": "室内休闲装的男性",
+      "reference_images": []
+    }
+  ]
+}

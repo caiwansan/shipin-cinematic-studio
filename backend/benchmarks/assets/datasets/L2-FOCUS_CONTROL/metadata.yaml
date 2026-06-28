@@ -1,0 +1,31 @@
+# L2-FOCUS_CONTROL
+# 焦点控制 — 导演引导观众视觉注意
+#
+# Wave 2 压轴能力。前四项回答"怎么拍"，
+# 这一项回答"观众应该看哪里"。
+#
+# 五类焦点控制：
+# 1. Subject Focus（主体焦点）— 主角保持焦内
+# 2. Rack Focus（移焦）— 焦点按剧情切换
+# 3. Depth of Field（景深）— 浅/深景深服务叙事
+# 4. Attention Guidance（注意力引导）— 导演意图的视觉焦点
+# 5. Focus Continuity（焦点连续）— 跨镜头焦点逻辑一致
+#
+
+id: L2-FOCUS_CONTROL
+primaryCapability: CAMERA_FOCUS
+secondaryCapabilities:
+  - CAMERA_COMPOSITION
+  - RENDER_SHOT
+difficulty: L2
+stage: full
+name: Focus Control — Attention Guidance and Visual Direction
+description: Verifies that focus control (subject focus, rack focus, depth of field, attention guidance, focus continuity) correctly directs the viewer's attention according to the director's intent. Measures whether the audience sees what they should be seeing.
+scenario: |
+  双人谈话场景。前景一人说话时焦点在其面部。
+  当说到关键线索时，通过移焦将焦点转向背景中的一张照片。
+  验证焦点策略是否正确引导观众注意力。
+storyIntent: reveal_clue_through_focus_shift
+cinematicIntent: direct_attention
+focusStrategy: subject_face_to_background_detail
+created: 2026-06-28

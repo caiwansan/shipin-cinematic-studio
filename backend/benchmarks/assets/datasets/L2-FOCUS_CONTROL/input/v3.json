@@ -1,0 +1,36 @@
+{
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "Study room — rack focus from speaker's face to photograph as clue is mentioned",
+      "shots": [
+        {
+          "id": "shot_1a",
+          "prompt": "Medium close-up of a man talking in a study room. Shallow depth of field, sharp focus on his face with background books and items softly blurred. Warm desk lamp lighting. Natural intimate atmosphere. Cinematic, photorealistic 24fps.",
+          "character_mapping": { "说话者": "char_1" },
+          "negative_prompt": "deep depth of field, background sharp, wrong subject in focus, soft face, clutter"
+        },
+        {
+          "id": "shot_1b",
+          "prompt": "Same study room. Focus has shifted from the speaker to a photograph pinned on the background wall. The photograph is now sharp and clear. The speaker's face is now softly blurred in the foreground. Smooth focus transition. Warm desk lamp lighting. Cinematic, photorealistic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "both in focus, no focus shift, photograph blurred, face still sharp, abrupt focus change"
+        }
+      ],
+      "characters": [
+        { "id": "char_1", "name": "说话者", "gender": "male", "appearance": "室内休闲装男性" }
+      ],
+      "focus_intent": {
+        "strategy": "subject_face_to_background_detail",
+        "rackCue": "clue_mentioned_in_dialogue",
+        "depthOfField": "shallow",
+        "narrativePurpose": "reveal_clue_through_focus_shift"
+      }
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}

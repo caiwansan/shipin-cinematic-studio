@@ -1,0 +1,41 @@
+- id: EC-FC-01
+  name: Subject Focus
+  description: Intended subject remains correctly in focus; no wrong-subject focus
+  weight: 0.20
+  passThreshold: 95
+  intentType: technical
+
+- id: EC-FC-02
+  name: Rack Focus
+  description: Rack focus occurs at correct narrative cue and transitions smoothly
+  weight: 0.20
+  passThreshold: 90
+  intentType: visual
+
+- id: EC-FC-03
+  name: Depth of Field
+  description: DOF matches narrative purpose — shallow for emphasis, deep for context
+  weight: 0.15
+  passThreshold: 85
+  intentType: visual
+
+- id: EC-FC-04
+  name: Attention Guidance
+  description: Focus strategy successfully directs viewer attention to the intended narrative element
+  weight: 0.25
+  passThreshold: 85
+  intentType: cinematic
+
+- id: EC-FC-05
+  name: Focus Continuity
+  description: Focus state is logically continuous across cuts, no unexplained focus shifts
+  weight: 0.10
+  passThreshold: 90
+  intentType: technical
+
+- id: EC-FC-06
+  name: Intent Alignment
+  description: Overall focus strategy supports the declared storyIntent and cinematicIntent
+  weight: 0.10
+  passThreshold: 80
+  intentType: cinematic
