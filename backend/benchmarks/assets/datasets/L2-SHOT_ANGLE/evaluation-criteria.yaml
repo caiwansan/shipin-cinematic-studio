@@ -1,0 +1,34 @@
+- id: EC-SA-01
+  name: Angle Accuracy
+  description: Camera angle matches the planned category (eye, low, high, dutch, overhead)
+  weight: 0.20
+  passThreshold: 95
+  intentType: technical
+
+- id: EC-SA-02
+  name: Perspective Clarity
+  description: Angle is sufficiently pronounced to clearly convey the intended perspective
+  weight: 0.20
+  passThreshold: 90
+  intentType: visual
+
+- id: EC-SA-03
+  name: Power Expression
+  description: Angle correctly expresses the intended power dynamics between characters
+  weight: 0.25
+  passThreshold: 85
+  intentType: cinematic
+
+- id: EC-SA-04
+  name: Narrative Consistency
+  description: Angle changes across shots are narratively motivated, maintaining spatial continuity
+  weight: 0.20
+  passThreshold: 85
+  intentType: cinematic
+
+- id: EC-SA-05
+  name: Intent Alignment
+  description: Overall angle selection supports the declared storyIntent and cinematicIntent
+  weight: 0.15
+  passThreshold: 80
+  intentType: cinematic

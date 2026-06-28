@@ -1,0 +1,85 @@
+{
+  "scenario": "对峙场景。主角站在台阶上居高临下，对手从下方仰视。主角走下台阶，二人转为平视对话。",
+  "storyIntent": "power_shifts_from_dominance_to_equality",
+  "cinematicIntent": "power_dynamics",
+  "expectedPlanning": {
+    "angleSequence": [
+      {
+        "shot": 1,
+        "angle": "high",
+        "subject": "protagonist on steps",
+        "narrativeIntent": "protagonist_dominant"
+      },
+      {
+        "shot": 2,
+        "angle": "low",
+        "subject": "antagonist looking up",
+        "narrativeIntent": "antagonist_subordinate"
+      },
+      {
+        "shot": 3,
+        "angle": "eye",
+        "subject": "both after protagonist descends",
+        "narrativeIntent": "power_shifts_equality"
+      }
+    ],
+    "shots": [
+      {
+        "id": "shot_1",
+        "angle": "high",
+        "description": "Protagonist standing on steps, camera above looking down — dominant perspective",
+        "angleConstraints": {
+          "expectedAngle": "high",
+          "subjectVerticalPlacement": "lower_third",
+          "powerExpression": "dominant"
+        }
+      },
+      {
+        "id": "shot_2",
+        "angle": "low",
+        "description": "Antagonist below, camera looking up — subordinate perspective",
+        "angleConstraints": {
+          "expectedAngle": "low",
+          "subjectVerticalPlacement": "upper_third",
+          "powerExpression": "subordinate"
+        }
+      },
+      {
+        "id": "shot_3",
+        "angle": "eye",
+        "description": "Both now at same level, eye-level — equal power dynamic",
+        "angleConstraints": {
+          "expectedAngle": "eye",
+          "subjectVerticalPlacement": "center",
+          "powerExpression": "equal"
+        }
+      }
+    ],
+    "powerArc": {
+      "start": "protagonist_dominant_via_high_angle",
+      "transition": "protagonist_descends",
+      "end": "equal_power_via_eye_level"
+    },
+    "intentAlignment": {
+      "dominance_established": "shot_1_high_angle_makes_protagonist_look_down",
+      "subordination_shown": "shot_2_low_angle_makes_antagonist_look_up",
+      "equality_achieved": "shot_3_eye_level_removes_power_bias"
+    }
+  },
+  "expectedNegotiation": {
+    "angleSequenceValidated": true,
+    "powerDynamicsEnforced": true,
+    "transitionMotivated": true
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalShots": 3
+  },
+  "expectedEvaluation": {
+    "angleAccuracyScore": { "min": 95 },
+    "perspectiveClarityScore": { "min": 90 },
+    "powerExpressionScore": { "min": 85 },
+    "narrativeConsistencyScore": { "min": 85 },
+    "intentAlignmentScore": { "min": 80 }
+  }
+}

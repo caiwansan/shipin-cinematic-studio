@@ -1,0 +1,57 @@
+{
+  "title": "台阶对峙 — 权力动力学",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "两人在台阶上下对峙，角度变化反映权力关系转移",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "古旧石阶上，一人背光站立于台阶高处，俯视下方。俯拍角度，强调居高临下的掌控感。傍晚天空在背景中。",
+          "characters": ["主角"],
+          "dialogues": [],
+          "actions": ["standing on steps, looking down"],
+          "camera": "high angle from above",
+          "lighting": "dramatic evening backlight",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_2",
+          "description": "另一人站在台阶下方，仰头看向上方的人。仰拍角度，强调被俯视的弱势感。身影在夕阳下显小。",
+          "characters": ["对手"],
+          "dialogues": [],
+          "actions": ["looking up from below"],
+          "camera": "low angle from ground level",
+          "lighting": "dramatic evening backlight",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_3",
+          "description": "上方的人走下台阶，两人同水平面对面对话。平视角度，无权力倾斜。傍晚柔和的光线照亮两人。",
+          "characters": ["主角", "对手"],
+          "dialogues": [],
+          "actions": ["facing each other at same level"],
+          "camera": "eye level from side",
+          "lighting": "evening soft ambient",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "主角",
+      "gender": "male",
+      "appearance": "穿深色大衣的男性，身材魁梧",
+      "reference_images": []
+    },
+    {
+      "id": "char_2",
+      "name": "对手",
+      "gender": "male",
+      "appearance": "穿浅色夹克的男性，身材中等",
+      "reference_images": []
+    }
+  ]
+}

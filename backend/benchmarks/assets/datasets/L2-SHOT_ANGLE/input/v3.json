@@ -1,0 +1,42 @@
+{
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "Steps confrontation — camera angle shifts reflect power dynamics",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "High angle shot looking down at a man in a dark coat standing on ancient stone steps at sunset. Dramatic backlight. He looks down at someone below. Dominant towering composition. Cinematic, photorealistic 24fps.",
+          "character_mapping": { "主角": "char_1" },
+          "negative_prompt": "eye level, low angle, flat lighting, weak composition"
+        },
+        {
+          "id": "shot_2",
+          "prompt": "Low angle shot looking up at a man in a light jacket standing below stone steps. He looks upward. The figure appears smaller against the sky. Subordinate vulnerable perspective. Evening backlight. Cinematic, photorealistic 24fps.",
+          "character_mapping": { "对手": "char_2" },
+          "negative_prompt": "eye level, high angle, overpowering composition"
+        },
+        {
+          "id": "shot_3",
+          "prompt": "Eye level shot of two men facing each other on the same level, having arrived at equal ground. Soft evening light illuminates both equally. Neutral power dynamic. Natural framing. Cinematic, photorealistic 24fps.",
+          "character_mapping": { "主角": "char_1", "对手": "char_2" },
+          "negative_prompt": "low angle, high angle, uneven power imbalance in framing"
+        }
+      ],
+      "characters": [
+        { "id": "char_1", "name": "主角", "gender": "male", "appearance": "深色大衣魁梧男性" },
+        { "id": "char_2", "name": "对手", "gender": "male", "appearance": "浅色夹克中等身材男性" }
+      ],
+      "angle_intent": {
+        "progression": ["high", "low", "eye"],
+        "powerArc": ["dominant", "subordinate", "equal"],
+        "storyPurpose": "power_shifts_from_dominance_to_equality"
+      }
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}

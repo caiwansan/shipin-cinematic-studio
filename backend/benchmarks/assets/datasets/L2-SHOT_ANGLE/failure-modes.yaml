@@ -1,0 +1,35 @@
+- id: FM-SA-001
+  category: incorrect_angle
+  description: Camera angle does not match the intended category (e.g., eye level intended but low angle produced)
+  expectedBehavior: Actual camera angle must match the planned angle category
+  severity: high
+
+- id: FM-SA-002
+  category: weak_perspective
+  description: Angle is technically correct but too subtle to convey the intended narrative effect (e.g., a low angle that's barely distinguishable from eye level)
+  expectedBehavior: Angle should be pronounced enough to clearly convey the intended perspective
+  severity: medium
+
+- id: FM-SA-003
+  category: power_mismatch
+  description: Angle contradicts the intended power dynamics (e.g., high angle (vulnerability) for a character who should appear dominant)
+  expectedBehavior: Angle must align with the storyIntent and character power relationship
+  severity: high
+
+- id: FM-SA-004
+  category: unnecessary_dutch
+  description: Dutch angle used without narrative justification (e.g., tilted frame in a neutral conversation)
+  expectedBehavior: Dutch angle should only be used when the scene calls for disorientation or crisis
+  severity: medium
+
+- id: FM-SA-005
+  category: inconsistent_angle
+  description: Camera angle shifts unpredictably between shots of the same scene, breaking spatial continuity
+  expectedBehavior: Angle changes between shots should be narratively motivated, not random
+  severity: medium
+
+- id: FM-SA-006
+  category: angle_intent_mismatch
+  description: Overall angle selection contradicts the declared cinematicIntent (e.g., power_dynamics intent but all eye-level shots)
+  expectedBehavior: Angle choices across shots should express the intended power dynamics narrative
+  severity: high

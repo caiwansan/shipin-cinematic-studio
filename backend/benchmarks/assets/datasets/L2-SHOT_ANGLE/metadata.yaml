@@ -1,0 +1,31 @@
+# L2-SHOT_ANGLE
+# 机位角度 — 镜头角度表达权力动力学
+#
+# Wave 2 电影语言能力。验证机位角度选择是否服务于
+# 叙事权力关系（Power Dynamics）和导演意图，
+# 而非仅判断"角度类型正确"。
+#
+# 五类角度：
+# 1. Eye Level（平视）— 客观/对话/日常
+# 2. Low Angle（仰拍）— 强势/英雄/压迫
+# 3. High Angle（俯拍）— 脆弱/孤独/渺小
+# 4. Dutch Angle（倾斜）— 混乱/危机/失衡
+# 5. Overhead（顶拍）— 空间关系/调度
+#
+
+id: L2-SHOT_ANGLE
+primaryCapability: SHOT_TRANSITION
+secondaryCapabilities:
+  - CAMERA_COMPOSITION
+  - RENDER_SHOT
+difficulty: L2
+stage: full
+name: Camera Angle — Power Dynamics and Narrative Perspective
+description: Verifies that camera angle choices express the intended power dynamics and narrative relationships. Measures whether angle supports the cinematic and story intent, not just angle classification accuracy.
+scenario: |
+  一个对峙场景。主角站在台阶上居高临下说话，对手从低处仰视。
+  随后主角走下台阶，两人转为平视对话。
+  角度变化反映了权力关系的变化。
+storyIntent: power_shifts_from_dominance_to_equality
+cinematicIntent: power_dynamics
+created: 2026-06-28
