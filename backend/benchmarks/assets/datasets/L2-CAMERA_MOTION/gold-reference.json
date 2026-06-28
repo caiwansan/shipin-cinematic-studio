@@ -1,0 +1,66 @@
+{
+  "scenario": "一座古老的石桥，桥中央站着一个穿红衣服的女孩。摄像机以四种不同运动方式拍摄同一场景：1. 匀速推近（远处至近景，恒速 2s），2. 加速拉远（近景至远景，起始慢后加速 2.5s），3. 水平平移（从左至右横移 3s），4. 环绕 180 度（以女孩为中心，半弧环绕 4s）。全程平滑，无抖动、无突然变速。",
+  "expectedPlanning": {
+    "motionSegments": [
+      {
+        "mode": "push-in",
+        "curve": "constant",
+        "from": { "x": 5, "y": 1.6, "z": -4 },
+        "to": { "x": 1.5, "y": 1.6, "z": -1 },
+        "velocity": 0.8,
+        "duration": 2.0
+      },
+      {
+        "mode": "pull-out",
+        "curve": "ease-out",
+        "from": { "x": 1.5, "y": 1.6, "z": -1 },
+        "to": { "x": 6, "y": 1.6, "z": -5 },
+        "initialVelocity": 0.3,
+        "finalVelocity": 1.5,
+        "duration": 2.5
+      },
+      {
+        "mode": "pan",
+        "curve": "constant",
+        "from": { "x": -3, "y": 1.6, "z": 0 },
+        "to": { "x": 3, "y": 1.6, "z": 0 },
+        "velocity": 0.6,
+        "duration": 3.0
+      },
+      {
+        "mode": "orbit",
+        "axis": "y",
+        "center": { "x": 0, "y": 1.6, "z": 0 },
+        "radius": 4,
+        "arcAngle": 180,
+        "direction": "clockwise",
+        "duration": 4.0
+      }
+    ],
+    "subject": "女孩"
+  },
+  "expectedNegotiation": {
+    "resolvedMotions": ["push-in", "pull-out", "pan", "orbit"],
+    "velocityControlEnabled": true,
+    "motionTypeStrictness": "exact",
+    "easingFunctions": {
+      "push-in": "linear",
+      "pull-out": "ease-out",
+      "pan": "linear",
+      "orbit": "linear"
+    }
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalFrames": 276,
+    "cameraCuts": 3,
+    "motionInterpolation": "smooth"
+  },
+  "expectedEvaluation": {
+    "velocitySmoothnessScore": { "min": 90 },
+    "motionTypePreservationScore": { "min": 95 },
+    "velocityCurveAdherenceScore": { "min": 80 },
+    "orbitalDistanceScore": { "min": 85 },
+    "motionContinuityScore": { "min": 95 }
+  }
+}

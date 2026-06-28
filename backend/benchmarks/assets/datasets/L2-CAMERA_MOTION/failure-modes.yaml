@@ -1,0 +1,29 @@
+- id: FM-CMO-001
+  description: Camera motion exhibits sudden acceleration or deceleration (velocity spike)
+  expectedBehavior: Motion velocity should change smoothly; acceleration rate change per frame < 0.1 unit/frame²
+  severity: high
+
+- id: FM-CMO-002
+  description: Motion type is not preserved (e.g., orbit becomes pan, push-in becomes dolly)
+  expectedBehavior: The requested motion mode should be maintained for the entire segment duration
+  severity: high
+
+- id: FM-CMO-003
+  description: Camera motion has jitter or micro-shaking during constant velocity segment
+  expectedBehavior: Position deviation from ideal constant-velocity line should be < 0.05 units
+  severity: medium
+
+- id: FM-CMO-004
+  description: Accelerated motion does not follow the requested curve (too linear or wrong direction)
+  expectedBehavior: Velocity profile should match the expected curve type (constant, ease-in, ease-out) within 15% tolerance
+  severity: medium
+
+- id: FM-CMO-005
+  description: Camera orbit does not maintain proper distance to subject center
+  expectedBehavior: Distance to subject should remain within 5% of the specified orbit radius
+  severity: medium
+
+- id: FM-CMO-006
+  description: Camera motion stops or hesitates mid-path without instruction
+  expectedBehavior: Motion should be continuous; no zero-velocity frames within the motion segment (except at planned endpoints)
+  severity: high

@@ -1,0 +1,30 @@
+{
+  "title": "石桥女孩 — 镜头运动学",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "石桥上的女孩，四种摄像机运动模式",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "一座古老的石桥，桥中央站着一个穿红衣服的女孩。摄像机以四种运动方式拍摄：匀速推近、加速拉远、水平平移、环绕180度。全程摄像机运动平滑，无抖动、无突然加速或减速。",
+          "characters": ["女孩"],
+          "dialogues": [],
+          "actions": ["standing"],
+          "camera": "multiple motion types: push-in (constant), pull-out (accelerating), pan (constant), orbit (180 deg clockwise)",
+          "lighting": "warm afternoon sunlight",
+          "duration_seconds": 12
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "女孩",
+      "gender": "female",
+      "appearance": "穿着红色连衣裙的女孩，约20岁，长发",
+      "reference_images": []
+    }
+  ]
+}

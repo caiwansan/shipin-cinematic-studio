@@ -1,0 +1,32 @@
+{
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "石桥上的女孩，四种摄像机运动模式",
+      "shots": [
+        {
+          "id": "shot_1",
+          "prompt": "An ancient stone bridge in warm afternoon light. A young woman in a red dress stands at the center. The camera performs four smooth motions in sequence: first a constant-speed push-in from distance to close-up, then an accelerating pull-out from close to wide, then a horizontal pan from left to right keeping the subject centered, and finally a 180-degree clockwise orbit around the woman. Throughout all motions, camera movement is silky smooth with no jitter, no sudden speed changes, and no hesitation. Cinematic 24fps, photorealistic.",
+          "character_mapping": {
+            "女孩": "char_1"
+          },
+          "negative_prompt": "jerky camera, motion blur artifacts, sudden acceleration or deceleration, jitter, shaking, camera bounce, hesitation, speed variation, wrong motion type"
+        }
+      ],
+      "characters": [
+        {
+          "id": "char_1",
+          "name": "女孩",
+          "gender": "female",
+          "appearance": "年轻女性，红色连衣裙，长发",
+          "reference_images": []
+        }
+      ]
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}

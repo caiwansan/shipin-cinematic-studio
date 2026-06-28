@@ -1,0 +1,36 @@
+# L2-CAMERA_MOTION
+# 摄像机运动 — 镜头运动学控制（并非路径规划）
+#
+# 核心关注：运动的速度曲线、加速/减速行为、运动方式的保持。
+# 场景：固定场景（一座石桥），同一物体在桥中央。
+# 摄像机在以下四种运动模式下循环：
+#   1. 匀速推进（从远处平推至近景）
+#   2. 加速拉远（先慢后快，从近景拉到远景）
+#   3. 水平平移（从左至右平移，速度均匀）
+#   4. 环绕（以目标为中心，环绕 180 度）
+# 每种运动保持起点终点一致，仅改变速度曲线和运动模式。
+# 重点检查：运动是否平滑、速度是否可控、模式是否保持。
+#
+# 与 CAMERA_PATH 的区别：
+#   CAMERA_PATH 验证"摄像机能否按规划路径行走"
+#   CAMERA_MOTION 验证"行走过程中的运动控制是否自然"
+#
+
+id: L2-CAMERA_MOTION
+primaryCapability: CAMERA_MOTION
+secondaryCapabilities:
+  - CAMERA_PATH
+  - TEMPORAL_CONSISTENCY
+difficulty: L2
+stage: full
+name: Camera Motion — Speed Curve and Motion Type
+description: Verifies camera kinematic control — velocity curve (constant/accelerate/decelerate), motion mode (push-in, pull-out, pan, orbit), and motion smoothness. Separate from CAMERA_PATH which tests spatial trajectory continuity.
+scenario: |
+  一座古老的石桥，桥中央站着一个穿红衣服的女孩。
+  摄像机以四种不同运动方式拍摄同一场景：
+  1. 匀速推近：从远处缓缓推至女孩面部（恒速）
+  2. 加速拉远：从近景快速拉远，起始慢后加速
+  3. 水平平移：从左至右横移，画幅中女孩保持居中
+  4. 环绕 180 度：以女孩为中心，半弧环绕
+  全程摄像机运动平滑，无抖动、无突然加速或减速。
+created: 2026-06-28
