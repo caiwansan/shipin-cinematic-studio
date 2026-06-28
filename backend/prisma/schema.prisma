@@ -4169,3 +4169,153 @@ model ResourceCost {
   resource ResourceContract @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   @@unique([resourceId, tenantId, workspaceId, billingPeriod, periodStart])
 }
+
+// ===== Workspace Runtime (KMKI-PLAT-009) =====
+
+model WorkspaceRuntime {
+  id          String   @id @default(uuid())
+  type        String   // short_drama, novel, ppt, geo
+  tenantId    String
+  name        String
+  description String?
+  status      String   @default("active") // active, archived, published
+  runtimeState String? // JSON — current runtime state for resume
+  manifest    String?  // JSON — full dependency manifest
+  settings    String?  // JSON — workspace settings
+  metadata    String?  // JSON
+  schemaVersion Int    @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  activatedAt DateTime?
+  archivedAt  DateTime?
+
+  snapshots       WorkspaceSnapshot[]
+  versions        WorkspaceVersion[]
+  drafts          WorkspaceDraft[]
+  operations      WorkspaceOperation[]
+  assets          WorkspaceAsset[]
+  conversations   WorkspaceConversation[]
+  checkpoints     WorkspaceCheckpoint[]
+  executions      WorkspaceExecution[]
+
+  @@map("workspace_runtime")
+}
+
+model WorkspaceSnapshot {
+  id           String   @id @default(uuid())
+  workspaceId  String
+  version      Int
+  label        String?  // user label for this snapshot
+  runtimeState String?  // JSON — serialized workspace runtime state
+  assetState   String?  // JSON — asset references
+  graphState   String?  // JSON — execution graph state
+  variables    String?  // JSON — workspace variables
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+  autoSave     Boolean  @default(false)
+
+  runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  @@unique([workspaceId, version])
+}
+
+model WorkspaceVersion {
+  id           String   @id @default(uuid())
+  workspaceId  String
+  version      Int
+  label        String   // v1, v2, published-20250629
+  description  String?
+  snapshotId   String?  // link to the snapshot for restore
+  published    Boolean  @default(false)
+  parentVersion Int?    // for fork/branch history
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+
+  runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  @@unique([workspaceId, version])
+}
+
+model WorkspaceDraft {
+  id          String   @id @default(uuid())
+  workspaceId String
+  draftNumber Int
+  contentState String? // JSON — workspace content at draft time
+  runtimeState String? // JSON — runtime state
+  autoSave    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  @@unique([workspaceId, draftNumber])
+}
+
+model WorkspaceOperation {
+  id          String   @id @default(uuid())
+  workspaceId String
+  type        String   // create, update, delete, restore, publish, archive, execute
+  target      String?  // what was operated on (snapshot, version, asset, etc.)
+  targetId    String?
+  description String?
+  diff        String?  // JSON — operation diff for undo
+  reverseDiff String?  // JSON — inverse operation for redo
+  userId      String?  // who performed the operation
+  metadata    String?  // JSON
+  createdAt   DateTime @default(now())
+
+  runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceAsset {
+  id          String   @id @default(uuid())
+  workspaceId String
+  type        String   // image, video, audio, script, prompt, pdf, doc, json, output
+  path        String
+  mimeType    String?
+  size        Int?
+  hash        String?
+  metadata    String?  // JSON
+  createdAt   DateTime @default(now())
+
+  runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceConversation {
+  id          String   @id @default(uuid())
+  workspaceId String
+  sessionId   String
+  role        String   // user, assistant, system
+  content     String   // message content
+  context     String?  // JSON — AI context
+  summary     String?  // conversation summary
+  tokenCount  Int?
+  metadata    String?  // JSON
+  createdAt   DateTime @default(now())
+
+  runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceCheckpoint {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  description String?
+  snapshotId  String?  // link to snapshot
+  versionId   String?  // link to version
+  metadata    String?  // JSON
+  createdAt   DateTime @default(now())
+
+  runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceExecution {
+  id           String   @id @default(uuid())
+  workspaceId  String
+  executionId  String   // link to ExecutionPlan
+  planVersion  String
+  status       String   // pending, running, completed, failed, cancelled
+  result       String?  // JSON — execution result
+  runtimeState String?  // JSON — runtime state at execution time
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
+  completedAt  DateTime?
+
+  runtime WorkspaceRuntime @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}

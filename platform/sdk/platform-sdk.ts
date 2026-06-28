@@ -161,6 +161,62 @@ export interface CapabilityService {
   list(ctx?: PlatformContext): CapabilityContract[]
 }
 
+// ─── Workspace Runtime Types (KMKI-PLAT-009) ───
+
+export type WorkspaceType = 'short_drama' | 'novel' | 'ppt' | 'geo' | 'asset'
+
+export interface WorkspaceDTO {
+  id: string
+  type: WorkspaceType
+  tenantId: string
+  name: string
+  description?: string
+  status: string
+  runtimeState?: Record<string, unknown>
+  manifest?: string
+  settings?: Record<string, unknown>
+  metadata?: Record<string, unknown>
+  schemaVersion: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface WorkspaceSnapshotDTO {
+  id: string
+  workspaceId: string
+  version: number
+  label?: string
+  runtimeState?: Record<string, unknown>
+  createdAt: Date
+  autoSave: boolean
+}
+
+export interface WorkspaceManifest {
+  workspaceId: string
+  name: string
+  type: WorkspaceType
+  capabilities: Array<{ id: string; name: string; version: string; category: string }>
+  assets: Array<{ id: string; type: string; path: string; size: number }>
+  outputVersions: Array<{ version: string; label: string; published: boolean; createdAt: string }>
+  costSummary: { totalEstimatedCost: number; currency: string }
+  auditTrail: Array<{ operation: string; userId?: string; timestamp: string }>
+  generatedAt: string
+  schemaVersion: number
+}
+
+export interface WorkspaceService {
+  create(type: WorkspaceType, name: string, tenantId: string, description?: string): Promise<WorkspaceDTO>
+  get(id: string): Promise<WorkspaceDTO | null>
+  list(tenantId: string): Promise<WorkspaceDTO[]>
+  snapshot(workspaceId: string, label?: string): Promise<WorkspaceSnapshotDTO>
+  restore(snapshotId: string): Promise<any>
+  undo(workspaceId: string): Promise<boolean>
+  redo(workspaceId: string): Promise<boolean>
+  getManifest(workspaceId: string): Promise<WorkspaceManifest | null>
+  export(workspaceId: string): Promise<any>
+  delete(id: string): Promise<void>
+}
+
 // ─── Platform SDK ───
 
 export class PlatformSDK {
@@ -301,6 +357,66 @@ export class PlatformSDK {
   async executePlan(plan: ExecutionPlanDTO, ctx?: PlatformContext): Promise<ExecutionResultDTO> {
     if (!this.executionRuntime) throw new Error('Execution Runtime not available')
     return this.executionRuntime.execute(ctx || {}, plan) as any
+  }
+
+  // ─── Workspace Runtime (KMKI-PLAT-009) ───
+
+  private workspaceService?: WorkspaceService
+
+  /**
+   * Get the Workspace service for managing AI creation workspaces.
+   */
+  workspace(): WorkspaceService {
+    if (!this.workspaceService) {
+      this.workspaceService = this._createWorkspaceService()
+    }
+    return this.workspaceService
+  }
+
+  private _createWorkspaceService(): WorkspaceService {
+    const that = this
+    return {
+      async create(type, name, tenantId, description) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.create({ type, name, tenantId, description })
+      },
+      async get(id) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.get(id) as any
+      },
+      async list(tenantId) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.list({ tenantId }) as any
+      },
+      async snapshot(workspaceId, label) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.snapshot(workspaceId, label)
+      },
+      async restore(snapshotId) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.restore(snapshotId)
+      },
+      async undo(workspaceId) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.undo(workspaceId)
+      },
+      async redo(workspaceId) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.redo(workspaceId)
+      },
+      async getManifest(workspaceId) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.getManifest(workspaceId) as any
+      },
+      async export(workspaceId) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.exportWorkspace(workspaceId)
+      },
+      async delete(id) {
+        const { workspaceService } = await import('../../backend/src/services/platform/workspace/workspace.service.js')
+        return workspaceService.delete(id)
+      },
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 # Capability Coverage Report
 
-Generated: 2026-06-28T10:40:05.223Z
+Generated: 2026-06-28T18:07:17.983Z
 Registry: v1 @ 1.0.0
 
 ## Summary

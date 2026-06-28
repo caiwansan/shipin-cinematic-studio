@@ -1,6 +1,6 @@
 # Capability Analytics Report
 
-Generated: 2026-06-28T10:40:05.232Z
+Generated: 2026-06-28T18:07:17.970Z
 Registry: v1 @ 1.0.0
 
 ## Summary

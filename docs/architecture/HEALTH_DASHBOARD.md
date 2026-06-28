@@ -8,6 +8,7 @@
 - Semantic Runtime: ✅ Implements RuntimeLifecycle, uses PlatformContext, PlatformEventBus
 - Goal Runtime: ✅ Implements RuntimeLifecycle, uses PlatformContext, PlatformEventBus
 - Capability Platform: ✅ Implements RuntimeLifecycle, uses PlatformContext, PlatformEventBus
+- Workspace Runtime: ✅ KMKI-PLAT-009 — ARCH-002 lifecycle, Snapshot recovery, unified Operation Log, Runtime-level AutoSave
 
 ### Platform Specification Compliance
 - Platform Context: ✅ No private Context defined in Runtime interfaces
@@ -43,6 +44,8 @@
 | ADR-010 | Platform SDK | Accepted |
 | ADR-011 | Plugin Registry | Accepted |
 | ADR-012 | Merge Gate | Accepted |
+| ADR-013 | (reserved) | — |
+| ADR-014 | Workspace Runtime | Accepted |
 
 ### Merge Gate
 - Last Check: 2025-06-28
