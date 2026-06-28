@@ -1,0 +1,8 @@
+version: 1.0.0
+files:
+  - url: kunlun-mirror-1.0.0-linux-x64.AppImage
+    sha512: placeholder_sha512
+    size: 100000000
+path: kunlun-mirror-1.0.0-linux-x64.AppImage
+sha512: placeholder_sha512
+releaseDate: 2026-06-04T00:00:00.000Z

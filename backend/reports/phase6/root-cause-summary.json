@@ -1,0 +1,28 @@
+{
+  "breakdown": {
+    "DTO_MISMATCH": 112,
+    "CONTRACT_OVERBINDING": 120,
+    "LEGACY_RETURN": 0,
+    "HYBRID_CONFLICT": 16,
+    "OTHER": 34
+  },
+  "total": 282,
+  "fix_priority": {
+    "refine_contract_or_fix_return": {
+      "files": 22,
+      "errors": 120
+    },
+    "normalize_dto_subtypes": {
+      "files": 31,
+      "errors": 112
+    },
+    "investigate": {
+      "files": 13,
+      "errors": 34
+    },
+    "normalize_output": {
+      "files": 7,
+      "errors": 16
+    }
+  }
+}

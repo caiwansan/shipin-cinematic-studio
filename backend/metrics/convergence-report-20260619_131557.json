@@ -1,0 +1,160 @@
+{
+  "timestamp": "2026-06-19T13:15:57.750412",
+  "projectId": "6050d107-b21c-41a2-a900-6582cf540cb9",
+  "totalChapters": 51,
+  "avgScore": 0.4588235294117647,
+  "variance": 0.05656430219146479,
+  "varianceReductionPct": 68.89673800124663,
+  "forbiddenViolations": 0,
+  "acceptableRate": 0.23529411764705882,
+  "entityHalfLife": {
+    "凌云子": {
+      "median_gap": 15,
+      "max_gap": 23,
+      "occurrences": 5
+    },
+    "剑玄通": {
+      "median_gap": 23,
+      "max_gap": 23,
+      "occurrences": 3
+    },
+    "陆云舟": {
+      "median_gap": 1,
+      "max_gap": 1,
+      "occurrences": 3
+    },
+    "叶如霜": {
+      "median_gap": 1,
+      "max_gap": 8,
+      "occurrences": 6
+    },
+    "江沱沱": {
+      "median_gap": 15,
+      "max_gap": 15,
+      "occurrences": 3
+    },
+    "永言长老": {
+      "median_gap": 1,
+      "max_gap": 1,
+      "occurrences": 2
+    },
+    "赤炎王": {
+      "median_gap": 10,
+      "max_gap": 10,
+      "occurrences": 2
+    },
+    "祖古上人": {
+      "median_gap": 2,
+      "max_gap": 2,
+      "occurrences": 2
+    },
+    "鳌润": {
+      "median_gap": 1,
+      "max_gap": 1,
+      "occurrences": 2
+    },
+    "江无痕": {
+      "median_gap": 1,
+      "max_gap": 1,
+      "occurrences": 3
+    },
+    "冷潇潇": {
+      "median_gap": 14,
+      "max_gap": 14,
+      "occurrences": 3
+    },
+    "金镶玉": {
+      "median_gap": 1,
+      "max_gap": 1,
+      "occurrences": 3
+    },
+    "剑如晦": {
+      "median_gap": 2,
+      "max_gap": 15,
+      "occurrences": 6
+    },
+    "无义长老": {
+      "median_gap": 2,
+      "max_gap": 9,
+      "occurrences": 5
+    },
+    "无仁长老": {
+      "median_gap": 1,
+      "max_gap": 1,
+      "occurrences": 2
+    },
+    "敖炎涛": {
+      "median_gap": 1,
+      "max_gap": 1,
+      "occurrences": 3
+    },
+    "殷素素": {
+      "median_gap": 10,
+      "max_gap": 13,
+      "occurrences": 4
+    },
+    "无觉道长": {
+      "median_gap": 9,
+      "max_gap": 9,
+      "occurrences": 2
+    },
+    "无礼长老": {
+      "median_gap": 2,
+      "max_gap": 2,
+      "occurrences": 2
+    }
+  },
+  "hypothesisH1": "confirmed",
+  "hotspotDecay": {
+    "凌云子": {
+      "total": 5,
+      "firstHalf": 2,
+      "secondHalf": 3
+    },
+    "剑玄通": {
+      "total": 3,
+      "firstHalf": 3,
+      "secondHalf": 0
+    },
+    "剑凌霄": {
+      "total": 1,
+      "firstHalf": 1,
+      "secondHalf": 0
+    },
+    "陆云舟": {
+      "total": 3,
+      "firstHalf": 3,
+      "secondHalf": 0
+    },
+    "叶如霜": {
+      "total": 6,
+      "firstHalf": 6,
+      "secondHalf": 0
+    },
+    "江沱沱": {
+      "total": 3,
+      "firstHalf": 3,
+      "secondHalf": 0
+    },
+    "永言长老": {
+      "total": 2,
+      "firstHalf": 2,
+      "secondHalf": 0
+    },
+    "赤炎王": {
+      "total": 2,
+      "firstHalf": 2,
+      "secondHalf": 0
+    },
+    "祖古上人": {
+      "total": 2,
+      "firstHalf": 2,
+      "secondHalf": 0
+    },
+    "鳌润": {
+      "total": 2,
+      "firstHalf": 2,
+      "secondHalf": 0
+    }
+  }
+}

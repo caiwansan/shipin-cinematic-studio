@@ -1,0 +1,5 @@
+export { simulateScene, type ScenePreSimulation, type FailurePoint } from './scene-pre-simulator.js'
+export { predictShotOutcome, type ShotPrediction, type ShotRiskFlag } from './shot-outcome-predictor.js'
+export { simulateEmotionTrajectory, type EmotionTrajectory, type EmotionPoint, type TensionPeak, type FlatZone } from './emotion-trajectory-simulator.js'
+export { predictContinuityRisks, type ContinuityRiskReport, type ContinuityRiskItem } from './continuity-risk-engine.js'
+export { aggregateSimulation, gatekeepSimulation, type AggregatedSimulation, type AggregatedRisk } from './simulation-aggregator.js'

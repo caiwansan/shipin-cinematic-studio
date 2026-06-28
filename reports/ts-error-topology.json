@@ -1,0 +1,43 @@
+{
+  "scanDate": "2026-05-28T21:30:00+08:00",
+  "rawLines": { "backend": 363, "frontend": 9 },
+  "uniqueErrors": 284,
+  "uniqueFiles": 90,
+  "moduleDistribution": {
+    "routes": 107,
+    "director-v2": 86,
+    "runtime": 21,
+    "services": 20,
+    "model-adapters": 14,
+    "queue": 3,
+    "engine": 21,
+    "core": 5,
+    "others": 7
+  },
+  "errorTypeBreakdown": {
+    "typeDrift": 127,
+    "importExport": 33,
+    "conversion": 5,
+    "enumUnion": 1
+  },
+  "topHotspotFiles": [
+    { "file": "src/routes/admin-global-config.ts", "errors": 21 },
+    { "file": "src/routes/member.ts", "errors": 16 },
+    { "file": "src/routes/kernel-causal.ts", "errors": 13 },
+    { "file": "src/director-v2/runtime/director-projection.ts", "errors": 12 },
+    { "file": "src/director-v2/runtime/api-surface.ts", "errors": 11 },
+    { "file": "src/routes/execution-graph.ts", "errors": 9 },
+    { "file": "src/director-v2/render/backends/execution-plan.ts", "errors": 9 },
+    { "file": "src/routes/workflow-visualizer.ts", "errors": 8 },
+    { "file": "src/routes/agent-orchestrator.ts", "errors": 8 },
+    { "file": "src/director-v2/memory/director-memory.ts", "errors": 8 }
+  ],
+  "fixCost": {
+    "L1_importRename": 91,
+    "L2_interfaceAdjust": 145,
+    "L3_archRefactor": 0,
+    "autoFixableRatio": 0.32
+  },
+  "recommendation": "PARTIAL_REFACTOR",
+  "recommendationRationale": "Most errors (51%) are L2 type drift requiring interface adjustment. No L3 architecture refactors needed. L1 auto-fixable portion is 32%."
+}

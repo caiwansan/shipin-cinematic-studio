@@ -1,0 +1,1093 @@
+{
+  "src/director-v2/runtime/api-surface.ts": {
+    "error_count": 11,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 262,
+        "code": "error TS2339",
+        "msg": "Property 'final' does not exist on type 'ConstitutionCompileResult'."
+      },
+      {
+        "line": 506,
+        "code": "error TS2339",
+        "msg": "Property 'emotion' does not exist on type 'ScenePreview'."
+      }
+    ]
+  },
+  "src/director-v2/runtime/cinematic-intent.ts": {
+    "error_count": 3,
+    "root_cause": "HYBRID_CONFLICT",
+    "fix_category": "normalize_output",
+    "sample": [
+      {
+        "line": 215,
+        "code": "error TS2345",
+        "msg": "Argument of type 'WorldPhysics' is not assignable to parameter of type 'Record<string, unknown>'."
+      },
+      {
+        "line": 216,
+        "code": "error TS2345",
+        "msg": "Argument of type 'EmotionalArc' is not assignable to parameter of type 'Record<string, unknown>'."
+      }
+    ]
+  },
+  "src/director-v2/runtime/director-projection.ts": {
+    "error_count": 12,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 15,
+        "code": "error TS2305",
+        "msg": "Module '\"./semantic-energy.js\"' has no exported member 'cinmaticEnergy'."
+      },
+      {
+        "line": 15,
+        "code": "error TS2305",
+        "msg": "Module '\"./semantic-energy.js\"' has no exported member 'EnergyProfile'."
+      }
+    ]
+  },
+  "src/director-v2/runtime/drift-intervention.ts": {
+    "error_count": 5,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 233,
+        "code": "error TS2339",
+        "msg": "Property 'shouldGateIntervention' does not exist on type 'SemanticEnergyScore'."
+      },
+      {
+        "line": 346,
+        "code": "error TS2322",
+        "msg": "Type 'ToneBoundary[]' is not assignable to type 'Record<string, unknown>[]'."
+      }
+    ]
+  },
+  "src/director-v2/runtime/memory-hygiene.ts": {
+    "error_count": 1,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 22,
+        "code": "error TS2305",
+        "msg": "Module '\"../memory/director-memory.js\"' has no exported member 'DriftMemoryState'."
+      }
+    ]
+  },
+  "src/director-v2/runtime/production-gatekeeper.ts": {
+    "error_count": 1,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 408,
+        "code": "error TS2366",
+        "msg": "Function lacks ending return statement and return type does not include 'undefined'."
+      }
+    ]
+  },
+  "src/director-v2/runtime/semantic-energy.ts": {
+    "error_count": 1,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 268,
+        "code": "error TS2352",
+        "msg": "Conversion of type 'VisualDoctrine' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first."
+      }
+    ]
+  },
+  "src/director-v2/runtime/session-registry.ts": {
+    "error_count": 1,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 21,
+        "code": "error TS2305",
+        "msg": "Module '\"./director-projection.js\"' has no exported member 'ProjectionState'."
+      }
+    ]
+  },
+  "src/plugins/runtime-context.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 41,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'stage' does not exist in type 'ContextInit'."
+      }
+    ]
+  },
+  "src/queue/worker-runtime.ts": {
+    "error_count": 3,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 87,
+        "code": "error TS2339",
+        "msg": "Property 'modelPrefix' does not exist on type 'string'."
+      },
+      {
+        "line": 89,
+        "code": "error TS2339",
+        "msg": "Property 'name' does not exist on type 'string'."
+      }
+    ]
+  },
+  "src/routes/admin-api-keys.ts": {
+    "error_count": 6,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 55,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'key' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 75,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'key' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/admin-assets.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 143,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/admin-global-config.ts": {
+    "error_count": 27,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 400,
+        "code": "error TS2322",
+        "msg": "Type '{ id: string; type: string; name: string; label: string; }[]' is not assignable to type '{ id: string; type: string; name: string; icon: string; }[]'."
+      },
+      {
+        "line": 407,
+        "code": "error TS2741",
+        "msg": "Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'."
+      }
+    ]
+  },
+  "src/routes/admin-models-v2.ts": {
+    "error_count": 4,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 96,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 104,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/admin-storage-config.ts": {
+    "error_count": 2,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 113,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 129,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/agent-orchestrator.ts": {
+    "error_count": 11,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 54,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'config' does not exist in type '(Without<AgentDefCreateInput, AgentDefUncheckedCreateInput> & AgentDefUncheckedCreateInput) | (Without<...> & AgentDefCreateInput)'."
+      },
+      {
+        "line": 72,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'config' does not exist in type '(Without<AgentDefUpdateInput, AgentDefUncheckedUpdateInput> & AgentDefUncheckedUpdateInput) | (Without<...> & AgentDefUpdateInput)'."
+      }
+    ]
+  },
+  "src/routes/ai-tasks.ts": {
+    "error_count": 2,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 183,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'task' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 262,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'tasks' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/analytics.ts": {
+    "error_count": 3,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 40,
+        "code": "error TS2345",
+        "msg": "Argument of type 'string' is not assignable to parameter of type 'AnalyticsEventType'."
+      },
+      {
+        "line": 41,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/anchor.ts": {
+    "error_count": 3,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 156,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 167,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/api-keys.ts": {
+    "error_count": 2,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 54,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'keys' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 131,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/asset-cards.ts": {
+    "error_count": 1,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 94,
+        "code": "error TS2783",
+        "msg": "'success' is specified more than once, so this usage will be overwritten."
+      }
+    ]
+  },
+  "src/routes/bridge.ts": {
+    "error_count": 3,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 83,
+        "code": "error TS2322",
+        "msg": "Type 'string' is not assignable to type '{ code: string; message: string; }'."
+      },
+      {
+        "line": 88,
+        "code": "error TS2322",
+        "msg": "Type 'string' is not assignable to type '{ code: string; message: string; }'."
+      }
+    ]
+  },
+  "src/routes/execution-graph.ts": {
+    "error_count": 9,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 40,
+        "code": "error TS2339",
+        "msg": "Property 'executionGraph' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'."
+      },
+      {
+        "line": 68,
+        "code": "error TS2339",
+        "msg": "Property 'executionNode' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'."
+      }
+    ]
+  },
+  "src/routes/execution-images.ts": {
+    "error_count": 12,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 157,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 312,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/execution-journal.ts": {
+    "error_count": 3,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 25,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'count' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 35,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'count' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/execution-trace.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 85,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/export-runtime.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 46,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'task' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/feedback.ts": {
+    "error_count": 3,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 33,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 52,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/hitl.ts": {
+    "error_count": 1,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 14,
+        "code": "error TS2305",
+        "msg": "Module '\"../runtime/asset-state-machine.js\"' has no exported member 'StateMachine'."
+      }
+    ]
+  },
+  "src/routes/kernel-causal.ts": {
+    "error_count": 15,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 1,
+        "code": "error TS2300",
+        "msg": "Duplicate identifier 'ApiResponse'."
+      },
+      {
+        "line": 2,
+        "code": "error TS2300",
+        "msg": "Duplicate identifier 'ApiResponse'."
+      }
+    ]
+  },
+  "src/routes/member.ts": {
+    "error_count": 26,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 99,
+        "code": "error TS2304",
+        "msg": "Cannot find name 'type'."
+      },
+      {
+        "line": 99,
+        "code": "error TS18004",
+        "msg": "No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer."
+      }
+    ]
+  },
+  "src/routes/model-params.ts": {
+    "error_count": 6,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 24,
+        "code": "error TS2339",
+        "msg": "Property 'aiModelParamSchema' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'."
+      },
+      {
+        "line": 27,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'schemas' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/model-provider.ts": {
+    "error_count": 1,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 62,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/narrative-llm.ts": {
+    "error_count": 2,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 675,
+        "code": "error TS2304",
+        "msg": "Cannot find name 'prisma'."
+      },
+      {
+        "line": 754,
+        "code": "error TS2367",
+        "msg": "This comparison appears to be unintentional because the types '\"storyboard\" | \"scene\"' and '\"makeup\"' have no overlap."
+      }
+    ]
+  },
+  "src/routes/observability.ts": {
+    "error_count": 4,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 99,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'trace' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 106,
+        "code": "error TS1360",
+        "msg": "Type '{ system: { requestCount: number; successRate: number; errorRate: number; avgLatency: number; p95Latency: number; activeTraces: number; }; queue: { avgWaitTime: number; avgProcessingTime: number; }; providers: Record<string, { latency: number; successRate: number; errorRate: number; costEstimate: number; }>; success...' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/optimization.ts": {
+    "error_count": 12,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 42,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 45,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'report' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/orchestrator.ts": {
+    "error_count": 2,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 96,
+        "code": "error TS2448",
+        "msg": "Block-scoped variable 'rawData' used before its declaration."
+      },
+      {
+        "line": 97,
+        "code": "error TS2448",
+        "msg": "Block-scoped variable 'rawData' used before its declaration."
+      }
+    ]
+  },
+  "src/routes/payment.ts": {
+    "error_count": 3,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 247,
+        "code": "error TS2552",
+        "msg": "Cannot find name 'config'. Did you mean 'qrConfig'?"
+      },
+      {
+        "line": 248,
+        "code": "error TS2552",
+        "msg": "Cannot find name 'config'. Did you mean 'qrConfig'?"
+      }
+    ]
+  },
+  "src/routes/pipeline.ts": {
+    "error_count": 1,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 158,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/project-decomposition.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 76,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'projectId' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/projects-v2.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 28,
+        "code": "error TS2322",
+        "msg": "Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'."
+      }
+    ]
+  },
+  "src/routes/projects.ts": {
+    "error_count": 6,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 32,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'project' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 104,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/psc1.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 31,
+        "code": "error TS2322",
+        "msg": "Type 'string' is not assignable to type '{ code: string; message: string; }'."
+      }
+    ]
+  },
+  "src/routes/queue-runtime.ts": {
+    "error_count": 3,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 14,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'queues' does not exist in type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 21,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/quick-creation.ts": {
+    "error_count": 2,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 137,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 158,
+        "code": "error TS2322",
+        "msg": "Type 'null' is not assignable to type 'InputJsonValue | JsonNullValueFilter | FieldRef<\"Project\", \"Json\"> | undefined'."
+      }
+    ]
+  },
+  "src/routes/redirect.ts": {
+    "error_count": 1,
+    "root_cause": "HYBRID_CONFLICT",
+    "fix_category": "normalize_output",
+    "sample": [
+      {
+        "line": 13,
+        "code": "error TS2345",
+        "msg": "Argument of type 'number' is not assignable to parameter of type 'string'."
+      }
+    ]
+  },
+  "src/routes/references.ts": {
+    "error_count": 1,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 77,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/runtime-checkpoint.ts": {
+    "error_count": 2,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 33,
+        "code": "error TS1360",
+        "msg": "Type '{ canResume: boolean; resumeStage: string | null; failedStages: string[]; runningJobs: RunningJob[]; completedStages: string[]; message: string; success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 45,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/runtime-trace.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 34,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/schema-runtime.ts": {
+    "error_count": 4,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 33,
+        "code": "error TS2322",
+        "msg": "Type 'string' is not assignable to type '{ code: string; message: string; }'."
+      },
+      {
+        "line": 38,
+        "code": "error TS2322",
+        "msg": "Type 'string' is not assignable to type '{ code: string; message: string; }'."
+      }
+    ]
+  },
+  "src/routes/script-submit.ts": {
+    "error_count": 3,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 258,
+        "code": "error TS7053",
+        "msg": "Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AigcSpecOutput'."
+      },
+      {
+        "line": 259,
+        "code": "error TS7053",
+        "msg": "Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AigcSpecOutput'."
+      }
+    ]
+  },
+  "src/routes/sms.ts": {
+    "error_count": 2,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 41,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      },
+      {
+        "line": 79,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/stage-model-config.ts": {
+    "error_count": 1,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 77,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/user-api-keys.ts": {
+    "error_count": 3,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 18,
+        "code": "error TS2724",
+        "msg": "'\"../services/usage-quota.service.js\"' has no exported member named 'getDailyUsage'. Did you mean 'getTodayUsage'?"
+      },
+      {
+        "line": 143,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/user-model-config-v2.ts": {
+    "error_count": 1,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 252,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/user-model-config.ts": {
+    "error_count": 7,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 56,
+        "code": "error TS2339",
+        "msg": "Property 'imageApiKey' does not exist on type '{ provider?: string | undefined; apiKey?: string | undefined; baseUrl?: string | undefined; llmModel?: string | undefined; llmEnabled?: boolean | undefined; imageModel?: string | undefined; ... 8 more ...; ttsProvider?: string | undefined; }'."
+      },
+      {
+        "line": 56,
+        "code": "error TS2339",
+        "msg": "Property 'imageApiKey' does not exist on type '{ provider?: string | undefined; apiKey?: string | undefined; baseUrl?: string | undefined; llmModel?: string | undefined; llmEnabled?: boolean | undefined; imageModel?: string | undefined; ... 8 more ...; ttsProvider?: string | undefined; }'."
+      }
+    ]
+  },
+  "src/routes/voice.ts": {
+    "error_count": 1,
+    "root_cause": "CONTRACT_OVERBINDING",
+    "fix_category": "refine_contract_or_fix_return",
+    "sample": [
+      {
+        "line": 133,
+        "code": "error TS1360",
+        "msg": "Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/routes/workflow-visualizer.ts": {
+    "error_count": 8,
+    "root_cause": "HYBRID_CONFLICT",
+    "fix_category": "normalize_output",
+    "sample": [
+      {
+        "line": 57,
+        "code": "error TS2345",
+        "msg": "Argument of type '(request: FastifyRequest<{ Querystring: { traceId?: string; workflowId?: string; }; }>, reply: FastifyReply) => Promise<never>' is not assignable to parameter of type 'RouteHandlerMethod<RawServerDefault, IncomingMessage, ServerResponse<IncomingMessage>, RouteGenericInterface, unknown, FastifySchema, FastifyTypeProviderDefault, FastifyBaseLogger>'."
+      },
+      {
+        "line": 86,
+        "code": "error TS2345",
+        "msg": "Argument of type '(request: FastifyRequest<{ Body: { traceId: string; skipSuccessNodes?: boolean; }; }>, reply: FastifyReply) => Promise<never>' is not assignable to parameter of type 'RouteHandlerMethod<RawServerDefault, IncomingMessage, ServerResponse<IncomingMessage>, RouteGenericInterface, unknown, FastifySchema, FastifyTypeProviderDefault, FastifyBaseLogger>'."
+      }
+    ]
+  },
+  "src/routes/workflow.ts": {
+    "error_count": 1,
+    "root_cause": "HYBRID_CONFLICT",
+    "fix_category": "normalize_output",
+    "sample": [
+      {
+        "line": 45,
+        "code": "error TS2345",
+        "msg": "Argument of type '(request: FastifyRequest<{ Body: { type: string; input: Record<string, any>; context?: Record<string, any>; }; }>, reply: FastifyReply) => Promise<any>' is not assignable to parameter of type 'RouteHandlerMethod<RawServerDefault, IncomingMessage, ServerResponse<IncomingMessage>, RouteGenericInterface, unknown, FastifySchema, FastifyTypeProviderDefault, FastifyBaseLogger>'."
+      }
+    ]
+  },
+  "src/routes/world-memory.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 55,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'."
+      }
+    ]
+  },
+  "src/runtime/adapters/tts/TTSAdapter.ts": {
+    "error_count": 1,
+    "root_cause": "HYBRID_CONFLICT",
+    "fix_category": "normalize_output",
+    "sample": [
+      {
+        "line": 58,
+        "code": "error TS2345",
+        "msg": "Argument of type '{ apiKey: string; }' is not assignable to parameter of type 'RuntimePayload'."
+      }
+    ]
+  },
+  "src/runtime/adapters/video/VideoAdapter.ts": {
+    "error_count": 6,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 35,
+        "code": "error TS2304",
+        "msg": "Cannot find name 'cfg'."
+      },
+      {
+        "line": 35,
+        "code": "error TS2304",
+        "msg": "Cannot find name 'cfg'."
+      }
+    ]
+  },
+  "src/runtime/narrative-gateway.ts": {
+    "error_count": 3,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 424,
+        "code": "error TS2345",
+        "msg": "Argument of type '{ module: string; function: string; caller: string; }' is not assignable to parameter of type 'Omit<TraceEvent, \"traceId\" | \"timestamp\">'."
+      },
+      {
+        "line": 676,
+        "code": "error TS2339",
+        "msg": "Property '_lastUserProvider' does not exist on type 'NarrativeLLMGateway'."
+      }
+    ]
+  },
+  "src/runtime/pipeline-executor.ts": {
+    "error_count": 1,
+    "root_cause": "HYBRID_CONFLICT",
+    "fix_category": "normalize_output",
+    "sample": [
+      {
+        "line": 63,
+        "code": "error TS2345",
+        "msg": "Argument of type '{ module: string; function: string; caller: string; }' is not assignable to parameter of type 'Omit<TraceEvent, \"traceId\" | \"timestamp\">'."
+      }
+    ]
+  },
+  "src/runtime/provider-middleware.ts": {
+    "error_count": 2,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 327,
+        "code": "error TS7053",
+        "msg": "Element implicitly has an 'any' type because expression of type 'TaskType' can't be used to index type 'ProviderCapability'."
+      },
+      {
+        "line": 335,
+        "code": "error TS7053",
+        "msg": "Element implicitly has an 'any' type because expression of type 'TaskType' can't be used to index type 'ProviderCapability'."
+      }
+    ]
+  },
+  "src/runtime/provider-state/provider-state.service.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 198,
+        "code": "error TS2739",
+        "msg": "Type '{ state: ProviderState; ts: number; }' is missing the following properties from type 'ProviderState': provider, status, enabled, consecutiveFailures"
+      }
+    ]
+  },
+  "src/runtime/resolveRuntimeConfig.ts": {
+    "error_count": 2,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 164,
+        "code": "error TS2339",
+        "msg": "Property 'baseUrl' does not exist on type '{ params: JsonValue; createdAt: Date; updatedAt: Date; provider: string; stage: string; size: string; enabled: boolean; model: string; }'."
+      },
+      {
+        "line": 166,
+        "code": "error TS2339",
+        "msg": "Property 'baseUrl' does not exist on type '{ params: JsonValue; createdAt: Date; updatedAt: Date; provider: string; stage: string; size: string; enabled: boolean; model: string; }'."
+      }
+    ]
+  },
+  "src/runtime/runtime-gateway.ts": {
+    "error_count": 2,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 64,
+        "code": "error TS2353",
+        "msg": "Object literal may only specify known properties, and 'provider' does not exist in type 'ContextInit'."
+      },
+      {
+        "line": 74,
+        "code": "error TS2322",
+        "msg": "Type 'string | undefined' is not assignable to type 'string'."
+      }
+    ]
+  },
+  "src/runtime/task-stream.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 28,
+        "code": "error TS2551",
+        "msg": "Property 'userId' does not exist on type 'FastifyRequest<RouteGenericInterface, RawServerDefault, IncomingMessage, FastifySchema, FastifyTypeProviderDefault, unknown, FastifyBaseLogger, ResolveFastifyRequestType<...>>'. Did you mean 'user'?"
+      }
+    ]
+  },
+  "src/runtime/trace/runtime-trace.ts": {
+    "error_count": 1,
+    "root_cause": "HYBRID_CONFLICT",
+    "fix_category": "normalize_output",
+    "sample": [
+      {
+        "line": 121,
+        "code": "error TS2345",
+        "msg": "Argument of type '{ module: string; function: string; caller: string; }' is not assignable to parameter of type 'Omit<TraceEvent, \"traceId\" | \"timestamp\">'."
+      }
+    ]
+  },
+  "src/runtime/with-user-model-config.ts": {
+    "error_count": 1,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 209,
+        "code": "error TS2339",
+        "msg": "Property 'secrets' does not exist on type 'RuntimeContext'."
+      }
+    ]
+  },
+  "src/schema-runtime/shadow.ts": {
+    "error_count": 3,
+    "root_cause": "DTO_MISMATCH",
+    "fix_category": "normalize_dto_subtypes",
+    "sample": [
+      {
+        "line": 123,
+        "code": "error TS2322",
+        "msg": "Type 'undefined' is not assignable to type 'string'."
+      },
+      {
+        "line": 125,
+        "code": "error TS2322",
+        "msg": "Type 'undefined' is not assignable to type 'string'."
+      }
+    ]
+  },
+  "src/services/runtime-checkpoint.service.ts": {
+    "error_count": 1,
+    "root_cause": "OTHER",
+    "fix_category": "investigate",
+    "sample": [
+      {
+        "line": 95,
+        "code": "error TS2352",
+        "msg": "Conversion of type 'string | number | boolean | JsonObject | JsonArray | null | undefined' to type 'RuntimeCheckpoint' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first."
+      }
+    ]
+  }
+}

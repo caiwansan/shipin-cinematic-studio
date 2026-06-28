@@ -1,0 +1,100 @@
+{
+  "_description": "OMS V2 PRO Design Tokens — 冻结版设计变量",
+  "_version": "1.0.0",
+  "_producer": "三郎 × 贵妃 AI",
+
+  "colors": {
+    "role_action": "#8b5cf6",
+    "conflict": "#FF4D4F",
+    "economy": "#FADB14",
+    "social": "#52C41A",
+    "system": "#1677FF",
+    "faction": "#722ED1",
+    "observer": "#FA8C16",
+    "variable": "#EB2F96",
+    "neutral": "#666666",
+    "text_primary": "#EAEAEF",
+    "text_secondary": "#8B8B9E",
+    "text_disabled": "#4B4B5E",
+    "bg_primary": "#060614",
+    "bg_secondary": "#0a0a1a",
+    "bg_card": "rgba(255,255,255,0.04)",
+    "bg_hover": "rgba(255,255,255,0.08)",
+    "border": "rgba(255,255,255,0.06)",
+    "border_active": "rgba(139,92,246,0.4)",
+    "shadow": "rgba(139,92,246,0.2)"
+  },
+
+  "typography": {
+    "font_family": "'Inter', 'Segoe UI', system-ui, sans-serif",
+    "mono": "'JetBrains Mono', 'Fira Code', monospace",
+    "size_10": "10px",
+    "size_11": "11px",
+    "size_12": "12px",
+    "size_14": "14px",
+    "size_16": "16px",
+    "weight_normal": 400,
+    "weight_medium": 500,
+    "weight_semibold": 600,
+    "weight_bold": 700
+  },
+
+  "spacing": {
+    "xs": "4px",
+    "sm": "8px",
+    "md": "12px",
+    "lg": "16px",
+    "xl": "24px",
+    "xxl": "32px"
+  },
+
+  "node_scale": {
+    "small": { "radius": 7, "glow": "2px", "pulse": false },
+    "medium": { "radius": 10, "glow": "4px", "pulse": "slow" },
+    "large": { "radius": 14, "glow": "8px", "pulse": "ripple" },
+    "system": { "radius": 15, "glow": "12px", "pulse": false },
+    "faction": { "radius": 12, "glow": "6px", "pulse": false },
+    "character": { "radius": 7, "glow": "3px", "pulse": "slow" }
+  },
+
+  "edge_types": {
+    "causal": { "style": "solid", "color": "#FF4D4F", "dasharray": null },
+    "influence": { "style": "solid", "color": "#FADB14", "dasharray": null },
+    "structure": { "style": "solid", "color": "#722ED1", "dasharray": null },
+    "trade": { "style": "dotted", "color": "#52C41A", "dasharray": "4,4" },
+    "observer": { "style": "solid", "color": "#FA8C16", "dasharray": null },
+    "belongs_to": { "style": "dashed", "color": "rgba(139,92,246,0.3)", "dasharray": "6,4" },
+    "conflict": { "style": "solid", "color": "rgba(239,68,68,0.4)", "dasharray": null }
+  },
+
+  "border_radius": {
+    "sm": "6px",
+    "md": "10px",
+    "lg": "14px",
+    "xl": "20px"
+  },
+
+  "gap": {
+    "sm": "4px",
+    "md": "8px",
+    "lg": "12px",
+    "xl": "16px",
+    "xxl": "24px"
+  },
+
+  "z_index": {
+    "status_bar": 50,
+    "nav_tabs": 40,
+    "modal": 100,
+    "tooltip": 90,
+    "loader": 200
+  },
+
+  "performance_thresholds": {
+    "svg_max": 500,
+    "canvas_max": 3000,
+    "webgl_min": 3001,
+    "sse_batch_size": 60,
+    "max_fps": 60
+  }
+}

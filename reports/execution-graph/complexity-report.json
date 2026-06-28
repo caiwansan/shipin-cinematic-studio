@@ -1,0 +1,375 @@
+{
+  "metrics": {
+    "totalNodes": 629,
+    "reachableNodes": 198,
+    "partiallyReachableNodes": 279,
+    "unreachableNodes": 152,
+    "reachableRatio": 31.5,
+    "unreachableRatio": 24.2,
+    "branchingFactor": 0,
+    "deepestExecutionChain": 4,
+    "averageRuntimeHopCount": 0.3,
+    "moduleCount": 44,
+    "routeCount": 0,
+    "serviceCount": 83,
+    "providerCount": 16,
+    "workerCount": 8
+  },
+  "reachability": {
+    "byModule": [
+      {
+        "module": "agents",
+        "reachable": 7,
+        "partiallyReachable": 0,
+        "unreachable": 0,
+        "total": 7,
+        "reachableRatio": 100
+      },
+      {
+        "module": "api",
+        "reachable": 7,
+        "partiallyReachable": 0,
+        "unreachable": 0,
+        "total": 7,
+        "reachableRatio": 100
+      },
+      {
+        "module": "chaos-test.ts",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 1,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "cinematic-ir",
+        "reachable": 0,
+        "partiallyReachable": 6,
+        "unreachable": 0,
+        "total": 6,
+        "reachableRatio": 0
+      },
+      {
+        "module": "cognition-loop",
+        "reachable": 0,
+        "partiallyReachable": 5,
+        "unreachable": 0,
+        "total": 5,
+        "reachableRatio": 0
+      },
+      {
+        "module": "config",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 1,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "control-plane",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 3,
+        "total": 3,
+        "reachableRatio": 0
+      },
+      {
+        "module": "core",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 64,
+        "total": 64,
+        "reachableRatio": 0
+      },
+      {
+        "module": "director",
+        "reachable": 0,
+        "partiallyReachable": 11,
+        "unreachable": 0,
+        "total": 11,
+        "reachableRatio": 0
+      },
+      {
+        "module": "director-simulation",
+        "reachable": 0,
+        "partiallyReachable": 6,
+        "unreachable": 0,
+        "total": 6,
+        "reachableRatio": 0
+      },
+      {
+        "module": "director-v2",
+        "reachable": 108,
+        "partiallyReachable": 0,
+        "unreachable": 0,
+        "total": 108,
+        "reachableRatio": 100
+      },
+      {
+        "module": "engine",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 21,
+        "total": 21,
+        "reachableRatio": 0
+      },
+      {
+        "module": "governance",
+        "reachable": 0,
+        "partiallyReachable": 7,
+        "unreachable": 0,
+        "total": 7,
+        "reachableRatio": 0
+      },
+      {
+        "module": "graph-optimization",
+        "reachable": 0,
+        "partiallyReachable": 4,
+        "unreachable": 0,
+        "total": 4,
+        "reachableRatio": 0
+      },
+      {
+        "module": "graph-patch",
+        "reachable": 0,
+        "partiallyReachable": 6,
+        "unreachable": 0,
+        "total": 6,
+        "reachableRatio": 0
+      },
+      {
+        "module": "graph-runtime",
+        "reachable": 0,
+        "partiallyReachable": 11,
+        "unreachable": 0,
+        "total": 11,
+        "reachableRatio": 0
+      },
+      {
+        "module": "index.ts",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 1,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "jobs",
+        "reachable": 3,
+        "partiallyReachable": 15,
+        "unreachable": 0,
+        "total": 18,
+        "reachableRatio": 16.7
+      },
+      {
+        "module": "middleware",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 1,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "observability",
+        "reachable": 0,
+        "partiallyReachable": 9,
+        "unreachable": 0,
+        "total": 9,
+        "reachableRatio": 0
+      },
+      {
+        "module": "optimization",
+        "reachable": 0,
+        "partiallyReachable": 7,
+        "unreachable": 0,
+        "total": 7,
+        "reachableRatio": 0
+      },
+      {
+        "module": "payment",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 6,
+        "total": 6,
+        "reachableRatio": 0
+      },
+      {
+        "module": "phase7a-declaration.ts",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 1,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "plugins",
+        "reachable": 3,
+        "partiallyReachable": 0,
+        "unreachable": 0,
+        "total": 3,
+        "reachableRatio": 100
+      },
+      {
+        "module": "production-loop",
+        "reachable": 0,
+        "partiallyReachable": 19,
+        "unreachable": 0,
+        "total": 19,
+        "reachableRatio": 0
+      },
+      {
+        "module": "queue",
+        "reachable": 0,
+        "partiallyReachable": 7,
+        "unreachable": 0,
+        "total": 7,
+        "reachableRatio": 0
+      },
+      {
+        "module": "replay",
+        "reachable": 0,
+        "partiallyReachable": 4,
+        "unreachable": 0,
+        "total": 4,
+        "reachableRatio": 0
+      },
+      {
+        "module": "replay-analytics",
+        "reachable": 0,
+        "partiallyReachable": 6,
+        "unreachable": 0,
+        "total": 6,
+        "reachableRatio": 0
+      },
+      {
+        "module": "routes",
+        "reachable": 25,
+        "partiallyReachable": 51,
+        "unreachable": 23,
+        "total": 99,
+        "reachableRatio": 25.3
+      },
+      {
+        "module": "runtime",
+        "reachable": 21,
+        "partiallyReachable": 6,
+        "unreachable": 0,
+        "total": 27,
+        "reachableRatio": 77.8
+      },
+      {
+        "module": "scheduler",
+        "reachable": 6,
+        "partiallyReachable": 0,
+        "unreachable": 0,
+        "total": 6,
+        "reachableRatio": 100
+      },
+      {
+        "module": "schemas",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 1,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "scripts",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 4,
+        "total": 4,
+        "reachableRatio": 0
+      },
+      {
+        "module": "services",
+        "reachable": 16,
+        "partiallyReachable": 67,
+        "unreachable": 0,
+        "total": 83,
+        "reachableRatio": 19.3
+      },
+      {
+        "module": "showrunner",
+        "reachable": 0,
+        "partiallyReachable": 7,
+        "unreachable": 0,
+        "total": 7,
+        "reachableRatio": 0
+      },
+      {
+        "module": "simulation",
+        "reachable": 0,
+        "partiallyReachable": 17,
+        "unreachable": 0,
+        "total": 17,
+        "reachableRatio": 0
+      },
+      {
+        "module": "storage",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 1,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "studio",
+        "reachable": 0,
+        "partiallyReachable": 5,
+        "unreachable": 0,
+        "total": 5,
+        "reachableRatio": 0
+      },
+      {
+        "module": "tests",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 19,
+        "total": 19,
+        "reachableRatio": 0
+      },
+      {
+        "module": "transport",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 4,
+        "total": 4,
+        "reachableRatio": 0
+      },
+      {
+        "module": "types",
+        "reachable": 0,
+        "partiallyReachable": 0,
+        "unreachable": 1,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "utils",
+        "reachable": 2,
+        "partiallyReachable": 0,
+        "unreachable": 0,
+        "total": 2,
+        "reachableRatio": 100
+      },
+      {
+        "module": "worker",
+        "reachable": 0,
+        "partiallyReachable": 1,
+        "unreachable": 0,
+        "total": 1,
+        "reachableRatio": 0
+      },
+      {
+        "module": "workers",
+        "reachable": 0,
+        "partiallyReachable": 2,
+        "unreachable": 0,
+        "total": 2,
+        "reachableRatio": 0
+      }
+    ]
+  },
+  "timestamp": "2026-05-21T04:10:20.859Z"
+}

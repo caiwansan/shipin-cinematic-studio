@@ -1,0 +1,3809 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VideoTaskStatus {
+  queued
+  processing
+  optimizing
+  storyboarding
+  generating
+  stitching
+  completed
+  failed
+  cancelled
+}
+
+enum TaskLogLevel {
+  info
+  warn
+  error
+}
+
+enum AssetType {
+  image
+  video
+  audio
+  other
+}
+
+model AiStageModelConfig {
+  stage    String   @id
+  provider String   @default("bailian")
+  model    String   @default("wan2.7-t2v")
+  size     String   @default("1024x1024")
+  params   Json     @default("{}")
+  enabled  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_stage_model_config")
+}
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  username        String    @unique
+  passwordHash    String
+  phone           String?   @unique
+  phoneVerified   Boolean   @default(false)
+  // DEPRECATED: use Membership.credits instead
+  // coins           Int       @default(0)
+  memberTier      String    @default("free")
+  memberExpiresAt DateTime?
+  // ═══ Phase 8.1 SaaS fields ═══
+  slaTier         String    @default("SLA_C")   // SLA_A / SLA_B / SLA_C / SLA_D
+  planLevel       String    @default("free")    // free / pro / studio / enterprise
+  createdAt       DateTime  @default(now())
+  wechatOpenId    String?   @unique
+  tokenVersion    Int       @default(1)
+  qqOpenId        String?   @unique
+  marketAgentId   String?             // 所属市场代理（推广关系）
+  agentPlanId     String?             // 代理商当前套餐ID（空=非代理商）
+  agentExpiresAt  DateTime?           // 代理商到期时间
+  agentLevel      String?             // 代理商等级: senior | premium（高级 | 顶级）
+  agentStatus     String   @default("none") // none | active | expired
+  agentCreatedAt  DateTime?           // 成为代理商的时间
+  provinceCode    String?             // 注册区位（省级代码）
+  provinceName    String?             // 省级名称
+  cityCode        String?             // 市级代码
+  cityName        String?             // 市级名称
+  districtCode    String?             // 区县级代码
+  districtName    String?             // 区县级名称
+  walletBalance   Float    @default(0)  // 钱包余额（佣金累计，可提现/升级VIP）
+  updatedAt       DateTime  @updatedAt
+  lastActiveAt    DateTime? // 最后活跃时间，用于在线状态判断
+
+  projects   Project[]
+  membership Membership?
+  comments   AssetComment[]
+  dna        CreatorDnaProfile?
+  dailyUsage DailyUsage[]
+  communityPosts    CommunityPost[]
+  communityComments CommunityComment[]
+  communityLikes    CommunityLike[]
+  communityCommentLikes CommunityCommentLike[]
+  communityRewards  CommunityReward[]
+  messagesSent      UserMessage[]     @relation("messages_sent")
+  messagesReceived  UserMessage[]     @relation("messages_received")
+  userModelConfigV2 UserModelConfigV2?
+}
+
+// 创作者 DNA 档案
+model CreatorDnaProfile {
+  id                     String   @id @default(uuid()) @db.Uuid
+  userId                 String   @unique @db.Uuid
+  cinematicStyleSignature String?  // JSON: visual pattern signature
+  pacingProfile          String?  // JSON: rhythm preference
+  emotionalProfile       String?  // JSON: emotion pattern
+  visualProfile          String?  // JSON: visual language
+  directorSpeciesType    String?  // e.g. "epic_director", "lyrical_poet"
+  dominantGenres         String?  // JSON array
+  creatorRank            Int      @default(0)
+  updatedAt              DateTime @updatedAt
+  createdAt              DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Captcha {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SmsCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  phone     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@index([phone, createdAt])
+}
+
+model EmailCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model Project {
+  id                String    @id @default(uuid()) @db.Uuid
+  name              String
+  description       String?
+  status            String    @default("draft")
+  version           Int       @default(1)
+  userId            String    @db.Uuid
+  budgetLimit       Float?
+  budgetSpent       Float     @default(0)
+  budgetAlertAt     Float?
+  budgetNotified    Boolean   @default(false)
+  executionResults  Json?     @map("execution_results")
+  mergedVideoUrl    String?   @map("merged_video_url")
+  mergeStatus       String?   @map("merge_status")              // null / processing / done / failed
+  runtimeCheckpoint Json?     @map("runtime_checkpoint")   // BLOCKER-1: pipeline checkpoint for refresh recovery
+  failureEvents     Json?     @map("failure_events")        // P1-3: append-only failure event log
+  executionJournal  Json?     @map("execution_journal")     // Phase B: append-only event log for runtime recovery
+  script            String?                                   // 剧本原文
+  plotBlueprint     Json?     @map("plot_blueprint")          // 总指挥拆解九大维度
+  continuationFrom  String?   @map("continuation_from") @db.Uuid
+  workspaceId       String?   @map("workspace_id") @db.Uuid
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyboards       Storyboard[]
+  videoTasks        VideoTask[]
+  characterProfiles CharacterProfile[]
+  sceneProfiles     SceneProfile[]
+  assets            Asset[]
+  aiCharacterSpecs  AiCharacterSpec[]
+  ttsRecords        TTSRecord[]
+  aiSceneSpecs      AiSceneSpec[]
+  aiVoiceConfigs    AiVoiceConfig[]
+  aiVideoSegments   AiVideoSegment[]
+  aiSegmentEdits    AiSegmentEdit[]
+  aiFrameDesigns    AiFrameDesign[]
+  aiPropSpecs       AiPropSpec[]
+  aiVideoProduction AiVideoProduction?
+  aiEffectSpecs     AiEffectSpec[]
+  aiActionSpecs     AiActionSpec[]
+  aiCameraSpecs     AiCameraSpec[]
+  aiEmotionSpecs    AiEmotionSpec[]
+
+  characterImages   CharacterImage[]
+  sceneImages       SceneImage[]
+  storyboardImages  StoryboardImage[]
+  propImages        PropImage[]
+  frameImages       FrameImage[]
+  pipelineStages    PipelineStage[]
+  pipelineJobs      PipelineJob[]
+  characterReferences CharacterReference[]
+  sceneReferences    SceneReference[]
+  exportTasks        ExportTask[]
+  assetRegistries    AssetRegistry[]
+  continuities       ContinuityLink[]
+  assetGraphEdges    AssetGraphEdge[]
+  workspace          Workspace? @relation(fields: [workspaceId], references: [id])
+}
+
+// AIGC 角色设计规格
+model AiCharacterSpec {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  characterName   String
+  variant         String   @default("")           // 变体标记，如"减肥前"、"减肥后"、"青年"、"老年"
+  gender          String?
+  age             String?
+  role            String?
+  voiceType       String?  @map("voice_type")
+  physicalDescription String?
+  clothing        String?
+  imagePrompt     String   @default("")
+  negativePrompt  String?
+  referenceImageUrl String?
+  confirmed       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, characterName, variant])
+  @@map("ai_character_specs")
+}
+
+// 项目 TTS 语音记录
+// 索引：projectId 上的索引用于加速按项目查询 TTS 记录
+model TTSRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  characterName   String                    // 角色名
+  voiceId         String                    // 使用的音色 ID
+  audioUrl        String                    // 音频 URL（data: 或 COS URL）
+  duration        Int      @default(0)      // 时长（秒）
+  sequenceIndex   Int      @default(0)      // 同角色多句顺序
+  text            String   @default("")     // 配音原文
+  createdAt       DateTime @default(now())
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@index([projectId])
+  @@index([projectId, characterName])
+  @@map("tts_records")
+}
+
+// AIGC 场景设计规格
+model AiSceneSpec {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  sceneId         String
+  sceneName       String
+  description     String?
+  type            String?  @map("type")
+  timeOfDay       String?  @map("time_of_day")
+  lighting        String?  @map("lighting")
+  mood            String?  @map("mood")
+  colorTone       String?  @map("color_tone")
+  environment     String?  @map("environment")
+  imagePrompt     String   @default("")
+  negativePrompt  String?
+  aspectRatio     String   @default("16:9")
+  confirmed       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_scene_specs")
+}
+
+// 图片生成提示词模板配置（从数据库读取，替代硬编码）
+model ImagePromptTemplates {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String                        // 'portrait' | 'scene' | 'storyboard' | 'prop'
+  templateKey String                        // 'negative_prompt' | 'qc_prompt' | 'prompt_structure' | 'quality_rules' | 'composition_rules'
+  title       String                        // 中文标题
+  content     String                        // 模板内容（支持 {{变量}} 插值）
+  sortOrder   Int      @default(0)
+  enabled     Boolean  @default(true)
+  description String?                       // 说明
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([type, templateKey])
+  @@map("image_prompt_templates")
+}
+
+// AIGC 音色配置
+// 索引：projectId 上的索引用于加速按项目查询音色配置
+model AiVoiceConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  characterName   String
+  voiceType       String?
+  speakingStyle   String?
+  pitch           Float    @default(1.0)
+  speed           Float    @default(1.0)
+  ttsPrompt       String?
+  audioUrl        String?  @map("audio_url")
+  voiceId         String?  @map("voice_id")  // 阿里百炼声音设计返回的专属音色 ID
+  confirmed       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_voice_configs")
+}
+
+// AIGC 视频段落规划
+model AiVideoSegment {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  segmentId       String
+  title           String?
+  associatedScenes String?  // JSON array string: ["scene_0", "scene_1"]
+  duration        Int?
+  narrativePurpose String?
+  fullText        String?  @map("full_text")  // 完整画面描述（画面设计师新增）
+  shotPattern     String?
+  emotionArc      String?
+  backgroundMusic String?
+  videoUrl        String?  @map("video_url")  // 生成的视频 URL
+  firstFrameUrl   String?  @map("first_frame_url")
+  midFrameUrl     String?  @map("mid_frame_url")
+  lastFrameUrl    String?  @map("last_frame_url")
+  firstFrameDesc  String?  @map("first_frame_desc")
+  midFrameDesc    String?  @map("mid_frame_desc")
+  lastFrameDesc   String?  @map("last_frame_desc")
+  confirmed       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, segmentId])
+  @@map("ai_video_segments")
+}
+
+// 视频编辑状态（持久化到 DB，页面切换不丢失）
+model AiSegmentEdit {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  segmentId       String
+  narrative       String?  @map("narrative")
+  dialogue        String?  @map("dialogue")
+  effects         String?  @map("effects")
+  emotion         String?  @map("emotion")
+  negativePrompt  String?  @map("negative_prompt")
+  duration        Int?     @map("duration")
+  firstFramePrompt String? @map("first_frame_prompt")
+  firstFrameNeg   String?  @map("first_frame_neg")
+  midFramePrompt  String?  @map("mid_frame_prompt")
+  midFrameNeg     String?  @map("mid_frame_neg")
+  lastFramePrompt String?  @map("last_frame_prompt")
+  lastFrameNeg    String?  @map("last_frame_neg")
+  charImageUrls   String?  @map("char_image_urls")   // JSON array
+  sceneImageUrls  String?  @map("scene_image_urls")  // JSON array
+  propImageUrls   String?  @map("prop_image_urls")   // JSON array
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, segmentId])
+  @@map("ai_segment_edits")
+}
+
+// AIGC 首尾帧设计
+// 索引：projectId 上的索引用于加速按项目查询首尾帧设计
+model AiFrameDesign {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  segmentId       String
+  firstFrameDesc  String?
+  firstFramePrompt String?
+  firstFrameAngle String?
+  lastFrameDesc   String?
+  lastFramePrompt String?
+  lastFrameAngle  String?
+  confirmed       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_frame_designs")
+}
+
+// AIGC 视频总设置
+model AiVideoProduction {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid  @unique
+  overallStyle    String?
+  fps             Int      @default(24)
+  resolution      String   @default("1920x1080")
+  colorPalette    String?
+  transitionStyle String?
+  subtitleStyle   String?
+  globalNegativePrompt String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("ai_video_productions")
+}
+
+// AIGC 特效规范表
+// 索引：projectId 上的索引用于加速按项目查询特效规范
+model AiEffectSpec {
+  id                 String   @id @default(uuid()) @db.Uuid
+  projectId          String   @db.Uuid
+  effectName         String
+  effectType         String?  // 粒子特效 / 光效 / 爆炸 / 烟雾 / 魔法 / 转场特效
+  triggerScene       String?  // 触发场景描述
+  triggerEvent       String?  // 触发事件（如：情绪高潮时、动作发生时）
+  visualDescription  String?  // 视觉表现描述
+  colorPalette       String?  // 特效色彩
+  duration           Float?   // 持续秒数
+  intensity          String?  // 强度：轻微 / 中等 / 强烈
+  notes              String?  // 补充说明
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_effect_specs")
+}
+
+// AIGC 人物动作规范表
+// 索引：projectId 上的索引用于加速按项目查询动作规范
+model AiActionSpec {
+  id                 String   @id @default(uuid()) @db.Uuid
+  projectId          String   @db.Uuid
+  characterName      String
+  actionName         String   // 动作名称：拔刀 / 转身 / 奔跑 / 拥抱 / 跳跃
+  triggerCondition   String?  // 触发条件
+  movementDesc       String?  // 动作描述（肢体轨迹、速度、力度）
+  facialExpression   String?  // 伴随面部表情
+  bodyLanguage       String?  // 身体语言补充
+  cameraFocus        String?  // 镜头聚焦点
+  duration           Float?   // 预估时长（秒）
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_action_specs")
+}
+
+// AIGC 道具规格表（Runtime Constitution v1: 独立表持久化）
+// 索引：projectId 上的索引用于加速按项目查询道具规格
+model AiPropSpec {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @map("project_id") @db.Uuid
+  name            String
+  category        String   @default("通用")
+  description     String?
+  sceneIds        Json?    @map("scene_ids") @db.JsonB    // 关联场景 ID 列表
+  characterNames  Json?    @map("character_names") @db.JsonB    // 关联角色名列表
+  imagePrompt     String?  @map("image_prompt")
+  sortOrder       Int      @default(0) @map("sort_order")
+  confirmed       Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_prop_specs")
+}
+
+// AIGC 运镜规范表
+// 索引：projectId 上的索引用于加速按项目查询运镜规范
+model AiCameraSpec {
+  id                 String   @id @default(uuid()) @db.Uuid
+  projectId          String   @db.Uuid
+  segmentId          String?  // 关联的视频段落
+  cameraMovement     String   // 运镜方式：推 / 拉 / 摇 / 移 / 跟 / 升 / 降 / 旋转 / 手持 / 斯坦尼康
+  shotSize           String?  // 景别：远景 / 全景 / 中景 / 近景 / 特写 / 大特写
+  angle              String?  // 角度：平视 / 俯视 / 仰视 / 过肩 / 主观视角
+  duration           Float?   // 持续秒数
+  transition         String?  // 转场方式
+  purpose            String?  // 镜头语言目的（营造紧张感、展现空间关系等）
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_camera_specs")
+}
+
+// AIGC 情绪表达规范表
+// 索引：projectId 上的索引用于加速按项目查询情绪规范
+model AiEmotionSpec {
+  id                 String   @id @default(uuid()) @db.Uuid
+  projectId          String   @db.Uuid
+  characterName      String
+  emotionType        String   // 情绪类型：喜悦 / 悲伤 / 愤怒 / 恐惧 / 惊讶 / 厌恶 / 爱慕 / 焦虑 / 平静 / 激动
+  intensity          String?  // 强度：轻微 / 中等 / 强烈 / 爆发
+  facialDesc         String?  // 面部表现（眉、眼、嘴的详细描述）
+  bodyLanguage       String?  // 肢体语言
+  voiceTone          String?  // 语调描述（颤抖、低沉、高昂、哽咽）
+  triggerEvent       String?  // 触发事件
+  timing             String?  // 时间点（贯穿全片 / 特定场景）
+  cameraPreference   String?  // 推荐运镜（情绪特写 / 近景跟随）
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_emotion_specs")
+}
+
+model Storyboard {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  shotIndex       Int
+  duration        Float?
+  shotType        String?
+  subject         String?
+  action          String?
+  expression      String?
+  cameraMovement  String?
+  lens            String?
+  lighting        String?
+  emotion         String?
+  environment     String?
+  cinematicStyle  String?
+  colorStyle      String?
+  realism         Boolean?
+  motionBlur      Boolean?
+  continuityNotes String?
+  negativePrompt  String?
+  storyboardImage String?
+  startFrame      Int?
+  endFrame        Int?
+  createdAt       DateTime @default(now())
+
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  videoTask VideoTask[]
+
+  @@index([projectId])
+}
+
+model VideoTask {
+  id             String          @id @default(uuid()) @db.Uuid
+  projectId      String          @db.Uuid
+  storyboardId   String?         @db.Uuid
+  segmentId      String?         @db.Uuid
+  status         VideoTaskStatus @default(queued)
+  progress       Int             @default(0)
+  error          String?
+  idempotencyKey String?         @unique
+  lockedBy       String?
+  heartbeatAt    DateTime?
+  retryCount     Int             @default(0)
+  maxRetries     Int             @default(3)
+  priority       Int             @default(1)
+  taskType       String          @default("video")
+  scheduledFor   DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  storyboard   Storyboard?    @relation(fields: [storyboardId], references: [id], onDelete: SetNull)
+  segments     VideoSegment[]
+  taskLogs     TaskLog[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([segmentId])
+}
+
+model VideoSegment {
+  id            String   @id @default(uuid()) @db.Uuid
+  taskId        String   @db.Uuid
+  shotIndex     Int
+  filePath      String?
+  thumbnailPath String?
+  duration      Float?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+
+  task VideoTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model ExportTask {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String
+  projectId   String   @db.Uuid
+  status      String   @default("queued")
+  exportType  String   @default("zip")
+  progress    Int      @default(0)
+  outputUrl   String?
+  packageSize Int?
+  error       String?
+  traceId     String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("export_tasks")
+}
+
+model CharacterProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  name            String
+  age             Int?
+  gender          String?
+  face            String?
+  hair            String?
+  clothes         String?
+  body            String?
+  identity        String?
+  speakingStyle   String?
+  personality     String?
+  frontImage      String?
+  sideImage       String?
+  fullBodyImage   String?
+  expressionImage String?
+  createdAt       DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model SceneProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  location        String?
+  architecture    String?
+  weather         String?
+  lighting        String?
+  timeOfDay       String?
+  atmosphere      String?
+  colorPalette    String?
+  referenceImage  String?
+  createdAt       DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+/// 视觉风格配置档案
+/// 每种视觉风格（anime/realistic/3d/cartoon 等）定义全链路 prompt 模板 + 模型路由 + 画风参数
+model StyleProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique               // 英文标识: 'anime', 'realistic', '3d', ...
+  displayName String                        // 中文显示名: '动漫风格', '写实风格', '3D 渲染', ...
+  icon        String   @default("🎨")       // 显示图标
+
+  /// 风格描述（prompt 语句块，注入各环节）
+  description String   @default("")
+  /// 正面风格修饰词（追加到所有 image/video prompt 末尾）
+  styleTokens  String   @default("")
+  /// 负面风格修饰词（追加到所有 negative prompt 末尾）
+  negativeTokens String @default("")
+
+  /// 各环节的 prompt 模板覆盖（JSON）
+  /// {
+  ///   "character": "…",
+  ///   "scene": "…",
+  ///   "storyboard": "…",
+  ///   "video": "…",
+  ///   "narrative": "…"
+  /// }
+  promptOverrides Json?   @map("prompt_overrides")
+
+  /// 推荐模型路由（JSON）
+  /// {
+  ///   "image": { "provider": "volcengine", "model": "doubao-seedream-4-0-250828" },
+  ///   "video": { "provider": "volcengine", "model": "doubao-seedance-2-0-260128" },
+  ///   "llm": { "provider": "deepseek", "model": "deepseek-chat" }
+  /// }
+  modelRoutes Json?   @map("model_routes")
+
+  /// 画风参考图 URL（可选）
+  referenceImageUrl String? @map("reference_image_url")
+
+  /// 额外参数（JSON）
+  parameters     Json?   @default("{}")
+
+  sortOrder      Int      @default(0)
+  enabled        Boolean  @default(true)
+  isDefault      Boolean  @default(false)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("style_profiles")
+}
+
+model PromptTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  category    String?
+  content     Json?
+  variables   Json?
+  createdAt   DateTime @default(now())
+}
+
+model Asset {
+  id        String    @id @default(uuid()) @db.Uuid
+  projectId String?   @db.Uuid
+  type      AssetType @default(other)
+  fileName  String
+  filePath  String
+  mimeType  String?
+  fileSize  Int?
+  width     Int?
+  height    Int?
+  duration  Float?
+  taskId    String?
+  createdAt DateTime  @default(now())
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, type])
+  @@index([projectId])
+}
+
+model Membership {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @unique @db.Uuid
+  tier          String    @default("free")
+  credits       Int       @default(0)
+  creditsUsed   Int       @default(0)
+  storageUsed   BigInt    @default(0)          // 已用空间(字节)
+  storageLimit  BigInt    @default(524288000)   // 空间上限(默认500MB)
+  agentLevel    String    @default("none")      // none | mid | senior | super
+  parentId      String?   @db.Uuid              // 上级代理(推荐人)
+  monthlyBudget Float?
+  monthlySpent  Float     @default(0)
+  monthlyResetAt DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent       Membership?    @relation("AgentReferral", fields: [parentId], references: [userId])
+  children     Membership[]   @relation("AgentReferral")
+  storagePacks StoragePack[]
+  coinLogs     CoinLog[]
+  assets       UserAsset[]
+  orders       RechargeOrder[]
+}
+
+// 积分流水
+model CoinLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  amount     Int                           // 正=收入，负=支出
+  type       String                        // recharge | consume | reward | transfer_in | transfer_out | storage_upgrade | agent_upgrade
+  remark     String?
+  relatedId  String?                       // 关联ID(订单号/作品ID等)
+  createdAt  DateTime @default(now())
+
+  membership Membership @relation(fields: [userId], references: [userId], map: "coinlog_membership_fkey")
+
+  @@index([userId, createdAt])
+}
+
+// 作品空间
+model UserAsset {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  title      String
+  type       String                        // image | video
+  url        String
+  thumbnail  String?
+  prompt     String?
+  style      String?
+  mode       String?
+  fileSize   Int       @default(0)          // 字节
+  isFeatured Boolean   @default(false)      // 是否被推荐展示
+  source     String?                        // 来源: 'ai_generate' | 'user_upload' | null
+  modifiedBy String?                        // 二次修改者用户名（JSON数组）
+
+  // 宇宙评分系统 v2
+  universeScore     Float @default(0)
+  cinematicScore    Float @default(0)
+  narrativeScore    Float @default(0)
+  emotionalScore    Float @default(0)
+  consistencyScore  Float @default(0)
+  renderQualityScore Float @default(0)
+  worldDepthScore   Float @default(0)
+  engagementScore   Float @default(0)
+  retentionScore    Float @default(0)
+  freshnessScore    Float @default(0)
+
+  // 分群
+  universeClusterId String? @db.Uuid
+  cluster           UniverseCluster? @relation(fields: [universeClusterId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  membership Membership @relation(fields: [userId], references: [userId], map: "userasset_membership_fkey")
+
+  likes      AssetLike[]
+  comments   AssetComment[]
+
+  @@index([userId, createdAt])
+  @@index([universeScore(sort: Desc)])
+  @@index([universeClusterId])
+}
+
+// 作品点赞
+// 宇宙分群
+model UniverseCluster {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  genre          String?
+  description    String?
+  embeddingCenter String?  // JSON 向量中心
+  activityScore  Float    @default(0)
+  evolutionState String    @default("active") // active | dormant | evolving
+  workCount      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assets UserAsset[]
+}
+
+model AssetLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  assetId   String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  asset UserAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, userId])
+  @@index([assetId])
+}
+
+// 作品评论
+model AssetComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  assetId   String   @db.Uuid
+  userId    String   @db.Uuid
+  content   String
+  createdAt DateTime @default(now())
+
+  asset UserAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, createdAt])
+}
+
+// 积分充值订单
+model RechargeOrder {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  orderNo      String?  @unique               // 自定义订单号（用于支付宝回调关联）
+  planLevel    String?                         // 购买的 VIP 套餐 level
+  coins        Int                            // 购买积分数
+  amount       Float                          // 支付金额(元)
+  status       String   @default("pending")  // pending | pending_verify | paid | failed | refunded
+  payMethod    String?                        // wechat | alipay | qrcode | alipay_secret
+  accountName  String?                        // 用户填写的系统账号名称（人工审核用）
+  tradeNo      String?                        // 支付宝交易号（回调返回）
+  remark       String?                        // 备注
+  payTime      DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  membership Membership? @relation(fields: [userId], references: [userId], map: "recharge_membership_fkey")
+}
+
+// 空间扩容包
+
+// 会员方案配置（后台可编辑）
+model MemberPlan {
+  id             String   @id @default(uuid()) @db.Uuid
+  level          String   @unique              // free | pro | director | enterprise
+  name           String                        // 显示名称
+  price          Float    @default(0)           // 价格（元）
+  originalPrice  Int      @default(0)           // 原价（元）
+  months         Float    @default(1)           // 有效期月数
+  storageLimit   Int      @default(500)         // 储存空间(MB)
+  dailyQuota     Int      @default(5)           // 每日配额（保留兼容）
+  maxResolution  String   @default("720p")      // 保留兼容
+  maxDuration    Int      @default(15)          // 秒（保留兼容）
+  concurrentTasks Int     @default(1)           // 保留兼容
+  watermark      Boolean  @default(true)        // 保留兼容
+  apiAccess      Boolean  @default(false)       // 保留兼容
+  coins          Int      @default(0)           // 赠送积分数
+  icon           String   @default("🎬")        // VIP 图标 emoji
+  color          String   @default("#818cf8")   // VIP 颜色值
+  sortOrder      Int      @default(0)
+  enabled        Boolean  @default(true)
+  // 新增：权限开关
+  onlineApiEnabled  Boolean  @default(false)    // 可使用独立在线大模型 API
+  localModelEnabled Boolean  @default(false)    // 可使用本地大模型
+
+  // 续费控制 & 多周期
+  renewable        Boolean  @default(true)      // 是否允许用户续费/二次购买
+  dayPrice         Float    @default(0)          // 日价（元/天），可选显示
+  firstPurchaseOnly Boolean @default(false)      // 是否仅限新用户首次购买
+
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  @@map("MemberPlan")
+}
+
+model StoragePack {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  size       BigInt                         // 扩容字节数(1G=1073741824)
+  coins      Int                            // 消耗积分数
+  startAt    DateTime @default(now())
+  expireAt   DateTime                       // 1年后过期
+  createdAt  DateTime @default(now())
+
+  membership Membership @relation(fields: [userId], references: [userId], map: "storagepack_membership_fkey")
+}
+
+// 代理等级配置(系统级)
+model AgentLevelConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  level       String   @unique              // mid | senior | super
+  name        String                        // 中级代理 | 高级代理 | 超级代理
+  priceCoins  Int                           // 所需积分数
+  discount    Float                         // 折扣(0.85=8.5折)
+  createdAt   DateTime @default(now())
+}
+
+model TaskLog {
+  id        String        @id @default(uuid()) @db.Uuid
+  taskId    String        @db.Uuid
+  level     TaskLogLevel  @default(info)
+  message   String
+  metadata  Json?
+  eventId   String?
+  createdAt DateTime      @default(now())
+
+  task VideoTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, eventId])
+}
+
+model WorkerRegistration {
+  id                String    @id @map("id")
+  hostname          String    @map("hostname")
+  version           String    @default("1.0") @map("version")
+  status            String    @default("active") @map("status")
+  capacity          Int       @default(5) @map("capacity")
+  currentLoad       Int       @default(0) @map("currentload")
+  healthy           Boolean   @default(true) @map("healthy")
+  tags              Json      @default("[]") @map("tags")
+  capabilities      Json      @default("{}") @map("capabilities")
+  lastError         String?   @map("lasterror")
+  consecutiveErrors Int       @default(0) @map("consecutiveerrors")
+  successCount      Int       @default(0) @map("successcount")
+  failureCount      Int       @default(0) @map("failurecount")
+  avgResponseTime   Float     @default(0) @map("avgresponsetime")
+  score             Float     @default(1.0) @map("score")
+  weight            Float     @default(1.0) @map("weight")
+  lastWeightedAt    DateTime? @map("lastweightedat")
+  autoUnhealthyAt   DateTime? @map("autounhealthyat")
+  lastHeartbeat     DateTime  @default(now()) @map("lastheartbeat")
+  createdAt         DateTime  @default(now()) @map("createdat")
+
+  assignments WorkerTaskAssignment[]
+  healthHistory WorkerHealthHistory[]
+
+  @@map("WorkerRegistration")
+}
+
+model WorkerTaskAssignment {
+  id                  String   @id @default(uuid()) @db.Uuid @map("id")
+  workerId            String   @map("workerid")
+  taskId              String   @map("taskid")
+  startedAt           DateTime @default(now()) @map("startedat")
+  estimatedDuration   Float?   @map("estimatedduration")
+  actualResponseTime  Float?   @map("actualresponsetime")
+
+  worker WorkerRegistration @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@index([workerId], map: "WorkerTaskAssignment_workerId_idx")
+  @@index([taskId], map: "WorkerTaskAssignment_taskId_idx")
+  @@map("WorkerTaskAssignment")
+}
+
+model WorkerHealthHistory {
+  id         String   @id @default(uuid()) @db.Uuid @map("id")
+  workerId   String   @map("workerid")
+  score      Float    @map("score")
+  healthy    Boolean  @map("healthy")
+  load       Int      @default(0) @map("load")
+  recordedAt DateTime @default(now()) @map("recordedat")
+
+  worker WorkerRegistration @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@index([workerId, recordedAt], map: "WorkerHealthHistory_workerId_recordedAt_idx")
+  @@map("WorkerHealthHistory")
+}
+
+model DeadLetterTask {
+  id              String   @id @default(uuid()) @db.Uuid
+  originalTaskId  String
+  projectId       String
+  taskType        String   @default("video")
+  error           String?
+  retryCount      Int      @default(0)
+  lastErrorAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ============================================
+// STEP 3: AI Model Router — 决策层模型
+// ============================================
+
+// ① 模型注册中心
+model AiModel {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @unique        // 如 "deepseek-chat", "kling-1.6", "gpt-4o"
+  provider        String                   // 如 "deepseek", "openai", "volcengine", "local"
+  modelType       String                   // "llm", "image", "video", "tts", "audio"
+  taskTypes       String[]                 // ["text_script","character_gen","storyboard","video_gen","voiceover"]
+  status          String   @default("active") // "active", "degraded", "deprecated", "disabled"
+  deprecateAt     DateTime?                // 过时时间，自动降级
+  
+  // 成本：每 request / 每 token
+  costPerRequest  Float    @default(0)
+  costPerToken    Float    @default(0)
+  costUnit        String   @default("USD")
+  
+  // 质量评分（0~1，人工标定更新）
+  qualityScore    Float    @default(0.8)
+  
+  // 实时统计（由系统自动更新）
+  avgLatency      Float    @default(0)     // 平均响应秒数
+  successCount    Int      @default(0)
+  failureCount    Int      @default(0)
+  totalCost       Float    @default(0)     // 累计花费
+  
+  // 配额
+  rateLimit       String?                  // "1000/min" 等
+  dailyTokenLimit Int?
+  concurrencyMax  Int      @default(5)
+  currentLoad     Int      @default(0)
+  
+  // 端点配置
+  endpointUrl     String?
+  apiKeyRef       String?                  // 指向环境变量或 vault key
+  params          Json?                    // 额外参数如 model_version, temperature 默认值
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  fallbackFrom    AiFallbackRule[] @relation("PrimaryModel")   // 作为 primary 时的回退链
+  fallbackTo      AiFallbackRule[] @relation("FallbackModel")  // 作为 fallback 时的引用
+
+  @@index([modelType, status])
+  @@map("AiModel")
+}
+
+// ② Fallback 链
+model AiFallbackRule {
+  id              String   @id @default(uuid()) @db.Uuid
+  taskType        String                   // "video_gen", "text_script" 等
+  priority        Int      @default(0)     // 回退优先级顺序
+  primaryId       String   @db.Uuid
+  fallbackId      String   @db.Uuid
+  condition       String?                  // 触发条件 JSON，如 {"error_contains":"rate_limit"}
+  createdAt       DateTime @default(now())
+
+  primary  AiModel @relation("PrimaryModel", fields: [primaryId], references: [id], onDelete: Cascade)
+  fallback AiModel @relation("FallbackModel", fields: [fallbackId], references: [id], onDelete: Cascade)
+
+  @@index([taskType, priority])
+  @@map("AiFallbackRule")
+}
+
+// ③ 路由策略
+model AiRoutingPolicy {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @unique          // "cost_first", "quality_first", "balanced", "low_latency"
+  description     String?
+  weightCost      Float    @default(0.25)   // 策略权重：成本
+  weightQuality   Float    @default(0.25)   // 策略权重：质量
+  weightLatency   Float    @default(0.25)   // 策略权重：延迟
+  weightSuccess   Float    @default(0.25)   // 策略权重：成功率
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@map("AiRoutingPolicy")
+}
+
+// ④ 任务类型 → 模型映射
+model AiTaskTypeMapping {
+  id              String   @id @default(uuid()) @db.Uuid
+  taskType        String   @unique           // "text_script", "character_gen" ...
+  description     String?
+  modelIds        String[]                   // 可选模型列表（按顺序优选出最佳）
+  policyId        String?                    // 默认策略 ID（不建立外键）
+  createdAt       DateTime @default(now())
+
+  @@map("AiTaskTypeMapping")
+}
+
+// ⑤ 模型调用日志（用于成本核算 + 路由评分）
+model AiExecutionLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  taskId          String   @db.Uuid
+  projectId       String?  @db.Uuid
+  modelId         String                   // 不建立外键，允许删除模型后日志留存
+  taskType        String                   // "video_gen", "text_script" ...
+  requestType     String   @default("api") // "api", "fallback", "retry"
+  
+  status          String                   // "success", "failed", "timeout", "fallback"
+  latency         Float                    // 响应秒数
+  cost            Float    @default(0)     // 本次调用花费
+  tokensInput     Int?
+  tokensOutput    Int?
+  error           String?
+  
+  // 路由决策回溯
+  policyUsed      String?                  // 当时使用的策略名称
+  scoreBefore     Float?                   // 调用前的路由评分
+  scoreAfter      Float?                   // 调用后的评分更新
+  
+  createdAt       DateTime @default(now())
+
+  @@index([modelId, createdAt])
+  @@index([taskId])
+  @@index([projectId])
+  @@map("AiExecutionLog")
+}
+
+// ============================================
+// STEP 4: Reality Sandbox Layer
+// ============================================
+
+// ① Circuit Breaker
+model AiCircuitBreaker {
+  id                String    @id @default(uuid()) @db.Uuid
+  modelId           String    @unique          // 关联 AiModel name
+  state             String    @default("closed") // closed / open / half-open
+  failureCount      Int       @default(0)
+  successCount      Int       @default(0)
+  failureThreshold  Int       @default(5)
+  successThreshold  Int       @default(3)
+  resetTimeoutMs    Int       @default(30000)
+  lastFailureAt     DateTime?
+  lastSuccessAt     DateTime?
+  openedAt          DateTime?
+  halfOpenAt        DateTime?
+  lastError         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("AiCircuitBreaker")
+}
+
+// ② Sandbox 调用日志
+model AiSandboxLog {
+  id                String   @id @default(uuid()) @db.Uuid
+  executionLogId    String   @db.Uuid
+  modelName         String
+  requestType       String   @default("chat_completion")
+  status            String   // success / timeout / circuit_breaker / rate_limited / failed
+  latencyMs         Int      @default(0)
+  timeoutMs         Int      @default(30000)
+  retryCount        Int      @default(0)
+  tokenCount        Int?
+  promptPreview     String?
+  responsePreview   String?
+  errorType         String?  // timeout / rate_limit / auth_error / server_error / parse_error
+  errorDetail       String?
+  cost              Float    @default(0)
+  createdAt         DateTime @default(now())
+
+  @@index([modelName, createdAt])
+  @@index([status])
+  @@index([executionLogId])
+  @@map("AiSandboxLog")
+}
+
+// ③ Timeout 配置
+model AiTimeoutConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  taskType        String   @unique
+  timeoutMs       Int      @default(30000)
+  retryCount      Int      @default(2)
+  retryDelayMs    Int      @default(1000)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================================
+// STEP 6: Shadow Mode + Production Release Layer
+// ============================================================
+
+// ① Shadow 配置（影子执行门控 + 灰度控制）
+model ShadowConfig {
+  id              String           @id @default(uuid())
+  enabled         Boolean          @default(false)
+  grayThreshold   Int              @default(0)
+  maxConcurrent   Int              @default(5)
+  rateLimitPerMin Int              @default(10)
+  costBudget      Decimal          @default(1.0) @db.Decimal(12,6)
+  costSpent       Decimal          @default(0.0) @db.Decimal(12,6)
+  autoRollback    Boolean          @default(true)
+  lastRolledBack  DateTime?
+  updatedAt       DateTime         @updatedAt
+
+  executionLogs   ShadowExecutionLog[]
+}
+
+// ② Shadow 执行日志
+model ShadowExecutionLog {
+  id              String   @id @default(uuid())
+  shadowConfigId  String
+  sandboxLogId    String?
+  taskId          String?
+  projectId       String?
+  userId          String?
+  taskType        String
+  modelName       String
+  promptPreview   String?
+  mockOutput      Json?
+  realOutput      Json?
+  mockLatencyMs   Int?
+  realLatencyMs   Int?
+  mockCost        Decimal  @default(0) @db.Decimal(12,6)
+  realCost        Decimal  @default(0) @db.Decimal(12,6)
+  status          String   @default("pending") // pending | success | failed | timeout | shadow_failed
+  errorMessage    String?
+  retryCount      Int      @default(0)
+  executedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  shadowConfig    ShadowConfig @relation(fields: [shadowConfigId], references: [id])
+  diffResult      ShadowDiffResult?
+}
+
+// ③ Mock vs Real 对比结果
+model ShadowDiffResult {
+  id              String   @id @default(uuid())
+  executionLogId  String   @unique
+  taskType        String
+  modelName       String
+  structureMatch  Boolean  @default(false)
+  structureScore  Decimal  @default(0) @db.Decimal(5,2)
+  contentScore    Decimal  @default(0) @db.Decimal(5,2)
+  latencyDelta    Decimal  @default(0) @db.Decimal(10,2)
+  costDelta       Decimal  @default(0) @db.Decimal(12,6)
+  driftScore      Decimal  @default(0) @db.Decimal(5,2)
+  overallScore    Decimal  @default(0) @db.Decimal(5,2)
+  judgedAt        DateTime?
+  createdAt       DateTime @default(now())
+
+  executionLog    ShadowExecutionLog @relation(fields: [executionLogId], references: [id])
+}
+
+// ④ 漂移历史
+model ShadowDriftHistory {
+  id                String   @id @default(uuid())
+  modelName         String
+  taskType          String
+  windowCount       Int      @default(0)
+  avgDriftScore     Decimal  @default(0) @db.Decimal(5,2)
+  avgStructureScore Decimal  @default(0) @db.Decimal(5,2)
+  avgContentScore   Decimal  @default(0) @db.Decimal(5,2)
+  avgLatencyDelta   Decimal  @default(0) @db.Decimal(10,2)
+  avgCostDelta      Decimal  @default(0) @db.Decimal(12,6)
+  sampleStartAt     DateTime @default(now())
+  sampleEndAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([modelName, taskType])
+}
+
+// ⑤ 4层成本预算控制
+model CostBudget {
+  id              String    @id @default(uuid())
+  scope           String    // global | project | user | task_type
+  scopeId         String?
+  budgetAmount    Decimal   @db.Decimal(12,6)
+  spentAmount     Decimal   @default(0) @db.Decimal(12,6)
+  alertThreshold  Int       @default(80)
+  blockThreshold  Int       @default(100)
+  period          String    @default("monthly") // daily | weekly | monthly
+  enabled         Boolean   @default(true)
+  lastAlertAt     DateTime?
+  lastBlockedAt   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([scope, scopeId])
+}
+
+// 系统时序指标表 — 长期稳定性持久化
+model SystemMetric {
+  id        BigInt   @id @default(autoincrement())
+  timestamp DateTime @default(now())
+
+  // CPU / 内存 / 进程
+  cpuPercent    Float   @default(0)
+  memoryMb      Float   @default(0)
+  eventLoopLag  Float?
+
+  // 队列
+  queueLength        Int   @default(0)
+  queuePressure      Float @default(0)
+
+  // Worker
+  activeWorkers    Int   @default(0)
+  workerEfficiency Float @default(0)
+  workerCompleted  Int   @default(0)
+
+  // PID / 背压控制
+  pidPressure      Float @default(0)
+  generatorRate    Float @default(0)
+
+  // 成本（模拟）
+  costPerMin       Float @default(0)
+  totalCost        Float @default(0)
+
+  // 系统均衡
+  ses              Float   @default(1)
+  degraded         Boolean @default(false)
+
+  // 稳定评分（延迟计算，nullable）
+  stabilityScore Float?
+  stabilityGrade String?
+
+  @@map("system_metrics")
+  @@index([timestamp])
+}
+
+// 回放帧 — 系统全景快照
+model ReplayFrame {
+  id        BigInt   @id @default(autoincrement())
+  timestamp DateTime @default(now())
+
+  // 队列
+  queueLength   Int   @default(0)
+  queuePressure Float @default(0)
+
+  // Worker
+  activeWorkers    Int   @default(0)
+  workerThroughput Float @default(0)
+  workerEfficiency Float @default(0)
+
+  // PID / 控制
+  pidPressure   Float @default(0)
+  generatorRate Float @default(0)
+  ses           Float @default(1)
+
+  // 内存
+  memoryMb Float @default(0)
+
+  // 成本（模拟）
+  costPerMin Float @default(0)
+  totalCost  Float @default(0)
+
+  // 漂移分析
+  queueGrowthRate Float?
+  workerTrend     Float?
+  memorySlope     Float?
+  pidVariance     Float?
+  stabilityScore  Float?
+  stabilityGrade  String?
+
+  // 标签（标记关键帧类型: normal / alert / throttle / recovery / emergency）
+  label String?
+
+  // Session 绑定
+  sessionId BigInt?
+  session   StabilitySession? @relation(fields: [sessionId], references: [id])
+
+  @@map("replay_frames")
+  @@index([timestamp])
+  @@index([sessionId])
+}
+
+// 稳定性实验 Session — 每次长稳测试的完整记录
+model StabilitySession {
+  id          BigInt   @id @default(autoincrement())
+  label       String?           // 实验标签，如 "Long Run #14"
+  status      String   @default("running") // running | completed | cancelled
+  
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  durationSec Int      @default(0)
+  
+  // 系统指纹
+  queuePattern       String?  // "stable" | "oscillating" | "diverging"
+  workerDecayCurve   String?  // "flat" | "slow_decay" | "sharp_decay"
+  pidSignature       String?  // "tight" | "spiky" | "oscillating"
+  costProfile        String?  // "linear" | "jumpy" | "runaway"
+  recoveryProfile    String?  // "quick" | "slow" | "incomplete"
+  
+  // 评估
+  grade     String?  // A+ | A | B | C | D | F
+  score     Float?
+  
+  // 退化统计
+  eventCount  Int   @default(0)
+  worstEvent  String?
+  
+  // 阶段执行记录（JSON）
+  phases Json?  // [{ name, startSec, endSec, pattern, intensity }]
+
+  // 关联
+  frames  ReplayFrame[]    // 该 session 期间的回放帧
+  events  DegradationEvent[] // 退化事件
+
+  @@map("stability_sessions")
+  @@index([status])
+  @@index([startedAt])
+}
+
+// 退化事件 — 实验中记录的系统退化时间点
+model DegradationEvent {
+  id          BigInt   @id @default(autoincrement())
+  sessionId   BigInt
+  timestamp   DateTime @default(now())
+  elapsedSec  Int      @default(0)
+  
+  eventType   String   // pid_oscillation | queue_divergence | worker_fatigue | ses_throttling | memory_leak | cost_spike
+  severity    String   // warning | critical | emergency
+  message     String
+  
+  // 系统状态快照（当时的值）
+  metricValues Json?   // { queueLength, queuePressure, memoryMb, ses, pidRate, ... }
+
+  session  StabilitySession @relation(fields: [sessionId], references: [id])
+
+  @@map("degradation_events")
+  @@index([sessionId])
+  @@index([timestamp])
+}
+
+// ============================================================
+// Prompt Intelligence — 提示词自优化系统
+// ============================================================
+
+model PromptMemory {
+  id              BigInt   @id @default(autoincrement())
+  userId          String
+  prompt          String       // 原始 prompt
+  optimizedPrompt String       // 优化后的 prompt
+  provider        String
+  modelName       String
+  taskType        String       // image | video
+  style           String?
+  mode            String?
+  qualityScore    Float?       // 0-10
+  consistencyScore Float?
+  realismScore    Float?
+  renderTimeMs    Int          @default(0)
+  cost            Float        @default(0)
+  success         Boolean      @default(true)
+  failureReason   String?
+  feedback        String?      // approve | reject | neutral
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("prompt_memory")
+  @@index([userId])
+  @@index([taskType])
+  @@index([provider])
+  @@index([qualityScore])
+}
+
+model ApiKey {
+  id        String   @id @default(uuid()) @db.Uuid
+  provider  String   @unique
+  keyName   String
+  keyValue  String
+  updatedAt DateTime @updatedAt
+
+  @@map("ApiKey")
+}
+
+// Config System v2：单行配置（Single Source of Truth）
+// 一个用户一行，image/video/tts provider 由 user 直接设定
+// 彻底消除 v1 跨行污染 + 时间戳竞争问题
+model UserModelConfigV2 {
+  userId          String   @id @db.Uuid
+  // 四类模型的 provider 选择（空字符串则未设置）
+  imageProvider   String   @default("volcengine")
+  videoProvider   String   @default("volcengine")
+  ttsProvider     String   @default("volcengine")
+  // API Key（加密存储）
+  imageApiKey     String?
+  videoApiKey     String?
+  ttsApiKey       String?
+  // LLM 模型（语言模型，控制层）
+  llmProvider     String   @default("volcengine")
+  llmApiKey       String?
+  llmModel        String   @default("doubao-seed-2-0-plus-260428")
+  llmEnabled      Boolean  @default(true)
+  // ⭐ 自定义端点（BYO — 每类模型独立）
+  baseUrl         String?           // 全局基址（向后兼容）
+  llmBaseUrl      String?           // LLM 自定义端点
+  imageBaseUrl    String?           // 图片模型自定义端点
+  videoBaseUrl    String?           // 视频模型自定义端点
+  ttsBaseUrl      String?           // 语音模型自定义端点
+  // 四类模型的模型名 + 开关
+  imageModel      String   @default("wan2.7-image-pro")
+  imageEnabled    Boolean  @default(true)
+  videoModel      String   @default("wan2.7-t2v")
+  videoEnabled    Boolean  @default(true)
+  ttsModel        String   @default("cosyvoice-v3.5-plus")
+  ttsEnabled      Boolean  @default(true)
+  // 🎵 音乐生成模型（独立配置，用户三选一）
+  musicProvider   String   @default("")
+  musicApiKey     String?
+  musicModel      String   @default("")
+  musicEnabled    Boolean  @default(false)
+  musicBaseUrl    String?           // 音乐模型自定义端点
+  // 时间戳
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("UserModelConfigV2")
+}
+
+// 每日 AI 生成使用计数（配额管理）
+model ModelProvider {
+  id            String   @id @default(uuid()) @db.Uuid
+  provider      String   @unique  // aliyun, volcengine, openai, deepseek 等
+  label         String            // 展示名称，如"阿里百炼"
+  modelType     String            // image | llm | video | tts
+  modelName     String            // 模型名，如 wanx2.1-t2i-turbo
+  apiKeyEnv     String            // 环境变量名，如 ALIYUN_API_KEY
+  endpoint      String?           // API 端点
+  aspectRatioMap Json?            // 画幅比例映射，如 {"16:9":"1280x720","9:16":"720x1280"}
+  defaultParams Json?             // 默认参数，如 {n:1, negativePrompt:""}
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("ModelProvider")
+}
+
+// 自定义音色预设（阿里百炼声音设计/复刻创建的音色）
+model VoicePreset {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String               // 展示名称
+  voiceId       String               // 阿里返回的 voice_id
+  type          String   @default("designed") // designed | cloned | builtin
+  description   String?              // 文字描述（声音设计时）
+  targetModel   String   @default("cosyvoice-v3.5-plus") // 绑定的模型
+  sampleUrl     String?              // 音频样本URL（可选）
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([voiceId, targetModel])
+  @@map("voice_presets")
+}
+
+model DailyUsage {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  date      DateTime // 日期，存储当天 00:00:00 UTC
+  videoCount Int     @default(0)    // 视频生成次数
+  imageCount Int     @default(0)    // 图片生成次数
+  ttsCount   Int     @default(0)    // 语音生成次数
+  llmCount   Int     @default(0)    // 语言模型调用次数
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("DailyUsage")
+}
+
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  displayName  String   @default("") @map("display_name")
+  role         String   @default("operator")
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("AdminUser")
+}
+
+// ============================================================
+// AI 资产经济体系（Asset Economy System）
+// ============================================================
+
+// 资产 DNA — 每个平台原生资产的唯一数字指纹
+model AssetDna {
+  id                 String   @id @default(uuid()) @db.Uuid
+  assetId            String   @unique @db.Uuid
+  creatorId          String   @db.Uuid       // 原始创作者
+  projectId          String   @db.Uuid       // 所属项目
+  type               String                  // image/video/character/scene/prop
+  promptStructure    String?                 // 提示词结构指纹（hash）
+  styleVector        String?                 // 风格向量（JSON 字符串）
+  characterEmbedding String?                 // 角色嵌入（JSON）
+  compositionVector  String?                 // 构图向量
+  colorDistribution  String?                 // 色彩分布
+  modelInfo          String?                 // 生成模型信息
+  workflowInfo       String?                 // 工作流信息
+  createdAt          DateTime @default(now())
+
+  @@map("AssetDna")
+}
+
+// 资产血缘 — 继承链记录
+model AssetLineage {
+  id              String   @id @default(uuid()) @db.Uuid
+  assetId         String   @unique @db.Uuid
+  parentAssetIds  String?    // 父资产ID数组 (JSON: string[])
+  rootAssetId     String?  @db.Uuid    // 根资产ID
+  lineageDepth    Int      @default(0)
+  creatorChain    String?     // 创作者链 (JSON)
+  createdAt       DateTime @default(now())
+
+  @@map("AssetLineage")
+}
+
+// 引用记录 — 谁引用了谁创建了什么
+model AssetReference {
+  id            String   @id @default(uuid()) @db.Uuid
+  sourceAssetId String @db.Uuid     // 被引用的资产
+  targetAssetId String @db.Uuid     // 引用后生成的新资产
+  userId        String   @db.Uuid     // 执行引用的用户
+  projectId     String   @db.Uuid     // 所在项目
+  referenceType String               // direct/derivative/inspiration
+  coinsPaid     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@map("AssetReference")
+  @@index([sourceAssetId])
+  @@index([targetAssetId])
+}
+
+// 贡献度权重
+model ContributionWeight {
+  id                String   @id @default(uuid()) @db.Uuid
+  assetId           String   @db.Uuid
+  creatorId         String   @db.Uuid
+  contributionScore Float  @default(0)  // 0.0 ~ 1.0
+  inheritedWeight   Float   @default(0)
+  role              String?               // character/scene/style/composition
+  createdAt         DateTime @default(now())
+
+  @@map("ContributionWeight")
+  @@index([assetId])
+  @@index([creatorId])
+}
+
+// 收益分账记录
+model RevenueSplit {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String  @db.Uuid
+  creatorId     String   @db.Uuid
+  assetId       String?  @db.Uuid
+  amount        Int                  // 分账积分
+  percentage    Float                // 分账比例
+  role          String               // original/derivative/contributor
+  createdAt     DateTime @default(now())
+
+  @@map("RevenueSplit")
+  @@index([creatorId])
+  @@index([transactionId])
+}
+
+// 交易记录
+model AssetTransaction {
+  id              String   @id @default(uuid()) @db.Uuid
+  fromUserId      String?  @db.Uuid     // 支付方
+  toUserId        String?  @db.Uuid     // 接收方
+  assetId         String   @db.Uuid
+  projectId       String?  @db.Uuid
+  transactionType String               // reference/reuse/revenue_split
+  coinsAmount     Int                    // 积分数量
+  platformFee     Int      @default(0)   // 平台抽成
+  status          String   @default("completed") // pending/completed/failed
+  createdAt       DateTime @default(now())
+
+  @@map("AssetTransaction")
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([assetId])
+}
+
+// 创作者钱包摘要（非核心表，用作缓存）
+model CreatorWallet {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @db.Uuid
+  totalEarned    Int      @default(0)
+  totalSpent     Int      @default(0)
+  balance        Int      @default(0)
+  referenceCount Int      @default(0)   // 被引用次数
+  reuseCount     Int      @default(0)   // 被复用次数
+  updatedAt      DateTime @updatedAt
+
+  @@map("CreatorWallet")
+}
+
+// 审核队列
+model ModerationQueue {
+  id              String   @id @default(uuid()) @db.Uuid
+  assetId         String   @db.Uuid
+  reason          String                 // high_similarity/suspicious_upload/potential_theft
+  similarityScore Float?                 // 相似度分数
+  reportedBy      String?                // 举报人（可选）
+  status          String   @default("pending") // pending/reviewed/cleared/flagged
+  reviewerId      String?                // 审核人
+  reviewedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@map("ModerationQueue")
+  @@index([status])
+}
+
+// 支付配置（收款码）
+model PaymentConfig {
+  id        String   @id @default(uuid()) @db.Uuid
+  method    String   @unique              // wechat | alipay
+  name      String                        // 显示名称
+  qrCodeUrl String?                       // 收款码图片URL
+  account   String?                       // 收款账号
+  enabled   Boolean  @default(true)
+  sort      Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("PaymentConfig")
+}
+
+// 支付密钥配置（后台管理填入）
+model PaymentSecret {
+  id        String   @id @default(uuid()) @db.Uuid
+  channel   String   @unique              // wechat | alipay
+  config    String                        // JSON格式的配置信息
+  enabled   Boolean  @default(true)
+  remark    String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("PaymentSecret")
+}
+
+// 手动确认订单
+model PaymentOrder {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  orderNo        String   @unique            // 订单号
+  type           String   @default("credit") // credit | subscription
+  amount         Float                       // 支付金额(元)
+  coins          Int                         // 获得积分数（credit时）
+  method         String                      // wechat | alipay
+  status         String   @default("pending") // pending | paid | failed | expired
+  planType       String?                      // monthly | yearly | enterprise（subscription时）
+  prepayId       String?                      // 微信预支付ID
+  qrCode         String?                      // 微信支付二维码
+  payUrl         String?                      // 支付宝支付链接
+  outTradeNo     String?                      // 第三方支付单号
+  rawNotify      String?                      // 原始回调数据(JSON)
+  remark         String?
+  payTime        DateTime?
+  confirmAdminId Int?                        // 确认管理员ID
+  confirmTime    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("PaymentOrder")
+  @@index([userId])
+  @@index([orderNo])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// 资产权限
+
+// ============================================================
+// Agent 系统数据库化重构（Agent System Schema v1）
+// ============================================================
+
+// 1️⃣ Agent定义表
+model AgentDef {
+  // NOTE: id is a readable string like agent_director, not uuid
+  id            String   @id
+  name          String
+  type          String                        // llm | rule | hybrid
+  role          String                        // director / writer / camera / storyboard / character / prompt
+  model         String?                       // gpt-5 / deepseek / rule-engine / null
+  systemPrompt  String   @default("") @map("system_prompt") @db.Text
+  capabilities  String   @default("[]") @db.Text // JSON array
+  memoryEnabled Boolean  @default(false) @map("memory_enabled")
+  costLevel     Int      @default(1) @map("cost_level")
+  status        String   @default("active")   // active / deprecated
+  version       String   @default("v1")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  edgesFrom    AgentEdge[]     @relation("from_agent")
+  edgesTo      AgentEdge[]     @relation("to_agent")
+  entryWorkflow WorkflowDef[]  @relation("entry_agent")
+  executions   AgentExecution[]
+  memories     AgentMemory[]
+
+  @@map("AgentDef")
+}
+
+// 2️⃣ Agent流程关系表
+model AgentEdge {
+  id            String   @id @default(uuid()) @db.Uuid
+  fromAgentId   String   @map("from_agent_id")
+  toAgentId     String   @map("to_agent_id")
+  condition     String?  @db.Text             // JSON logic
+  priority      Int      @default(0)
+  executionMode String   @default("sync") @map("execution_mode") // sync / async
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  fromAgent AgentDef @relation("from_agent", fields: [fromAgentId], references: [id])
+  toAgent   AgentDef @relation("to_agent", fields: [toAgentId], references: [id])
+
+  @@map("AgentEdge")
+}
+
+// 3️⃣ 工作流定义表
+model WorkflowDef {
+  id           String   @id
+  name         String
+  entryAgentId String?  @map("entry_agent_id")
+  graphJson    String?  @map("graph_json") @db.Text  // 完整流程图JSON
+  version      String   @default("v1")
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  entryAgent AgentDef? @relation("entry_agent", fields: [entryAgentId], references: [id])
+
+  @@map("WorkflowDef")
+}
+
+// 4️⃣ Agent执行日志表
+model AgentExecution {
+  id        String   @id @default(uuid()) @db.Uuid
+  workflowId String? @map("workflow_id")
+  runId     String?  @map("run_id")
+  agentId   String   @map("agent_id")
+  input     String?  @db.Text
+  output    String?  @db.Text
+  llmCalls  Int      @default(0) @map("llm_calls")
+  tokensUsed Int     @default(0) @map("tokens_used")
+  cost      Float    @default(0)
+  latency   Int      @default(0)               // ms
+  status    String   @default("pending")        // pending / running / success / failed
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agent AgentDef @relation(fields: [agentId], references: [id])
+
+  @@map("AgentExecution")
+  @@index([runId])
+  @@index([workflowId])
+}
+
+// 5️⃣ Agent记忆表
+model AgentMemory {
+  id            String   @id @default(uuid()) @db.Uuid
+  agentId       String   @map("agent_id")
+  projectId     String?
+  memoryType    String   @map("memory_type")    // character / scene / style / prompt
+  content       String   @db.Text
+  embeddingVector String? @map("embedding_vector") @db.Text
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  agent AgentDef @relation(fields: [agentId], references: [id])
+
+  @@map("AgentMemory")
+  @@index([agentId, memoryType])
+}
+
+model AssetRights {
+  id                String   @id @default(uuid()) @db.Uuid
+  assetId           String   @unique @db.Uuid
+  publicView        Boolean  @default(true)
+  reuseAllowed      Boolean  @default(true)
+  downloadAllowed   Boolean  @default(false)
+  commercialAllowed Boolean  @default(false)
+  externalAsset     Boolean  @default(false)  // 外部上传资产
+  updatedAt         DateTime @updatedAt
+
+  @@map("AssetRights")
+}
+
+// ═══════════════════════════════════════════
+// v3 — High Availability / 10万级并发层
+// ═══════════════════════════════════════════
+
+// L1: 用户与权限层
+// 1️⃣ users 表 — 扩展用户维度
+// 原 model User 已存在，补充 model user_limits
+
+// 2️⃣ user_limits — 用户限流
+model UserLimit {
+  id             String @id @default(uuid()) @db.Uuid
+  userId         String @unique @map("user_id")
+  llmLimitPerMin Int    @default(30) @map("llm_limit_per_min")
+  gpuLimitPerDay Int    @default(100) @map("gpu_limit_per_day")
+  agentLimit     Int    @default(10) @map("agent_limit")
+  burstLimit     Int    @default(5) @map("burst_limit")
+
+  @@map("UserLimit")
+}
+
+// L2: 任务与调度层（防崩核心）
+// 3️⃣ task_queue — 统一任务队列
+model TaskQueue {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id")
+  type          String   // agent / image / video / audio
+  priority      Int      @default(50)             // 0-100, 越低越高
+  status        String   @default("pending")       // pending / running / queued / throttled / failed / completed
+  payload       String?  @db.Text
+  enqueueTime   DateTime @default(now()) @map("enqueue_time")
+  startTime     DateTime? @map("start_time")
+  endTime       DateTime? @map("end_time")
+  estimatedCost Float?   @map("estimated_cost")
+  retryCount    Int      @default(0) @map("retry_count")
+  maxRetries    Int      @default(3) @map("max_retries")
+  lockWorkerId  String?  @map("lock_worker_id")
+  error         String?  @db.Text
+
+  @@map("TaskQueue")
+  @@index([userId])
+  @@index([status, priority])
+  @@index([enqueueTime])
+}
+
+// 4️⃣ task_execution — 执行实例
+model TaskExecution {
+  id         String   @id @default(uuid()) @db.Uuid
+  taskId     String   @map("task_id")
+  workflowId String?  @map("workflow_id")
+  dagId      String?  @map("dag_id")
+  status     String   @default("pending")  // pending / running / paused / completed / failed
+  currentNode String?  @map("current_node")
+  progress   Float    @default(0)          // 0-100
+  error      String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("TaskExecution")
+  @@index([taskId])
+  @@index([status])
+}
+
+// L3: Agent运行层
+// 5️⃣ agents — Agent定义表（已有 AgentDef，补充 agent 运行时配置）
+
+// 6️⃣ agent_execution_log — Agent执行日志
+model AgentExecutionLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  executionId String   @map("execution_id")
+  agentId     String   @map("agent_id")
+  input       String?  @db.Text
+  output      String?  @db.Text
+  latency     Int      @default(0)
+  tokensUsed  Int      @default(0) @map("tokens_used")
+  cost        Float    @default(0)
+  workerId    String?  @map("worker_id")
+  status      String   @default("pending")  // pending / running / success / failed
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("AgentExecutionLog")
+  @@index([executionId])
+  @@index([agentId])
+}
+
+model MarketAgent {
+  id               String   @id @default(uuid())
+  name             String                         // 代理名称
+  contactPerson    String                         // 联系人
+  phone            String                         // 电话
+  email            String   @default("")           // 邮箱
+  userId           String?  @map("user_id")        // 关联会员用户ID
+  level            String   @default("normal")     // normal | silver | gold | diamond
+  commissionRate   Float    @default(0)            // 佣金比例(%)
+  settlementCycle  String   @default("monthly")    // monthly | quarterly | yearly
+  bankName         String   @default("")           // 开户行
+  bankAccount      String   @default("")           // 银行账号
+  accountName      String   @default("")           // 户名
+  remark           String   @default("")           // 备注
+  referredUsers    Int      @default(0)            // 推广用户数
+  totalCommission  Float    @default(0)            // 累计佣金
+  settledCommission Float   @default(0)            // 已结算佣金
+  pendingCommission Float   @default(0)            // 待结算佣金
+  status           String   @default("active")     // active | frozen
+  agentType        String   @default("market")     // market | city | district（普通市场代理 / 市级代理 / 区县级代理）
+  regionCode       String?                         // 管辖区域代码（市或区县的行政区划代码）
+  regionName       String?                         // 管辖区域名称（eg. 广东省广州市 或 广州市天河区）
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  orderRecords CommissionOrder[] @relation("AgentOrderRecords")
+
+  @@map("MarketAgent")
+}
+
+// 中国行政区划（三级：省/市/区县）
+model ChinaRegion {
+  code        String       @id                    // 行政区划代码（6位数字）
+  name        String                              // 名称
+  level       Int                                 // 1=省/直辖市/自治区, 2=市, 3=区/县
+  parentCode  String?                             // 上级区划代码（省的parent为空）
+  parent      ChinaRegion?  @relation("RegionTree", fields: [parentCode], references: [code])
+  children    ChinaRegion[] @relation("RegionTree")
+
+  @@map("ChinaRegion")
+  @@index([parentCode])
+}
+
+// 佣金设置（全局配置 + 按代理级别覆盖）
+model CommissionConfig {
+  id             String   @id @default(uuid())
+  level          String   @unique // normal | silver | gold | diamond
+  rate           Float    @default(0)   // 佣金比例(%)
+  minOrderAmount Float    @default(0)   // 最低订单金额才计佣金
+  maxCommission  Float    @default(0)   // 单笔佣金上限(0=不限)
+  enabled        Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  @@map("CommissionConfig")
+}
+
+// 佣金订单明细（每笔审核通过的订单生成的佣金记录）
+model CommissionOrder {
+  id               String   @id @default(uuid())
+  agentId          String                       // 改成普通 String 以匹配 MarketAgent.id 类型
+  userId           String                       // 被推荐用户
+  orderId          String                       // 对应的 rechargeOrder id
+  orderAmount      Float                          // 订单金额
+  commissionRate   Float                          // 当时使用的佣金比例
+  commissionAmount Float                          // 实际佣金金额
+  status           String   @default("pending")   // pending | settled
+  remark           String   @default("")
+  createdAt        DateTime @default(now())
+  settledAt        DateTime?
+
+  agent MarketAgent @relation("AgentOrderRecords", fields: [agentId], references: [id])
+  @@map("CommissionOrder")
+  @@index([agentId])
+  @@index([userId])
+}
+
+// 代理套餐（用户可直接购买成为代理商）
+model AgentPlan {
+  id          String   @id @default(uuid())
+  level       String   @unique              // senior | premium
+  name        String                        // 高级代理商 / 顶级代理商
+  price       Float                         // 购买价格（元）
+  months      Int      @default(12)         // 有效期月数
+  commissionRate Float @default(0)          // 佣金比例(%)
+  benefits    String   @default("")         // 权益描述(JSON数组)
+  icon        String   @default("⭐")
+  color       String   @default("#818cf8")
+  sortOrder   Int      @default(0)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("AgentPlan")
+}
+
+// 代理商提现申请（已改为通用钱包提现，支持支付宝/微信收款码）
+model AgentWithdraw {
+  id             String   @id @default(uuid())
+  userId         String   @db.Uuid
+  amount         Float                         // 提现金额
+  accountType    String   @default("bank")     // bank | alipay | wechat
+  accountName    String   @default("")         // 收款人全名
+  accountNo      String   @default("")         // 支付宝账号 / 微信 openid
+  qrCodeUrl      String   @default("")         // 收款码图片URL
+  status         String   @default("pending")  // pending | approved | rejected
+  remark         String   @default("")
+  createdAt      DateTime @default(now())
+  approvedAt     DateTime?
+  adminId        Int?                          // 审核管理员ID
+
+  @@map("AgentWithdraw")
+  @@index([userId])
+  @@index([status])
+}
+
+// L4: Workflow & DAG层
+// 7️⃣ workflows — 已有 WorkflowDef，补充
+
+// 8️⃣ dag_graphs — 编译后的可执行图缓存
+model DAGGraph {
+  id            String   @id @default(uuid()) @db.Uuid
+  workflowId    String   @map("workflow_id")
+  dagHash       String?  @map("dag_hash")              // 用于缓存去重
+  optimizedGraph String  @map("optimized_graph") @db.Text
+  parallelGroups String? @map("parallel_groups") @db.Text
+  executionOrder String? @map("execution_order") @db.Text
+  compiledAt    DateTime @default(now()) @map("compiled_at")
+  version       Int      @default(1)
+
+  @@map("DAGGraph")
+  @@index([workflowId])
+  @@index([dagHash])
+}
+
+// 9️⃣ dag_state — DAG执行状态（支持断点恢复）
+model DAGState {
+  id             String   @id @default(uuid()) @db.Uuid
+  dagId          String   @map("dag_id")
+  executionId    String   @unique @map("execution_id")
+  status         String   @default("pending")  // pending / running / paused / completed / failed
+  activeNodes    String?  @map("active_nodes") @db.Text    // JSON array
+  completedNodes String?  @map("completed_nodes") @db.Text // JSON array
+  failedNodes    String?  @map("failed_nodes") @db.Text    // JSON array
+  currentLoad    Float    @default(0) @map("current_load")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("DAGState")
+  @@index([dagId])
+  @@index([status])
+}
+
+// L5: GPU与算力调度层（防爆核心）
+// 10️⃣ gpu_nodes — GPU资源池
+model GPUNode {
+  id           String  @id @default(uuid()) @db.Uuid
+  name         String
+  type         String        // 4090 / A100 / H100 / cloud
+  status       String @default("online")  // online / offline / busy / error
+  maxCapacity  Int    @default(4) @map("max_capacity")
+  currentLoad  Int    @default(0) @map("current_load")
+  queueDepth   Int    @default(0) @map("queue_depth")
+  temperature  Float? @default(0)
+  lastHeartbeat DateTime @default(now()) @map("last_heartbeat")
+
+  @@map("GPUNode")
+}
+
+// 11️⃣ gpu_tasks — GPU任务队列
+model GPUTaskLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  taskId       String   @map("task_id")
+  model        String   // kling / wan / seedream / seedance / flux
+  priority     Int      @default(50)
+  status       String   @default("queued")  // queued / running / completed / failed / degraded
+  assignedGpu  String?  @map("assigned_gpu")
+  userId       String?  @map("user_id")
+  prompt       String?  @db.Text
+  enqueueTime  DateTime @default(now()) @map("enqueue_time")
+  startTime    DateTime? @map("start_time")
+  endTime      DateTime? @map("end_time")
+  estimatedSeconds Int? @default(60) @map("estimated_seconds")
+  retryCount   Int      @default(0) @map("retry_count")
+  error        String?  @db.Text
+
+  @@map("GPUTaskLog")
+  @@index([status, priority])
+  @@index([assignedGpu])
+  @@index([userId])
+}
+
+// 12️⃣ gpu_throttle_state — GPU限流状态
+model GPUThrottleState {
+  id           String  @id @default(uuid()) @db.Uuid
+  gpuId        String  @unique @map("gpu_id")
+  loadPercent  Float   @default(0) @map("load_percent")
+  throttleLevel Int    @default(0) @map("throttle_level")  // 0=正常 / 1=限流 / 2=降级 / 3=安全模式
+  mode         String  @default("normal")  // normal / slowdown / safe_mode
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("GPUThrottleState")
+}
+
+// L6: 系统控制与稳定层（防崩核心）
+// 13️⃣ system_metrics — 系统监控
+model SystemMonitor {
+  id              String   @id @default(uuid()) @db.Uuid
+  cpuUsage        Float    @default(0) @map("cpu_usage")
+  gpuUsage        Float    @default(0) @map("gpu_usage")
+  memoryUsage     Float    @default(0) @map("memory_usage")
+  queueDepth      Int      @default(0) @map("queue_depth")
+  llmRequestsPerSec Float  @default(0) @map("llm_requests_per_sec")
+  errorRate       Float    @default(0) @map("error_rate")
+  timestamp       DateTime @default(now())
+
+  @@map("SystemMonitor")
+  @@index([timestamp])
+}
+
+// 14️⃣ rate_limits — 全局限流
+model RateLimit {
+  id           String @id @default(uuid()) @db.Uuid
+  userId       String @map("user_id")
+  apiType      String @map("api_type")  // llm / gpu / agent / worker
+  limitPerSec  Int    @default(10) @map("limit_per_sec")
+  limitPerMin  Int    @default(60) @map("limit_per_min")
+  limitPerDay  Int    @default(1000) @map("limit_per_day")
+  currentUsage Int    @default(0) @map("current_usage")
+  windowStart  DateTime @default(now()) @map("window_start")
+
+  @@map("RateLimit")
+  @@index([userId, apiType])
+}
+
+// 15️⃣ circuit_breaker — 熔断器
+model CircuitBreaker {
+  id             String   @id @default(uuid()) @db.Uuid
+  service        String   @unique  // gpu / llm / worker / dag / queue
+  status         String   @default("closed")  // closed / open / half-open
+  failureCount   Int      @default(0) @map("failure_count")
+  successCount   Int      @default(0) @map("success_count")
+  threshold      Int      @default(5)          // 失败阈值
+  lastFailureTime DateTime? @map("last_failure_time")
+  lastSuccessTime DateTime? @map("last_success_time")
+  cooldownTime   Int      @default(30000)      // 30秒冷却（毫秒）
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("CircuitBreaker")
+}
+
+// 补充: Worker心跳表（用于10万级worker心跳检测）
+model WorkerHeartbeat {
+  id              String   @id @default(uuid()) @db.Uuid
+  workerId        String   @map("worker_id")
+  type            String   // llm / rule / hybrid / gpu
+  status          String   @default("online")  // online / busy / offline
+  currentTasks    Int      @default(0) @map("current_tasks")
+  heartbeatAt     DateTime @default(now()) @map("heartbeat_at")
+  lastActiveAt    DateTime @default(now()) @map("last_active_at")
+
+  @@map("WorkerHeartbeat")
+  @@index([workerId])
+  @@index([heartbeatAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// L7: Cross-Platform Desktop Runtime Architecture v1
+// 「火麒麟AI导演控制台」桌面运行时 — 数据库表
+// ═══════════════════════════════════════════════════════════════════
+
+// 16️⃣ desktop_runtime_config — 桌面运行时配置
+model DesktopRuntimeConfig {
+  id            String   @id @default(cuid())
+  platform      String   // windows | macos | linux
+  runtimeMode   String   @default("desktop")
+  gpuPreference String?  // cuda | metal | directml | rocm
+  autoDetect    Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("DesktopRuntimeConfig")
+}
+
+// 17️⃣ local_gpu_node — 本地GPU节点
+model LocalGPUNode {
+  id            String   @id @default(cuid())
+  adapterName   String
+  platform      String
+  memoryMB      Int
+  computeUnits  Int
+  driverVersion String?
+  temperature   Float?
+  usagePercent  Float?
+  isAvailable   Boolean  @default(true)
+  lastSeen      DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@map("LocalGPUNode")
+}
+
+// 18️⃣ license_cache — License缓存（服务端）
+model LicenseCache {
+  id            String   @id @default(cuid())
+  userId        String
+  licenseToken  String
+  isActive      Boolean  @default(true)
+  expiresAt     DateTime
+  cachedAt      DateTime @default(now())
+  lastVerified  DateTime @default(now())
+
+  @@map("LicenseCache")
+  @@index([userId])
+  @@index([licenseToken])
+  @@index([expiresAt])
+}
+
+// 19️⃣ local_asset_index — 本地资产索引
+model LocalAssetIndex {
+  id              String   @id @default(cuid())
+  category        String   // image | video | dag | agent | workflow
+  name            String
+  localPath       String
+  sizeBytes       BigInt
+  checksum        String?
+  syncedFromCloud Boolean  @default(false)
+  lastUsed        DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@map("LocalAssetIndex")
+  @@index([category])
+  @@index([syncedFromCloud])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// L8: Unified Runtime Kernel v1 数据库表
+// ═══════════════════════════════════════════════════════════════════
+
+// 20️⃣ kernel_event — 内核事件日志
+model KernelEvent {
+  id            String   @id @default(cuid())
+  eventType     String
+  priority      String   @default("NORMAL")
+  source        String
+  payload       Json?
+  chainDepth    Int      @default(0)
+  traceId       String?
+  isLoopBreaker Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@map("KernelEvent")
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([traceId])
+}
+
+// 21️⃣ kernel_state_snapshot — 内核状态快照
+model KernelStateSnapshot {
+  id            String   @id @default(cuid())
+  snapshot      Json
+  diff          Json?
+  recordedBy    String   @default("kernel")
+  checksum      String?
+  createdAt     DateTime @default(now())
+
+  @@map("KernelStateSnapshot")
+  @@index([createdAt])
+}
+
+// 22️⃣ runtime_registry — Runtime注册记录
+model RuntimeRegistry {
+  id            String   @id @default(cuid())
+  moduleId      String   @unique
+  name          String
+  dependencies  String[]
+  phase         String   @default("BOOTING")
+  priority      Int      @default(0)
+  isActive      Boolean  @default(true)
+  registeredAt  DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("RuntimeRegistry")
+  @@index([moduleId])
+  @@index([phase])
+}
+
+// 23️⃣ kernel_health_log — 内核健康日志
+model KernelHealthLog {
+  id            String   @id @default(cuid())
+  moduleId      String
+  status        String   // healthy | degraded | critical
+  score         Float
+  metrics       Json
+  recommendations String[]
+  createdAt     DateTime @default(now())
+
+  @@map("KernelHealthLog")
+  @@index([moduleId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+// 24️⃣ scheduler_task — 调度任务记录
+model SchedulerTask {
+  id            String   @id @default(cuid())
+  taskType      String   // worker | gpu | maintenance | evolution | background
+  priority      String   @default("NORMAL")
+  moduleId      String
+  status        String   // pending | running | completed | failed | cancelled | timeout
+  retries       Int      @default(0)
+  maxRetries    Int      @default(3)
+  timeout       Int?
+  submittedAt   DateTime @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  errorMessage  String?
+
+  @@map("SchedulerTask")
+  @@index([taskType])
+  @@index([status])
+  @@index([priority])
+}
+
+// 25️⃣ resource_allocation — 资源分配记录
+model ResourceAllocation {
+  id            String   @id @default(cuid())
+  resourceType  String   // gpu | worker | memory
+  resourceId    String
+  sessionId     String?
+  allocatedTo   String   // moduleId
+  amount        Float
+  unit          String
+  isActive      Boolean  @default(true)
+  allocatedAt   DateTime @default(now())
+  releasedAt    DateTime?
+
+  @@map("ResourceAllocation")
+  @@index([resourceType])
+  @@index([allocatedTo])
+  @@index([isActive])
+}
+
+// 26️⃣ event_loop_violation — 事件循环违规记录
+model EventLoopViolation {
+  id            String   @id @default(cuid())
+  eventChain    String[] // 事件A→B→C路径
+  triggerEvent  String
+  depth         Int
+  breachedRule  String   // max_depth | circular_detected | max_dispatch
+  actionTaken   String   // circuit_break | warn | block
+  createdAt     DateTime @default(now())
+
+  @@map("EventLoopViolation")
+  @@index([triggerEvent])
+  @@index([createdAt])
+}
+
+// 27️⃣ runtime_dependency_graph — 运行时依赖图
+model RuntimeDependencyGraph {
+  id            String   @id @default(cuid())
+  graphId       String
+  version       Int      @default(1)
+  nodes         Json     // Runtime节点
+  edges         Json     // 依赖边
+  cycleDetected Boolean  @default(false)
+  cyclePaths    String[]
+  createdAt     DateTime @default(now())
+
+  @@map("RuntimeDependencyGraph")
+  @@index([graphId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// L9: Kernel Cutover & Dual Execution 数据库表
+// ═══════════════════════════════════════════════════════════════════
+
+// 28️⃣ kernel_shadow_event_log — Kernel Shadow事件日志
+model KernelShadowEventLog {
+  id            String   @id @default(cuid())
+  eventType     String
+  source        String
+  mirroredAt    DateTime
+  consistency   Float?   // 0-1 一致性评分
+  originalEvent Json?
+  shadowEvent   Json?
+  isMatch       Boolean?
+  createdAt     DateTime @default(now())
+
+  @@map("KernelShadowEventLog")
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([isMatch])
+}
+
+// 29️⃣ kernel_cutover_score — Kernel接管评分记录
+model KernelCutoverScore {
+  id              String   @id @default(cuid())
+  overallScore    Float
+  eventConsistency Float
+  stateConsistency Float
+  schedulerStability Float
+  gpuCorrectness  Float
+  latencyImpact   Float
+  decision        String   // SAFE_MODE | OBSERVE_ONLY | PARTIAL_CUTOVER | FULL_CUTOVER
+  phase           String   // SHADOW_ONLY | READONLY_CUTOVER | PARTIAL_EXECUTION | FULL_SCHEDULER | FULL_CONTROL
+  createdAt       DateTime @default(now())
+
+  @@map("KernelCutoverScore")
+  @@index([createdAt])
+  @@index([decision])
+}
+
+// 30️⃣ kernel_dual_execution_log — 双轨执行日志
+model KernelDualExecutionLog {
+  id              String   @id @default(cuid())
+  taskId          String
+  taskType        String
+  oldLatency      Float
+  kernelLatency   Float
+  matchRate       Float
+  oldResult       Json?
+  kernelResult    Json?
+  diff            Json?
+  passed          Boolean
+  createdAt       DateTime @default(now())
+
+  @@map("KernelDualExecutionLog")
+  @@index([taskId])
+  @@index([passed])
+  @@index([createdAt])
+}
+
+// 31️⃣ kernel_state_diff_log — 状态差异日志
+model KernelStateDiffLog {
+  id            String   @id @default(cuid())
+  statePath     String
+  oldValue      Json?
+  kernelValue   Json?
+  diff          Json?
+  isConsistent  Boolean
+  severity      String   // info | warning | critical
+  createdAt     DateTime @default(now())
+
+  @@map("KernelStateDiffLog")
+  @@index([isConsistent])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+// 32️⃣ kernel_rollback_history — Kernel回滚历史
+model KernelRollbackHistory {
+  id            String   @id @default(cuid())
+  reason        String
+  triggerSource String   // auto | manual
+  phase         String   // 回滚前所处阶段
+  snapshotId    String?
+  errorRate     Float?
+  duration      Int?     // 回滚耗时(ms)
+  success       Boolean
+  createdAt     DateTime @default(now())
+
+  @@map("KernelRollbackHistory")
+  @@index([createdAt])
+  @@index([success])
+}
+
+// 33️⃣ kernel_health_metrics — Kernel健康指标
+model KernelHealthMetrics {
+  id              String   @id @default(cuid())
+  eventLatency    Float
+  schedulerDelay  Float
+  gpuUtilization  Float
+  workerLoad      Float
+  stateSyncDelay  Float
+  errorRate       Float
+  memoryUsage     Float
+  healthScore     Float
+  recordedAt      DateTime @default(now())
+
+  @@map("KernelHealthMetrics")
+  @@index([recordedAt])
+}
+
+// ============================================================
+// Reference Image System（参考图生成链路）
+// ============================================================
+
+/// 生成任务的参考图记录
+model GenerationReference {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  taskId      String                        // 生成任务ID（图片/视频）
+  assetUrl    String                        // 参考图URL
+  assetId     String?   @db.Uuid            // 对应的资产ID
+  refType     String   @default("style")    // character | product | scene | style
+  weight      Float    @default(0.5)        // 0.0 - 1.0
+  priority    String   @default("secondary") // primary | secondary
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([taskId])
+  @@map("GenerationReference")
+}
+
+/// 作品生成记录（包含参考图和参数快照）
+model ProductionRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  projectId       String?  @db.Uuid
+  title           String   @default("未命名")
+  prompt          String   @default("")
+  resultType      String                        // image | video | music
+  resultUrl       String?
+  thumbnail       String?
+  referenceMode   String   @default("soft")      // soft | hard
+  directorParams  Json?                          // 导演参数快照
+  version         Int      @default(1)
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("ProductionRecord")
+}
+
+// ================================================================
+// OMS + Observer Economy MVP 表
+// ================================================================
+
+model World {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @default("新世界")
+  state     Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  observers       Observer[]       @relation("WorldObservers")
+  events          Event[]          @relation("WorldEvents")
+  narrativeScenes NarrativeScene[] @relation("WorldScenes")
+  characters      Character[]     @relation("WorldCharacters")
+
+  @@map("World")
+}
+
+model Observer {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String?  @db.Uuid
+  worldId         String   @db.Uuid
+  role            String   @default("observer")
+  influenceWeight Float    @default(0.1)
+  stats           Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  world World @relation("WorldObservers", fields: [worldId], references: [id])
+
+  @@index([worldId])
+  @@map("Observer")
+}
+
+model Event {
+  id        String   @id @default(uuid()) @db.Uuid
+  worldId   String   @db.Uuid
+  type      String
+  tick      Int      @default(0)
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  world World @relation("WorldEvents", fields: [worldId], references: [id])
+
+  @@index([worldId, tick])
+  @@map("Event")
+}
+
+model NarrativeScene {
+  id         String   @id @default(uuid()) @db.Uuid
+  worldId    String   @db.Uuid
+  summary    String   @default("")
+  importance Float    @default(0.5)
+  tickRange  String   @default("")
+  data       Json?    @default("{}")
+  createdAt  DateTime @default(now())
+
+  world World @relation("WorldScenes", fields: [worldId], references: [id])
+
+  @@index([worldId])
+  @@map("NarrativeScene")
+}
+
+// ──── Character System V1 ────
+
+model Character {
+  id          String   @id @default(uuid())
+  worldId     String   @db.Uuid
+  world       World    @relation("WorldCharacters", fields: [worldId], references: [id])
+  name        String
+  age         Int      @default(30)
+  faction     String   @default("civilian")
+  location    String   @default("city_center")
+  activity    String   @default("observing")
+  alive       Boolean  @default(true)
+  personality String   @default("{\"logic\":0.5,\"emotion\":0.5,\"aggression\":0.3,\"empathy\":0.5}")
+  emotion     String   @default("{\"joy\":0.5,\"anger\":0.1,\"fear\":0.2,\"sadness\":0.1,\"trust\":0.5}")
+  state       String   @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tickBorn    Int      @default(0)
+  tickDied    Int?
+
+  relations   CharacterRelation[] @relation("fromChar")
+  relationsTo CharacterRelation[] @relation("toChar")
+  memories    CharacterMemory[]
+  behaviors   CharacterBehavior[]
+
+  @@index([worldId])
+  @@map("Character")
+}
+
+model CharacterMemory {
+  id            String   @id @default(uuid())
+  characterId   String
+  character     Character @relation(fields: [characterId], references: [id])
+  type          String   @default("event")
+  content       String
+  importance    Float    @default(0.5)
+  tick          Int
+  emotionalTag  String   @default("neutral")
+  createdAt     DateTime @default(now())
+
+  @@index([characterId])
+  @@map("CharacterMemory")
+}
+
+model CharacterRelation {
+  id        String   @id @default(uuid())
+  fromId    String
+  toId      String
+  from      Character @relation("fromChar", fields: [fromId], references: [id])
+  to        Character @relation("toChar", fields: [toId], references: [id])
+  type      String   @default("trust")
+  value     Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fromId])
+  @@index([toId])
+  @@map("CharacterRelation")
+}
+
+model CharacterBehavior {
+  id          String   @id @default(uuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id])
+  action      String   @default("observe")
+  targetId    String?
+  context     String   @default("")
+  tick        Int
+  score       Float    @default(0)
+  executed    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([characterId])
+  @@map("CharacterBehavior")
+}
+
+// ── Pipeline Stage（组件流程表单驱动） ──
+
+// 组件执行阶段 —— 用数据库表驱动整个生产流水线
+// 每个组件的输入、输出、状态全部持久化到这张表
+// 组件间依赖关系通过查表决定，不再依赖内存 store 或 localStorage
+model PipelineStage {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @db.Uuid
+  stageKey     String   @map("stage_key")        // character | scene | storyboard | voice | frame | director
+  status       String   @default("pending")       // pending | ready | blocked | processing | done | failed | skipped
+  inputData    Json?    @map("input_data")        // 前端传给该组件的输入
+  outputData   Json?    @map("output_data")       // 该组件的输出（图片URL、规格数据等）
+  referenceUrls Json?  @map("reference_urls")     // 该组件产出的参考图URL列表 { images: [{key, url}] }
+  runtimeVersion String? @map("runtime_version")  // 该 stage 写入时的 runtime 版本号
+  blockedBy    String?  @map("blocked_by")        // 逗号分隔的阻塞stageKey列表
+  blockReason  String?  @map("block_reason")      // 人类可读的阻塞原因
+  error        String?
+  startedAt    DateTime? @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, stageKey])
+  @@map("pipeline_stages")
+}
+
+// ── Pipeline Job Queue v0 ──
+//
+// DB-backed job queue for AI production tasks.
+// 每个 job 对应一个可执行的 AI 生产任务（生成一张角色图、一张分镜图...）
+// Graph Runtime 判断某个 stage 可执行后，创建对应 job(s)
+// Worker 从表中拉取 job 执行
+
+model PipelineJob {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  stageKey    String   @map("stage_key")          // character | scene | storyboard | frame
+  jobType     String   @map("job_type")           // image_generate | voice_generate | ...
+  status      String   @default("pending")        // pending | running | done | failed
+  payload     Json?                               // job 输入参数（prompt, aspectRatio, referenceImage...）
+  result      Json?                               // job 输出结果（url, duration...）
+  attempts    Int      @default(0)                // 执行尝试次数
+  maxAttempts Int      @default(3)                // 最大重试次数
+  priority    Int      @default(0)                // 优先级（数值越大越优先）
+  sortKey     Int?     @map("sort_key")           // 同一 stage 内的排序（如镜头编号）
+  error       String?
+  lockedBy    String?  @map("locked_by")          // 当前执行锁（worker id）
+  lockedAt    DateTime? @map("locked_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, stageKey])
+  @@index([status, lockedBy])
+  @@index([status, priority])
+  @@map("pipeline_jobs")
+}
+
+// 角色执行结果图片
+model CharacterImage {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  characterName   String
+  variant         String   @default("")           // 变体标记，与 AiCharacterSpec.variant 对应
+  imageUrl        String
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, characterName, variant])
+  @@index([variant])
+  @@map("character_images")
+}
+
+// 场景执行结果图片
+model SceneImage {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  sceneName       String
+  variant         String   @default("")           // "front" | "side" | "back" | ""(旧数据兼容)
+  imageUrl        String
+  prompt          String?                         // 该视角的生成 prompt
+  negativePrompt  String?                         // 该视角的负面 prompt
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sceneName, variant])
+  @@index([variant])
+  @@map("scene_images")
+}
+
+// 分镜执行结果图片
+model StoryboardImage {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  segmentId       String
+  description     String?
+  imageUrl        String
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, segmentId])
+  @@map("storyboard_images")
+}
+
+// 道具图
+model PropImage {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  propName        String   @map("prop_name")
+  category        String   @default("通用")
+  description     String?
+  imageUrl        String   @map("image_url")
+  imagePrompt     String?  @map("image_prompt")
+  negativePrompt  String?  @map("negative_prompt")
+  referenceUrl    String?  @map("reference_url")
+  sortOrder       Int      @map("sort_order") @default(0)
+  createdAt       DateTime @map("created_at") @default(now())
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("prop_images")
+}
+
+// 道具库（通用道具数据，不依赖项目）
+model PropLibrary {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  category        String   @default("通用")
+  description     String?
+  defaultPrompt   String?
+  imageUrl        String?
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@map("prop_library")
+}
+
+// 首尾帧执行结果图片
+model FrameImage {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  segmentId       String
+  frameType       String   // first / last
+  imageUrl        String
+  createdAt       DateTime @default(now())
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, segmentId, frameType])
+  @@map("frame_images")
+}
+
+// ─── 角色/场景参考图（一致性系统） ───
+
+// 角色定版参考图（用于跨集/跨步骤保持角色一致性）
+model CharacterReference {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  characterName   String
+  imageUrl        String
+  refType         String   @default("standard") // standard / front / side / fullbody / expression
+  createdAt       DateTime @default(now())
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, characterName, refType])
+  @@map("character_references")
+}
+
+// 场景定版参考图（用于跨场景保持一致）
+model SceneReference {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  sceneName       String
+  imageUrl        String
+  refType         String   @default("standard") // standard / wide / close
+  createdAt       DateTime @default(now())
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sceneName, refType])
+  @@map("scene_references")
+}
+
+// ===== 智能客服（小麒）相关表 =====
+
+model CustomerChatSession {
+  id        String              @id @default(cuid())
+  userId    String              @map("user_id")
+  status    String              @default("active") // active / closed
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+  messages  CustomerChatMessage[]
+
+  @@map("customer_chat_sessions")
+}
+
+model CustomerChatMessage {
+  id        String              @id @default(cuid())
+  sessionId String              @map("session_id")
+  role      String              // user / assistant
+  content   String
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  session   CustomerChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("customer_chat_messages")
+}
+
+model CustomerChatMemory {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  key       String   // 记忆键，如 "preferred_style", "product_mentioned"
+  value     String   // 记忆值（JSON）
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, key])
+  @@map("customer_chat_memories")
+}
+
+// ======== Job Store (Showrunner异步任务) ========
+
+model Job {
+  id         String   @id
+  projectId  String?
+  type       String   // showrunner / cognition / simulation
+  status     String   // queued / running / partial / completed / failed
+  stage      String   // intent / scenario / narrative / plan / complete
+  progress   Int      @default(0)
+  payload    Json?    // 原始请求参数
+  result     Json?    // 最终结果
+  trace      Json?    // step trace 数组
+  error      String?  // 错误信息
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([status])
+  @@index([type])
+  @@map("jobs")
+}
+
+// ======== Observability Models ========
+
+model UsageLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  projectId  String?  @db.Uuid
+  taskId     String?
+  cost       Float    @default(0)
+  taskType   String   // image / tts / video / llm
+  provider   String
+  tokens     String?  // JSON: { input, output }
+  isPlatform Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([taskType])
+  @@map("usage_logs")
+}
+
+// ======== World Memory Graph (角色/世界观/事件连续性) ========
+
+model WorldMemory {
+  id         String   @id @default(cuid())
+  projectId  String
+  entityType String   // character / world / event / relationship
+  entityId   String   @map("entity_id")
+  name       String?  // 实体名称（便于检索）
+  memory     Json     // 记忆内容（结构化）
+  tags       String[] @default([]) // 标签，如 ["protagonist", "city"]
+  episodeRef Int?     @map("episode_ref") // 关联剧集
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([projectId, entityType, entityId])
+  @@index([projectId])
+  @@index([projectId, entityType])
+  @@map("world_memory")
+}
+
+// ======== Director OS — Story Constitution (Immutable) ========
+
+model StoryConstitution {
+  id                  String   @id @default(cuid())
+  projectId           String   @map("project_id")
+  schemaVersion       String   @map("schema_version")
+  constitutionVersion String   @map("constitution_version")
+  constitutionHash    String   @unique @map("constitution_hash")
+  constitution        Json
+  immutable           Boolean  @default(true)
+  degraded            Boolean  @default(false)
+  degradeReason       String?  @map("degrade_reason")
+  confidence          Float    @default(0)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([projectId])
+  @@index([constitutionHash])
+  @@map("story_constitution")
+}
+
+// ======== Director OS — Director Memory (Mutable) ========
+
+model DirectorMemory {
+  id               String   @id @default(cuid())
+  projectId        String   @unique @map("project_id")
+  continuityState  Json     @map("continuity_state")
+  emotionalHistory Json     @map("emotional_history")
+  visualAnchors    Json     @map("visual_anchors")
+  characterLocks   Json     @map("character_locks")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("director_memory")
+}
+
+// ======== Job Priority Queue ========
+
+model JobQueue {
+  id        String   @id @default(cuid())
+  jobId     String   @map("job_id")
+  type      String   // showrunner / cognition
+  status    String   // queued / running / completed / failed
+  priority  Int      @default(1)
+  lockedBy  String?  @map("locked_by") // worker id
+  lockedAt  DateTime? @map("locked_at")
+  projectId String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status, priority])
+  @@index([projectId])
+  @@map("job_queue")
+}
+
+// ======== W1 — Asset Registry ========
+
+model AssetRegistry {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  type            String                        // 'character' | 'scene' | 'prop' | 'storyboard' | 'keyframe' | 'shot'
+  sourceId        String                        // 指向明细表的 id（如 AiCharacterSpec.id）
+  status          String   @default("draft")    // draft | processing | optimized | approved | generating | partial_failed | generated | failed | locked | archived
+  currentVersion  Int      @default(1)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions        AssetVersion[]
+  @@unique([projectId, type, sourceId])
+  @@index([projectId, type, status])
+  @@map("AssetRegistry")
+}
+
+model AssetVersion {
+  id              String   @id @default(uuid()) @db.Uuid
+  assetRegistryId String   @db.Uuid
+  version         Int      @default(1)
+  optimizationType String?
+  agent            String?
+  diffSummary      String?
+  content          Json
+  prompt           Json?
+  userEdited       Boolean   @default(false) @map("user_edited")
+  parentVersion    Int?      @map("parent_version")             // 用户编辑基于的 AI 版本号
+  locked           Boolean   @default(false)
+  referenceImages  Json?     @map("reference_images")            // string[] 用户上传参考图 URL
+  createdAt        DateTime  @default(now())
+  asset            AssetRegistry @relation(fields: [assetRegistryId], references: [id], onDelete: Cascade)
+  @@unique([assetRegistryId, version])
+  @@index([assetRegistryId, createdAt])
+  @@map("AssetVersion")
+}
+
+model ContinuityLink {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @db.Uuid
+  fromSegmentId String  @db.Uuid
+  fromType      String                       // 'keyframe_tail' | 'scene_exit' | 'shot_end'
+  toSegmentId   String   @db.Uuid
+  toType        String                       // 'keyframe_head' | 'scene_enter' | 'shot_start'
+  linkType      String   @default("next_scene")  // next_scene | same_character | same_environment | same_camera
+  inheritedContent Json?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@unique([projectId, fromSegmentId])
+  @@map("ContinuityLink")
+}
+
+model InvocationLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  projectId       String?
+  traceId         String?
+  executionId     String?   // 工作流执行实例 ID
+  stageId         String?   // pipeline stage identifier
+  capability      String   // llm | image | video | tts
+  provider        String?
+  model           String
+  status          String   // success | failed | timeout | fallback
+  latencyMs       Int?
+  tokenUsage      Int?
+  errorMsg        String?
+  fallbackChain   Json?    @db.JsonB // [{provider, model, status, latencyMs}, ...]
+  sourcePath      String?  // 调用的原始来源路径（route / worker / service）
+  runtimeVersion  String?  // constitutional baseline version
+  agentType       String?
+  operationType   String?
+  assetRegistryId String?
+  createdAt       DateTime @default(now())
+  @@index([userId, createdAt])
+  @@index([projectId, capability])
+  @@index([traceId])
+  @@index([executionId])
+  @@map("InvocationLog")
+}
+
+// W1 预留表 — Asset Graph Index Layer（W1 不实现逻辑，仅预留 Schema）
+model AssetGraphEdge {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @db.Uuid
+  fromAssetId   String   @db.Uuid
+  fromType      String
+  toAssetId     String   @db.Uuid
+  toType        String
+  relationType  String                    // 'appears_in' | 'uses' | 'continues_to' | 'references'
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@index([projectId, fromAssetId])
+  @@index([projectId, toAssetId])
+  @@index([projectId, relationType])
+  @@map("AssetGraphEdge")
+}
+
+// ══════════════════════════════════════════════════════════════
+// F4 — Multi-Tenant Workspace / Organization
+// ══════════════════════════════════════════════════════════════
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces Workspace[]
+  members    OrgMember[]
+
+  @@map("Organization")
+}
+
+model OrgMember {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  userId         String       @db.Uuid
+  role           String       @default("member") // owner / admin / member / viewer
+  createdAt      DateTime     @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("OrgMember")
+}
+
+model Workspace {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projects      Project[]
+
+  @@map("Workspace")
+}
+
+// 扩展 Project 增加 workspaceId（可选，兼容已有 Project）
+// 已有 Project 的 workspaceId = null 则视为个人项目
+
+// ===== 社区系统 =====
+
+// 社区分类
+model CommunityCategory {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  description String?
+  icon      String?
+  sortOrder Int      @default(0)
+  postCount Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@map("community_categories")
+}
+
+// 敏感词库
+model CommunitySensitiveWord {
+  id        String   @id @default(uuid()) @db.Uuid
+  word      String   @unique
+  replaceWith String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("community_sensitive_words")
+}
+
+
+// 社区帖子
+model CommunityPost {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  title         String
+  content       String                        // 纯文本内容
+  mediaJson     String   @default("[]")       // JSON: [{type:"image"|"video",url:"..."}]
+  tags          String   @default("")         // 逗号分隔
+  category      String   @default("general")  // general / question / share / showcase / tutorial
+  status        String   @default("pending")  // pending / approved / rejected / draft
+  rejectReason  String?
+  viewCount     Int      @default(0)
+  likeCount     Int      @default(0)
+  commentCount  Int      @default(0)
+  rewardCoins   Int      @default(0)          // 累计打赏积分
+  isPinned      Boolean  @default(false)
+  isEssence     Boolean  @default(false)
+  reviewedBy    String?                             // 审核人（admin userId）
+  reviewedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments  CommunityComment[]
+  likes     CommunityLike[]
+  rewards   CommunityReward[]
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([category])
+  @@map("community_posts")
+}
+
+// 社区评论
+model CommunityComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @db.Uuid
+  userId    String   @db.Uuid
+  parentId  String?  @db.Uuid             // 父评论ID（支持楼中楼回复）
+  content   String
+  likeCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post      CommunityPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    CommunityComment? @relation("CommentReply", fields: [parentId], references: [id])
+  replies   CommunityComment[] @relation("CommentReply")
+  likes     CommunityCommentLike[]
+
+  @@index([postId, createdAt])
+  @@index([userId])
+  @@map("community_comments")
+}
+
+// 帖子点赞
+model CommunityLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("community_likes")
+}
+
+// 评论点赞
+model CommunityCommentLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  commentId String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  comment CommunityComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("community_comment_likes")
+}
+
+// 积分打赏
+model CommunityReward {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @db.Uuid
+  userId    String   @db.Uuid              // 打赏者
+  coins     Int
+  remark    String?  @default("")          // 打赏留言
+  createdAt DateTime @default(now())
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("community_rewards")
+}
+
+// COS 对象存储配置（支持 MinIO / 阿里云 OSS / AWS S3 等）
+model StorageConfig {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String                         // 配置名称（如"阿里云OSS"、"自建MinIO"）
+  type       String   @default("minio")     // minio | aliyun-oss | tencent-cos | aws-s3
+  endpoint   String                         // 服务地址
+  region     String?                        // 地域（OSS/S3 需要）
+  accessKey  String                         // 访问密钥
+  secretKey  String                         // 密钥（AES 加密存储）
+  bucket     String   @default("aigc-assets") // 存储桶
+  isDefault  Boolean  @default(false)       // 是否默认配置
+  enabled    Boolean  @default(true)        // 是否启用
+  remark     String?                        // 备注
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("storage_configs")
+}
+
+// ===== Provider State Layer v1.2 =====
+model ProviderState {
+  id          String   @id @default(cuid())
+  userId      String
+  provider    String
+
+  // healthy | degraded | invalid_key | billing_failed | down | open | half_open
+  status      String
+
+  lastError   String?
+  errorCode   String?
+
+  lastSuccessAt DateTime?
+  lastFailAt    DateTime?
+
+  // v1.2: Circuit Breaker
+  failureCount   Int      @default(0)
+  circuitOpenedAt DateTime?
+
+  keyFingerprint String?
+
+  enabled     Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([userId, provider])
+  @@map("provider_state")
+}
+
+// ===== LLM Execution Trace（不可变事件流） =====
+model LlmExecutionTrace {
+  id           String   @id @default(cuid())
+  traceId      String
+  userId       String
+  provider     String
+  model        String
+  success      Boolean
+  latencyMs    Int
+  decisionPath Json?      // nodes[] 序列化
+  sourcePath   String?    // "V2_CONFIG" | etc
+  error        String?
+  timestamp    DateTime   @default(now())
+
+  @@index([traceId])
+  @@index([userId])
+  @@index([userId, timestamp(sort: Desc)])
+  @@map("llm_execution_trace")
+}
+
+// ===== 私信系统 =====
+model UserMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  fromId    String   @map("from_id") @db.Uuid
+  toId      String   @map("to_id") @db.Uuid
+  content   String
+  media     String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  fromUser  User @relation("messages_sent", fields: [fromId], references: [id], onDelete: Cascade)
+  toUser    User @relation("messages_received", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([toId, createdAt])
+  @@index([fromId, createdAt])
+  @@index([toId, read])
+  @@map("user_messages")
+}
+
+// ===== Analytics Event (SaaS 用户行为分析) =====
+model AnalyticsEvent {
+  id        BigInt   @id @default(autoincrement())
+  userId    String   @db.Uuid
+  event     String   // script_created / segment_created / ai_analysis / quota_hit / upgrade_clicked / payment_success / export_video
+  metadata  Json?    // 事件上下文，JSON 结构
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([event, createdAt])
+  @@index([createdAt])
+  @@map("analytics_events")
+}
+
+// ════════════════════════════════════════════
+// RouteConfig — 路由配置表（替代硬编码）
+// ════════════════════════════════════════════
+model RouteConfig {
+  id        String   @id @default(cuid())
+  scope     String            // "route:admin-global-config" | "route:api-keys" | "route:user-api-keys" | "route:system-health" | "route:ai-router-service"
+  key       String            // 配置键，如 "provider.aliyun.types"
+  value     Json              // 配置值（JSON 灵活存储，支持任意嵌套结构）
+  label     String?           // 可读说明
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scope, key])
+  @@map("route_config")
+}
+
+
+// ============================================================
+// ScriptBreakdown — Narrative Compiler v2 结构化拆解结果
+// AI 输出的完整 schema，作为后续 pipeline 的唯一数据源
+// ============================================================
+model ScriptBreakdown {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String?
+  title          String
+  script         String   @db.Text   // 原始剧本
+  targetDuration Int                // 目标总时长(秒)
+  segmentDuration Int      @default(10)  // 每段视频固定时长(秒)，默认10秒
+  fixedSystemPrompt String @db.Text  // 固定的AI系统指令（初始化时写入，不可编辑）
+  status         Int      @default(0)     // 0-待处理 1-处理中 2-已完成 3-失败
+  resultScript   String?  @db.Text   // AI返回的完整拍摄脚本文本（JSON）
+  userId         String   @db.Uuid
+  // 结构化拆解结果（JSON 存储，AI 直接输出）
+  characters     Json?    @db.JsonB  // BreakdownCharacter[]
+  scenes         Json?    @db.JsonB  // BreakdownScene[]
+  dialogues      Json?    @db.JsonB  // BreakdownDialogue[]
+  actions        Json?    @db.JsonB  // BreakdownAction[]
+  videoSegments  Json?    @db.JsonB  // VideoSegment[]
+  voices         Json?    @db.JsonB  // BreakdownVoice[]
+  meta           Json?    @db.JsonB  // 额外元信息（版本、耗时等）
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("ScriptBreakdown")
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// 混沌珠小说工作台（HunDunZhu Novel Workspace）
+// 独立于短剧系统的长篇AI小说结构化创作
+// ════════════════════════════════════════════════════════════════
+
+model HdzProject {
+  id                String     @id @default(uuid()) @db.Uuid
+  userId            String
+  title             String
+  genre             String?                   // 小说类型：玄幻/科幻/言情/悬疑...
+  wordTarget        Int?                      // 目标总字数（0=不限）
+  chapterWordTarget Int?                      // 单章目标字数
+  styleDesc         String?                   // 写作风格描述
+  status            String     @default("draft")  // draft / active / completed
+  locks             Json       @default("{}")     // {styleLocked, outlineLocked, logicLocked}
+  // 封面
+  authorNickname    String?
+  coverPrompt       String?   @db.Text
+  coverImgUrl       String?
+  masterStyle       String?                   // 选中的大师风格标识（如: wangzengqi, laoshe...）
+  // 发布
+  isPublished       Boolean   @default(false)
+  publishedAt       DateTime?
+  publishWordCount  Int?
+  
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  sessions   HdzSession[]
+  characters HdzCharacter[]
+  factions   HdzFaction[]
+  chapters   HdzChapter[]
+  memories   HdzMemory[]
+  styleDna   HdzStyleDna?
+  agentTasks HdzAgentTask[]
+
+  @@index([userId])
+  @@map("hdz_projects")
+}
+
+model HdzSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  userId    String
+  status    String   @default("active")  // active / paused / completed
+  messages  Json     @default("[]")      // [{role, content, timestamp}]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("hdz_sessions")
+}
+
+model HdzChapter {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  chapterNo   Int
+  title       String?
+  status      String   @default("outline")  // outline / draft / reviewed / final
+  outline     String?  @db.Text             // 大纲 / 段落指导
+  content     String?  @db.Text             // 正文
+  wordCount   Int?                          // 字数
+  summary     String?   @db.Text            // 章节摘要（上下文管理用）
+  reviewNotes Json?    @default("[]")       // [{issue, severity, suggestion}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, chapterNo])
+  @@index([projectId, chapterNo])
+  @@map("hdz_chapters")
+}
+
+model HdzCharacter {
+  id         String   @id @default(uuid()) @db.Uuid
+  projectId  String   @db.Uuid
+  name       String
+  role       String   @default("supporting")  // protagonist / antagonist / supporting / minor
+  properties Json     @default("{}")           // {age, gender, appearance, personality, background, motivation}
+  relations  Json?    @default("[]")           // [{target, type, description}]
+  arc        String?                          // 角色弧线描述
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("hdz_characters")
+}
+
+model HdzFaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  name        String
+  type        String   @default("sect")     // sect/kingdom/company/family/gang/military/other
+  description String?  @db.Text             // 组织介绍
+  leaderIds   String[] @default([])         // 领导者角色ID列表
+  memberIds   String[] @default([])         // 成员角色ID列表
+  properties  Json?    @default("{}")       // {location, ranking, scale, culture, era}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("hdz_factions")
+}
+
+model HdzMemory {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  type      String                            // world_state / character_matrix / pending_hooks / chapter_summary / location_state / pov_tracker / timeline
+  content   Json                              // 结构化记忆数据
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type])
+  @@map("hdz_memories")
+}
+
+model HdzStyleDna {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @unique @db.Uuid
+  sourceText  String?  @db.Text             // 用户上传的参考文本
+  fingerprint Json     @default("{}")          // 文风指纹：{sentenceLength, vocabulary, emotionPatterns, ...}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("hdz_style_dna")
+}
+
+model HdzAgentTask {
+  id              String    @id @default(uuid()) @db.Uuid
+  projectId       String    @db.Uuid
+  sessionId       String?   @db.Uuid
+  agentType       String                           // planner / character_agent / director / writer / reviewer
+  status          String    @default("queued")      // queued / running / completed / failed / waiting_approval
+  input           Json      @default("{}")          // 输入参数
+  output          Json?                             // 输出结果
+  approvalStatus  String?                           // pending / approved / rejected / modified
+  approvalNote    String?                           // 用户修改意见
+  tokenCost       Int?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, agentType])
+  @@index([projectId, status])
+  @@map("hdz_agent_tasks")
+}
+// ====== 小说阅读板块 ======
+model NovelPost {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @unique @db.Uuid        // 关联 HdzProject
+  userId        String   @db.Uuid
+  title         String
+  authorNick    String?
+  coverUrl      String?                          // 封面图 URL
+  genre         String?                          // 男频/女频/玄幻/言情等
+  intro         String?  @db.Text                // 简介
+  wordCount     Int      @default(0)
+  viewCount     Int      @default(0)
+  likeCount     Int      @default(0)
+  collectCount  Int      @default(0)
+  commentCount  Int      @default(0)
+  status        String   @default("pending")     // pending / approved / rejected
+  isNewBook     Boolean  @default(true)           // 新书标识
+  newBookUntil  DateTime?                        // 新书挂板截止
+  publishedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([userId])
+  @@index([genre])
+  @@map("novel_posts")
+}
+
+// ====== 动作套路卷轴知识库 ======
+model ActionTemplate {
+  id              String   @id @default(cuid())
+  name            String                            // 套路名称
+  category        String                            // fight / chase / performance / war / disaster
+  school          String?                           // 流派（太极拳/自由搏击等）
+  description     String   @db.Text                 // 文字描述
+  totalRounds     Int      @default(3)              // 总回合数
+  scrollImageUrl  String?                           // 卷轴图 COS URL
+  thumbnailUrl    String?                           // 缩略图
+  scrollWidth     Int?
+  scrollHeight    Int?
+  matchKeywords   Json      @default("[]")          // 匹配关键词数组
+  templateData    Json                              // 完整套路模板 JSON（rounds + cameraLayout）
+  isActive        Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  usageCount      Int       @default(0)             // 使用次数统计
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([category, isActive])
+  @@index([isActive, sortOrder])
+  @@map("action_templates")
+}
+
+// ─────────────────────────────────────────────
+// 📋 Event Log — 系统事实层（append-only）
+//    所有状态变更必须通过 emitEvent() 写入
+//    与业务状态更新在同一事务内
+// ─────────────────────────────────────────────
+model EventLog {
+  id         String   @id @default(uuid())
+  tenantId   String?
+  userId     String?
+  entityType String                          // 'chapter' | 'task' | 'project' | 'review'
+  entityId   String
+  eventType  String                          // 'CHAPTER_STATUS_CHANGED' | 'TASK_CREATED' | ...
+  payload    Json?
+  traceId    String?
+  requestId  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("event_log")
+}
+
+// ═══ 余额模块 ═══
+model ProviderBalanceRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String   // deepseek / volcengine / bailian / zhipu / minimax
+  balance   Float?
+  currency  String?  // CNY / USD
+  unit      String?  // 元 / 豆 / 点
+  error     String?  // 查询失败时的错误信息
+  fetchedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("provider_balance_records")
+}

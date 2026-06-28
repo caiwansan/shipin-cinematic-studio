@@ -1,0 +1,57 @@
+// 稳定性实验 Session — 每次长稳测试的完整记录
+model StabilitySession {
+  id          BigInt   @id @default(autoincrement())
+  label       String?           // 实验标签，如 "Long Run #14"
+  status      String   @default("running") // running | completed | cancelled
+  
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  durationSec Int      @default(0)
+  
+  // 系统指纹
+  queuePattern       String?  // "stable" | "oscillating" | "diverging"
+  workerDecayCurve   String?  // "flat" | "slow_decay" | "sharp_decay"
+  pidSignature       String?  // "tight" | "spiky" | "oscillating"
+  costProfile        String?  // "linear" | "jumpy" | "runaway"
+  recoveryProfile    String?  // "quick" | "slow" | "incomplete"
+  
+  // 评估
+  grade     String?  // A+ | A | B | C | D | F
+  score     Float?
+  
+  // 退化统计
+  eventCount  Int   @default(0)
+  worstEvent  String?
+  
+  // 阶段执行记录（JSON）
+  phases JSON?  // [{ name, startSec, endSec, pattern, intensity }]
+
+  // 关联
+  frames  ReplayFrame[]    // 该 session 期间的回放帧
+  events  DegradationEvent[] // 退化事件
+
+  @@map("stability_sessions")
+  @@index([status])
+  @@index([startedAt])
+}
+
+// 退化事件 — 实验中记录的系统退化时间点
+model DegradationEvent {
+  id          BigInt   @id @default(autoincrement())
+  sessionId   BigInt
+  timestamp   DateTime @default(now())
+  elapsedSec  Int      @default(0)
+  
+  eventType   String   // pid_oscillation | queue_divergence | worker_fatigue | ses_throttling | memory_leak | cost_spike
+  severity    String   // warning | critical | emergency
+  message     String
+  
+  // 系统状态快照（当时的值）
+  metricValues JSON?   // { queueLength, queuePressure, memoryMb, ses, pidRate, ... }
+
+  session  StabilitySession @relation(fields: [sessionId], references: [id])
+
+  @@map("degradation_events")
+  @@index([sessionId])
+  @@index([timestamp])
+}

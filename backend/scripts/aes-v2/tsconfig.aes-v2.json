@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitAny": true,
+    "strict": true
+  },
+  "include": [
+    "src/workflow/**/*",
+    "src/observation/**/*",
+    "src/execution/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

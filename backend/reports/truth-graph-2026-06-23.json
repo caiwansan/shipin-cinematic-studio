@@ -1,0 +1,4503 @@
+{
+  "summary": {
+    "scannedAt": "2026-06-23T11:16:14.507Z",
+    "total": 319,
+    "cos": 104,
+    "local": 108,
+    "thirdParty": 107,
+    "pendingRegen": 48,
+    "mode": "FULL",
+    "elapsed": "11.1"
+  },
+  "byTier": {
+    "COS": 104,
+    "LOCAL": 108,
+    "THIRD_PARTY": 107,
+    "UNKNOWN": 0
+  },
+  "assets": [
+    {
+      "url": "https://dianshangfu-1312954470.cos....84-a77e120d10a2.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "0d864632-0b5f-4dde-831b-d5757de78a67",
+      "size": 270963,
+      "hash": "f3a45189815ffc8ba0b10ed33a211adb9f682d637ec5ecadd29148cdd946d1d8",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_ChenMo_3b23bfba.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "27348f80-32a3-4932-aadb-ee680b9be337",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-13",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/four_ChenMo_3f5fc66a.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "106c8c66-b462-4be9-a758-d2b0d72747ca",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-13",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2fe4719d-0a2b-410c-98a6-eace3dc08cf2",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-13"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....56a-37923f2770c1.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "040cb922-116a-4e56-93d3-79450a4680d4",
+      "size": 145663,
+      "hash": "37f8e928b7a5c8d872801e26e658e35e464cd2c3679d031098c2cb3ae31cca56",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....f8d-b9a2da0dda35.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5695fc9c-855b-4133-bc56-b8339476cf28",
+      "size": 85089,
+      "hash": "21e5af21f6d68de1deeb899515c15a4559b114713fbe59f7257524dc27b27ffe",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_Landlord_6cf52402.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "eb646d1a-722c-4806-913d-1c1e802ebd81",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-13",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/four_Landlord_32b18718.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "44fb4e83-d9f5-46f5-8e74-682eef25e366",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-13",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "62a2263d-4edc-4c87-9250-23626cf24808",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-13"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....4ed-6680c9d14047.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "33329d09-29c7-48c3-910d-0fbe7495caba",
+      "size": 136168,
+      "hash": "cce8538cc68e6398d5b76da941933bd4280c12bd7d1b1de6bd24b38dfe04c124",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....a45-e91193f085c3.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "d8d45a7d-a221-4eee-90a5-7891dabb5879",
+      "size": 101492,
+      "hash": "932069706cc38a7a31a940b4bee6134e4594d1b4fbebdf23627ff38aa34895b2",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....c9-78582bacc1c2.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3363dd93-e6c4-4c24-a771-ba63c9debbbd",
+      "size": 246750,
+      "hash": "de8aff54687778a9bb92f34a1c29100cc6ece9ce96d3b690348709b3eb9c6760",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "27379b23-6984-4606-bad8-4f9de791dbd9",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....569-8953999faa32.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "83a8567b-115c-4108-b0d9-8fd23b7bdea4",
+      "size": 161274,
+      "hash": "ba9cc9a3758ef05769043d6714212b3bdef883b6c571a9bc202270814b9b1068",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....4c9-7bbbad60183a.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "a86e120c-1398-4f88-bcb1-14042448d5e4",
+      "size": 103317,
+      "hash": "a454d19eccea97e4467974393351d0efca6d20a0fac93b77897512c2223cbdab",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "8b900204-7805-4fac-be62-f31d2a129de1",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_陆沉舟_e8660cc1.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5b2635a6-a04e-4d58-82a1-2ed12f34800b",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/view_陆沉舟_d9129372.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "8601d76b-3afd-4e58-8eb5-0cc9e97ca79c",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/img_1782209624041_d0ac93be.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "7e0bc413-5fe6-4a72-945e-879a1b50eca1",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_苏晚棠_d331f0c0.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ad7ac8c5-c2b4-4c3c-ba20-22aae7b88aa2",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/view_苏晚棠_fea425de.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fbdb5046-9bdd-49d7-b17f-774a7d284fb4",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/img_1782209831576_0d3bba5f.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "a37a7060-888e-4bfe-b163-14d8231917d3",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781880175921_rew3mxe8.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "4051efc6-2d1f-41a2-9092-5377804811a5",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781874654326_0yfkdijv.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ec7b8014-88a0-4ae6-8a83-3d6a8f8c4c8a",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781345514606_9llf06ik.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "1cc1d8f1-1f16-488a-9d50-34c24ed702ba",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-13",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781875160047_ipvt7ozm.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "14e108b8-ac14-417d-995c-e56cf17133a1",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781872993387_8slm2kmv.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "93ca8233-2345-4c1f-9baa-a18528a1d76e",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781345206189_bv4bg7s0.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "6206fd39-9242-472f-a914-dd3cf4658406",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-13",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_姜灼_a5fbf977.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "65db52b7-98e1-4437-a34f-2cf4b4a0cc66",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/view_姜灼_67f9876f.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "45bbe420-f52a-44da-a424-64157e01a6c2",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "92e8a0a4-7a30-4f37-9f35-6e15247b0bf7",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_狼妖王_34ff5a4b.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "cb16bf34-700b-4570-a51d-62e8508dbc66",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/view_狼妖王_28a397d8.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "1c71adb6-8c90-4a55-b3f7-d7ae55ec2e70",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "513ac623-c40b-4dfc-8340-ca73e1584d75",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_苏晚棠_5aa88be6.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "7c536c17-fe26-4153-be0a-9c9dc5f935f6",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3df60535-88b2-426b-93e2-8fc828d14f71",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....49-2dc186ca1290.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "4d5d751f-1a10-4060-b370-75f65d33fc03",
+      "size": 184123,
+      "hash": "5395a8a50bebdd7ab6e9812075a5cd72cf18366dfcd583d1b75d2e25ef580d5b",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....81-56c23639374e.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "74689773-356e-484f-8a3b-5768ddd2bc3c",
+      "size": 444963,
+      "hash": "9986bb33904076ee57068c265eadb85c9c17592d56a171971813fb845d64c815",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "1ca1dc6f-125c-4c61-b2db-61bd3c0833de",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_陆沉舟_4db02ba4.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5ffbe90c-a6cd-4119-9a80-ed62e9d10760",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/view_陆沉舟_fdae19cb.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "9a6f93ef-5577-4218-b465-d23c44ecd9ef",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....31-cef2426a30fe.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2e302c85-2c17-4f95-a7e3-0f617356fe25",
+      "size": 681036,
+      "hash": "2fee9f7e922fc2bec5d5ddbae7febc0f763617af6c0bced57e601b7d95bc0387",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....172-47451ae3aeeb.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "8a431cd3-c3d1-48f7-a979-742c9515e3e4",
+      "size": 58803,
+      "hash": "2691557e611fe9f8442ff5902ff14e0a0fab5dfb43d8095e4d0a57718ea7ff28",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....31a-e206ed5294c4.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ff21e239-811e-48ef-b47c-accadac505ac",
+      "size": 66837,
+      "hash": "adc031aa05b718eb31e25a5e4f9f07f2abd55641017c22fa422bd120f902adac",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....1f-152015f340a4.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "43eb0341-aeed-43c9-a625-7ccc033fd60c",
+      "size": 436310,
+      "hash": "440afd0e9738748c41db5a4ce6ee159b1b93f8b072f5668c214bafdab8d72f40",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....2b5-6a076b39fda9.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3cb941de-a692-46f4-9157-409ba0c475cf",
+      "size": 78378,
+      "hash": "937180ab60d776c8b7f1e2c9f9182844b10646c95e86fe99bd772992264bb5c6",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....bd5-5eca8a554902.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "52837f3d-932c-4f5b-b8ab-d362346ba6e5",
+      "size": 83778,
+      "hash": "5316ba47a0e946b92addd039422e27fc7d5b6c15a938316af8989563af73d6b8",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_姜灼_43c371ee.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "9ddbec3d-a43f-4435-b470-b2db9efa66cc",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/view_姜灼_33c8b3f6.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "f8d1c057-5a79-4a4c-9068-88085760d017",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781416354207_3surpcaz.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "25cf2ac4-4573-4bc7-b498-2d528de29c24",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781874508814_uhjv7tp9.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "53c20c2a-d2cb-469e-860d-e729e6ca53b8",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781416873812_0x77t4f3.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "540f3ab0-69b1-4542-8fbd-2c087a63f498",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....6f8-bf6b544edadd.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "afe0c393-9da8-4a69-ac0c-806a3f67df57",
+      "size": 61735,
+      "hash": "766a55ca6f89396c25d2e944ea7020f5e767adfb3cc9951876a3405f8dc9aeb9",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....13d-411008e0cadc.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5c32075b-752f-4a66-8346-535ea6c526c9",
+      "size": 106568,
+      "hash": "777b833c2a479c20bfefe12ba8fe4bf0680fa9a234be01f172a5bbc72a248a1b",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....06b-59743f958f72.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "263c08dd-95de-44cd-9611-9e357913a6a2",
+      "size": 90049,
+      "hash": "8590e6633a9bfaf9322c2d31de902510202ec99373c47a08b3c3a192b43cd06c",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....18-1609472089da.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fad9300a-cbfb-43de-ac34-41e62183def2",
+      "size": 638339,
+      "hash": "e561c7f22dbd1eb193abafe146893f4db8f31022e2da671b50541b3e02d0d517",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....c38-2350b6c23231.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "d15cfe8c-79b9-49eb-bb8f-50e2a4f60298",
+      "size": 69999,
+      "hash": "4a0061a9d927230fc6e09153fb8a8aa7deea041673ad248dcde2975a530174cc",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....f8-040fa12c256d.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5a78f00f-f7c8-4a52-85c1-759bb8dec152",
+      "size": 390202,
+      "hash": "0a6f943013ba0b731b4ced99f1f17cf73e8b0675146ed8d4670f63300c4c4f05",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....b26-3b8ecf5f64d4.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "7b5668d9-d87d-4f13-8388-fc4cbb68b40d",
+      "size": 145046,
+      "hash": "a53c0997513b9fea873ba7bc3c337a30ccbec64fe2d88ee20def5ea1a9103fe8",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....76a-c2446882cda9.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b270aa16-3dbc-4690-86b6-1f661d1ba1dc",
+      "size": 92143,
+      "hash": "70ba1da6d7567887eb2fa9467976df4a86054e22bd000501ec20b886ba44a742",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....da-e4b4a450b406.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "62978180-41eb-4e4a-b9cc-086c9d7a0c54",
+      "size": 201468,
+      "hash": "39970c52c793e38b7941a26c578804c9996930aeb290defe737975dee7f54a1f",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....26d-e12613dcc3de.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "8436ddbb-d559-4251-a637-12348c9c0a0c",
+      "size": 60633,
+      "hash": "fd189f2e2467e41a718ac3cbc79915017e43bf1d804a48c938a01d8bbe3b365a",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....857-6730a046fba7.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "30450bcd-0a92-4273-9b69-bcf67c260531",
+      "size": 73714,
+      "hash": "265297339c898def6ce7e801ce019c9c0cbc35b50193346cdd41ce9596d78872",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....72-54e3c8b8f4ae.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "f262ef45-a2bb-4831-ba34-8f3af8c3872f",
+      "size": 309553,
+      "hash": "fff9539475c67c582e8eb4b023f7d85a530de6018fb7e1674e3c900afed6af1c",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "c9fb4b96-5c77-4ca8-8474-c6e1f79c876e",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "42b0f103-2f45-4b4e-b0a2-61f6796ed458",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....ee4-7104ed796c8d.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "196cb1e7-ff49-41c6-8785-8abde371f645",
+      "size": 122807,
+      "hash": "e14b9c2b689c34012081ef5ffb9780cde0f6af06c80a3c8458d6a207065ffa29",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....9b4-2f5054cb4060.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "e1c565f6-739d-4840-8dcd-47c12ec50234",
+      "size": 94419,
+      "hash": "8c2cf335061efe2f9ddb59e40ee0c50efebc9ed976bcdcbf96611212cd7d6cb6",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....79-bd41d58e5e33.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "6be33c38-e625-4563-bc78-11e2bf672286",
+      "size": 212371,
+      "hash": "0dea6601e46dbc965c84711118b6fa63ecefb70adb4baec1de82a6a953f691f5",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "/uploads/characters/img_1782149460430_a7604382.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "06900c40-f04b-43f6-ba90-2c892348b4a4",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....8c0-7dfbb3609f6e.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "9c7974d7-1f61-4a60-a321-fa70983d7383",
+      "size": 137706,
+      "hash": "0a2eceb1a6b99825cca347bcdcd863f63559b8bf92f6b8d039f1e276ad0bdd5d",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....6fd-520531912005.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ba23ef45-7a85-44a1-a159-9c3098c41996",
+      "size": 73932,
+      "hash": "194b16667193aa7fe913a8be957d0996245490a3338734ef3d2a40eb173124ae",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....50-74299fa84dca.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ac627b2a-b876-4475-a87f-3af9f4977c00",
+      "size": 624794,
+      "hash": "21385a7dbc015eb410be3017ca0b61f6fb51b325ed52995c6442237b72d6b37d",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....f4-4f5519ec0768.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ebe811ac-cbed-4f1d-8a64-32eca844d312",
+      "size": 379296,
+      "hash": "a467cdb60c25a2b50ab756a1a4cad2fd46d21712cee2f0a2bf05e246d18bea68",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "6186a284-d4ae-48dc-a4ae-b24ae397867c",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781927196559_n9ph84p1.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "f476db7d-e8f3-4a7a-9ab6-97f4ed44f491",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:back",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....5ce-c9a72a58a013.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "c9e44dfa-4902-421c-bc4a-2deb93d1be2b",
+      "size": 97169,
+      "hash": "a4814b468ddb26dc885e803d931aedd18dff840cb9c3b56519900959b1dd48b2",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....a4a-7b7529999e23.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "a399abec-848e-4425-961c-ea654e3df5e9",
+      "size": 104190,
+      "hash": "8f1cec01fe809a892f68e477add397854509b387090cdeb3218f959a0145d3cd",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....4f-f7b5a627da55.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "a7c68899-533c-415a-8e26-90b4c1686d30",
+      "size": 610044,
+      "hash": "166b406b1692be8030e9062d7ea2fbc6e85924f9fb09747a7b16b1ff71c2bc91",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....6f9-4b5497839de8.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b2d4a49f-fd9d-4376-907a-6644adb730e1",
+      "size": 86969,
+      "hash": "8500ee0c9b16e57641cf3f1021b8e7dbcb70244974015a4e3954c22996f952ee",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "d7d774bb-9969-445e-8c70-3ea949a0aceb",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "34b261e0-cb86-4dbe-b21e-5f00e9d2bfde",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fdc81072-e595-44fe-829c-d27c8ee845dd",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "c2640172-aa9e-4f38-b834-a0e838d0eb17",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "0c4f5bae-300b-491a-a2dc-8cc7cf162ffb",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "7a9baa95-c9a9-4968-aa4b-604fb7d95939",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "67b7bd32-a9dd-46aa-8401-85ce51ecf69f",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "46c96ff3-56af-4399-9751-6570cb2aab94",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781890312036_etsx2hyb.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "1a108e98-de5b-4021-8039-4b490bf857ae",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:back",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "1dc9de83-4f01-4902-a1d7-c95e0c7e6dd0",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "20c2b4ff-c6b0-4e24-92ce-f4f82be15eeb",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "f2c5cf95-0ae9-45f3-aa49-5fb492e9fdd4",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781811066632_tal7p36g.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "06342484-969c-4124-abd8-b7a44b087d98",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "09519769-444f-460a-b37e-995154669f3e",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....004-f4efd04c0b6f.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "d723b148-e4b0-4fd5-b0a0-da04f6c35545",
+      "size": 107559,
+      "hash": "8a54c62c4e8d8e0dc120d3c99902924133b3bca38f454df3a68a6f4b5b5bfca3",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....11a-9a654dbfa7d9.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2ba2ae8f-c931-448a-8dfe-38cbb264c155",
+      "size": 87167,
+      "hash": "e3ac9819398fb07448fe0a39c0234fb56a072b8c1cbd944cd8d2d3c8d5876be0",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....94-e0e3c413ed96.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "52a5c5c0-4f13-497a-8490-78d8df55c57a",
+      "size": 187993,
+      "hash": "9aa1d98d15516e971bb1287d5d6e1287be32502cf4d39b18fc4e5b9806a7303f",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "f32bf4c2-4ad0-4abb-845b-2129dc7c68c5",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2607a8a8-2000-4624-949f-a9b889f00dca",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....c9f-e209c4c9b71d.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fdb4a47b-8c6f-4b94-8ddb-87d7fca845c6",
+      "size": 62838,
+      "hash": "1f65e865e6c28b4585a2f60f411fa6bb1c9e296dcd6183814df63619afe6d745",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....31-c5d4628fc3b3.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5621812a-0aee-46e0-9c4e-318cd42aa14d",
+      "size": 509556,
+      "hash": "8cb31a7f41af5ae3bafe89d8f247e3cfb51649c4ee6818f2d218747a7dd7147c",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "a63f58fb-da14-41f3-b34f-9caf61bd3293",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....7a1-d6f1b584aae2.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2ed49d74-a9ed-4c44-a011-2c063c6e6865",
+      "size": 56456,
+      "hash": "ce817f5f8ec2f762bd96d692893070e7e77579720c8dcc21e397a7c920f24079",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....f5-9ad3bae95a60.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "e41ac121-78cf-4804-89e7-d88074d7f489",
+      "size": 404421,
+      "hash": "ffe1c922c8e86eea6f0a854e7dd93f2196f3ac36fb7a5540be95c061401032db",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....775-4bd41adf3a46.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "7735675a-b8b5-483e-86cc-08553c373573",
+      "size": 76168,
+      "hash": "a0946f9c740c1bb38f535c75896b387300a14557825b565af01dae51db34cc2d",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....cee-3bb12c612394.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ee3e2dd9-7f11-4c0f-82b9-843a6c0c4e05",
+      "size": 77927,
+      "hash": "20670ad976c3263839e342fc8bb9d84759a359406b6e9080d4b1d444a49ac62e",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....ad3-5636677b1c10.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "96206fe1-47e1-4b0a-a33a-7db235a52c09",
+      "size": 166419,
+      "hash": "f6a2aa3140450fda12a44b8b4ff82f0030b39de30dd6916be77100dd31971352",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....329-3a269a38c6f8.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "0b97e1ba-56c2-4f1f-b890-99c751d3f38c",
+      "size": 105096,
+      "hash": "25decef26bfc175b7f704f80bd9ecbd8bd3ce43522ce082fbcf1445e34f9013e",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....c9-ff893b5eb0fa.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "25e0bf2a-bfb8-4aa0-948f-2f7c42200acd",
+      "size": 243890,
+      "hash": "7dd18e87afef9a4b97fba552a621a50b3685fefca35af24484e484a935f034c6",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3dc269f4-6840-435b-8173-9fca694814c1",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2a4004c1-0bfe-4e16-9911-f7f57e7e2600",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "81e0d4b1-54b0-44db-9c51-93a0a088aa38",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....13b-f0ae6e8d34c8.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "d5071a97-7e23-4c56-9f99-48d356a06df9",
+      "size": 56492,
+      "hash": "94b593b3f620eeb7e38c68aaeb157c9ffa39b6e201972b30e09978776bc1eed9",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....2ae-d27767c84c3f.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "8f1af80e-5e9e-4494-a7a2-2b732dbf14c7",
+      "size": 69575,
+      "hash": "853cfb913342daff9515914cbea3d7106bd85c1dad185d9cbbaf1bc4009c0987",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....bc-f988453d202b.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "622caf54-0f6f-4c97-9046-aa9ad5b76278",
+      "size": 226896,
+      "hash": "7c3f3a3041ae59e34e1ab798af8ff7ddddf2b90a5af4f89ae0feb89b4a5805cb",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "7769ee77-d2cf-4167-90f5-920e581dc755",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....3d-9497c087497b.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ef4908b7-fd3c-4b25-83e4-ff185b8e565f",
+      "size": 517365,
+      "hash": "d1f70de3ba8ed4ab182d51e1ce09ffbbb4c071d9908014d6a0e5ac9a1a7ba647",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "101785ba-3de0-4e8f-b04b-91f0e4097cc8",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "4302ce60-3cca-492e-8032-cd39ce2ca7a1",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "74209642-37c8-41ba-a22e-eed5d3a11f2d",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "91f6701e-d9de-4009-bf55-98ceae4c4afc",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....ea7-944a1aefcb69.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2b0b137c-33b8-47d7-be14-7dd3ec649520",
+      "size": 119201,
+      "hash": "f018413d884f78af5d613bd8e93633e61c19f0b8e2abeb53f5c00376b05881ab",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....a0d-cff111766d5c.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "244190d0-96b7-477d-a72b-83ed467982f2",
+      "size": 91011,
+      "hash": "d735e1deb7c12628b2e8595517b12fa34d785d8e045ec34ab67f0e645f764afa",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....ea-b605c253aaa3.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "cc07c0ca-73a5-4487-a8b3-64d6b19da055",
+      "size": 245799,
+      "hash": "de49e446dcbd54867cf5dd6ff90c27bfac13196d59ab6a0a6ede45d31f5ad314",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....f9b-c129da2f51be.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "e783a866-0de8-4ac8-811d-e3d7307111b3",
+      "size": 93125,
+      "hash": "2ae80cabf67ee0992922daf22684fa2fe7381ab54489911d508aecf3a23da226",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....c03-fbc124809d82.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "d13c86f7-24c0-490c-b3d9-7748394b0a29",
+      "size": 117286,
+      "hash": "e9eecd4e8fc38477b3e0c555204675bd215470efa04b9e47beb192e582a74055",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b39b3e84-d2b1-416d-bd67-ab457cda3c24",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "0ccf5b11-8610-449d-9e6a-354a6d3db560",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "673d7b62-44a4-4704-8e49-2ec94bf37e2b",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "cf3ee2b8-2ad5-4adb-bb9c-7d01b0faaae1",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "d7cfc1ed-3f41-4bd5-8869-abeb5dda1c52",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fe884d7d-dc29-4e0b-b8f3-dc7bc990c025",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781875699424_iu5ad2bw.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "4539b324-fb17-457e-8063-e60fbb1b9a68",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882347697_yvem0r5w.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "64f9a8f0-8e33-4105-8d58-782d2217e154",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882428616_g32t6uur.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "56d153e4-b492-42b1-b212-80ea60d484d7",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fbb73c97-3bd2-466f-a2cf-f6d409c4052d",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_白露晞_dd325bd6.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "37c38c52-88cb-4349-8d0b-34360ab4168c",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....2d3-f6de60f192e1.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "6ded7456-8237-4f70-b3e5-67f5975bbedd",
+      "size": 149010,
+      "hash": "5ae804a1e5c961be805e831845e928b821be858ab70a01adf95ed0d546902aef",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....cf4-c402b428b46a.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fdd7eec9-3592-4322-b369-79152ec8accf",
+      "size": 101317,
+      "hash": "c726fe67aa03512685d1d222ab6221ef2b2bb260bb223020ede108b4dff158f4",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....9f-3b0b0b06e346.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "e9b38887-3657-4f4f-83a1-69c43ae96111",
+      "size": 262616,
+      "hash": "3aac73abbafeacd13f94791dff41ece29cf0ed6dca92d07ec215a074cbe0822f",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "9d5e67af-86e3-4d82-91c6-d21361e0f2d1",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "4a2e8a0a-409a-47a0-b02a-323072d9c851",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2bb447ec-3740-4632-b41b-9a83f731dee1",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....1c6-cb04e518175b.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5249e86d-4642-48a9-b090-092bed4af159",
+      "size": 112554,
+      "hash": "116f2488118f24f3d95f8f40ba7a0ed47ca2380ca7fda81ddcc600e5d7dfb266",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "/uploads/characters/view_白露晞_b3941ba2.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "feeab838-4e3e-4460-88cf-464289e6e842",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/view_宇航员_a5752316.jpg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fc34a62e-d5ad-4713-acec-317be5f1eae0",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:makeup",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/img_1782207490636_6c151b77.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "730c5f61-a5da-40a3-bb12-a6e6e3ff897a",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b50d3b5e-5069-4158-a7ce-e337045aa88d",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "9e43e098-ec24-48d5-9c5d-1720b176ccec",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "f068de5d-d2ce-4994-86d3-2d41bddd5ee9",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "/uploads/characters/face_宇航员_0a0ee89c.png",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3139e3c1-24eb-4d7b-a9fe-f6a2fb665f47",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:face_ref",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782030245086_fvw0l0r3.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "1ea5e266-e08d-4efb-af9c-a974360efd0e",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/characters/img_1782209366024_c440c998.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "7564745d-8891-4430-9a10-49e93809d728",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:full_front",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "40a73d45-ee97-4e2c-b346-a8f048c874f4",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2e1eba37-94c5-439b-b51b-58c7089b48c1",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "123995c0-d14a-4eca-8b62-0782df522bf3",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882309347_2z88kdfh.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3d0a4db2-db0d-4ae1-9abd-c63ed7c306bb",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882463830_suzef124.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "57d0c10f-4c27-4a0e-aaa9-9863b3ed87b6",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781783680285_9qxaudmv.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "e965cd09-c3b2-4e1d-b14d-524ee81284d8",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781783709274_67axe3jg.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "41866070-3afc-4b51-bbb4-cf4f46e8984f",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781416806385_ntsjhlub.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5e4b8aa7-e086-4de3-8135-1f7693ed7c25",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b864e726-c008-4db5-92b5-fcf576c194df",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "312db638-7933-42d6-8fcc-6ce67c9e789d",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3ae23a73-0397-40e8-ac08-816045ba124b",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781783722210_bip1yhyz.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "fe3b8a85-8f4c-461d-970e-fa4ff3dd801f",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781783767070_owt4n248.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "03327d63-ef2f-4a1d-936e-b0965592b865",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781889626591_fomuii88.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "8bcdaf79-0ede-48bd-8aec-bad3d8505d81",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "dbed45cf-e422-4358-b813-8cfe50457160",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:portrait",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5fca8436-eb23-442e-ae0c-153b37ea2645",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:side",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "590cdce8-8e81-4488-9c78-a4649e516401",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "variant:back",
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781416716139_0j2vnvlw.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ad46bb41-1f8e-4034-a146-3cd76e0979b7",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-14",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781872996441_fbd1da1z.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2411bc66-b137-4d6c-aeb6-9c17fcd77a34",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781875668593_migo8hlp.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3f12e324-8a64-4e9f-9ac3-6ddd055e43bf",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781811077601_opzotjia.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "a8006531-a711-46f3-b3c6-c4e57337b2b9",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781798136673_6qwd47hf.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "58b7056c-7d47-4577-992e-35ff8ae502e9",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882171229_d8fe8h89.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "1b9829a7-2db0-4a85-bd09-811ab6708a4b",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781798036783_wbygewt1.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b7d5d900-d012-47bc-a199-a45a911a0703",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781798071960_awfbdq3j.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "263d0d27-46be-4e03-9e28-4af703227167",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781798101102_050oao5b.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "042dc82a-f530-441a-9cce-b163598f2f4f",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781811054964_e0f34qjz.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "67ae6fc1-cea6-48ad-8f94-47efac91a1ff",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782209829054_no7uw1sl.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "54f37b87-9cf1-4a62-8c20-ea680ec98a9e",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781811039149_wlnwr12i.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "9cb7efa8-a4b8-4342-aa08-55736f6b3bbe",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882489094_dvmepg9j.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "0a382e8c-9011-4663-891c-afe7843fcc01",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882523873_3mqjj9i9.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "99e53912-1883-4b6d-b184-24b229bcfa5e",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781927069706_fbd1tzf6.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b53fb91f-e5f8-4429-9bfc-3fda29b7a4ab",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782029374537_kx5jclcj.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "9fc4ea78-0f97-46bf-a954-1f90ae14444c",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782029415720_jwo4rscr.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "e328214b-36a2-460d-9aa4-d96bc188f726",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781927015743_tx21p0pp.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "87033290-db63-4744-ae68-2bfd526c2c58",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781927021535_5sazd4x5.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5b8602d6-7e94-4933-a7e6-58a1d3bd2d6f",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781875734467_y5ojn8v6.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "f3388c1e-d6ef-476b-8376-6319a3c13347",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882230937_tz5mdce0.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b07d440c-e563-4eec-9ef0-59a6d062ccf9",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781888857809_cubv2kba.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b0726cd4-bf00-4cc3-9497-84f3db256ab7",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781873332097_8gx7059d.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ddb8b255-caae-40a6-80a9-e9bd230e3e5d",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781875095506_mhocu0hn.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "070aade6-4731-48d7-b426-db3d5ed34593",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781875192536_j6lco4eo.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "a9f9ff40-9390-483a-9bf8-b861d7aca938",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781875761497_w2o0t7cd.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5339d91a-6f1e-4cb8-9264-2a35dbc8c60d",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781968840913_v6ylm0a4.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "c2d31639-539e-4b50-9c7a-e16dcdec37aa",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782149457037_5nyvvbho.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "48fc12fb-2de1-46e6-9d50-cdfb6074d614",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782029448743_w19j6ddf.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "6f6df90d-f5c6-40c2-8746-ca40141930d6",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781873501938_8djfcqof.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "0aa08eae-add6-4c9f-bf0d-c64b74af661f",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781875131228_mugrqyeg.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "1de5f921-bc3e-4311-b5d5-2da09572ab40",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882065210_g170fylw.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "c0c83d49-5878-4da7-ba76-00e829604be7",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781882270328_osrzl2dl.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ac63e9a6-a99d-4ce6-a084-746b660d6a78",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-19",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782029329727_3odtlybk.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "55b4322c-aec5-409b-844a-671351366b37",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782030290946_2xu83bkv.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "6003e1cf-6b57-413c-82ac-bad10c6665e2",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782030329614_oxxeth45.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "b4f0a59a-fd9a-46a3-a076-2faca62e8403",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782030368397_ld96dqen.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "388a6ad7-1a1e-458b-aea7-9d843ddbc4d1",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782039074914_vqohbn26.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "86b82a72-9afa-45f3-bb8e-342808101599",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782039109953_d0sw8gdg.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "2d701207-b869-49d7-aaa6-647b7d994ea9",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782039040597_5z2ehveq.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "e61ef500-9e27-41cf-84e9-71ff81b34983",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782039141334_45s98ahf.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "18fd67f1-272c-481d-acd8-79cafdcf2961",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782041300668_6uboqsyx.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "69d51540-fc31-463d-8ef1-b907be6725bf",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782041340755_93jv6xpq.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "dd524b7d-e63e-4f7e-acfd-9bcc7654b24a",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782041374718_etpzn5q9.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "97d908a5-1543-462c-8834-7c5b7d33b2a5",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782041419655_io9u7s55.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "573cc896-9471-4318-a251-f98fdf308f5a",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782206705267_ydekrweh.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "a70845cf-5f17-46c1-8c0f-9bc2417c0fa5",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-23",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782206734083_2w38i4is.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "3fd87e47-9d47-4f34-8d54-b363cf295a27",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-23",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782206769732_6iogzefy.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "5ec5bf8b-e919-4411-b1c8-3651b2022bcf",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-23",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782206799746_qu1adh96.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "f5554d4b-89ad-416e-9c4b-04a67902e11b",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-23",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782209622149_cri6rz03.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "73e36953-0e07-43e5-aac2-2b6157ffd4e2",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781783413244_vb63yedw.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "598d0299-1007-4bbe-b13d-792233ed4fe6",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781795673569_ifq2by8a.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "cc31ed4b-76c9-44ee-85d4-7b32834ead58",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781785019659_oqyqid94.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "c79457fb-0f13-4f96-b5b0-c4cede5dd24b",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781797913541_nu41ftwn.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "6825db0c-1e27-4a84-91bd-831fcaa24434",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-18",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781927004247_zbwyblro.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "4d324401-bcc9-4f41-a9e3-de7a4654553f",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1781968363448_vuwamp3u.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "ca101c86-21a9-4b7d-9270-bb3cf3cedf11",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-20",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782038750473_6fg7qcvk.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "d446b20e-658d-444d-ae4d-ac95a6768947",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "/uploads/img_1782041202343_v3c23vzb.jpeg",
+      "existsInDB": true,
+      "dbType": "character_image",
+      "dbId": "364900a3-90d0-4d13-84b4-6742deac10ec",
+      "size": null,
+      "hash": null,
+      "tier": "LOCAL",
+      "status": "LOCAL_MISSING",
+      "notes": [
+        "variant:legacy",
+        "created:2026-06-21",
+        "❌ file not found on disk"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....7e-f47c054e3c46.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "cb2918bf-ccac-4641-97fa-a554f4cccd30",
+      "size": 483080,
+      "hash": "35e594d0d07123dd8d107b5962da4832639500e6e571bb9ac74cd41161dc6f26",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....c8-48500a660f52.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "3530e493-c883-48a0-a59c-60338a722968",
+      "size": 420242,
+      "hash": "1b69b2be907f6c79b35e52b8232d3f5a4ea5e09fb919597f50e471b3cf011d12",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....74-48e27fb7d0c0.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "40f6a462-5420-445c-9df1-86bd6230b2bf",
+      "size": 385317,
+      "hash": "13c0773ec56adee8474c8b93afdbef78e50f890467ddc659bb49f38eba9cc2b9",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....28-c2be246df20b.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "538b9b66-68ff-46f6-95dc-cf21e233338c",
+      "size": 501170,
+      "hash": "2ade5e48dc2c92e6bb5eab1d3e52e4dccca94a12e76a0f14a4a08265933a8cb2",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....0b-93df3fd83e0a.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "8a9a9821-373e-4758-be7e-ba3ffe84ee5e",
+      "size": 923937,
+      "hash": "73cfd16821286a925f25b9ad3f07b7659c416f609481a42ebabc50d571f2ec5f",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....44-84f396edbc13.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "9baf0b04-0511-4b26-b6ff-f37bb8da7871",
+      "size": 1016025,
+      "hash": "ee12f50fb2705ca28e4ccf616b0ea211612a0e1830c9ecba69492f3c2391f934",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....74-4cf3a9cdd732.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "8071007e-b5ae-489b-bc52-0d70d4541e0f",
+      "size": 696508,
+      "hash": "c4260c81cb75a10dc8c9069c3a149de5e8ab06b5613f3aecec34f3f17d57356d",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....16-4e8b4ea9d62f.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "23bd1b47-40ba-4169-a34a-421172728bda",
+      "size": 636919,
+      "hash": "b5ae19c70ab2b688bee439e34ddb44042d940697d03a2c59b8ac83a464555fe7",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....fe-9f1630180aae.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "20c96ca2-ae7d-4821-87bc-d1eb37b1852a",
+      "size": 659781,
+      "hash": "0e699fa6cd0ded99debba58fb92169335249b2c79a2c5de94ca33b70a2cdaef8",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....c1-4acb367c4778.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "d0e9c522-e44d-40ae-a115-feca6a89425e",
+      "size": 824332,
+      "hash": "c312819ed3ae406af88b4a4dd0cbae3c3c29a50353d28c380edc6ba985b7a7cb",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....c0-3d83893df120.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "2577a395-e6bc-4ef7-9f5d-247545f31f32",
+      "size": 836546,
+      "hash": "a7eaa7a785ddd5944bebcb426e06f41a8dcc3f3cfc37ab78dd138224f5b3e353",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....1d-32f49ef30114.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "b08c9fd9-0751-4064-ba9e-eff614d46156",
+      "size": 767428,
+      "hash": "425304554a25d62371272e70d76c9fa790702890d886a5dd8c53e27a99757993",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....d6-7fe02db89abf.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "b673d644-cdfb-4a2e-a871-f5f56748f1f0",
+      "size": 1051894,
+      "hash": "a31239ca88af7e95d2aab85d115966d6e7031885389b20c8204be561d8bfdb48",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....8b-396c6e64de93.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "57410f41-e4ea-44ab-a2bf-9cbef6a0318e",
+      "size": 1089114,
+      "hash": "d72840136b68e41ec470a46081a1dfa486c32c85a55def063b47dd1a256a3511",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....28-3530d7605e07.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "29d9a9ae-e097-48d9-a757-f8ecf99185dc",
+      "size": 1335020,
+      "hash": "fd8e3496d9f57cb8a79879ad4d936e694c6400d3788e74e1097ee41864c6661d",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....84-533772e623f1.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "6d46710f-e905-4ef2-b46f-23914a07157f",
+      "size": 1245065,
+      "hash": "19bb4f1d1bd14f4d7c3036f4c9bb77bfcaf58351803cb473a37566874c674f44",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....f5-e26659406935.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "28c70637-6174-4a34-bc0f-0abcc58fef11",
+      "size": 589308,
+      "hash": "21936d8fa215fb526cf6dd093e8b6c8113aa4b85705fcbf1939e7d8ea037cd4f",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....66-e1803ea3c71b.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "f0efdc41-8bb4-4da5-b38b-e11e9f8b3621",
+      "size": 441230,
+      "hash": "8a1a69f7364d39e04b1a913a565530cef8d1945964f85e16db4501e2ca7031ed",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....77-2d7027875904.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "e306dacf-61f9-4383-aff9-a0106c7da566",
+      "size": 533226,
+      "hash": "9a371731f463e3ca7a2c1b6360a89e4ab61d1f7d8c8f82137e718fede3d9183c",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....95-4a4689b2fd6c.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "cdb0c6d4-0c7b-447c-a093-73aa271a1f07",
+      "size": 621828,
+      "hash": "62212b5f2ae741ef33927a6b941ff52e7213df8a14b3ee69649ab7c4b260440b",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....5c-fe47cf325c57.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "070f1e4b-466f-4e32-9645-c12a1af063ee",
+      "size": 601425,
+      "hash": "7c06250a7c76bb7a0f2875333f6ca9b301d99eae3c5ef2448eaa5e4edd4e2873",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....71-36059b58e61b.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "5f889ad8-8b67-4aac-8084-702ce8fe96b7",
+      "size": 719087,
+      "hash": "b6e9aafc342968a7fcc217b31179844590fd2490293046f80cba6e2676cecee1",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....03-96d10bde59d7.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "370fb6af-e0e8-4421-899d-9b6f0858b474",
+      "size": 567529,
+      "hash": "5040b4e43ddd465acf28527505dc9694ef1406165023947f1c4cf7d31fdddd06",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....31-9c16b2c9829c.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "2ece8899-c881-4934-a29a-cf54dd995115",
+      "size": 853498,
+      "hash": "26e37f850d49e8ef34a99d26879cb9c2ac593fd724015f3de9955734d3a0f69a",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....8d-7c06b6208d33.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "ebc0597d-2679-4b07-89eb-1c138bc6a5e7",
+      "size": 665307,
+      "hash": "8705a1b67ac967822f744889a29b202349dae6b53ec75e9f2ed575f487771791",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....29-ee6ba02c8366.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "c4350034-189f-45a7-92d5-30147478752e",
+      "size": 720724,
+      "hash": "1d511c9ac2edbe1b3c53fc4da394ebaafbf55074b6bfe48cf7c64d399b762e5f",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....2b-6444687522a8.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "0f864d85-3ae9-4de5-85d1-421e282eb5e0",
+      "size": 643786,
+      "hash": "fceca0a0b9c677e9021abd875896d82e1e829e2657520d869350eaa81abb1f3c",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....de-2d8e9b40f4e2.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "1b66fd73-3cc8-42d7-aa12-467aaff60ea8",
+      "size": 795072,
+      "hash": "ba495aaa3dc257640f360bdbb6956615c6eee918c91ebfae2572923bfbc1019b",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....eb-4848bf97667e.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "5b0bb908-f79a-4376-a616-2a0b1a00e837",
+      "size": 543739,
+      "hash": "8f1a3bd0bffd0de9d3ff1f518bbf02274bf3b95c55af23949674e085430d23df",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....76-8fb929cebf2b.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "3c024f5d-0de4-4563-a79a-b8429c2efadb",
+      "size": 559389,
+      "hash": "b04419d83f723e014fa8a6cf932dcd9c1358fa86399060a4bdc976e221d4b935",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....01-0d41911fce28.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "f0fe5380-2c41-435b-af3f-49ff1b6a0065",
+      "size": 559488,
+      "hash": "1e1110997449400e99c881ec81f390cab9304e88a69ebd187b58267ae5e53de2",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....8c-914ef8050b2b.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "34bed60a-eb7d-4825-badc-d49ef1170bae",
+      "size": 780543,
+      "hash": "e443fef31e3a7d1c302a03b90c97d357c1ae73a012d80623bf2825abe044a5e2",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....95-9498c1d38c8d.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "958235d0-15c7-45cb-8b9d-92fb343618a0",
+      "size": 1000112,
+      "hash": "6eb9fa01624f6495ce4d840d54e90d2025a7352e3461ed4e23a9246a0f4060ed",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....5f-9472fdb95cbd.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "a5398b16-2625-4a72-b97c-72910a11e883",
+      "size": 1051385,
+      "hash": "7ba24b1b7c20e843a21c155aeecb6c0b5a9c016199a3ff545c5f6f44bffd1033",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....2a-707c232d108d.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "2a16a5c2-aa61-423d-8b07-413f8b420ff3",
+      "size": 863574,
+      "hash": "3c8e4f9e9307af8cdc9b06515a31fe11a5ef2dc8bae7e1d47f29d17640f62817",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....dd-8cd2accc1b90.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "f80c5aa5-ad29-47d3-a8c5-b657a48f09ed",
+      "size": 1117676,
+      "hash": "19c48afa4926353c43b989763b70cb00f62301bae55c118174208da58d79f816",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....3d-371a5d9ff0a3.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "d585364a-dbef-41cf-a89b-709eebcf78d1",
+      "size": 334924,
+      "hash": "5524e7c093584f9461cde69f092c5e94c01e57c0b04f3d92828e9df09e49ba30",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....7f-de5241576494.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "4eb8f1d3-769c-485b-95e2-d797c5191ed7",
+      "size": 342324,
+      "hash": "ed9f811fbae732f408c2bb2e64a20bb7e0abc351196f042bfd2bdf501daabe41",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....6b-fc9832bea98b.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "9bbd3855-865c-4fa6-abc6-78890d85f2e2",
+      "size": 391635,
+      "hash": "15f427e7612baece3969a3da8d8de61bff403ca449529ff572b4d7ec4031d7e9",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://dianshangfu-1312954470.cos....73-51e6d617e9c7.jpeg",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "d85ed211-08c3-4308-907e-6b0eef7046fc",
+      "size": 551012,
+      "hash": "33c23466aab7f3e693eab979199c04aec3a97307af07cf0bc89b1a5c48bd5429",
+      "tier": "COS",
+      "status": "HEALTHY",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "2b37fe29-41f3-4945-a49b-cfe0fc2a0d8e",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "6c8188dc-61f4-4c2a-bd6a-383edb52103c",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "543d9d26-4287-4e69-a770-22dac8dc4544",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "scene_image",
+      "dbId": "1cc47722-d96a-4539-b4d9-fdf548808687",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-23"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "f3007745-5387-4df8-8e79-f20e6a5b3388",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "a241e98c-1f82-49e2-80a8-6082d7bf9075",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "54ec9bfe-9ee3-414d-abff-3002bc21f883",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "c56610f2-634f-4494-921b-b2280e28bfc4",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "963c02f2-1828-459c-9ce1-5f109e4b37ce",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "528cf609-7931-4f01-af55-c57eb3eeccb5",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-14"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "8c2d1f68-1325-436e-91ac-417c79b78f73",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "9e199a4d-7d47-4698-b8fe-1689a5fca6c8",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "728f8125-efd1-41b2-9ab6-6f5215638c39",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "7f61c163-b78a-4015-b91d-e11bd77ead7a",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "05eaa47b-20d9-41b9-952d-3b760c18f2ae",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-18"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "b3e49de1-95df-4621-9cf5-6d0c40e449d3",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "718284d6-26e3-438c-8829-61492c17b2e6",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "20f551a3-b3dd-4e39-b592-e754d43e776a",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "4ff18377-24b9-4f37-9e58-01c69b2cfa4a",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "eceebe67-1013-4ce7-ad3b-ad0882a871b5",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "f956a753-75f7-4c34-b694-977506394888",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "7e88d7d7-97f8-490e-b7f6-b8a4fc3887c2",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "dde3a9d7-68eb-4f2c-8d20-8230f5d29a0d",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "b6fbf8b4-51e6-49a7-b79f-06f2a213b09b",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "15eb250e-23e7-4e49-95fa-3251483ff427",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "c41cfd07-9e66-4ac5-a069-e785d2166ce3",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-19"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "684cf3bd-515f-4230-a704-773e60dde474",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "d9d394c5-6a7d-48ed-8a91-97eaff1b8bf0",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "26234100-cc55-4f39-a106-0792c3e0567f",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "3603c948-ab2e-488a-b7fb-d7c5fdec2c00",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-20"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "4dd47666-ec0d-45b8-b794-1a48c9a027d2",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "d2d012e9-7f4e-483d-b824-e0ae918086e0",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "7867da30-4e84-4b14-9500-12ed9229caca",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "6c9e8d7c-5899-4d3c-b37c-7bed0e57c049",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "23b148c2-2b98-404f-a8e1-a525190e1741",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "de27c586-7f02-479f-87b0-120252c13c0d",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "06d5dd18-e6f7-4424-be00-807f2ec67ed3",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "79d64c1e-a06d-490b-98ea-7bd3e55c077a",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "e556306b-9630-4012-a3e3-4113a7e2d45d",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "8fd765fd-0bae-49f0-810a-9b6e8866d5e3",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "00d6b466-77e1-48fe-b83f-298a8fdfb253",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "0beee48a-c45b-4c95-951d-ba424d7b1a7e",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "a9cae337-5e5f-4ef2-af5c-1471797c659a",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "d37c09bb-3953-4fa0-aa93-6b720ca5a3df",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "035cc6e3-0282-409e-ad83-aab9076bfc05",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "b446b9ed-cb6d-4046-8055-ca3855d18af2",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "618218e1-7527-4c93-99ce-847082c60178",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "224fefbc-50eb-46e0-b37d-211e2593c1fe",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "347c2330-b45a-42dc-8093-57c4273f31ab",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-content-generation-v2-c...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "13d50deb-0f2e-4a35-95be-35564b66f73c",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-21"
+      ]
+    },
+    {
+      "url": "https://ark-acg-cn-beijing.tos-cn-b...s-SignedHeaders=host",
+      "existsInDB": true,
+      "dbType": "storyboard_image",
+      "dbId": "ee44648f-1091-420b-9a5e-ddfd0f96357a",
+      "size": null,
+      "hash": null,
+      "tier": "THIRD_PARTY",
+      "status": "ACTIVE",
+      "notes": [
+        "created:2026-06-23"
+      ]
+    }
+  ]
+}

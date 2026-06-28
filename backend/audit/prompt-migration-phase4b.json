@@ -1,0 +1,102 @@
+{
+  "phase": "Phase 4-B — Prompt Telemetry Spec v1（验收报告）",
+  "timestamp": "2026-06-23T22:35:00+08:00",
+
+  "newDBTables": [
+    {
+      "name": "prompt_version_stats",
+      "columns": ["promptName", "version", "totalCalls", "successCalls", "avgLatency", "p95Latency", "failureRate"]
+    },
+    {
+      "name": "prompt_routing_distribution",
+      "columns": ["promptName", "stableCount", "canaryCount", "overrideCount", "total", "entropy"]
+    },
+    {
+      "name": "prompt_failure_clusters",
+      "columns": ["promptName", "failureSignature", "count", "sampleContext", "firstSeen", "lastSeen"]
+    },
+    {
+      "name": "prompt_version_snapshot",
+      "columns": ["promptName", "version", "callCount", "windowStart"]
+    }
+  ],
+
+  "newFiles": [
+    {
+      "path": "runtime/prompt/PromptTelemetryAggregator.ts",
+      "functions": [
+        "aggregateVersionStats() — 聚合版本统计",
+        "aggregateRoutingDistribution() — 聚合路由分布+熵计算",
+        "takeVersionSnapshot() — 整小时版本快照",
+        "detectFailureClusters() — 失败模式聚类",
+        "runFullAggregation() — 全量入口"
+      ]
+    },
+    {
+      "path": "routes/admin-prompt-telemetry.ts",
+      "endpoints": [
+        "POST /api/admin/prompt-telemetry/aggregate",
+        "GET /api/admin/prompt-telemetry/overview",
+        "GET /api/admin/prompt-telemetry/version-distribution",
+        "GET /api/admin/prompt-telemetry/routing-behavior",
+        "GET /api/admin/prompt-telemetry/latency-heatmap",
+        "GET /api/admin/prompt-telemetry/failure-clusters",
+        "GET /api/admin/prompt-telemetry/drift-timeline",
+        "GET /api/admin/prompt-telemetry/prompt/:name"
+      ]
+    },
+    {
+      "path": "services/cron-prompt-telemetry.ts",
+      "cron": "每 10 分钟全量聚合一次"
+    }
+  ],
+
+  "telemetryIndicators": {
+    "PSI (Prompt Stability Index)": "success_calls / total_calls",
+    "RE (Routing Entropy)": "-Σ p(mode) * log(p(mode))",
+    "VDS (Version Drift Score)": "version_snapshot 时序",
+    "LSI (Latency Stability Index)": "p95_latency - avg_latency",
+    "FCS (Failure Cluster Score)": "repeated_failure_patterns / total_failures"
+  },
+
+  "verification": {
+    "telemetry_logs": true,
+    "aggregation_tables": true,
+    "entropy_calculated": true,
+    "version_stats_active": true,
+    "failure_clustering_active": true,
+    "dashboard_defined": true,
+    "no_ai_scoring": true,
+    "site_200": true,
+    "all_8_telemetry_endpoints_200": true,
+    "registry_still_200": true,
+    "cron_registered": true,
+    "aggregation_runs_on_startup": true
+  },
+
+  "systemState": {
+    "Phase 0": "fragmented system ✅",
+    "Phase 1": "registry born + portrait fixed ✅",
+    "Phase 2": "backend fully unified ✅",
+    "Phase 3": "frontend de-ruled ✅",
+    "Phase 4-A": "Minimal Runtime OS ✅",
+    "Phase 4-B": "Prompt Telemetry Spec v1 ✅（当前已完成）",
+    "Phase 5": "Prompt Evaluator + AB Test + Evolution ❌"
+  },
+
+  "fullSystemLayers": {
+    "layer_telemetry": "PromptTelemetryAggregator + Dashboard API + Cron",
+    "layer_logger": "PromptRuntimeLogger（不可变日志）",
+    "layer_router": "PromptRouter（确定路由）",
+    "layer_version": "PromptVersionGraph（版本链）",
+    "layer_registry": "PromptRegistry（统一入口）",
+    "layer_db": "7 张 prompt_* 表"
+  },
+
+  "notes": {
+    "cold_observation": "系统已进入冷观测期，聚合 cron 每 10 分钟自动执行",
+    "observation_condition": "等待日调用量 > 300 后评估是否可进 Phase 5",
+    "metrics_calibratable": "PSI/RE/VDS/LSI/FCS 全部可 SQL 查询",
+    "dashboard_not_yet_built": "v1 只提供 API，未做前端 UI 面板"
+  }
+}

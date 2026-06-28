@@ -1,0 +1,148 @@
+{
+  "surveyDate": "2026-06-23T19:55:00+08:00",
+  "surveyor": "Phase 0 — Schema Survey",
+  "totalGraphsIdentified": 26,
+  "sampledGraphs": 17,
+
+  "compatibilityMatrix": {
+    "G1_character_image_dag": {
+      "file": "runtime/character-image-dag.ts",
+      "family": "B (dependency DAG)",
+      "nodes": "DAGNode { key, mode, prompt, dependsOn }",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": false,
+      "edgeSource": "dependsOn field",
+      "r11DirectCompatible": "EASY",
+      "note": "dependsOn → Edge adapter needed; schema is stable"
+    },
+    "G2_image_pipeline": {
+      "file": "services/image/pipeline/runner.ts",
+      "family": "C (sequential pipeline)",
+      "nodes": "PipelineStage",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": false,
+      "edgeSource": "stage order in array",
+      "r11DirectCompatible": "ADAPTER",
+      "note": "Linear chain — low diff value, defer"
+    },
+    "G3_production_loop": {
+      "file": "production-loop/dag-builder.ts",
+      "family": "D (tree via parentId)",
+      "nodes": "TimelineNode { parentId }",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": false,
+      "edgeSource": "parentId field",
+      "r11DirectCompatible": "ADAPTER",
+      "note": "Director→Scene→Shot tree; parentId → Edge"
+    },
+    "G4_decision_graph_lane": {
+      "file": "services/image/pipeline/decision/decision-graph-lane.ts",
+      "family": "A (explicit DAG)",
+      "nodes": "D2InputNode { id, type, label, locked }",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": true,
+      "edgeSource": "D2InputEdge { from, to, weight, active }",
+      "r11DirectCompatible": "HIGH",
+      "note": "Near 1:1 mapping to R11 ExecutionGraph"
+    },
+    "G5_llm_exec_graph_v2": {
+      "file": "llm-execution-graph-v2/types.ts",
+      "family": "E (no edge model)",
+      "nodes": "GraphNode { id, type, provider, model }",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": false,
+      "edgeSource": "none",
+      "r11DirectCompatible": "RECONSTRUCT",
+      "note": "Node list only; edge model needs reverse engineering"
+    },
+    "G6_agent_graph": {
+      "file": "core/agent-graph/agent-graph.ts",
+      "family": "A (explicit DAG)",
+      "nodes": "AgentNode",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": true,
+      "edgeSource": "AgentEdge { from, to, label }",
+      "r11DirectCompatible": "HIGH",
+      "note": "Near 1:1 mapping; has topo sort built in"
+    },
+    "G7_governance_dag": {
+      "file": "governance/dag/execution-dag.ts",
+      "family": "D (flat via parentId)",
+      "nodes": "ExecutionDagNode { parentId }",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": false,
+      "edgeSource": "parentId",
+      "r11DirectCompatible": "ADAPTER",
+      "note": "Memory-based (Map), limited query scope"
+    },
+    "G8_kernel_dag": {
+      "file": "kernel/dag/execution-dag.ts",
+      "family": "D (flat via parentId)",
+      "nodes": "DagNode { parentId }",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": false,
+      "edgeSource": "parentId",
+      "r11DirectCompatible": "ADAPTER",
+      "note": "From ExecutionEvent; linearized timeline"
+    },
+    "G9_shot_graph": {
+      "file": "director-v2/shot-graph/shot-graph-schema.ts",
+      "family": "E (continuity-linked list)",
+      "nodes": "ShotNode { continuity }",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": false,
+      "edgeSource": "continuity.previousRelation",
+      "r11DirectCompatible": "ADAPTER",
+      "note": "Linked list via continuity; domain-specific"
+    },
+    "G11_graph_patch": {
+      "file": "graph-patch/graph-model.ts",
+      "family": "A (explicit DAG)",
+      "nodes": "NodeType enum",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": true,
+      "edgeSource": "Pipeline edges",
+      "r11DirectCompatible": "HIGH",
+      "note": "Full Node/Edge/Pipeline model; production-ready but experimental"
+    },
+    "G25_prompt_version_graph": {
+      "file": "runtime/prompt/PromptVersionGraph.ts",
+      "family": "A (explicit DAG)",
+      "nodes": "VersionNode",
+      "hasExplicitNodes": true,
+      "hasExplicitEdges": true,
+      "edgeSource": "Version DAG edges",
+      "r11DirectCompatible": "HIGH",
+      "note": "Built-in DAG with version edges"
+    }
+  },
+
+  "productionTargets": [
+    "G4_decision_graph_lane",
+    "G6_agent_graph",
+    "G1_character_image_dag",
+    "G25_prompt_version_graph"
+  ],
+
+  "deferred": [
+    "G2_image_pipeline",
+    "G3_production_loop",
+    "G7_governance_dag",
+    "G8_kernel_dag",
+    "G9_shot_graph"
+  ],
+
+  "excluded": [
+    "G5_llm_exec_graph_v2 (needs edge reconstruction)",
+    "G11_graph_patch (experimental phase)",
+    "G12+ (not production)"
+  ],
+
+  "adapterStrategies": {
+    "family_A_explicit_DAG": { "type": "direct_mapping", "effort": "low" },
+    "family_B_dependsOn": { "type": "dependsOn_to_edge", "effort": "low" },
+    "family_C_sequential": { "type": "deferred" },
+    "family_D_parentId_tree": { "type": "parentId_to_edge", "effort": "medium" },
+    "family_E_domain_specific": { "type": "domain_adapter", "effort": "high" }
+  }
+}

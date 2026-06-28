@@ -1,0 +1,6 @@
+{
+  "standardized_fixed": "ApiResponse<null> \u2192 ApiResponse<unknown>",
+  "legacy_wrapped": {},
+  "hybrid_blocked": 26,
+  "ts_errors_after": 411
+}

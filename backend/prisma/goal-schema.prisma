@@ -1,0 +1,153 @@
+// ===== Goal Runtime (Platform Level) =====
+
+model Goal {
+  id             String    @id @default(uuid())
+  projectId      String
+  title          String
+  description    String?
+  successCriteria String?  // JSON array of criteria
+  targetMetric   String?   // e.g., "visibility_score > 80"
+  deadline       DateTime?
+  priority       Int       @default(3)  // 1=high, 2=medium, 3=low
+  status         String    @default("draft") // draft, active, paused, completed, cancelled
+  metadata       String?   // JSON
+  schemaVersion  Int       @default(1)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  strategies    Strategy[]
+  tasks         Task[]
+}
+
+model Strategy {
+  id            String    @id @default(uuid())
+  goalId        String
+  name          String
+  description   String?
+  type          String    // content, entity, citation, authority, visibility, etc.
+  status        String    @default("draft") // draft, active, completed, cancelled
+  priority      Int       @default(3)
+  metadata      String?   // JSON
+  schemaVersion Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  goal          Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  workflows     Workflow[]
+  tasks         Task[]
+}
+
+model Workflow {
+  id            String    @id @default(uuid())
+  strategyId    String
+  name          String
+  description   String?
+  status        String    @default("draft")
+  metadata      String?   // JSON
+  schemaVersion Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  strategy      Strategy  @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  stages        WorkflowStage[]
+  tasks         Task[]
+}
+
+model WorkflowStage {
+  id            String    @id @default(uuid())
+  workflowId    String
+  name          String
+  order         Int
+  status        String    @default("pending")
+  metadata      String?   // JSON
+  schemaVersion Int       @default(1)
+  createdAt     DateTime  @default(now())
+
+  workflow      Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  tasks         Task[]
+}
+
+model Task {
+  id            String    @id @default(uuid())
+  goalId        String?
+  strategyId    String?
+  workflowId    String?
+  stageId       String?
+  title         String
+  description   String?
+  actionType    String    // The registered Action type
+  priority      Int       @default(3)
+  dependencies  String?   // JSON array of task IDs
+  retryCount    Int       @default(0)
+  maxRetries    Int       @default(3)
+  deadline      DateTime?
+  status        String    @default("pending") // pending, ready, running, completed, failed, cancelled
+  metadata      String?   // JSON
+  schemaVersion Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  goal          Goal?     @relation(fields: [goalId], references: [id])
+  strategy      Strategy? @relation(fields: [strategyId], references: [id])
+  workflow      Workflow? @relation(fields: [workflowId], references: [id])
+  stage         WorkflowStage? @relation(fields: [stageId], references: [id])
+  executions    Execution[]
+}
+
+model Action {
+  id            String    @id @default(uuid())
+  name          String    @unique   // e.g., "GenerateFAQ", "PublishCMS"
+  description   String?
+  provider      String    // internal, llm, api, webhook
+  config        String?   // JSON configuration schema
+  schemaVersion Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Execution {
+  id            String    @id @default(uuid())
+  taskId        String
+  actionType    String
+  status        String    @default("running") // pending, running, completed, failed, cancelled
+  input         String?   // JSON
+  output        String?   // JSON
+  error         String?
+  durationMs    Int?
+  retryAttempt  Int       @default(0)
+  metadata      String?   // JSON
+  schemaVersion Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  task          Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  results       ExecutionResult[]
+  reviews       Review[]
+}
+
+model ExecutionResult {
+  id            String    @id @default(uuid())
+  executionId   String
+  assetId       String?
+  type          String    // created, updated, deleted, skipped, error
+  summary       String?
+  details       String?   // JSON
+  schemaVersion Int       @default(1)
+  createdAt     DateTime  @default(now())
+
+  execution     Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id            String    @id @default(uuid())
+  executionId   String
+  status        String    @default("pending") // pending, approved, rejected, needs_revision
+  comments      String?
+  score         Float?
+  metadata      String?   // JSON
+  schemaVersion Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  execution     Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+}

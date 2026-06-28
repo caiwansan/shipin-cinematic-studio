@@ -1,0 +1,81 @@
+{
+  "planId": "ep-boot-auto-auto",
+  "version": "v1.0.0",
+  "builtAt": "2026-05-24T15:00:53.067Z",
+  "hash": "SEDP-37d5a894",
+  "description": "SEDP plan for taskType=boot",
+  "steps": [
+    {
+      "id": 1,
+      "label": "Event Sink",
+      "file": "kernel/event-sourcing/execution-event-store.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionEvent",
+      "outputType": "void"
+    },
+    {
+      "id": 1,
+      "label": "Boot: Governance Init",
+      "file": "governance/init-governance.ts",
+      "requiresCapability": "kernel",
+      "paramsType": "void",
+      "outputType": "void"
+    },
+    {
+      "id": 2,
+      "label": "Truth Arbitration",
+      "file": "truth/arbitration-engine.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionResult[]",
+      "outputType": "ArbitrationResult"
+    },
+    {
+      "id": 2,
+      "label": "Boot: Kernel Init",
+      "file": "kernel/init-kernel.ts",
+      "requiresCapability": "kernel",
+      "paramsType": "void",
+      "outputType": "void"
+    },
+    {
+      "id": 3,
+      "label": "Boot: Truth Layer Init",
+      "file": "truth/init-truth.ts",
+      "requiresCapability": "truth",
+      "paramsType": "void",
+      "outputType": "void"
+    },
+    {
+      "id": 4,
+      "label": "Boot: Model Adapter Registry",
+      "file": "model-adapters/index.ts",
+      "requiresCapability": "adapter",
+      "paramsType": "void",
+      "outputType": "void"
+    },
+    {
+      "id": 5,
+      "label": "Boot: Freeze Registry",
+      "file": "model-adapters/registry.ts",
+      "requiresCapability": "adapter",
+      "paramsType": "void",
+      "outputType": "void"
+    },
+    {
+      "id": 6,
+      "label": "Boot: Determinism Test",
+      "file": "bootstrap/determinism-test.ts",
+      "requiresCapability": "kernel",
+      "paramsType": "void",
+      "outputType": "void"
+    },
+    {
+      "id": 7,
+      "label": "Boot: Runtime Self-Test",
+      "file": "bootstrap/self-test/runtime-self-test.ts",
+      "requiresCapability": "kernel",
+      "paramsType": "void",
+      "outputType": "void"
+    }
+  ]
+}

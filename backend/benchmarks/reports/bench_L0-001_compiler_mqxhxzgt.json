@@ -1,0 +1,44 @@
+{
+  "benchmarkId": "bench_L0-001_compiler_mqxhxzgt",
+  "timestamp": "2026-06-28T07:57:53.741Z",
+  "dataset": {
+    "id": "L0-001",
+    "level": "L0",
+    "name": "Single Shot — Basic",
+    "shots": 1,
+    "capabilities": [
+      "film.character.reference",
+      "film.keyframe",
+      "film.render.shot"
+    ],
+    "complexity": {
+      "characters": 1,
+      "locations": 1,
+      "shots": 1,
+      "interactions": 1
+    }
+  },
+  "stage": "compiler",
+  "status": "success",
+  "metrics": {
+    "duration": 1,
+    "sps": 1,
+    "capabilityCoverage": 0,
+    "compilerHashConsistency": 1,
+    "driftCount": 0
+  },
+  "fingerprint": {
+    "compilerHash": "sh008rklly",
+    "graphHash": "",
+    "plannerHash": "",
+    "negotiatorHash": "",
+    "dagHash": "",
+    "traceHash": ""
+  },
+  "diagnostics": {
+    "warnings": 0,
+    "errors": 0,
+    "warningDetail": [],
+    "errorDetail": []
+  }
+}

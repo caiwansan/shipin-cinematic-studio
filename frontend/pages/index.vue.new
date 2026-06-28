@@ -1,0 +1,143 @@
+<template>
+  <div class="landing-page">
+    <!-- 顶部导航（全局骨架，由 Page 层维护） -->
+    <KunlunNav
+      :is-logged-in="isLoggedIn"
+      @show-login="showLogin = true; isRegisterMode = false"
+      @show-register="showLogin = true; isRegisterMode = true"
+    />
+
+    <!-- 昆仑镜 Scene 编排（所有视觉内容由 Scene 组件负责） -->
+    <div class="kunlun-scenes">
+      <HeroScene />
+      <ChoiceLiberationScene />
+      <WorkbenchUniverseScene />
+      <WenquxingScene />
+      <CreationLawScene />
+      <FourStepScene />
+      <CreatorVoicesScene />
+      <FinalCTAScene />
+    </div>
+
+    <!-- Footer -->
+    <KunlunFooter />
+
+    <!-- 全局登录/注册弹窗 -->
+    <Teleport to="body">
+      <LoginModal
+        v-if="showLogin"
+        :register-mode="isRegisterMode"
+        @close="showLogin = false; checkLogin()"
+        @toggle-mode="isRegisterMode = !isRegisterMode"
+        @login-success="showLogin = false; isLoggedIn = true"
+      />
+    </Teleport>
+  </div>
+</template>
+
+<script setup lang="ts">
+/**
+ * 昆仑镜首页
+ *
+ * 层级：L5 Page
+ * 职责：仅编排 L4 Scene 的顺序 + 全局骨架（Nav/Footer/LoginModal）
+ * 宪法禁止：Page 调用 Primitive、Page 包含动画逻辑、Page 包含视觉实现
+ */
+
+import { useReveal } from '~/composables/kunlun/useMotion'
+
+// ── 登录状态管理 ──
+const showLogin = ref(false)
+const isRegisterMode = ref(false)
+const isLoggedIn = ref(false)
+
+function checkLogin() {
+  isLoggedIn.value = !!localStorage.getItem('accessToken')
+}
+
+// ── 全局初始化 ──
+onMounted(() => {
+  // 恢复登录态
+  const token = localStorage.getItem('accessToken')
+  isLoggedIn.value = !!token
+
+  // URL 参数触发登录弹窗
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('showLogin') === '1') {
+    showLogin.value = true
+    isRegisterMode.value = params.get('register') === '1'
+  }
+
+  // 轮询检测 OAuth 登录完成（QQ/微信回调页写入 localStorage 后关闭弹窗）
+  // 由于弹窗里的 postMessage 可能因跨域不生效，fallback 到页面级轮询
+  let oauthPollTimer: ReturnType<typeof setInterval> | null = null
+  oauthPollTimer = setInterval(() => {
+    const token = localStorage.getItem('accessToken')
+    if (token && showLogin.value) {
+      showLogin.value = false
+      isLoggedIn.value = true
+      if (oauthPollTimer) {
+        clearInterval(oauthPollTimer)
+        oauthPollTimer = null
+      }
+    }
+  }, 800)
+
+  onUnmounted(() => {
+    if (oauthPollTimer) {
+      clearInterval(oauthPollTimer)
+      oauthPollTimer = null
+    }
+  })
+})
+</script>
+
+<style>
+/* ========================================
+   昆仑镜首页全局样式
+   所有视觉实现已委托至 Scene 组件
+   此处仅保留：
+   1. 深空背景与全局 CSS 变量
+   2. 基础排版
+   3. Lenis smooth scroll 样式
+   ======================================== */
+
+/* ── Design Token Override ── */
+:root {
+  --kl-bg-primary: #08131F;
+  --kl-bg-secondary: #0E1D31;
+  --kl-gold-main: #C9A86C;
+  --kl-gold-light: #E2C88A;
+  --kl-cyan-main: #00D4FF;
+  --kl-cyan-light: #00F0FF;
+  --kl-paper-white: #F8F6F1;
+  --kl-prism-purple: #A78BFA;
+  --kl-prism-pink: #F472B6;
+  --kl-prism-green: #34D399;
+}
+
+/* ── 深空基底 ── */
+.landing-page {
+  position: relative;
+  min-height: 100vh;
+  background: var(--kl-bg-primary, #08131F);
+  color: var(--kl-paper-white, #F8F6F1);
+  font-family:
+    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei',
+    -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Lenis smooth scroll ── */
+html.lenis {
+  scroll-behavior: auto;
+}
+
+html.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+.lenis {
+  height: 100%;
+}
+</style>

@@ -1,0 +1,2799 @@
+{
+  "admin-api-keys.ts": [
+    {
+      "line": 54,
+      "fields": [
+        "success",
+        "key",
+        "keyValue"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 73,
+      "fields": [
+        "success",
+        "key",
+        "keyValue"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 84,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 92,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 108,
+      "fields": [
+        "success",
+        "model"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 115,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "admin-assets.ts": [
+    {
+      "line": 142,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "admin-auth.ts": [
+    {
+      "line": 18,
+      "fields": [
+        "userId",
+        "username",
+        "role",
+        "isAdmin"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 70,
+      "fields": [
+        "id",
+        "username",
+        "displayName",
+        "role"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 86,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 107,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 132,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 153,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 170,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 175,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 184,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "admin-global-config.ts": [
+    {
+      "line": 513,
+      "fields": [
+        "success",
+        "providers"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 534,
+      "fields": [
+        "success",
+        "skipped"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 551,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 579,
+      "fields": [
+        "success",
+        "enabledProviders"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 605,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 797,
+      "fields": [
+        "success",
+        "providers"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "admin-members-storage.ts": [
+    {
+      "line": 55,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "admin-models-v2.ts": [
+    {
+      "line": 31,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 54,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 78,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 92,
+      "fields": [
+        "success",
+        "data",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 99,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 114,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 126,
+      "fields": [
+        "success",
+        "data",
+        "id",
+        "provider",
+        "keyName"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 133,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 159,
+      "fields": [
+        "success",
+        "data",
+        "ok",
+        "latency",
+        "error"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 178,
+      "fields": [
+        "success",
+        "data",
+        "ok",
+        "latency",
+        "error"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 194,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "admin-storage-config.ts": [
+    {
+      "line": 56,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 85,
+      "fields": [
+        "success",
+        "data",
+        "secretKey"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 94,
+      "fields": [
+        "success",
+        "data",
+        "secretKey"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 109,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 124,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 141,
+      "fields": [
+        "success",
+        "data",
+        "enabled"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "agent-orchestrator.ts": [
+    {
+      "line": 81,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 118,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 156,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "ai-router.ts": [
+    {
+      "line": 52,
+      "fields": [
+        "failedModelId",
+        "fallbackChain"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "ai-tasks.ts": [
+    {
+      "line": 182,
+      "fields": [
+        "success",
+        "task"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 197,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 200,
+      "fields": [
+        "success",
+        "data",
+        "status",
+        "url"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 212,
+      "fields": [
+        "success",
+        "data",
+        "status"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 214,
+      "fields": [
+        "success",
+        "data",
+        "status"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 217,
+      "fields": [
+        "success",
+        "data",
+        "status"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 255,
+      "fields": [
+        "success",
+        "tasks"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "aigc-spec-db.ts": [
+    {
+      "line": 138,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "analytics.ts": [
+    {
+      "line": 40,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 60,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 74,
+      "fields": [
+        "success",
+        "data",
+        "from",
+        "to"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 85,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "anchor.ts": [
+    {
+      "line": 155,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 165,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 175,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "api-keys.ts": [
+    {
+      "line": 53,
+      "fields": [
+        "success",
+        "keys"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 129,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "assets.ts": [
+    {
+      "line": 23,
+      "fields": [
+        "page",
+        "pageSize"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 44,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 63,
+      "fields": [
+        "success",
+        "data",
+        "id",
+        "url"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "auth.ts": [
+    {
+      "line": 168,
+      "fields": [
+        "accessToken",
+        "refreshToken"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 189,
+      "fields": [
+        "user"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 216,
+      "fields": [
+        "user"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 222,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 234,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 240,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "autonomous.ts": [
+    {
+      "line": 27,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 52,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "bridge.ts": [
+    {
+      "line": 82,
+      "fields": [
+        "success",
+        "error",
+        "\u672a\u77e5\u8def\u5f84",
+        "\u53ef\u7528"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 86,
+      "fields": [
+        "success",
+        "error",
+        "\u672a\u77e5\u6a21\u5f0f",
+        "\u53ef\u7528"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 90,
+      "fields": [
+        "success",
+        "data",
+        "config"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 154,
+      "fields": [
+        "success",
+        "error",
+        "\u65e0\u6548\u9636\u6bb5",
+        "\u53ef\u7528"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "cluster.ts": [
+    {
+      "line": 34,
+      "fields": [
+        "success",
+        "data",
+        "registered"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 47,
+      "fields": [
+        "success",
+        "data",
+        "failed",
+        "migrated"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 61,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "cognition-loop.ts": [
+    {
+      "line": 52,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 68,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 85,
+      "fields": [
+        "success",
+        "data",
+        "driftReport",
+        "needsCorrection"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "control-plane.ts": [
+    {
+      "line": 32,
+      "fields": [
+        "traceIds"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 86,
+      "fields": [
+        "entries"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 90,
+      "fields": [
+        "entries"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 94,
+      "fields": [
+        "entries"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "costume.ts": [
+    {
+      "line": 62,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 69,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 79,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 100,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 120,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 143,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 151,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 168,
+      "fields": [
+        "success",
+        "data",
+        "activeCostumeId"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "director-engine.ts": [
+    {
+      "line": 58,
+      "fields": [
+        "value"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "director-simulation.ts": [
+    {
+      "line": 50,
+      "fields": [
+        "sceneId"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "execution-debug.ts": [
+    {
+      "line": 33,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 47,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "execution-graph.ts": [
+    {
+      "line": 247,
+      "fields": [
+        "success",
+        "data",
+        "status"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 264,
+      "fields": [
+        "success",
+        "data",
+        "id",
+        "nodeType",
+        "status"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "execution-images.ts": [
+    {
+      "line": 156,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 163,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 169,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 308,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 314,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 320,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 344,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 350,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 356,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 372,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 378,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 384,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 394,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 530,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 675,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 716,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 729,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "execution-journal.ts": [
+    {
+      "line": 24,
+      "fields": [
+        "success",
+        "data",
+        "count"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 33,
+      "fields": [
+        "success",
+        "data",
+        "count"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 65,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "execution-trace.ts": [
+    {
+      "line": 54,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 83,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "export-runtime.ts": [
+    {
+      "line": 34,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 44,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "featured.ts": [
+    {
+      "line": 68,
+      "fields": [
+        "data",
+        "page",
+        "pageSize"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 104,
+      "fields": [
+        "page",
+        "pageSize"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 148,
+      "fields": [
+        "liked",
+        "likeCount"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 155,
+      "fields": [
+        "liked",
+        "likeCount"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 186,
+      "fields": [
+        "commentCount"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 212,
+      "fields": [
+        "page",
+        "pageSize"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "feedback.ts": [
+    {
+      "line": 32,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 50,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 61,
+      "fields": [
+        "success",
+        "data",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 63,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 71,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "global.ts": [
+    {
+      "line": 20,
+      "fields": [
+        "success",
+        "data",
+        "regions"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 31,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 50,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 55,
+      "fields": [
+        "success",
+        "data",
+        "links"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 61,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "governance.ts": [
+    {
+      "line": 25,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 30,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 40,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 47,
+      "fields": [
+        "success",
+        "data",
+        "stats"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 52,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 59,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 64,
+      "fields": [
+        "success",
+        "data",
+        "snapshots"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 74,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "images.ts": [
+    {
+      "line": 264,
+      "fields": [
+        "success",
+        "data",
+        "characterName",
+        "imageUrl",
+        "createdAt"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "jobs.ts": [
+    {
+      "line": 48,
+      "fields": [
+        "success",
+        "data",
+        "status",
+        "result"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "llm-execution-trace.ts": [
+    {
+      "line": 28,
+      "fields": [
+        "error"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "member.ts": [
+    {
+      "line": 73,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 141,
+      "fields": [
+        "orderId",
+        "coins",
+        "amount"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 158,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 176,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 233,
+      "fields": [
+        "success",
+        "coins",
+        "expireAt"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 283,
+      "fields": [
+        "success",
+        "agentName",
+        "coins"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 324,
+      "fields": [
+        "success",
+        "amount"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 631,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 752,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 775,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 837,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 873,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 898,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 955,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 964,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "messages.ts": [
+    {
+      "line": 26,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 112,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 127,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 145,
+      "fields": [],
+      "pattern": "single_line"
+    }
+  ],
+  "model-params.ts": [
+    {
+      "line": 26,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 35,
+      "fields": [
+        "success",
+        "schemas"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 54,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "model-provider.ts": [
+    {
+      "line": 10,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 18,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 51,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 58,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 69,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 89,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "models.ts": [
+    {
+      "line": 97,
+      "fields": [
+        "models"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "observability.ts": [
+    {
+      "line": 98,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 104,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 146,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 174,
+      "fields": [
+        "success",
+        "classification"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "optimization.ts": [
+    {
+      "line": 41,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 43,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 52,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 59,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 70,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 76,
+      "fields": [
+        "success",
+        "providers"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 88,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 94,
+      "fields": [
+        "success",
+        "users"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 100,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 107,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 114,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 120,
+      "fields": [
+        "success",
+        "experiments"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "optimize-video-prompt.ts": [
+    {
+      "line": 213,
+      "fields": [
+        "success",
+        "data",
+        "prompts",
+        "vpIrCount"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 550,
+      "fields": [],
+      "pattern": "single_line"
+    }
+  ],
+  "optimize.ts": [
+    {
+      "line": 116,
+      "fields": [
+        "records"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "payment.ts": [
+    {
+      "line": 70,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 127,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 301,
+      "fields": [
+        "success",
+        "orderNo",
+        "coins"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 361,
+      "fields": [
+        "success",
+        "orderId",
+        "plan",
+        "planLevel"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 378,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 420,
+      "fields": [
+        "_orderType"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 425,
+      "fields": [
+        "_orderType",
+        "orderNo"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 433,
+      "fields": [
+        "orders",
+        "total",
+        "page",
+        "totalPages"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 458,
+      "fields": [
+        "page",
+        "totalPages"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 493,
+      "fields": [
+        "url"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 561,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 629,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 668,
+      "fields": [
+        "success",
+        "model"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "pipeline-jobs.ts": [
+    {
+      "line": 190,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 200,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 208,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 217,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 226,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 252,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 268,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 275,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 282,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "pipeline.ts": [
+    {
+      "line": 23,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 48,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 107,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 115,
+      "fields": [
+        "success",
+        "data",
+        "ready",
+        "missing"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 153,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 178,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "project-decomposition.ts": [
+    {
+      "line": 75,
+      "fields": [
+        "success",
+        "projectId"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "projects.ts": [
+    {
+      "line": 31,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 102,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 133,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 143,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 179,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 188,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 193,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "psc1.ts": [
+    {
+      "line": 22,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 29,
+      "fields": [
+        "success",
+        "error"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 32,
+      "fields": [
+        "success",
+        "data",
+        "bridgeTrafficPercent"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 38,
+      "fields": [
+        "success",
+        "data",
+        "frozen"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 44,
+      "fields": [
+        "success",
+        "data",
+        "frozen"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 52,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 58,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "qq-oauth.ts": [
+    {
+      "line": 28,
+      "fields": [
+        "enabled"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 47,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 61,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 230,
+      "fields": [
+        "enabled",
+        "appId"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "queue-runtime.ts": [
+    {
+      "line": 13,
+      "fields": [
+        "success",
+        "queues",
+        "dlq"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 19,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 25,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "quick-creation.ts": [
+    {
+      "line": 82,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 135,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 147,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 179,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "reference.ts": [
+    {
+      "line": 29,
+      "fields": [
+        "id",
+        "url",
+        "type",
+        "weight"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 193,
+      "fields": [
+        "references"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 197,
+      "fields": [
+        "records"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 207,
+      "fields": [
+        "references"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "references.ts": [
+    {
+      "line": 44,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 75,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 101,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 131,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 156,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 180,
+      "fields": [
+        "success",
+        "data",
+        "references",
+        "injectText"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "runtime-checkpoint.ts": [
+    {
+      "line": 23,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 31,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 42,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 53,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 61,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 70,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 78,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "runtime-observability.ts": [
+    {
+      "line": 116,
+      "fields": [
+        "stability",
+        "repair_rate",
+        "anomaly_freq",
+        "gpu_pressure",
+        "queue_pressure"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 288,
+      "fields": [
+        "total"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "runtime-trace.ts": [
+    {
+      "line": 33,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "schema-runtime.ts": [
+    {
+      "line": 32,
+      "fields": [
+        "success",
+        "error"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 36,
+      "fields": [
+        "success",
+        "error",
+        "schema"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 65,
+      "fields": [
+        "success",
+        "error"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 103,
+      "fields": [
+        "success",
+        "error"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "showrunner.ts": [
+    {
+      "line": 134,
+      "fields": [
+        "success",
+        "data",
+        "jobs",
+        "graphs"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "sms.ts": [
+    {
+      "line": 40,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 77,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "stability.ts": [
+    {
+      "line": 19,
+      "fields": [
+        "throttled",
+        "message",
+        "retryAfterMs"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 25,
+      "fields": [
+        "blocked",
+        "message"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 45,
+      "fields": [
+        "taskId",
+        "status",
+        "position"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 53,
+      "fields": [
+        "id",
+        "status",
+        "type",
+        "retryCount",
+        "error"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 64,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 99,
+      "fields": [
+        "service",
+        "status",
+        "failureCount",
+        "threshold"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 123,
+      "fields": [
+        "service",
+        "status",
+        "successCount"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 134,
+      "fields": [
+        "status"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 159,
+      "fields": [
+        "id",
+        "status"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 186,
+      "fields": [
+        "workerId",
+        "heartbeatAt"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 217,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "stage-model-config.ts": [
+    {
+      "line": 15,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 34,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 36,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 61,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 72,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "story-graph.ts": [
+    {
+      "line": 313,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 356,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "storyboards.ts": [
+    {
+      "line": 70,
+      "fields": [
+        "shots",
+        "mock"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 148,
+      "fields": [
+        "shots",
+        "mock"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "system-health.ts": [
+    {
+      "line": 36,
+      "fields": [
+        "success",
+        "error"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 124,
+      "fields": [
+        "ok",
+        "latency",
+        "error"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 176,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "tasks.ts": [
+    {
+      "line": 129,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "upload.ts": [
+    {
+      "line": 186,
+      "fields": [
+        "assets",
+        "total"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "user-api-keys.ts": [
+    {
+      "line": 142,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 169,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "user-center.ts": [
+    {
+      "line": 23,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 54,
+      "fields": [
+        "success",
+        "coins",
+        "balance"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 117,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 136,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 171,
+      "fields": [
+        "generated",
+        "total"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 190,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 257,
+      "fields": [
+        "works",
+        "hasMore"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 270,
+      "fields": [
+        "liked"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 273,
+      "fields": [
+        "liked"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 285,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 297,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 418,
+      "fields": [
+        "success",
+        "agentName",
+        "coins"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 581,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "user-model-config-v2.ts": [
+    {
+      "line": 251,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "user-model-config.ts": [
+    {
+      "line": 272,
+      "fields": [
+        "success",
+        "timestamp"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 335,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 391,
+      "fields": [
+        "supportsI2I"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "verification.ts": [
+    {
+      "line": 87,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "voice.ts": [
+    {
+      "line": 119,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 131,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 183,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "wechat-oauth.ts": [
+    {
+      "line": 28,
+      "fields": [
+        "enabled"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 47,
+      "fields": [
+        "success"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 61,
+      "fields": [],
+      "pattern": "single_line"
+    },
+    {
+      "line": 225,
+      "fields": [
+        "enabled",
+        "appId"
+      ],
+      "pattern": "single_line"
+    }
+  ],
+  "world-memory.ts": [
+    {
+      "line": 38,
+      "fields": [
+        "success",
+        "data",
+        "summary"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 46,
+      "fields": [
+        "success",
+        "data"
+      ],
+      "pattern": "single_line"
+    },
+    {
+      "line": 52,
+      "fields": [
+        "success",
+        "message"
+      ],
+      "pattern": "single_line"
+    }
+  ]
+}

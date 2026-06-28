@@ -1,0 +1,288 @@
+{
+  "projectId": "6050d107-b21c-41a2-a900-6582cf540cb9",
+  "generatedAt": "2026-06-19T05:01:32.054Z",
+  "drift_events": [
+    {
+      "entityId": "5f8a4d8c-60f2-446f-92b7-aa178463ed5a",
+      "entityName": "凌云子",
+      "severity": "high",
+      "pattern": "角色「凌云子」在章节间有最长 13 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        22,
+        23,
+        24,
+        25,
+        26,
+        34,
+        35,
+        36,
+        37,
+        38
+      ]
+    },
+    {
+      "entityId": "8d66599c-bb8f-4138-8c1c-ee50d49854a2",
+      "entityName": "赤炎王",
+      "severity": "high",
+      "pattern": "角色「赤炎王」在章节间有最长 11 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ]
+    },
+    {
+      "entityId": "604ab02a-4ee3-484f-9bc8-43320e107ad3",
+      "entityName": "寒江月",
+      "severity": "high",
+      "pattern": "角色「寒江月」在章节间有最长 12 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        16,
+        17,
+        18,
+        19,
+        20
+      ]
+    },
+    {
+      "entityId": "aadad9b0-f1f7-443c-8b5e-f83d229bc995",
+      "entityName": "玉青子",
+      "severity": "high",
+      "pattern": "角色「玉青子」在章节间有最长 13 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        16,
+        17,
+        18,
+        19,
+        20
+      ]
+    },
+    {
+      "entityId": "c145c3ab-bcd4-4a36-8992-d3facf04328f",
+      "entityName": "玄春子",
+      "severity": "high",
+      "pattern": "角色「玄春子」在章节间有最长 12 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        16,
+        17,
+        18,
+        19,
+        20
+      ]
+    },
+    {
+      "entityId": "2ae794de-fa80-4aa0-815d-23b41367a10c",
+      "entityName": "无礼长老",
+      "severity": "high",
+      "pattern": "角色「无礼长老」在章节间有最长 13 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        20
+      ]
+    },
+    {
+      "entityId": "c15f1a34-249e-47ca-a0af-d46e5d1280b4",
+      "entityName": "叶如霜",
+      "severity": "low",
+      "pattern": "角色「叶如霜」在章节间有最长 5 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        7,
+        8,
+        9,
+        10,
+        13,
+        14,
+        15,
+        16,
+        23,
+        24
+      ]
+    },
+    {
+      "entityId": "e7a92404-aa87-4b9b-98c4-42525ad6fe6f",
+      "entityName": "江沱沱",
+      "severity": "medium",
+      "pattern": "角色「江沱沱」在章节间有最长 9 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        13,
+        14
+      ]
+    },
+    {
+      "entityId": "e34555b5-35e8-4cac-80c2-bfd1baaafd02",
+      "entityName": "陆云舟",
+      "severity": "medium",
+      "pattern": "角色「陆云舟」在章节间有最长 9 章未出现，出现间断性漂移",
+      "affectedChapters": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    }
+  ],
+  "transition_failures": [
+    {
+      "entityName": "江沱沱",
+      "chapterNo": 3,
+      "failureType": "entity_underreference",
+      "description": "实体「江沱沱」在 ch3 仅出现 1 次"
+    },
+    {
+      "entityName": "无忧真人",
+      "chapterNo": 5,
+      "failureType": "entity_underreference",
+      "description": "实体「无忧真人」在 ch5 仅出现 1 次"
+    },
+    {
+      "entityName": "叶如霜",
+      "chapterNo": 6,
+      "failureType": "entity_underreference",
+      "description": "实体「叶如霜」在 ch6 仅出现 1 次"
+    },
+    {
+      "entityName": "凌云子",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「凌云子」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityName": "赤炎王",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「赤炎王」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityName": "寒江月",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「寒江月」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityName": "玉青子",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「玉青子」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityName": "玄春子",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「玄春子」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityName": "凌云子",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「凌云子」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityName": "赤炎王",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「赤炎王」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityName": "寒江月",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「寒江月」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityName": "玉青子",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「玉青子」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityName": "玄春子",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「玄春子」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityName": "永言长老",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「永言长老」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityName": "无信长老",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「无信长老」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityName": "叶如霜",
+      "chapterNo": 11,
+      "failureType": "entity_underreference",
+      "description": "实体「叶如霜」在 ch11 仅出现 1 次"
+    },
+    {
+      "entityName": "凌云子",
+      "chapterNo": 12,
+      "failureType": "entity_underreference",
+      "description": "实体「凌云子」在 ch12 仅出现 1 次"
+    },
+    {
+      "entityName": "赤炎王",
+      "chapterNo": 12,
+      "failureType": "entity_underreference",
+      "description": "实体「赤炎王」在 ch12 仅出现 1 次"
+    },
+    {
+      "entityName": "邶风起",
+      "chapterNo": 12,
+      "failureType": "entity_underreference",
+      "description": "实体「邶风起」在 ch12 仅出现 1 次"
+    },
+    {
+      "entityName": "敖炎涛",
+      "chapterNo": 12,
+      "failureType": "entity_underreference",
+      "description": "实体「敖炎涛」在 ch12 仅出现 1 次"
+    }
+  ]
+}

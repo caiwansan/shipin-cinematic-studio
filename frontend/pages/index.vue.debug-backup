@@ -1,0 +1,21 @@
+<template>
+  <div id="INDEX-PROBE" style="position:fixed;top:80px;left:20px;z-index:99999998;background:red;color:white;font-size:40px;padding:20px;">
+    INDEX ROUTE LOADED
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+console.log("BUILD-ID", "20260624-LAST")
+console.log("INDEX-PROBE: component script executed")
+
+onMounted(() => {
+  // 延迟3秒执行 DOM 探针
+  setTimeout(() => {
+    console.log("DOM-PROBE: #__nuxt innerHTML =", document.querySelector('#__nuxt')?.innerHTML || '<empty>')
+    console.log("DOM-PROBE: APP-PROBE =", document.getElementById('APP-PROBE')?.textContent || 'NOT FOUND')
+    console.log("DOM-PROBE: INDEX-PROBE =", document.getElementById('INDEX-PROBE')?.textContent || 'NOT FOUND')
+  }, 3000)
+})
+</script>

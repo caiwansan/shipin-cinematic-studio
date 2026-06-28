@@ -1,0 +1,82 @@
+{
+  "baselineVersion": "v1.0",
+  "timestamp": "2026-06-23T19:15:00+08:00",
+  "state": "FROZEN",
+  "classification": "Stable Asset Lifecycle Baseline",
+
+  "snapshot1_truthLayer": {
+    "cosAssets": 104,
+    "reachability": "100%",
+    "integrity": "VALID",
+    "totalSizeBytes": 41036026,
+    "totalSizeMB": 39.14
+  },
+
+  "snapshot2_behavioralLayer": {
+    "heatModel": {
+      "HOT": 0,
+      "WARM": 104,
+      "COLD": 0
+    },
+    "stateType": "cold-start-equilibrium",
+    "reason": "no access signal (behavioral vacuum)"
+  },
+
+  "snapshot3_storageLayer": {
+    "tiering": {
+      "COS_STANDARD": 0,
+      "COS_STANDARD_IA": 104,
+      "COS_ARCHIVE": 0,
+      "COS_DEEP_ARCHIVE": 0
+    },
+    "estimatedMonthlyCost": 0.000688
+  },
+
+  "snapshot4_integrityLayer": {
+    "orphanDetected": 0,
+    "status": "FULL_CONSISTENCY",
+    "scannedAssets": 104,
+    "dbReferences": 319,
+    "note": "all COS assets have DB references"
+  },
+
+  "snapshot5_identityLayer": {
+    "uniqueAssets": 104,
+    "duplicateClusters": 0,
+    "duplicateRatio": 0,
+    "hashAlgorithm": "SHA256",
+    "note": "all 104 hashes are unique singletons"
+  },
+
+  "snapshot6_driftContext": {
+    "legacyLocalMissing": 108,
+    "externalUnverified": 107,
+    "propPendingRegen": 48,
+    "classification": "non-truth layer — excluded from system decisions"
+  },
+
+  "deprecatedRn": [
+    "R6 → execution correctness",
+    "R7 → rendering correctness",
+    "R8 → data integrity",
+    "R9 → asset lifecycle model (FROZEN BASELINE)"
+  ],
+
+  "freezeSemantics": {
+    "forbidden": [
+      "modify heat function",
+      "modify tier mapping",
+      "modify hash logic",
+      "modify orphan logic",
+      "modify cost model",
+      "any structural change to R9"
+    ],
+    "allowed": [
+      "R10 differential experiments on baseline",
+      "observe and compare metrics",
+      "report observable changes"
+    ]
+  },
+
+  "nextPhase": "R10 — baseline-aware self-optimizing generation system (design phase, not execution)"
+}

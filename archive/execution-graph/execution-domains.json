@@ -1,0 +1,76 @@
+{
+  "domains": {
+    "SYNC": {
+      "entry": "narrative-gateway",
+      "description": "Synchronous LLM/inference execution. All routes converge here.",
+      "fileCount": 71,
+      "entries": [
+        "narrative-gateway",
+        "pipeline-executor"
+      ]
+    },
+    "ASYNC": {
+      "entry": "narrative-gateway",
+      "description": "Asynchronous job-based execution (BullMQ).",
+      "fileCount": 1,
+      "entries": [
+        "narrative-gateway"
+      ]
+    },
+    "WORKER": {
+      "entry": "worker-registry",
+      "description": "Background job workers. Must register via worker-registry.",
+      "fileCount": 7,
+      "entries": [
+        "worker-registry"
+      ]
+    },
+    "TOOL": {
+      "entry": "provider.registry",
+      "description": "AI provider implementations. Must register via provider.registry.",
+      "fileCount": 14,
+      "entries": [
+        "provider.registry"
+      ]
+    },
+    "OBSERVE": {
+      "entry": "director-api",
+      "description": "Observability & analytics only. No execution routing allowed.",
+      "fileCount": 11,
+      "entries": [
+        "director-api"
+      ]
+    },
+    "LEGACY": {
+      "entry": "various",
+      "description": "Frozen/archived modules. No new code. Read-only usage only.",
+      "fileCount": 18,
+      "entries": [
+        "cognition-loop",
+        "control-plane",
+        "director-simulation",
+        "director-v1",
+        "execution-graph",
+        "showrunner-v1"
+      ]
+    },
+    "SHADOW": {
+      "entry": "various",
+      "description": "Frozen-with-coupling modules. Read-only. New imports forbidden.",
+      "fileCount": 35,
+      "entries": [
+        "graph-runtime",
+        "shadow-jobs",
+        "queue-legacy",
+        "sandbox",
+        "shadow",
+        "asset-state"
+      ]
+    }
+  },
+  "summary": {
+    "totalFiles": 157,
+    "modeCount": 7
+  },
+  "timestamp": "2026-05-21T04:16:24.197Z"
+}

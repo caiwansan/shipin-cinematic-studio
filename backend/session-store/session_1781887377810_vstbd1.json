@@ -1,0 +1,37 @@
+{
+  "sessionId": "session_1781887377810_vstbd1",
+  "createdAt": 1781887377810,
+  "lastActiveAt": 1781887377810,
+  "status": "active",
+  "storyGraph": {
+    "title": "e2e",
+    "scenes": [
+      {
+        "id": "s1",
+        "type": "intro",
+        "description": "start",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "A"
+            }
+          ],
+          "action": "walk",
+          "camera": {
+            "shot_type": "medium"
+          },
+          "spatialFrame": "room"
+        }
+      }
+    ]
+  },
+  "executionSnapshot": {
+    "currentSceneId": null,
+    "currentShotIndex": 0,
+    "completedScenes": 0,
+    "totalScenes": 0,
+    "intensity": 0.5,
+    "playbackTime": 0,
+    "isPlaying": false
+  }
+}

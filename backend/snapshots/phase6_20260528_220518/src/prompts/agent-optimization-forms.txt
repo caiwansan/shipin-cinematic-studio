@@ -1,0 +1,144 @@
+# AIGC 专业 Agent 优化需求表单
+
+每个专业 Agent 从统筹拿到对应数据后，按以下标准格式提交给 AI 做二次优化。
+
+---
+
+## 1. 角色肖像提示词优化 — 需求表单
+
+**输入**: 统筹的"角色分析"中该角色的数据
+**输出**: 可直接用于文生图 API 的角色肖像提示词
+
+```
+【角色肖像优化需求】
+角色名: {{name}}
+角色身份: {{role}}
+外貌特征: {{appearance}}
+性格标签: {{personality}}
+剧情作用: {{characterArc}}
+
+【标准格式要求】
+请生成一条英文角色肖像提示词，包含以下要素：
+- 角色名称 + 外貌描述（年龄、发型、服饰、标志特征）
+- 姿态: full body portrait, standing front view
+- 背景: white background, character design sheet style
+- 画质: high detail face, cinematic lighting, 8k, sharp focus
+
+【输出格式】
+{
+  "prompt": "Portrait of ... full body portrait, white background, character design sheet style...",
+  "optimizedTags": ["age:XX", "hair:XX", "clothing:XX"]
+}
+```
+
+---
+
+## 2. 场景图提示词优化 — 需求表单
+
+**输入**: 统筹的"场景分析"中该场景的数据
+**输出**: 可直接用于文生图 API 的场景图提示词
+
+```
+【场景图优化需求】
+场景名: {{sceneName}}
+剧情概括: {{剧情概括}}
+环境类型: {{环境类型}}
+时间: {{时间}}
+天气: {{天气}}
+情绪基调: {{情绪基调}}
+场景外观描述: {{场景外观描述}}
+该场景道具: {{道具清单}}
+
+【标准格式要求】
+请生成一条英文场景图提示词，包含以下要素：
+- Scene name identifier
+- Time of day + weather description
+- Lighting description（光源、方向、色温、光比）
+- Space texture（空间质感）
+- Color palette（色彩体系）
+- Mood/atmosphere keywords
+- Camera: wide shot, 16:9, empty scene, no people
+- Quality: cinematic composition, photorealistic, 8k, high detail, professional lighting
+
+【输出格式】
+{
+  "scenePrompt": "Scene: XXX ... wide shot, empty scene, 16:9...",
+  "negativePrompt": "people, character, person, figure, silhouette, text, watermark, signature"
+}
+```
+
+---
+
+## 3. 分镜提示词优化 — 需求表单
+
+**输入**: 统筹的"分镜分析"中该段落的数据 + 关联场景 + 关联角色
+
+## 4. 道具提示词优化 — 需求表单
+
+**输入**: 统筹的"道具分析"中该道具的数据
+**输出**: 可直接用于文生图 API 的道具提示词
+
+```
+【道具图优化需求】
+道具名: {{名称}}
+分类: {{分类}}
+材质: {{材质}}
+颜色: {{颜色}}
+剧情场景: {{出现场景ID}}
+外观描述: {{外观描述}}
+
+【标准格式要求】
+请生成一条英文道具提示词，包含以下要素：
+- Item name + category
+- Material and color description
+- Detailed texture and surface properties
+- Isolated object, white background, product photography style
+- Quality: 8k, high detail, studio lighting, sharp focus
+
+【输出格式】
+{
+  "prompt": "... isolated object, white background, product photography, 8k...",
+  "negativePrompt": "background, context, people, text, watermark"
+}
+```
+
+---
+
+## 5. 音色合成提示词优化 — 需求表单
+
+**输入**: 统筹的"角色音色分析"
+**输出**: 可用于 TTS 引擎的音色配置
+
+```
+【音色配置优化需求】
+角色名: {{角色名}}
+音色类型: {{音色类型}}
+语调特征: {{语调特征}}
+语速: {{语速}}
+音色详细描述: {{音色详细描述}}
+
+【标准格式要求】
+请生成结构化的音色配置参数：
+- Voice type classification
+- Pitch range (low/mid/high)
+- Speed (words per minute)
+- Emotion expressiveness parameters
+
+【输出格式】
+{
+  "voiceId": "...",
+  "voiceParams": { "pitch": "...", "speed": "...", "emotion": "..." }
+}
+```
+
+---
+
+## 6. 视频段落提示词优化 — 需求表单
+
+**输入**: 统筹的"视频段落分析"
+**输出**: 可用于视频生成模型的段落提示词
+
+## 7. 特效提示词优化 — 需求表单
+
+**输入**: 统筹的"特效分析"
+**输出**: 可用于特效生成的提示词

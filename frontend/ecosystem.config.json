@@ -1,0 +1,18 @@
+{
+  "name": "frontend",
+  "script": ".output/server/index.mjs",
+  "cwd": "/root/shipin-cinematic-studio/frontend",
+  "env": {
+    "PORT": "4001",
+    "NITRO_PORT": "4001",
+    "NODE_ENV": "production",
+    "NUXT_TELEMETRY_DISABLED": "1"
+  },
+  "max_restarts": 10,
+  "restart_delay": 3000,
+  "exp_backoff_restart_delay": 100,
+  "max_memory_restart": "500M",
+  "error_file": "/root/.pm2/logs/frontend-error.log",
+  "out_file": "/root/.pm2/logs/frontend-out.log",
+  "merge_logs": true
+}

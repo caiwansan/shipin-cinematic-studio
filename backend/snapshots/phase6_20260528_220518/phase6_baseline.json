@@ -1,0 +1,17 @@
+{
+  "phase": "Phase 6.0 \u2014 Freezing Snapshot",
+  "time": "2026-05-28T14:05:30Z",
+  "ts_error_baseline": 399,
+  "snapshot_path": "snapshots/phase6_20260528_220518",
+  "contract_coverage": {
+    "total_routes": 127,
+    "contract_active": 65,
+    "coverage_pct": 51.2
+  },
+  "api_classification": {
+    "A_group": 65,
+    "B_group_legacy": 18,
+    "C_group_hybrid": 16,
+    "skip": 28
+  }
+}

@@ -1,0 +1,120 @@
+<template>
+  <div class="hdzm-app">
+    <!-- 顶部栏 -->
+    <nav class="hdzm-topbar">
+      <div class="hdzm-topbar-left">
+        <router-link to="/" class="hdzm-back">← 首页</router-link>
+        <span class="hdzm-sep">|</span>
+        <span class="hdzm-title">📚 小说工作台</span>
+      </div>
+      <div class="hdzm-topbar-right">
+        <span class="hdzm-stat">{{ projects.length }} 项目</span>
+      </div>
+    </nav>
+
+    <!-- 列表 -->
+    <div class="hdzm-content">
+      <div v-if="loading" class="hdzm-loading">加载中...</div>
+      <div v-else-if="projects.length === 0" class="hdzm-empty">
+        <div class="hdzm-empty-icon">📖</div>
+        <p>还没有小说项目</p>
+        <p class="hdzm-empty-hint">先在电脑版新建项目</p>
+      </div>
+      <div v-else class="hdzm-list">
+        <div
+          v-for="p in projects"
+          :key="p.id"
+          class="hdzm-card"
+          @click="goWorkspace(p.id)"
+        >
+          <div class="hdzm-card-top">
+            <span class="hdzm-tag">{{ p.genre || '未分类' }}</span>
+            <span class="hdzm-status" :class="'hdzm-st--' + p.status">{{ statusLabel(p.status) }}</span>
+          </div>
+          <h3 class="hdzm-card-title">{{ p.title }}</h3>
+          <div class="hdzm-card-meta">
+            <span>📝 {{ p._count?.chapters || 0 }} 章</span>
+            <span>👤 {{ p._count?.characters || 0 }} 角色</span>
+            <span v-if="p.wordTarget">🎯 {{ formatNum(p.wordTarget) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+const { $api } = useNuxtApp()
+const router = useRouter()
+
+const loading = ref(true)
+const projects = ref<any[]>([])
+
+onMounted(async () => {
+  try {
+    const res: any = await $api.get('/api/hdz/projects')
+    projects.value = res.projects || res || []
+  } catch (e: any) {
+    console.error('加载项目列表失败:', e)
+  } finally {
+    loading.value = false
+  }
+})
+
+function goWorkspace(id: string) {
+  router.push(`/hdz/m/workspace/${id}`)
+}
+
+function statusLabel(s: string) {
+  const map: Record<string, string> = { draft: '草稿', active: '连载中', completed: '已完结', abandoned: '已搁置' }
+  return map[s] || s
+}
+
+function formatNum(n: number) {
+  if (n >= 10000) return (n / 10000).toFixed(1) + '万'
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
+  return String(n)
+}
+</script>
+
+<style scoped>
+.hdzm-app {
+  min-height: 100vh; background: #f5f0e8; color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.hdzm-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 44px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px;
+  background: rgba(245,240,232,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.hdzm-topbar-left { display: flex; align-items: center; gap: 8px; }
+.hdzm-back { font-size: 0.8rem; color: #8b7355; text-decoration: none; }
+.hdzm-sep { color: rgba(0,0,0,0.12); }
+.hdzm-title { font-size: 0.85rem; font-weight: 600; }
+.hdzm-topbar-right { }
+.hdzm-stat { font-size: 0.7rem; color: #999; }
+.hdzm-content { margin-top: 44px; padding: 12px; }
+.hdzm-loading { text-align: center; padding: 40px; color: #999; }
+.hdzm-empty { text-align: center; padding: 60px 20px; }
+.hdzm-empty-icon { font-size: 3rem; margin-bottom: 12px; }
+.hdzm-empty p { font-size: 1rem; color: #999; margin: 4px 0; }
+.hdzm-empty-hint { font-size: 0.8rem; color: #bbb; }
+.hdzm-list { display: flex; flex-direction: column; gap: 10px; }
+.hdzm-card {
+  background: #faf7f0; border-radius: 10px; padding: 14px;
+  border: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer; transition: all 0.15s;
+}
+.hdzm-card:active { transform: scale(0.98); background: #f0ebe0; }
+.hdzm-card-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.hdzm-tag { font-size: 0.6rem; padding: 1px 6px; border-radius: 3px; background: rgba(168,130,255,0.1); color: #7a5f9a; }
+.hdzm-st--active { color: #4a9f6a; }
+.hdzm-st--completed { color: #6b5a9f; }
+.hdzm-st--draft { color: #999; }
+.hdzm-status { font-size: 0.6rem; }
+.hdzm-card-title { font-size: 0.9rem; font-weight: 600; margin: 0 0 6px; }
+.hdzm-card-meta { display: flex; gap: 12px; font-size: 0.7rem; color: #999; }
+</style>

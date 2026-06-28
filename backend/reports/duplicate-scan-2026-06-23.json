@@ -1,0 +1,1363 @@
+{
+  "scannedAt": "2026-06-23T11:27:01.138Z",
+  "totalScanned": 104,
+  "totalClusters": 104,
+  "duplicateClusters": 0,
+  "uniqueAssets": 104,
+  "duplicateAssets": -104,
+  "clusters": [
+    {
+      "hashShort": "0e699fa6cd0d",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "20c96ca2-ae7",
+      "assets": [
+        {
+          "id": "20c96ca2-ae7",
+          "type": "scene_image",
+          "size": 659781
+        }
+      ]
+    },
+    {
+      "hashShort": "c4260c81cb75",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "8071007e-b5a",
+      "assets": [
+        {
+          "id": "8071007e-b5a",
+          "type": "scene_image",
+          "size": 696508
+        }
+      ]
+    },
+    {
+      "hashShort": "7dd18e87afef",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "25e0bf2a-bfb",
+      "assets": [
+        {
+          "id": "25e0bf2a-bfb",
+          "type": "character_image",
+          "size": 243890
+        }
+      ]
+    },
+    {
+      "hashShort": "fceca0a0b9c6",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "0f864d85-3ae",
+      "assets": [
+        {
+          "id": "0f864d85-3ae",
+          "type": "scene_image",
+          "size": 643786
+        }
+      ]
+    },
+    {
+      "hashShort": "21e5af21f6d6",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "5695fc9c-855",
+      "assets": [
+        {
+          "id": "5695fc9c-855",
+          "type": "character_image",
+          "size": 85089
+        }
+      ]
+    },
+    {
+      "hashShort": "1f65e865e6c2",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "fdb4a47b-8c6",
+      "assets": [
+        {
+          "id": "fdb4a47b-8c6",
+          "type": "character_image",
+          "size": 62838
+        }
+      ]
+    },
+    {
+      "hashShort": "c312819ed3ae",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "d0e9c522-e44",
+      "assets": [
+        {
+          "id": "d0e9c522-e44",
+          "type": "scene_image",
+          "size": 824332
+        }
+      ]
+    },
+    {
+      "hashShort": "9986bb339040",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "74689773-356",
+      "assets": [
+        {
+          "id": "74689773-356",
+          "type": "character_image",
+          "size": 444963
+        }
+      ]
+    },
+    {
+      "hashShort": "2691557e611f",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "8a431cd3-c3d",
+      "assets": [
+        {
+          "id": "8a431cd3-c3d",
+          "type": "character_image",
+          "size": 58803
+        }
+      ]
+    },
+    {
+      "hashShort": "adc031aa05b7",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "ff21e239-811",
+      "assets": [
+        {
+          "id": "ff21e239-811",
+          "type": "character_image",
+          "size": 66837
+        }
+      ]
+    },
+    {
+      "hashShort": "440afd0e9738",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "43eb0341-aee",
+      "assets": [
+        {
+          "id": "43eb0341-aee",
+          "type": "character_image",
+          "size": 436310
+        }
+      ]
+    },
+    {
+      "hashShort": "f3a45189815f",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "0d864632-0b5",
+      "assets": [
+        {
+          "id": "0d864632-0b5",
+          "type": "character_image",
+          "size": 270963
+        }
+      ]
+    },
+    {
+      "hashShort": "5395a8a50beb",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "4d5d751f-1a1",
+      "assets": [
+        {
+          "id": "4d5d751f-1a1",
+          "type": "character_image",
+          "size": 184123
+        }
+      ]
+    },
+    {
+      "hashShort": "ba9cc9a3758e",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "83a8567b-115",
+      "assets": [
+        {
+          "id": "83a8567b-115",
+          "type": "character_image",
+          "size": 161274
+        }
+      ]
+    },
+    {
+      "hashShort": "932069706cc3",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "d8d45a7d-a22",
+      "assets": [
+        {
+          "id": "d8d45a7d-a22",
+          "type": "character_image",
+          "size": 101492
+        }
+      ]
+    },
+    {
+      "hashShort": "8c2cf335061e",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "e1c565f6-739",
+      "assets": [
+        {
+          "id": "e1c565f6-739",
+          "type": "character_image",
+          "size": 94419
+        }
+      ]
+    },
+    {
+      "hashShort": "f018413d884f",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "2b0b137c-33b",
+      "assets": [
+        {
+          "id": "2b0b137c-33b",
+          "type": "character_image",
+          "size": 119201
+        }
+      ]
+    },
+    {
+      "hashShort": "937180ab60d7",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "3cb941de-a69",
+      "assets": [
+        {
+          "id": "3cb941de-a69",
+          "type": "character_image",
+          "size": 78378
+        }
+      ]
+    },
+    {
+      "hashShort": "766a55ca6f89",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "afe0c393-9da",
+      "assets": [
+        {
+          "id": "afe0c393-9da",
+          "type": "character_image",
+          "size": 61735
+        }
+      ]
+    },
+    {
+      "hashShort": "4a0061a9d927",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "d15cfe8c-79b",
+      "assets": [
+        {
+          "id": "d15cfe8c-79b",
+          "type": "character_image",
+          "size": 69999
+        }
+      ]
+    },
+    {
+      "hashShort": "0a6f943013ba",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "5a78f00f-f7c",
+      "assets": [
+        {
+          "id": "5a78f00f-f7c",
+          "type": "character_image",
+          "size": 390202
+        }
+      ]
+    },
+    {
+      "hashShort": "37f8e928b7a5",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "040cb922-116",
+      "assets": [
+        {
+          "id": "040cb922-116",
+          "type": "character_image",
+          "size": 145663
+        }
+      ]
+    },
+    {
+      "hashShort": "94b593b3f620",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "d5071a97-7e2",
+      "assets": [
+        {
+          "id": "d5071a97-7e2",
+          "type": "character_image",
+          "size": 56492
+        }
+      ]
+    },
+    {
+      "hashShort": "853cfb913342",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "8f1af80e-5e9",
+      "assets": [
+        {
+          "id": "8f1af80e-5e9",
+          "type": "character_image",
+          "size": 69575
+        }
+      ]
+    },
+    {
+      "hashShort": "fd189f2e2467",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "8436ddbb-d55",
+      "assets": [
+        {
+          "id": "8436ddbb-d55",
+          "type": "character_image",
+          "size": 60633
+        }
+      ]
+    },
+    {
+      "hashShort": "265297339c89",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "30450bcd-0a9",
+      "assets": [
+        {
+          "id": "30450bcd-0a9",
+          "type": "character_image",
+          "size": 73714
+        }
+      ]
+    },
+    {
+      "hashShort": "fff9539475c6",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "f262ef45-a2b",
+      "assets": [
+        {
+          "id": "f262ef45-a2b",
+          "type": "character_image",
+          "size": 309553
+        }
+      ]
+    },
+    {
+      "hashShort": "0a2eceb1a6b9",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "9c7974d7-1f6",
+      "assets": [
+        {
+          "id": "9c7974d7-1f6",
+          "type": "character_image",
+          "size": 137706
+        }
+      ]
+    },
+    {
+      "hashShort": "194b16667193",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "ba23ef45-7a8",
+      "assets": [
+        {
+          "id": "ba23ef45-7a8",
+          "type": "character_image",
+          "size": 73932
+        }
+      ]
+    },
+    {
+      "hashShort": "a467cdb60c25",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "ebe811ac-cbe",
+      "assets": [
+        {
+          "id": "ebe811ac-cbe",
+          "type": "character_image",
+          "size": 379296
+        }
+      ]
+    },
+    {
+      "hashShort": "a4814b468ddb",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "c9e44dfa-490",
+      "assets": [
+        {
+          "id": "c9e44dfa-490",
+          "type": "character_image",
+          "size": 97169
+        }
+      ]
+    },
+    {
+      "hashShort": "8f1cec01fe80",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "a399abec-848",
+      "assets": [
+        {
+          "id": "a399abec-848",
+          "type": "character_image",
+          "size": 104190
+        }
+      ]
+    },
+    {
+      "hashShort": "8cb31a7f41af",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "5621812a-0ae",
+      "assets": [
+        {
+          "id": "5621812a-0ae",
+          "type": "character_image",
+          "size": 509556
+        }
+      ]
+    },
+    {
+      "hashShort": "ce817f5f8ec2",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "2ed49d74-a9e",
+      "assets": [
+        {
+          "id": "2ed49d74-a9e",
+          "type": "character_image",
+          "size": 56456
+        }
+      ]
+    },
+    {
+      "hashShort": "ffe1c922c8e8",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "e41ac121-78c",
+      "assets": [
+        {
+          "id": "e41ac121-78c",
+          "type": "character_image",
+          "size": 404421
+        }
+      ]
+    },
+    {
+      "hashShort": "a0946f9c740c",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "7735675a-b8b",
+      "assets": [
+        {
+          "id": "7735675a-b8b",
+          "type": "character_image",
+          "size": 76168
+        }
+      ]
+    },
+    {
+      "hashShort": "20670ad976c3",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "ee3e2dd9-7f1",
+      "assets": [
+        {
+          "id": "ee3e2dd9-7f1",
+          "type": "character_image",
+          "size": 77927
+        }
+      ]
+    },
+    {
+      "hashShort": "25decef26bfc",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "0b97e1ba-56c",
+      "assets": [
+        {
+          "id": "0b97e1ba-56c",
+          "type": "character_image",
+          "size": 105096
+        }
+      ]
+    },
+    {
+      "hashShort": "777b833c2a47",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "5c32075b-752",
+      "assets": [
+        {
+          "id": "5c32075b-752",
+          "type": "character_image",
+          "size": 106568
+        }
+      ]
+    },
+    {
+      "hashShort": "de8aff546877",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "3363dd93-e6c",
+      "assets": [
+        {
+          "id": "3363dd93-e6c",
+          "type": "character_image",
+          "size": 246750
+        }
+      ]
+    },
+    {
+      "hashShort": "39970c52c793",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "62978180-41e",
+      "assets": [
+        {
+          "id": "62978180-41e",
+          "type": "character_image",
+          "size": 201468
+        }
+      ]
+    },
+    {
+      "hashShort": "a53c0997513b",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "7b5668d9-d87",
+      "assets": [
+        {
+          "id": "7b5668d9-d87",
+          "type": "character_image",
+          "size": 145046
+        }
+      ]
+    },
+    {
+      "hashShort": "e561c7f22dbd",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "fad9300a-cbf",
+      "assets": [
+        {
+          "id": "fad9300a-cbf",
+          "type": "character_image",
+          "size": 638339
+        }
+      ]
+    },
+    {
+      "hashShort": "8590e6633a9b",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "263c08dd-95d",
+      "assets": [
+        {
+          "id": "263c08dd-95d",
+          "type": "character_image",
+          "size": 90049
+        }
+      ]
+    },
+    {
+      "hashShort": "2fee9f7e922f",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "2e302c85-2c1",
+      "assets": [
+        {
+          "id": "2e302c85-2c1",
+          "type": "character_image",
+          "size": 681036
+        }
+      ]
+    },
+    {
+      "hashShort": "5ae804a1e5c9",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "6ded7456-823",
+      "assets": [
+        {
+          "id": "6ded7456-823",
+          "type": "character_image",
+          "size": 149010
+        }
+      ]
+    },
+    {
+      "hashShort": "c726fe67aa03",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "fdd7eec9-359",
+      "assets": [
+        {
+          "id": "fdd7eec9-359",
+          "type": "character_image",
+          "size": 101317
+        }
+      ]
+    },
+    {
+      "hashShort": "b5ae19c70ab2",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "23bd1b47-40b",
+      "assets": [
+        {
+          "id": "23bd1b47-40b",
+          "type": "scene_image",
+          "size": 636919
+        }
+      ]
+    },
+    {
+      "hashShort": "3aac73abbafe",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "e9b38887-365",
+      "assets": [
+        {
+          "id": "e9b38887-365",
+          "type": "character_image",
+          "size": 262616
+        }
+      ]
+    },
+    {
+      "hashShort": "2ade5e48dc2c",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "538b9b66-68f",
+      "assets": [
+        {
+          "id": "538b9b66-68f",
+          "type": "scene_image",
+          "size": 501170
+        }
+      ]
+    },
+    {
+      "hashShort": "d735e1deb7c1",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "244190d0-96b",
+      "assets": [
+        {
+          "id": "244190d0-96b",
+          "type": "character_image",
+          "size": 91011
+        }
+      ]
+    },
+    {
+      "hashShort": "de49e446dcbd",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "cc07c0ca-73a",
+      "assets": [
+        {
+          "id": "cc07c0ca-73a",
+          "type": "character_image",
+          "size": 245799
+        }
+      ]
+    },
+    {
+      "hashShort": "e9eecd4e8fc3",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "d13c86f7-24c",
+      "assets": [
+        {
+          "id": "d13c86f7-24c",
+          "type": "character_image",
+          "size": 117286
+        }
+      ]
+    },
+    {
+      "hashShort": "116f2488118f",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "5249e86d-464",
+      "assets": [
+        {
+          "id": "5249e86d-464",
+          "type": "character_image",
+          "size": 112554
+        }
+      ]
+    },
+    {
+      "hashShort": "35e594d0d071",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "cb2918bf-cca",
+      "assets": [
+        {
+          "id": "cb2918bf-cca",
+          "type": "scene_image",
+          "size": 483080
+        }
+      ]
+    },
+    {
+      "hashShort": "1b69b2be907f",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "3530e493-c88",
+      "assets": [
+        {
+          "id": "3530e493-c88",
+          "type": "scene_image",
+          "size": 420242
+        }
+      ]
+    },
+    {
+      "hashShort": "13c0773ec56a",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "40f6a462-542",
+      "assets": [
+        {
+          "id": "40f6a462-542",
+          "type": "scene_image",
+          "size": 385317
+        }
+      ]
+    },
+    {
+      "hashShort": "2ae80cabf67e",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "e783a866-0de",
+      "assets": [
+        {
+          "id": "e783a866-0de",
+          "type": "character_image",
+          "size": 93125
+        }
+      ]
+    },
+    {
+      "hashShort": "166b406b1692",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "a7c68899-533",
+      "assets": [
+        {
+          "id": "a7c68899-533",
+          "type": "character_image",
+          "size": 610044
+        }
+      ]
+    },
+    {
+      "hashShort": "8a54c62c4e8d",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "d723b148-e4b",
+      "assets": [
+        {
+          "id": "d723b148-e4b",
+          "type": "character_image",
+          "size": 107559
+        }
+      ]
+    },
+    {
+      "hashShort": "e3ac9819398f",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "2ba2ae8f-c93",
+      "assets": [
+        {
+          "id": "2ba2ae8f-c93",
+          "type": "character_image",
+          "size": 87167
+        }
+      ]
+    },
+    {
+      "hashShort": "d1f70de3ba8e",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "ef4908b7-fd3",
+      "assets": [
+        {
+          "id": "ef4908b7-fd3",
+          "type": "character_image",
+          "size": 517365
+        }
+      ]
+    },
+    {
+      "hashShort": "21936d8fa215",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "28c70637-617",
+      "assets": [
+        {
+          "id": "28c70637-617",
+          "type": "scene_image",
+          "size": 589308
+        }
+      ]
+    },
+    {
+      "hashShort": "8a1a69f7364d",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "f0efdc41-8bb",
+      "assets": [
+        {
+          "id": "f0efdc41-8bb",
+          "type": "scene_image",
+          "size": 441230
+        }
+      ]
+    },
+    {
+      "hashShort": "8500ee0c9b16",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "b2d4a49f-fd9",
+      "assets": [
+        {
+          "id": "b2d4a49f-fd9",
+          "type": "character_image",
+          "size": 86969
+        }
+      ]
+    },
+    {
+      "hashShort": "0dea6601e46d",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "6be33c38-e62",
+      "assets": [
+        {
+          "id": "6be33c38-e62",
+          "type": "character_image",
+          "size": 212371
+        }
+      ]
+    },
+    {
+      "hashShort": "fd8e3496d9f5",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "29d9a9ae-e09",
+      "assets": [
+        {
+          "id": "29d9a9ae-e09",
+          "type": "scene_image",
+          "size": 1335020
+        }
+      ]
+    },
+    {
+      "hashShort": "19bb4f1d1bd1",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "6d46710f-e90",
+      "assets": [
+        {
+          "id": "6d46710f-e90",
+          "type": "scene_image",
+          "size": 1245065
+        }
+      ]
+    },
+    {
+      "hashShort": "33c23466aab7",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "d85ed211-08c",
+      "assets": [
+        {
+          "id": "d85ed211-08c",
+          "type": "scene_image",
+          "size": 551012
+        }
+      ]
+    },
+    {
+      "hashShort": "15f427e7612b",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "9bbd3855-865",
+      "assets": [
+        {
+          "id": "9bbd3855-865",
+          "type": "scene_image",
+          "size": 391635
+        }
+      ]
+    },
+    {
+      "hashShort": "ed9f811fbae7",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "4eb8f1d3-769",
+      "assets": [
+        {
+          "id": "4eb8f1d3-769",
+          "type": "scene_image",
+          "size": 342324
+        }
+      ]
+    },
+    {
+      "hashShort": "5524e7c09358",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "d585364a-dbe",
+      "assets": [
+        {
+          "id": "d585364a-dbe",
+          "type": "scene_image",
+          "size": 334924
+        }
+      ]
+    },
+    {
+      "hashShort": "3c8e4f9e9307",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "2a16a5c2-aa6",
+      "assets": [
+        {
+          "id": "2a16a5c2-aa6",
+          "type": "scene_image",
+          "size": 863574
+        }
+      ]
+    },
+    {
+      "hashShort": "7ba24b1b7c20",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "a5398b16-262",
+      "assets": [
+        {
+          "id": "a5398b16-262",
+          "type": "scene_image",
+          "size": 1051385
+        }
+      ]
+    },
+    {
+      "hashShort": "6eb9fa01624f",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "958235d0-15c",
+      "assets": [
+        {
+          "id": "958235d0-15c",
+          "type": "scene_image",
+          "size": 1000112
+        }
+      ]
+    },
+    {
+      "hashShort": "9a371731f463",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "e306dacf-61f",
+      "assets": [
+        {
+          "id": "e306dacf-61f",
+          "type": "scene_image",
+          "size": 533226
+        }
+      ]
+    },
+    {
+      "hashShort": "62212b5f2ae7",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "cdb0c6d4-0c7",
+      "assets": [
+        {
+          "id": "cdb0c6d4-0c7",
+          "type": "scene_image",
+          "size": 621828
+        }
+      ]
+    },
+    {
+      "hashShort": "7c06250a7c76",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "070f1e4b-466",
+      "assets": [
+        {
+          "id": "070f1e4b-466",
+          "type": "scene_image",
+          "size": 601425
+        }
+      ]
+    },
+    {
+      "hashShort": "5040b4e43ddd",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "370fb6af-e0e",
+      "assets": [
+        {
+          "id": "370fb6af-e0e",
+          "type": "scene_image",
+          "size": 567529
+        }
+      ]
+    },
+    {
+      "hashShort": "8705a1b67ac9",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "ebc0597d-267",
+      "assets": [
+        {
+          "id": "ebc0597d-267",
+          "type": "scene_image",
+          "size": 665307
+        }
+      ]
+    },
+    {
+      "hashShort": "1d511c9ac2ed",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "c4350034-189",
+      "assets": [
+        {
+          "id": "c4350034-189",
+          "type": "scene_image",
+          "size": 720724
+        }
+      ]
+    },
+    {
+      "hashShort": "ba495aaa3dc2",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "1b66fd73-3cc",
+      "assets": [
+        {
+          "id": "1b66fd73-3cc",
+          "type": "scene_image",
+          "size": 795072
+        }
+      ]
+    },
+    {
+      "hashShort": "5316ba47a0e9",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "52837f3d-932",
+      "assets": [
+        {
+          "id": "52837f3d-932",
+          "type": "character_image",
+          "size": 83778
+        }
+      ]
+    },
+    {
+      "hashShort": "73cfd1682128",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "8a9a9821-373",
+      "assets": [
+        {
+          "id": "8a9a9821-373",
+          "type": "scene_image",
+          "size": 923937
+        }
+      ]
+    },
+    {
+      "hashShort": "ee12f50fb270",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "9baf0b04-051",
+      "assets": [
+        {
+          "id": "9baf0b04-051",
+          "type": "scene_image",
+          "size": 1016025
+        }
+      ]
+    },
+    {
+      "hashShort": "425304554a25",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "b08c9fd9-075",
+      "assets": [
+        {
+          "id": "b08c9fd9-075",
+          "type": "scene_image",
+          "size": 767428
+        }
+      ]
+    },
+    {
+      "hashShort": "d72840136b68",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "57410f41-e4e",
+      "assets": [
+        {
+          "id": "57410f41-e4e",
+          "type": "scene_image",
+          "size": 1089114
+        }
+      ]
+    },
+    {
+      "hashShort": "cce8538cc68e",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "33329d09-29c",
+      "assets": [
+        {
+          "id": "33329d09-29c",
+          "type": "character_image",
+          "size": 136168
+        }
+      ]
+    },
+    {
+      "hashShort": "a454d19eccea",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "a86e120c-139",
+      "assets": [
+        {
+          "id": "a86e120c-139",
+          "type": "character_image",
+          "size": 103317
+        }
+      ]
+    },
+    {
+      "hashShort": "70ba1da6d756",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "b270aa16-3db",
+      "assets": [
+        {
+          "id": "b270aa16-3db",
+          "type": "character_image",
+          "size": 92143
+        }
+      ]
+    },
+    {
+      "hashShort": "e14b9c2b689c",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "196cb1e7-ff4",
+      "assets": [
+        {
+          "id": "196cb1e7-ff4",
+          "type": "character_image",
+          "size": 122807
+        }
+      ]
+    },
+    {
+      "hashShort": "7c3f3a3041ae",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "622caf54-0f6",
+      "assets": [
+        {
+          "id": "622caf54-0f6",
+          "type": "character_image",
+          "size": 226896
+        }
+      ]
+    },
+    {
+      "hashShort": "19c48afa4926",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "f80c5aa5-ad2",
+      "assets": [
+        {
+          "id": "f80c5aa5-ad2",
+          "type": "scene_image",
+          "size": 1117676
+        }
+      ]
+    },
+    {
+      "hashShort": "21385a7dbc01",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "ac627b2a-b87",
+      "assets": [
+        {
+          "id": "ac627b2a-b87",
+          "type": "character_image",
+          "size": 624794
+        }
+      ]
+    },
+    {
+      "hashShort": "9aa1d98d1551",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "52a5c5c0-4f1",
+      "assets": [
+        {
+          "id": "52a5c5c0-4f1",
+          "type": "character_image",
+          "size": 187993
+        }
+      ]
+    },
+    {
+      "hashShort": "f6a2aa314045",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "96206fe1-47e",
+      "assets": [
+        {
+          "id": "96206fe1-47e",
+          "type": "character_image",
+          "size": 166419
+        }
+      ]
+    },
+    {
+      "hashShort": "b6e9aafc3429",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "5f889ad8-8b6",
+      "assets": [
+        {
+          "id": "5f889ad8-8b6",
+          "type": "scene_image",
+          "size": 719087
+        }
+      ]
+    },
+    {
+      "hashShort": "26e37f850d49",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "2ece8899-c88",
+      "assets": [
+        {
+          "id": "2ece8899-c88",
+          "type": "scene_image",
+          "size": 853498
+        }
+      ]
+    },
+    {
+      "hashShort": "8f1a3bd0bffd",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "5b0bb908-f79",
+      "assets": [
+        {
+          "id": "5b0bb908-f79",
+          "type": "scene_image",
+          "size": 543739
+        }
+      ]
+    },
+    {
+      "hashShort": "b04419d83f72",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "3c024f5d-0de",
+      "assets": [
+        {
+          "id": "3c024f5d-0de",
+          "type": "scene_image",
+          "size": 559389
+        }
+      ]
+    },
+    {
+      "hashShort": "1e1110997449",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "f0fe5380-2c4",
+      "assets": [
+        {
+          "id": "f0fe5380-2c4",
+          "type": "scene_image",
+          "size": 559488
+        }
+      ]
+    },
+    {
+      "hashShort": "e443fef31e3a",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "34bed60a-eb7",
+      "assets": [
+        {
+          "id": "34bed60a-eb7",
+          "type": "scene_image",
+          "size": 780543
+        }
+      ]
+    },
+    {
+      "hashShort": "a7eaa7a785dd",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "2577a395-e6b",
+      "assets": [
+        {
+          "id": "2577a395-e6b",
+          "type": "scene_image",
+          "size": 836546
+        }
+      ]
+    },
+    {
+      "hashShort": "a31239ca88af",
+      "count": 1,
+      "isDuplicate": false,
+      "primaryId": "b673d644-cdf",
+      "assets": [
+        {
+          "id": "b673d644-cdf",
+          "type": "scene_image",
+          "size": 1051894
+        }
+      ]
+    }
+  ],
+  "elapsed": "11.8"
+}

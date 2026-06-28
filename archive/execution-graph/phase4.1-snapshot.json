@@ -1,0 +1,67 @@
+{
+  "phase": "4.1",
+  "title": "Execution Boundary Enforcement Bootstrap",
+  "timestamp": "2026-05-21T12:11:00+08:00",
+  "principle": "先CI Gate + annotation，不改runtime behavior",
+  "status": "bootstrap complete",
+  "deliverables": {
+    "ownership_injection": {
+      "files_injected": 157,
+      "tool": "tools/execution-graph/inject-runtime-owner.ts",
+      "by_mode": {
+        "SYNC": 71,
+        "ASYNC": 1,
+        "WORKER": 7,
+        "TOOL": 14,
+        "OBSERVE": 11,
+        "LEGACY": 18,
+        "SHADOW": 35
+      }
+    },
+    "ownership_map": {
+      "path": "reports/execution-graph/ownership-map.json",
+      "format": "full registry of all 157 files"
+    },
+    "execution_domains": {
+      "path": "reports/execution-graph/execution-domains.json",
+      "domains": ["SYNC", "ASYNC", "WORKER", "TOOL", "OBSERVE", "LEGACY", "SHADOW"]
+    },
+    "pipeline_adapter": {
+      "path": "src/runtime/pipeline/PipelineAdapter.ts",
+      "status": "skeleton only"
+    },
+    "runtime_trace": {
+      "path": "src/runtime/trace/runtime-trace.ts",
+      "status": "skeleton, non-invasive"
+    },
+    "eslint_rules": {
+      "path": "backend/eslint-rules/phase4-rules.md",
+      "rules": [
+        "no-missing-runtime-owner",
+        "single-entry-domain-enforcement",
+        "shadow-module-import-block",
+        "invalid-domain-routing"
+      ],
+      "status": "documented, not wired"
+    },
+    "architecture_update": {
+      "path": "ARCHITECTURE.md",
+      "new_sections": ["H (execution domains)", "I (enforcement rules)", "J (runtime trace)", "K (PipelineAdapter)"]
+    },
+    "tsc_impact": "no new errors (pre-existing 198 unchanged)"
+  },
+  "what_changed_in_src": {
+    "new_files": [
+      "src/runtime/pipeline/PipelineAdapter.ts",
+      "src/runtime/trace/runtime-trace.ts"
+    ],
+    "modified_files": "157 files — added __RUNTIME_OWNER__ export only",
+    "behavior_changes": "zero"
+  },
+  "not_moved_to_phase_4_2": [
+    "Wire runtimeTrace into narrative-gateway.execute()",
+    "Wire PipelineAdapter into pipeline-executor.createRuntime()",
+    "Deploy ESLint plugin",
+    "Build import graph baseline for shadow module blocking"
+  ]
+}

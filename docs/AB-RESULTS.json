@@ -1,0 +1,52 @@
+{
+  "test": "PROMPT-EFFECTIVENESS-VALIDATION-001",
+  "timestamp": "2026-06-24T14:07:14.457Z",
+  "provider": "volcengine",
+  "model": "doubao-seedance-1-5-pro-251215",
+  "projectId": "7d4d6857-aa7a-429e-8cd0-fa012fe2c96f",
+  "results": [
+    {
+      "name": "A-Legacy-对话",
+      "type": "legacy",
+      "status": "completed",
+      "videoUrl": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02178230985254800000000000000000000ffffac1915c459558b.mp4",
+      "charCount": 229,
+      "hasCharacterConstraints": false,
+      "hasSceneConstraints": false,
+      "hasStoryboardLanguage": false,
+      "hasShotScript": false
+    },
+    {
+      "name": "B-Enhanced-对话",
+      "type": "enhanced",
+      "status": "completed",
+      "videoUrl": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02178230991319900000000000000000000ffffac14d0d9a7715b.mp4",
+      "charCount": 887,
+      "hasCharacterConstraints": true,
+      "hasSceneConstraints": true,
+      "hasStoryboardLanguage": true,
+      "hasShotScript": true,
+      "characterFields": ["age","gender","clothing","appearance"],
+      "sceneFields": ["environment","lighting","mood","timeOfDay"],
+      "storyboardFields": ["shotPattern","emotion","duration"]
+    },
+    {
+      "name": "A-Legacy-情绪",
+      "type": "legacy",
+      "status": "completed",
+      "videoUrl": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02178230988868900000000000000000000ffffac18096bfda0ab.mp4",
+      "hasCharacterConstraints": false,
+      "hasSceneConstraints": false,
+      "hasStoryboardLanguage": false
+    },
+    {
+      "name": "B-Enhanced-情绪",
+      "type": "enhanced",
+      "status": "completed",
+      "videoUrl": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02178230981140000000000000000000000ffffac158f8edb4b25.mp4",
+      "hasCharacterConstraints": true,
+      "hasSceneConstraints": true,
+      "hasStoryboardLanguage": true
+    }
+  ]
+}

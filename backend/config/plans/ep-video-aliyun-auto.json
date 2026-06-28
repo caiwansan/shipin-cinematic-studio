@@ -1,0 +1,33 @@
+{
+  "planId": "ep-video-aliyun-auto",
+  "version": "v1.0.0",
+  "builtAt": "2026-05-24T15:00:53.066Z",
+  "hash": "SEDP-23415c84",
+  "description": "SEDP plan for taskType=video provider=aliyun",
+  "steps": [
+    {
+      "id": 1,
+      "label": "Adapter: video-aliyun",
+      "file": "model-adapters/video/aliyun-video.adapter.ts",
+      "requiresCapability": "video",
+      "paramsType": "videoInput",
+      "outputType": "videoOutput"
+    },
+    {
+      "id": 2,
+      "label": "Event Sink",
+      "file": "kernel/event-sourcing/execution-event-store.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionEvent",
+      "outputType": "void"
+    },
+    {
+      "id": 3,
+      "label": "Truth Arbitration",
+      "file": "truth/arbitration-engine.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionResult[]",
+      "outputType": "ArbitrationResult"
+    }
+  ]
+}

@@ -1,0 +1,2887 @@
+{
+  "summary": {
+    "totalFiles": 209,
+    "runtimeModules": 1,
+    "routeModules": 1,
+    "serviceModules": 1,
+    "graphRuntimeEdges": 0,
+    "runtimeInternalEdges": 53
+  },
+  "files": [
+    {
+      "file": "routes/admin-api-keys.ts",
+      "module": "routes",
+      "sizeBytes": 4220,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "../middleware/require-admin.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/admin-assets.ts",
+      "module": "routes",
+      "sizeBytes": 5591,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "./admin-auth.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/admin-auth.ts",
+      "module": "routes",
+      "sizeBytes": 8284,
+      "exportCount": 3,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "bcryptjs",
+        "crypto",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/admin-global-config.ts",
+      "module": "routes",
+      "sizeBytes": 30599,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "./admin-auth.js",
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/admin-models-v2.ts",
+      "module": "routes",
+      "sizeBytes": 7986,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/admin-models.ts",
+      "module": "routes",
+      "sizeBytes": 1659,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "./admin-auth.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/agent-orchestrator.ts",
+      "module": "routes",
+      "sizeBytes": 8421,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/ai-gateway.ts",
+      "module": "routes",
+      "sizeBytes": 2620,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/ai-router.ts",
+      "module": "routes",
+      "sizeBytes": 4850,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/ai-tasks.ts",
+      "module": "routes",
+      "sizeBytes": 4427,
+      "exportCount": 1,
+      "importCount": 5,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "../config/env.js",
+        "../queue/queue-manager.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/aigc-spec-db.ts",
+      "module": "routes",
+      "sizeBytes": 8042,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/anchor.ts",
+      "module": "routes",
+      "sizeBytes": 9247,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/api-keys.ts",
+      "module": "routes",
+      "sizeBytes": 5205,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/asset-cards.ts",
+      "module": "routes",
+      "sizeBytes": 3666,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/asset-registry.ts",
+      "module": "routes",
+      "sizeBytes": 3022,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/asset-versions.ts",
+      "module": "routes",
+      "sizeBytes": 3969,
+      "exportCount": 1,
+      "importCount": 5,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/assets.ts",
+      "module": "routes",
+      "sizeBytes": 1777,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/auth.ts",
+      "module": "routes",
+      "sizeBytes": 10108,
+      "exportCount": 1,
+      "importCount": 5,
+      "externalDeps": [
+        "fastify",
+        "bcryptjs",
+        "../utils/index.js",
+        "./captcha.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/captcha.ts",
+      "module": "routes",
+      "sizeBytes": 1513,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "svg-captcha",
+        "crypto",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/character-state.ts",
+      "module": "routes",
+      "sizeBytes": 9944,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/characters.ts",
+      "module": "routes",
+      "sizeBytes": 13757,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "@prisma/client"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/cognition-loop.ts",
+      "module": "routes",
+      "sizeBytes": 4264,
+      "exportCount": 1,
+      "importCount": 5,
+      "externalDeps": [
+        "fastify",
+        "../jobs/index.js",
+        "../cognition-loop/director-intent-state.js",
+        "../cognition-loop/intent-enforcement.js",
+        "../cognition-loop/intent-feedback-analyzer.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/continuity.ts",
+      "module": "routes",
+      "sizeBytes": 3442,
+      "exportCount": 1,
+      "importCount": 6,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/control-plane-v2.ts",
+      "module": "routes",
+      "sizeBytes": 2656,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/control-plane.ts",
+      "module": "routes",
+      "sizeBytes": 3212,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../control-plane/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/costume.ts",
+      "module": "routes",
+      "sizeBytes": 9279,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/customer-service.ts",
+      "module": "routes",
+      "sizeBytes": 23329,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/desktop-runtime.ts",
+      "module": "routes",
+      "sizeBytes": 23132,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/director-engine.ts",
+      "module": "routes",
+      "sizeBytes": 29418,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/director-simulation.ts",
+      "module": "routes",
+      "sizeBytes": 4907,
+      "exportCount": 1,
+      "importCount": 6,
+      "externalDeps": [
+        "fastify",
+        "../director-simulation/scene-pre-simulator.js",
+        "../director-simulation/shot-outcome-predictor.js",
+        "../director-simulation/emotion-trajectory-simulator.js",
+        "../director-simulation/continuity-risk-engine.js",
+        "../director-simulation/simulation-aggregator.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/director-v2.ts",
+      "module": "routes",
+      "sizeBytes": 2558,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/director.ts",
+      "module": "routes",
+      "sizeBytes": 9929,
+      "exportCount": 1,
+      "importCount": 9,
+      "externalDeps": [
+        "fastify",
+        "../director/director-brain.agent.js",
+        "../director/cinematic-shot.agent.js",
+        "../director/character-director.agent.js",
+        "../director/scene-atmosphere.agent.js",
+        "../director/story-rhythm.agent.js",
+        "../director/prompt-compiler.js",
+        "../director/continuity.engine.js",
+        "../director/review.engine.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/execution-graph.ts",
+      "module": "routes",
+      "sizeBytes": 9078,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/execution-images.ts",
+      "module": "routes",
+      "sizeBytes": 4053,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/execution-journal.ts",
+      "module": "routes",
+      "sizeBytes": 2336,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/export-runtime.ts",
+      "module": "routes",
+      "sizeBytes": 2115,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "../storage/artifact-storage.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/featured.ts",
+      "module": "routes",
+      "sizeBytes": 6950,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/feedback.ts",
+      "module": "routes",
+      "sizeBytes": 2847,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../engine/prompt-compiler/feedback-collector.js",
+        "../engine/prompt-compiler/vp-ir-quality-schema.js",
+        "../engine/prompt-compiler/grammar-adjuster.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/governance.ts",
+      "module": "routes",
+      "sizeBytes": 4989,
+      "exportCount": 1,
+      "importCount": 8,
+      "externalDeps": [
+        "fastify",
+        "../governance/governance-controller.js",
+        "../governance/system-health.js",
+        "../governance/system-policy.js",
+        "../governance/optimization-budget.js",
+        "../governance/change-rate-limiter.js",
+        "../governance/rollback-manager.js",
+        "../governance/audit-log.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/hitl.ts",
+      "module": "routes",
+      "sizeBytes": 8444,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/images.ts",
+      "module": "routes",
+      "sizeBytes": 24040,
+      "exportCount": 1,
+      "importCount": 16,
+      "externalDeps": [
+        "fastify",
+        "../engine/prompt-compiler/feedback-collector.js",
+        "../config/env.js",
+        "../utils/index.js",
+        "../core/asset-economy/asset-dna/dna-generator.js",
+        "archiver",
+        "../core/asset-economy/rights-engine/rights-manager.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/job-manager.ts",
+      "module": "routes",
+      "sizeBytes": 2697,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/jobs.ts",
+      "module": "routes",
+      "sizeBytes": 1911,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../jobs/job-store.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/member.ts",
+      "module": "routes",
+      "sizeBytes": 30459,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../middleware/require-admin.js",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/model-params.ts",
+      "module": "routes",
+      "sizeBytes": 2329,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "@prisma/client"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/model-provider.ts",
+      "module": "routes",
+      "sizeBytes": 3576,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/models.ts",
+      "module": "routes",
+      "sizeBytes": 3424,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/music.ts",
+      "module": "routes",
+      "sizeBytes": 4722,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/narrative-llm.ts",
+      "module": "routes",
+      "sizeBytes": 41624,
+      "exportCount": 1,
+      "importCount": 7,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/observability.ts",
+      "module": "routes",
+      "sizeBytes": 6503,
+      "exportCount": 1,
+      "importCount": 9,
+      "externalDeps": [
+        "fastify",
+        "../observability/trace.js",
+        "../observability/metrics.js",
+        "../observability/cost-intelligence.js",
+        "../observability/provider-score.js",
+        "../observability/logger.js",
+        "../core/backpressure.js",
+        "../core/circuit-breaker.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/oms-dashboard.ts",
+      "module": "routes",
+      "sizeBytes": 10439,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "@prisma/client"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/oms-fusion.ts",
+      "module": "routes",
+      "sizeBytes": 10840,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "@prisma/client"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/oms-v2.ts",
+      "module": "routes",
+      "sizeBytes": 6900,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "@prisma/client"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/online-ai.ts",
+      "module": "routes",
+      "sizeBytes": 7217,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/optimization.ts",
+      "module": "routes",
+      "sizeBytes": 4916,
+      "exportCount": 1,
+      "importCount": 8,
+      "externalDeps": [
+        "fastify",
+        "../optimization/optimizer-loop.js",
+        "../optimization/router-learning.js",
+        "../optimization/cost-optimizer.js",
+        "../optimization/user-behavior-analyzer.js",
+        "../optimization/load-predictor.js",
+        "../optimization/self-healing.js",
+        "../optimization/experiments.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/optimize-video-prompt.ts",
+      "module": "routes",
+      "sizeBytes": 7831,
+      "exportCount": 1,
+      "importCount": 7,
+      "externalDeps": [
+        "fastify",
+        "fs",
+        "path",
+        "@prisma/client",
+        "../engine/prompt-compiler/prompt-compiler.js",
+        "../engine/prompt-compiler/vp-ir-validator.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/optimize.ts",
+      "module": "routes",
+      "sizeBytes": 4302,
+      "exportCount": 1,
+      "importCount": 6,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/orchestrator.ts",
+      "module": "routes",
+      "sizeBytes": 12381,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../director/director-brain.agent.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/payment.ts",
+      "module": "routes",
+      "sizeBytes": 24294,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../middleware/require-admin.js",
+        "../utils/index.js",
+        "./admin-auth.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/pipeline-jobs.ts",
+      "module": "routes",
+      "sizeBytes": 9992,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/pipeline.ts",
+      "module": "routes",
+      "sizeBytes": 6945,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/product.ts",
+      "module": "routes",
+      "sizeBytes": 3979,
+      "exportCount": 1,
+      "importCount": 5,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/projects-v2.ts",
+      "module": "routes",
+      "sizeBytes": 7430,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/projects.ts",
+      "module": "routes",
+      "sizeBytes": 4892,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/queue-runtime.ts",
+      "module": "routes",
+      "sizeBytes": 1136,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../queue/queue-manager.js",
+        "../middleware/require-admin.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/redirect.ts",
+      "module": "routes",
+      "sizeBytes": 550,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/reference.ts",
+      "module": "routes",
+      "sizeBytes": 9629,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/references.ts",
+      "module": "routes",
+      "sizeBytes": 5600,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/render-shots.ts",
+      "module": "routes",
+      "sizeBytes": 4914,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "../engine/director/director-engine.js",
+        "../engine/director/cinematic-bridge.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/runtime-checkpoint.ts",
+      "module": "routes",
+      "sizeBytes": 3313,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/runtime-observability.ts",
+      "module": "routes",
+      "sizeBytes": 15654,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "@prisma/client"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/sandbox.ts",
+      "module": "routes",
+      "sizeBytes": 4813,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/scenes.ts",
+      "module": "routes",
+      "sizeBytes": 1439,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/scheduler.ts",
+      "module": "routes",
+      "sizeBytes": 3252,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../scheduler/graph-scheduler.js",
+        "../scheduler/aggregation-layer.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/script-submit.ts",
+      "module": "routes",
+      "sizeBytes": 10651,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/shadow.ts",
+      "module": "routes",
+      "sizeBytes": 7077,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "@prisma/client"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/showrunner.ts",
+      "module": "routes",
+      "sizeBytes": 5180,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../jobs/index.js",
+        "../jobs/job-queue.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/sms.ts",
+      "module": "routes",
+      "sizeBytes": 2410,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "./captcha.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/stability.ts",
+      "module": "routes",
+      "sizeBytes": 11202,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/stage-model-config.ts",
+      "module": "routes",
+      "sizeBytes": 3340,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/story-graph.ts",
+      "module": "routes",
+      "sizeBytes": 13682,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/storyboards.ts",
+      "module": "routes",
+      "sizeBytes": 6398,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../config/env.js",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/system-dashboard.ts",
+      "module": "routes",
+      "sizeBytes": 3734,
+      "exportCount": 1,
+      "importCount": 6,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/system-health.ts",
+      "module": "routes",
+      "sizeBytes": 6828,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../jobs/llm-pool.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/system-version.ts",
+      "module": "routes",
+      "sizeBytes": 693,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/tasks.ts",
+      "module": "routes",
+      "sizeBytes": 5498,
+      "exportCount": 1,
+      "importCount": 5,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/tenant.ts",
+      "module": "routes",
+      "sizeBytes": 4300,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/tts.ts",
+      "module": "routes",
+      "sizeBytes": 8892,
+      "exportCount": 1,
+      "importCount": 8,
+      "externalDeps": [
+        "fastify",
+        "../config/env.js",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/universe-images.ts",
+      "module": "routes",
+      "sizeBytes": 10323,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "../core/asset-economy/lineage-engine/lineage-tracker.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/upload.ts",
+      "module": "routes",
+      "sizeBytes": 6586,
+      "exportCount": 1,
+      "importCount": 6,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "../core/asset-economy/rights-engine/rights-manager.js",
+        "path",
+        "fs/promises",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/user-api-keys.ts",
+      "module": "routes",
+      "sizeBytes": 7183,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/user-center.ts",
+      "module": "routes",
+      "sizeBytes": 18594,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/user-model-config.ts",
+      "module": "routes",
+      "sizeBytes": 15957,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/video-tasks.ts",
+      "module": "routes",
+      "sizeBytes": 0,
+      "exportCount": 0,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/voice.ts",
+      "module": "routes",
+      "sizeBytes": 4980,
+      "exportCount": 1,
+      "importCount": 5,
+      "externalDeps": [
+        "fastify",
+        "zod",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/wechat-oauth.ts",
+      "module": "routes",
+      "sizeBytes": 7101,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js",
+        "./admin-auth.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/world-memory.ts",
+      "module": "routes",
+      "sizeBytes": 2096,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/world-model.ts",
+      "module": "routes",
+      "sizeBytes": 3598,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "routes/world-runtime.ts",
+      "module": "routes",
+      "sizeBytes": 11214,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "@prisma/client"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/asset-state-audit.ts",
+      "module": "runtime",
+      "sizeBytes": 1478,
+      "exportCount": 3,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/asset-state-guard.ts",
+      "module": "runtime",
+      "sizeBytes": 1194,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/asset-state-machine.ts",
+      "module": "runtime",
+      "sizeBytes": 1697,
+      "exportCount": 2,
+      "importCount": 5,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/asset-state-transition.ts",
+      "module": "runtime",
+      "sizeBytes": 1981,
+      "exportCount": 3,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/asset-status.enum.ts",
+      "module": "runtime",
+      "sizeBytes": 1062,
+      "exportCount": 3,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/degrade-engine.ts",
+      "module": "runtime",
+      "sizeBytes": 4679,
+      "exportCount": 4,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/execution-guard.ts",
+      "module": "runtime",
+      "sizeBytes": 4477,
+      "exportCount": 4,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/base-llm.executor.ts",
+      "module": "runtime",
+      "sizeBytes": 1908,
+      "exportCount": 0,
+      "importCount": 3,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/base.executor.ts",
+      "module": "runtime",
+      "sizeBytes": 1092,
+      "exportCount": 3,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/executor.registry.ts",
+      "module": "runtime",
+      "sizeBytes": 2628,
+      "exportCount": 1,
+      "importCount": 9,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/image-gen.executor.ts",
+      "module": "runtime",
+      "sizeBytes": 3675,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/image-prompt.executor.ts",
+      "module": "runtime",
+      "sizeBytes": 1881,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/prompt-builder.executor.ts",
+      "module": "runtime",
+      "sizeBytes": 1217,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/script-writer.executor.ts",
+      "module": "runtime",
+      "sizeBytes": 1298,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/shot-split.executor.ts",
+      "module": "runtime",
+      "sizeBytes": 1752,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/executors/storyboard.executor.ts",
+      "module": "runtime",
+      "sizeBytes": 1634,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/index.ts",
+      "module": "runtime",
+      "sizeBytes": 1446,
+      "exportCount": 0,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/narrative-gateway.ts",
+      "module": "runtime",
+      "sizeBytes": 22934,
+      "exportCount": 11,
+      "importCount": 8,
+      "externalDeps": [
+        "../core/circuit-breaker.js",
+        "../core/circuit-breaker.js",
+        "../observability/metrics.js",
+        "../observability/distributed-trace.js",
+        "../observability/distributed-trace.js",
+        "../queue/queue-manager.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/pipeline-executor.ts",
+      "module": "runtime",
+      "sizeBytes": 5370,
+      "exportCount": 4,
+      "importCount": 8,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/providers/base.provider.ts",
+      "module": "runtime",
+      "sizeBytes": 4560,
+      "exportCount": 4,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/providers/deepseek.provider.ts",
+      "module": "runtime",
+      "sizeBytes": 1750,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/providers/image.base.provider.ts",
+      "module": "runtime",
+      "sizeBytes": 901,
+      "exportCount": 3,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/providers/openai.provider.ts",
+      "module": "runtime",
+      "sizeBytes": 3066,
+      "exportCount": 2,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/providers/provider.registry.ts",
+      "module": "runtime",
+      "sizeBytes": 2557,
+      "exportCount": 7,
+      "importCount": 4,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/providers/replicate.image.provider.ts",
+      "module": "runtime",
+      "sizeBytes": 4476,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/task-stream.ts",
+      "module": "runtime",
+      "sizeBytes": 2295,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "runtime/with-user-model-config.ts",
+      "module": "runtime",
+      "sizeBytes": 6532,
+      "exportCount": 1,
+      "importCount": 3,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/aggregation-engine.ts",
+      "module": "services",
+      "sizeBytes": 10478,
+      "exportCount": 4,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/ai-invocation-envelope.ts",
+      "module": "services",
+      "sizeBytes": 2120,
+      "exportCount": 5,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/ai-router.service.ts",
+      "module": "services",
+      "sizeBytes": 12603,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/ai-sandbox.service.ts",
+      "module": "services",
+      "sizeBytes": 15888,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/aliyun-image.provider.ts",
+      "module": "services",
+      "sizeBytes": 9518,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/aliyun-llm.provider.ts",
+      "module": "services",
+      "sizeBytes": 4786,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/aliyun-tts.provider.ts",
+      "module": "services",
+      "sizeBytes": 4305,
+      "exportCount": 2,
+      "importCount": 2,
+      "externalDeps": [
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/aliyun-video.provider.ts",
+      "module": "services",
+      "sizeBytes": 8245,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/api-router.service.ts",
+      "module": "services",
+      "sizeBytes": 9766,
+      "exportCount": 2,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js",
+        "../core/circuit-breaker.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/artifact-persistence.service.ts",
+      "module": "services",
+      "sizeBytes": 12395,
+      "exportCount": 0,
+      "importCount": 3,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/artifact-schemas.ts",
+      "module": "services",
+      "sizeBytes": 5839,
+      "exportCount": 16,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/artifact-sync.service.ts",
+      "module": "services",
+      "sizeBytes": 9416,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/asset-canonical.schema.ts",
+      "module": "services",
+      "sizeBytes": 2222,
+      "exportCount": 9,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/asset-diff-schema.ts",
+      "module": "services",
+      "sizeBytes": 2430,
+      "exportCount": 5,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/asset-graph-index.ts",
+      "module": "services",
+      "sizeBytes": 2892,
+      "exportCount": 4,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/asset-registry.service.ts",
+      "module": "services",
+      "sizeBytes": 2371,
+      "exportCount": 2,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/asset-rollback.service.ts",
+      "module": "services",
+      "sizeBytes": 2789,
+      "exportCount": 2,
+      "importCount": 3,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/asset-version.service.ts",
+      "module": "services",
+      "sizeBytes": 2805,
+      "exportCount": 2,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/async-pipeline.service.ts",
+      "module": "services",
+      "sizeBytes": 2187,
+      "exportCount": 2,
+      "importCount": 4,
+      "externalDeps": [
+        "../workers/worker-pool.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/auth.service.ts",
+      "module": "services",
+      "sizeBytes": 1408,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../types/index.js",
+        "bcryptjs",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/bottleneck-detector.engine.ts",
+      "module": "services",
+      "sizeBytes": 1723,
+      "exportCount": 2,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/card-contract.ts",
+      "module": "services",
+      "sizeBytes": 733,
+      "exportCount": 4,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/card-render.engine.ts",
+      "module": "services",
+      "sizeBytes": 2510,
+      "exportCount": 2,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/character.service.ts",
+      "module": "services",
+      "sizeBytes": 679,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/continuity-link.service.ts",
+      "module": "services",
+      "sizeBytes": 3163,
+      "exportCount": 4,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/control-plane.service.ts",
+      "module": "services",
+      "sizeBytes": 3160,
+      "exportCount": 2,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/crypto.service.ts",
+      "module": "services",
+      "sizeBytes": 3044,
+      "exportCount": 4,
+      "importCount": 1,
+      "externalDeps": [
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/dag-runtime.ts",
+      "module": "services",
+      "sizeBytes": 5059,
+      "exportCount": 5,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/download.service.ts",
+      "module": "services",
+      "sizeBytes": 3264,
+      "exportCount": 0,
+      "importCount": 6,
+      "externalDeps": [
+        "path",
+        "fs/promises",
+        "fs",
+        "crypto",
+        "https",
+        "http"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/execution-journal.service.ts",
+      "module": "services",
+      "sizeBytes": 12014,
+      "exportCount": 6,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/export-runtime.ts",
+      "module": "services",
+      "sizeBytes": 8593,
+      "exportCount": 2,
+      "importCount": 9,
+      "externalDeps": [
+        "../utils/index.js",
+        "../storage/artifact-storage.js",
+        "../observability/trace.js",
+        "../utils/index.js",
+        "path",
+        "fs/promises",
+        "fs",
+        "os",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/failure-event.service.ts",
+      "module": "services",
+      "sizeBytes": 2077,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/gateway-guard.ts",
+      "module": "services",
+      "sizeBytes": 2282,
+      "exportCount": 3,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/invocation-log.service.ts",
+      "module": "services",
+      "sizeBytes": 2350,
+      "exportCount": 2,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/job-queue-manager.ts",
+      "module": "services",
+      "sizeBytes": 4345,
+      "exportCount": 5,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/job-ux-layer.ts",
+      "module": "services",
+      "sizeBytes": 2696,
+      "exportCount": 3,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/large-text-processor.ts",
+      "module": "services",
+      "sizeBytes": 8064,
+      "exportCount": 5,
+      "importCount": 4,
+      "externalDeps": [
+        "fs",
+        "path",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/lifecycle-manager.ts",
+      "module": "services",
+      "sizeBytes": 6789,
+      "exportCount": 13,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/mock-worker.ts",
+      "module": "services",
+      "sizeBytes": 7690,
+      "exportCount": 0,
+      "importCount": 5,
+      "externalDeps": [
+        "../utils/index.js",
+        "os"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/music/mureka.provider.ts",
+      "module": "services",
+      "sizeBytes": 4026,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/music/music15.provider.ts",
+      "module": "services",
+      "sizeBytes": 3906,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/music/registry.ts",
+      "module": "services",
+      "sizeBytes": 6029,
+      "exportCount": 1,
+      "importCount": 5,
+      "externalDeps": [
+        "../../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/music/suno.provider.ts",
+      "module": "services",
+      "sizeBytes": 3938,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/music/types.ts",
+      "module": "services",
+      "sizeBytes": 2085,
+      "exportCount": 4,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/observability.service.ts",
+      "module": "services",
+      "sizeBytes": 9096,
+      "exportCount": 3,
+      "importCount": 1,
+      "externalDeps": [
+        "fastify"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/optimization-engine.ts",
+      "module": "services",
+      "sizeBytes": 4424,
+      "exportCount": 3,
+      "importCount": 5,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/permission-graph.engine.ts",
+      "module": "services",
+      "sizeBytes": 5024,
+      "exportCount": 4,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/project-hydrate.service.ts",
+      "module": "services",
+      "sizeBytes": 13950,
+      "exportCount": 2,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/project.service.ts",
+      "module": "services",
+      "sizeBytes": 2207,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/prompt-intelligence/optimization-loop.ts",
+      "module": "services",
+      "sizeBytes": 3605,
+      "exportCount": 3,
+      "importCount": 4,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/prompt-intelligence/prompt-evaluator.ts",
+      "module": "services",
+      "sizeBytes": 4969,
+      "exportCount": 2,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/prompt-intelligence/prompt-memory.ts",
+      "module": "services",
+      "sizeBytes": 2688,
+      "exportCount": 2,
+      "importCount": 1,
+      "externalDeps": [
+        "../../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/prompt-intelligence/prompt-optimizer.ts",
+      "module": "services",
+      "sizeBytes": 4697,
+      "exportCount": 3,
+      "importCount": 2,
+      "externalDeps": [
+        "../../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/prompt.service.ts",
+      "module": "services",
+      "sizeBytes": 541,
+      "exportCount": 1,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/runtime-checkpoint.service.ts",
+      "module": "services",
+      "sizeBytes": 7822,
+      "exportCount": 7,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/runtime-context.ts",
+      "module": "services",
+      "sizeBytes": 6225,
+      "exportCount": 17,
+      "importCount": 2,
+      "externalDeps": [
+        "async_hooks",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/runtime-observer.service.ts",
+      "module": "services",
+      "sizeBytes": 5928,
+      "exportCount": 6,
+      "importCount": 2,
+      "externalDeps": [
+        "../queue/queue-manager.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/runtime-validator.ts",
+      "module": "services",
+      "sizeBytes": 2753,
+      "exportCount": 6,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/scene.service.ts",
+      "module": "services",
+      "sizeBytes": 655,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/scheduler.service.ts",
+      "module": "services",
+      "sizeBytes": 5850,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/shadow-execution.service.ts",
+      "module": "services",
+      "sizeBytes": 17817,
+      "exportCount": 0,
+      "importCount": 2,
+      "externalDeps": [
+        "@prisma/client",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/shot-resolver.service.ts",
+      "module": "services",
+      "sizeBytes": 3374,
+      "exportCount": 4,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/siliconflow-tts.provider.ts",
+      "module": "services",
+      "sizeBytes": 4705,
+      "exportCount": 1,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/storyboard.service.ts",
+      "module": "services",
+      "sizeBytes": 748,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/system-intelligence.engine.ts",
+      "module": "services",
+      "sizeBytes": 5619,
+      "exportCount": 4,
+      "importCount": 1,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/task-queue.service.ts",
+      "module": "services",
+      "sizeBytes": 3733,
+      "exportCount": 2,
+      "importCount": 3,
+      "externalDeps": [
+        "bullmq",
+        "ioredis",
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/template-registry.ts",
+      "module": "services",
+      "sizeBytes": 3839,
+      "exportCount": 3,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/temporal-graph.engine.ts",
+      "module": "services",
+      "sizeBytes": 1741,
+      "exportCount": 4,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/unified-ai-gateway.ts",
+      "module": "services",
+      "sizeBytes": 6882,
+      "exportCount": 3,
+      "importCount": 6,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/universe-score-engine.ts",
+      "module": "services",
+      "sizeBytes": 5190,
+      "exportCount": 0,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/usage-quota.service.ts",
+      "module": "services",
+      "sizeBytes": 2900,
+      "exportCount": 0,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/user-api-key.service.ts",
+      "module": "services",
+      "sizeBytes": 2096,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/user-model-resolver.ts",
+      "module": "services",
+      "sizeBytes": 2811,
+      "exportCount": 2,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/video-pipeline.engine.ts",
+      "module": "services",
+      "sizeBytes": 3438,
+      "exportCount": 4,
+      "importCount": 4,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/video.service.ts",
+      "module": "services",
+      "sizeBytes": 2485,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../utils/index.js",
+        "crypto"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/voice-manager.service.ts",
+      "module": "services",
+      "sizeBytes": 5317,
+      "exportCount": 1,
+      "importCount": 2,
+      "externalDeps": [
+        "../config/env.js",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/volcengine-image.provider.ts",
+      "module": "services",
+      "sizeBytes": 6232,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/volcengine-tts.provider.ts",
+      "module": "services",
+      "sizeBytes": 2782,
+      "exportCount": 1,
+      "importCount": 0,
+      "externalDeps": [],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/volcengine-video.provider.ts",
+      "module": "services",
+      "sizeBytes": 4132,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../config/env.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/watermark.service.ts",
+      "module": "services",
+      "sizeBytes": 5238,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "sharp",
+        "crypto",
+        "fs/promises",
+        "fs"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/with-user-key.ts",
+      "module": "services",
+      "sizeBytes": 6718,
+      "exportCount": 1,
+      "importCount": 4,
+      "externalDeps": [
+        "fastify",
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/worker-pool.service.ts",
+      "module": "services",
+      "sizeBytes": 10235,
+      "exportCount": 1,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    },
+    {
+      "file": "services/world-memory.service.ts",
+      "module": "services",
+      "sizeBytes": 4141,
+      "exportCount": 3,
+      "importCount": 1,
+      "externalDeps": [
+        "../utils/index.js"
+      ],
+      "graphRuntimeDeps": []
+    }
+  ],
+  "edges": {
+    "runtimeInternal": [
+      {
+        "from": "runtime/asset-state-audit.ts",
+        "to": "./asset-status.enum.js"
+      },
+      {
+        "from": "runtime/asset-state-guard.ts",
+        "to": "./asset-status.enum.js"
+      },
+      {
+        "from": "runtime/asset-state-guard.ts",
+        "to": "./asset-state-transition.js"
+      },
+      {
+        "from": "runtime/asset-state-machine.ts",
+        "to": "./asset-state-transition.js"
+      },
+      {
+        "from": "runtime/asset-state-machine.ts",
+        "to": "./asset-state-guard.js"
+      },
+      {
+        "from": "runtime/asset-state-machine.ts",
+        "to": "./asset-state-audit.js"
+      },
+      {
+        "from": "runtime/asset-state-machine.ts",
+        "to": "./asset-status.enum.js"
+      },
+      {
+        "from": "runtime/asset-state-transition.ts",
+        "to": "./asset-status.enum.js"
+      },
+      {
+        "from": "runtime/degrade-engine.ts",
+        "to": "./execution-guard.js"
+      },
+      {
+        "from": "runtime/degrade-engine.ts",
+        "to": "./narrative-gateway.js"
+      },
+      {
+        "from": "runtime/execution-guard.ts",
+        "to": "./narrative-gateway.js"
+      },
+      {
+        "from": "runtime/executors/base-llm.executor.ts",
+        "to": "./base.executor.js"
+      },
+      {
+        "from": "runtime/executors/base-llm.executor.ts",
+        "to": "../providers/provider.registry.js"
+      },
+      {
+        "from": "runtime/executors/base-llm.executor.ts",
+        "to": "../providers/base.provider.js"
+      },
+      {
+        "from": "runtime/executors/base.executor.ts",
+        "to": "../../graph-runtime/runtime/context.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "../../graph-runtime/runtime/node.executor.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "../../graph-runtime/runtime/context.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "../../graph-runtime/compiler/graph.compiler.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "./prompt-builder.executor.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "./script-writer.executor.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "./storyboard.executor.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "./shot-split.executor.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "./image-prompt.executor.js"
+      },
+      {
+        "from": "runtime/executors/executor.registry.ts",
+        "to": "./image-gen.executor.js"
+      },
+      {
+        "from": "runtime/executors/image-gen.executor.ts",
+        "to": "../providers/provider.registry.js"
+      },
+      {
+        "from": "runtime/executors/image-gen.executor.ts",
+        "to": "./base.executor.js"
+      },
+      {
+        "from": "runtime/executors/image-prompt.executor.ts",
+        "to": "./base-llm.executor.js"
+      },
+      {
+        "from": "runtime/executors/image-prompt.executor.ts",
+        "to": "./base.executor.js"
+      },
+      {
+        "from": "runtime/executors/prompt-builder.executor.ts",
+        "to": "./base-llm.executor.js"
+      },
+      {
+        "from": "runtime/executors/prompt-builder.executor.ts",
+        "to": "./base.executor.js"
+      },
+      {
+        "from": "runtime/executors/script-writer.executor.ts",
+        "to": "./base-llm.executor.js"
+      },
+      {
+        "from": "runtime/executors/script-writer.executor.ts",
+        "to": "./base.executor.js"
+      },
+      {
+        "from": "runtime/executors/shot-split.executor.ts",
+        "to": "./base-llm.executor.js"
+      },
+      {
+        "from": "runtime/executors/shot-split.executor.ts",
+        "to": "./base.executor.js"
+      },
+      {
+        "from": "runtime/executors/storyboard.executor.ts",
+        "to": "./base-llm.executor.js"
+      },
+      {
+        "from": "runtime/executors/storyboard.executor.ts",
+        "to": "./base.executor.js"
+      },
+      {
+        "from": "runtime/narrative-gateway.ts",
+        "to": "./providers/provider.registry.js"
+      },
+      {
+        "from": "runtime/narrative-gateway.ts",
+        "to": "./providers/base.provider.js"
+      },
+      {
+        "from": "runtime/pipeline-executor.ts",
+        "to": "../graph-runtime/runtime/graph.runtime.js"
+      },
+      {
+        "from": "runtime/pipeline-executor.ts",
+        "to": "../graph-runtime/registry/node.registry.js"
+      },
+      {
+        "from": "runtime/pipeline-executor.ts",
+        "to": "../graph-runtime/compiler/graph.compiler.js"
+      },
+      {
+        "from": "runtime/pipeline-executor.ts",
+        "to": "./degrade-engine.js"
+      },
+      {
+        "from": "runtime/pipeline-executor.ts",
+        "to": "./execution-guard.js"
+      },
+      {
+        "from": "runtime/pipeline-executor.ts",
+        "to": "../graph-runtime/runtime/node.executor.js"
+      },
+      {
+        "from": "runtime/pipeline-executor.ts",
+        "to": "../graph-runtime/runtime/context.js"
+      },
+      {
+        "from": "runtime/pipeline-executor.ts",
+        "to": "../graph-runtime/runtime/edge.resolver.js"
+      },
+      {
+        "from": "runtime/providers/deepseek.provider.ts",
+        "to": "./base.provider.js"
+      },
+      {
+        "from": "runtime/providers/openai.provider.ts",
+        "to": "./base.provider.js"
+      },
+      {
+        "from": "runtime/providers/provider.registry.ts",
+        "to": "./base.provider.js"
+      },
+      {
+        "from": "runtime/providers/provider.registry.ts",
+        "to": "./image.base.provider.js"
+      },
+      {
+        "from": "runtime/providers/provider.registry.ts",
+        "to": "./deepseek.provider.js"
+      },
+      {
+        "from": "runtime/providers/provider.registry.ts",
+        "to": "./openai.provider.js"
+      },
+      {
+        "from": "runtime/providers/replicate.image.provider.ts",
+        "to": "./image.base.provider.js"
+      }
+    ],
+    "graphRuntime": []
+  },
+  "externalDependencies": [
+    {
+      "package": "fastify",
+      "usedBy": 102,
+      "files": [
+        "routes/admin-api-keys.ts",
+        "routes/admin-assets.ts",
+        "routes/admin-auth.ts",
+        "routes/admin-global-config.ts",
+        "routes/admin-models-v2.ts",
+        "routes/admin-models.ts",
+        "routes/agent-orchestrator.ts",
+        "routes/ai-gateway.ts",
+        "routes/ai-router.ts",
+        "routes/ai-tasks.ts",
+        "routes/aigc-spec-db.ts",
+        "routes/anchor.ts",
+        "routes/api-keys.ts",
+        "routes/asset-cards.ts",
+        "routes/asset-registry.ts",
+        "routes/asset-versions.ts",
+        "routes/assets.ts",
+        "routes/auth.ts",
+        "routes/captcha.ts",
+        "routes/character-state.ts",
+        "routes/characters.ts",
+        "routes/cognition-loop.ts",
+        "routes/continuity.ts",
+        "routes/control-plane-v2.ts",
+        "routes/control-plane.ts",
+        "routes/costume.ts",
+        "routes/customer-service.ts",
+        "routes/desktop-runtime.ts",
+        "routes/director-engine.ts",
+        "routes/director-simulation.ts",
+        "routes/director-v2.ts",
+        "routes/director.ts",
+        "routes/execution-graph.ts",
+        "routes/execution-images.ts",
+        "routes/execution-journal.ts",
+        "routes/export-runtime.ts",
+        "routes/featured.ts",
+        "routes/feedback.ts",
+        "routes/governance.ts",
+        "routes/hitl.ts",
+        "routes/images.ts",
+        "routes/job-manager.ts",
+        "routes/jobs.ts",
+        "routes/member.ts",
+        "routes/model-params.ts",
+        "routes/model-provider.ts",
+        "routes/models.ts",
+        "routes/music.ts",
+        "routes/narrative-llm.ts",
+        "routes/observability.ts",
+        "routes/oms-dashboard.ts",
+        "routes/oms-fusion.ts",
+        "routes/oms-v2.ts",
+        "routes/online-ai.ts",
+        "routes/optimization.ts",
+        "routes/optimize-video-prompt.ts",
+        "routes/optimize.ts",
+        "routes/orchestrator.ts",
+        "routes/payment.ts",
+        "routes/pipeline-jobs.ts",
+        "routes/pipeline.ts",
+        "routes/product.ts",
+        "routes/projects-v2.ts",
+        "routes/projects.ts",
+        "routes/queue-runtime.ts",
+        "routes/redirect.ts",
+        "routes/reference.ts",
+        "routes/references.ts",
+        "routes/render-shots.ts",
+        "routes/runtime-checkpoint.ts",
+        "routes/runtime-observability.ts",
+        "routes/sandbox.ts",
+        "routes/scenes.ts",
+        "routes/scheduler.ts",
+        "routes/script-submit.ts",
+        "routes/shadow.ts",
+        "routes/showrunner.ts",
+        "routes/sms.ts",
+        "routes/stability.ts",
+        "routes/stage-model-config.ts",
+        "routes/story-graph.ts",
+        "routes/storyboards.ts",
+        "routes/system-dashboard.ts",
+        "routes/system-health.ts",
+        "routes/system-version.ts",
+        "routes/tasks.ts",
+        "routes/tenant.ts",
+        "routes/tts.ts",
+        "routes/universe-images.ts",
+        "routes/upload.ts",
+        "routes/user-api-keys.ts",
+        "routes/user-center.ts",
+        "routes/user-model-config.ts",
+        "routes/voice.ts",
+        "routes/wechat-oauth.ts",
+        "routes/world-memory.ts",
+        "routes/world-model.ts",
+        "routes/world-runtime.ts",
+        "runtime/task-stream.ts",
+        "services/auth.service.ts",
+        "services/observability.service.ts",
+        "services/with-user-key.ts"
+      ]
+    },
+    {
+      "package": "bcryptjs",
+      "usedBy": 3,
+      "files": [
+        "routes/admin-auth.ts",
+        "routes/auth.ts",
+        "services/auth.service.ts"
+      ]
+    },
+    {
+      "package": "crypto",
+      "usedBy": 14,
+      "files": [
+        "routes/admin-auth.ts",
+        "routes/admin-models-v2.ts",
+        "routes/captcha.ts",
+        "routes/desktop-runtime.ts",
+        "routes/upload.ts",
+        "services/crypto.service.ts",
+        "services/download.service.ts",
+        "services/export-runtime.ts",
+        "services/large-text-processor.ts",
+        "services/runtime-context.ts",
+        "services/shadow-execution.service.ts",
+        "services/user-model-resolver.ts",
+        "services/video.service.ts",
+        "services/watermark.service.ts"
+      ]
+    },
+    {
+      "package": "svg-captcha",
+      "usedBy": 1,
+      "files": [
+        "routes/captcha.ts"
+      ]
+    },
+    {
+      "package": "@prisma/client",
+      "usedBy": 10,
+      "files": [
+        "routes/characters.ts",
+        "routes/model-params.ts",
+        "routes/oms-dashboard.ts",
+        "routes/oms-fusion.ts",
+        "routes/oms-v2.ts",
+        "routes/optimize-video-prompt.ts",
+        "routes/runtime-observability.ts",
+        "routes/shadow.ts",
+        "routes/world-runtime.ts",
+        "services/shadow-execution.service.ts"
+      ]
+    },
+    {
+      "package": "archiver",
+      "usedBy": 1,
+      "files": [
+        "routes/images.ts"
+      ]
+    },
+    {
+      "package": "fs",
+      "usedBy": 5,
+      "files": [
+        "routes/optimize-video-prompt.ts",
+        "services/download.service.ts",
+        "services/export-runtime.ts",
+        "services/large-text-processor.ts",
+        "services/watermark.service.ts"
+      ]
+    },
+    {
+      "package": "path",
+      "usedBy": 5,
+      "files": [
+        "routes/optimize-video-prompt.ts",
+        "routes/upload.ts",
+        "services/download.service.ts",
+        "services/export-runtime.ts",
+        "services/large-text-processor.ts"
+      ]
+    },
+    {
+      "package": "fs/promises",
+      "usedBy": 4,
+      "files": [
+        "routes/upload.ts",
+        "services/download.service.ts",
+        "services/export-runtime.ts",
+        "services/watermark.service.ts"
+      ]
+    },
+    {
+      "package": "zod",
+      "usedBy": 1,
+      "files": [
+        "routes/voice.ts"
+      ]
+    },
+    {
+      "package": "https",
+      "usedBy": 1,
+      "files": [
+        "services/download.service.ts"
+      ]
+    },
+    {
+      "package": "http",
+      "usedBy": 1,
+      "files": [
+        "services/download.service.ts"
+      ]
+    },
+    {
+      "package": "os",
+      "usedBy": 2,
+      "files": [
+        "services/export-runtime.ts",
+        "services/mock-worker.ts"
+      ]
+    },
+    {
+      "package": "async_hooks",
+      "usedBy": 1,
+      "files": [
+        "services/runtime-context.ts"
+      ]
+    },
+    {
+      "package": "bullmq",
+      "usedBy": 1,
+      "files": [
+        "services/task-queue.service.ts"
+      ]
+    },
+    {
+      "package": "ioredis",
+      "usedBy": 1,
+      "files": [
+        "services/task-queue.service.ts"
+      ]
+    },
+    {
+      "package": "sharp",
+      "usedBy": 1,
+      "files": [
+        "services/watermark.service.ts"
+      ]
+    }
+  ],
+  "timestamp": "2026-05-21T04:09:13.718Z"
+}

@@ -1,0 +1,82 @@
+{
+  "phase": "Phase 1 — PromptRegistry 统一抽象层（修正版）",
+  "timestamp": "2026-06-23T22:00:00+08:00",
+
+  "newFiles": [
+    {
+      "path": "/runtime/prompt/PromptRegistry.ts",
+      "lines": 200,
+      "status": "CREATED",
+      "description": "统一 Prompt 注册中心，唯一入口"
+    }
+  ],
+
+  "modifiedFiles": [
+    {
+      "path": "src/agents/portrait-prompt.agent.ts",
+      "status": "REWRITTEN",
+      "description": "移除所有硬编码 FALLBACK 变量，改用 PromptRegistry.getPromptBatch()",
+      "deletedFallbacks": 5,
+      "deletedDirectPrismaCalls": 0
+    }
+  ],
+
+  "validation": {
+    "singleEntryPoint": true,
+    "directPrismaCalls": 0,
+    "imagePromptBridgeUsed": true,
+    "deprecatedSourcesDetected": [],
+    "registryCoverage": "5% — 仅 portrait-prompt 已收敛，13 个后端模块尚未改造"
+  },
+
+  "promptRegistryState": {
+    "getPrompt(name)": "已实现，带 TTL 缓存",
+    "getPromptBatch(names)": "已实现",
+    "getPromptSource(name)": "已实现",
+    "invalidateCache(name)": "已实现",
+    "clearCache()": "已实现",
+    "getStats()": "已实现",
+    "contextInjection": "支持 {{key}} 模板替换",
+    "sourceEnum": "PromptTemplate | ImagePromptTemplate | fallback",
+    "bridgeMode": true
+  },
+
+  "portraitPromptUpgrade": {
+    "旧逻辑": "prisma.imagePromptTemplates.findUnique + 5 个 FALLBACK_* 硬编码变量",
+    "新逻辑": "PromptRegistry.getPromptBatch(['portrait/negativePrompt', ...])",
+    "删除的硬编码变量": [
+      "FALLBACK_QC_PROMPT（~150行）",
+      "FALLBACK_NEGATIVE_PROMPT（~60行）",
+      "FALLBACK_PROMPT_STRUCTURE（~30行）",
+      "FALLBACK_QUALITY_RULES（~60行）",
+      "FALLBACK_COMPOSITION_RULES（~40行）"
+    ],
+    "删除的DB函数": [
+      "getTemplateContent()",
+      "getTemplateJSON()"
+    ],
+    "新增依赖": "PromptRegistry.getPromptBatch() 桥接 imagePromptTemplates 表（标记 deprecated）"
+  },
+
+  "编译状态": "0 新增错误。PromptRegistry、portrait-prompt 两文件编译无问题",
+
+  "未完成（Phase 2 需要）": [
+    {"file": "src/routes/narrative-llm.ts", "status": "直接 prisma.findUnique（7个name）"},
+    {"file": "src/routes/ai-optimize-frame-prompt.ts", "status": "直接 prisma.findUnique → frame-designer"},
+    {"file": "src/routes/ai-optimize-image-prompt.ts", "status": "直接 prisma.findUnique → image-prompt-designer"},
+    {"file": "src/routes/ai-optimize-shot.ts", "status": "直接 prisma.findUnique → director-of-photography"},
+    {"file": "src/agents/script-breakdown-master.ts", "status": "直接 prisma.findUnique → 剧本拆解总导演"},
+    {"file": "src/agents/aigc-orchestrator.ts", "status": "直接 prisma.findUnique"},
+    {"file": "src/routes/ai-optimize-storyboard.ts", "status": "直接 prisma.findUnique → storyboard-designer"},
+    {"file": "src/routes/optimize-video-agent.ts", "status": "直接 prisma.findUnique（双表）"},
+    {"file": "src/queue/worker-runtime.ts", "status": "直接 prisma.findUnique → video-worker-prompt"},
+    {"file": "src/director-v2/narrative-ir/compileIR.ts", "status": "直接 prisma.findUnique → plot-supervisor"},
+    {"file": "src/director-v2/runtime/api-surface.ts", "status": "直接 prisma.findUnique → plot-supervisor"},
+    {"file": "src/routes/script-breakdown.ts", "status": "读写字 + 自定义 prompt"},
+    {"file": "src/routes/script-submit.ts", "status": "直接 prisma.findUnique（双表）"},
+    {"file": "src/services/hdz/llm.client.ts", "status": "getAgentPrompt() 内部 prisma.findUnique（6个name）"},
+    {"file": "src/routes/execution-images.ts", "status": "prisma.findUnique → character-view-prompts, scene-view-prompts"}
+  ],
+
+  "nextPhase": "Phase 2 — 后端 Route 全部收敛到 PromptRegistry，禁止任何直接 prisma.promptTemplate.findUnique"
+}

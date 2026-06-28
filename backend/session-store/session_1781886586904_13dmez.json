@@ -1,0 +1,81 @@
+{
+  "sessionId": "session_1781886586904_13dmez",
+  "createdAt": 1781886586904,
+  "lastActiveAt": 1781886586904,
+  "status": "active",
+  "storyGraph": {
+    "title": "prod-test",
+    "scenes": [
+      {
+        "id": "s1",
+        "type": "intro",
+        "description": "start",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "A"
+            }
+          ],
+          "action": "walk",
+          "camera": {
+            "shot_type": "medium"
+          },
+          "spatialFrame": "room"
+        }
+      },
+      {
+        "id": "s2",
+        "type": "conflict",
+        "description": "fight",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "A"
+            },
+            {
+              "name": "B"
+            }
+          ],
+          "action": "fight",
+          "camera": {
+            "shot_type": "close-up",
+            "movement": "handheld"
+          },
+          "spatialFrame": "arena"
+        },
+        "relations": {
+          "causedBy": "s1"
+        }
+      },
+      {
+        "id": "s3",
+        "type": "resolution",
+        "description": "escape",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "A"
+            }
+          ],
+          "action": "escape",
+          "camera": {
+            "shot_type": "wide"
+          },
+          "spatialFrame": "door"
+        },
+        "relations": {
+          "resolves": "s2"
+        }
+      }
+    ]
+  },
+  "executionSnapshot": {
+    "currentSceneId": null,
+    "currentShotIndex": 0,
+    "completedScenes": 0,
+    "totalScenes": 0,
+    "intensity": 0.5,
+    "playbackTime": 0,
+    "isPlaying": false
+  }
+}

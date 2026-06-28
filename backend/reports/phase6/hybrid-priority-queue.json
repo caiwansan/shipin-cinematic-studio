@@ -1,0 +1,32 @@
+{
+  "phase": "6.4-hybrid-decomposition",
+  "strategy": "lowest error count first",
+  "queue": [
+    {"file": "assets.ts", "errors": 1, "priority": 1},
+    {"file": "aigc-spec-db.ts", "errors": 1, "priority": 1},
+    {"file": "admin-members-storage.ts", "errors": 1, "priority": 1},
+    {"file": "director-simulation.ts", "errors": 1, "priority": 1},
+    {"file": "narrative-llm.ts", "errors": 1, "priority": 1},
+    {"file": "orchestrator.ts", "errors": 1, "priority": 1},
+    {"file": "story-graph.ts", "errors": 1, "priority": 1},
+    {"file": "schema-runtime.ts", "errors": 2, "priority": 2},
+    {"file": "optimize-video-prompt.ts", "errors": 2, "priority": 2},
+    {"file": "system-health.ts", "errors": 2, "priority": 2},
+    {"file": "user-model-config.ts", "errors": 2, "priority": 2},
+    {"file": "bridge.ts", "errors": 2, "priority": 2},
+    {"file": "director.ts", "errors": 2, "priority": 2},
+    {"file": "pipeline.ts", "errors": 2, "priority": 2},
+    {"file": "quick-creation.ts", "errors": 2, "priority": 2},
+    {"file": "member.ts", "errors": 5, "priority": 3},
+    {"file": "admin-auth.ts", "errors": 5, "priority": 3},
+    {"file": "auth.ts", "errors": 5, "priority": 3},
+    {"file": "messages.ts", "errors": 5, "priority": 3},
+    {"file": "admin-global-config.ts", "errors": 10, "priority": 4},
+    {"file": "qq-oauth.ts", "errors": 10, "priority": 4},
+    {"file": "wechat-oauth.ts", "errors": 10, "priority": 4},
+    {"file": "featured.ts", "errors": 12, "priority": 5},
+    {"file": "stability.ts", "errors": 14, "priority": 5},
+    {"file": "payment.ts", "errors": 16, "priority": 5},
+    {"file": "user-center.ts", "errors": 18, "priority": 5}
+  ]
+}

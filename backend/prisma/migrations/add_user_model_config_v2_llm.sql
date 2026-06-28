@@ -1,0 +1,6 @@
+-- Add LLM fields to UserModelConfigV2
+ALTER TABLE "UserModelConfigV2"
+ADD COLUMN IF NOT EXISTS "llmProvider" TEXT NOT NULL DEFAULT 'volcengine',
+ADD COLUMN IF NOT EXISTS "llmApiKey" TEXT,
+ADD COLUMN IF NOT EXISTS "llmModel" TEXT NOT NULL DEFAULT 'doubao-seed-2-0-plus-260428',
+ADD COLUMN IF NOT EXISTS "llmEnabled" BOOLEAN NOT NULL DEFAULT true;

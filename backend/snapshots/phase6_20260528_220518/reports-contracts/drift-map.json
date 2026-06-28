@@ -1,0 +1,1165 @@
+[
+  {
+    "file": "admin-api-keys.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 11,
+    "success_wrapped": 7,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "admin-assets.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 9,
+    "success_wrapped": 2,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "admin-auth.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 34,
+    "success_wrapped": 7,
+    "bare_returns": 4,
+    "satisfies_types": []
+  },
+  {
+    "file": "admin-global-config.ts",
+    "status": "contract_active",
+    "contract_imports": [],
+    "return_count": 79,
+    "success_wrapped": 8,
+    "bare_returns": 2,
+    "satisfies_types": [
+      "GlobalConfigResponse",
+      "GlobalConfigResponse",
+      "GlobalConfigResponse",
+      "GlobalConfigResponse",
+      "GlobalConfigResponse",
+      "GlobalConfigResponse"
+    ]
+  },
+  {
+    "file": "admin-members-storage.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 3,
+    "success_wrapped": 1,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "admin-models-v2.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 16,
+    "success_wrapped": 12,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "admin-models.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 4,
+    "success_wrapped": 1,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "admin-storage-config.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 22,
+    "success_wrapped": 6,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "agent-orchestrator.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 17,
+    "success_wrapped": 3,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "ai-gateway.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "ai-router.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 15,
+    "success_wrapped": 0,
+    "bare_returns": 2,
+    "satisfies_types": []
+  },
+  {
+    "file": "ai-tasks.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 13,
+    "success_wrapped": 8,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "aigc-spec-db.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 2,
+    "success_wrapped": 1,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "analytics.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 7,
+    "success_wrapped": 5,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "anchor.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 18,
+    "success_wrapped": 11,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "api-keys.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 4,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "asset-cards.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 11,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "asset-registry.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 10,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "asset-versions.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 13,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "assets.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 2,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "async-runtime.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 6,
+    "success_wrapped": 4,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "auth.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 26,
+    "success_wrapped": 3,
+    "bare_returns": 5,
+    "satisfies_types": []
+  },
+  {
+    "file": "autonomous.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 6,
+    "success_wrapped": 5,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "bridge.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 9,
+    "success_wrapped": 7,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "captcha.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 6,
+    "success_wrapped": 0,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "character-state.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 15,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "characters.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 17,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "cluster.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 6,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "cognition-loop.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 10,
+    "success_wrapped": 4,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "continuity.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 12,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "control-plane-v2.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 2,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "control-plane.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 13,
+    "success_wrapped": 0,
+    "bare_returns": 9,
+    "satisfies_types": []
+  },
+  {
+    "file": "costume.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 21,
+    "success_wrapped": 9,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "customer-service.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 12,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "desktop-runtime.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 35,
+    "success_wrapped": 8,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "director-engine.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 31,
+    "success_wrapped": 0,
+    "bare_returns": 3,
+    "satisfies_types": []
+  },
+  {
+    "file": "director-simulation.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 7,
+    "success_wrapped": 3,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "director-v2.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "director.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 18,
+    "success_wrapped": 8,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "execution-debug.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 3,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "execution-graph.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 18,
+    "success_wrapped": 6,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "execution-images.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 46,
+    "success_wrapped": 17,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "execution-journal.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 4,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "execution-trace.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 6,
+    "success_wrapped": 4,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "export-runtime.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 6,
+    "success_wrapped": 2,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "featured.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 13,
+    "success_wrapped": 1,
+    "bare_returns": 6,
+    "satisfies_types": []
+  },
+  {
+    "file": "feedback.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 6,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "global.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 7,
+    "success_wrapped": 5,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "governance.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 10,
+    "success_wrapped": 8,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "hitl.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 19,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "images.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 22,
+    "success_wrapped": 1,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "job-manager.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 11,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "jobs.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 2,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "kernel-causal.ts",
+    "status": "import_only",
+    "contract_imports": [],
+    "return_count": 2,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "kernel-command.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "llm-execution-trace.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 2,
+    "success_wrapped": 0,
+    "bare_returns": 2,
+    "satisfies_types": []
+  },
+  {
+    "file": "member.ts",
+    "status": "contract_active",
+    "contract_imports": [],
+    "return_count": 96,
+    "success_wrapped": 13,
+    "bare_returns": 9,
+    "satisfies_types": [
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse",
+      "MemberResponse"
+    ]
+  },
+  {
+    "file": "messages.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 11,
+    "success_wrapped": 2,
+    "bare_returns": 5,
+    "satisfies_types": []
+  },
+  {
+    "file": "model-params.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 4,
+    "success_wrapped": 3,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "model-provider.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 9,
+    "success_wrapped": 7,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "model-selection.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 6,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "models.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 0,
+    "bare_returns": 2,
+    "satisfies_types": []
+  },
+  {
+    "file": "music.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 0,
+    "bare_returns": 3,
+    "satisfies_types": []
+  },
+  {
+    "file": "narrative-llm.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 31,
+    "success_wrapped": 6,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "observability.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 12,
+    "success_wrapped": 9,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "oms-dashboard.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 21,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "oms-fusion.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 10,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "oms-v2.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 7,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "online-ai.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 13,
+    "success_wrapped": 0,
+    "bare_returns": 4,
+    "satisfies_types": []
+  },
+  {
+    "file": "optimization.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 14,
+    "success_wrapped": 13,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "optimize-video-prompt.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 29,
+    "success_wrapped": 2,
+    "bare_returns": 2,
+    "satisfies_types": []
+  },
+  {
+    "file": "optimize.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 4,
+    "success_wrapped": 0,
+    "bare_returns": 3,
+    "satisfies_types": []
+  },
+  {
+    "file": "orchestrator.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 6,
+    "success_wrapped": 4,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "payment.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 71,
+    "success_wrapped": 7,
+    "bare_returns": 11,
+    "satisfies_types": []
+  },
+  {
+    "file": "pipeline-jobs.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 21,
+    "success_wrapped": 9,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "pipeline.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 11,
+    "success_wrapped": 8,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "product.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 11,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "project-decomposition.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 2,
+    "success_wrapped": 1,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "projects-v2.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 2,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "projects.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 17,
+    "success_wrapped": 7,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "psc1.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 14,
+    "success_wrapped": 9,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "qq-oauth.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 25,
+    "success_wrapped": 1,
+    "bare_returns": 5,
+    "satisfies_types": []
+  },
+  {
+    "file": "queue-runtime.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 3,
+    "success_wrapped": 3,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "quick-creation.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 21,
+    "success_wrapped": 13,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "redirect.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 1,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "reference.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 16,
+    "success_wrapped": 0,
+    "bare_returns": 9,
+    "satisfies_types": []
+  },
+  {
+    "file": "references.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 9,
+    "success_wrapped": 6,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "render-shots.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 2,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "rfvl-verification.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 3,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "runtime-checkpoint.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 9,
+    "success_wrapped": 7,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "runtime-observability.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 7,
+    "success_wrapped": 0,
+    "bare_returns": 7,
+    "satisfies_types": []
+  },
+  {
+    "file": "runtime-trace.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 2,
+    "success_wrapped": 2,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "sandbox.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 9,
+    "success_wrapped": 0,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "scenes.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "scheduler.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 6,
+    "success_wrapped": 3,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "schema-runtime.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 10,
+    "success_wrapped": 8,
+    "bare_returns": 2,
+    "satisfies_types": []
+  },
+  {
+    "file": "script-submit.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 18,
+    "success_wrapped": 3,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "self-check.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 2,
+    "success_wrapped": 1,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "shadow.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 14,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "showrunner.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 5,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "sms.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 2,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "stability.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 23,
+    "success_wrapped": 1,
+    "bare_returns": 11,
+    "satisfies_types": []
+  },
+  {
+    "file": "stage-model-config.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 10,
+    "success_wrapped": 5,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "story-graph.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 18,
+    "success_wrapped": 5,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "storyboards.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 13,
+    "success_wrapped": 0,
+    "bare_returns": 2,
+    "satisfies_types": []
+  },
+  {
+    "file": "system-dashboard.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 12,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "system-health.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 9,
+    "success_wrapped": 7,
+    "bare_returns": 2,
+    "satisfies_types": []
+  },
+  {
+    "file": "system-version.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 1,
+    "success_wrapped": 0,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "tasks.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 17,
+    "success_wrapped": 1,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "tenant.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 16,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "tts.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 4,
+    "success_wrapped": 1,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "unified-model-config.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 8,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "universe-images.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 7,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "upload.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 14,
+    "success_wrapped": 0,
+    "bare_returns": 3,
+    "satisfies_types": []
+  },
+  {
+    "file": "user-api-keys.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 11,
+    "success_wrapped": 7,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "user-center.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 40,
+    "success_wrapped": 6,
+    "bare_returns": 16,
+    "satisfies_types": []
+  },
+  {
+    "file": "user-model-config-v2.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 13,
+    "success_wrapped": 5,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "user-model-config.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 21,
+    "success_wrapped": 6,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "verification.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 4,
+    "success_wrapped": 4,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "video-tasks.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 0,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "voice.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 16,
+    "success_wrapped": 5,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "wechat-oauth.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 25,
+    "success_wrapped": 1,
+    "bare_returns": 5,
+    "satisfies_types": []
+  },
+  {
+    "file": "workflow-visualizer.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 7,
+    "success_wrapped": 0,
+    "bare_returns": 1,
+    "satisfies_types": []
+  },
+  {
+    "file": "workflow.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 0,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "world-memory.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 3,
+    "success_wrapped": 3,
+    "bare_returns": 0,
+    "satisfies_types": []
+  },
+  {
+    "file": "world-model.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 5,
+    "success_wrapped": 0,
+    "bare_returns": 5,
+    "satisfies_types": []
+  },
+  {
+    "file": "world-runtime.ts",
+    "status": "uncovered",
+    "contract_imports": [],
+    "return_count": 21,
+    "success_wrapped": 0,
+    "bare_returns": 1,
+    "satisfies_types": []
+  }
+]

@@ -1,0 +1,523 @@
+<template>
+  <div class="hdzm-app">
+    <!-- 顶部栏 -->
+    <nav class="hdzm-topbar">
+      <button class="hdzm-back" @click="router.back()">←</button>
+      <h1 class="hdzm-title">{{ project?.title || '加载中...' }}</h1>
+      <button class="hdzm-menu-btn" @click="showMenu = !showMenu">···</button>
+      <div v-if="showMenu" class="hdzm-dropdown" @click="showMenu = false">
+        <button @click="generateSummary">📚 生成章节总结</button>
+      </div>
+    </nav>
+
+    <!-- 内容区 -->
+    <div class="hdzm-content">
+      <!-- Tab: 写作 -->
+      <div v-if="tab === 0" class="hdzm-chat">
+        <div class="hdzm-chat-msgs" ref="chatRef">
+          <div v-if="!currentSession" class="hdzm-empty">
+            <p>📝 开始创作</p>
+            <p class="hdzm-sub">输入消息或点快捷按钮</p>
+          </div>
+          <div v-for="(m, i) in messages" :key="i" class="hdzm-msg" :class="'hdzm-msg--' + m.role">
+            <div class="hdzm-msg-avatar">{{ m.role === 'user' ? '🧑' : '🤖' }}</div>
+            <div class="hdzm-msg-bubble">
+              <div class="hdzm-msg-text">{{ m.content }}</div>
+              <button v-if="m.role === 'assistant' && m.content" class="hdzm-tts-btn" @click="playTTS(m.content)">🔊</button>
+            </div>
+          </div>
+          <div v-if="chatLoading" class="hdzm-msg hdzm-msg--assistant">
+            <div class="hdzm-msg-avatar">🤖</div>
+            <div class="hdzm-msg-bubble"><span class="hdzm-typing">思考中...</span></div>
+          </div>
+        </div>
+        <div class="hdzm-quick">
+          <button class="hdzm-qbtn" @click="writeChapter">✍️ 写正文</button>
+          <button class="hdzm-qbtn" @click="quickChat('帮我创建一个角色')">👤 创建角色</button>
+          <button class="hdzm-qbtn" @click="quickChat('帮我创建一个组织势力')">🏛️ 组织</button>
+        </div>
+        <div class="hdzm-input-bar">
+          <input v-model="chatInput" placeholder="输入消息..." @keydown.enter="sendChat" :disabled="chatLoading" />
+          <button @click="sendChat" :disabled="!chatInput.trim() || chatLoading">发送</button>
+          <button class="hdzm-new-btn" @click="newSession">🆕</button>
+        </div>
+      </div>
+
+      <!-- Tab: 手稿 -->
+      <div v-if="tab === 1" class="hdzm-chapter-list" v-show="!reading">
+        <h2>✍️ 手稿</h2>
+        <div v-if="chapters.length === 0" class="hdzm-empty"><p>暂无章节</p></div>
+        <div v-for="ch in chapters" :key="ch.chapterNo" class="hdzm-ch-item" @click="openReader(ch)">
+          <span class="hdzm-ch-no">第{{ ch.chapterNo }}章</span>
+          <span class="hdzm-ch-title">{{ ch.title || '无标题' }}</span>
+          <span class="hdzm-ch-words">{{ ch.wordCount || 0 }}字</span>
+        </div>
+      </div>
+
+      <!-- 全屏阅读器 -->
+      <div v-if="reading" class="hdzm-reader">
+        <div class="hdzm-reader-top">{{ reading.title || `第${reading.chapterNo}章` }}</div>
+        <div class="hdzm-reader-body" :style="{ fontSize: fontSize + 'px' }" @click="readerTap">
+          <div class="hdzm-reader-text">{{ reading.content || '(暂无内容)' }}</div>
+        </div>
+        <div class="hdzm-reader-bar">
+          <button @click="prevCh">◀</button>
+          <button @click="readerTTS">🔊</button>
+          <button @click="fontSize = Math.max(14, fontSize - 1)">A−</button>
+          <span>{{ fontSize }}</span>
+          <button @click="fontSize = Math.min(26, fontSize + 1)">A+</button>
+          <button @click="reading = null">📖</button>
+          <button @click="nextCh">▶</button>
+        </div>
+      </div>
+
+      <!-- Tab: 角色 -->
+      <div v-if="tab === 2">
+        <h2>👤 角色</h2>
+        <div v-if="chars.length === 0" class="hdzm-empty"><p>暂无角色</p></div>
+        <div v-for="c in chars" :key="c.id" class="hdzm-card" @click="selChar = c">
+          <span style="font-size:1.5rem">{{ c.emoji || '🧑' }}</span>
+          <div>
+            <div class="hdzm-card-title">{{ c.name }}</div>
+            <div class="hdzm-card-sub">{{ c.role || '' }}</div>
+            <div class="hdzm-card-desc">{{ c.shortDesc || '' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: 设定 -->
+      <div v-if="tab === 3" class="hdzm-settings">
+        <h2>📚 设定</h2>
+        <h3>📋 大纲</h3>
+        <div v-for="ch in chapters" :key="ch.chapterNo" class="hdzm-outline-item">
+          <span>第{{ ch.chapterNo }}章</span>
+          <span>{{ ch.summary?.slice(0, 30) || ch.title }}</span>
+        </div>
+        <h3>🔒 锁定</h3>
+        <div class="hdzm-lock" v-for="lk in locks" :key="lk.key">
+          <span>{{ lk.label }}</span>
+          <button class="hdzm-toggle" :class="{ on: lockVal(lk.key) }" @click="toggleLock(lk.key)">{{ lockVal(lk.key) ? '开' : '关' }}</button>
+        </div>
+        <h3>🧠 记忆库</h3>
+        <div v-for="m in memories" :key="m.id" class="hdzm-mem-item">{{ m.title || m.content?.slice(0, 40) }}</div>
+        <div v-if="memories.length === 0" class="hdzm-empty"><p>暂无记忆</p></div>
+        <h3>🎨 风格DNA</h3>
+        <div v-if="styleDna" class="hdzm-dna">{{ styleDna }}</div>
+        <div v-else class="hdzm-empty"><p>暂无风格DNA</p></div>
+      </div>
+
+      <!-- Tab: 审批 -->
+      <div v-if="tab === 4">
+        <h2>📋 审批</h2>
+        <div v-if="tasks.length === 0" class="hdzm-empty"><p>暂无待审批</p></div>
+        <div v-for="t in tasks" :key="t.id" class="hdzm-task" @click="selTask = t; fetchReview(t)">
+          <span>第{{ t.chapterNo }}章</span>
+          <span class="hdzm-task-st">{{ t.status }}</span>
+          <span>{{ t.wordCount || 0 }}字</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部 Tab -->
+    <nav class="hdzm-tabs" v-if="!reading">
+      <button v-for="(tb, i) in tabList" :key="i" :class="{ active: tab === i }" @click="tab = i">
+        <span>{{ tb.icon }}</span>
+        <span>{{ tb.label }}</span>
+      </button>
+    </nav>
+
+    <!-- Bottom Sheet: 角色详情 -->
+    <div v-if="selChar" class="hdzm-overlay" @click="selChar = null">
+      <div class="hdzm-sheet" @click.stop>
+        <h3>{{ selChar.emoji || '🧑' }} {{ selChar.name }}</h3>
+        <div class="hdzm-field"><label>定位</label><span>{{ selChar.role }}</span></div>
+        <div class="hdzm-field"><label>势力</label><span>{{ selChar.faction }}</span></div>
+        <div class="hdzm-field"><label>性格</label><span>{{ selChar.personality }}</span></div>
+        <div class="hdzm-field"><label>背景</label><span>{{ selChar.background }}</span></div>
+        <button class="hdzm-close" @click="selChar = null">关闭</button>
+      </div>
+    </div>
+
+    <!-- Bottom Sheet: 审批 -->
+    <div v-if="selTask" class="hdzm-overlay" @click="selTask = null">
+      <div class="hdzm-sheet" @click.stop>
+        <h3>第{{ selTask.chapterNo }}章 审校</h3>
+        <div class="hdzm-field"><label>评分</label><span>{{ reviewRes?.score || '待获取' }}</span></div>
+        <div class="hdzm-field"><label>问题</label></div>
+        <ul v-if="reviewRes?.issues?.length" class="hdzm-issues">
+          <li v-for="(iss, i) in reviewRes.issues" :key="i">{{ iss }}</li>
+        </ul>
+        <div v-else class="hdzm-empty"><p>暂无</p></div>
+        <div class="hdzm-review-acts">
+          <button class="hdzm-rbtn hdzm-rbtn--ok" @click="doApprove('approved')">✅ 通过</button>
+          <button class="hdzm-rbtn hdzm-rbtn--edit" @click="showMod = true">✏️ 修改</button>
+          <button class="hdzm-rbtn hdzm-rbtn--no" @click="showRej = true">❌ 驳回</button>
+        </div>
+        <button class="hdzm-close" @click="selTask = null">关闭</button>
+      </div>
+    </div>
+
+    <!-- 驳回弹窗 -->
+    <div v-if="showRej" class="hdzm-overlay" @click="showRej = false">
+      <div class="hdzm-dialog" @click.stop>
+        <h3>驳回原因</h3>
+        <textarea v-model="rejNote" rows="4" placeholder="请输入原因..."></textarea>
+        <div class="hdzm-dlg-acts">
+          <button @click="showRej = false">取消</button>
+          <button @click="doApprove('rejected')">确认驳回</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 修改弹窗 -->
+    <div v-if="showMod" class="hdzm-overlay" @click="showMod = false">
+      <div class="hdzm-dialog" @click.stop>
+        <h3>修改内容</h3>
+        <textarea v-model="modContent" rows="6" placeholder="修改后的内容..."></textarea>
+        <div class="hdzm-dlg-acts">
+          <button @click="showMod = false">取消</button>
+          <button @click="doApprove('modified')">确认修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+const { $api } = useNuxtApp()
+const projectId = computed(() => route.params.id as string)
+
+// --- State ---
+const tab = ref(0)
+const showMenu = ref(false)
+const project = ref<any>(null)
+const chapters = ref<any[]>([])
+const chars = ref<any[]>([])
+const memories = ref<any[]>([])
+const styleDna = ref('')
+const tasks = ref<any[]>([])
+const messages = ref<any[]>([])
+const chatInput = ref('')
+const chatLoading = ref(false)
+const currentSession = ref('')
+const reading = ref<any>(null)
+const fontSize = ref(18)
+const selChar = ref<any>(null)
+const selTask = ref<any>(null)
+const reviewRes = ref<any>(null)
+const showRej = ref(false)
+const showMod = ref(false)
+const rejNote = ref('')
+const modContent = ref('')
+const chatRef = ref<any>(null)
+
+const tabList = [
+  { icon: '📝', label: '写作' },
+  { icon: '✍️', label: '手稿' },
+  { icon: '👤', label: '角色' },
+  { icon: '📚', label: '设定' },
+  { icon: '📋', label: '审批' },
+]
+
+const locks = [
+  { key: 'styleLocked', label: '风格锁定' },
+  { key: 'outlineLocked', label: '大纲锁定' },
+  { key: 'logicLocked', label: '逻辑锁定' },
+]
+
+function lockVal(k: string): boolean {
+  return project.value?.locks?.[k] !== false
+}
+
+// --- Load ---
+onMounted(async () => {
+  try {
+    const p: any = await $api(`/api/hdz/projects/${projectId.value}`)
+    project.value = p
+  } catch {}
+  try {
+    const c: any = await $api(`/api/hdz/projects/${projectId.value}/chapters`)
+    chapters.value = Array.isArray(c) ? c : []
+  } catch {}
+  try {
+    const c: any = await $api(`/api/hdz/character/${projectId.value}`)
+    chars.value = Array.isArray(c) ? c : []
+  } catch {}
+  try {
+    const m: any = await $api(`/api/hdz/memory/${projectId.value}`)
+    memories.value = Array.isArray(m) ? m : []
+  } catch {}
+  try {
+    const s: any = await $api(`/api/hdz/style-dna/${projectId.value}`)
+    styleDna.value = typeof s === 'string' ? s : s?.styleDna || ''
+  } catch {}
+  try {
+    const t: any = await $api(`/api/hdz/agent/tasks/${projectId.value}`)
+    tasks.value = Array.isArray(t) ? t : []
+  } catch {}
+  try {
+    const s: any = await $api(`/api/hdz/chat/sessions?projectId=${projectId.value}`)
+    if (Array.isArray(s) && s.length > 0) {
+      currentSession.value = s[0].sessionId || s[0].id
+    }
+  } catch {}
+})
+
+// --- Chat ---
+async function newSession() {
+  try {
+    const r: any = await $api(`/api/hdz/chat/sessions?projectId=${projectId.value}`, { method: 'POST' })
+    currentSession.value = r?.sessionId || r?.id || ''
+    messages.value = []
+  } catch {}
+}
+
+async function sendChat() {
+  if (!chatInput.value.trim() || chatLoading.value) return
+  const msg = chatInput.value.trim()
+  chatInput.value = ''
+  messages.value.push({ role: 'user', content: msg })
+  chatLoading.value = true
+  if (!currentSession.value) await newSession()
+  try {
+    const res = await fetch('/api/hdz/chat/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: projectId.value, sessionId: currentSession.value, message: msg }),
+    })
+    if (res.body) {
+      const reader = res.body.getReader()
+      const dec = new TextDecoder()
+      let acc = ''
+      messages.value.push({ role: 'assistant', content: '' })
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        acc += dec.decode(value, { stream: true })
+        messages.value[messages.value.length - 1].content = acc
+        scrollChat()
+      }
+    } else {
+      const d = await res.json()
+      messages.value.push({ role: 'assistant', content: d?.text || d?.message || '完成' })
+    }
+  } catch {
+    messages.value.push({ role: 'assistant', content: '发送失败' })
+  } finally {
+    chatLoading.value = false
+    scrollChat()
+  }
+}
+
+function scrollChat() {
+  nextTick(() => { if (chatRef.value) chatRef.value.scrollTop = chatRef.value.scrollHeight })
+}
+
+function quickChat(text: string) {
+  chatInput.value = text
+  sendChat()
+}
+
+// --- Writing ---
+async function writeChapter() {
+  try {
+    await $api('/api/hdz/agent/write', {
+      method: 'POST',
+      body: { projectId: projectId.value, chapterNo: chapters.value.length + 1, mode: 'single' },
+    })
+    pollTask()
+  } catch {}
+}
+
+function pollTask() {
+  const iv = setInterval(async () => {
+    try {
+      const t: any = await $api(`/api/hdz/agent/tasks/${projectId.value}`)
+      tasks.value = Array.isArray(t) ? t : []
+      const pending = tasks.value.filter((x: any) => x.status === 'queued' || x.status === 'running')
+      if (pending.length === 0) {
+        clearInterval(iv)
+        if (tasks.value.length > 0) {
+          selTask.value = tasks.value[tasks.value.length - 1]
+          await fetchReview(selTask.value)
+          tab.value = 4
+        }
+        const c: any = await $api(`/api/hdz/projects/${projectId.value}/chapters`)
+        chapters.value = Array.isArray(c) ? c : []
+      }
+    } catch { clearInterval(iv) }
+  }, 2000) as any
+}
+
+async function fetchReview(task: any) {
+  try {
+    const r: any = await $api(`/api/hdz/agent/review/${projectId.value}/${task.chapterNo}`)
+    reviewRes.value = r || null
+  } catch { reviewRes.value = null }
+}
+
+async function doApprove(action: string) {
+  if (!selTask.value) return
+  const body: any = { taskId: selTask.value.id, action }
+  if (action === 'rejected') { body.note = rejNote.value; showRej.value = false }
+  if (action === 'modified') { body.modifiedOutput = modContent.value; showMod.value = false }
+  try {
+    await $api('/api/hdz/agent/approve', { method: 'POST', body })
+    selTask.value = null
+    rejNote.value = ''
+    modContent.value = ''
+    const t: any = await $api(`/api/hdz/agent/tasks/${projectId.value}`)
+    tasks.value = Array.isArray(t) ? t : []
+  } catch {}
+}
+
+// --- Reader ---
+function openReader(ch: any) { reading.value = ch }
+function readerTap(e: MouseEvent) {
+  const el = e.currentTarget as HTMLElement
+  const r = el.getBoundingClientRect()
+  const x = e.clientX - r.left
+  if (x < r.width * 0.3) prevCh()
+  else if (x > r.width * 0.7) nextCh()
+}
+function chIdx() { return chapters.value.findIndex((c: any) => c.chapterNo === reading.value?.chapterNo) }
+function prevCh() { const i = chIdx(); if (i > 0) reading.value = chapters.value[i - 1] }
+function nextCh() { const i = chIdx(); if (i < chapters.value.length - 1) reading.value = chapters.value[i + 1] }
+
+async function readerTTS() {
+  if (!reading.value?.content) return
+  try {
+    const r: any = await $api('/api/hdz/tts', { method: 'POST', body: { text: reading.value.content.slice(0, 2000) }, timeout: 300000 })
+    if (r?.url) new Audio(r.url).play()
+  } catch {}
+}
+
+async function playTTS(text: string) {
+  if (!text) return
+  try {
+    const r: any = await $api('/api/hdz/tts', { method: 'POST', body: { text: text.slice(0, 1000) }, timeout: 300000 })
+    if (r?.url) new Audio(r.url).play()
+  } catch {}
+}
+
+// --- Locks ---
+async function toggleLock(k: string) {
+  if (!project.value) return
+  try {
+    const nv = !lockVal(k)
+    await $api(`/api/hdz/projects/${projectId.value}/locks`, { method: 'PATCH', body: { [k]: nv } } as any)
+    if (project.value.locks) project.value.locks[k] = nv
+  } catch {}
+}
+
+// --- Librarian ---
+async function generateSummary() {
+  try {
+    await $api('/api/hdz/library-reader/summarize', { method: 'POST', body: { projectId: projectId.value, overwriteExisting: false } } as any)
+  } catch {}
+}
+</script>
+
+<style scoped>
+.hdzm-app { display:flex; flex-direction:column; height:100dvh; max-width:420px; margin:0 auto; background:#f5f0e8; color:#333; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,sans-serif; }
+.hdzm-topbar { display:flex; align-items:center; padding:calc(8px + env(safe-area-inset-top,0px)) 10px 6px; background:linear-gradient(135deg,#e8dccc,#d6c8b4); border-bottom:1px solid #c8b89e; gap:8px; position:relative; min-height:44px; }
+.hdzm-back { font-size:24px; background:none; border:none; color:#5a4a34; cursor:pointer; padding:0 4px; }
+.hdzm-title { flex:1; font-size:16px; font-weight:600; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hdzm-menu-btn { font-size:18px; background:none; border:none; color:#5a4a34; cursor:pointer; letter-spacing:2px; padding:4px 6px; }
+.hdzm-dropdown { position:absolute; top:44px; right:8px; background:#fffdf7; border:1px solid #d6c8b4; border-radius:8px; z-index:30; box-shadow:0 4px 12px rgba(0,0,0,0.1); overflow:hidden; }
+.hdzm-dropdown button { display:block; width:100%; padding:10px 14px; border:none; background:none; text-align:left; font-size:13px; color:#333; cursor:pointer; }
+.hdzm-dropdown button:active { background:#ede5d8; }
+.hdzm-content { flex:1; overflow-y:auto; padding:10px 12px; padding-bottom:0; }
+.hdzm-empty { text-align:center; padding:32px 16px; color:#999; }
+.hdzm-sub { font-size:12px; color:#bbb; margin:4px 0 0; }
+h2 { font-size:16px; font-weight:600; margin:0 0 10px; }
+h3 { font-size:13px; font-weight:600; margin:14px 0 6px; color:#666; }
+
+/* Chat */
+.hdzm-chat { display:flex; flex-direction:column; height:calc(100dvh - 100px); }
+.hdzm-chat-msgs { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:4px 0; }
+.hdzm-msg { display:flex; gap:6px; max-width:88%; }
+.hdzm-msg--user { align-self:flex-end; flex-direction:row-reverse; }
+.hdzm-msg--assistant { align-self:flex-start; }
+.hdzm-msg-avatar { font-size:20px; flex-shrink:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center; }
+.hdzm-msg-bubble { background:#fffdf7; border:1px solid #e0d6c6; border-radius:10px; padding:8px 12px; font-size:14px; line-height:1.6; word-break:break-word; }
+.hdzm-msg--user .hdzm-msg-bubble { background:#e8ddd0; border-color:#d0c0a8; }
+.hdzm-msg-text { white-space:pre-wrap; }
+.hdzm-tts-btn { font-size:12px; background:none; border:1px solid #d6c8b4; border-radius:4px; padding:1px 6px; margin-top:4px; cursor:pointer; }
+.hdzm-typing { color:#999; font-style:italic; font-size:13px; }
+.hdzm-quick { display:flex; gap:6px; padding:6px 0; overflow-x:auto; flex-shrink:0; }
+.hdzm-qbtn { flex-shrink:0; padding:6px 12px; background:#ede5d8; border:1px solid #c8b89e; border-radius:16px; font-size:12px; color:#5a4a34; cursor:pointer; white-space:nowrap; }
+.hdzm-input-bar { display:flex; gap:6px; padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px)); background:#f5f0e8; flex-shrink:0; }
+.hdzm-input-bar input { flex:1; border:1px solid #d6c8b4; border-radius:8px; padding:8px 10px; font-size:14px; background:#fff; outline:none; }
+.hdzm-input-bar button { padding:8px 14px; border:none; border-radius:8px; background:#8b7355; color:#fff; font-size:13px; cursor:pointer; }
+.hdzm-input-bar button:disabled { opacity:0.4; }
+.hdzm-new-btn { background:#ede5d8 !important; color:#5a4a34 !important; font-size:16px !important; }
+
+/* Chapter list */
+.hdzm-ch-item { display:flex; align-items:center; padding:10px; border-bottom:1px solid #ede5d8; gap:8px; cursor:pointer; }
+.hdzm-ch-no { font-size:12px; color:#999; min-width:48px; }
+.hdzm-ch-title { flex:1; font-size:14px; }
+.hdzm-ch-words { font-size:11px; color:#999; }
+
+/* Reader */
+.hdzm-reader { position:fixed; inset:0; z-index:50; background:#f5f0e8; display:flex; flex-direction:column; }
+.hdzm-reader-top { text-align:center; font-size:16px; font-weight:600; padding:12px 16px calc(8px + env(safe-area-inset-top,0px)); background:linear-gradient(135deg,#e8dccc,#d6c8b4); }
+.hdzm-reader-body { flex:1; overflow-y:auto; padding:16px 20px; line-height:1.9; }
+.hdzm-reader-text { max-width:680px; margin:0 auto; white-space:pre-wrap; }
+.hdzm-reader-bar { display:flex; align-items:center; justify-content:center; gap:12px; padding:8px calc(8px + env(safe-area-inset-bottom,0px)); background:rgba(214,200,180,0.9); border-top:1px solid #c8b89e; }
+.hdzm-reader-bar button { background:none; border:1px solid #b8a88a; border-radius:6px; padding:6px 10px; font-size:12px; color:#5a4a34; cursor:pointer; }
+.hdzm-reader-bar span { font-size:12px; color:#888; min-width:20px; text-align:center; }
+
+/* Character */
+.hdzm-card { display:flex; gap:10px; padding:10px; border-bottom:1px solid #ede5d8; cursor:pointer; }
+.hdzm-card-title { font-size:14px; font-weight:600; }
+.hdzm-card-sub { font-size:11px; color:#999; }
+.hdzm-card-desc { font-size:12px; color:#777; }
+
+/* Settings */
+.hdzm-outline-item { display:flex; gap:8px; padding:6px 0; font-size:13px; border-bottom:1px solid #ede5d8; }
+.hdzm-lock { display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:13px; }
+.hdzm-toggle { width:40px; height:22px; border-radius:11px; border:1px solid #c8b89e; background:#ede5d8; color:#999; font-size:11px; cursor:pointer; }
+.hdzm-toggle.on { background:#8b7355; color:#fff; border-color:#8b7355; }
+.hdzm-mem-item { padding:6px 0; font-size:13px; border-bottom:1px solid #ede5d8; }
+.hdzm-dna { font-size:12px; color:#666; line-height:1.6; padding:8px; background:rgba(255,255,255,0.4); border-radius:6px; }
+
+/* Task */
+.hdzm-task { display:flex; align-items:center; gap:8px; padding:10px; border-bottom:1px solid #ede5d8; cursor:pointer; font-size:13px; }
+.hdzm-task-st { font-size:11px; padding:1px 6px; border-radius:4px; background:#ede5d8; }
+
+/* Bottom tabs */
+.hdzm-tabs { display:flex; background:rgba(232,220,204,0.95); backdrop-filter:blur(10px); border-top:1px solid #c8b89e; padding:4px 0 calc(4px + env(safe-area-inset-bottom,0px)); }
+.hdzm-tabs button { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 0; background:none; border:none; font-size:10px; color:#999; cursor:pointer; }
+.hdzm-tabs button.active { color:#5a4a34; font-weight:600; }
+.hdzm-tabs button span:first-child { font-size:18px; }
+
+/* Bottom sheet */
+.hdzm-overlay { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.4); display:flex; align-items:flex-end; justify-content:center; }
+.hdzm-sheet { background:#faf7f0; border-radius:16px 16px 0 0; width:100%; max-width:420px; max-height:70vh; overflow-y:auto; padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px)); }
+.hdzm-sheet h3 { margin:0 0 14px; font-size:16px; }
+.hdzm-field { display:flex; gap:6px; padding:4px 0; font-size:13px; }
+.hdzm-field label { color:#999; min-width:40px; }
+.hdzm-close { width:100%; margin-top:14px; padding:10px; border:none; border-radius:8px; background:#ede5d8; font-size:14px; color:#5a4a34; cursor:pointer; }
+.hdzm-issues { list-style:none; padding:0; margin:0; }
+.hdzm-issues li { font-size:12px; padding:3px 0; color:#666; }
+.hdzm-review-acts { display:flex; gap:8px; margin-top:12px; }
+.hdzm-rbtn { flex:1; padding:8px; border:none; border-radius:6px; font-size:12px; cursor:pointer; }
+.hdzm-rbtn--ok { background:#e0e8d8; color:#3a6a3a; }
+.hdzm-rbtn--edit { background:#e8e0d0; color:#6a5a3a; }
+.hdzm-rbtn--no { background:#f0d8d8; color:#a03a3a; }
+
+/* Dialog */
+.hdzm-dialog { background:#faf7f0; border-radius:12px; width:90%; max-width:360px; padding:20px; margin-bottom:20vh; }
+.hdzm-dialog h3 { margin:0 0 10px; }
+.hdzm-dialog textarea { width:100%; border:1px solid #d6c8b4; border-radius:6px; padding:8px; font-size:13px; resize:vertical; background:#fff; box-sizing:border-box; }
+.hdzm-dlg-acts { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+.hdzm-dlg-acts button { padding:8px 16px; border:none; border-radius:6px; font-size:13px; cursor:pointer; }
+.hdzm-dlg-acts button:first-child { background:#ede5d8; color:#5a4a34; }
+.hdzm-dlg-acts button:last-child { background:#8b7355; color:#fff; }
+</style>

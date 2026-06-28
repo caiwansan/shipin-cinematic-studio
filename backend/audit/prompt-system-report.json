@@ -1,0 +1,217 @@
+{
+  "phase": "Phase 0 — 现状冻结与扫描",
+  "timestamp": "2026-06-23T21:00:00+08:00",
+  "systemVersion": "当前体系：前端硬编码 + 后端半统一 PromptTemplate",
+
+  "frontend": {
+    "hardcodedRules": {
+      "DirectorAgent.ts": {
+        "path": "frontend/studio-v2/runtime/director-ai/DirectorAgent.ts",
+        "hardcodedMaps": [
+          {
+            "name": "EMOTION_TO_CAMERA",
+            "type": "Record<string, {camera, reason}[]>",
+            "line": 22,
+            "content": "10种情绪→镜头映射（高兴→推，悲伤→拉...）",
+            "target": "PromptRegistry.getPrompt('director/emotion-camera-map')"
+          },
+          {
+            "name": "EMOTION_TRANSITIONS",
+            "type": "Record<string, string[]>",
+            "line": 58,
+            "content": "8种情绪间合法转场规则",
+            "target": "PromptRegistry.getPrompt('director/emotion-transitions')"
+          },
+          {
+            "name": "DEFAULT_CAMERAS",
+            "type": "string[]",
+            "line": 34,
+            "content": "6种默认运镜回退方案",
+            "target": "PromptRegistry.getPrompt('director/default-cameras')"
+          },
+          {
+            "name": "CONTINUITY_RULES",
+            "type": "object with thresholds",
+            "line": 81,
+            "content": "连续性检查阈值（sceneConsistencyScore < 0.5, cameraFlowScore < 0.3）",
+            "target": "PromptRegistry.getPrompt('director/continuity-thresholds')"
+          },
+          {
+            "name": "checkConstraints()",
+            "type": "inline rule logic",
+            "line": 469,
+            "content": "5条硬编码约束检查（max-scene-change≤1, emotion-jump-limit≤3, camera-style-lock≤2等）",
+            "target": "PromptRegistry.getPrompt('director/constraint-rules')"
+          }
+        ],
+        "ruleLogicBlocks": [
+          "suggestCameraForFrame() — switch/if-else on emotion → camera",
+          "suggestEmotions() — transition validation via EMOTION_TRANSITIONS",
+          "checkContinuity() — scoring logic",
+          "fixViolations() — 4-type switch (emotion_break, camera_inconsistency, scene_jump, character_drift)",
+          "computeGraphHints() — scene/emotion/camera graph building"
+        ]
+      },
+      "SegmentToPromptCompiler.ts": {
+        "path": "frontend/studio-v2/runtime/execution/SegmentToPromptCompiler.ts",
+        "hardcodedMaps": [
+          {
+            "name": "EMOTION_TO_TONE",
+            "type": "Record<string, string>",
+            "line": 12,
+            "content": "10种情绪→画风描述（平静→柔和自然光，愤怒→高对比度...）",
+            "target": "PromptRegistry.getPrompt('compiler/emotion-tone-map')"
+          },
+          {
+            "name": "CAMERA_DESCRIPTIONS",
+            "type": "Record<string, string>",
+            "line": 25,
+            "content": "10种运镜→中文描述（推→镜头匀速向前推进...）",
+            "target": "PromptRegistry.getPrompt('compiler/camera-description-map')"
+          }
+        ],
+        "violations": [
+          "compileVisual() 中直接查 EMOTION_TO_TONE——语义转换逻辑不应在前端",
+          "compileCamera() 中直接查 CAMERA_DESCRIPTIONS——描述映射应由后端提供"
+        ]
+      }
+    },
+
+    "constraintFileHardcoded": {
+      "path": "frontend/studio-v2/runtime/director-ai/constraint-types.ts",
+      "hardcodedValues": {
+        "BUILTIN_CONSTRAINTS": [
+          { "id": "max-scene-change", "severity": "hard", "rule": "≤1次场景切换" },
+          { "id": "emotion-jump-limit", "severity": "hard", "rule": "相邻帧≤30%变化" },
+          { "id": "camera-style-lock", "severity": "soft", "rule": "≤2种镜头风格" },
+          { "id": "character-wardrobe-lock", "severity": "soft", "rule": "服装一致" },
+          { "id": "scene-transition-required", "severity": "hard", "rule": "必须标记过渡帧" }
+        ]
+      }
+    },
+
+    "vulnerabilitySummary": {
+      "hardcodedMaps": 7,
+      "ruleBlocks": 5,
+      "severity": "严重——所有规则逻辑缺乏中心化控制，修改需发版"
+    }
+  },
+
+  "backend": {
+    "promptTemplateUsage": {
+      "pattern": "分散——每个 route/agent 独立查询 PromptTemplate 表",
+      "violations": {
+        "directPrismaQueries": 8,
+        "queryPatterns": [
+          "prisma.promptTemplate.findUnique — 直接查表",
+          "getDbPrompt() — 内部还是 prisma.findUnique",
+          "getFrameDesignerPrompt() — 固定 name，内部 prisma.findUnique",
+          "getDirectorOfPhotographyPrompt() — 固定 name，内部 prisma.findUnique",
+          "getNarrativeSystemPrompt() — 固定 name，内部 prisma.findUnique",
+          "getCharacterVisualDesignerPrompt() — 固定 name，内部 prisma.findUnique",
+          "getSystemPrompt() in ai-optimize-image-prompt — 固定 name，内部 prisma.findUnique",
+          "getAgentPrompt() in hdz/* — 统一函数，但仍在 llm.client.ts 内 prisma.findUnique"
+        ]
+      }
+    },
+
+    "promptTemplateNames": {
+      "seed定义的names": [
+        "剧情总指挥", "角色设计师", "场景设计师", "角色定妆师",
+        "声音设计师", "画面设计师", "镜头/特效师",
+        "六维数据拆解分析", "道具设计师",
+        "narrative-system-prompt", "video-prompt-designer",
+        "image-prompt-designer", "frame-designer",
+        "character-visual-designer", "scene-visual-designer",
+        "director-of-photography",
+        "character-view-prompts", "scene-view-prompts"
+      ],
+      "imagePromptTemplates seed": [
+        "type=portrait: negative_prompt, qc_prompt, prompt_structure, quality_rules, composition_rules"
+      ],
+      "后端实际使用的names": [
+        "frame-designer", "director-of-photography",
+        "narrative-system-prompt", "character-visual-designer",
+        "image-prompt-designer", "video-prompt-designer",
+        "video-optimize-user-prompt", "video-worker-prompt",
+        "storyboard-designer", "plot-supervisor",
+        "script-template-v2",
+        "六维数据拆解分析", "aigc-prompt",
+        "剧本拆解大师", "剧本拆解总导演", "道具设计师",
+        "character-view-prompts", "scene-view-prompts",
+        "hdz-planner", "hdz-writer", "hdz-reviewer", "hdz-character", "hdz-director", "hdz-summarizer"
+      ]
+    },
+
+    "orphanPrompts": {
+      "seed有但后端未用": [
+        "剧情总指挥", "角色设计师", "场景设计师", "角色定妆师",
+        "声音设计师", "画面设计师", "镜头/特效师"
+      ],
+      "后端用了但seed没有（需补种）": [
+        "hdz-planner", "hdz-writer", "hdz-reviewer", "hdz-character", "hdz-director", "hdz-summarizer",
+        "剧本拆解大师", "剧本拆解总导演", "plot-supervisor",
+        "storyboard-designer", "video-optimize-user-prompt",
+        "video-worker-prompt", "script-template-v2",
+        "aigc-prompt"
+      ],
+      "note": "aigc-orchestrator 的7个子Agent prompt已从seed层面删除逻辑（换成了统一的separate prompts），但seed仍有残留"
+    },
+
+    "portraitFallbackIssues": {
+      "path": "src/agents/portrait-prompt.agent.ts",
+      "问题": "虽然有 DB 读取，但保留5个硬编码 FALLBACK_* 变量。DB 失败才回退到硬编码。根据宪法应禁止硬编码，必须强制DB存在",
+      "行号": "35,56,64,70,82",
+      "解法": "去掉FALLBACK，改为只抛错（同其他route的宪法级禁止策略）"
+    },
+
+    "nonStandardReadPatterns": [
+      {"file": "src/queue/worker-runtime.ts", "行号": 439, "name": "video-worker-prompt", "类型": "读 sections 数组"},
+      {"file": "src/director-v2/narrative-ir/compileIR.ts", "行号": 58, "name": "plot-supervisor", "类型": "读 .prompt"},
+      {"file": "src/director-v2/runtime/api-surface.ts", "行号": 284, "name": "plot-supervisor", "类型": "读 .prompt"},
+      {"file": "src/routes/script-breakdown.ts", "行号": 253/279, "name": "剧本拆解大师", "类型": "读写（管理后台可编辑）"},
+      {"file": "src/routes/optimize-video-agent.ts", "行号": 113, "name": "video-optimize-user-prompt", "类型": "另一个user prompt表（特例双表）"},
+      {"file": "src/routes/narrative-llm.ts", "行号": 465, "name": "aigc-prompt", "类型": "getDbPrompt('aigc-prompt')"}
+    ]
+  },
+
+  "dependencyGraph": {
+    "nodes": [
+      {"id": "frontend/DirectorAgent", "type": "frontend", "reads": ["前端硬编码: EMOTION_TO_CAMERA", "前端硬编码: EMOTION_TRANSITIONS"]},
+      {"id": "frontend/SegmentToPromptCompiler", "type": "frontend", "reads": ["前端硬编码: EMOTION_TO_TONE", "前端硬编码: CAMERA_DESCRIPTIONS"]},
+      {"id": "backend/narrative-llm", "type": "backend", "reads": ["narrative-system-prompt", "六维数据拆解分析", "character-visual-designer", "aigc-prompt"]},
+      {"id": "backend/ai-optimize-frame-prompt", "type": "backend", "reads": ["frame-designer"]},
+      {"id": "backend/ai-optimize-image-prompt", "type": "backend", "reads": ["image-prompt-designer"]},
+      {"id": "backend/ai-optimize-shot", "type": "backend", "reads": ["director-of-photography"]},
+      {"id": "backend/ai-optimize-storyboard", "type": "backend", "reads": ["storyboard-designer"]},
+      {"id": "backend/optimize-video-agent", "type": "backend", "reads": ["video-prompt-designer", "video-optimize-user-prompt"]},
+      {"id": "backend/worker-runtime", "type": "backend", "reads": ["video-worker-prompt"]},
+      {"id": "backend/script-breakdown", "type": "backend", "reads": ["剧本拆解大师"]},
+      {"id": "backend/script-submit", "type": "backend", "reads": ["道具设计师", "六维数据拆解分析"]},
+      {"id": "backend/script-breakdown-master", "type": "backend", "reads": ["剧本拆解总导演"]},
+      {"id": "backend/aigc-orchestrator", "type": "backend", "reads": ["剧本拆解总导演"]},
+      {"id": "backend/compileIR", "type": "backend", "reads": ["plot-supervisor"]},
+      {"id": "backend/api-surface", "type": "backend", "reads": ["plot-supervisor"]},
+      {"id": "backend/hdz/*", "type": "backend", "reads": ["hdz-planner", "hdz-writer", "hdz-reviewer", "hdz-character", "hdz-director", "hdz-summarizer"]},
+      {"id": "backend/portrait-prompt.agent", "type": "backend", "reads": ["imagePromptTemplates(portrait/*) + 硬编码FALLBACK"]},
+      {"id": "backend/execution-images", "type": "backend", "reads": ["character-view-prompts", "scene-view-prompts"]}
+    ],
+    "edges": [
+      {"from": "frontend", "to": "DB PromptTemplate", "label": "（无——全硬编码）"},
+      {"from": "backend/narrative-llm", "to": "DB PromptTemplate", "label": "prisma.findUnique（7个name）"},
+      {"from": "backend/hdz/*", "to": "DB PromptTemplate", "label": "getAgentPrompt()（6个name）"},
+      {"from": "backend/portrait-prompt.agent", "to": "DB imagePromptTemplates", "label": "prisma.findUnique + FALLBACK"},
+      {"from": "backend/*", "to": "DB PromptTemplate", "label": "13个独立入口，13次 findUnique"}
+    ],
+    "dataFlowIssue": "后端13个模块各自直接查DB，没有统一缓存层。每个请求至少1次DB查询（某些route查2次）。前端完全离线，无后端同步机制。"
+  },
+
+  "summary": {
+    "totalHardcodedFrontendMaps": 7,
+    "totalBackendPromptSources": 13,
+    "totalUniquePromptNamesUsed": 26,
+    "orphanPromptNames_SeedUnused": 7,
+    "missingPrompts_HasUseNoSeed": 14,
+    "severityAssessment": "Phase 0 完成。现状：前端7个硬编码映射+5个规则块完全脱离DB；后端13个分散的prisma.findUnique入口，无统一缓存，无输入校验，无版本追踪。宪法级问题：portrait-prompt.agent 仍有5个硬编码FALLBACK变量。潜在风险：前端规则变更需发版，后端的分散查询导致系统在大量并发prompt请求下DB压力大。"
+  }
+}

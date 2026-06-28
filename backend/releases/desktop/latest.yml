@@ -1,0 +1,8 @@
+version: 1.0.0
+files:
+  - url: 昆仑镜-1.0.0-win-x64.exe
+    sha512: placeholder_sha512
+    size: 100000000
+path: 昆仑镜-1.0.0-win-x64.exe
+sha512: placeholder_sha512
+releaseDate: 2026-06-04T00:00:00.000Z

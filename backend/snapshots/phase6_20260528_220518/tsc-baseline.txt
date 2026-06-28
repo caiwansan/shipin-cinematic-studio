@@ -1,0 +1,399 @@
+src/agents/portrait-prompt.agent.ts(132,45): error TS2345: Argument of type '(v: string) => string' is not assignable to parameter of type '(value: unknown, index: number, array: unknown[]) => string'.
+src/core/verification/execution-plane/adapter-coverage-mapper.ts(43,17): error TS2339: Property 'TTS' does not exist on type 'typeof Capability'.
+src/core/verification/execution-plane/index.ts(5,10): error TS2300: Duplicate identifier 'staticPathScanner'.
+src/core/verification/execution-plane/index.ts(5,29): error TS2300: Duplicate identifier 'staticPathScanner'.
+src/core/verification/execution-plane/index.ts(6,10): error TS2300: Duplicate identifier 'runtimeCallTracer'.
+src/core/verification/execution-plane/index.ts(6,29): error TS2300: Duplicate identifier 'runtimeCallTracer'.
+src/core/verification/execution-plane/index.ts(7,10): error TS2300: Duplicate identifier 'adapterCoverageMapper'.
+src/core/verification/execution-plane/index.ts(7,33): error TS2300: Duplicate identifier 'adapterCoverageMapper'.
+src/core/verification/execution-plane/index.ts(8,10): error TS2300: Duplicate identifier 'violationReporter'.
+src/core/verification/execution-plane/index.ts(8,29): error TS2300: Duplicate identifier 'violationReporter'.
+src/director-v2/cinematic-compiler/cinematic-compiler.ts(13,30): error TS2305: Module '"../render/backends/execution-plan.js"' has no exported member 'ShotPlan'.
+src/director-v2/cinematic-compiler/cinematic-compiler.ts(517,30): error TS2339: Property 'shots' does not exist on type 'ExecutionPlan'.
+src/director-v2/cinematic-compiler/cinematic-compiler.ts(521,31): error TS7006: Parameter 'shot' implicitly has an 'any' type.
+src/director-v2/cinematic-compiler/cinematic-compiler.ts(521,37): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/director-v2/cinematic-compiler/cinematic-compiler.ts(531,30): error TS7006: Parameter 'shot' implicitly has an 'any' type.
+src/director-v2/compat/director-adapter.ts(216,19): error TS2304: Cannot find name 'T'.
+src/director-v2/compat/director-adapter.ts(217,15): error TS2304: Cannot find name 'T'.
+src/director-v2/constitution-compiler.ts(32,34): error TS2724: '"./schema/story-constitution.js"' has no exported member named 'StoryConstitutionFields'. Did you mean 'StoryConstitution'?
+src/director-v2/constitution-compiler.ts(173,9): error TS2741: Property 'confidence' is missing in type '{ constitution: StoryConstitution; actions: never[]; }' but required in type 'RepairResult'.
+src/director-v2/constitution-compiler.ts(196,9): error TS2322: Type '"skeleton"' is not assignable to type '"schema_validation" | "llm_call" | "normalization" | "semantic_repair"'.
+src/director-v2/constitution-compiler.ts(213,11): error TS2741: Property 'confidence' is missing in type '{ constitution: StoryConstitution; actions: never[]; }' but required in type 'RepairResult'.
+src/director-v2/constitution-compiler.ts(293,11): error TS2322: Type '"enrichment"' is not assignable to type '"schema_validation" | "llm_call" | "normalization" | "semantic_repair"'.
+src/director-v2/constitution-compiler.ts(338,11): error TS2322: Type '"drift_detector"' is not assignable to type '"schema_validation" | "llm_call" | "normalization" | "semantic_repair"'.
+src/director-v2/constitution-compiler.ts(372,9): error TS2322: Type '"enrichment"' is not assignable to type '"schema_validation" | "llm_call" | "normalization" | "semantic_repair"'.
+src/director-v2/constitution-compiler.ts(389,11): error TS2741: Property 'confidence' is missing in type '{ constitution: StoryConstitution; actions: never[]; }' but required in type 'RepairResult'.
+src/director-v2/diagnostics/director-field.ts(718,7): error TS2322: Type '{ admissibleRange: [number, number]; anchorStrength?: number | undefined; signConstraint: "negative"; } | { admissibleRange: [number, number]; anchorStrength?: number | undefined; signConstraint: "any" | "positive"; } | ... 6 more ... | { ...; }' is not assignable to type 'never'.
+src/director-v2/diagnostics/system-diagnostics.ts(148,56): error TS2339: Property '__type' does not exist on type 'SystemDiagnosticsReport'.
+src/director-v2/memory/constitution-store.ts(10,50): error TS2307: Cannot find module './constitution-fingerprint.js' or its corresponding type declarations.
+src/director-v2/memory/constitution-store.ts(84,9): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'JsonNull | InputJsonValue'.
+src/director-v2/memory/director-memory.ts(101,9): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'JsonNull | InputJsonValue'.
+src/director-v2/memory/director-memory.ts(102,9): error TS2322: Type 'Record<string, unknown>[]' is not assignable to type 'JsonNull | InputJsonValue'.
+src/director-v2/memory/director-memory.ts(103,9): error TS2322: Type 'Record<string, unknown>[]' is not assignable to type 'JsonNull | InputJsonValue'.
+src/director-v2/memory/director-memory.ts(104,9): error TS2322: Type 'Record<string, unknown>[]' is not assignable to type 'JsonNull | InputJsonValue'.
+src/director-v2/memory/director-memory.ts(121,9): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'JsonNull | InputJsonValue | undefined'.
+src/director-v2/memory/director-memory.ts(139,9): error TS2322: Type 'Record<string, unknown>[]' is not assignable to type 'JsonNull | InputJsonValue | undefined'.
+src/director-v2/memory/director-memory.ts(157,9): error TS2322: Type 'Record<string, unknown>[]' is not assignable to type 'JsonNull | InputJsonValue | undefined'.
+src/director-v2/memory/director-memory.ts(186,9): error TS2322: Type 'Record<string, unknown>[]' is not assignable to type 'JsonNull | InputJsonValue | undefined'.
+src/director-v2/norm/anchor/constitution-anchors.ts(18,40): error TS2307: Cannot find module '../schema/story-constitution.js' or its corresponding type declarations.
+src/director-v2/norm/anchor/constitution-anchors.ts(91,55): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/director-v2/norm/anchor/constitution-anchors.ts(243,59): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/director-v2/realtime/realtime-scene.ts(12,38): error TS2305: Module '"../runtime/cinematic-intent.js"' has no exported member 'SemanticEnergySummary'.
+src/director-v2/render/backends/execution-plan.ts(14,40): error TS2307: Cannot find module './render-ir.js' or its corresponding type declarations.
+src/director-v2/render/backends/execution-plan.ts(122,56): error TS7006: Parameter 'scene' implicitly has an 'any' type.
+src/director-v2/render/backends/execution-plan.ts(158,34): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/director-v2/render/backends/execution-plan.ts(161,39): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/director-v2/render/backends/execution-plan.ts(188,40): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/director-v2/render/backends/execution-plan.ts(207,27): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/director-v2/render/backends/execution-plan.ts(207,30): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/director-v2/render/backends/execution-plan.ts(212,27): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/director-v2/render/backends/execution-plan.ts(212,30): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/director-v2/render/ir-compiler-lock.ts(173,7): error TS4104: The type 'readonly Readonly<{ shots: readonly string[]; forbiddenStates: readonly string[]; sceneId: string; index: number; mood: string; pacing: "fast" | "slow" | "moderate"; narrativeFunction: string; emotionalWeight: number; }>[]' is 'readonly' and cannot be assigned to the mutable type 'RenderScene[]'.
+src/director-v2/render/ir-compiler-lock.ts(176,7): error TS4104: The type 'readonly Readonly<{ colorGuide: Readonly<ColorGuide>; visualKeywords: readonly string[]; frameIds: readonly string[]; shotId: string; sceneId: string; shotType: string; emotionalTension: "medium" | "low" | "high"; motionIntensity: number; cameraMotion: string; }>[]' is 'readonly' and cannot be assigned to the mutable type 'RenderShot[]'.
+src/director-v2/render/ir-compiler-lock.ts(184,7): error TS4104: The type 'readonly Readonly<{ forbiddenStyles: readonly string[]; frameId: string; type: "closing" | "transition" | "opening" | "key_frame"; contrast: number; brightnessOffset: number; renderDescription: string; }>[]' is 'readonly' and cannot be assigned to the mutable type 'FrameInstruction[]'.
+src/director-v2/render/ir-compiler-lock.ts(187,7): error TS2322: Type 'Readonly<{ forbiddenVisualStates: readonly string[]; characterContinuity: boolean; visualConsistency: boolean; toneLocked: boolean; maxMotionIntensity: number; }>' is not assignable to type 'IRConstraints'.
+src/director-v2/render/ir-compiler-lock.ts(188,7): error TS2322: Type 'Readonly<{ characters: readonly string[]; locations: readonly string[]; objects: readonly string[]; }>' is not assignable to type 'TemporalAnchors'.
+src/director-v2/render/prompt/prompt-de-diffusion.ts(16,36): error TS2307: Cannot find module './backends/execution-plan.js' or its corresponding type declarations.
+src/director-v2/render/prompt/prompt-de-diffusion.ts(17,68): error TS2307: Cannot find module './temporal/temporal-guard.js' or its corresponding type declarations.
+src/director-v2/render/prompt/prompt-de-diffusion.ts(342,50): error TS7006: Parameter 'char' implicitly has an 'any' type.
+src/director-v2/render/render-adapter.ts(23,8): error TS2307: Cannot find module './director-projection.js' or its corresponding type declarations.
+src/director-v2/render/render-adapter.ts(24,37): error TS2307: Cannot find module './projection-input-types.js' or its corresponding type declarations.
+src/director-v2/render/temporal/temporal-guard.ts(16,51): error TS2307: Cannot find module './backends/execution-plan.js' or its corresponding type declarations.
+src/director-v2/runtime/api-surface.ts(262,42): error TS2339: Property 'final' does not exist on type 'ConstitutionCompileResult'.
+src/director-v2/runtime/api-surface.ts(506,18): error TS2339: Property 'emotion' does not exist on type 'ScenePreview'.
+src/director-v2/runtime/api-surface.ts(518,42): error TS2339: Property 'shots' does not exist on type 'GenerationResult'.
+src/director-v2/runtime/api-surface.ts(518,52): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/director-v2/runtime/api-surface.ts(529,34): error TS2339: Property 'laws' does not exist on type 'CinematicIntentVector'.
+src/director-v2/runtime/api-surface.ts(530,30): error TS2339: Property 'laws' does not exist on type 'CinematicIntentVector'.
+src/director-v2/runtime/api-surface.ts(531,31): error TS2339: Property 'laws' does not exist on type 'CinematicIntentVector'.
+src/director-v2/runtime/api-surface.ts(560,80): error TS2322: Type 'string' is not assignable to type 'number'.
+src/director-v2/runtime/api-surface.ts(661,50): error TS2339: Property 'thematicFocus' does not exist on type 'StoryConstitution'.
+src/director-v2/runtime/api-surface.ts(662,36): error TS2339: Property 'coreConflict' does not exist on type 'StoryConstitution'.
+src/director-v2/runtime/api-surface.ts(666,9): error TS2353: Object literal may only specify known properties, and 'totalEnergy' does not exist in type '{ potential: number; kinetic: number; dissipation: number; }'.
+src/director-v2/runtime/cinematic-intent.ts(215,40): error TS2345: Argument of type 'WorldPhysics' is not assignable to parameter of type 'Record<string, unknown>'.
+src/director-v2/runtime/cinematic-intent.ts(216,42): error TS2345: Argument of type 'EmotionalArc' is not assignable to parameter of type 'Record<string, unknown>'.
+src/director-v2/runtime/cinematic-intent.ts(217,41): error TS2345: Argument of type 'PacingDoctrine' is not assignable to parameter of type 'Record<string, unknown>'.
+src/director-v2/runtime/director-projection.ts(15,10): error TS2305: Module '"./semantic-energy.js"' has no exported member 'cinmaticEnergy'.
+src/director-v2/runtime/director-projection.ts(15,26): error TS2305: Module '"./semantic-energy.js"' has no exported member 'EnergyProfile'.
+src/director-v2/runtime/director-projection.ts(130,37): error TS2339: Property 'colorPalette' does not exist on type 'VisualDoctrine'.
+src/director-v2/runtime/director-projection.ts(130,78): error TS2339: Property 'lighting' does not exist on type 'VisualDoctrine'.
+src/director-v2/runtime/director-projection.ts(149,57): error TS2345: Argument of type 'EmotionalArc' is not assignable to parameter of type 'Record<string, unknown>'.
+src/director-v2/runtime/director-projection.ts(150,59): error TS2345: Argument of type 'EmotionalArc' is not assignable to parameter of type 'Record<string, unknown>'.
+src/director-v2/runtime/director-projection.ts(151,60): error TS2345: Argument of type 'EmotionalArc' is not assignable to parameter of type 'Record<string, unknown>'.
+src/director-v2/runtime/director-projection.ts(167,38): error TS2345: Argument of type 'EmotionalArc' is not assignable to parameter of type 'Record<string, unknown>'.
+src/director-v2/runtime/director-projection.ts(170,46): error TS2345: Argument of type 'PacingDoctrine' is not assignable to parameter of type 'Record<string, unknown>'.
+src/director-v2/runtime/director-projection.ts(191,61): error TS2339: Property 'colorPalette' does not exist on type 'VisualDoctrine'.
+src/director-v2/runtime/director-projection.ts(220,11): error TS2322: Type '"accelerating"' is not assignable to type 'PacingCurve'.
+src/director-v2/runtime/director-projection.ts(222,11): error TS2322: Type '"steady"' is not assignable to type 'PacingCurve'.
+src/director-v2/runtime/drift-intervention.ts(233,45): error TS2339: Property 'shouldGateIntervention' does not exist on type 'SemanticEnergyScore'.
+src/director-v2/runtime/drift-intervention.ts(346,15): error TS2322: Type 'ToneBoundary[]' is not assignable to type 'Record<string, unknown>[]'.
+src/director-v2/runtime/drift-intervention.ts(360,9): error TS2322: Type 'Record<string, unknown>[]' is not assignable to type 'ToneBoundary[]'.
+src/director-v2/runtime/drift-intervention.ts(370,11): error TS2322: Type 'unknown' is not assignable to type 'EmotionalArc'.
+src/director-v2/runtime/drift-intervention.ts(377,9): error TS2322: Type 'any' is not assignable to type 'never'.
+src/director-v2/runtime/memory-hygiene.ts(22,15): error TS2305: Module '"../memory/director-memory.js"' has no exported member 'DriftMemoryState'.
+src/director-v2/runtime/production-gatekeeper.ts(408,6): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/director-v2/runtime/semantic-energy.ts(268,23): error TS2352: Conversion of type 'VisualDoctrine' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/director-v2/runtime/session-registry.ts(21,15): error TS2305: Module '"./director-projection.js"' has no exported member 'ProjectionState'.
+src/engine/director/cinematic-bridge.ts(23,87): error TS2307: Cannot find module './director-schemas.js' or its corresponding type declarations.
+src/engine/director/cinematic-bridge.ts(118,5): error TS2304: Cannot find name 'ExecutionTelemetryCollector'.
+src/engine/director/cinematic-bridge.ts(203,37): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/engine/director/cinematic-bridge.ts(209,37): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/engine/director/director-engine.ts(26,8): error TS2307: Cannot find module './director-schemas.js' or its corresponding type declarations.
+src/engine/director/director-engine.ts(34,10): error TS2339: Property '_buildStartTime' does not exist on type 'DirectorEngine'.
+src/engine/director/director-engine.ts(57,33): error TS2339: Property '_buildStartTime' does not exist on type 'DirectorEngine'.
+src/engine/director/director-engine.ts(58,5): error TS2304: Cannot find name 'ExecutionTelemetryCollector'.
+src/engine/director/shotgraph-writer.ts(156,9): error TS2304: Cannot find name 'ExecutionTelemetryCollector'.
+src/engine/prompt-compiler/grammar-adjuster.ts(14,15): error TS2305: Module '"./model-grammar.js"' has no exported member 'SupportedModel'.
+src/engine/prompt-compiler/prompt-compiler.ts(24,8): error TS2305: Module '"./model-grammar.js"' has no exported member 'PromptComponents'.
+src/engine/prompt-compiler/prompt-compiler.ts(25,8): error TS2305: Module '"./model-grammar.js"' has no exported member 'SupportedModel'.
+src/engine/prompt-compiler/prompt-compiler.ts(26,3): error TS2305: Module '"./model-grammar.js"' has no exported member 'getGrammar'.
+src/engine/prompt-compiler/prompt-compiler.ts(29,3): error TS2305: Module '"./cinematic-constraints.js"' has no exported member 'checkAllConstraints'.
+src/engine/prompt-compiler/prompt-compiler.ts(30,8): error TS2305: Module '"./cinematic-constraints.js"' has no exported member 'ConstraintViolation'.
+src/engine/prompt-compiler/prompt-compiler.ts(253,51): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/llm-execution-graph-v2/executor.ts(31,3): error TS2322: Type '"executing"' is not assignable to type '"failed" | "executed" | "building"'.
+src/model-adapters/images/dalle-image.adapter.ts(23,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/images/qwen-image.adapter.ts(36,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/images/siliconflow-image.adapter.ts(43,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/images/wan-image.adapter.ts(56,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/llm/aliyun-llm.adapter.ts(38,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/llm/aliyun-llm.adapter.ts(43,38): error TS2304: Cannot find name 'ctx'.
+src/model-adapters/llm/openai-compat.adapter.ts(39,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/llm/volcengine-llm.adapter.ts(29,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/tts/aliyun-tts.adapter.ts(16,63): error TS2459: Module '"../types.js"' declares 'RuntimePayload' locally, but it is not exported.
+src/model-adapters/tts/siliconflow-tts.adapter.ts(125,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/tts/volcengine-tts.adapter.ts(20,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/video/aliyun-video.adapter.ts(47,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/model-adapters/video/aliyun-video.adapter.ts(64,7): error TS2353: Object literal may only specify known properties, and 'referenceImages' does not exist in type '{ model: string; prompt: string; imageUrl?: string | undefined; imageUrl2?: string | undefined; audioUrl?: string | undefined; shotType?: string | undefined; r2vMedia?: { type: string; url: string; reference_voice?: string | undefined; }[] | undefined; duration?: number | undefined; ratio?: string | undefined; negat...'.
+src/model-adapters/video/volcengine-video.adapter.ts(34,26): error TS2304: Cannot find name 'RuntimePayload'.
+src/plugins/runtime-context.ts(41,7): error TS2353: Object literal may only specify known properties, and 'stage' does not exist in type 'ContextInit'.
+src/production-loop/api.ts(377,36): error TS2339: Property 'length' does not exist on type 'ImageGenResult'.
+src/providers/legacy-provider-adapter.ts(18,90): error TS2305: Module '"../services/runtime-context.js"' has no exported member 'ProviderSecrets'.
+src/providers/legacy-provider-adapter.ts(38,5): error TS2353: Object literal may only specify known properties, and 'executionId' does not exist in type 'ContextInit'.
+src/providers/legacy-provider-adapter.ts(112,32): error TS2339: Property 'provider' does not exist on type 'RuntimeContext'.
+src/queue/worker-runtime.ts(87,79): error TS2339: Property 'modelPrefix' does not exist on type 'string'.
+src/queue/worker-runtime.ts(89,38): error TS2339: Property 'name' does not exist on type 'string'.
+src/queue/worker-runtime.ts(90,62): error TS2339: Property 'modelPrefix' does not exist on type 'string'.
+src/rfvl/rfvl-run.ts(21,34): error TS1343: The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', or 'nodenext'.
+src/rfvl/scanner.ts(22,34): error TS1343: The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', or 'nodenext'.
+src/routes/admin-api-keys.ts(55,29): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ApiResponse<unknown>'.
+src/routes/admin-api-keys.ts(75,29): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ApiResponse<unknown>'.
+src/routes/admin-api-keys.ts(87,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/admin-api-keys.ts(96,29): error TS2353: Object literal may only specify known properties, and 'models' does not exist in type 'ApiResponse<unknown>'.
+src/routes/admin-api-keys.ts(113,29): error TS2353: Object literal may only specify known properties, and 'model' does not exist in type 'ApiResponse<unknown>'.
+src/routes/admin-api-keys.ts(121,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/admin-assets.ts(143,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/admin-global-config.ts(400,34): error TS2322: Type '{ id: string; type: string; name: string; label: string; }[]' is not assignable to type '{ id: string; type: string; name: string; icon: string; }[]'.
+src/routes/admin-global-config.ts(407,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(408,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(409,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(410,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(411,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(412,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(413,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(414,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(415,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(417,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(418,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(419,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(420,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(422,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(423,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(424,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(426,7): error TS2741: Property 'icon' is missing in type '{ type: string; id: string; name: string; }' but required in type '{ id: string; type: string; name: string; icon: string; }'.
+src/routes/admin-global-config.ts(448,34): error TS2322: Type '{ id: string; type: string; name: string; label: string; }[]' is not assignable to type '{ id: string; type: string; name: string; icon: string; }[]'.
+src/routes/admin-global-config.ts(463,64): error TS2353: Object literal may only specify known properties, and 'icon' does not exist in type '{ id: string; type: string; name: string; }'.
+src/routes/admin-global-config.ts(466,5): error TS2322: Type '{ id: string; type: string; name: string; }[]' is not assignable to type '{ id: string; type: string; name: string; icon: string; }[]'.
+src/routes/admin-global-config.ts(513,29): error TS2353: Object literal may only specify known properties, and 'providers' does not exist in type 'ApiResponse<GlobalConfigDTO>'.
+src/routes/admin-global-config.ts(534,31): error TS2353: Object literal may only specify known properties, and 'skipped' does not exist in type 'ApiResponse<GlobalConfigDTO>'.
+src/routes/admin-global-config.ts(551,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'GlobalConfigResponse'.
+src/routes/admin-global-config.ts(579,29): error TS2353: Object literal may only specify known properties, and 'enabledProviders' does not exist in type 'ApiResponse<GlobalConfigDTO>'.
+src/routes/admin-global-config.ts(605,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'GlobalConfigResponse'.
+src/routes/admin-global-config.ts(797,29): error TS2353: Object literal may only specify known properties, and 'providers' does not exist in type 'ApiResponse<GlobalConfigDTO>'.
+src/routes/admin-models-v2.ts(96,42): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/admin-models-v2.ts(104,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/admin-models-v2.ts(141,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/admin-models-v2.ts(154,32): error TS2538: Type 'null' cannot be used as an index type.
+src/routes/admin-storage-config.ts(113,32): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/admin-storage-config.ts(129,32): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/agent-orchestrator.ts(54,9): error TS2353: Object literal may only specify known properties, and 'config' does not exist in type '(Without<AgentDefCreateInput, AgentDefUncheckedCreateInput> & AgentDefUncheckedCreateInput) | (Without<...> & AgentDefCreateInput)'.
+src/routes/agent-orchestrator.ts(72,9): error TS2353: Object literal may only specify known properties, and 'config' does not exist in type '(Without<AgentDefUpdateInput, AgentDefUncheckedUpdateInput> & AgentDefUncheckedUpdateInput) | (Without<...> & AgentDefUpdateInput)'.
+src/routes/agent-orchestrator.ts(82,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/agent-orchestrator.ts(109,9): error TS2353: Object literal may only specify known properties, and 'edgeType' does not exist in type '(Without<AgentEdgeCreateInput, AgentEdgeUncheckedCreateInput> & AgentEdgeUncheckedCreateInput) | (Without<...> & AgentEdgeCreateInput)'.
+src/routes/agent-orchestrator.ts(120,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/agent-orchestrator.ts(128,36): error TS2339: Property 'workflow' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/agent-orchestrator.ts(134,35): error TS2339: Property 'workflow' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/agent-orchestrator.ts(146,35): error TS2339: Property 'workflow' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/agent-orchestrator.ts(158,18): error TS2339: Property 'workflow' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/agent-orchestrator.ts(159,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/agent-orchestrator.ts(169,7): error TS2322: Type '{ workflowId: any; input: any; status: string; }' is not assignable to type '(Without<AgentExecutionCreateInput, AgentExecutionUncheckedCreateInput> & AgentExecutionUncheckedCreateInput) | (Without<...> & AgentExecutionCreateInput)'.
+src/routes/ai-tasks.ts(183,29): error TS2353: Object literal may only specify known properties, and 'task' does not exist in type 'ApiResponse<unknown>'.
+src/routes/ai-tasks.ts(262,29): error TS2353: Object literal may only specify known properties, and 'tasks' does not exist in type 'ApiResponse<unknown>'.
+src/routes/analytics.ts(40,25): error TS2345: Argument of type 'string' is not assignable to parameter of type 'AnalyticsEventType'.
+src/routes/analytics.ts(41,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/analytics.ts(62,41): error TS1360: Type '{ events: { id: bigint; userId: string; createdAt: Date; event: string; metadata: JsonValue | null; }[]; total: number; success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/anchor.ts(156,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/anchor.ts(167,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/anchor.ts(178,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/api-keys.ts(54,29): error TS2353: Object literal may only specify known properties, and 'keys' does not exist in type 'ApiResponse<unknown>'.
+src/routes/api-keys.ts(131,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/asset-cards.ts(94,35): error TS2783: 'success' is specified more than once, so this usage will be overwritten.
+src/routes/bridge.ts(83,32): error TS2322: Type 'string' is not assignable to type '{ code: string; message: string; }'.
+src/routes/bridge.ts(88,32): error TS2322: Type 'string' is not assignable to type '{ code: string; message: string; }'.
+src/routes/bridge.ts(158,32): error TS2322: Type 'string' is not assignable to type '{ code: string; message: string; }'.
+src/routes/execution-graph.ts(40,35): error TS2339: Property 'executionGraph' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/execution-graph.ts(68,34): error TS2339: Property 'executionNode' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/execution-graph.ts(133,15): error TS2339: Property 'createScriptAnalysisGraph' does not exist on type 'typeof import("/root/shipin-cinematic-studio/backend/src/agents/scheduler")'.
+src/routes/execution-graph.ts(141,34): error TS7006: Parameter 'n' implicitly has an 'any' type.
+src/routes/execution-graph.ts(159,34): error TS2339: Property 'executionGraph' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/execution-graph.ts(177,34): error TS7006: Parameter 'n' implicitly has an 'any' type.
+src/routes/execution-graph.ts(212,32): error TS2339: Property 'executionGraph' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/execution-graph.ts(246,15): error TS2339: Property 'replayGraph' does not exist on type 'typeof import("/root/shipin-cinematic-studio/backend/src/agents/scheduler")'.
+src/routes/execution-graph.ts(264,15): error TS2339: Property 'appendNode' does not exist on type 'typeof import("/root/shipin-cinematic-studio/backend/src/agents/scheduler")'.
+src/routes/execution-images.ts(157,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/execution-images.ts(312,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/execution-images.ts(351,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/execution-images.ts(382,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/execution-images.ts(422,99): error TS2322: Type 'boolean' is not assignable to type 'number'.
+src/routes/execution-images.ts(448,11): error TS2322: Type 'boolean' is not assignable to type 'number'.
+src/routes/execution-images.ts(463,11): error TS2322: Type 'boolean' is not assignable to type 'number'.
+src/routes/execution-images.ts(478,11): error TS2322: Type 'boolean' is not assignable to type 'number'.
+src/routes/execution-images.ts(544,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/execution-images.ts(690,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/execution-images.ts(732,32): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/execution-images.ts(746,32): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/execution-journal.ts(25,43): error TS2353: Object literal may only specify known properties, and 'count' does not exist in type 'ApiResponse<unknown>'.
+src/routes/execution-journal.ts(35,43): error TS2353: Object literal may only specify known properties, and 'count' does not exist in type 'ApiResponse<unknown>'.
+src/routes/execution-journal.ts(68,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/execution-trace.ts(85,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/export-runtime.ts(46,29): error TS2353: Object literal may only specify known properties, and 'task' does not exist in type 'ApiResponse<unknown>'.
+src/routes/feedback.ts(33,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/feedback.ts(52,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/feedback.ts(64,43): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/hitl.ts(14,10): error TS2305: Module '"../runtime/asset-state-machine.js"' has no exported member 'StateMachine'.
+src/routes/kernel-causal.ts(1,15): error TS2300: Duplicate identifier 'ApiResponse'.
+src/routes/kernel-causal.ts(2,15): error TS2300: Duplicate identifier 'ApiResponse'.
+src/routes/kernel-causal.ts(12,24): error TS2307: Cannot find module 'express' or its corresponding type declarations.
+src/routes/kernel-causal.ts(18,39): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(18,44): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(32,38): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(32,43): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(43,47): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(43,52): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(54,39): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(54,44): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(65,29): error TS7006: Parameter '_req' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(65,35): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(77,41): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/routes/kernel-causal.ts(77,46): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/routes/member.ts(99,82): error TS2304: Cannot find name 'type'.
+src/routes/member.ts(99,91): error TS18004: No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer.
+src/routes/member.ts(137,28): error TS2304: Cannot find name 'type'.
+src/routes/member.ts(137,37): error TS18004: No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer.
+src/routes/member.ts(171,28): error TS2304: Cannot find name 'type'.
+src/routes/member.ts(171,37): error TS18004: No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer.
+src/routes/member.ts(176,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'MemberResponse'.
+src/routes/member.ts(216,28): error TS2304: Cannot find name 'type'.
+src/routes/member.ts(216,37): error TS18004: No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer.
+src/routes/member.ts(233,29): error TS2353: Object literal may only specify known properties, and 'size' does not exist in type 'ApiResponse<MemberDTO>'.
+src/routes/member.ts(256,79): error TS2304: Cannot find name 'type'.
+src/routes/member.ts(256,88): error TS18004: No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer.
+src/routes/member.ts(279,28): error TS2304: Cannot find name 'type'.
+src/routes/member.ts(279,37): error TS18004: No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer.
+src/routes/member.ts(283,29): error TS2353: Object literal may only specify known properties, and 'level' does not exist in type 'ApiResponse<MemberDTO>'.
+src/routes/member.ts(298,84): error TS2304: Cannot find name 'type'.
+src/routes/member.ts(298,93): error TS18004: No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer.
+src/routes/member.ts(324,29): error TS2353: Object literal may only specify known properties, and 'amount' does not exist in type 'ApiResponse<MemberDTO>'.
+src/routes/member.ts(356,28): error TS2304: Cannot find name 'type'.
+src/routes/member.ts(356,37): error TS18004: No value exists in scope for the shorthand property 'type'. Either declare one or provide an initializer.
+src/routes/member.ts(631,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<MemberDTO>'.
+src/routes/member.ts(752,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<MemberDTO>'.
+src/routes/member.ts(775,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<MemberDTO>'.
+src/routes/member.ts(837,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'MemberResponse'.
+src/routes/member.ts(898,27): error TS2739: Type '{ membership: { id: string; userId: string; createdAt: Date; updatedAt: Date; tier: string; credits: number; creditsUsed: number; storageUsed: bigint; storageLimit: bigint; agentLevel: string; ... 4 more ...; parentId: string | null; } | null; } & { ...; }' is missing the following properties from type 'MemberDTO': userId, status
+src/routes/member.ts(964,28): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'MemberResponse'.
+src/routes/model-params.ts(24,34): error TS2339: Property 'aiModelParamSchema' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/model-params.ts(27,29): error TS2353: Object literal may only specify known properties, and 'schemas' does not exist in type 'ApiResponse<unknown>'.
+src/routes/model-params.ts(34,31): error TS2339: Property 'aiModelParamSchema' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/model-params.ts(37,29): error TS2353: Object literal may only specify known properties, and 'schemas' does not exist in type 'ApiResponse<unknown>'.
+src/routes/model-params.ts(50,33): error TS2339: Property 'aiModelParamSchema' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/model-params.ts(57,29): error TS2353: Object literal may only specify known properties, and 'schema' does not exist in type 'ApiResponse<unknown>'.
+src/routes/model-provider.ts(62,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/narrative-llm.ts(675,33): error TS2304: Cannot find name 'prisma'.
+src/routes/narrative-llm.ts(754,18): error TS2367: This comparison appears to be unintentional because the types '"storyboard" | "scene"' and '"makeup"' have no overlap.
+src/routes/observability.ts(99,29): error TS2353: Object literal may only specify known properties, and 'trace' does not exist in type 'ApiResponse<unknown>'.
+src/routes/observability.ts(106,42): error TS1360: Type '{ system: { requestCount: number; successRate: number; errorRate: number; avgLatency: number; p95Latency: number; activeTraces: number; }; queue: { avgWaitTime: number; avgProcessingTime: number; }; providers: Record<string, { latency: number; successRate: number; errorRate: number; costEstimate: number; }>; success...' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/observability.ts(149,29): error TS2353: Object literal may only specify known properties, and 'logs' does not exist in type 'ApiResponse<unknown>'.
+src/routes/observability.ts(178,29): error TS2353: Object literal may only specify known properties, and 'classification' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(42,31): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(45,29): error TS2353: Object literal may only specify known properties, and 'report' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(55,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(63,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(75,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(82,29): error TS2353: Object literal may only specify known properties, and 'providers' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(95,29): error TS2353: Object literal may only specify known properties, and 'suggestions' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(102,29): error TS2353: Object literal may only specify known properties, and 'users' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(109,29): error TS2353: Object literal may only specify known properties, and 'prediction' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(117,29): error TS2353: Object literal may only specify known properties, and 'checks' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(125,29): error TS2353: Object literal may only specify known properties, and 'action' does not exist in type 'ApiResponse<unknown>'.
+src/routes/optimization.ts(132,29): error TS2353: Object literal may only specify known properties, and 'experiments' does not exist in type 'ApiResponse<unknown>'.
+src/routes/orchestrator.ts(96,11): error TS2448: Block-scoped variable 'rawData' used before its declaration.
+src/routes/orchestrator.ts(97,29): error TS2448: Block-scoped variable 'rawData' used before its declaration.
+src/routes/payment.ts(247,18): error TS2552: Cannot find name 'config'. Did you mean 'qrConfig'?
+src/routes/payment.ts(248,16): error TS2552: Cannot find name 'config'. Did you mean 'qrConfig'?
+src/routes/payment.ts(249,18): error TS2552: Cannot find name 'config'. Did you mean 'qrConfig'?
+src/routes/pipeline.ts(158,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/project-decomposition.ts(76,29): error TS2353: Object literal may only specify known properties, and 'projectId' does not exist in type 'ApiResponse<unknown>'.
+src/routes/projects-v2.ts(28,13): error TS2322: Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+src/routes/projects.ts(32,29): error TS2353: Object literal may only specify known properties, and 'project' does not exist in type 'ApiResponse<unknown>'.
+src/routes/projects.ts(104,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/projects.ts(136,39): error TS1360: Type '{ project: { id: string; name: string; description: string | null; status: string; createdAt: Date; updatedAt: Date; executionResults: JsonValue; plotBlueprint?: undefined; }; designSpec: { ...; }; success: true; } | { ...; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/projects.ts(184,36): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/projects.ts(194,32): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/projects.ts(200,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/psc1.ts(31,32): error TS2322: Type 'string' is not assignable to type '{ code: string; message: string; }'.
+src/routes/queue-runtime.ts(14,29): error TS2353: Object literal may only specify known properties, and 'queues' does not exist in type 'ApiResponse<unknown>'.
+src/routes/queue-runtime.ts(21,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/queue-runtime.ts(28,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/quick-creation.ts(137,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/quick-creation.ts(158,53): error TS2322: Type 'null' is not assignable to type 'InputJsonValue | JsonNullValueFilter | FieldRef<"Project", "Json"> | undefined'.
+src/routes/redirect.ts(13,27): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/routes/references.ts(77,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/runtime-checkpoint.ts(33,39): error TS1360: Type '{ canResume: boolean; resumeStage: string | null; failedStages: string[]; runningJobs: RunningJob[]; completedStages: string[]; message: string; success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/runtime-checkpoint.ts(45,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/runtime-trace.ts(34,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/routes/schema-runtime.ts(33,32): error TS2322: Type 'string' is not assignable to type '{ code: string; message: string; }'.
+src/routes/schema-runtime.ts(38,32): error TS2322: Type 'string' is not assignable to type '{ code: string; message: string; }'.
+src/routes/schema-runtime.ts(68,32): error TS2322: Type 'string' is not assignable to type '{ code: string; message: string; }'.
+src/routes/schema-runtime.ts(107,32): error TS2322: Type 'string' is not assignable to type '{ code: string; message: string; }'.
+src/routes/script-submit.ts(258,22): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AigcSpecOutput'.
+src/routes/script-submit.ts(259,26): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AigcSpecOutput'.
+src/routes/script-submit.ts(264,30): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'AigcSpecOutput'.
+src/routes/sms.ts(41,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/sms.ts(79,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/stage-model-config.ts(77,32): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/user-api-keys.ts(18,10): error TS2724: '"../services/usage-quota.service.js"' has no exported member named 'getDailyUsage'. Did you mean 'getTodayUsage'?
+src/routes/user-api-keys.ts(143,30): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/user-api-keys.ts(171,29): error TS2353: Object literal may only specify known properties, and 'usage' does not exist in type 'ApiResponse<unknown>'.
+src/routes/user-model-config-v2.ts(252,32): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/user-model-config.ts(56,16): error TS2339: Property 'imageApiKey' does not exist on type '{ provider?: string | undefined; apiKey?: string | undefined; baseUrl?: string | undefined; llmModel?: string | undefined; llmEnabled?: boolean | undefined; imageModel?: string | undefined; ... 8 more ...; ttsProvider?: string | undefined; }'.
+src/routes/user-model-config.ts(56,50): error TS2339: Property 'imageApiKey' does not exist on type '{ provider?: string | undefined; apiKey?: string | undefined; baseUrl?: string | undefined; llmModel?: string | undefined; llmEnabled?: boolean | undefined; imageModel?: string | undefined; ... 8 more ...; ttsProvider?: string | undefined; }'.
+src/routes/user-model-config.ts(57,50): error TS2339: Property 'imageApiKey' does not exist on type '{ provider?: string | undefined; apiKey?: string | undefined; baseUrl?: string | undefined; llmModel?: string | undefined; llmEnabled?: boolean | undefined; imageModel?: string | undefined; ... 8 more ...; ttsProvider?: string | undefined; }'.
+src/routes/user-model-config.ts(60,16): error TS2339: Property 'videoApiKey' does not exist on type '{ provider?: string | undefined; apiKey?: string | undefined; baseUrl?: string | undefined; llmModel?: string | undefined; llmEnabled?: boolean | undefined; imageModel?: string | undefined; ... 8 more ...; ttsProvider?: string | undefined; }'.
+src/routes/user-model-config.ts(60,50): error TS2339: Property 'videoApiKey' does not exist on type '{ provider?: string | undefined; apiKey?: string | undefined; baseUrl?: string | undefined; llmModel?: string | undefined; llmEnabled?: boolean | undefined; imageModel?: string | undefined; ... 8 more ...; ttsProvider?: string | undefined; }'.
+src/routes/user-model-config.ts(61,50): error TS2339: Property 'videoApiKey' does not exist on type '{ provider?: string | undefined; apiKey?: string | undefined; baseUrl?: string | undefined; llmModel?: string | undefined; llmEnabled?: boolean | undefined; imageModel?: string | undefined; ... 8 more ...; ttsProvider?: string | undefined; }'.
+src/routes/user-model-config.ts(273,31): error TS2353: Object literal may only specify known properties, and 'timestamp' does not exist in type 'ApiResponse<unknown>'.
+src/routes/voice.ts(133,32): error TS1360: Type '{ success: true; }' does not satisfy the expected type 'ApiResponse<unknown>'.
+src/routes/workflow-visualizer.ts(57,6): error TS2345: Argument of type '(request: FastifyRequest<{ Querystring: { traceId?: string; workflowId?: string; }; }>, reply: FastifyReply) => Promise<never>' is not assignable to parameter of type 'RouteHandlerMethod<RawServerDefault, IncomingMessage, ServerResponse<IncomingMessage>, RouteGenericInterface, unknown, FastifySchema, FastifyTypeProviderDefault, FastifyBaseLogger>'.
+src/routes/workflow-visualizer.ts(86,6): error TS2345: Argument of type '(request: FastifyRequest<{ Body: { traceId: string; skipSuccessNodes?: boolean; }; }>, reply: FastifyReply) => Promise<never>' is not assignable to parameter of type 'RouteHandlerMethod<RawServerDefault, IncomingMessage, ServerResponse<IncomingMessage>, RouteGenericInterface, unknown, FastifySchema, FastifyTypeProviderDefault, FastifyBaseLogger>'.
+src/routes/workflow-visualizer.ts(91,30): error TS2304: Cannot find name 'loadFullConfigV2'.
+src/routes/workflow-visualizer.ts(98,46): error TS2307: Cannot find module '../runtime/execution-trace/index.js' or its corresponding type declarations.
+src/routes/workflow-visualizer.ts(135,6): error TS2345: Argument of type '(request: FastifyRequest<{ Params: { traceId: string; }; }>, reply: FastifyReply) => Promise<never>' is not assignable to parameter of type 'RouteHandlerMethod<RawServerDefault, IncomingMessage, ServerResponse<IncomingMessage>, RouteGenericInterface, unknown, FastifySchema, FastifyTypeProviderDefault, FastifyBaseLogger>'.
+src/routes/workflow-visualizer.ts(139,46): error TS2307: Cannot find module '../runtime/execution-trace/index.js' or its corresponding type declarations.
+src/routes/workflow-visualizer.ts(155,15): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/routes/workflow-visualizer.ts(156,12): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/routes/workflow.ts(45,6): error TS2345: Argument of type '(request: FastifyRequest<{ Body: { type: string; input: Record<string, any>; context?: Record<string, any>; }; }>, reply: FastifyReply) => Promise<any>' is not assignable to parameter of type 'RouteHandlerMethod<RawServerDefault, IncomingMessage, ServerResponse<IncomingMessage>, RouteGenericInterface, unknown, FastifySchema, FastifyTypeProviderDefault, FastifyBaseLogger>'.
+src/routes/world-memory.ts(55,29): error TS2353: Object literal may only specify known properties, and 'message' does not exist in type 'ApiResponse<unknown>'.
+src/runtime/adapters/tts/TTSAdapter.ts(58,13): error TS2345: Argument of type '{ apiKey: string; }' is not assignable to parameter of type 'RuntimePayload'.
+src/runtime/adapters/video/VideoAdapter.ts(35,13): error TS2304: Cannot find name 'cfg'.
+src/runtime/adapters/video/VideoAdapter.ts(35,70): error TS2304: Cannot find name 'cfg'.
+src/runtime/adapters/video/VideoAdapter.ts(38,11): error TS2741: Property 'videoUrl' is missing in type 'VideoGenResult' but required in type 'VideoOutput'.
+src/runtime/adapters/video/VideoAdapter.ts(46,13): error TS2304: Cannot find name 'cfg'.
+src/runtime/adapters/video/VideoAdapter.ts(46,74): error TS2304: Cannot find name 'cfg'.
+src/runtime/adapters/video/VideoAdapter.ts(49,11): error TS2741: Property 'videoUrl' is missing in type 'VideoGenResult' but required in type 'VideoOutput'.
+src/runtime/narrative-gateway.ts(424,27): error TS2345: Argument of type '{ module: string; function: string; caller: string; }' is not assignable to parameter of type 'Omit<TraceEvent, "traceId" | "timestamp">'.
+src/runtime/narrative-gateway.ts(676,82): error TS2339: Property '_lastUserProvider' does not exist on type 'NarrativeLLMGateway'.
+src/runtime/narrative-gateway.ts(678,7): error TS2304: Cannot find name 'ExecutionTelemetryCollector'.
+src/runtime/pipeline-executor.ts(63,27): error TS2345: Argument of type '{ module: string; function: string; caller: string; }' is not assignable to parameter of type 'Omit<TraceEvent, "traceId" | "timestamp">'.
+src/runtime/provider-middleware.ts(327,12): error TS7053: Element implicitly has an 'any' type because expression of type 'TaskType' can't be used to index type 'ProviderCapability'.
+src/runtime/provider-middleware.ts(335,20): error TS7053: Element implicitly has an 'any' type because expression of type 'TaskType' can't be used to index type 'ProviderCapability'.
+src/runtime/provider-state/provider-state.service.ts(198,26): error TS2739: Type '{ state: ProviderState; ts: number; }' is missing the following properties from type 'ProviderState': provider, status, enabled, consecutiveFailures
+src/runtime/resolveRuntimeConfig.ts(164,30): error TS2339: Property 'baseUrl' does not exist on type '{ params: JsonValue; createdAt: Date; updatedAt: Date; provider: string; stage: string; size: string; enabled: boolean; model: string; }'.
+src/runtime/resolveRuntimeConfig.ts(166,103): error TS2339: Property 'baseUrl' does not exist on type '{ params: JsonValue; createdAt: Date; updatedAt: Date; provider: string; stage: string; size: string; enabled: boolean; model: string; }'.
+src/runtime/runtime-gateway.ts(64,5): error TS2353: Object literal may only specify known properties, and 'provider' does not exist in type 'ContextInit'.
+src/runtime/runtime-gateway.ts(74,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+src/runtime/task-stream.ts(28,28): error TS2551: Property 'userId' does not exist on type 'FastifyRequest<RouteGenericInterface, RawServerDefault, IncomingMessage, FastifySchema, FastifyTypeProviderDefault, unknown, FastifyBaseLogger, ResolveFastifyRequestType<...>>'. Did you mean 'user'?
+src/runtime/trace/runtime-trace.ts(121,27): error TS2345: Argument of type '{ module: string; function: string; caller: string; }' is not assignable to parameter of type 'Omit<TraceEvent, "traceId" | "timestamp">'.
+src/runtime/with-user-model-config.ts(209,31): error TS2339: Property 'secrets' does not exist on type 'RuntimeContext'.
+src/schema-runtime/shadow.ts(123,32): error TS2322: Type 'undefined' is not assignable to type 'string'.
+src/schema-runtime/shadow.ts(125,29): error TS2322: Type 'undefined' is not assignable to type 'string'.
+src/schema-runtime/shadow.ts(126,31): error TS2322: Type 'undefined' is not assignable to type 'string'.
+src/services/aliyun-image.provider.ts(51,39): error TS2339: Property 'secrets' does not exist on type 'RuntimeContext'.
+src/services/aliyun-image.provider.ts(88,56): error TS2339: Property 'secrets' does not exist on type 'RuntimeContext'.
+src/services/aliyun-image.provider.ts(116,46): error TS2339: Property 'secrets' does not exist on type 'RuntimeContext'.
+src/services/aliyun-image.provider.ts(195,48): error TS2339: Property 'secrets' does not exist on type 'RuntimeContext'.
+src/services/aliyun-llm.provider.ts(14,31): error TS2339: Property 'secrets' does not exist on type 'RuntimeContext'.
+src/services/aliyun-video.provider.ts(21,40): error TS2339: Property 'secrets' does not exist on type 'RuntimeContext'.
+src/services/aliyun-video.provider.ts(31,31): error TS2339: Property 'secrets' does not exist on type 'RuntimeContext'.
+src/services/aliyun-video.provider.ts(151,7): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'VideoGenResult'.
+src/services/artifact-schemas.ts(219,18): error TS2430: Interface 'VideoProductionArtifact' incorrectly extends interface 'ArtifactBase'.
+src/services/execution-journal.service.ts(80,10): error TS2352: Conversion of type 'JsonArray' to type 'JournalEvent[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/services/execution-journal.service.ts(114,10): error TS2352: Conversion of type 'JsonArray' to type 'JournalEvent[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/services/execution-journal.service.ts(145,56): error TS2352: Conversion of type 'JsonArray' to type 'JournalEvent[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/services/failure-event.service.ts(36,17): error TS2353: Object literal may only specify known properties, and 'failureEvents' does not exist in type 'VideoTaskSelect<DefaultArgs>'.
+src/services/failure-event.service.ts(40,59): error TS2339: Property 'failureEvents' does not exist on type '{ status: VideoTaskStatus; error: string | null; id: string; createdAt: Date; updatedAt: Date; projectId: string; priority: number; progress: number; taskType: string; ... 7 more ...; completedAt: Date | null; }'.
+src/services/failure-event.service.ts(40,85): error TS2339: Property 'failureEvents' does not exist on type '{ status: VideoTaskStatus; error: string | null; id: string; createdAt: Date; updatedAt: Date; projectId: string; priority: number; progress: number; taskType: string; ... 7 more ...; completedAt: Date | null; }'.
+src/services/failure-event.service.ts(45,15): error TS2353: Object literal may only specify known properties, and 'failureEvents' does not exist in type '(Without<VideoTaskUpdateInput, VideoTaskUncheckedUpdateInput> & VideoTaskUncheckedUpdateInput) | (Without<...> & VideoTaskUpdateInput)'.
+src/services/failure-event.service.ts(59,17): error TS2353: Object literal may only specify known properties, and 'failureEvents' does not exist in type 'VideoTaskSelect<DefaultArgs>'.
+src/services/failure-event.service.ts(61,32): error TS2339: Property 'failureEvents' does not exist on type '{ status: VideoTaskStatus; error: string | null; id: string; createdAt: Date; updatedAt: Date; projectId: string; priority: number; progress: number; taskType: string; ... 7 more ...; completedAt: Date | null; }'.
+src/services/failure-event.service.ts(61,55): error TS2339: Property 'failureEvents' does not exist on type '{ status: VideoTaskStatus; error: string | null; id: string; createdAt: Date; updatedAt: Date; projectId: string; priority: number; progress: number; taskType: string; ... 7 more ...; completedAt: Date | null; }'.
+src/services/runtime-checkpoint.service.ts(95,11): error TS2352: Conversion of type 'string | number | boolean | JsonObject | JsonArray | null | undefined' to type 'RuntimeCheckpoint' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.

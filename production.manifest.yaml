@@ -1,0 +1,88 @@
+# Production Manifest — 昆仑镜
+
+> Machine-readable subsystem classification.
+> Last updated: 2026-05-21
+
+production_modules:
+  - api
+  - agents
+  - director-v2
+  - engine
+  - jobs
+  - plugins
+  - routes
+  - runtime
+  - scheduler
+  - services
+  - utils
+
+frozen_modules:
+  - cognition-loop
+  - director
+  - director-simulation
+  - governance
+  - graph-optimization
+  - graph-patch
+  - observability
+  - optimization
+  - production-loop
+  - queue
+  - replay
+  - replay-analytics
+  - showrunner
+  - simulation
+  - studio
+  - workers
+
+experimental_modules:
+  - governance
+
+archived_modules:
+  - control-plane
+  - core
+  - graph-runtime
+  - payment
+  - worker
+  - schemas
+  - scripts
+  - transport
+  - storage
+  - middleware
+  - types
+  - config
+
+unclassified:
+  - cinematic-ir          # Static prompt files (text templates), not runtime code
+  - prompts               # Static prompt files (text templates), not runtime code
+  - tests                 # Test files only
+
+runtime_entrypoints:
+  - src/index.ts
+  - src/start-with-env.js
+
+critical_paths:
+  - "POST /api/v1/script/parse → aigcOrchestrator.generate"
+  - "POST /api/v1/pipeline/* → PipelineExecutor"
+  - "PUT  /api/projects/:id/execution-results → PersistenceRuntime"
+  - "POST /api/projects/:id/journal → ExecutionJournal"
+  - "POST /api/v1/director/generate → director-v2"
+
+forbidden_patterns:
+  - "*-v2"
+  - "*-v3"
+  - "*-next"
+  - "*-enhanced"
+  - "*-final"
+  - "new-*"
+
+approved_exceptions:
+  - "director-v2"     # Approved production runtime — previous generation superseded v1
+
+# Legacy evolution branches — tagged for traceability
+legacy_branches:
+  jobs/intent-engine-v3:
+    runtime_status: experimental
+    ownership: research
+    integration_level: partial
+    mutation_policy: restricted
+    notes: Legacy intent classification experiment branch. Still has runtime dependency via jobs/. Do not rename. Do not delete.

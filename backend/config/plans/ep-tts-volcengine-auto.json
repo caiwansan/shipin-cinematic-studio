@@ -1,0 +1,33 @@
+{
+  "planId": "ep-tts-volcengine-auto",
+  "version": "v1.0.0",
+  "builtAt": "2026-05-24T15:00:53.067Z",
+  "hash": "SEDP-11a5730a",
+  "description": "SEDP plan for taskType=tts provider=volcengine",
+  "steps": [
+    {
+      "id": 1,
+      "label": "Adapter: tts-volcengine",
+      "file": "model-adapters/tts/volcengine-tts.adapter.ts",
+      "requiresCapability": "tts",
+      "paramsType": "ttsInput",
+      "outputType": "ttsOutput"
+    },
+    {
+      "id": 2,
+      "label": "Event Sink",
+      "file": "kernel/event-sourcing/execution-event-store.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionEvent",
+      "outputType": "void"
+    },
+    {
+      "id": 3,
+      "label": "Truth Arbitration",
+      "file": "truth/arbitration-engine.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionResult[]",
+      "outputType": "ArbitrationResult"
+    }
+  ]
+}

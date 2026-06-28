@@ -1,0 +1,125 @@
+{
+  "phase": "Phase 4-A — Minimal Runtime OS（验收报告）",
+  "timestamp": "2026-06-23T22:25:00+08:00",
+
+  "newDBTables": [
+    {
+      "name": "prompt_variant",
+      "columns": ["id", "name", "version", "label", "description", "content", "parentVersion", "createdAt"],
+      "constraints": ["@@unique([name, version])", "@@index([name, label])"],
+      "seedData": 18 rows (每个既有 prompt 的 v1/stable)
+    },
+    {
+      "name": "prompt_runtime_log",
+      "columns": ["id", "promptName", "version", "routingMode", "contextHash", "latencyMs", "success", "responseChars", "createdAt"],
+      "constraints": ["@@index([promptName, createdAt])"],
+      "initialData": "调用自动写入"
+    }
+  ],
+
+  "newFiles": [
+    {
+      "path": "runtime/prompt/PromptVersionGraph.ts",
+      "api": ["getStableVersion()", "getCurrentVersion()", "getAllVersions()", "getVersion()", "registerVersion()", "setVersionLabel()", "invalidateVersionCache()"],
+      "constraints": {
+        "readOnly": true,
+        "onlyThreeRoutingModes": "stable / canary / override",
+        "noAutoPromote": true
+      }
+    },
+    {
+      "path": "runtime/prompt/PromptRouter.ts",
+      "strategies": ["stable（默认）", "canary（手动开启）", "override（调试指定版本）"],
+      "bannedStrategies": ["score routing", "AI decision routing", "auto-fallback learning"]
+    },
+    {
+      "path": "runtime/prompt/PromptRuntimeLogger.ts",
+      "api": ["logPromptCall()", "getRecentLogs()", "getPromptStats()", "hashContext()"],
+      "constraints": {
+        "noScoring": true,
+        "noAnalysis": true,
+        "noEvolution": true,
+        "onlyRecord": true
+      }
+    },
+    {
+      "path": "routes/admin-prompt-runtime.ts",
+      "endpoints": [
+        "GET /api/admin/prompt-runtime/versions/:name",
+        "GET /api/admin/prompt-runtime/stable/:name",
+        "POST /api/admin/prompt-runtime/set-label",
+        "POST /api/admin/prompt-runtime/register",
+        "GET /api/admin/prompt-runtime/preview/:name/:version",
+        "GET /api/admin/prompt-runtime/logs",
+        "GET /api/admin/prompt-runtime/stats/:name"
+      ]
+    }
+  ],
+
+  "modifiedFiles": [
+    {
+      "path": "runtime/prompt/PromptRegistry.ts",
+      "changes": [
+        "getPrompt() 集成 PromptRouter 版本解析",
+        "getPrompt() 调用后记录 RuntimeLogger",
+        "getPromptEntry() 集成日志",
+        "新增 PROMPT_RUNTIME_OBSERVATION_MODE = true",
+        "新增 logPromptCallAsync() 异步日志"
+      ]
+    },
+    {
+      "path": "prisma/schema.prisma",
+      "changes": ["新增 PromptVariant model", "新增 PromptRuntimeLog model"]
+    },
+    {
+      "path": "index.ts",
+      "changes": ["注册 admin-prompt-runtime 路由"]
+    }
+  ],
+
+  "verification": {
+    "version_graph_enabled": true,
+    "deterministic_routing": true,
+    "runtime_logging": true,
+    "no_self_evolution": true,
+    "override_support": true,
+    "site_200": true,
+    "registry_api_200": true,
+    "versions_api_200": true,
+    "logs_api_200": true,
+    "stable_api_200": true,
+    "stats_api_200": true
+  },
+
+  "systemState": {
+    "Phase 0": "fragmented system ✅",
+    "Phase 1": "registry born + portrait fixed ✅",
+    "Phase 2": "backend fully unified ✅",
+    "Phase 3": "frontend de-ruled ✅",
+    "Phase 4-A": "Minimal Runtime OS ✅（当前已完成）",
+    "Phase 4-B": "Evaluator + AB + Evolution ❌"
+  },
+
+  "finalSystemStructure": {
+    "top": "Admin Routes（版本管理/日志查询）",
+    "layer1": "PromptRegistry（统一入口，集成路由+日志）",
+    "layer2": "PromptRouter（只支持 stable/canary/override）",
+    "layer3": "PromptVersionGraph（只读版本链）",
+    "bottom": "DB（PromptVariant + PromptRuntimeLog）"
+  },
+
+  "observabilityLock": {
+    "enabled": true,
+    "rules": {
+      "every_prompt_call_must_log": true,
+      "version_must_be_traceable": true,
+      "routing_must_be_reproducible": true
+    }
+  },
+
+  "notes": {
+    "api_endpoints_not_authenticated": "管理路由目前没有认证（需要时加），属于内部接口",
+    "future_4B_ready": "RuntimeLogger 的数据结构已为 AB scoring 预埋好 baseline 数据",
+    "no_frontend_changes": "Phase 4-A 全部在后端，前端零改动"
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "meta": {
+    "generatedAt": "2026-06-20T02:50:00+08:00",
+    "scope": "AI / Director / Payment / Media 路由调用链"
+  },
+  "routes": [
+    {
+      "path": "POST /api/v1/narrative/analyze",
+      "file": "src/routes/narrative-llm.ts",
+      "preHandler": ["app.authenticate"],
+      "userId": "extractUserId(request) || 'anonymous'",
+      "processEnvDependent": false,
+      "externalFetches": [],
+      "serviceChain": [
+        "narrativeGateway.analyze(styleProfiles, script, title, targetDuration, userId)",
+        "→ narrativeGateway.execute() → injectUserApiKey() → process.env 注入",
+        "→ prisma.project.update(executionResults)"
+      ],
+      "dbWrites": ["prisma.project.update(L229-415)", "AiStoryboard/AiVideoSegment 创建"],
+      "anonymousFallback": true,
+      "BYOKViolation": "process.env 注入，anonymous 可进入执行链路"
+    },
+    {
+      "path": "POST /api/v1/narrative/analyze-v2",
+      "file": "src/routes/narrative-llm.ts",
+      "preHandler": ["app.authenticate"],
+      "userId": "extractUserId(request) || 'anonymous'",
+      "processEnvDependent": false,
+      "serviceChain": [
+        "narrativeGateway.analyzeV2()",
+        "→ narrativeGateway.execute() → getRuntimeConfig() → v2-resolver.ts",
+        "→ LLM / heuristic fallback"
+      ],
+      "anonymousFallback": true,
+      "BYOKViolation": "anonymous 可进入 v2-resolver (零降级)"
+    },
+    {
+      "path": "POST /api/ai/optimize-image-prompt",
+      "file": "src/routes/ai-optimize-image-prompt.ts",
+      "preHandler": ["app.authenticate"],
+      "userId": "extractUserId(request) || 'anonymous'",
+      "serviceChain": [
+        "narrativeGateway.execute(optimizeImagePrompt, userId)",
+        "→ prompt from DB (prisma.promptTemplate)",
+        "→ LLM generation"
+      ],
+      "anonymousFallback": true
+    },
+    {
+      "path": "POST /api/ai/optimize-ad-script",
+      "file": "src/routes/ai-optimize-ad-script.ts",
+      "preHandler": ["app.authenticate"],
+      "userId": "extractUserId(request) || 'anonymous'",
+      "serviceChain": [
+        "DB read prompt → fallback to hardcoded 3200 chars",
+        "→ narrativeGateway.execute()",
+        "→ prisma.promptTemplate.findUnique()"
+      ],
+      "anonymousFallback": true,
+      "hardcodedPrompt": true,
+      "hardcodedPromptSize": 3200
+    },
+    {
+      "path": "POST /api/ai/generate-ad-video",
+      "file": "src/routes/ai-generate-ad-video.ts",
+      "preHandler": ["app.authenticate"],
+      "userId": "extractUserId(request) || 'anonymous'",
+      "serviceChain": [
+        "userModelResolver.resolve('video', userId)",
+        "→ pollVolcVideo(volcUrl, apiKey) — Key 在闭包中 600s",
+        "→ prisma.videoTask.create/update"
+      ],
+      "anonymousFallback": true,
+      "externalFetches": ["https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/{taskId}"],
+      "apiKeyInDB": true,
+      "sharedProject": "__ad_placeholder__"
+    },
+    {
+      "path": "POST /api/tasks/ai-generate",
+      "file": "src/routes/ai-tasks.ts",
+      "preHandler": ["fastify.authenticate"],
+      "serviceChain": [
+        "planGuard check → checkDailyQuota → resolveProviderFromUserConfig()",
+        "→ enqueueTask → Worker 处理"
+      ],
+      "zeroFallback": true
+    },
+    {
+      "path": "POST /api/payment/recharge",
+      "file": "src/routes/payment.ts",
+      "preHandler": ["fastify.authenticate"],
+      "serviceChain": [
+        "prisma.paymentOrder.create → 返回 qrCodeUrl/account"
+      ],
+      "hasBug": "config 变量未定义 ReferenceError (L686-688)"
+    },
+    {
+      "path": "POST /api/payment/alipay/notify",
+      "file": "src/routes/payment.ts",
+      "preHandler": ["(none)"],
+      "serviceChain": [
+        "IP whitelist check (process.env.WHITELIST_ALIPAY_IPS)",
+        "→ AlipayProvider verify signature (config.privateKey)",
+        "→ prisma.paymentOrder.update + prisma.membership.update",
+        "→ balance mutation (coinLog, user update)"
+      ],
+      "authMissing": true,
+      "signatureVerify": true,
+      "whitelistConfigOptional": true,
+      "processEnvDependent": true,
+      "processEnvKeys": ["WHITELIST_ALIPAY_IPS", "WHITELIST_WXPAY_IPS"]
+    },
+    {
+      "path": "POST /api/payment/wxpay/notify",
+      "file": "src/routes/payment.ts",
+      "preHandler": ["(none)"],
+      "serviceChain": [
+        "IP whitelist check (process.env.WHITELIST_WXPAY_IPS)",
+        "→ decrypt(wxpay xml body) → Invalid key length error (已知问题)",
+        "→ prisma.paymentOrder.update"
+      ],
+      "authMissing": true,
+      "signatureVerify": "decrypt error — key length 不匹配"
+    },
+    {
+      "path": "GET /execution-images/proxy",
+      "file": "src/routes/execution-images.ts",
+      "preHandler": ["fastify.authenticate"],
+      "serviceChain": [
+        "fetch(url from query) → 无白名单 → return proxy image",
+        "失败则 302 redirect to url"
+      ],
+      "ssrfEntry": true,
+      "openRedirect": true
+    },
+    {
+      "path": "POST /api/export/compose-video",
+      "file": "src/routes/export.ts",
+      "preHandler": ["(none)"],
+      "serviceChain": [
+        "import queue/video-composer.ts → downloadImage(frames[i].imageUrl)",
+        "→ execAsync(ffmpeg shell string)",
+        "→ output to uploads dir"
+      ],
+      "authMissing": true,
+      "ssrfEntry": true,
+      "ffmpegInjection": true
+    },
+    {
+      "path": "POST /api/director/runtime/start",
+      "file": "src/api/director-v2/runtime.ts",
+      "preHandler": ["(none)"],
+      "serviceChain": [
+        "compileStory(bundle) → liveBridge.createSession(sessionKey)",
+        "→ sessionManager.updateExecutionSnapshot()",
+        "→ runtimePersistence.saveRuntimeSnapshot()"
+      ],
+      "authMissing": true,
+      "sessionSharedStore": "Map<string, PlaybackController> in liveBridge"
+    },
+    {
+      "path": "POST /api/director/runtime/tick",
+      "file": "src/api/director-v2/runtime.ts",
+      "preHandler": ["(none)"],
+      "serviceChain": [
+        "liveBridge.getController(sessionKey) → controller.tick(deltaTime)",
+        "→ AdaptiveKernel, MemoryKernel, NarrativeIdentityKernel"
+      ],
+      "authMissing": true,
+      "sessionSharedStore": true
+    },
+    {
+      "path": "POST /api/director/runtime/state",
+      "file": "src/api/director-v2/runtime.ts",
+      "preHandler": ["(none)"],
+      "authMissing": true,
+      "sessionSharedStore": true
+    },
+    {
+      "path": "POST /api/director/runtime/seek",
+      "file": "src/api/director-v2/runtime.ts",
+      "preHandler": ["(none)"],
+      "authMissing": true,
+      "sessionSharedStore": true
+    },
+    {
+      "path": "POST /api/director/runtime/mutate",
+      "file": "src/api/director-v2/runtime.ts",
+      "preHandler": ["(none)"],
+      "authMissing": true,
+      "sessionSharedStore": true
+    },
+    {
+      "path": "GET /api/director/runtime/stream/:sessionKey",
+      "file": "src/api/director-v2/runtime.ts",
+      "preHandler": ["(none)"],
+      "authMissing": true,
+      "cors": "Access-Control-Allow-Origin: *",
+      "sessionSharedStore": true
+    },
+    {
+      "path": "POST /api/director/runtime/auto-tick",
+      "file": "src/api/director-v2/runtime.ts",
+      "preHandler": ["(none)"],
+      "authMissing": true,
+      "sessionSharedStore": true
+    },
+    {
+      "path": "POST /api/director/runtime/stop",
+      "file": "src/api/director-v2/runtime.ts",
+      "preHandler": ["(none)"],
+      "authMissing": true,
+      "sessionSharedStore": true
+    }
+  ],
+  "processEnvMutationPoints": [
+    {
+      "file": "src/runtime/narrative-gateway.ts",
+      "description": "API Key inject to process.env (跨用户污染)"
+    },
+    {
+      "file": "src/routes/payment.ts",
+      "description": "BAILIAN_API_KEY / BAILIAN_BASE_URL 运行时写入"
+    },
+    {
+      "file": "src/routes/payment.ts",
+      "description": "WHITELIST_ALIPAY_IPS / WHITELIST_WXPAY_IPS 读取"
+    }
+  ],
+  "anonymousFallbackRoutes": [
+    "POST /api/v1/narrative/analyze",
+    "POST /api/v1/narrative/analyze-v2",
+    "POST /api/ai/optimize-image-prompt",
+    "POST /api/ai/optimize-ad-script",
+    "POST /api/ai/optimize-shot-script",
+    "POST /api/ai/optimize-storyboard",
+    "POST /api/ai/optimize-frame-prompt",
+    "POST /api/ai/generate-ad-video",
+    "GET /execution-images/proxy (request.user?.id || 'anonymous')"
+  ]
+}

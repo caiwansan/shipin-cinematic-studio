@@ -1,0 +1,33 @@
+{
+  "planId": "ep-llm-volcengine-auto",
+  "version": "v1.0.0",
+  "builtAt": "2026-05-24T15:00:53.065Z",
+  "hash": "SEDP-380a2950",
+  "description": "SEDP plan for taskType=llm provider=volcengine",
+  "steps": [
+    {
+      "id": 1,
+      "label": "Adapter: llm-volcengine",
+      "file": "model-adapters/llm/volcengine-llm.adapter.ts",
+      "requiresCapability": "llm",
+      "paramsType": "llmInput",
+      "outputType": "llmOutput"
+    },
+    {
+      "id": 2,
+      "label": "Event Sink",
+      "file": "kernel/event-sourcing/execution-event-store.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionEvent",
+      "outputType": "void"
+    },
+    {
+      "id": 3,
+      "label": "Truth Arbitration",
+      "file": "truth/arbitration-engine.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionResult[]",
+      "outputType": "ArbitrationResult"
+    }
+  ]
+}

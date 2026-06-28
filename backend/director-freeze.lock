@@ -1,0 +1,30 @@
+DIRECTOR_OS_FREEZE_VERSION=1
+STATUS=FROZEN
+TIMESTAMP=2026-05-18T06:03:12.957Z
+
+RULES:
+- No new runtime modules allowed
+- No dependency direction changes allowed
+- Layer isolation: schema→norm→runtime, no reverse imports
+- schema/ immutable — no new fields or types
+- Only bugfix patches and performance tuning allowed
+- Any architectural change must be reviewed
+
+ENFORCEMENT:
+- CI must validate dependency graph layer isolation
+- Any layer violation fails build
+
+LAYER MAP:
+  schema/ (immutable)  →  no deps on norm/runtime/memory/telemetry
+  norm/ (normalizers)  →  may import schema/ only
+  memory/             →  may import schema/ only
+  telemetry/          →  may import norm/ and schema/
+  runtime/ (cognitive) →  may import norm/, schema/
+  index.ts             →  only export from runtime/api-surface.ts
+
+DEPENDENCY DIRECTION:
+  schema ← norm ← runtime (one-way, no cycles)
+  schema ← memory
+  schema ← telemetry ← norm
+
+VIOLATIONS: none

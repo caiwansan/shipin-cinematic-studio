@@ -1,0 +1,2 @@
+{"test":"baseline_normal","passed":true,"detail":"graph=50b68f94-05c3-47ca-b68b-d4cfc7476f0d status=completed nodes=1","ts":"2026-05-16T16:12:11Z"}
+{"test":"edge_empty_script","passed":true,"detail":"rejected empty script","ts":"2026-05-16T16:12:11Z"}

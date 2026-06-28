@@ -1,0 +1,404 @@
+{
+  "projectId": "6050d107-b21c-41a2-a900-6582cf540cb9",
+  "totalFailures": 51,
+  "failureRate": "100%",
+  "failureChapters": [
+    {
+      "chapterNo": 1,
+      "score": 0.189,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 2,
+      "score": 0.189,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 3,
+      "score": 0.206,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 4,
+      "score": 0.198,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 5,
+      "score": 0.233,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 6,
+      "score": 0.285,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 7,
+      "score": 0.268,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 8,
+      "score": 0.189,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 9,
+      "score": 0.285,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 10,
+      "score": 0.206,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 11,
+      "score": 0.285,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 12,
+      "score": 0.259,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 13,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 14,
+      "score": 0.198,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 15,
+      "score": 0.259,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 16,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 17,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 18,
+      "score": 0.268,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 19,
+      "score": 0.241,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 20,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 21,
+      "score": 0.241,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 22,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 23,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 24,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 25,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 26,
+      "score": 0.233,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 27,
+      "score": 0.303,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 28,
+      "score": 0.25,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 29,
+      "score": 0.259,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 30,
+      "score": 0.259,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 31,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 32,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 33,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 34,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 35,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 36,
+      "score": 0.233,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 37,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 38,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 39,
+      "score": 0.233,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 40,
+      "score": 0.259,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 41,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 42,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 43,
+      "score": 0.206,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 44,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 45,
+      "score": 0.206,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 46,
+      "score": 0.25,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 47,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 48,
+      "score": 0.268,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 49,
+      "score": 0.224,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 50,
+      "score": 0.276,
+      "lowIn": "entity_coverage"
+    },
+    {
+      "chapterNo": 51,
+      "score": 0.215,
+      "lowIn": "entity_coverage"
+    }
+  ],
+  "failureClusters": [
+    {
+      "entityId": "",
+      "entityName": "江沱沱",
+      "chapterNo": 3,
+      "failureType": "entity_underreference",
+      "description": "实体「江沱沱」在 ch3 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "无忧真人",
+      "chapterNo": 5,
+      "failureType": "entity_underreference",
+      "description": "实体「无忧真人」在 ch5 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "叶如霜",
+      "chapterNo": 6,
+      "failureType": "entity_underreference",
+      "description": "实体「叶如霜」在 ch6 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "凌云子",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「凌云子」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "赤炎王",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「赤炎王」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "寒江月",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「寒江月」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "玉青子",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「玉青子」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "玄春子",
+      "chapterNo": 7,
+      "failureType": "entity_underreference",
+      "description": "实体「玄春子」在 ch7 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "凌云子",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「凌云子」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "赤炎王",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「赤炎王」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "寒江月",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「寒江月」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "玉青子",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「玉青子」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "玄春子",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「玄春子」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "永言长老",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「永言长老」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "无信长老",
+      "chapterNo": 9,
+      "failureType": "entity_underreference",
+      "description": "实体「无信长老」在 ch9 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "叶如霜",
+      "chapterNo": 11,
+      "failureType": "entity_underreference",
+      "description": "实体「叶如霜」在 ch11 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "凌云子",
+      "chapterNo": 12,
+      "failureType": "entity_underreference",
+      "description": "实体「凌云子」在 ch12 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "赤炎王",
+      "chapterNo": 12,
+      "failureType": "entity_underreference",
+      "description": "实体「赤炎王」在 ch12 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "邶风起",
+      "chapterNo": 12,
+      "failureType": "entity_underreference",
+      "description": "实体「邶风起」在 ch12 仅出现 1 次"
+    },
+    {
+      "entityId": "",
+      "entityName": "敖炎涛",
+      "chapterNo": 12,
+      "failureType": "entity_underreference",
+      "description": "实体「敖炎涛」在 ch12 仅出现 1 次"
+    }
+  ]
+}

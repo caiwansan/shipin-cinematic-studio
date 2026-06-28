@@ -8,7 +8,7 @@
 import { PlatformContext, createContext } from '@platform/context/platform-context.js'
 import type { RuntimeLifecycle } from '@platform/lifecycle/runtime-lifecycle.js'
 import { IEventBus, platformEventBus } from '@platform/events/event-bus.js'
-import type { PlatformEventType } from '@platform/events/event-types.js'
+import { NotFoundError, ValidationError } from '@platform/errors/platform-errors.js'
 import { normalizer } from '../normalizer/index.js'
 import { assetExtractor } from '../extractor/index.js'
 import { assetService } from '../asset.service.js'
@@ -48,7 +48,7 @@ export class AssetRuntime implements RuntimeLifecycle<AssetInput, AssetOutput> {
   async load(ctx: PlatformContext, id: string): Promise<AssetInput> {
     const asset: any = await assetService.getAsset(id)
     if (!asset) {
-      throw new Error(`Asset not found: ${id}`)
+      throw new NotFoundError('Asset not found', { assetId: id })
     }
     return { assetId: id, projectId: asset.projectId, content: asset.content || undefined }
   }
@@ -64,7 +64,7 @@ export class AssetRuntime implements RuntimeLifecycle<AssetInput, AssetOutput> {
 
   async execute(ctx: PlatformContext, input: AssetInput): Promise<AssetOutput> {
     if (!input.html) {
-      throw new Error('html content is required for execution')
+      throw new ValidationError('html content is required for execution')
     }
     const url = input.url || ''
     const html = input.html

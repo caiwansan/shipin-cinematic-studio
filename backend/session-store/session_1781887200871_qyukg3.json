@@ -1,0 +1,57 @@
+{
+  "sessionId": "session_1781887200871_qyukg3",
+  "createdAt": 1781887200871,
+  "lastActiveAt": 1781887200871,
+  "status": "active",
+  "storyGraph": {
+    "title": "projection-test",
+    "scenes": [
+      {
+        "id": "s1",
+        "type": "intro",
+        "description": "start",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "A"
+            }
+          ],
+          "action": "walk",
+          "camera": {
+            "shot_type": "medium"
+          },
+          "spatialFrame": "room"
+        }
+      },
+      {
+        "id": "s2",
+        "type": "conflict",
+        "description": "fight",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "A"
+            },
+            {
+              "name": "B"
+            }
+          ],
+          "action": "fight",
+          "camera": {
+            "shot_type": "close-up"
+          },
+          "spatialFrame": "arena"
+        }
+      }
+    ]
+  },
+  "executionSnapshot": {
+    "currentSceneId": null,
+    "currentShotIndex": 0,
+    "completedScenes": 0,
+    "totalScenes": 0,
+    "intensity": 0.5,
+    "playbackTime": 0,
+    "isPlaying": false
+  }
+}

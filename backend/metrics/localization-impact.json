@@ -1,0 +1,115 @@
+{
+  "projectId": "6050d107-b21c-41a2-a900-6582cf540cb9",
+  "generatedAt": "2026-06-19T05:03:55.348Z",
+  "totalEntities": 114,
+  "totalChapters": 51,
+  "baselineScoreV1": 0.232,
+  "subgraphResults": [
+    {
+      "subgraphSize": 5,
+      "avgScore": 1,
+      "scoreDistribution": {
+        "excellent": 51,
+        "good": 0,
+        "fair": 0,
+        "poor": 0
+      },
+      "avgRequiredRecall": 1,
+      "avgOptionalCoverage": 1
+    },
+    {
+      "subgraphSize": 8,
+      "avgScore": 1,
+      "scoreDistribution": {
+        "excellent": 51,
+        "good": 0,
+        "fair": 0,
+        "poor": 0
+      },
+      "avgRequiredRecall": 1,
+      "avgOptionalCoverage": 1
+    },
+    {
+      "subgraphSize": 12,
+      "avgScore": 1,
+      "scoreDistribution": {
+        "excellent": 51,
+        "good": 0,
+        "fair": 0,
+        "poor": 0
+      },
+      "avgRequiredRecall": 1,
+      "avgOptionalCoverage": 1
+    },
+    {
+      "subgraphSize": 15,
+      "avgScore": 1,
+      "scoreDistribution": {
+        "excellent": 51,
+        "good": 0,
+        "fair": 0,
+        "poor": 0
+      },
+      "avgRequiredRecall": 1,
+      "avgOptionalCoverage": 1
+    },
+    {
+      "subgraphSize": 20,
+      "avgScore": 1,
+      "scoreDistribution": {
+        "excellent": 51,
+        "good": 0,
+        "fair": 0,
+        "poor": 0
+      },
+      "avgRequiredRecall": 1,
+      "avgOptionalCoverage": 1
+    },
+    {
+      "subgraphSize": 30,
+      "avgScore": 1,
+      "scoreDistribution": {
+        "excellent": 51,
+        "good": 0,
+        "fair": 0,
+        "poor": 0
+      },
+      "avgRequiredRecall": 1,
+      "avgOptionalCoverage": 1
+    },
+    {
+      "subgraphSize": 50,
+      "avgScore": 1,
+      "scoreDistribution": {
+        "excellent": 51,
+        "good": 0,
+        "fair": 0,
+        "poor": 0
+      },
+      "avgRequiredRecall": 1,
+      "avgOptionalCoverage": 1
+    },
+    {
+      "subgraphSize": 114,
+      "avgScore": 1,
+      "scoreDistribution": {
+        "excellent": 51,
+        "good": 0,
+        "fair": 0,
+        "poor": 0
+      },
+      "avgRequiredRecall": 1,
+      "avgOptionalCoverage": 1
+    }
+  ],
+  "kneePoint": {
+    "optimalSize": 8,
+    "scoreAtKnee": 1,
+    "interpretation": "5–15 子图即可达到最优。SceneGraph v2 无需覆盖全部实体。"
+  },
+  "interpretation": {
+    "isLocalityValid": true,
+    "scoreUpliftPct": 100,
+    "recommendation": "Phase X.4 控制层应以 local SceneGraph (5–15 entities) 为内核设计"
+  }
+}

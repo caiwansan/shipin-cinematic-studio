@@ -1,0 +1,86 @@
+{
+  "ts": "2026-06-20T01:51:17.764350",
+  "uptime_h": 0.0,
+  "requests": {
+    "total": 4,
+    "observed": 4,
+    "success": 4,
+    "errors": 0,
+    "success_rate": 100.0
+  },
+  "ir": {
+    "beat_distribution": {
+      "5": 100.0
+    },
+    "fallback_camera_intent": {
+      "steady-contemplation": 60.0,
+      "wide-establishing": 20.0,
+      "rapid-cut-action": 20.0
+    }
+  },
+  "shotgraph": {
+    "shot_count_dist": {
+      "5": 100.0
+    },
+    "camera_movement_dist": {}
+  },
+  "timeline": {
+    "sequence_count_dist": {
+      "1": 100.0
+    },
+    "rhythm_type_dist": {},
+    "cut_type_dist": {
+      "invisible-cut:4": 50.0,
+      "fade:1": 50.0
+    }
+  },
+  "emotion": {
+    "global_tone_dist": {
+      "neutral": 100.0
+    }
+  },
+  "latest_10_requests": [
+    {
+      "ts": "2026-06-20T01:51:17.764162",
+      "type": "compile-ir",
+      "success": true,
+      "trace": {
+        "beatCount": 5
+      },
+      "duration_ms": 120
+    },
+    {
+      "ts": "2026-06-20T01:51:17.764181",
+      "type": "compile-shotgraph",
+      "success": true,
+      "trace": {
+        "shots": 5
+      },
+      "duration_ms": 85
+    },
+    {
+      "ts": "2026-06-20T01:51:17.764187",
+      "type": "compile-temporal",
+      "success": true,
+      "trace": {
+        "sequences": 1,
+        "cutTypes": {
+          "invisible-cut": 4,
+          "fade": 1
+        }
+      },
+      "duration_ms": 60
+    },
+    {
+      "ts": "2026-06-20T01:51:17.764194",
+      "type": "compile-emotion",
+      "success": true,
+      "trace": {
+        "globalTone": 0.57,
+        "globalTension": 0.3,
+        "keyframes": 20
+      },
+      "duration_ms": 45
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "test": "PROMPT-EFFECTIVENESS-VALIDATION-001",
+  "timestamp": "2026-06-24T14:14:00.000Z",
+  "provider": "volcengine",
+  "model": "doubao-seedance-1-5-pro-251215",
+  "samples": 2,
+  "videos_total": 4,
+  "execution_status": "completed",
+  "scoring_status": "estimated_from_metrics",
+  "scoring": {
+    "A": {
+      "character_consistency": 4.0,
+      "scene_consistency": 5.0,
+      "camera_compliance": 5.0,
+      "emotion_accuracy": 3.0,
+      "narrative_fidelity": 7.0,
+      "weighted_average": 4.8
+    },
+    "B": {
+      "character_consistency": 8.0,
+      "scene_consistency": 8.0,
+      "camera_compliance": 7.0,
+      "emotion_accuracy": 6.0,
+      "narrative_fidelity": 8.0,
+      "weighted_average": 7.4
+    },
+    "delta": {
+      "character_consistency": 4.0,
+      "scene_consistency": 3.0,
+      "camera_compliance": 2.0,
+      "emotion_accuracy": 3.0,
+      "narrative_fidelity": 1.0,
+      "improvement_percent": 54
+    }
+  },
+  "confidence": "medium-high",
+  "decision_gate": {
+    "improvement_above_40_percent": true,
+    "average_B_above_7_5": false,
+    "status": "candidate_for_director_evaluation"
+  },
+  "video_urls": {
+    "A1_legacy_dialogue": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02178230985254800000000000000000000ffffac1915c459558b.mp4",
+    "B1_enhanced_dialogue": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02178230991319900000000000000000000ffffac14d0d9a7715b.mp4",
+    "A2_legacy_emotion": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02178230988868900000000000000000000ffffac18096bfda0ab.mp4",
+    "B2_enhanced_emotion": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02178230981140000000000000000000000ffffac158f8edb4b25.mp4"
+  }
+}

@@ -1,0 +1,264 @@
+{
+  "../config/env.ts": [],
+  "../core/circuit-breaker.ts": [],
+  "../observability/distributed-trace.ts": [
+    "../observability/trace.ts",
+    "../utils/index.ts"
+  ],
+  "../observability/metrics.ts": [],
+  "../observability/trace.ts": [],
+  "../queue/queue-manager.ts": [
+    "../config/env.ts",
+    "../observability/trace.ts",
+    "../utils/index.ts"
+  ],
+  "../runtime/narrative-gateway.ts": [
+    "../core/circuit-breaker.ts",
+    "../observability/distributed-trace.ts",
+    "../observability/metrics.ts",
+    "../queue/queue-manager.ts",
+    "../runtime/providers/base.provider.ts",
+    "../runtime/providers/provider.registry.ts",
+    "../services/crypto.service.ts",
+    "../utils/index.ts"
+  ],
+  "../runtime/providers/base.provider.ts": [],
+  "../runtime/providers/deepseek.provider.ts": [
+    "../runtime/providers/base.provider.ts"
+  ],
+  "../runtime/providers/image.base.provider.ts": [],
+  "../runtime/providers/openai.provider.ts": [
+    "../runtime/providers/base.provider.ts"
+  ],
+  "../runtime/providers/provider.registry.ts": [
+    "../runtime/providers/base.provider.ts",
+    "../runtime/providers/deepseek.provider.ts",
+    "../runtime/providers/image.base.provider.ts",
+    "../runtime/providers/openai.provider.ts",
+    "../runtime/providers/replicate.image.provider.ts"
+  ],
+  "../runtime/providers/replicate.image.provider.ts": [
+    "../runtime/providers/image.base.provider.ts"
+  ],
+  "../services/crypto.service.ts": [],
+  "../services/project.service.ts": [
+    "../utils/index.ts"
+  ],
+  "../utils/index.ts": [
+    "../services/project.service.ts"
+  ],
+  "__chaos__/constitution-chaos-harness.ts": [
+    "__chaos__/drift-severity.ts",
+    "constitution-compiler.ts",
+    "norm/anchor/constitution-anchors.ts",
+    "norm/constitution-fingerprint.ts",
+    "schema/story-constitution.ts",
+    "telemetry/semantic-drift.ts"
+  ],
+  "__chaos__/drift-severity.ts": [],
+  "__chaos__/run-chaos-test.ts": [
+    "__chaos__/constitution-chaos-harness.ts",
+    "__chaos__/drift-severity.ts",
+    "__fixtures__/scripts.ts"
+  ],
+  "__fixtures__/scripts.ts": [],
+  "__tests__/api-surface.spec.ts": [
+    "runtime/api-surface.ts"
+  ],
+  "__tests__/cinematic-intent.spec.ts": [
+    "runtime/cinematic-intent.ts"
+  ],
+  "__tests__/constitution-stability.spec.ts": [
+    "norm/constitution-fingerprint.ts",
+    "norm/llm-normalizer.ts",
+    "schema/story-constitution.ts"
+  ],
+  "__tests__/director-projection.spec.ts": [
+    "runtime/director-projection.ts"
+  ],
+  "__tests__/drift-intervention.spec.ts": [
+    "runtime/drift-intervention.ts"
+  ],
+  "__tests__/drift-memory.spec.ts": [
+    "runtime/drift-memory.ts"
+  ],
+  "__tests__/e2e-reality-harness.spec.ts": [
+    "runtime/e2e-reality-harness.ts"
+  ],
+  "__tests__/malformed-output.spec.ts": [
+    "norm/constitution-fingerprint.ts",
+    "norm/llm-normalizer.ts"
+  ],
+  "__tests__/production-gatekeeper.spec.ts": [
+    "runtime/production-gatekeeper.ts",
+    "runtime/shadow-ui-router.ts"
+  ],
+  "__tests__/semantic-energy.spec.ts": [
+    "runtime/semantic-energy.ts"
+  ],
+  "__tests__/semantic-repair.spec.ts": [
+    "norm/fallback-policy.ts",
+    "norm/semantic-repair.ts",
+    "schema/story-constitution.ts"
+  ],
+  "__tests__/shadow-ui-router.spec.ts": [
+    "runtime/shadow-ui-router.ts"
+  ],
+  "constitution-compiler.ts": [
+    "../runtime/narrative-gateway.ts",
+    "norm/fallback-policy.ts",
+    "norm/llm-normalizer.ts",
+    "norm/schema-validator.ts",
+    "norm/semantic-repair.ts",
+    "runtime/cache-governor.ts",
+    "runtime/constitution-cache.ts",
+    "runtime/constitution-merge.ts",
+    "runtime/drift-scorer.ts",
+    "runtime/skeleton-compiler.ts",
+    "schema/story-constitution.ts"
+  ],
+  "director-bridge.ts": [
+    "constitution-compiler.ts",
+    "schema/story-constitution.ts"
+  ],
+  "index.ts": [
+    "runtime/api-surface.ts"
+  ],
+  "memory/constitution-store.ts": [
+    "../utils/index.ts",
+    "schema/story-constitution.ts"
+  ],
+  "memory/director-memory.ts": [
+    "../utils/index.ts"
+  ],
+  "memory/index.ts": [
+    "memory/constitution-store.ts",
+    "memory/director-memory.ts"
+  ],
+  "norm/anchor/constitution-anchors.ts": [
+    "norm/constitution-fingerprint.ts"
+  ],
+  "norm/anchor/index.ts": [
+    "norm/anchor/constitution-anchors.ts"
+  ],
+  "norm/constitution-fingerprint.ts": [
+    "schema/story-constitution.ts"
+  ],
+  "norm/fallback-policy.ts": [
+    "schema/story-constitution.ts"
+  ],
+  "norm/llm-normalizer.ts": [
+    "norm/schema-validator.ts",
+    "schema/story-constitution.ts"
+  ],
+  "norm/schema-validator.ts": [
+    "schema/character-law.ts",
+    "schema/cinematic-identity.ts",
+    "schema/emotional-arc.ts",
+    "schema/pacing-doctrine.ts",
+    "schema/story-constitution.ts",
+    "schema/tone-boundary.ts",
+    "schema/visual-doctrine.ts",
+    "schema/world-physics.ts"
+  ],
+  "norm/semantic-repair.ts": [
+    "schema/story-constitution.ts"
+  ],
+  "runtime/api-surface.ts": [
+    "constitution-compiler.ts",
+    "runtime/cinematic-intent.ts",
+    "runtime/director-projection.ts",
+    "runtime/production-gatekeeper.ts",
+    "runtime/semantic-energy.ts",
+    "runtime/shadow-ui-router.ts",
+    "schema/story-constitution.ts"
+  ],
+  "runtime/cache-governor.ts": [
+    "runtime/constitution-cache.ts"
+  ],
+  "runtime/cinematic-intent.ts": [
+    "runtime/drift-memory.ts",
+    "schema/story-constitution.ts"
+  ],
+  "runtime/constitution-cache.ts": [
+    "schema/story-constitution.ts"
+  ],
+  "runtime/constitution-merge.ts": [
+    "schema/story-constitution.ts"
+  ],
+  "runtime/director-projection.ts": [
+    "runtime/semantic-energy.ts",
+    "schema/story-constitution.ts"
+  ],
+  "runtime/drift-intervention.ts": [
+    "runtime/drift-memory.ts",
+    "runtime/semantic-energy.ts",
+    "schema/story-constitution.ts"
+  ],
+  "runtime/drift-memory.ts": [
+    "runtime/drift-scorer.ts",
+    "schema/story-constitution.ts"
+  ],
+  "runtime/drift-scorer.ts": [
+    "schema/story-constitution.ts"
+  ],
+  "runtime/e2e-reality-harness.ts": [
+    "runtime/cinematic-intent.ts",
+    "runtime/director-projection.ts",
+    "runtime/semantic-energy.ts",
+    "schema/story-constitution.ts"
+  ],
+  "runtime/production-gatekeeper.ts": [
+    "runtime/cinematic-intent.ts",
+    "runtime/shadow-ui-router.ts",
+    "schema/story-constitution.ts"
+  ],
+  "runtime/semantic-energy.ts": [
+    "schema/story-constitution.ts"
+  ],
+  "runtime/shadow-ui-router.ts": [
+    "runtime/cinematic-intent.ts",
+    "runtime/director-projection.ts",
+    "runtime/semantic-energy.ts",
+    "schema/story-constitution.ts"
+  ],
+  "runtime/skeleton-compiler.ts": [],
+  "schema/character-law.ts": [],
+  "schema/cinematic-identity.ts": [],
+  "schema/emotional-arc.ts": [],
+  "schema/index.ts": [
+    "schema/character-law.ts",
+    "schema/cinematic-identity.ts",
+    "schema/emotional-arc.ts",
+    "schema/pacing-doctrine.ts",
+    "schema/script-source.ts",
+    "schema/story-constitution.ts",
+    "schema/tone-boundary.ts",
+    "schema/visual-doctrine.ts",
+    "schema/world-physics.ts"
+  ],
+  "schema/pacing-doctrine.ts": [],
+  "schema/script-source.ts": [],
+  "schema/story-constitution.ts": [
+    "schema/character-law.ts",
+    "schema/cinematic-identity.ts",
+    "schema/emotional-arc.ts",
+    "schema/pacing-doctrine.ts",
+    "schema/script-source.ts",
+    "schema/tone-boundary.ts",
+    "schema/visual-doctrine.ts",
+    "schema/world-physics.ts"
+  ],
+  "schema/tone-boundary.ts": [],
+  "schema/visual-doctrine.ts": [],
+  "schema/world-physics.ts": [],
+  "telemetry/constitution-events.ts": [],
+  "telemetry/index.ts": [
+    "telemetry/constitution-events.ts",
+    "telemetry/semantic-drift.ts"
+  ],
+  "telemetry/semantic-drift.ts": [
+    "norm/constitution-fingerprint.ts",
+    "schema/story-constitution.ts"
+  ]
+}

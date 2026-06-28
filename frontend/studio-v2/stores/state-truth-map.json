@@ -1,0 +1,73 @@
+# P1-A State Truth Map
+
+## State 结构总览
+
+```
+state (reactive)
+├── pipeline           PipelineRuntime        # 前端-only，运行时阶段状态
+│   ├── stages[]       PipelineStage[]
+│   └── activeStageId  string
+├── workspace          WorkspaceRuntime        # 核心工作区状态
+│   ├── activeWorkspaceId  WorkspaceId
+│   ├── narrative      NarrativeRuntime        # 剧本分析结果
+│   │   ├── script             string          # 原始剧本文本
+│   │   ├── title/projectName  string
+│   │   ├── projectDesc        string
+│   │   ├── characters[]       ref[]           # 角色引用信息
+│   │   ├── scenes[]           ref[]           # 场景引用信息
+│   │   ├── emotionCurve[]     EmotionPoint[]
+│   │   ├── beats[]            Beat[]
+│   │   ├── props[]            Prop[]
+│   │   ├── voices[]           Voice[]
+│   │   ├── videoSegments[]    VideoSegment[]
+│   │   ├── dialogues[]        Dialogue[]
+│   │   ├── effects[]          Effect[]
+│   │   ├── emotionSpecs[]     EmotionSpec[]
+│   │   ├── videoStyle/visualStyle/aspectRatio/styleLocked
+│   ├── characters[]   CharacterRuntime[]      # 角色设定数据
+│   ├── scenes[]       SceneRuntime[]          # 场景设定数据
+│   ├── segments[]     SegmentRuntime[]        # 分镜段数据（Director 运行时）
+│   └── storyboardImages[] StoryboardImage[]   # 分镜图片
+├── assets             AssetRuntime            # 素材库
+│   ├── assets[]       AssetEntry[]
+│   ├── activeCategory string
+│   └── collapsed      boolean
+├── activeSegmentIndex number                  # 当前选中分镜
+├── projectId          string
+└── execution          { compiledPrompts[] }   # Prompt 编译结果（前端-only）
+```
+
+## 每个字段的真相源
+
+| 字段 | 存储位置 | 类型 | 持久化？ |
+|-------|-----------|------|---------|
+| `pipeline.*` | 前端内存 | Runtime | ❌ 前端-only，运行时状态 |
+| `workspace.narrative.script` | `Project.script` | DB 列 | ✅ |
+| `workspace.narrative.title/projectName` | `Project.name` | DB 列 | ✅ |
+| `workspace.narrative.projectDesc` | `Project.description` | DB 列 | ✅ |
+| `workspace.narrative.characters[]` | `AiCharacterSpec` 表 + `executionResults.analyzeV2Data` | DB 表+JSON | ⚠️ 双源 |
+| `workspace.narrative.scenes[]` | `AiSceneSpec` 表 + `executionResults.analyzeV2Data` | DB 表+JSON | ⚠️ 双源 |
+| `workspace.narrative.videoSegments[]` | `executionResults.videoSegments` | JSON 字段 | ⚠️ JSON |
+| `workspace.narrative.beats[]` | `AiVideoSegment` 表 (fallback: executionResults) | DB 表+JSON | ⚠️ 双源 |
+| `workspace.narrative.props[]` | `PropImage` 表 + `executionResults.propSpecs` | DB 表+JSON | ⚠️ 双源 |
+| `workspace.narrative.voices[]` | `executionResults.voiceConfigs` | JSON 字段 | ⚠️ JSON |
+| `workspace.narrative.emotionCurve[]` | `executionResults.emotionCurve` | JSON 字段 | ⚠️ JSON |
+| `workspace.narrative.effects[]` | `executionResults.effectsDesign` | JSON 字段 | ⚠️ JSON |
+| `workspace.narrative.videoStyle/aspectRatio/styleLocked` | 前端内存 | Runtime | ❌ 仅前端 |
+| `workspace.characters[]` | `CharacterImage` 表 | DB 表 | ✅ 但仅图片 |
+| `workspace.scenes[]` | `SceneImage` 表 | DB 表 | ✅ 但仅图片 |
+| `workspace.segments[]` | 前端内存 | Runtime | ❌ 仅前端 |
+| `workspace.storyboardImages[]` | `StoryboardImage` 表 | DB 表 | ✅ |
+| `assets.*` | 前端内存缓存 | Runtime | ❌ 按需加载 |
+| `execution.compiledPrompts[]` | 前端内存 | Runtime | ❌ 仅前端 |
+
+## 风险评级
+
+| 风险 | 字段 | 问题 |
+|------|-------|---------|
+| 🔴 S | `workspace.segments[]` | **仅前端内存**。浏览器刷新后丢失。Director 的分镜段编辑结果不会被持久化 |
+| 🔴 S | `narrative.videoStyle/aspectRatio` | 保存时未写入 DB。刷新后恢复为默认值 |
+| 🟠 A | `narrative.videoSegments[]` | 存在 JSON 字段，但 save 方法不主动更新它 |
+| 🟠 A | `pipeline.*` | 运行时阶段状态（哪些 stage 已完成）不持久化 |
+| 🟡 B | 所有 `executionResults.*` 子字段 | JSON 字段，无 schema 校验，可能混入无效数据 |
+| 🟡 B | `workspace.narrative.beats[]` | 双源 fallback（表→JSON），可能不一致 |

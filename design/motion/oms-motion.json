@@ -1,0 +1,103 @@
+{
+  "_description": "OMS V2 Motion System Specification — 动效系统规范",
+  "_version": "1.0.0",
+
+  "node": {
+    "entry": {
+      "animation": "scale + fade",
+      "from_scale": 0,
+      "to_scale": 1,
+      "from_opacity": 0,
+      "to_opacity": 1,
+      "duration_ms": 300,
+      "easing": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "stagger_delay_ms": 30
+    },
+    "exit": {
+      "animation": "scale + fade",
+      "to_scale": 0,
+      "to_opacity": 0,
+      "duration_ms": 200,
+      "easing": "ease-in"
+    },
+    "update": {
+      "animation": "position_tween",
+      "duration_ms": 400,
+      "easing": "ease-out"
+    }
+  },
+
+  "edge": {
+    "draw": {
+      "animation": "stroke_dashoffset",
+      "direction": "source_to_target",
+      "duration_ms": 400,
+      "easing": "linear"
+    },
+    "fade": {
+      "old_edge_fade_ms": 2000,
+      "decay_ticks": 50
+    }
+  },
+
+  "critical_event": {
+    "type": "combat | narrative_break | economic_crash | faction_collapse",
+    "animation": "pulse + glow + slight_shake",
+    "duration_ms": 800,
+    "repeat": 2,
+    "pulse_radius_scale": 1.3,
+    "glow_color": "#FF4D4F",
+    "shake_intensity_px": 3,
+    "shake_frequency_ms": 50
+  },
+
+  "influence_flow": {
+    "animation": "particle_stream",
+    "path_type": "bezier",
+    "particle_count": 20,
+    "particle_size": 2,
+    "particle_color": "#FA8C16",
+    "speed": "moderate",
+    "trail_length": 0.3,
+    "glow_intensity": "0.6",
+    "fade_trail": true
+  },
+
+  "update_polling": {
+    "interval_ms": 5000,
+    "transition_animation": "diff_update",
+    "batch_size_max": 10,
+    "full_rerender_threshold": 50
+  },
+
+  "sse_flow": {
+    "connection": {
+      "indicator": "green_pulse_dot",
+      "lost": "red_dot",
+      "transition_ms": 300
+    },
+    "event_entry": {
+      "animation": "slide_in_right",
+      "duration_ms": 300,
+      "easing": "ease-out"
+    },
+    "event_exit": {
+      "animation": "slide_out_left",
+      "after_ms": 30000,
+      "critical_pinned": true
+    }
+  },
+
+  "status_bar": {
+    "value_transition_ms": 500,
+    "pulse_on_change": true,
+    "pulse_duration_ms": 1000
+  },
+
+  "performance": {
+    "fps_target": 60,
+    "max_particles": 200,
+    "max_simultaneous_animations": 30,
+    "canvas_resize_throttle_ms": 200
+  }
+}

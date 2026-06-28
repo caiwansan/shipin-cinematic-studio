@@ -1,0 +1,28 @@
+{
+  "ts": "2026-06-20T01:51:32.411707",
+  "uptime_h": 0.0,
+  "requests": {
+    "total": 0,
+    "observed": 0,
+    "success": 0,
+    "errors": 0,
+    "success_rate": 0.0
+  },
+  "ir": {
+    "beat_distribution": {},
+    "fallback_camera_intent": {}
+  },
+  "shotgraph": {
+    "shot_count_dist": {},
+    "camera_movement_dist": {}
+  },
+  "timeline": {
+    "sequence_count_dist": {},
+    "rhythm_type_dist": {},
+    "cut_type_dist": {}
+  },
+  "emotion": {
+    "global_tone_dist": {}
+  },
+  "latest_10_requests": []
+}

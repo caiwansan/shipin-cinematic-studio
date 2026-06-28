@@ -1,0 +1,80 @@
+{
+  "sessionId": "session_1781888951622_4d4oie",
+  "createdAt": 1781888951622,
+  "lastActiveAt": 1781888951622,
+  "status": "active",
+  "storyGraph": {
+    "title": "故事",
+    "scenes": [
+      {
+        "id": "s1",
+        "type": "intro",
+        "description": "平静的村庄",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "英雄"
+            }
+          ],
+          "action": "准备出发",
+          "camera": {
+            "shot_type": "wide"
+          },
+          "spatialFrame": "村庄"
+        }
+      },
+      {
+        "id": "s2",
+        "type": "conflict",
+        "description": "黑暗森林的遭遇",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "英雄"
+            },
+            {
+              "name": "怪物"
+            }
+          ],
+          "action": "战斗",
+          "camera": {
+            "shot_type": "close-up"
+          },
+          "spatialFrame": "森林"
+        },
+        "relations": {
+          "causedBy": "s1"
+        }
+      },
+      {
+        "id": "s3",
+        "type": "resolution",
+        "description": "带着宝藏归来",
+        "shotGraph": {
+          "subject": [
+            {
+              "name": "英雄"
+            }
+          ],
+          "action": "凯旋",
+          "camera": {
+            "shot_type": "medium"
+          },
+          "spatialFrame": "村庄"
+        },
+        "relations": {
+          "resolves": "s2"
+        }
+      }
+    ]
+  },
+  "executionSnapshot": {
+    "currentSceneId": null,
+    "currentShotIndex": 0,
+    "completedScenes": 0,
+    "totalScenes": 0,
+    "intensity": 0.5,
+    "playbackTime": 0,
+    "isPlaying": false
+  }
+}

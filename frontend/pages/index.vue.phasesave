@@ -1,0 +1,36 @@
+<template>
+  <div id="home-root">
+    <div style="background:#08131F;min-height:100vh;color:#fff;display:flex;align-items:center;justify-content:center;font-size:2rem">
+      🌟 昆仑镜 — HOME TEST
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, onErrorCaptured } from 'vue'
+
+onErrorCaptured((err, instance, info) => {
+  console.error('[HOME ERROR] onErrorCaptured:', err.message, 'info:', info)
+  console.error('[HOME ERROR] stack:', err.stack)
+  return false
+})
+
+// 全局未捕获错误兜底
+if (typeof window !== 'undefined') {
+  window.onerror = (msg, url, line, col, err) => {
+    console.error('[HOME WINDOW ERROR]', msg, 'at', url, line, col)
+    console.error('[HOME WINDOW ERR STACK]', err?.stack)
+  }
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error('[HOME UNHANDLED REJECTION]', e.reason?.message || e.reason)
+  })
+}
+
+onMounted(() => {
+  console.log('[HOME] ✅ 首页挂载完成')
+})
+</script>
+
+<style scoped>
+div { background: #08131F; }
+</style>

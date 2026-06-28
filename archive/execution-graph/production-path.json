@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-05-21T04:10:20.548Z",
+  "total_paths": 4,
+  "is_unique": false,
+  "shared_modules": [
+    "runtime/narrative-gateway.ts",
+    "agents/aigc-orchestrator.ts",
+    "services/with-user-key.ts",
+    "runtime/degrade-engine.ts",
+    "runtime/execution-guard.ts",
+    "runtime/providers/provider.registry.ts"
+  ],
+  "orphan_modules": [],
+  "paths": [
+    {
+      "id": "p1",
+      "name": "Script Parse → Semantic → Generation",
+      "entrypoints": [
+        {
+          "route": "script/parse",
+          "source": "script-submit.ts → aigc-orchestrator.ts",
+          "path": "/api/v1/script/parse",
+          "method": "POST"
+        }
+      ],
+      "coreRuntimeChain": [
+        "routes/script-submit.ts",
+        "agents/aigc-orchestrator.ts",
+        "runtime/narrative-gateway.ts",
+        "runtime/providers/provider.registry.ts",
+        "runtime/providers/base.provider.ts"
+      ],
+      "serviceDependencies": [
+        "services/with-user-key.ts",
+        "services/usage-quota.service.ts",
+        "services/crypto.service.ts",
+        "services/aliyun-llm.provider.ts"
+      ],
+      "agentDependencies": [
+        "agents/aigc-orchestrator.ts",
+        "agents/aigc-spec-agent.ts",
+        "cinematic-ir/"
+      ],
+      "providerDependencies": [
+        "aliyun-llm.provider → aliyun (qwen3.6-max-preview)",
+        "deepseek.provider → deepseek (fallback)"
+      ],
+      "criticalDependencies": [
+        "POST /api/v1/script/parse → resolveUserId() JWT decode → injectUserApiKey() → callLLM()"
+      ],
+      "notes": "Primary production path: user script → AI-generated content"
+    },
+    {
+      "id": "p2",
+      "name": "Pipeline Execution",
+      "entrypoints": [
+        {
+          "route": "pipeline/*",
+          "source": "pipeline.ts → pipeline-executor",
+          "path": "/api/v1/pipeline/*",
+          "method": "POST"
+        }
+      ],
+      "coreRuntimeChain": [
+        "routes/pipeline.ts",
+        "routes/pipeline-jobs.ts",
+        "runtime/pipeline-executor.ts",
+        "runtime/executors/executor.registry.ts",
+        "runtime/degrade-engine.ts",
+        "runtime/execution-guard.ts",
+        "graph-runtime/runtime/graph.runtime.ts",
+        "graph-runtime/compiler/graph.compiler.ts"
+      ],
+      "serviceDependencies": [
+        "services/dag-runtime.ts",
+        "services/aggregation-engine.ts",
+        "services/async-pipeline.service.ts"
+      ],
+      "agentDependencies": [],
+      "providerDependencies": [
+        "executor.registry → image-gen.executor → aliyun-image.provider",
+        "executor.registry → image-prompt.executor → aliyun-llm.provider",
+        "executor.registry → shot-split.executor → aliyun-llm.provider",
+        "executor.registry → storyboard.executor → aliyun-llm.provider"
+      ],
+      "criticalDependencies": [
+        "pipeline-executor.ts → createRuntime() (graph-runtime)",
+        "registerBuiltinExecutors() (graph-runtime registry)",
+        "degrade-engine → fallback if LLM fails"
+      ],
+      "notes": "Pipeline job execution path"
+    },
+    {
+      "id": "p3",
+      "name": "Async Job (Showrunner/Cognition)",
+      "entrypoints": [
+        {
+          "route": "showrunner/*",
+          "source": "showrunner.ts → showrunner-worker.ts",
+          "path": "/api/v1/showrunner/*",
+          "method": "POST"
+        }
+      ],
+      "coreRuntimeChain": [
+        "routes/showrunner.ts",
+        "jobs/showrunner-worker.ts",
+        "jobs/worker-memory.ts",
+        "jobs/cognition-worker.ts",
+        "runtime/narrative-gateway.ts"
+      ],
+      "serviceDependencies": [
+        "services/world-memory.service.ts",
+        "services/with-user-key.ts"
+      ],
+      "agentDependencies": [
+        "agents/aigc-orchestrator.ts"
+      ],
+      "providerDependencies": [
+        "aliyun-llm.provider → aliyun (narrative analysis)"
+      ],
+      "criticalDependencies": [
+        "POST /api/v1/showrunner/plan → job creation → BullMQ → showrunner-worker",
+        "showrunner-worker → narrative-gateway → LLM call"
+      ],
+      "notes": "Async job execution via BullMQ workers"
+    },
+    {
+      "id": "p4",
+      "name": "Director OS Observability",
+      "entrypoints": [
+        {
+          "route": "director-v2/*",
+          "source": "director-v2.ts → director-v2/runtime/api-surface.ts",
+          "path": "/api/v2/director/*",
+          "method": "POST/GET"
+        }
+      ],
+      "coreRuntimeChain": [
+        "routes/director-v2.ts",
+        "director-v2/runtime/api-surface.ts",
+        "director-v2/diagnostics/director-field.ts",
+        "director-v2/engine/*"
+      ],
+      "serviceDependencies": [],
+      "agentDependencies": [],
+      "criticalDependencies": [
+        "Non-causal observability layer. Independent from LLM provider."
+      ],
+      "providerDependencies": [],
+      "notes": "Director V2 observability layer"
+    }
+  ]
+}

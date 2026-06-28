@@ -1,0 +1,63 @@
+{
+  "phase": "Phase 2 — 后端 Route 全量收敛到 PromptRegistry（终验报告）",
+  "timestamp": "2026-06-23T22:15:00+08:00",
+
+  "newFiles": [
+    {
+      "path": "/runtime/prompt/PromptAccessGuard.ts",
+      "description": "Prisma 中间件防回流锁，拦截所有 prompt 表直接访问",
+      "exemptions": ["PromptRegistry内部", "seed/migration", "Admin CRUD路由"]
+    }
+  ],
+
+  "modulesConverted": [
+    {"path": "src/routes/narrative-llm.ts", "removedDBCalls": 7, "status": "✅"},
+    {"path": "src/routes/ai-optimize-frame-prompt.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/routes/ai-optimize-image-prompt.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/routes/ai-optimize-shot.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/routes/ai-optimize-storyboard.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/routes/ai-optimize-ad-script.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/routes/optimize-video-agent.ts", "removedDBCalls": 2, "status": "✅ — 含移除硬编码 fallback"},
+    {"path": "src/routes/script-submit.ts", "removedDBCalls": 2, "status": "✅"},
+    {"path": "src/routes/execution-images.ts", "removedDBCalls": 2, "removedHardcodedInline": false, "status": "✅ — 仍然保留 inline fallback（四视图模板）"},
+    {"path": "src/agents/aigc-orchestrator.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/agents/script-breakdown-master.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/agents/prompt-service.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/queue/worker-runtime.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/director-v2/narrative-ir/compileIR.ts", "removedDBCalls": 1, "removedHardcodedFallback": true, "status": "✅ — 移除 ~15行硬编码兜底 prompt"},
+    {"path": "src/director-v2/runtime/api-surface.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/services/hdz/llm.client.ts", "removedDBCalls": 1, "status": "✅"},
+    {"path": "src/services/hdz/screenwriter.service.ts", "removedDBCalls": 1, "removedHardcodedFallback": true, "status": "✅ — 移除 DEFAULT_SYSTEM_PROMPT fallback"}
+  ],
+
+  "totalDBCallsRemoved": 26,
+  "hardcodedFallbacksRemoved": 3,
+  "hardcodedFallbacksRemaining": {
+    "execution-images.ts": "四视图/场景视图 inline fallback（character-view-prompts, scene-view-prompts 无法加载时的备用值，后续 Phase 3 处理前端投射后清理）"
+  },
+
+  "remainingDirectDBReads": {
+    "script-breakdown.ts POST prompt": "✅ Admin CRUD，Guard 豁免",
+    "admin-image-prompts.ts": "✅ Admin CRUD，Guard 豁免",
+    "PromptRegistry.ts内部": "✅ 自身桥接层，Guard 白名单豁免"
+  },
+
+  "verification": {
+    "directPrismaPromptCalls": 0,
+    "registryUsage": "100% — 所有业务模块通过 PromptRegistry",
+    "routeCoverage": 17,
+    "fallbackUsage": 0,
+    "adminCRUDExemptions": 2,
+    "contextStandardized": false
+  },
+
+  "systemState": {
+    "Phase 0": "fragmented system ✅（已完成审计）",
+    "Phase 1": "registry born + portrait fixed ✅",
+    "Phase 2": "backend fully unified ✅（当前已完成）",
+    "Phase 3": "frontend de-rule ❌（待执行）",
+    "Phase 4": "full prompt OS ❌"
+  },
+
+  "nextPhase": "Phase 3 — 前端 DirectorAgent.ts / SegmentToPromptCompiler.ts 的 7 个硬编码映射去除：EMOTION_TO_CAMERA, EMOTION_TRANSITIONS, EMOTION_TO_TONE, CAMERA_DESCRIPTIONS, CONTINUITY_RULES, checkConstraints(), BUILTIN_CONSTRAINTS"
+}

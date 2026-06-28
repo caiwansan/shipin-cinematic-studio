@@ -1,0 +1,1139 @@
+{
+  "projectId": "6050d107-b21c-41a2-a900-6582cf540cb9",
+  "generatedAt": "2026-06-19T05:08:12.296Z",
+  "summary": {
+    "totalChapters": 51,
+    "avgComplianceScore": 0.4588235294117647,
+    "acceptableCount": 12,
+    "unacceptableCount": 39,
+    "acceptableRate": "23.5%",
+    "totalMissing": 64,
+    "topMissing": [
+      {
+        "name": "叶如霜",
+        "missingChapters": 6,
+        "rate": "12%"
+      },
+      {
+        "name": "剑如晦",
+        "missingChapters": 6,
+        "rate": "12%"
+      },
+      {
+        "name": "凌云子",
+        "missingChapters": 5,
+        "rate": "10%"
+      },
+      {
+        "name": "无义长老",
+        "missingChapters": 5,
+        "rate": "10%"
+      },
+      {
+        "name": "殷素素",
+        "missingChapters": 4,
+        "rate": "8%"
+      },
+      {
+        "name": "剑玄通",
+        "missingChapters": 3,
+        "rate": "6%"
+      },
+      {
+        "name": "陆云舟",
+        "missingChapters": 3,
+        "rate": "6%"
+      },
+      {
+        "name": "江沱沱",
+        "missingChapters": 3,
+        "rate": "6%"
+      },
+      {
+        "name": "江无痕",
+        "missingChapters": 3,
+        "rate": "6%"
+      },
+      {
+        "name": "冷潇潇",
+        "missingChapters": 3,
+        "rate": "6%"
+      }
+    ],
+    "worstChapter": {
+      "chapterNo": 1,
+      "missingCount": 3,
+      "missingNames": [
+        "凌云子",
+        "剑玄通",
+        "剑凌霄"
+      ]
+    },
+    "hasForbiddenViolations": false,
+    "trend": {
+      "earlyAvg": 0.52,
+      "lateAvg": 0.58,
+      "direction": "improving"
+    }
+  },
+  "perChapter": [
+    {
+      "chapterNo": 1,
+      "contract": {
+        "required": 3,
+        "optional": 0,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.3,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 1,
+      "missingRequired": [
+        "凌云子",
+        "剑玄通",
+        "剑凌霄"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 凌云子, 剑玄通, 剑凌霄 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 2,
+      "contract": {
+        "required": 1,
+        "optional": 0,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.9,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 1,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "✅ 合规评分优秀 — EntityContract 完全遵守"
+      ]
+    },
+    {
+      "chapterNo": 3,
+      "contract": {
+        "required": 1,
+        "optional": 0,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.9,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 1,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "✅ 合规评分优秀 — EntityContract 完全遵守"
+      ]
+    },
+    {
+      "chapterNo": 4,
+      "contract": {
+        "required": 3,
+        "optional": 0,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.3,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 1,
+      "missingRequired": [
+        "陆云舟",
+        "叶如霜",
+        "江沱沱"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 陆云舟, 叶如霜, 江沱沱 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 5,
+      "contract": {
+        "required": 3,
+        "optional": 2,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.2,
+      "isAcceptable": false,
+      "requiredRecall": 0.333,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "陆云舟",
+        "叶如霜"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 陆云舟, 叶如霜 (2/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 6,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.7,
+      "isAcceptable": true,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 1,
+      "missingRequired": [
+        "陆云舟"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 陆云舟 (1/3)",
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 7,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.625,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0.75,
+      "missingRequired": [
+        "永言长老"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 永言长老 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 8,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "凌云子",
+        "永言长老",
+        "赤炎王"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 凌云子, 永言长老, 赤炎王 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 9,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.5,
+      "isAcceptable": false,
+      "requiredRecall": 0.333,
+      "optionalCoverage": 1,
+      "missingRequired": [
+        "祖古上人",
+        "鳌润"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 祖古上人, 鳌润 (2/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 10,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.2,
+      "isAcceptable": false,
+      "requiredRecall": 0.333,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "江无痕",
+        "鳌润"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 江无痕, 鳌润 (2/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 11,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.075,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 0.25,
+      "missingRequired": [
+        "冷潇潇",
+        "江无痕",
+        "祖古上人"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 冷潇潇, 江无痕, 祖古上人 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 12,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.35,
+      "isAcceptable": false,
+      "requiredRecall": 0.333,
+      "optionalCoverage": 0.5,
+      "missingRequired": [
+        "江无痕",
+        "金镶玉"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 江无痕, 金镶玉 (2/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 13,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.15,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 0.5,
+      "missingRequired": [
+        "叶如霜",
+        "冷潇潇",
+        "金镶玉"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 叶如霜, 冷潇潇, 金镶玉 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 14,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "剑如晦",
+        "叶如霜",
+        "金镶玉"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 剑如晦, 叶如霜, 金镶玉 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 15,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.15,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 0.5,
+      "missingRequired": [
+        "剑如晦",
+        "叶如霜",
+        "无义长老"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 剑如晦, 叶如霜, 无义长老 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 16,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.075,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 0.25,
+      "missingRequired": [
+        "剑如晦",
+        "无仁长老",
+        "无义长老"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 剑如晦, 无仁长老, 无义长老 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 17,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.075,
+      "isAcceptable": false,
+      "requiredRecall": 0,
+      "optionalCoverage": 0.25,
+      "missingRequired": [
+        "敖炎涛",
+        "无仁长老",
+        "无义长老"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 敖炎涛, 无仁长老, 无义长老 (3/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 18,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.2,
+      "isAcceptable": false,
+      "requiredRecall": 0.333,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "敖炎涛",
+        "赤炎王"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 敖炎涛, 赤炎王 (2/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 19,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.35,
+      "isAcceptable": false,
+      "requiredRecall": 0.333,
+      "optionalCoverage": 0.5,
+      "missingRequired": [
+        "敖炎涛",
+        "江沱沱"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 敖炎涛, 江沱沱 (2/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 20,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.55,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0.5,
+      "missingRequired": [
+        "殷素素"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 殷素素 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 21,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.55,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0.5,
+      "missingRequired": [
+        "江沱沱"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 江沱沱 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 22,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.6,
+      "isAcceptable": false,
+      "requiredRecall": 1,
+      "optionalCoverage": 0,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 23,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.4,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "叶如霜"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 叶如霜 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 24,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.4,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "剑玄通"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 剑玄通 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 25,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.4,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "剑玄通"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 剑玄通 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 26,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.4,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "无义长老"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 无义长老 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 27,
+      "contract": {
+        "required": 4,
+        "optional": 6,
+        "latent": 4,
+        "forbidden": 0
+      },
+      "complianceScore": 0.5,
+      "isAcceptable": false,
+      "requiredRecall": 0.75,
+      "optionalCoverage": 0.167,
+      "missingRequired": [
+        "冷潇潇"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 冷潇潇 (1/4)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 28,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.55,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0.5,
+      "missingRequired": [
+        "无义长老"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 无义长老 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 29,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.9,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 1,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "✅ 合规评分优秀 — EntityContract 完全遵守"
+      ]
+    },
+    {
+      "chapterNo": 30,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.825,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 0.75,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 31,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.275,
+      "isAcceptable": false,
+      "requiredRecall": 0.333,
+      "optionalCoverage": 0.25,
+      "missingRequired": [
+        "凌云子",
+        "剑如晦"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 凌云子, 剑如晦 (2/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 32,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.4,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "凌云子"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 凌云子 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 33,
+      "contract": {
+        "required": 4,
+        "optional": 6,
+        "latent": 4,
+        "forbidden": 0
+      },
+      "complianceScore": 0.45,
+      "isAcceptable": false,
+      "requiredRecall": 0.75,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "殷素素"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 殷素素 (1/4)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 34,
+      "contract": {
+        "required": 4,
+        "optional": 5,
+        "latent": 4,
+        "forbidden": 0
+      },
+      "complianceScore": 0.45,
+      "isAcceptable": false,
+      "requiredRecall": 0.75,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "剑如晦"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 剑如晦 (1/4)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 35,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.675,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 0.25,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 36,
+      "contract": {
+        "required": 4,
+        "optional": 4,
+        "latent": 4,
+        "forbidden": 0
+      },
+      "complianceScore": 0.45,
+      "isAcceptable": false,
+      "requiredRecall": 0.75,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "剑如晦"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 剑如晦 (1/4)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 37,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.475,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0.25,
+      "missingRequired": [
+        "无觉道长"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 无觉道长 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 38,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.75,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 0.5,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 39,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.75,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 0.5,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 40,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.825,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 0.75,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 41,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.475,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0.25,
+      "missingRequired": [
+        "上官云秀"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 上官云秀 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 42,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.675,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 0.25,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 43,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.275,
+      "isAcceptable": false,
+      "requiredRecall": 0.333,
+      "optionalCoverage": 0.25,
+      "missingRequired": [
+        "殷素素",
+        "无礼长老"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 殷素素, 无礼长老 (2/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 44,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.55,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0.5,
+      "missingRequired": [
+        "殷素素"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 殷素素 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 45,
+      "contract": {
+        "required": 3,
+        "optional": 3,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.5,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0.333,
+      "missingRequired": [
+        "无礼长老"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 无礼长老 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 46,
+      "contract": {
+        "required": 3,
+        "optional": 1,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.4,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "无觉道长"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 无觉道长 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 47,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.4,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "凌云子"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 凌云子 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 48,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.825,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 0.75,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 49,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.675,
+      "isAcceptable": true,
+      "requiredRecall": 1,
+      "optionalCoverage": 0.25,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "⚠️ 合规评分可接受 — 有少量缺失，但不影响整体一致"
+      ]
+    },
+    {
+      "chapterNo": 50,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.6,
+      "isAcceptable": false,
+      "requiredRecall": 1,
+      "optionalCoverage": 0,
+      "missingRequired": [],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    },
+    {
+      "chapterNo": 51,
+      "contract": {
+        "required": 3,
+        "optional": 4,
+        "latent": 3,
+        "forbidden": 0
+      },
+      "complianceScore": 0.4,
+      "isAcceptable": false,
+      "requiredRecall": 0.667,
+      "optionalCoverage": 0,
+      "missingRequired": [
+        "沈清漪"
+      ],
+      "forbiddenViolations": 0,
+      "diagnostics": [
+        "required 实体缺失: 沈清漪 (1/3)",
+        "❌ 合规评分不合格 — EntityContract 未得到遵守，建议检查 Writer prompt"
+      ]
+    }
+  ]
+}

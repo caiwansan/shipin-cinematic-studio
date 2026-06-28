@@ -1,0 +1,45 @@
+// 回放帧 — 系统全景快照
+model ReplayFrame {
+  id        BigInt   @id @default(autoincrement())
+  timestamp DateTime @default(now())
+
+  // 队列
+  queueLength   Int   @default(0)
+  queuePressure Float @default(0)
+
+  // Worker
+  activeWorkers    Int   @default(0)
+  workerThroughput Float @default(0)
+  workerEfficiency Float @default(0)
+
+  // PID / 控制
+  pidPressure   Float @default(0)
+  generatorRate Float @default(0)
+  ses           Float @default(1)
+
+  // 内存
+  memoryMb Float @default(0)
+
+  // 成本（模拟）
+  costPerMin Float @default(0)
+  totalCost  Float @default(0)
+
+  // 漂移分析
+  queueGrowthRate Float?
+  workerTrend     Float?
+  memorySlope     Float?
+  pidVariance     Float?
+  stabilityScore  Float?
+  stabilityGrade  String?
+
+  // 标签（标记关键帧类型: normal / alert / throttle / recovery / emergency）
+  label String?
+
+  // Session 绑定
+  sessionId BigInt?
+  session   StabilitySession? @relation(fields: [sessionId], references: [id])
+
+  @@map("replay_frames")
+  @@index([timestamp])
+  @@index([sessionId])
+}

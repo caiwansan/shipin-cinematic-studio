@@ -1,0 +1,296 @@
+{
+  "summary": {
+    "totalProviders": 16,
+    "referenced": 16,
+    "orphan": 0,
+    "byType": {
+      "other": 3,
+      "llm": 3,
+      "image": 4,
+      "tts": 3,
+      "video": 2,
+      "music": 1
+    },
+    "byVendor": {
+      "unknown": 2,
+      "deepseek": 1,
+      "openai": 1,
+      "replicate": 1,
+      "aliyun": 4,
+      "mureka": 1,
+      "suno": 2,
+      "siliconflow": 1,
+      "volcengine": 3
+    }
+  },
+  "providers": [
+    {
+      "file": "runtime/providers/base.provider.ts",
+      "name": "base.provider",
+      "vendor": "unknown",
+      "type": "other",
+      "sizeBytes": 4560,
+      "exports": [],
+      "referenceCount": 7,
+      "referencedBy": [
+        "runtime/executors/base-llm.executor.ts",
+        "runtime/index.ts",
+        "runtime/narrative-gateway.ts",
+        "runtime/providers/deepseek.provider.ts",
+        "runtime/providers/openai.provider.ts",
+        "runtime/providers/provider.registry.ts",
+        "runtime/providers/replicate.image.provider.ts"
+      ]
+    },
+    {
+      "file": "runtime/providers/deepseek.provider.ts",
+      "name": "deepseek.provider",
+      "vendor": "deepseek",
+      "type": "llm",
+      "sizeBytes": 1750,
+      "exports": [
+        "DeepSeekProvider"
+      ],
+      "referenceCount": 2,
+      "referencedBy": [
+        "runtime/index.ts",
+        "runtime/providers/provider.registry.ts"
+      ]
+    },
+    {
+      "file": "runtime/providers/image.base.provider.ts",
+      "name": "image.base.provider",
+      "vendor": "unknown",
+      "type": "image",
+      "sizeBytes": 901,
+      "exports": [],
+      "referenceCount": 3,
+      "referencedBy": [
+        "runtime/index.ts",
+        "runtime/providers/provider.registry.ts",
+        "runtime/providers/replicate.image.provider.ts"
+      ]
+    },
+    {
+      "file": "runtime/providers/openai.provider.ts",
+      "name": "openai.provider",
+      "vendor": "openai",
+      "type": "llm",
+      "sizeBytes": 3066,
+      "exports": [
+        "OpenAIProvider"
+      ],
+      "referenceCount": 2,
+      "referencedBy": [
+        "runtime/index.ts",
+        "runtime/providers/provider.registry.ts"
+      ]
+    },
+    {
+      "file": "runtime/providers/replicate.image.provider.ts",
+      "name": "replicate.image.provider",
+      "vendor": "replicate",
+      "type": "image",
+      "sizeBytes": 4476,
+      "exports": [
+        "ReplicateImageProvider"
+      ],
+      "referenceCount": 1,
+      "referencedBy": [
+        "runtime/index.ts"
+      ]
+    },
+    {
+      "file": "services/aliyun-image.provider.ts",
+      "name": "aliyun-image.provider",
+      "vendor": "aliyun",
+      "type": "image",
+      "sizeBytes": 9518,
+      "exports": [
+        "aliyunImage",
+        "generateWithImage"
+      ],
+      "referenceCount": 5,
+      "referencedBy": [
+        "core/provider-adapters/aliyun-image.adapter.ts",
+        "queue/worker-runtime.ts",
+        "routes/images.ts",
+        "runtime/with-user-model-config.ts",
+        "services/runtime-context.ts"
+      ]
+    },
+    {
+      "file": "services/aliyun-llm.provider.ts",
+      "name": "aliyun-llm.provider",
+      "vendor": "aliyun",
+      "type": "llm",
+      "sizeBytes": 4786,
+      "exports": [
+        "aliyunLLM"
+      ],
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/unified-ai-gateway.ts"
+      ]
+    },
+    {
+      "file": "services/aliyun-tts.provider.ts",
+      "name": "aliyun-tts.provider",
+      "vendor": "aliyun",
+      "type": "tts",
+      "sizeBytes": 4305,
+      "exports": [
+        "aliyunTTS",
+        "ALIYUN_TTS_VOICES"
+      ],
+      "referenceCount": 4,
+      "referencedBy": [
+        "core/provider-adapters/aliyun-tts.adapter.ts",
+        "queue/worker-runtime.ts",
+        "routes/tts.ts",
+        "routes/voice.ts"
+      ]
+    },
+    {
+      "file": "services/aliyun-video.provider.ts",
+      "name": "aliyun-video.provider",
+      "vendor": "aliyun",
+      "type": "video",
+      "sizeBytes": 8245,
+      "exports": [
+        "aliyunVideo"
+      ],
+      "referenceCount": 5,
+      "referencedBy": [
+        "core/provider-adapters/aliyun-video.adapter.ts",
+        "queue/worker-runtime.ts",
+        "routes/images.ts",
+        "runtime/with-user-model-config.ts",
+        "services/runtime-context.ts"
+      ]
+    },
+    {
+      "file": "services/music/mureka.provider.ts",
+      "name": "mureka.provider",
+      "vendor": "mureka",
+      "type": "other",
+      "sizeBytes": 4026,
+      "exports": [
+        "MurekaProvider"
+      ],
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/music/registry.ts"
+      ]
+    },
+    {
+      "file": "services/music/music15.provider.ts",
+      "name": "music15.provider",
+      "vendor": "suno",
+      "type": "music",
+      "sizeBytes": 3906,
+      "exports": [
+        "Music15Provider"
+      ],
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/music/registry.ts"
+      ]
+    },
+    {
+      "file": "services/music/suno.provider.ts",
+      "name": "suno.provider",
+      "vendor": "suno",
+      "type": "other",
+      "sizeBytes": 3938,
+      "exports": [
+        "SunoProvider"
+      ],
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/music/registry.ts"
+      ]
+    },
+    {
+      "file": "services/siliconflow-tts.provider.ts",
+      "name": "siliconflow-tts.provider",
+      "vendor": "siliconflow",
+      "type": "tts",
+      "sizeBytes": 4705,
+      "exports": [
+        "siliconflowTTS"
+      ],
+      "referenceCount": 3,
+      "referencedBy": [
+        "core/provider-adapters/siliconflow-tts.adapter.ts",
+        "queue/worker-runtime.ts",
+        "routes/tts.ts"
+      ]
+    },
+    {
+      "file": "services/volcengine-image.provider.ts",
+      "name": "volcengine-image.provider",
+      "vendor": "volcengine",
+      "type": "image",
+      "sizeBytes": 6232,
+      "exports": [
+        "volcengineImage"
+      ],
+      "referenceCount": 11,
+      "referencedBy": [
+        "core/provider-wrapper/volcengine/index.ts",
+        "core/provider-wrapper/volcengine/volcengine-image.wrapper.ts",
+        "queue/worker-runtime.ts",
+        "routes/images.ts",
+        "core/provider-adapters/volcengine-image.adapter.ts",
+        "core/provider-wrapper/volcengine/volcengine-method-bindings.ts",
+        "core/provider-wrapper/volcengine/volcengine-proxy.factory.ts",
+        "production-loop/api.ts",
+        "production-loop/video/volcengine.image.ts",
+        "routes/system-health.ts"
+      ]
+    },
+    {
+      "file": "services/volcengine-tts.provider.ts",
+      "name": "volcengine-tts.provider",
+      "vendor": "volcengine",
+      "type": "tts",
+      "sizeBytes": 2782,
+      "exports": [
+        "volcengineTTS"
+      ],
+      "referenceCount": 7,
+      "referencedBy": [
+        "core/provider-wrapper/volcengine/volcengine-tts.wrapper.ts",
+        "queue/worker-runtime.ts",
+        "routes/tts.ts",
+        "core/provider-adapters/volcengine-tts.adapter.ts",
+        "core/provider-wrapper/volcengine/index.ts",
+        "core/provider-wrapper/volcengine/volcengine-method-bindings.ts",
+        "core/provider-wrapper/volcengine/volcengine-proxy.factory.ts"
+      ]
+    },
+    {
+      "file": "services/volcengine-video.provider.ts",
+      "name": "volcengine-video.provider",
+      "vendor": "volcengine",
+      "type": "video",
+      "sizeBytes": 4132,
+      "exports": [
+        "volcengineVideo"
+      ],
+      "referenceCount": 8,
+      "referencedBy": [
+        "core/provider-wrapper/volcengine/volcengine-video.wrapper.ts",
+        "routes/images.ts",
+        "services/mock-worker.ts",
+        "core/provider-adapters/volcengine-video.adapter.ts",
+        "core/provider-wrapper/volcengine/index.ts",
+        "core/provider-wrapper/volcengine/volcengine-method-bindings.ts",
+        "core/provider-wrapper/volcengine/volcengine-proxy.factory.ts",
+        "routes/system-health.ts"
+      ]
+    }
+  ],
+  "timestamp": "2026-05-21T04:09:14.150Z"
+}

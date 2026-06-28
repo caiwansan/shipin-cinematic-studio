@@ -1,0 +1,6 @@
+{
+  "version": "5.2",
+  "steps": [],
+  "datasource": "db",
+  "driftOverride": true
+}

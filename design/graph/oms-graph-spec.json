@@ -1,0 +1,180 @@
+{
+  "_description": "OMS V2 Graph Visualization Specification — 图谱可视化规范",
+  "_version": "1.0.0",
+
+  "node_types": [
+    {
+      "id": "event",
+      "label": "事件",
+      "color": "#FF4D4F",
+      "icon": "⚠️",
+      "size_rule": "impact * 10 + 5",
+      "in_graphs": ["causal"]
+    },
+    {
+      "id": "character_action",
+      "label": "角色动作",
+      "color": "#8b5cf6",
+      "icon": "🎭",
+      "size_rule": "8 + (score || 0.5) * 6",
+      "in_graphs": ["causal"]
+    },
+    {
+      "id": "conflict",
+      "label": "冲突",
+      "color": "#FF4D4F",
+      "icon": "⚔️",
+      "size_rule": "impact * 12 + 6",
+      "in_graphs": ["causal"]
+    },
+    {
+      "id": "economic_shift",
+      "label": "经济变迁",
+      "color": "#FADB14",
+      "icon": "💰",
+      "size_rule": "impact * 10 + 5",
+      "in_graphs": ["causal"]
+    },
+    {
+      "id": "system",
+      "label": "系统",
+      "color": "#1677FF",
+      "icon": "🌐",
+      "size_rule": 15,
+      "in_graphs": ["structure"]
+    },
+    {
+      "id": "faction",
+      "label": "派系",
+      "color": "#722ED1",
+      "icon": "🏛",
+      "size_rule": "12 + characterCount * 0.5",
+      "in_graphs": ["structure"]
+    },
+    {
+      "id": "character",
+      "label": "角色",
+      "color": "#8b5cf6",
+      "icon": "🎭",
+      "size_rule": 7,
+      "in_graphs": ["structure", "influence"]
+    },
+    {
+      "id": "observer",
+      "label": "观察者",
+      "color": "#FA8C16",
+      "icon": "👁",
+      "size_rule": 12,
+      "in_graphs": ["influence"]
+    },
+    {
+      "id": "variable",
+      "label": "世界变量",
+      "color": "#EB2F96",
+      "icon": "📊",
+      "size_rule": 10,
+      "in_graphs": ["influence"]
+    }
+  ],
+
+  "edge_types": {
+    "causal": {
+      "style": "solid",
+      "width": "(strength || 0.5) * 2.5",
+      "opacity": 0.6,
+      "in_graphs": ["causal"]
+    },
+    "influence": {
+      "style": "solid",
+      "width": 2,
+      "opacity": 0.5,
+      "in_graphs": ["influence"]
+    },
+    "structure": {
+      "style": "solid",
+      "width": 2,
+      "opacity": 0.5,
+      "in_graphs": ["structure"]
+    },
+    "belongs_to": {
+      "style": "dashed",
+      "width": 1.5,
+      "opacity": 0.3,
+      "in_graphs": ["structure"]
+    },
+    "conflict": {
+      "style": "solid",
+      "width": 2.5,
+      "opacity": 0.4,
+      "in_graphs": ["structure"]
+    },
+    "trade": {
+      "style": "dotted",
+      "width": 2,
+      "opacity": 0.4,
+      "in_graphs": ["structure"]
+    },
+    "observer_control": {
+      "style": "solid",
+      "width": 1.5,
+      "opacity": 0.4,
+      "in_graphs": ["influence"]
+    },
+    "character_influence": {
+      "style": "solid",
+      "width": "(strength || 0.5) * 3",
+      "opacity": 0.5,
+      "in_graphs": ["influence"]
+    }
+  },
+
+  "layout_rules": {
+    "causal": {
+      "engine": "force-directed",
+      "charge_strength": -300,
+      "link_distance": 130,
+      "center_gravity": 0.02,
+      "time_decay_ticks": 50,
+      "cluster_by": null,
+      "high_impact_auto_center": true
+    },
+    "structure": {
+      "engine": "force-directed",
+      "charge_strength": -350,
+      "link_distance": 150,
+      "center_gravity": 0.015,
+      "cluster_by": "faction",
+      "sub_cluster": "character",
+      "hierarchical_levels": ["system", "faction", "character"]
+    },
+    "influence": {
+      "engine": "force-directed",
+      "charge_strength": -250,
+      "link_distance": 140,
+      "center_gravity": 0.02,
+      "flow_direction": "observer → variable → character → world"
+    }
+  },
+
+  "inspection_rules": {
+    "hover": {
+      "highlight": "neighbors_1hop",
+      "dim_unrelated": true,
+      "show_inspector": true,
+      "inspector_fields": ["characterName", "faction", "emotion", "location", "activity", "impact", "stability"]
+    },
+    "click": {
+      "lock_focus": true,
+      "expand_subgraph": true,
+      "show_causal_ancestry": true
+    }
+  },
+
+  "interaction_bindings": {
+    "pan": "enabled",
+    "zoom": "enabled (scroll wheel)",
+    "node_drag": "enabled, release_recalculates",
+    "click_inactive": "deselect",
+    "double_click": "lock_node_in_center"
+  }
+}

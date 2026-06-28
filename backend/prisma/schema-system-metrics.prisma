@@ -1,0 +1,38 @@
+// 系统时序指标表 — 长期稳定性持久化
+model SystemMetric {
+  id        BigInt   @id @default(autoincrement()) @map("id")
+  timestamp DateTime @default(now()) @db(Decimal(17, 3))
+
+  // CPU / 内存 / 进程
+  cpuPercent    Float   @default(0) @map("cpu_percent")
+  memoryMb      Float   @default(0) @map("memory_mb")
+  eventLoopLag  Float?  @map("event_loop_lag")
+
+  // 队列
+  queueLength        Int   @default(0) @map("queue_length")
+  queuePressure      Float @default(0) @map("queue_pressure")
+
+  // Worker
+  activeWorkers    Int   @default(0) @map("active_workers")
+  workerEfficiency Float @default(0) @map("worker_efficiency")
+  workerCompleted  Int   @default(0) @map("worker_completed")
+
+  // PID / 背压控制
+  pidPressure      Float @default(0) @map("pid_pressure")
+  generatorRate    Float @default(0) @map("generator_rate")
+
+  // 成本（模拟）
+  costPerMin       Float @default(0) @map("cost_per_min")
+  totalCost        Float @default(0) @map("total_cost")
+
+  // 系统均衡
+  ses              Float @default(1) @map("ses")
+  degraded         Boolean @default(false) @map("degraded")
+
+  // 稳定评分（延迟计算，nullable）
+  stabilityScore Float? @map("stability_score")
+  stabilityGrade String? @length(2) @map("stability_grade")
+
+  @@map("system_metrics")
+  @@index([timestamp])
+}

@@ -1,0 +1,1617 @@
+{
+  "summary": {
+    "totalModels": 155,
+    "referenced": 119,
+    "orphaned": 36,
+    "orphanRate": 23.2
+  },
+  "models": [
+    {
+      "modelName": "AiStageModelConfig",
+      "schemaLine": 38,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/images.ts",
+        "routes/stage-model-config.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "User",
+      "schemaLine": 51,
+      "referenceCount": 40,
+      "referencedBy": [
+        "core/cost-guard.ts",
+        "core/provider-registry/fallback-resolver.ts",
+        "core/provider-registry/merged-view.ts",
+        "core/runtime/user-instance-registry.ts",
+        "core/stream-plane/stream-chunk.ts",
+        "graph-patch/patch.types.ts",
+        "index.ts",
+        "optimization/user-behavior-analyzer.ts",
+        "payment/providers/wechat/index.ts",
+        "payment/services/index.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CreatorDnaProfile",
+      "schemaLine": 79,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/user-center.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Captcha",
+      "schemaLine": 95,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/captcha.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "SmsCode",
+      "schemaLine": 104,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/auth.ts",
+        "routes/sms.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "EmailCode",
+      "schemaLine": 113,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/auth.ts",
+        "routes/sms.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Project",
+      "schemaLine": 122,
+      "referenceCount": 27,
+      "referencedBy": [
+        "director-v2/__tests__/production-controller.spec.ts",
+        "engine/director/shotgraph-writer.ts",
+        "production-loop/schema.ts",
+        "routes/admin-assets.ts",
+        "routes/admin-auth.ts",
+        "routes/ai-tasks.ts",
+        "routes/export-runtime.ts",
+        "routes/images.ts",
+        "routes/narrative-llm.ts",
+        "routes/optimize-video-prompt.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiCharacterSpec",
+      "schemaLine": 176,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiSceneSpec",
+      "schemaLine": 198,
+      "referenceCount": 5,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "routes/render-shots.ts",
+        "services/artifact-persistence.service.ts",
+        "services/artifact-sync.service.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiVoiceConfig",
+      "schemaLine": 218,
+      "referenceCount": 5,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "routes/tts.ts",
+        "services/artifact-persistence.service.ts",
+        "services/artifact-sync.service.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiVideoSegment",
+      "schemaLine": 239,
+      "referenceCount": 6,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "routes/images.ts",
+        "routes/optimize-video-prompt.ts",
+        "services/artifact-persistence.service.ts",
+        "services/artifact-sync.service.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiFrameDesign",
+      "schemaLine": 262,
+      "referenceCount": 6,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "routes/images.ts",
+        "routes/optimize-video-prompt.ts",
+        "services/artifact-persistence.service.ts",
+        "services/artifact-sync.service.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiVideoProduction",
+      "schemaLine": 283,
+      "referenceCount": 5,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "routes/optimize-video-prompt.ts",
+        "services/artifact-persistence.service.ts",
+        "services/artifact-sync.service.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiEffectSpec",
+      "schemaLine": 302,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiActionSpec",
+      "schemaLine": 324,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiCameraSpec",
+      "schemaLine": 345,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiEmotionSpec",
+      "schemaLine": 365,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/aigc-spec-db.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Storyboard",
+      "schemaLine": 386,
+      "referenceCount": 9,
+      "referencedBy": [
+        "graph-runtime/core/node.schema.ts",
+        "production-loop/api.ts",
+        "production-loop/production-runner.ts",
+        "production-loop/prompt-compiler.ts",
+        "routes/narrative-llm.ts",
+        "routes/storyboards.ts",
+        "schemas/index.ts",
+        "services/mock-worker.ts",
+        "services/storyboard.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "VideoTask",
+      "schemaLine": 415,
+      "referenceCount": 11,
+      "referencedBy": [
+        "chaos-test.ts",
+        "optimization/user-behavior-analyzer.ts",
+        "queue/queue-manager.ts",
+        "queue/worker-runtime.ts",
+        "routes/ai-tasks.ts",
+        "services/failure-event.service.ts",
+        "services/mock-worker.ts",
+        "services/observability.service.ts",
+        "services/scheduler.service.ts",
+        "services/video.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "VideoSegment",
+      "schemaLine": 440,
+      "referenceCount": 3,
+      "referencedBy": [
+        "services/export-runtime.ts",
+        "services/video-pipeline.engine.ts",
+        "services/video.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ExportTask",
+      "schemaLine": 453,
+      "referenceCount": 2,
+      "referencedBy": [
+        "queue/queue-manager.ts",
+        "services/export-runtime.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CharacterProfile",
+      "schemaLine": 472,
+      "referenceCount": 3,
+      "referencedBy": [
+        "agents/character.agent.ts",
+        "agents/portrait-prompt.agent.ts",
+        "services/character.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "SceneProfile",
+      "schemaLine": 494,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/scene.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "PromptTemplate",
+      "schemaLine": 510,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/prompt.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Asset",
+      "schemaLine": 520,
+      "referenceCount": 5,
+      "referencedBy": [
+        "core/asset-economy/api/asset-economy.routes.ts",
+        "core/asset-economy/asset-graph/graph-builder.ts",
+        "index.ts",
+        "runtime/asset-state-machine.ts",
+        "services/permission-graph.engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Membership",
+      "schemaLine": 539,
+      "referenceCount": 8,
+      "referencedBy": [
+        "core/asset-economy/api/asset-economy.routes.ts",
+        "payment/services/index.ts",
+        "routes/auth.ts",
+        "routes/member.ts",
+        "routes/payment.ts",
+        "routes/user-center.ts",
+        "routes/wechat-oauth.ts",
+        "services/ai-sandbox.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CoinLog",
+      "schemaLine": 566,
+      "referenceCount": 7,
+      "referencedBy": [
+        "payment/services/index.ts",
+        "routes/auth.ts",
+        "routes/images.ts",
+        "routes/member.ts",
+        "routes/music.ts",
+        "routes/payment.ts",
+        "routes/user-center.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "UserAsset",
+      "schemaLine": 581,
+      "referenceCount": 8,
+      "referencedBy": [
+        "routes/assets.ts",
+        "routes/featured.ts",
+        "routes/images.ts",
+        "routes/member.ts",
+        "routes/universe-images.ts",
+        "routes/upload.ts",
+        "routes/user-center.ts",
+        "services/universe-score-engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "UniverseCluster",
+      "schemaLine": 626,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/user-center.ts",
+        "services/universe-score-engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetLike",
+      "schemaLine": 641,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/featured.ts",
+        "routes/user-center.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetComment",
+      "schemaLine": 654,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/featured.ts",
+        "routes/user-center.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "RechargeOrder",
+      "schemaLine": 668,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/member.ts",
+        "routes/payment.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "MemberPlan",
+      "schemaLine": 687,
+      "referenceCount": 4,
+      "referencedBy": [
+        "routes/auth.ts",
+        "routes/member.ts",
+        "routes/payment.ts",
+        "runtime/with-user-model-config.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "StoragePack",
+      "schemaLine": 714,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/member.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AgentLevelConfig",
+      "schemaLine": 727,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/member.ts",
+        "routes/user-center.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "TaskLog",
+      "schemaLine": 736,
+      "referenceCount": 3,
+      "referencedBy": [
+        "observability/distributed-trace.ts",
+        "routes/tasks.ts",
+        "services/scheduler.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "WorkerRegistration",
+      "schemaLine": 750,
+      "referenceCount": 3,
+      "referencedBy": [
+        "services/observability.service.ts",
+        "services/scheduler.service.ts",
+        "services/worker-pool.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "WorkerTaskAssignment",
+      "schemaLine": 778,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/worker-pool.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "WorkerHealthHistory",
+      "schemaLine": 793,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/worker-pool.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "DeadLetterTask",
+      "schemaLine": 807,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/scheduler.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiModel",
+      "schemaLine": 823,
+      "referenceCount": 8,
+      "referencedBy": [
+        "routes/admin-api-keys.ts",
+        "routes/admin-models-v2.ts",
+        "routes/models.ts",
+        "scripts/sync-models.ts",
+        "scripts/update-models-v3.ts",
+        "scripts/update-models.ts",
+        "services/ai-router.service.ts",
+        "services/observability.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiFallbackRule",
+      "schemaLine": 868,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/ai-router.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiRoutingPolicy",
+      "schemaLine": 885,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/ai-router.ts",
+        "services/ai-router.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiTaskTypeMapping",
+      "schemaLine": 900,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/ai-router.ts",
+        "services/ai-router.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiExecutionLog",
+      "schemaLine": 912,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/ai-router.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiCircuitBreaker",
+      "schemaLine": 945,
+      "referenceCount": 4,
+      "referencedBy": [
+        "chaos-test.ts",
+        "routes/shadow.ts",
+        "services/ai-sandbox.service.ts",
+        "services/observability.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiSandboxLog",
+      "schemaLine": 966,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/ai-sandbox.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AiTimeoutConfig",
+      "schemaLine": 990,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/sandbox.ts",
+        "services/ai-sandbox.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ShadowConfig",
+      "schemaLine": 1005,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/shadow-execution.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ShadowExecutionLog",
+      "schemaLine": 1021,
+      "referenceCount": 2,
+      "referencedBy": [
+        "services/observability.service.ts",
+        "services/shadow-execution.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ShadowDiffResult",
+      "schemaLine": 1048,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/shadow-execution.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ShadowDriftHistory",
+      "schemaLine": 1067,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/shadow.ts",
+        "services/shadow-execution.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CostBudget",
+      "schemaLine": 1085,
+      "referenceCount": 3,
+      "referencedBy": [
+        "routes/shadow.ts",
+        "services/observability.service.ts",
+        "services/shadow-execution.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "SystemMetric",
+      "schemaLine": 1104,
+      "referenceCount": 1,
+      "referencedBy": [
+        "observability/timeseries.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ReplayFrame",
+      "schemaLine": 1143,
+      "referenceCount": 1,
+      "referencedBy": [
+        "replay/replay-engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "StabilitySession",
+      "schemaLine": 1189,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "DegradationEvent",
+      "schemaLine": 1226,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "PromptMemory",
+      "schemaLine": 1250,
+      "referenceCount": 2,
+      "referencedBy": [
+        "services/prompt-intelligence/optimization-loop.ts",
+        "services/prompt-intelligence/prompt-memory.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ApiKey",
+      "schemaLine": 1279,
+      "referenceCount": 10,
+      "referencedBy": [
+        "index.ts",
+        "queue/worker-runtime.ts",
+        "routes/admin-api-keys.ts",
+        "routes/admin-global-config.ts",
+        "routes/admin-models-v2.ts",
+        "runtime/with-user-model-config.ts",
+        "scripts/sync-models.ts",
+        "services/api-router.service.ts",
+        "services/runtime-context.ts",
+        "services/with-user-key.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "UserApiKey",
+      "schemaLine": 1290,
+      "referenceCount": 10,
+      "referencedBy": [
+        "core/runtime/user-instance-registry.ts",
+        "plugins/auth.ts",
+        "routes/api-keys.ts",
+        "routes/images.ts",
+        "routes/tts.ts",
+        "routes/user-api-keys.ts",
+        "runtime/narrative-gateway.ts",
+        "services/api-router.service.ts",
+        "services/user-api-key.service.ts",
+        "services/with-user-key.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "UserModelConfig",
+      "schemaLine": 1310,
+      "referenceCount": 8,
+      "referencedBy": [
+        "plugins/auth.ts",
+        "routes/admin-models.ts",
+        "routes/render-shots.ts",
+        "routes/user-model-config.ts",
+        "runtime/narrative-gateway.ts",
+        "runtime/with-user-model-config.ts",
+        "services/user-model-resolver.ts",
+        "services/with-user-key.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ModelProvider",
+      "schemaLine": 1347,
+      "referenceCount": 4,
+      "referencedBy": [
+        "routes/admin-global-config.ts",
+        "routes/model-provider.ts",
+        "routes/user-model-config.ts",
+        "scripts/init-model-providers.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "VoicePreset",
+      "schemaLine": 1366,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/voice.ts",
+        "services/voice-manager.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "DailyUsage",
+      "schemaLine": 1382,
+      "referenceCount": 3,
+      "referencedBy": [
+        "core/cost-guard.ts",
+        "services/usage-quota.service.ts",
+        "services/with-user-key.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AdminUser",
+      "schemaLine": 1398,
+      "referenceCount": 3,
+      "referencedBy": [
+        "middleware/require-admin.ts",
+        "routes/admin-auth.ts",
+        "routes/payment.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetDna",
+      "schemaLine": 1416,
+      "referenceCount": 3,
+      "referencedBy": [
+        "core/asset-economy/asset-dna/dna-generator.ts",
+        "core/asset-economy/revenue-engine/revenue-splitter.ts",
+        "core/asset-economy/similarity-engine/similarity-scorer.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetLineage",
+      "schemaLine": 1435,
+      "referenceCount": 2,
+      "referencedBy": [
+        "core/asset-economy/lineage-engine/lineage-tracker.ts",
+        "routes/universe-images.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetReference",
+      "schemaLine": 1448,
+      "referenceCount": 3,
+      "referencedBy": [
+        "core/asset-economy/api/asset-economy.routes.ts",
+        "core/asset-economy/asset-graph/graph-builder.ts",
+        "core/asset-economy/revenue-engine/revenue-splitter.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ContributionWeight",
+      "schemaLine": 1464,
+      "referenceCount": 1,
+      "referencedBy": [
+        "core/asset-economy/attribution-engine/contribution-calc.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "RevenueSplit",
+      "schemaLine": 1479,
+      "referenceCount": 1,
+      "referencedBy": [
+        "core/asset-economy/revenue-engine/revenue-splitter.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetTransaction",
+      "schemaLine": 1495,
+      "referenceCount": 3,
+      "referencedBy": [
+        "core/asset-economy/creator-wallet/wallet-manager.ts",
+        "core/asset-economy/revenue-engine/revenue-splitter.ts",
+        "core/asset-economy/transaction-engine/transaction-logger.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CreatorWallet",
+      "schemaLine": 1514,
+      "referenceCount": 2,
+      "referencedBy": [
+        "core/asset-economy/api/asset-economy.routes.ts",
+        "core/asset-economy/creator-wallet/wallet-manager.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ModerationQueue",
+      "schemaLine": 1528,
+      "referenceCount": 1,
+      "referencedBy": [
+        "core/asset-economy/moderation/review-queue.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "PaymentConfig",
+      "schemaLine": 1544,
+      "referenceCount": 3,
+      "referencedBy": [
+        "routes/member.ts",
+        "routes/payment.ts",
+        "routes/user-center.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "PaymentSecret",
+      "schemaLine": 1559,
+      "referenceCount": 3,
+      "referencedBy": [
+        "payment/config/index.ts",
+        "routes/payment.ts",
+        "routes/wechat-oauth.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "PaymentOrder",
+      "schemaLine": 1572,
+      "referenceCount": 3,
+      "referencedBy": [
+        "payment/services/index.ts",
+        "routes/payment.ts",
+        "routes/user-center.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AgentDef",
+      "schemaLine": 1608,
+      "referenceCount": 2,
+      "referencedBy": [
+        "agents/aigc-orchestrator.ts",
+        "routes/agent-orchestrator.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AgentEdge",
+      "schemaLine": 1634,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/agent-orchestrator.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "WorkflowDef",
+      "schemaLine": 1650,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/agent-orchestrator.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AgentExecution",
+      "schemaLine": 1665,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/agent-orchestrator.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AgentMemory",
+      "schemaLine": 1687,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "AssetRights",
+      "schemaLine": 1703,
+      "referenceCount": 2,
+      "referencedBy": [
+        "core/asset-economy/rights-engine/rights-manager.ts",
+        "routes/upload.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "UserLimit",
+      "schemaLine": 1725,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "TaskQueue",
+      "schemaLine": 1738,
+      "referenceCount": 1,
+      "referencedBy": [
+        "queue/task-queue.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "TaskExecution",
+      "schemaLine": 1761,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "AgentExecutionLog",
+      "schemaLine": 1782,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "DAGGraph",
+      "schemaLine": 1804,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "DAGState",
+      "schemaLine": 1820,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "GPUNode",
+      "schemaLine": 1839,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "GPUTaskLog",
+      "schemaLine": 1854,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "GPUThrottleState",
+      "schemaLine": 1877,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "SystemMonitor",
+      "schemaLine": 1890,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "RateLimit",
+      "schemaLine": 1905,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "CircuitBreaker",
+      "schemaLine": 1920,
+      "referenceCount": 1,
+      "referencedBy": [
+        "core/circuit-breaker.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "WorkerHeartbeat",
+      "schemaLine": 1936,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "DesktopRuntimeConfig",
+      "schemaLine": 1956,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "LocalGPUNode",
+      "schemaLine": 1969,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "LicenseCache",
+      "schemaLine": 1986,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/desktop-runtime.ts",
+        "routes/payment.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "LocalAssetIndex",
+      "schemaLine": 2002,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelEvent",
+      "schemaLine": 2023,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelStateSnapshot",
+      "schemaLine": 2041,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "RuntimeRegistry",
+      "schemaLine": 2054,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelHealthLog",
+      "schemaLine": 2071,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "SchedulerTask",
+      "schemaLine": 2087,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "ResourceAllocation",
+      "schemaLine": 2108,
+      "referenceCount": 2,
+      "referencedBy": [
+        "scheduler/index.ts",
+        "scheduler/resource-router.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "EventLoopViolation",
+      "schemaLine": 2127,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "RuntimeDependencyGraph",
+      "schemaLine": 2142,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelShadowEventLog",
+      "schemaLine": 2161,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelCutoverScore",
+      "schemaLine": 2179,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelDualExecutionLog",
+      "schemaLine": 2197,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelStateDiffLog",
+      "schemaLine": 2217,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelRollbackHistory",
+      "schemaLine": 2234,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "KernelHealthMetrics",
+      "schemaLine": 2251,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "GenerationReference",
+      "schemaLine": 2272,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/reference.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ProductionRecord",
+      "schemaLine": 2289,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/reference.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "World",
+      "schemaLine": 2311,
+      "referenceCount": 13,
+      "referencedBy": [
+        "director-v2/schema/world-physics.ts",
+        "index.ts",
+        "jobs/showrunner-worker.ts",
+        "routes/admin-assets.ts",
+        "routes/characters.ts",
+        "routes/oms-dashboard.ts",
+        "routes/oms-fusion.ts",
+        "routes/oms-v2.ts",
+        "routes/world-memory.ts",
+        "routes/world-model.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Observer",
+      "schemaLine": 2326,
+      "referenceCount": 8,
+      "referencedBy": [
+        "plugins/runtime-context.ts",
+        "queue/queue-manager.ts",
+        "queue/worker-runtime.ts",
+        "routes/oms-dashboard.ts",
+        "routes/oms-fusion.ts",
+        "routes/oms-v2.ts",
+        "routes/world-runtime.ts",
+        "services/runtime-observer.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Event",
+      "schemaLine": 2341,
+      "referenceCount": 18,
+      "referencedBy": [
+        "api/runtime/runtime.service.ts",
+        "core/stream-plane/stream-event-bus.ts",
+        "director-v2/telemetry/constitution-events.ts",
+        "production-loop/event-bus.ts",
+        "routes/characters.ts",
+        "routes/oms-dashboard.ts",
+        "routes/oms-fusion.ts",
+        "routes/oms-v2.ts",
+        "routes/runtime-observability.ts",
+        "routes/world-runtime.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "NarrativeScene",
+      "schemaLine": 2355,
+      "referenceCount": 3,
+      "referencedBy": [
+        "routes/oms-dashboard.ts",
+        "routes/world-runtime.ts",
+        "worker/tick-worker.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Character",
+      "schemaLine": 2372,
+      "referenceCount": 16,
+      "referencedBy": [
+        "core/constraint-physics/index.ts",
+        "director/character-director.agent.ts",
+        "director/index.ts",
+        "director-v2/diagnostics/golden-suite.ts",
+        "director-v2/runtime/constitution-merge.ts",
+        "director-v2/runtime/shadow-ui-router.ts",
+        "director-v2/schema/character-law.ts",
+        "graph-runtime/core/node.schema.ts",
+        "index.ts",
+        "routes/characters.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CharacterMemory",
+      "schemaLine": 2399,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/characters.ts",
+        "worker/tick-worker.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CharacterRelation",
+      "schemaLine": 2414,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/characters.ts",
+        "routes/oms-fusion.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CharacterBehavior",
+      "schemaLine": 2430,
+      "referenceCount": 3,
+      "referencedBy": [
+        "routes/characters.ts",
+        "routes/oms-fusion.ts",
+        "worker/tick-worker.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "PipelineStage",
+      "schemaLine": 2451,
+      "referenceCount": 3,
+      "referencedBy": [
+        "routes/pipeline.ts",
+        "services/aggregation-engine.ts",
+        "services/dag-runtime.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "PipelineJob",
+      "schemaLine": 2481,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/pipeline-jobs.ts",
+        "services/aggregation-engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CharacterImage",
+      "schemaLine": 2510,
+      "referenceCount": 5,
+      "referencedBy": [
+        "queue/worker-runtime.ts",
+        "routes/execution-images.ts",
+        "routes/images.ts",
+        "routes/pipeline.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "SceneImage",
+      "schemaLine": 2525,
+      "referenceCount": 6,
+      "referencedBy": [
+        "queue/worker-runtime.ts",
+        "routes/execution-images.ts",
+        "routes/images.ts",
+        "routes/pipeline.ts",
+        "services/export-runtime.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "StoryboardImage",
+      "schemaLine": 2540,
+      "referenceCount": 6,
+      "referencedBy": [
+        "queue/worker-runtime.ts",
+        "routes/execution-images.ts",
+        "routes/images.ts",
+        "routes/pipeline.ts",
+        "services/export-runtime.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "PropImage",
+      "schemaLine": 2556,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/images.ts",
+        "services/project-hydrate.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "PropLibrary",
+      "schemaLine": 2575,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "FrameImage",
+      "schemaLine": 2589,
+      "referenceCount": 4,
+      "referencedBy": [
+        "queue/worker-runtime.ts",
+        "routes/execution-images.ts",
+        "routes/pipeline.ts",
+        "services/export-runtime.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CharacterReference",
+      "schemaLine": 2606,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/narrative-llm.ts",
+        "routes/references.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "SceneReference",
+      "schemaLine": 2621,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/narrative-llm.ts",
+        "routes/references.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CustomerChatSession",
+      "schemaLine": 2637,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/customer-service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CustomerChatMessage",
+      "schemaLine": 2648,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/customer-service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CustomerChatMemory",
+      "schemaLine": 2660,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/customer-service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Job",
+      "schemaLine": 2674,
+      "referenceCount": 24,
+      "referencedBy": [
+        "core/job-envelope.ts",
+        "core/lifecycle-integration.ts",
+        "core/lifecycle-state-machine.ts",
+        "director-v2/distributed/distributed-runtime.ts",
+        "director-v2/production/production-controller.ts",
+        "index.ts",
+        "jobs/job-queue.ts",
+        "jobs/job-store.ts",
+        "production-loop/api.ts",
+        "production-loop/render-executor.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "UsageLog",
+      "schemaLine": 2696,
+      "referenceCount": 2,
+      "referencedBy": [
+        "observability/cost-intelligence.ts",
+        "optimization/user-behavior-analyzer.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "WorldMemory",
+      "schemaLine": 2716,
+      "referenceCount": 4,
+      "referencedBy": [
+        "jobs/showrunner-worker.ts",
+        "routes/admin-assets.ts",
+        "routes/world-memory.ts",
+        "services/world-memory.service.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "StoryConstitution",
+      "schemaLine": 2736,
+      "referenceCount": 31,
+      "referencedBy": [
+        "director-v2/__chaos__/constitution-chaos-harness.ts",
+        "director-v2/__fixtures__/scripts.ts",
+        "director-v2/__tests__/constitution-stability.spec.ts",
+        "director-v2/__tests__/realtime-scene.spec.ts",
+        "director-v2/constitution-compiler.ts",
+        "director-v2/director-bridge.ts",
+        "director-v2/index.ts",
+        "director-v2/memory/constitution-store.ts",
+        "director-v2/norm/anchor/constitution-anchors.ts",
+        "director-v2/norm/constitution-fingerprint.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "DirectorMemory",
+      "schemaLine": 2756,
+      "referenceCount": 1,
+      "referencedBy": [
+        "director-v2/memory/director-memory.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "JobQueue",
+      "schemaLine": 2771,
+      "referenceCount": 4,
+      "referencedBy": [
+        "director-v2/production/production-controller.ts",
+        "jobs/job-queue.ts",
+        "routes/showrunner.ts",
+        "workers/worker-pool.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetRegistry",
+      "schemaLine": 2790,
+      "referenceCount": 7,
+      "referencedBy": [
+        "routes/hitl.ts",
+        "services/asset-registry.service.ts",
+        "services/asset-version.service.ts",
+        "services/card-render.engine.ts",
+        "services/permission-graph.engine.ts",
+        "services/shot-resolver.service.ts",
+        "services/video-pipeline.engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetVersion",
+      "schemaLine": 2807,
+      "referenceCount": 7,
+      "referencedBy": [
+        "routes/hitl.ts",
+        "services/ai-invocation-envelope.ts",
+        "services/asset-version.service.ts",
+        "services/card-render.engine.ts",
+        "services/optimization-engine.ts",
+        "services/shot-resolver.service.ts",
+        "services/unified-ai-gateway.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "ContinuityLink",
+      "schemaLine": 2827,
+      "referenceCount": 3,
+      "referencedBy": [
+        "services/continuity-link.service.ts",
+        "services/shot-resolver.service.ts",
+        "services/temporal-graph.engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "InvocationLog",
+      "schemaLine": 2843,
+      "referenceCount": 5,
+      "referencedBy": [
+        "routes/product.ts",
+        "runtime/asset-state-audit.ts",
+        "services/control-plane.service.ts",
+        "services/invocation-log.service.ts",
+        "services/unified-ai-gateway.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "AssetGraphEdge",
+      "schemaLine": 2866,
+      "referenceCount": 1,
+      "referencedBy": [
+        "services/asset-graph-index.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Organization",
+      "schemaLine": 2887,
+      "referenceCount": 1,
+      "referencedBy": [
+        "routes/tenant.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "OrgMember",
+      "schemaLine": 2899,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/tenant.ts",
+        "services/permission-graph.engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "Workspace",
+      "schemaLine": 2912,
+      "referenceCount": 2,
+      "referencedBy": [
+        "routes/tenant.ts",
+        "services/permission-graph.engine.ts"
+      ],
+      "status": "active"
+    },
+    {
+      "modelName": "CommunityPost",
+      "schemaLine": 2931,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "CommunityComment",
+      "schemaLine": 2964,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "CommunityLike",
+      "schemaLine": 2986,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "CommunityCommentLike",
+      "schemaLine": 3000,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    },
+    {
+      "modelName": "CommunityReward",
+      "schemaLine": 3014,
+      "referenceCount": 0,
+      "referencedBy": [],
+      "status": "orphan"
+    }
+  ],
+  "timestamp": "2026-05-21T03:55:51.691Z"
+}

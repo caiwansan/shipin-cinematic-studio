@@ -1,0 +1,46 @@
+{
+  "benchmarkId": "bench_L0-001_full_mqxfqhgk",
+  "timestamp": "2026-06-28T06:56:04.580Z",
+  "dataset": {
+    "id": "L0-001",
+    "level": "L0",
+    "name": "Single Shot — Basic",
+    "shots": 1,
+    "capabilities": [
+      "film.character.reference",
+      "film.keyframe",
+      "film.render.shot"
+    ],
+    "complexity": {
+      "characters": 1,
+      "locations": 1,
+      "shots": 1,
+      "interactions": 1
+    }
+  },
+  "stage": "full",
+  "status": "failed",
+  "metrics": {
+    "duration": 3,
+    "sps": 1,
+    "capabilityCoverage": 0,
+    "compilerHashConsistency": 1,
+    "driftCount": 0
+  },
+  "fingerprint": {
+    "compilerHash": "sh008rklly",
+    "graphHash": "sh00wzcn7y",
+    "plannerHash": "sh00owo4o1",
+    "negotiatorHash": "sh000bagtg",
+    "dagHash": "sh00vrsv3q",
+    "traceHash": "sh003yvpzs"
+  },
+  "diagnostics": {
+    "warnings": 0,
+    "errors": 1,
+    "warningDetail": [],
+    "errorDetail": [
+      "GraphBuilder: Cannot read properties of undefined (reading 'length')"
+    ]
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "phase": "Phase 3 — 前端去规则化（验收报告）",
+  "timestamp": "2026-06-23T22:20:00+08:00",
+
+  "newFiles": [
+    {
+      "path": "frontend/studio-v2/runtime/execution/PromptRegistryClient.ts",
+      "description": "前端 PromptRegistry 客户端，唯一 API 调用入口"
+    },
+    {
+      "path": "backend/src/routes/prompt-registry.ts",
+      "description": "PromptRegistry 前端 API 路由（/api/ai/prompt-registry/{get,batch,entry}）"
+    }
+  ],
+
+  "frontendRefactored": [
+    {
+      "path": "DirectorAgent.ts",
+      "status": "REWRITTEN",
+      "deleted": [
+        "EMOTION_TO_CAMERA（10种情绪→镜头映射，~30行）",
+        "EMOTION_TRANSITIONS（10种情绪转场表，~15行）",
+        "CONTINUITY_RULES（3类阈值规则，~10行）",
+        "suggestCameraForFrame()（完整建议逻辑，~30行）",
+        "suggestEmotionForFrame()（完整建议逻辑，~30行）",
+        "DEFAULT_CAMERAS（6种默认运镜，~10行）",
+        "checkConstraints()（5条硬编码检查，~40行）",
+        "checkContinuity()（3类连续性判断，~80行）",
+        "fixViolations()（4类修正逻辑，~50行）",
+        "suggestEmotions()（情绪过渡计算，~40行）"
+      ],
+      "retained": ["createMergeState（纯拼接）", "generateSuggestions（仅空洞统计）"],
+      "new": [
+        "PromptRegistryClient.getPrompt('director/...') 调用封装",
+        "evaluateContinuity() / evaluateConstraints() 委托给后端"
+      ],
+      "totalHardcodedMapsRemoved": 7,
+      "totalRuleLogicBlocksRemoved": 9
+    },
+    {
+      "path": "SegmentToPromptCompiler.ts",
+      "status": "REWRITTEN",
+      "deleted": [
+        "EMOTION_TO_TONE（10种情绪→色调，~12行）",
+        "CAMERA_DESCRIPTIONS（10种运镜→描述，~12行）"
+      ],
+      "removedSemanticLogic": true,
+      "new": [
+        "enrichVisualWithTone() — 运行时异步补充色调/描述（走 PromptRegistry）",
+        "compileCamera() — 纯身份透传，不做语义转换",
+        "compileVisual() — 用'情绪: xxx'代替EMOTION_TO_TONE查找"
+      ]
+    },
+    {
+      "path": "constraint-types.ts",
+      "status": "REWRITTEN",
+      "deleted": ["BUILTIN_CONSTRAINTS（5条硬编码约束表，~30行）"],
+      "retained": ["类型定义（ProductionConstraint, ConstraintCheckResult, ConstraintReport）"]
+    }
+  ],
+
+  "backendNewRoutes": [
+    {
+      "path": "src/routes/prompt-registry.ts",
+      "methods": ["POST /api/ai/prompt-registry/get", "POST /api/ai/prompt-registry/batch", "POST /api/ai/prompt-registry/entry"],
+      "description": "供前端 PromptRegistryClient 调用的 API 接口"
+    }
+  ],
+
+  "guardRefactored": {
+    "path": "PromptAccessGuard.ts",
+    "old": "Prisma $use（Prisma 6 不兼容）",
+    "new": "导出封装式（runAsRegistry / runAsAdmin 上下文标记）",
+    "status": "已部署并验证通过",
+    "verified": true
+  },
+
+  "verification": {
+    "frontendRules": 0,
+    "hardcodedMaps": 0,
+    "decisionLogicInFrontend": 0,
+    "promptCallsOnly": true,
+    "frontendBuildClean": true,
+    "backendAllOnline": true,
+    "registryAPIClean": true
+  },
+
+  "systemState": {
+    "Phase 0": "fragmented system ✅",
+    "Phase 1": "registry born + portrait fixed ✅",
+    "Phase 2": "backend fully unified ✅",
+    "Phase 3": "frontend de-ruled ✅（当前已完成）",
+    "Phase 4": "Prompt Runtime OS ❌"
+  },
+
+  "finalSystemForm": {
+    "promptRegistry": "brain",
+    "backendRoutes": "muscles",
+    "frontend": "skeleton（纯编排壳）",
+    "db": "memory"
+  },
+
+  "notes": {
+    "retainedFrontendLogic": "generateSuggestions() 仅做空洞检测（纯统计），不包含任何语义映射",
+    "executionImagesFallback": "四视图 inline fallback 保留（非前端规则，属运行时备用值）",
+    "narrativeGPT": "前端 AIDirectorPanel 中的 narrativeGPT 仍调用 OpenAI 本地（未走 PromptRegistry）—— 待 Phase 4"
+  }
+}

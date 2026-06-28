@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "generatedAt": "2026-06-20T02:51:00+08:00",
+    "scope": "所有端点鉴权边界 / 共享状态存储"
+  },
+  "routesWithoutAuth": [
+    {
+      "path": "POST /api/director/runtime/start",
+      "file": "src/api/director-v2/runtime.ts",
+      "name": "runtime-start",
+      "risk": "无 auth，可创建任意运行时 session"
+    },
+    {
+      "path": "POST /api/director/runtime/tick",
+      "file": "src/api/director-v2/runtime.ts",
+      "name": "runtime-tick",
+      "risk": "无 auth，sessionKey 仅为随机数"
+    },
+    {
+      "path": "POST /api/director/runtime/state",
+      "file": "src/api/director-v2/runtime.ts",
+      "risk": "无 auth"
+    },
+    {
+      "path": "POST /api/director/runtime/seek",
+      "file": "src/api/director-v2/runtime.ts",
+      "risk": "无 auth"
+    },
+    {
+      "path": "POST /api/director/runtime/mutate",
+      "file": "src/api/director-v2/runtime.ts",
+      "risk": "无 auth，可修改运行中场景参数"
+    },
+    {
+      "path": "GET /api/director/runtime/stream/:sessionKey",
+      "file": "src/api/director-v2/runtime.ts",
+      "risk": "无 auth + CORS * + SSE 流可被任意网站订阅"
+    },
+    {
+      "path": "POST /api/director/runtime/auto-tick",
+      "file": "src/api/director-v2/runtime.ts",
+      "risk": "无 auth，可启动自动 tick 触发器"
+    },
+    {
+      "path": "POST /api/director/runtime/stop",
+      "file": "src/api/director-v2/runtime.ts",
+      "risk": "无 auth，可停止他人 session"
+    },
+    {
+      "path": "POST /api/payment/alipay/notify",
+      "file": "src/routes/payment.ts",
+      "risk": "无 auth，依赖 IP 白名单 + 签名验证"
+    },
+    {
+      "path": "POST /api/payment/wxpay/notify",
+      "file": "src/routes/payment.ts",
+      "risk": "无 auth，签名验证还报 Invalid key length 错误"
+    },
+    {
+      "path": "POST /api/export/compose-video",
+      "file": "src/routes/export.ts",
+      "risk": "无 auth，可远程触发 ffmpeg 合成"
+    },
+    {
+      "path": "GET /api/export/status",
+      "file": "src/routes/export.ts",
+      "risk": "无 auth，暴露系统状态"
+    },
+    {
+      "path": "GET /api/v1/uploads/:filename",
+      "file": "src/routes/upload.ts",
+      "risk": "无 auth，静态文件公开访问"
+    },
+    {
+      "path": "GET /api/v1/watermark/:filename",
+      "file": "src/routes/upload.ts",
+      "risk": "无 auth"
+    }
+  ],
+  "sessionSharedStores": {
+    "live-bridge.ts": {
+      "type": "进程内存 Map",
+      "store": "private controllers = Map<string, PlaybackController>",
+      "scope": "所有 session 共享",
+      "lifecycle": "进程存活期间持续存在",
+      "cleanup": "stop 时调用 destroySession"
+    },
+    "emotion-history.ts": {
+      "type": "进程内存数组（无限增长）",
+      "store": "characterTimelines = Map<string, EmotionPoint[]>",
+      "risk": "OOM — 数万 tick 后数组过大"
+    },
+    "scene-memory-store.ts": {
+      "type": "进程内存数组（无限增长）",
+      "store": "intensityHistory / mutationHistory",
+      "risk": "OOM"
+    },
+    "director-v2/api-surface.ts": {
+      "type": "进程内存 Map",
+      "store": "sessions Map<string, {projectId, constitution}>",
+      "keyCollision": "sessionId === projectId → 跨用户污染",
+      "risk": "A 用户看到 B 用户的 constitution"
+    },
+    "rule-engine.ts": {
+      "type": "模块级全局变量",
+      "store": "stagnationTrackers Map<string, StagnationTracker>",
+      "risk": "跨 session 场景 ID 冲突导致停滞检测污染"
+    }
+  },
+  "sessionKeyGeneration": {
+    "algorithm": "`runtime_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`",
+    "entropy": "Math.random() — 非密码学安全",
+    "pattern": "runtime_<timestamp>_<6字母数字>",
+    "bruteforceDifficulty": "低 — 时间戳可推算，6位随机 = 2.1B 组合"
+  },
+  "sseSecurity": {
+    "auth": "无",
+    "cors": "Access-Control-Allow-Origin: *",
+    "expiry": "订阅者永不超时",
+    "keepAliveLeak": "存在定时器泄漏路径",
+    "redis": "未使用（进程内存）"
+  },
+  "anonymousRoutingGraph": {
+    "JWT → fail": "fallback to 'anonymous'",
+    "anonymous → extractUserId()": "return null",
+    "null → narrativeGateway.execute()": "enters execution graph build",
+    "executionGraph → v2-resolver": "zero fallback → null config",
+    "null → process.env inject": "跳过 Key 注入",
+    "结果": "anonymous 成功创建 executionGraph 实例但不含 Key",
+    "fix": "anonymous 应在路由层直接 401，不进入任何执行链路"
+  },
+  "authArchitectureNotes": {
+    "standardAuth": "fastify.authenticate (JWT via fastify-jwt)",
+    "adminAuth": "requireAdmin (同时支持 fastify.jwt + x-admin-token 双模式)",
+    "authGaps": [
+      "export.ts 无 auth — 两个端点完全开放",
+      "director-v2/runtime.ts 全部 9 端点无 auth",
+      "payment notify 路由无 auth（设计意图是外部回调，但缺少额外验证）",
+      "upload.ts 中 /uploads/:filename 和 /watermark/:filename 无 auth（静态文件公开）"
+    ]
+  }
+}

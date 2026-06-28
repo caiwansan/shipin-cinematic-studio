@@ -1,0 +1,37 @@
+// Kernel v1 模型
+// 手动迁移：npx prisma migrate dev --name add_kernel_v1
+
+model EntityGraphNode {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  type      String   // character / scene / prop / voice / effect / shot
+  version   Int      @default(1)
+  spec      Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  parentId  String?  @map("parent_id") @db.Uuid
+  tags      String[] @default([])
+  imageRefs String[] @default([]) @map("image_refs")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type])
+  @@index([parentId])
+  @@map("entity_graph")
+}
+
+model EventLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  timestamp DateTime @default(now())
+  source    String
+  type      String
+  target    String
+  payload   Json     @default("{}")
+  sequence  Int
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sequence])
+  @@map("event_log")
+}

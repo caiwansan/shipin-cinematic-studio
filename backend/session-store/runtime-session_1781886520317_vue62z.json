@@ -1,0 +1,15 @@
+{
+  "savedAt": 1781886520322,
+  "tick": 8,
+  "runtimeState": {
+    "currentSceneId": "s2",
+    "currentShotIndex": 1,
+    "completedScenes": 2,
+    "totalScenes": 3,
+    "intensity": 0.75,
+    "playbackTime": 8,
+    "isPlaying": true
+  },
+  "bundle": "{\"title\":\"test-v2\",\"scenes\":[]}",
+  "isPlaying": true
+}

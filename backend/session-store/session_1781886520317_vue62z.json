@@ -1,0 +1,18 @@
+{
+  "sessionId": "session_1781886520317_vue62z",
+  "createdAt": 1781886520317,
+  "lastActiveAt": 1781886520322,
+  "status": "active",
+  "storyGraph": {
+    "title": "test"
+  },
+  "executionSnapshot": {
+    "currentSceneId": "s2",
+    "currentShotIndex": 1,
+    "completedScenes": 2,
+    "totalScenes": 3,
+    "intensity": 0.75,
+    "playbackTime": 8,
+    "isPlaying": true
+  }
+}

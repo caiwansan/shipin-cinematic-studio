@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "generatedAt": "2026-06-20T02:50:30+08:00",
+    "scope": "所有外部 URL 发起点（fetch / http.get / https.get / download）"
+  },
+  "entries": [
+    {
+      "id": "SSRF-001",
+      "file": "src/routes/execution-images.ts",
+      "function": "downloadAndUpload() / downloadAndUploadSingle()",
+      "line": 20,
+      "code": "const protocol = imageUrl.startsWith('https') ? httpsGet : httpRequest",
+      "urlSource": "DB 字段 (characterImage.imageUrl / sceneImage.imageUrl 等)",
+      "protocols": ["http:", "https:"],
+      "redirectFollow": true,
+      "whitelist": "无",
+      "risk": "高 — URL 来自 DB，DB 被篡改则 SSRF",
+      "internalFetchTargets": ["localhost:4002/api/tasks/* (同一进程)"]
+    },
+    {
+      "id": "SSRF-002",
+      "file": "src/routes/execution-images.ts",
+      "function": "proxy image route",
+      "line": 1390,
+      "code": "const response = await fetch(url, { ... })",
+      "urlSource": "用户 query 参数 `?url=`",
+      "protocols": ["http:", "https:"],
+      "redirectFollow": "fetch 默认跟随重定向",
+      "whitelist": "无",
+      "risk": "严重 — 用户直接控制 URL，可打内网",
+      "note": "失败时 302 redirect 到用户 URL (开放重定向)"
+    },
+    {
+      "id": "SSRF-003",
+      "file": "src/routes/execution-images.ts",
+      "function": "refresh-images / down image",
+      "line": 1259,
+      "code": "client.get(url, { timeout: 15000 }, (res) => { ... })",
+      "urlSource": "DB 字段 / 内部参数",
+      "protocols": ["http:", "https:"],
+      "redirectFollow": "是 (手动跟随 302)",
+      "whitelist": "无",
+      "risk": "高 — 支持 http:// 协议 + 302 跳转"
+    },
+    {
+      "id": "SSRF-004",
+      "file": "src/routes/images.ts",
+      "function": "视频打包下载 fetch entry.url",
+      "line": 243,
+      "code": "const res = await fetch(entry.url)",
+      "urlSource": "DB (aiVideoSegment.videoUrl)",
+      "protocols": ["http:", "https:"],
+      "redirectFollow": "fetch 默认跟随",
+      "whitelist": "无",
+      "risk": "中 — URL 来自 DB，需配合 DB 注入"
+    },
+    {
+      "id": "SSRF-005",
+      "file": "src/queue/video-composer.ts",
+      "function": "downloadImage()",
+      "line": 52,
+      "code": "const client = url.startsWith('https') ? https : http",
+      "urlSource": "API 请求参数 (segments[].videoUrl via export.ts)",
+      "protocols": ["http:", "https:"],
+      "redirectFollow": "是 (手动跟随 302)",
+      "whitelist": "无",
+      "risk": "严重 — export.ts 无 auth，用户直接传入 URL"
+    },
+    {
+      "id": "SSRF-006",
+      "file": "src/services/video-merge.service.ts",
+      "function": "downloadFile()",
+      "line": 28,
+      "code": "const client = url.startsWith('https') ? https : http",
+      "urlSource": "DB (AiVideoSegment.videoUrl / tts.audioUrl)",
+      "protocols": ["http:", "https:"],
+      "redirectFollow": "是 (手动跟随 302)",
+      "whitelist": "无",
+      "risk": "高 — 支持 http:// + 302"
+    },
+    {
+      "id": "SSRF-007",
+      "file": "src/routes/images.ts",
+      "function": "proxyImageToQueue (inject fallback)",
+      "line": 58,
+      "code": "const res = await fetch(`http://localhost:${PORT}/api/tasks/ai-generate`, ...)",
+      "urlSource": "固定 localhost URL（内部转发）",
+      "protocols": ["http: (localhost only)"],
+      "redirectFollow": false,
+      "whitelist": "localhost 固定",
+      "risk": "低 — 仅回环地址，无用户控制"
+    },
+    {
+      "id": "SSRF-008",
+      "file": "src/routes/ai-generate-ad-video.ts",
+      "function": "pollVolcVideo()",
+      "line": 249,
+      "code": "const pollRes = await fetch(`${POLL_URL}/${volcTaskId}`, { headers: ... })",
+      "urlSource": "固定火山引擎 URL",
+      "protocols": ["https: (aliyun oss / volc engine)"],
+      "redirectFollow": false,
+      "whitelist": "固定域名白名单 (白名单有效)",
+      "risk": "低 — 仅固定外部 API"
+    },
+    {
+      "id": "SSRF-009",
+      "file": "src/routes/payment.ts",
+      "function": "bailian proxy call",
+      "line": 677,
+      "code": "const res = await fetch(`${baseUrl}/chat/completions`, ...)",
+      "urlSource": "process.env.BAILIAN_BASE_URL (管理员设置)",
+      "protocols": ["https: (预期 dashscope)"],
+      "redirectFollow": false,
+      "whitelist": "无 (仅管理员可设，但可能设到恶意地址)",
+      "risk": "中 — 虽然仅管理员可配置，但 process.env 任意代码可覆盖"
+    }
+  ],
+  "internalFetchPatterns": {
+    "execution-images.ts": "localhost:${PORT || 4002}/api/tasks/ai-generate (多处)",
+    "images.ts": "localhost:${PORT || 4000}/api/tasks/ai-generate",
+    "ai-tasks.ts": "非直接 fetch，通过 enqueueTask 队列"
+  },
+  "ffmpegCommandInjection": [
+    {
+      "id": "FFMPEG-001",
+      "file": "src/queue/video-composer.ts",
+      "line": 150,
+      "code": "execAsync(`ffmpeg -y -f concat -safe 0 -i \"${concatFile}\" ... \"${outputPath}\"`)",
+      "execMode": "shell string (execAsync = promisify(exec))",
+      "safeAlternative": "spawn('ffmpeg', ['-i', concatFile, ...])",
+      "risk": "高 — shell string 模式，虽然当前入参多为内部生成，但代码结构脆弱"
+    },
+    {
+      "id": "FFMPEG-002",
+      "file": "src/services/video-merge.service.ts",
+      "line": 55,
+      "code": "function execCmd(cmd: string) { return execSync(cmd, ...) }",
+      "execMode": "shell string (execSync)",
+      "risk": "高 — 全文件 14+ 处都使用此函数，含 transitionType 等用户不可控参数"
+    }
+  ]
+}

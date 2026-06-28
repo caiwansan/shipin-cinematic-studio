@@ -1,0 +1,1 @@
+{"flushedAt":"2026-05-30T13:47:46.183Z","totalEvents":2,"invokedModules":["narrative-gateway"],"events":[{"module":"narrative-gateway","function":"execute","caller":"gateway-entry","timestamp":1780148861422,"traceId":"trace-13"},{"module":"narrative-gateway","function":"execute","caller":"gateway-entry","timestamp":1780148864725,"traceId":"trace-14"}]}

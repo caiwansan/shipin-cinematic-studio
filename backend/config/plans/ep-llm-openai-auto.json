@@ -1,0 +1,33 @@
+{
+  "planId": "ep-llm-openai-auto",
+  "version": "v1.0.0",
+  "builtAt": "2026-05-24T15:00:53.064Z",
+  "hash": "SEDP-2f3ab973",
+  "description": "SEDP plan for taskType=llm provider=openai",
+  "steps": [
+    {
+      "id": 1,
+      "label": "Adapter: llm-openai",
+      "file": "model-adapters/llm/openai-compat.adapter.ts",
+      "requiresCapability": "llm",
+      "paramsType": "llmInput",
+      "outputType": "llmOutput"
+    },
+    {
+      "id": 2,
+      "label": "Event Sink",
+      "file": "kernel/event-sourcing/execution-event-store.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionEvent",
+      "outputType": "void"
+    },
+    {
+      "id": 3,
+      "label": "Truth Arbitration",
+      "file": "truth/arbitration-engine.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionResult[]",
+      "outputType": "ArbitrationResult"
+    }
+  ]
+}

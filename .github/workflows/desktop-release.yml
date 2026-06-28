@@ -1,0 +1,81 @@
+name: Build & Release Desktop App
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (e.g. 1.0.1)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      # 前端构建
+      - name: Build Frontend (SPA)
+        working-directory: frontend
+        run: |
+          pnpm install
+          npx nuxi build
+          echo "✅ Frontend built"
+
+      # Electron 依赖
+      - name: Install Desktop Dependencies
+        working-directory: desktop
+        run: |
+          npm install
+          mkdir -p web
+          cp -r ../frontend/.output/public/* web/
+
+      # Electron 打包
+      - name: Build Electron (${{ matrix.os }})
+        working-directory: desktop
+        run: |
+          npm exec electron-builder --${{ matrix.os == 'ubuntu-latest' && 'linux --x64' || matrix.os == 'macos-latest' && 'mac --x64' || 'win --x64' }} --publish=never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 上传产物
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}
+          path: desktop/dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Deploy to Server
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          echo "$DEPLOY_KEY" > deploy_key
+          chmod 600 deploy_key
+          # 上传到服务器
+          scp -i deploy_key -o StrictHostKeyChecking=no -r artifacts/* root@$DEPLOY_HOST:/root/shipin-cinematic-studio/backend/releases/desktop/
+          echo "✅ Deployed to server"

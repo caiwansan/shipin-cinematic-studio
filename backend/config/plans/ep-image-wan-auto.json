@@ -1,0 +1,33 @@
+{
+  "planId": "ep-image-wan-auto",
+  "version": "v1.0.0",
+  "builtAt": "2026-05-24T15:00:53.065Z",
+  "hash": "SEDP-067b3111",
+  "description": "SEDP plan for taskType=image provider=wan",
+  "steps": [
+    {
+      "id": 1,
+      "label": "Adapter: image-wan",
+      "file": "model-adapters/images/wan-image.adapter.ts",
+      "requiresCapability": "image",
+      "paramsType": "imageInput",
+      "outputType": "imageOutput"
+    },
+    {
+      "id": 2,
+      "label": "Event Sink",
+      "file": "kernel/event-sourcing/execution-event-store.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionEvent",
+      "outputType": "void"
+    },
+    {
+      "id": 3,
+      "label": "Truth Arbitration",
+      "file": "truth/arbitration-engine.ts",
+      "requiresCapability": "",
+      "paramsType": "ExecutionResult[]",
+      "outputType": "ArbitrationResult"
+    }
+  ]
+}

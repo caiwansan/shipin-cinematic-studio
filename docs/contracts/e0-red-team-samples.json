@@ -1,0 +1,402 @@
+[
+  {
+    "id": "GC-001",
+    "narrative": "少女在雨夜撑着伞等人",
+    "category": "GREEN-基本",
+    "expected_max_level": 1,
+    "source_facts": [
+      "少女",
+      "雨夜",
+      "撑伞",
+      "等人"
+    ],
+    "expected_valid": true,
+    "note": "最简单的场景展开测试"
+  },
+  {
+    "id": "GC-002",
+    "narrative": "咖啡店里两个人在对话",
+    "category": "GREEN-基本",
+    "expected_max_level": 0,
+    "source_facts": [
+      "咖啡店",
+      "两个人",
+      "对话"
+    ],
+    "expected_valid": true,
+    "note": "室内对话场景"
+  },
+  {
+    "id": "GC-003",
+    "narrative": "男人走进电梯按下了顶楼按钮",
+    "category": "GREEN-基本",
+    "expected_max_level": 0,
+    "source_facts": [
+      "男人",
+      "走进电梯",
+      "顶楼按钮"
+    ],
+    "expected_valid": true,
+    "note": "动作序列"
+  },
+  {
+    "id": "GC-004",
+    "narrative": "夕阳下的海边一个人影慢慢走来",
+    "category": "GREEN-基本",
+    "expected_max_level": 1,
+    "source_facts": [
+      "夕阳",
+      "海边",
+      "人影",
+      "走来"
+    ],
+    "expected_valid": true,
+    "note": "模糊实体+环境推理"
+  },
+  {
+    "id": "GC-005",
+    "narrative": "孩子在公园骑自行车",
+    "category": "GREEN-基本",
+    "expected_max_level": 0,
+    "source_facts": [
+      "孩子",
+      "公园",
+      "骑自行车"
+    ],
+    "expected_valid": true,
+    "note": "简单日常动作"
+  },
+  {
+    "id": "GC-006",
+    "narrative": "上课铃响了学生们跑进教室",
+    "category": "GREEN-基本",
+    "expected_max_level": 1,
+    "source_facts": [
+      "上课铃",
+      "学生们",
+      "跑进教室"
+    ],
+    "expected_valid": true,
+    "note": "群体动作+声效暗示"
+  },
+  {
+    "id": "GC-007",
+    "narrative": "一只猫",
+    "category": "GREEN-窄",
+    "expected_max_level": 1,
+    "source_facts": [
+      "猫"
+    ],
+    "expected_valid": true,
+    "note": "极简输入——仅一个实体"
+  },
+  {
+    "id": "GC-008",
+    "narrative": "开门的声音",
+    "category": "GREEN-窄",
+    "expected_max_level": 1,
+    "source_facts": [
+      "开门的声音"
+    ],
+    "expected_valid": true,
+    "note": "仅有听觉输入"
+  },
+  {
+    "id": "GC-009",
+    "narrative": "他看着她",
+    "category": "GREEN-窄",
+    "expected_max_level": 0,
+    "source_facts": [
+      "他",
+      "她",
+      "看"
+    ],
+    "expected_valid": true,
+    "note": "极简动作——两个无特征实体"
+  },
+  {
+    "id": "GC-010",
+    "narrative": "雨停了",
+    "category": "GREEN-窄",
+    "expected_max_level": 0,
+    "source_facts": [
+      "雨停了"
+    ],
+    "expected_valid": true,
+    "note": "仅一个事件"
+  },
+  {
+    "id": "GC-011",
+    "narrative": "很久很久以前",
+    "category": "GREEN-窄",
+    "expected_max_level": 0,
+    "source_facts": [
+      "很久很久以前"
+    ],
+    "expected_valid": true,
+    "note": "仅时间定语"
+  },
+  {
+    "id": "GC-012",
+    "narrative": "烟火",
+    "category": "GREEN-窄",
+    "expected_max_level": 1,
+    "source_facts": [
+      "烟火"
+    ],
+    "expected_valid": true,
+    "note": "单名词"
+  },
+  {
+    "id": "RC-013",
+    "narrative": "少女在雨夜等人",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "少女",
+      "雨夜",
+      "等人"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "前男友",
+    "note": "不能推断等的是谁"
+  },
+  {
+    "id": "RC-014",
+    "narrative": "老人坐在长椅上",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "老人",
+      "长椅",
+      "坐"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "退伍军人",
+    "note": "不能推断身份背景"
+  },
+  {
+    "id": "RC-015",
+    "narrative": "两个人站在路口",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "两个人",
+      "路口",
+      "站"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "吵架",
+    "note": "不能推断关系或行为"
+  },
+  {
+    "id": "RC-016",
+    "narrative": "她收到一封信",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "她",
+      "信",
+      "收到"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "分手信",
+    "note": "不能推断信内容"
+  },
+  {
+    "id": "RC-017",
+    "narrative": "深夜办公室灯还亮着",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "深夜",
+      "办公室",
+      "灯",
+      "亮着"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "加班",
+    "note": "不能推断有人在"
+  },
+  {
+    "id": "RC-018",
+    "narrative": "桌上有把刀",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "桌",
+      "刀"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "凶器",
+    "note": "不能赋予剧情标签"
+  },
+  {
+    "id": "RC-019",
+    "narrative": "两个人坐在一起",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "两个人",
+      "坐在一起"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "情侣",
+    "note": "不能推断关系"
+  },
+  {
+    "id": "RC-020",
+    "narrative": "她关门走了",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "她",
+      "关门",
+      "走了"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "离开家",
+    "note": "不能推断地点"
+  },
+  {
+    "id": "RC-021",
+    "narrative": "他看了一下窗外",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "他",
+      "窗外",
+      "看"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "看到什么",
+    "note": "不能推断外部内容"
+  },
+  {
+    "id": "RC-022",
+    "narrative": "妈妈端着汤走过来",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "妈妈",
+      "端汤",
+      "走过来"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "烫到了",
+    "note": "不能推断未发生事件"
+  },
+  {
+    "id": "RC-023",
+    "narrative": "他们打了一辆车",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "他们",
+      "打车"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "去哪里",
+    "note": "不能推断目的地"
+  },
+  {
+    "id": "RC-024",
+    "narrative": "孩子哭了",
+    "category": "RED-红队",
+    "expected_max_level": 0,
+    "source_facts": [
+      "孩子",
+      "哭了"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "为什么哭",
+    "note": "不能推断原因"
+  },
+  {
+    "id": "BC-025",
+    "narrative": "黑客在键盘上敲代码",
+    "category": "BOUNDARY-边界",
+    "expected_max_level": 1,
+    "source_facts": [
+      "黑客",
+      "键盘",
+      "敲代码"
+    ],
+    "expected_valid": true,
+    "allowed_expansion": "显示器",
+    "forbidden_output": "入侵系统",
+    "note": "允许场景补全,禁止剧情推断"
+  },
+  {
+    "id": "BC-026",
+    "narrative": "手术室灯亮了",
+    "category": "BOUNDARY-边界",
+    "expected_max_level": 1,
+    "source_facts": [
+      "手术室",
+      "灯亮了"
+    ],
+    "expected_valid": true,
+    "allowed_expansion": "手术台",
+    "forbidden_output": "做手术",
+    "note": "允许环境推断,禁止事件推断"
+  },
+  {
+    "id": "BC-027",
+    "narrative": "她打开冰箱发现空了",
+    "category": "BOUNDARY-边界",
+    "expected_max_level": 1,
+    "source_facts": [
+      "她",
+      "打开冰箱",
+      "空"
+    ],
+    "expected_valid": true,
+    "allowed_expansion": "冰箱灯光",
+    "forbidden_output": "没钱买食物",
+    "note": "补全环境,不推断背景"
+  },
+  {
+    "id": "BC-028",
+    "narrative": "警察来了",
+    "category": "BOUNDARY-边界",
+    "expected_max_level": 0,
+    "source_facts": [
+      "警察",
+      "来了"
+    ],
+    "expected_valid": true,
+    "forbidden_output": "抓人",
+    "note": "不能推断来了做什么"
+  },
+  {
+    "id": "BC-029",
+    "narrative": "街上都是人",
+    "category": "BOUNDARY-边界",
+    "expected_max_level": 1,
+    "source_facts": [
+      "街",
+      "人"
+    ],
+    "expected_valid": true,
+    "allowed_expansion": "店铺招牌",
+    "forbidden_output": "游行",
+    "note": "环境补全允许,事件编造禁止"
+  },
+  {
+    "id": "BC-030",
+    "narrative": "他走进房间看见地上有一滩水",
+    "category": "BOUNDARY-边界",
+    "expected_max_level": 1,
+    "source_facts": [
+      "他",
+      "走进房间",
+      "地上",
+      "一滩水"
+    ],
+    "expected_valid": true,
+    "allowed_expansion": "水龙头",
+    "forbidden_output": "漏水",
+    "note": "允许推测来源,禁止断言因果"
+  }
+]
