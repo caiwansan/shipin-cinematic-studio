@@ -1,0 +1,7 @@
+export { CoverageScanner } from './CoverageScanner.js'
+export { analyzeGaps, printGapReport } from './GapAnalyzer.js'
+export { buildCoverageReport, exportJSON, exportMarkdown } from './CoverageReport.js'
+export { exportAll, exportFormat } from './CoverageExporter.js'
+export type { GapReport, GapSuggestion } from './GapAnalyzer.js'
+export type { CoverageReportData } from './CoverageReport.js'
+export type { ExportFormat } from './CoverageExporter.js'

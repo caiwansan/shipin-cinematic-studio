@@ -1,0 +1,1720 @@
+{
+  "generated": "2026-06-28T06:50:21.760Z",
+  "summary": {
+    "total": 31,
+    "covered": 7,
+    "missing": 24,
+    "weak": 0,
+    "sparse": 0,
+    "coverageScore": 23
+  },
+  "registryId": "v1",
+  "registryVersion": "1.0.0",
+  "entries": [
+    {
+      "capability": "CAMERA_PATH",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "CAMERA_MOTION",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L1",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "CAMERA_COMPOSITION",
+      "primaryDatasets": [],
+      "secondaryDatasets": [
+        "L1-001"
+      ],
+      "totalCoverage": 1,
+      "stage": "planner",
+      "difficulty": "L2",
+      "gap": false,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "CAMERA_FOCUS",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "LIGHT_DIRECTION",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L1",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "LIGHT_CONTINUITY",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "negotiator",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "LIGHT_CONTROL",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "LIGHT_TRANSITION",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "negotiator",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "CHARACTER_REFERENCE",
+      "primaryDatasets": [
+        "L0-001",
+        "L1-001"
+      ],
+      "secondaryDatasets": [],
+      "totalCoverage": 2,
+      "stage": "compiler",
+      "difficulty": "L0",
+      "gap": false,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "CHARACTER_CONSISTENCY",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "negotiator",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "CHARACTER_EMOTION",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L1",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "CHARACTER_POSE",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L1",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "RENDER_SHOT",
+      "primaryDatasets": [],
+      "secondaryDatasets": [
+        "L0-001",
+        "L1-001"
+      ],
+      "totalCoverage": 2,
+      "stage": "renderer",
+      "difficulty": "L0",
+      "gap": false,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "RENDER_KEYFRAME",
+      "primaryDatasets": [],
+      "secondaryDatasets": [
+        "L0-001",
+        "L1-001"
+      ],
+      "totalCoverage": 2,
+      "stage": "renderer",
+      "difficulty": "L0",
+      "gap": false,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "RENDER_SEQUENCE",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "renderer",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "RENDER_MULTI_SHOT",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "renderer",
+      "difficulty": "L3",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "TEMPORAL_CONSISTENCY",
+      "primaryDatasets": [],
+      "secondaryDatasets": [
+        "L1-001"
+      ],
+      "totalCoverage": 1,
+      "stage": "negotiator",
+      "difficulty": "L2",
+      "gap": false,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "ACTION_TIMING",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "SHOT_TRANSITION",
+      "primaryDatasets": [],
+      "secondaryDatasets": [
+        "L1-001"
+      ],
+      "totalCoverage": 1,
+      "stage": "planner",
+      "difficulty": "L1",
+      "gap": false,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "TIMELINE_SYNC",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "negotiator",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "PHYSICS_CONSTRAINT",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "renderer",
+      "difficulty": "L3",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "PHYSICS_ENVIRONMENT",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "renderer",
+      "difficulty": "L3",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "SPATIAL_LAYOUT",
+      "primaryDatasets": [],
+      "secondaryDatasets": [
+        "L0-001",
+        "L1-001"
+      ],
+      "totalCoverage": 2,
+      "stage": "planner",
+      "difficulty": "L0",
+      "gap": false,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "WORLD_STATE",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "negotiator",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "OBJECT_PERSISTENCE",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "negotiator",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "SPATIAL_RELATIONSHIP",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L1",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "STYLE_TRANSFER",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "renderer",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "EMOTION_ALIGNMENT",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "EMOTION_ARC",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "planner",
+      "difficulty": "L3",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "POST_COLOR_GRADING",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "renderer",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    },
+    {
+      "capability": "POST_VFX",
+      "primaryDatasets": [],
+      "secondaryDatasets": [],
+      "totalCoverage": 0,
+      "stage": "renderer",
+      "difficulty": "L2",
+      "gap": true,
+      "evidence": [],
+      "metrics": {}
+    }
+  ],
+  "gapReport": {
+    "critical": [
+      {
+        "capability": "CAMERA_PATH",
+        "level": "P0",
+        "suggestedId": "L2-camera",
+        "primaryCapability": "CAMERA_PATH",
+        "secondaryCapabilities": [
+          "CAMERA_MOTION",
+          "CAMERA_COMPOSITION",
+          "CAMERA_FOCUS"
+        ],
+        "reason": "Capability \"CAMERA_PATH\" (Camera Path) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CAMERA_MOTION",
+        "level": "P0",
+        "suggestedId": "L1-camera",
+        "primaryCapability": "CAMERA_MOTION",
+        "secondaryCapabilities": [
+          "CAMERA_PATH",
+          "CAMERA_COMPOSITION",
+          "CAMERA_FOCUS"
+        ],
+        "reason": "Capability \"CAMERA_MOTION\" (Camera Motion) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CAMERA_FOCUS",
+        "level": "P0",
+        "suggestedId": "L2-camera",
+        "primaryCapability": "CAMERA_FOCUS",
+        "secondaryCapabilities": [
+          "CAMERA_PATH",
+          "CAMERA_MOTION",
+          "CAMERA_COMPOSITION"
+        ],
+        "reason": "Capability \"CAMERA_FOCUS\" (Camera Focus) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "LIGHT_DIRECTION",
+        "level": "P0",
+        "suggestedId": "L1-lighting",
+        "primaryCapability": "LIGHT_DIRECTION",
+        "secondaryCapabilities": [
+          "LIGHT_CONTINUITY",
+          "LIGHT_CONTROL",
+          "LIGHT_TRANSITION"
+        ],
+        "reason": "Capability \"LIGHT_DIRECTION\" (Light Direction) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "LIGHT_CONTINUITY",
+        "level": "P0",
+        "suggestedId": "L2-lighting",
+        "primaryCapability": "LIGHT_CONTINUITY",
+        "secondaryCapabilities": [
+          "LIGHT_DIRECTION",
+          "LIGHT_CONTROL",
+          "LIGHT_TRANSITION"
+        ],
+        "reason": "Capability \"LIGHT_CONTINUITY\" (Light Continuity) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "LIGHT_CONTROL",
+        "level": "P0",
+        "suggestedId": "L2-lighting",
+        "primaryCapability": "LIGHT_CONTROL",
+        "secondaryCapabilities": [
+          "LIGHT_DIRECTION",
+          "LIGHT_CONTINUITY",
+          "LIGHT_TRANSITION"
+        ],
+        "reason": "Capability \"LIGHT_CONTROL\" (Light Control) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "LIGHT_TRANSITION",
+        "level": "P0",
+        "suggestedId": "L2-lighting",
+        "primaryCapability": "LIGHT_TRANSITION",
+        "secondaryCapabilities": [
+          "LIGHT_DIRECTION",
+          "LIGHT_CONTINUITY",
+          "LIGHT_CONTROL"
+        ],
+        "reason": "Capability \"LIGHT_TRANSITION\" (Light Transition) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CHARACTER_CONSISTENCY",
+        "level": "P0",
+        "suggestedId": "L2-character",
+        "primaryCapability": "CHARACTER_CONSISTENCY",
+        "secondaryCapabilities": [
+          "CHARACTER_REFERENCE",
+          "CHARACTER_EMOTION",
+          "CHARACTER_POSE"
+        ],
+        "reason": "Capability \"CHARACTER_CONSISTENCY\" (Character Consistency) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CHARACTER_EMOTION",
+        "level": "P0",
+        "suggestedId": "L1-character",
+        "primaryCapability": "CHARACTER_EMOTION",
+        "secondaryCapabilities": [
+          "CHARACTER_REFERENCE",
+          "CHARACTER_CONSISTENCY",
+          "CHARACTER_POSE"
+        ],
+        "reason": "Capability \"CHARACTER_EMOTION\" (Character Emotion) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CHARACTER_POSE",
+        "level": "P0",
+        "suggestedId": "L1-character",
+        "primaryCapability": "CHARACTER_POSE",
+        "secondaryCapabilities": [
+          "CHARACTER_REFERENCE",
+          "CHARACTER_CONSISTENCY",
+          "CHARACTER_EMOTION"
+        ],
+        "reason": "Capability \"CHARACTER_POSE\" (Character Pose) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "RENDER_SEQUENCE",
+        "level": "P0",
+        "suggestedId": "L2-render",
+        "primaryCapability": "RENDER_SEQUENCE",
+        "secondaryCapabilities": [
+          "RENDER_SHOT",
+          "RENDER_KEYFRAME",
+          "RENDER_MULTI_SHOT"
+        ],
+        "reason": "Capability \"RENDER_SEQUENCE\" (Render Sequence) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "RENDER_MULTI_SHOT",
+        "level": "P0",
+        "suggestedId": "L3-render",
+        "primaryCapability": "RENDER_MULTI_SHOT",
+        "secondaryCapabilities": [
+          "RENDER_SHOT",
+          "RENDER_KEYFRAME",
+          "RENDER_SEQUENCE"
+        ],
+        "reason": "Capability \"RENDER_MULTI_SHOT\" (Render Multi Shot) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "ACTION_TIMING",
+        "level": "P0",
+        "suggestedId": "L2-temporal",
+        "primaryCapability": "ACTION_TIMING",
+        "secondaryCapabilities": [
+          "TEMPORAL_CONSISTENCY",
+          "SHOT_TRANSITION",
+          "TIMELINE_SYNC"
+        ],
+        "reason": "Capability \"ACTION_TIMING\" (Action Timing) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "TIMELINE_SYNC",
+        "level": "P0",
+        "suggestedId": "L2-temporal",
+        "primaryCapability": "TIMELINE_SYNC",
+        "secondaryCapabilities": [
+          "TEMPORAL_CONSISTENCY",
+          "ACTION_TIMING",
+          "SHOT_TRANSITION"
+        ],
+        "reason": "Capability \"TIMELINE_SYNC\" (Timeline Sync) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "PHYSICS_CONSTRAINT",
+        "level": "P0",
+        "suggestedId": "L3-physics",
+        "primaryCapability": "PHYSICS_CONSTRAINT",
+        "secondaryCapabilities": [
+          "PHYSICS_ENVIRONMENT"
+        ],
+        "reason": "Capability \"PHYSICS_CONSTRAINT\" (Physics Constraint) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "PHYSICS_ENVIRONMENT",
+        "level": "P0",
+        "suggestedId": "L3-physics",
+        "primaryCapability": "PHYSICS_ENVIRONMENT",
+        "secondaryCapabilities": [
+          "PHYSICS_CONSTRAINT"
+        ],
+        "reason": "Capability \"PHYSICS_ENVIRONMENT\" (Physics Environment) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "WORLD_STATE",
+        "level": "P0",
+        "suggestedId": "L2-spatial",
+        "primaryCapability": "WORLD_STATE",
+        "secondaryCapabilities": [
+          "SPATIAL_LAYOUT",
+          "OBJECT_PERSISTENCE",
+          "SPATIAL_RELATIONSHIP"
+        ],
+        "reason": "Capability \"WORLD_STATE\" (World State) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "OBJECT_PERSISTENCE",
+        "level": "P0",
+        "suggestedId": "L2-spatial",
+        "primaryCapability": "OBJECT_PERSISTENCE",
+        "secondaryCapabilities": [
+          "SPATIAL_LAYOUT",
+          "WORLD_STATE",
+          "SPATIAL_RELATIONSHIP"
+        ],
+        "reason": "Capability \"OBJECT_PERSISTENCE\" (Object Persistence) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "SPATIAL_RELATIONSHIP",
+        "level": "P0",
+        "suggestedId": "L1-spatial",
+        "primaryCapability": "SPATIAL_RELATIONSHIP",
+        "secondaryCapabilities": [
+          "SPATIAL_LAYOUT",
+          "WORLD_STATE",
+          "OBJECT_PERSISTENCE"
+        ],
+        "reason": "Capability \"SPATIAL_RELATIONSHIP\" (Spatial Relationship) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "STYLE_TRANSFER",
+        "level": "P0",
+        "suggestedId": "L2-style",
+        "primaryCapability": "STYLE_TRANSFER",
+        "secondaryCapabilities": [],
+        "reason": "Capability \"STYLE_TRANSFER\" (Style Transfer) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "EMOTION_ALIGNMENT",
+        "level": "P0",
+        "suggestedId": "L2-emotion",
+        "primaryCapability": "EMOTION_ALIGNMENT",
+        "secondaryCapabilities": [
+          "EMOTION_ARC"
+        ],
+        "reason": "Capability \"EMOTION_ALIGNMENT\" (Emotion Alignment) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "EMOTION_ARC",
+        "level": "P0",
+        "suggestedId": "L3-emotion",
+        "primaryCapability": "EMOTION_ARC",
+        "secondaryCapabilities": [
+          "EMOTION_ALIGNMENT"
+        ],
+        "reason": "Capability \"EMOTION_ARC\" (Emotion Arc) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "POST_COLOR_GRADING",
+        "level": "P0",
+        "suggestedId": "L2-post",
+        "primaryCapability": "POST_COLOR_GRADING",
+        "secondaryCapabilities": [
+          "POST_VFX"
+        ],
+        "reason": "Capability \"POST_COLOR_GRADING\" (Post Color Grading) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "POST_VFX",
+        "level": "P0",
+        "suggestedId": "L2-post",
+        "primaryCapability": "POST_VFX",
+        "secondaryCapabilities": [
+          "POST_COLOR_GRADING"
+        ],
+        "reason": "Capability \"POST_VFX\" (Post VFX) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      }
+    ],
+    "weak": [],
+    "sparse": [],
+    "totalGaps": 24,
+    "suggestions": [
+      {
+        "capability": "CAMERA_PATH",
+        "level": "P0",
+        "suggestedId": "L2-camera",
+        "primaryCapability": "CAMERA_PATH",
+        "secondaryCapabilities": [
+          "CAMERA_MOTION",
+          "CAMERA_COMPOSITION",
+          "CAMERA_FOCUS"
+        ],
+        "reason": "Capability \"CAMERA_PATH\" (Camera Path) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CAMERA_MOTION",
+        "level": "P0",
+        "suggestedId": "L1-camera",
+        "primaryCapability": "CAMERA_MOTION",
+        "secondaryCapabilities": [
+          "CAMERA_PATH",
+          "CAMERA_COMPOSITION",
+          "CAMERA_FOCUS"
+        ],
+        "reason": "Capability \"CAMERA_MOTION\" (Camera Motion) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CAMERA_FOCUS",
+        "level": "P0",
+        "suggestedId": "L2-camera",
+        "primaryCapability": "CAMERA_FOCUS",
+        "secondaryCapabilities": [
+          "CAMERA_PATH",
+          "CAMERA_MOTION",
+          "CAMERA_COMPOSITION"
+        ],
+        "reason": "Capability \"CAMERA_FOCUS\" (Camera Focus) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "LIGHT_DIRECTION",
+        "level": "P0",
+        "suggestedId": "L1-lighting",
+        "primaryCapability": "LIGHT_DIRECTION",
+        "secondaryCapabilities": [
+          "LIGHT_CONTINUITY",
+          "LIGHT_CONTROL",
+          "LIGHT_TRANSITION"
+        ],
+        "reason": "Capability \"LIGHT_DIRECTION\" (Light Direction) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "LIGHT_CONTINUITY",
+        "level": "P0",
+        "suggestedId": "L2-lighting",
+        "primaryCapability": "LIGHT_CONTINUITY",
+        "secondaryCapabilities": [
+          "LIGHT_DIRECTION",
+          "LIGHT_CONTROL",
+          "LIGHT_TRANSITION"
+        ],
+        "reason": "Capability \"LIGHT_CONTINUITY\" (Light Continuity) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "LIGHT_CONTROL",
+        "level": "P0",
+        "suggestedId": "L2-lighting",
+        "primaryCapability": "LIGHT_CONTROL",
+        "secondaryCapabilities": [
+          "LIGHT_DIRECTION",
+          "LIGHT_CONTINUITY",
+          "LIGHT_TRANSITION"
+        ],
+        "reason": "Capability \"LIGHT_CONTROL\" (Light Control) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "LIGHT_TRANSITION",
+        "level": "P0",
+        "suggestedId": "L2-lighting",
+        "primaryCapability": "LIGHT_TRANSITION",
+        "secondaryCapabilities": [
+          "LIGHT_DIRECTION",
+          "LIGHT_CONTINUITY",
+          "LIGHT_CONTROL"
+        ],
+        "reason": "Capability \"LIGHT_TRANSITION\" (Light Transition) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CHARACTER_CONSISTENCY",
+        "level": "P0",
+        "suggestedId": "L2-character",
+        "primaryCapability": "CHARACTER_CONSISTENCY",
+        "secondaryCapabilities": [
+          "CHARACTER_REFERENCE",
+          "CHARACTER_EMOTION",
+          "CHARACTER_POSE"
+        ],
+        "reason": "Capability \"CHARACTER_CONSISTENCY\" (Character Consistency) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CHARACTER_EMOTION",
+        "level": "P0",
+        "suggestedId": "L1-character",
+        "primaryCapability": "CHARACTER_EMOTION",
+        "secondaryCapabilities": [
+          "CHARACTER_REFERENCE",
+          "CHARACTER_CONSISTENCY",
+          "CHARACTER_POSE"
+        ],
+        "reason": "Capability \"CHARACTER_EMOTION\" (Character Emotion) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "CHARACTER_POSE",
+        "level": "P0",
+        "suggestedId": "L1-character",
+        "primaryCapability": "CHARACTER_POSE",
+        "secondaryCapabilities": [
+          "CHARACTER_REFERENCE",
+          "CHARACTER_CONSISTENCY",
+          "CHARACTER_EMOTION"
+        ],
+        "reason": "Capability \"CHARACTER_POSE\" (Character Pose) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "RENDER_SEQUENCE",
+        "level": "P0",
+        "suggestedId": "L2-render",
+        "primaryCapability": "RENDER_SEQUENCE",
+        "secondaryCapabilities": [
+          "RENDER_SHOT",
+          "RENDER_KEYFRAME",
+          "RENDER_MULTI_SHOT"
+        ],
+        "reason": "Capability \"RENDER_SEQUENCE\" (Render Sequence) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "RENDER_MULTI_SHOT",
+        "level": "P0",
+        "suggestedId": "L3-render",
+        "primaryCapability": "RENDER_MULTI_SHOT",
+        "secondaryCapabilities": [
+          "RENDER_SHOT",
+          "RENDER_KEYFRAME",
+          "RENDER_SEQUENCE"
+        ],
+        "reason": "Capability \"RENDER_MULTI_SHOT\" (Render Multi Shot) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "ACTION_TIMING",
+        "level": "P0",
+        "suggestedId": "L2-temporal",
+        "primaryCapability": "ACTION_TIMING",
+        "secondaryCapabilities": [
+          "TEMPORAL_CONSISTENCY",
+          "SHOT_TRANSITION",
+          "TIMELINE_SYNC"
+        ],
+        "reason": "Capability \"ACTION_TIMING\" (Action Timing) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "TIMELINE_SYNC",
+        "level": "P0",
+        "suggestedId": "L2-temporal",
+        "primaryCapability": "TIMELINE_SYNC",
+        "secondaryCapabilities": [
+          "TEMPORAL_CONSISTENCY",
+          "ACTION_TIMING",
+          "SHOT_TRANSITION"
+        ],
+        "reason": "Capability \"TIMELINE_SYNC\" (Timeline Sync) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "PHYSICS_CONSTRAINT",
+        "level": "P0",
+        "suggestedId": "L3-physics",
+        "primaryCapability": "PHYSICS_CONSTRAINT",
+        "secondaryCapabilities": [
+          "PHYSICS_ENVIRONMENT"
+        ],
+        "reason": "Capability \"PHYSICS_CONSTRAINT\" (Physics Constraint) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "PHYSICS_ENVIRONMENT",
+        "level": "P0",
+        "suggestedId": "L3-physics",
+        "primaryCapability": "PHYSICS_ENVIRONMENT",
+        "secondaryCapabilities": [
+          "PHYSICS_CONSTRAINT"
+        ],
+        "reason": "Capability \"PHYSICS_ENVIRONMENT\" (Physics Environment) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "WORLD_STATE",
+        "level": "P0",
+        "suggestedId": "L2-spatial",
+        "primaryCapability": "WORLD_STATE",
+        "secondaryCapabilities": [
+          "SPATIAL_LAYOUT",
+          "OBJECT_PERSISTENCE",
+          "SPATIAL_RELATIONSHIP"
+        ],
+        "reason": "Capability \"WORLD_STATE\" (World State) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "OBJECT_PERSISTENCE",
+        "level": "P0",
+        "suggestedId": "L2-spatial",
+        "primaryCapability": "OBJECT_PERSISTENCE",
+        "secondaryCapabilities": [
+          "SPATIAL_LAYOUT",
+          "WORLD_STATE",
+          "SPATIAL_RELATIONSHIP"
+        ],
+        "reason": "Capability \"OBJECT_PERSISTENCE\" (Object Persistence) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "SPATIAL_RELATIONSHIP",
+        "level": "P0",
+        "suggestedId": "L1-spatial",
+        "primaryCapability": "SPATIAL_RELATIONSHIP",
+        "secondaryCapabilities": [
+          "SPATIAL_LAYOUT",
+          "WORLD_STATE",
+          "OBJECT_PERSISTENCE"
+        ],
+        "reason": "Capability \"SPATIAL_RELATIONSHIP\" (Spatial Relationship) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "STYLE_TRANSFER",
+        "level": "P0",
+        "suggestedId": "L2-style",
+        "primaryCapability": "STYLE_TRANSFER",
+        "secondaryCapabilities": [],
+        "reason": "Capability \"STYLE_TRANSFER\" (Style Transfer) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "EMOTION_ALIGNMENT",
+        "level": "P0",
+        "suggestedId": "L2-emotion",
+        "primaryCapability": "EMOTION_ALIGNMENT",
+        "secondaryCapabilities": [
+          "EMOTION_ARC"
+        ],
+        "reason": "Capability \"EMOTION_ALIGNMENT\" (Emotion Alignment) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "EMOTION_ARC",
+        "level": "P0",
+        "suggestedId": "L3-emotion",
+        "primaryCapability": "EMOTION_ARC",
+        "secondaryCapabilities": [
+          "EMOTION_ALIGNMENT"
+        ],
+        "reason": "Capability \"EMOTION_ARC\" (Emotion Arc) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "POST_COLOR_GRADING",
+        "level": "P0",
+        "suggestedId": "L2-post",
+        "primaryCapability": "POST_COLOR_GRADING",
+        "secondaryCapabilities": [
+          "POST_VFX"
+        ],
+        "reason": "Capability \"POST_COLOR_GRADING\" (Post Color Grading) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      },
+      {
+        "capability": "POST_VFX",
+        "level": "P0",
+        "suggestedId": "L2-post",
+        "primaryCapability": "POST_VFX",
+        "secondaryCapabilities": [
+          "POST_COLOR_GRADING"
+        ],
+        "reason": "Capability \"POST_VFX\" (Post VFX) has zero coverage: primary=0, secondary=0. Requires dedicated dataset.",
+        "priority": 1
+      }
+    ]
+  },
+  "byStage": {
+    "planner": [
+      {
+        "capability": "CAMERA_PATH",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CAMERA_MOTION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CAMERA_COMPOSITION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L1-001"
+        ],
+        "totalCoverage": 1,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CAMERA_FOCUS",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "LIGHT_DIRECTION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "LIGHT_CONTROL",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CHARACTER_EMOTION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CHARACTER_POSE",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "ACTION_TIMING",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "SHOT_TRANSITION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L1-001"
+        ],
+        "totalCoverage": 1,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "SPATIAL_LAYOUT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L0-001",
+          "L1-001"
+        ],
+        "totalCoverage": 2,
+        "stage": "planner",
+        "difficulty": "L0",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "SPATIAL_RELATIONSHIP",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "EMOTION_ALIGNMENT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "EMOTION_ARC",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L3",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      }
+    ],
+    "negotiator": [
+      {
+        "capability": "LIGHT_CONTINUITY",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "LIGHT_TRANSITION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CHARACTER_CONSISTENCY",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "TEMPORAL_CONSISTENCY",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L1-001"
+        ],
+        "totalCoverage": 1,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "TIMELINE_SYNC",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "WORLD_STATE",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "OBJECT_PERSISTENCE",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      }
+    ],
+    "compiler": [
+      {
+        "capability": "CHARACTER_REFERENCE",
+        "primaryDatasets": [
+          "L0-001",
+          "L1-001"
+        ],
+        "secondaryDatasets": [],
+        "totalCoverage": 2,
+        "stage": "compiler",
+        "difficulty": "L0",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      }
+    ],
+    "renderer": [
+      {
+        "capability": "RENDER_SHOT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L0-001",
+          "L1-001"
+        ],
+        "totalCoverage": 2,
+        "stage": "renderer",
+        "difficulty": "L0",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "RENDER_KEYFRAME",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L0-001",
+          "L1-001"
+        ],
+        "totalCoverage": 2,
+        "stage": "renderer",
+        "difficulty": "L0",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "RENDER_SEQUENCE",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "RENDER_MULTI_SHOT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L3",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "PHYSICS_CONSTRAINT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L3",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "PHYSICS_ENVIRONMENT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L3",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "STYLE_TRANSFER",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "POST_COLOR_GRADING",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "POST_VFX",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      }
+    ]
+  },
+  "byDifficulty": {
+    "L2": [
+      {
+        "capability": "CAMERA_PATH",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CAMERA_COMPOSITION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L1-001"
+        ],
+        "totalCoverage": 1,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CAMERA_FOCUS",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "LIGHT_CONTINUITY",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "LIGHT_CONTROL",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "LIGHT_TRANSITION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CHARACTER_CONSISTENCY",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "RENDER_SEQUENCE",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "TEMPORAL_CONSISTENCY",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L1-001"
+        ],
+        "totalCoverage": 1,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "ACTION_TIMING",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "TIMELINE_SYNC",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "WORLD_STATE",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "OBJECT_PERSISTENCE",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "negotiator",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "STYLE_TRANSFER",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "EMOTION_ALIGNMENT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "POST_COLOR_GRADING",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "POST_VFX",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L2",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      }
+    ],
+    "L1": [
+      {
+        "capability": "CAMERA_MOTION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "LIGHT_DIRECTION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CHARACTER_EMOTION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "CHARACTER_POSE",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "SHOT_TRANSITION",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L1-001"
+        ],
+        "totalCoverage": 1,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "SPATIAL_RELATIONSHIP",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L1",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      }
+    ],
+    "L0": [
+      {
+        "capability": "CHARACTER_REFERENCE",
+        "primaryDatasets": [
+          "L0-001",
+          "L1-001"
+        ],
+        "secondaryDatasets": [],
+        "totalCoverage": 2,
+        "stage": "compiler",
+        "difficulty": "L0",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "RENDER_SHOT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L0-001",
+          "L1-001"
+        ],
+        "totalCoverage": 2,
+        "stage": "renderer",
+        "difficulty": "L0",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "RENDER_KEYFRAME",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L0-001",
+          "L1-001"
+        ],
+        "totalCoverage": 2,
+        "stage": "renderer",
+        "difficulty": "L0",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "SPATIAL_LAYOUT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [
+          "L0-001",
+          "L1-001"
+        ],
+        "totalCoverage": 2,
+        "stage": "planner",
+        "difficulty": "L0",
+        "gap": false,
+        "evidence": [],
+        "metrics": {}
+      }
+    ],
+    "L3": [
+      {
+        "capability": "RENDER_MULTI_SHOT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L3",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "PHYSICS_CONSTRAINT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L3",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "PHYSICS_ENVIRONMENT",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "renderer",
+        "difficulty": "L3",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      },
+      {
+        "capability": "EMOTION_ARC",
+        "primaryDatasets": [],
+        "secondaryDatasets": [],
+        "totalCoverage": 0,
+        "stage": "planner",
+        "difficulty": "L3",
+        "gap": true,
+        "evidence": [],
+        "metrics": {}
+      }
+    ]
+  },
+  "byGroup": {
+    "undefined": {
+      "total": 31,
+      "covered": 7,
+      "coverage": 23
+    }
+  }
+}
