@@ -1,55 +1,30 @@
 // ============================================================
-// Brand GEO — Graph Routes
-// CRUD: /api/geo/projects/:projectId/graph/*
-//       /api/geo/graph/edges
+// GEO Graph Routes (Brand GEO compat → KMKI-GEO Sprint 1A)
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { geoGraphService } from '../../services/geo/graph.service.js'
+import { geoGraphService } from '../../services/geo/services/geo-graph.service'
 
 export default async function geoGraphRoutes(fastify: FastifyInstance) {
-  // List graph nodes for a project
-  fastify.get('/api/geo/projects/:projectId/graph/nodes', async (request, reply) => {
+  // GET /api/geo/projects/:projectId/graph — Get graph
+  fastify.get('/api/geo/projects/:projectId/graph', async (request, reply) => {
     const { projectId } = request.params as any
-    const nodes = await geoGraphService.listNodes(projectId)
-    return { success: true, data: { nodes } }
-  })
-
-  // Create graph node
-  fastify.post('/api/geo/projects/:projectId/graph/nodes', async (request, reply) => {
-    const { projectId } = request.params as any
-    const body = request.body as any
-    if (!body.type || !body.label) {
-      return reply.status(400).send({ success: false, error: 'type and label are required' })
+    try {
+      const graph = await geoGraphService.getGraph(projectId)
+      return { success: true, data: { graph } }
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err.message })
     }
-    const node = await geoGraphService.createNode({
-      projectId,
-      type: body.type,
-      label: body.label,
-      properties: body.properties || undefined,
-    })
-    return { success: true, data: { node } }
   })
 
-  // List graph edges for a project
-  fastify.get('/api/geo/projects/:projectId/graph/edges', async (request, reply) => {
+  // POST /api/geo/projects/:projectId/graph/build — Build graph
+  fastify.post('/api/geo/projects/:projectId/graph/build', async (request, reply) => {
     const { projectId } = request.params as any
-    const edges = await geoGraphService.listEdges(projectId)
-    return { success: true, data: { edges: edges } }
-  })
-
-  // Create graph edge (top-level /api/geo/graph/edges)
-  fastify.post('/api/geo/graph/edges', async (request, reply) => {
-    const body = request.body as any
-    if (!body.sourceId || !body.targetId || !body.type) {
-      return reply.status(400).send({ success: false, error: 'sourceId, targetId, and type are required' })
+    try {
+      const graph = await geoGraphService.buildGraph(projectId)
+      return { success: true, data: { graph } }
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err.message })
     }
-    const edge = await geoGraphService.createEdge({
-      sourceId: body.sourceId,
-      targetId: body.targetId,
-      type: body.type,
-      properties: body.properties || undefined,
-    })
-    return { success: true, data: { edge } }
   })
 }

@@ -1,35 +1,19 @@
 // ============================================================
-// Brand GEO — Brand Profile Routes
-// CRUD: /api/geo/brand/:projectId
+// GEO Brand Routes (Brand GEO compat → KMKI-GEO Sprint 1A)
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { geoBrandService } from '../../services/geo/brand.service.js'
+import { geoProjectService } from '../../services/geo/services/geo-project.service'
 
 export default async function geoBrandRoutes(fastify: FastifyInstance) {
-  // Get brand profile
-  fastify.get('/api/geo/brand/:projectId', async (request, reply) => {
-    const { projectId } = request.params as any
-    const brand = await geoBrandService.getByProjectId(projectId)
-    if (!brand) {
-      return reply.status(404).send({ success: false, error: 'Brand profile not found' })
+  // GET /api/geo/brands — Get brand profile (delegates to project service)
+  fastify.get('/api/geo/brands', async (request, reply) => {
+    const userId = (request as any).user?.id || 'anonymous'
+    try {
+      const projects = await geoProjectService.listProjects(userId)
+      return { success: true, data: { brands: projects } }
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err.message })
     }
-    return { success: true, data: { brand } }
-  })
-
-  // Create brand profile
-  fastify.post('/api/geo/brand/:projectId', async (request, reply) => {
-    const { projectId } = request.params as any
-    const body = request.body as any
-    const brand = await geoBrandService.create(projectId, body)
-    return { success: true, data: { brand } }
-  })
-
-  // Update brand profile (upsert)
-  fastify.put('/api/geo/brand/:projectId', async (request, reply) => {
-    const { projectId } = request.params as any
-    const body = request.body as any
-    const brand = await geoBrandService.update(projectId, body)
-    return { success: true, data: { brand } }
   })
 }

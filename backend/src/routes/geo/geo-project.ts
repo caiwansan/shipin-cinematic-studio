@@ -1,65 +1,78 @@
 // ============================================================
-// Brand GEO — Project Routes
-// CRUD: /api/geo/projects
+// GEO Project Routes (Brand GEO compat → KMKI-GEO Sprint 1A)
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { geoProjectService } from '../../services/geo/project.service.js'
+import { geoProjectService } from '../../services/geo/services/geo-project.service'
 
 export default async function geoProjectRoutes(fastify: FastifyInstance) {
-  // Get user's project list
+  // GET /api/geo/projects — List projects
   fastify.get('/api/geo/projects', async (request, reply) => {
-    const userId = (request as any).user?.id
-    if (!userId) {
-      return reply.status(401).send({ success: false, error: 'Unauthorized' })
+    const userId = (request as any).user?.id || (request.query as any).userId || 'anonymous'
+    try {
+      const projects = await geoProjectService.listProjects(userId)
+      return { success: true, data: { projects } }
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err.message })
     }
-    const projects = await geoProjectService.list(userId)
-    return { success: true, data: { projects } }
   })
 
-  // Create project
+  // POST /api/geo/projects — Create project
   fastify.post('/api/geo/projects', async (request, reply) => {
-    const userId = (request as any).user?.id
-    if (!userId) {
-      return reply.status(401).send({ success: false, error: 'Unauthorized' })
+    const userId = (request as any).user?.id || 'anonymous'
+    const body = request.body as any
+    if (!body?.name) {
+      return reply.status(400).send({ success: false, error: 'name is required' })
     }
-    const { name, website, industry, language, country } = request.body as any
-    if (!name) {
-      return reply.status(400).send({ success: false, error: 'Project name is required' })
+    try {
+      const project = await geoProjectService.createProject({
+        name: body.name,
+        topic: body.topic,
+        userId,
+        language: body.language,
+        industry: body.industry,
+        config: body.config,
+      })
+      return reply.status(201).send({ success: true, data: { project } })
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err.message })
     }
-    const project = await geoProjectService.create({
-      userId,
-      name,
-      website,
-      industry,
-      language,
-      country,
-    })
-    return { success: true, data: { project } }
   })
 
-  // Get project detail
+  // GET /api/geo/projects/:id — Get project
   fastify.get('/api/geo/projects/:id', async (request, reply) => {
     const { id } = request.params as any
-    const project = await geoProjectService.getById(id)
-    if (!project) {
-      return reply.status(404).send({ success: false, error: 'Project not found' })
+    try {
+      const project = await geoProjectService.getProject(id)
+      if (!project) return reply.status(404).send({ success: false, error: 'Project not found' })
+      return { success: true, data: { project } }
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err.message })
     }
-    return { success: true, data: { project } }
   })
 
-  // Update project
+  // PUT /api/geo/projects/:id — Update project
   fastify.put('/api/geo/projects/:id', async (request, reply) => {
     const { id } = request.params as any
-    const updates = request.body as any
-    const project = await geoProjectService.update(id, updates)
-    return { success: true, data: { project } }
+    const body = request.body as any
+    try {
+      const project = await geoProjectService.updateProject(id, body)
+      if (!project) return reply.status(404).send({ success: false, error: 'Project not found' })
+      return { success: true, data: { project } }
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err.message })
+    }
   })
 
-  // Delete project
+  // DELETE /api/geo/projects/:id — Delete project
   fastify.delete('/api/geo/projects/:id', async (request, reply) => {
     const { id } = request.params as any
-    await geoProjectService.delete(id)
-    return { success: true, data: { message: 'Project deleted' } }
+    try {
+      const deleted = await geoProjectService.deleteProject(id)
+      if (!deleted) return reply.status(404).send({ success: false, error: 'Project not found' })
+      return { success: true }
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err.message })
+    }
   })
 }
