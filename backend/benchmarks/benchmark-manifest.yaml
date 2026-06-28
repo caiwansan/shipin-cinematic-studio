@@ -1,0 +1,103 @@
+# Benchmark Manifest — 昆仑镜短剧系统
+
+所有已验证的 Benchmark Dataset 列表。新增 Dataset 必须在此注册。
+
+---
+
+## Dataset Registry
+
+| ID | Level | Shots | Name | Capabilities | Added |
+| -- | ----- | ----: | ---- | ------------ | ----- |
+| L0-001 | L0 | 1 | Single Shot — Basic | charRef, keyframe, render | 2026-06-29 |
+| L1-001 | L1 | 5 | Dialogue — Two Characters | charRef, keyframe, render, temporal | 2026-06-29 |
+
+---
+
+## L0-001 — Single Shot, Basic
+
+**Purpose:** 最小 Pipeline 验证。仅包含一个镜头、一个角色、一段简单描述。
+
+### Input Files
+
+```text
+benchmarks/datasets/L0-001/input/
+├── narrative.json
+└── v3.json
+```
+
+### Expectations
+
+```yaml
+compileSuccess: true
+minSps: 0.9
+minCapabilityCoverage: 0.8
+compilerDeterminism: 0.99
+maxPipelineDurationMs: 3000
+maxDriftCount: 0
+```
+
+### Tags
+
+```yaml
+capabilities:
+  film.character.reference: true
+  film.keyframe: true
+  film.render.shot: true
+  film.camera.path: false
+  film.physics.constraint: false
+  film.lip.sync: false
+  film.temporal.consistency: false
+  film.lighting.control: false
+  film.style.transfer: false
+  film.spatial.layout: false
+tags:
+  - single-shot
+  - basic
+  - unit-test
+```
+
+---
+
+## L1-001 — Dialogue, Two Characters, 5 Shots
+
+**Purpose:** Pipeline 集成验证。两角色简短的对话场景，五镜头交替。
+
+### Input Files
+
+```text
+benchmarks/datasets/L1-001/input/
+├── narrative.json
+└── v3.json
+```
+
+### Expectations
+
+```yaml
+compileSuccess: true
+minSps: 0.8
+minCapabilityCoverage: 0.7
+compilerDeterminism: 0.99
+maxPipelineDurationMs: 5000
+maxDriftCount: 0
+```
+
+### Tags
+
+```yaml
+capabilities:
+  film.character.reference: true
+  film.keyframe: true
+  film.render.shot: true
+  film.camera.path: false
+  film.physics.constraint: false
+  film.lip.sync: false
+  film.temporal.consistency: true
+  film.lighting.control: false
+  film.style.transfer: false
+  film.spatial.layout: false
+tags:
+  - dialogue
+  - two-characters
+  - multi-shot
+  - integration-test
+```

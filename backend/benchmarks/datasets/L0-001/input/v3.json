@@ -1,0 +1,37 @@
+{
+  "plotSummary": "主角在清晨的街道上漫步",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "description": "清晨街道，主角独自散步",
+      "shots": [
+        {
+          "id": "shot_1",
+          "type": "shot",
+          "description": "主角在清晨的街道上漫步，阳光透过树叶洒下斑驳光影。",
+          "characters": ["主角"],
+          "dialogue": [],
+          "action": "walking",
+          "camera": {
+            "position": "medium shot",
+            "movement": "static"
+          },
+          "lighting": "natural sunlight",
+          "duration_seconds": 5,
+          "visual_cues": ["阳光", "树叶", "斑驳光影", "清晨街道"]
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "name": "主角",
+      "gender": "male",
+      "age": "young adult",
+      "appearance": "穿着休闲服，短发，约25岁",
+      "features": [],
+      "clothing": "休闲服"
+    }
+  ],
+  "global_mood": "平静"
+}

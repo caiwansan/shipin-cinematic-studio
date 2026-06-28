@@ -1,0 +1,17 @@
+# L1-001 — Dialogue, Two Characters, 5 Shots
+# Pipeline 集成验证：两角色简短对话，五镜头交替
+
+level: L1
+id: L1-001
+name: Dialogue — Two Characters
+description: Pipeline integration validation. Two characters, brief dialogue, 5 shots alternating.
+shots: 5
+characters: 2
+capabilities:
+  - film.character.reference
+  - film.keyframe
+  - film.render.shot
+  - film.temporal.consistency
+difficulty: basic
+created: 2026-06-29
+hash: "sha256:placeholder"

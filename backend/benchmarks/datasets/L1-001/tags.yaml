@@ -1,0 +1,16 @@
+capabilities:
+  film.character.reference: true
+  film.keyframe: true
+  film.render.shot: true
+  film.camera.path: false
+  film.physics.constraint: false
+  film.lip.sync: false
+  film.temporal.consistency: true
+  film.lighting.control: false
+  film.style.transfer: false
+  film.spatial.layout: false
+tags:
+  - dialogue
+  - two-characters
+  - multi-shot
+  - integration-test

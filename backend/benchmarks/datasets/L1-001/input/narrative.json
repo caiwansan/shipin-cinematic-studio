@@ -1,0 +1,75 @@
+{
+  "title": "两段对话",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "两个人在咖啡馆交谈",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "Alice 坐在咖啡馆窗边，看向窗外",
+          "characters": ["Alice"],
+          "dialogues": [],
+          "actions": ["坐", "望窗外"],
+          "camera": "medium shot",
+          "lighting": "warm indoor lighting",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_2",
+          "description": "Bob 走进咖啡馆，看到了 Alice",
+          "characters": ["Bob"],
+          "dialogues": [],
+          "actions": ["走进", "看到"],
+          "camera": "medium shot",
+          "lighting": "warm indoor lighting",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_3",
+          "description": "Alice 抬头对 Bob 微笑",
+          "characters": ["Alice"],
+          "dialogues": ["你来了。"],
+          "actions": ["抬头", "微笑"],
+          "camera": "close-up",
+          "lighting": "warm indoor lighting",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_4",
+          "description": "Bob 坐下，两人对视",
+          "characters": ["Alice", "Bob"],
+          "dialogues": ["今天天气真好。"],
+          "actions": ["坐下", "对视"],
+          "camera": "two-shot",
+          "lighting": "warm indoor lighting",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_5",
+          "description": "Alice 笑着回答，窗外阳光洒进来",
+          "characters": ["Alice"],
+          "dialogues": ["是啊，最适合出来走走了。"],
+          "actions": ["笑", "说话"],
+          "camera": "medium shot",
+          "lighting": "warm indoor lighting with sunlight",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "name": "Alice",
+      "gender": "female",
+      "age": "young adult",
+      "appearance": "长发，穿白色衬衫，约25岁"
+    },
+    {
+      "name": "Bob",
+      "gender": "male",
+      "age": "young adult",
+      "appearance": "短发，穿深色夹克，约28岁"
+    }
+  ]
+}

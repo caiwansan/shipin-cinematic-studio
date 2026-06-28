@@ -1,0 +1,29 @@
+{
+  "title": "小场景",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "summary": "一个人走在街上",
+      "shots": [
+        {
+          "id": "shot_1",
+          "description": "主角在清晨的街道上漫步，阳光透过树叶洒下斑驳光影。",
+          "characters": ["主角"],
+          "dialogues": [],
+          "actions": ["walking"],
+          "camera": "medium shot",
+          "lighting": "natural sunlight",
+          "duration_seconds": 5
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "name": "主角",
+      "gender": "male",
+      "age": "young adult",
+      "appearance": "穿着休闲服，短发，约25岁"
+    }
+  ]
+}

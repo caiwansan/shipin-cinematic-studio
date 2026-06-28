@@ -1,0 +1,16 @@
+# L0-001 — Single Shot, Basic
+# 最小 Pipeline 验证：1 镜头、1 角色、简单描述
+
+level: L0
+id: L0-001
+name: Single Shot — Basic
+description: Minimum pipeline validation. One shot, one character, simple description.
+shots: 1
+characters: 1
+capabilities:
+  - film.character.reference
+  - film.keyframe
+  - film.render.shot
+difficulty: basic
+created: 2026-06-29
+hash: "sha256:placeholder"
