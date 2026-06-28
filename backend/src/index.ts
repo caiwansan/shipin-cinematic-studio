@@ -543,6 +543,35 @@ await app.register(projectV2Routes)
     console.warn('[SemanticRuntime] Failed to initialize:', (err as Error).message)
   }
 
+  // Capability Platform routes (Phase 6 — Platform Level Capability Contract Layer)
+  await app.register(await import('./routes/platform/capability/contract.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/capability/registry.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/capability/resolver.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/capability/validator.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/capability/catalog.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/capability/capability-main.route.js').then(m => m.default))
+
+  // 初始化 Capability Runtime（Phase 6 平台级能力契约层）
+  try {
+    const { capabilityRuntime } = await import('./services/platform/capability/runtime/capability.runtime.js')
+    await capabilityRuntime.initialize()
+
+    // Register routing strategies
+    const { capabilityResolver } = await import('./services/platform/capability/resolver/capability-resolver.js')
+    const { qualityFirstStrategy } = await import('./services/platform/capability/resolver/routing-strategies/quality-first.js')
+    const { costFirstStrategy } = await import('./services/platform/capability/resolver/routing-strategies/cost-first.js')
+    const { latencyFirstStrategy } = await import('./services/platform/capability/resolver/routing-strategies/latency-first.js')
+    const { balancedStrategy } = await import('./services/platform/capability/resolver/routing-strategies/balanced.js')
+
+    capabilityResolver.registerStrategy(qualityFirstStrategy)
+    capabilityResolver.registerStrategy(costFirstStrategy)
+    capabilityResolver.registerStrategy(latencyFirstStrategy)
+    capabilityResolver.registerStrategy(balancedStrategy)
+    console.log('[CapabilityRuntime] ✅ Capability Runtime initialized with 4 routing strategies')
+  } catch (err) {
+    console.warn('[CapabilityRuntime] Failed to initialize:', (err as Error).message)
+  }
+
   // Goal Runtime routes (Phase 4 — Platform Level Growth Execution Layer)
   await app.register(await import('./routes/goal/goal.route.js').then(m => m.default))
   await app.register(await import('./routes/goal/strategy.route.js').then(m => m.default))

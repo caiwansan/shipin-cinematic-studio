@@ -4009,3 +4009,41 @@ model Review {
 
   execution     Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
 }
+
+// ===== Capability Platform =====
+
+model CapabilityContract {
+  id                String   @id @default(uuid())
+  name              String   @unique  // e.g., "GenerateFAQ", "ExtractEntity"
+  displayName       String
+  description       String?
+  category          String   // Generation, Analysis, Extraction, Transformation, Publishing, etc.
+  version           String   @default("1.0.0")
+  inputSchema       String?  // JSON Schema
+  outputSchema      String?  // JSON Schema
+  constraints       String?  // JSON - maxTimeout, maxRetries, idempotent, streaming, etc.
+  qualityProfile    String?  // JSON - expected quality metrics
+  permissionProfile String?  // JSON - required permissions
+  tags              String?  // JSON array
+  status            String   @default("active") // active, deprecated, removed
+  metadata          String?  // JSON
+  schemaVersion     Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  providerMappings  CapabilityProviderMapping[]
+}
+
+model CapabilityProviderMapping {
+  id             String   @id @default(uuid())
+  capabilityId   String
+  provider       String   // e.g., "openai", "deepseek", "claude" (reserved for Provider Runtime)
+  priority       Int      @default(0)
+  config         String?  // JSON provider-specific config
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  capability     CapabilityContract @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+  @@unique([capabilityId, provider])
+}
