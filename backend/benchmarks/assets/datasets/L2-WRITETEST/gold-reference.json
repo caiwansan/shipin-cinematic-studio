@@ -1,0 +1,7 @@
+{
+  "input": "some prompt",
+  "expectedPlanning": {},
+  "expectedNegotiation": {},
+  "expectedRuntime": {},
+  "expectedEvaluation": {}
+}

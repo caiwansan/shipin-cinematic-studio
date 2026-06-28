@@ -1,0 +1,8 @@
+- id: FM-001
+  description: Camera path jitters
+  expectedBehavior: Camera motion should be smooth
+  severity: high
+- id: FM-002
+  description: Camera clips through geometry
+  expectedBehavior: Camera should avoid collisions
+  severity: medium

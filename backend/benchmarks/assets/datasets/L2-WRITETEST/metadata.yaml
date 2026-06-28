@@ -1,0 +1,10 @@
+id: L2-WRITETEST
+primaryCapability: CAMERA_PATH
+secondaryCapabilities:
+  - CAMERA_COMPOSITION
+  - TEMPORAL_CONSISTENCY
+difficulty: L2
+stage: planner
+name: Test Camera Path
+description: A camera path test dataset
+scenario: A camera follows a moving character through a forest.

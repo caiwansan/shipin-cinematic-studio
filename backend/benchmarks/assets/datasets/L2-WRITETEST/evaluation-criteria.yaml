@@ -1,0 +1,10 @@
+- id: EC-001
+  name: Smoothness
+  description: Camera trajectory smoothness
+  weight: 0.6
+  passThreshold: 80
+- id: EC-002
+  name: Collision Avoidance
+  description: No geometry clipping
+  weight: 0.4
+  passThreshold: 90
