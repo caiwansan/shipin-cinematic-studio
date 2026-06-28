@@ -1,0 +1,184 @@
+{
+  "title": "时间连续性 — 五段时序验证",
+  "scenes": [
+    {
+      "id": "case1-state-progression",
+      "summary": "门的状态：关闭→打开→半开",
+      "shots": [
+        {
+          "id": "shot_1a",
+          "description": "一间客厅，一扇木门关闭着。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "medium shot facing door",
+          "lighting": "afternoon daylight through window",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_1b",
+          "description": "同一扇门，现在是打开的。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "medium shot facing door",
+          "lighting": "afternoon daylight through window",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_1c",
+          "description": "同一扇门，现在是半开状态。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "medium shot facing door",
+          "lighting": "afternoon daylight through window",
+          "duration_seconds": 3
+        }
+      ]
+    },
+    {
+      "id": "case2-action-continuity",
+      "summary": "人的动作：坐在沙发上→站起来→走向窗户",
+      "shots": [
+        {
+          "id": "shot_2a",
+          "description": "一个人坐在客厅沙发上。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["sitting"],
+          "camera": "medium shot from side",
+          "lighting": "afternoon daylight",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_2b",
+          "description": "同一个人从沙发上站起来。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["standing up"],
+          "camera": "medium shot from front",
+          "lighting": "afternoon daylight",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_2c",
+          "description": "同一个人走向窗户。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["walking to window"],
+          "camera": "wide shot from behind",
+          "lighting": "afternoon daylight",
+          "duration_seconds": 3
+        }
+      ]
+    },
+    {
+      "id": "case3-event-ordering",
+      "summary": "事件顺序：拿起钥匙→开门→出门",
+      "shots": [
+        {
+          "id": "shot_3a",
+          "description": "一个人从桌上拿起一串钥匙。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["picking up keys"],
+          "camera": "close-up of hands",
+          "lighting": "warm interior light",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_3b",
+          "description": "同一个人用钥匙打开门。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["opening door with keys"],
+          "camera": "medium shot from behind",
+          "lighting": "warm interior light",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_3c",
+          "description": "同一个人走出门，离开房间。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["exiting room"],
+          "camera": "wide shot from interior",
+          "lighting": "warm interior light",
+          "duration_seconds": 3
+        }
+      ]
+    },
+    {
+      "id": "case4-attribute-evolution",
+      "summary": "冰块：完整→部分融化→完全融化",
+      "shots": [
+        {
+          "id": "shot_4a",
+          "description": "桌上有一杯冰水，冰块还是完整的立方体。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "close-up of glass",
+          "lighting": "warm interior light",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_4b",
+          "description": "同一杯冰水，冰块已经部分融化了，变小了一些。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "close-up of glass",
+          "lighting": "warm interior light",
+          "duration_seconds": 3
+        },
+        {
+          "id": "shot_4c",
+          "description": "同一杯水，冰块已经完全融化，只剩下一杯水。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "close-up of glass",
+          "lighting": "warm interior light",
+          "duration_seconds": 3
+        }
+      ]
+    },
+    {
+      "id": "case5-temporal-gap",
+      "summary": "时间跳跃：白昼→（字幕：三小时后）→黄昏",
+      "shots": [
+        {
+          "id": "shot_5a",
+          "description": "透过窗户看到外面是白天，阳光明亮。房间内被阳光照亮。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "wide shot showing window",
+          "lighting": "bright daylight through window",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_5b",
+          "description": "字幕：三小时后。透过窗户看到外面已是黄昏，金色的光线照进房间。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "wide shot showing window",
+          "lighting": "golden hour / dusk light through window",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "人",
+      "gender": "male",
+      "appearance": "穿休闲装的年轻男性",
+      "reference_images": []
+    }
+  ]
+}

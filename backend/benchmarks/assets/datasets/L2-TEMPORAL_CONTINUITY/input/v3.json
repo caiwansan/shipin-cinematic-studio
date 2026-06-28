@@ -1,0 +1,132 @@
+{
+  "scenes": [
+    {
+      "id": "case1-state-progression",
+      "summary": "Door state: closed → open → half-open",
+      "shots": [
+        {
+          "id": "shot_1a",
+          "prompt": "A cozy living room with a wooden door. The door is closed. Afternoon daylight comes through a window. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "open door, broken door"
+        },
+        {
+          "id": "shot_1b",
+          "prompt": "The same living room, the same wooden door. Now the door is open wide. Afternoon daylight. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "closed door, broken door"
+        },
+        {
+          "id": "shot_1c",
+          "prompt": "The same living room, the same wooden door. Now the door is half-open, neither fully closed nor fully open. Afternoon daylight. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "closed door, fully open door"
+        }
+      ],
+      "characters": []
+    },
+    {
+      "id": "case2-action-continuity",
+      "summary": "Action: sitting → standing → walking to window",
+      "shots": [
+        {
+          "id": "shot_2a",
+          "prompt": "A young man in casual clothes sitting on a sofa in a living room. Afternoon daylight. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "standing person, person walking"
+        },
+        {
+          "id": "shot_2b",
+          "prompt": "The same young man standing up from the sofa in the same living room. Afternoon daylight. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "sitting person, lying person"
+        },
+        {
+          "id": "shot_2c",
+          "prompt": "The same young man walking toward a window in the living room. Afternoon daylight. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_1" },
+          "negative_prompt": "sitting person, standing still, different room"
+        }
+      ],
+      "characters": [
+        { "id": "char_1", "name": "人", "gender": "male", "appearance": "休闲装年轻男性" }
+      ]
+    },
+    {
+      "id": "case3-event-ordering",
+      "summary": "Event order: pick up keys → open door → exit",
+      "shots": [
+        {
+          "id": "shot_3a",
+          "prompt": "Close-up of hands picking up a set of keys from a wooden table. Warm interior lighting. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_2" },
+          "negative_prompt": "keys on table, empty hands, dropping keys"
+        },
+        {
+          "id": "shot_3b",
+          "prompt": "A young man inserting a key into a wooden door lock and opening the door. Warm interior light. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_2" },
+          "negative_prompt": "closed door, person walking away"
+        },
+        {
+          "id": "shot_3c",
+          "prompt": "A young man walking out through an open door, leaving the room. Seen from inside. Warm interior light. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_2" },
+          "negative_prompt": "person entering, person standing"
+        }
+      ],
+      "characters": [
+        { "id": "char_2", "name": "人", "gender": "male", "appearance": "穿便装的年轻男性" }
+      ]
+    },
+    {
+      "id": "case4-attribute-evolution",
+      "summary": "Ice: solid → partially melted → fully melted",
+      "shots": [
+        {
+          "id": "shot_4a",
+          "prompt": "A glass of water with full ice cubes. The ice cubes are large and solid. Close-up, warm interior light. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "melted ice, empty glass, no ice"
+        },
+        {
+          "id": "shot_4b",
+          "prompt": "The same glass of water. The ice cubes have partially melted and are noticeably smaller. Close-up, warm interior light. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "full ice cubes, no ice, all melted"
+        },
+        {
+          "id": "shot_4c",
+          "prompt": "The same glass of water. The ice has fully melted, only water remains in the glass. No ice visible. Close-up, warm interior light. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "ice cubes, partially melted ice"
+        }
+      ],
+      "characters": []
+    },
+    {
+      "id": "case5-temporal-gap",
+      "summary": "Time jump: daylight → (title: 3 hours later) → dusk",
+      "shots": [
+        {
+          "id": "shot_5a",
+          "prompt": "A cozy room seen from inside. Through the window, bright daylight is visible. Sunlight streams into the room. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "dark room, night, sunset"
+        },
+        {
+          "id": "shot_5b",
+          "prompt": "The same room, same angle. Three hours later. Through the window, golden hour light fills the room. Warm dusk lighting. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "daylight, bright sunlight, night, dark room"
+        }
+      ],
+      "characters": []
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}

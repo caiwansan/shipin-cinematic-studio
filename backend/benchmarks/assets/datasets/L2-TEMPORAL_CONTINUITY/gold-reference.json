@@ -1,0 +1,76 @@
+{
+  "scenario": "一个下午到傍晚的客厅场景，五段时序验证不同类型的连续性：Case 1 门的状态 / Case 2 人的动作 / Case 3 事件顺序 / Case 4 冰的属性演化 / Case 5 有提示的时间跳跃。",
+  "expectedPlanning": {
+    "cases": [
+      {
+        "id": "case1-state-progression",
+        "description": "A wooden door in a living room. Shot 1: door is closed. Shot 2: door is open. Shot 3: door is half-open. State must not regress.",
+        "shots": 3,
+        "stateProgression": {
+          "subject": "门",
+          "expectedSequence": ["closed", "open", "half-open"],
+          "monotonic": true
+        }
+      },
+      {
+        "id": "case2-action-continuity",
+        "description": "A person in a living room. Shot 1: sitting on sofa. Shot 2: standing up. Shot 3: walking to window. Actions must not jump back.",
+        "shots": 3,
+        "actionProgression": {
+          "subject": "人",
+          "expectedSequence": ["sitting", "standing", "walking_to_window"],
+          "monotonic": true
+        }
+      },
+      {
+        "id": "case3-event-ordering",
+        "description": "A person at a desk with keys. Shot 1: picking up keys. Shot 2: opening door. Shot 3: walking out. Order must be logical.",
+        "shots": 3,
+        "eventOrdering": {
+          "subject": "人",
+          "expectedSequence": ["pick_up_keys", "open_door", "exit_room"],
+          "causalOrder": true
+        }
+      },
+      {
+        "id": "case4-attribute-evolution",
+        "description": "A glass of ice water on a table. Shot 1: full ice cubes. Shot 2: partially melted. Shot 3: fully melted, water only. Attribute change must be monotonic.",
+        "shots": 3,
+        "attributeEvolution": {
+          "subject": "冰块",
+          "attribute": "melt_state",
+          "expectedSequence": ["solid", "partially_melted", "fully_melted"],
+          "monotonic": true
+        }
+      },
+      {
+        "id": "case5-temporal-gap",
+        "description": "A room with a window. Shot 1: daylight through window. Title card: 'Three hours later'. Shot 2: golden hour / dusk light through window. Transition is cued.",
+        "shots": 2,
+        "temporalTransition": {
+          "cue": "title_card_three_hours_later",
+          "lightingChange": "daylight_to_dusk",
+          "gradualOrCued": "cued"
+        }
+      }
+    ]
+  },
+  "expectedNegotiation": {
+    "temporalConsistencyCheck": true,
+    "stateProgressionEnabled": true,
+    "causalOrderEnforced": true,
+    "temporalCuesRequired": true
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalCases": 5,
+    "temporalConsistency": true
+  },
+  "expectedEvaluation": {
+    "stateProgressionScore": { "min": 90 },
+    "actionContinuityScore": { "min": 90 },
+    "eventOrderingScore": { "min": 95 },
+    "attributeConsistencyScore": { "min": 85 },
+    "temporalTransitionScore": { "min": 85 }
+  }
+}

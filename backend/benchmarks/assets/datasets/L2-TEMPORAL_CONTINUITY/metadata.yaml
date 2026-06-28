@@ -1,0 +1,47 @@
+# L2-TEMPORAL_CONTINUITY
+# 时间连续性 — 事件和状态随时间合理演化
+#
+# 核心关注：时间维度上的合理连续性。
+# 验证前四个能力（PATH/MOTION/PERSISTENCE/RELATION）在时间上的协同是否成立。
+#
+# 五类时间连续性验证：
+#
+# 1. State Progression（状态演化）:
+#    门：关闭 → 打开 → 半开。不能无原因回退。
+#
+# 2. Action Continuity（动作连续）:
+#    抬手 → 挥手 → 放下。不能无故跳跃回退。
+#
+# 3. Event Ordering（事件顺序）:
+#    拿起钥匙 → 开门 → 进入。顺序不能颠倒。
+#
+# 4. Attribute Evolution（属性演化）:
+#    冰块 → 融化 → 水。允许合理变化，不能无原因恢复。
+#
+# 5. Temporal Gap（时间跳跃）:
+#    允许字幕提示后的跳转。未经提示不应昼夜突变。
+#
+# 与其它能力的区分：
+#   OBJECT_PERSISTENCE：物体身份是否一致
+#   SPATIAL_RELATIONSHIP：物体之间关系是否正确
+#   TEMPORAL_CONTINUITY：上述一切在时间轴上是否合理演变
+#
+
+id: L2-TEMPORAL_CONTINUITY
+primaryCapability: TEMPORAL_CONSISTENCY
+secondaryCapabilities:
+  - OBJECT_PERSISTENCE
+  - SPATIAL_RELATIONSHIP
+  - CAMERA_MOTION
+difficulty: L2
+stage: full
+name: Temporal Continuity — State, Action, Event Evolution Over Time
+description: Verifies that object state, actions, events, attributes, and scene time evolve logically over time. No regression, no unexplained jumps, no reversed event ordering.
+scenario: |
+  一个下午到傍晚的客厅场景，五段时序验证不同类型的连续性：
+  Case 1 — 门的状态演化（关→开→半开）。
+  Case 2 — 人的动作连续（坐→站→走向窗边）。
+  Case 3 — 事件顺序（拿起钥匙→开门→出门）。
+  Case 4 — 物体属性演化（冰水→融化一半→完全融化）。
+  Case 5 — 时间跳跃（白昼→黄昏，有提示）。
+created: 2026-06-28

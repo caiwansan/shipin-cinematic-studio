@@ -1,0 +1,29 @@
+- id: FM-TC-001
+  category: state_regression
+  description: Object state regresses without justification (e.g., door open → door closed → door open again)
+  expectedBehavior: Object state should only move forward along a plausible progression path; regression requires explicit narrative justification
+  severity: high
+
+- id: FM-TC-002
+  category: action_jump
+  description: A character's action has discontinuity or jumps back to a previous state (e.g., standing → sitting → standing again without reason)
+  expectedBehavior: Character actions should follow a logical sequential progression; no unexplained return to prior action state
+  severity: high
+
+- id: FM-TC-003
+  category: event_reorder
+  description: Chronological event ordering is violated (e.g., entering room before opening door)
+  expectedBehavior: Events must follow logical chronological order; cause must precede effect
+  severity: high
+
+- id: FM-TC-004
+  category: attribute_reset
+  description: An object's attributes revert to an earlier state without justification (e.g., melted ice becomes solid again)
+  expectedBehavior: Attribute changes should be monotonic unless a reverse process is explicitly shown
+  severity: medium
+
+- id: FM-TC-005
+  category: unexplained_time_skip
+  description: Scene lighting or time-of-day changes substantially without temporal cue (title card, fade, narration)
+  expectedBehavior: Temporal transitions should be accompanied by explicit cues; abrupt day/night shifts without cue are failures
+  severity: medium
