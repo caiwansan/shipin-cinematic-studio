@@ -1,0 +1,81 @@
+{
+  "scenario": "一个安静的客厅，四种场景验证不同类型的空间拓扑关系：Case 1 相对位置（花瓶与书）/ Case 2 包含关系（书与桌、笔与书）/ Case 3 距离关系（人与车）/ Case 4 排序关系（队列 A→B→C）。",
+  "expectedPlanning": {
+    "cases": [
+      {
+        "id": "case1-relative-position",
+        "description": "A blue vase is to the left of a red book on a wooden shelf. Two shots from different angles must preserve this left-of relationship.",
+        "objects": [
+          { "name": "蓝色花瓶", "attributes": { "color": "blue", "type": "vase" } },
+          { "name": "红色书本", "attributes": { "color": "red", "type": "book" } }
+        ],
+        "topologicalConstraints": {
+          "type": "relative_position",
+          "relation": "left_of",
+          "subject": "蓝色花瓶",
+          "target": "红色书本",
+          "stability": "must_persist"
+        }
+      },
+      {
+        "id": "case2-containment",
+        "description": "A book is on a table. A fountain pen is resting inside the open book. Both shots must maintain these containment relationships.",
+        "objects": [
+          { "name": "桌子", "attributes": { "type": "wooden desk" } },
+          { "name": "书本", "attributes": { "state": "open" } },
+          { "name": "钢笔", "attributes": { "type": "fountain pen", "color": "silver" } }
+        ],
+        "topologicalConstraints": [
+          { "type": "containment", "relation": "on", "subject": "书本", "target": "桌子" },
+          { "type": "containment", "relation": "inside", "subject": "钢笔", "target": "书本" }
+        ]
+      },
+      {
+        "id": "case3-distance",
+        "description": "A person stands about 2 meters from a parked car. Two shots must maintain this distance magnitude.",
+        "objects": [
+          { "name": "人", "attributes": { "type": "person", "action": "standing" } },
+          { "name": "汽车", "attributes": { "type": "sedan", "color": "white" } }
+        ],
+        "topologicalConstraints": {
+          "type": "distance",
+          "expectedRange": { "min": 1.5, "max": 3.0, "unit": "meters" },
+          "subject": "人",
+          "target": "汽车",
+          "perspectiveTolerance": "allowed"
+        }
+      },
+      {
+        "id": "case4-ordering",
+        "description": "Three people are in a queue: A → B → C. Two shots from different angles must preserve this ordering.",
+        "objects": [
+          { "name": "人A", "attributes": { "position": "1st_in_line", "appearance": "red shirt" } },
+          { "name": "人B", "attributes": { "position": "2nd_in_line", "appearance": "blue shirt" } },
+          { "name": "人C", "attributes": { "position": "3rd_in_line", "appearance": "green shirt" } }
+        ],
+        "topologicalConstraints": {
+          "type": "ordering",
+          "expectedOrder": ["人A", "人B", "人C"],
+          "stability": "must_persist"
+        }
+      }
+    ]
+  },
+  "expectedNegotiation": {
+    "spatialRelationshipCheck": true,
+    "topologicalPersistence": "strict",
+    "coordinateIndependent": true
+  },
+  "expectedRuntime": {
+    "outputFps": 24,
+    "totalCases": 4,
+    "crossShotSpatialConsistency": true
+  },
+  "expectedEvaluation": {
+    "relativePositionScore": { "min": 90 },
+    "containmentScore": { "min": 90 },
+    "distanceScore": { "min": 85 },
+    "orderingScore": { "min": 90 },
+    "sceneGravityScore": { "min": 95 }
+  }
+}

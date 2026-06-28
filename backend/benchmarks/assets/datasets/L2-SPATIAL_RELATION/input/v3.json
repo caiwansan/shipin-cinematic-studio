@@ -1,0 +1,91 @@
+{
+  "scenes": [
+    {
+      "id": "case1-relative-position",
+      "summary": "蓝色花瓶在红色书本左侧 — 验证相对位置",
+      "shots": [
+        {
+          "id": "shot_c1a",
+          "prompt": "A wooden shelf against a warm interior wall. On the shelf, a blue ceramic vase is on the left side and a red hardcover book is on the right side. The blue vase is clearly to the left of the red book. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "vase and book swapped positions, vase on right, book on left"
+        },
+        {
+          "id": "shot_c1b",
+          "prompt": "The same wooden shelf from a 45-degree right angle. The blue ceramic vase is still on the left of the red hardcover book. The left-of relationship is maintained from this new angle. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "vase and book swapped, reversed positions, different objects"
+        }
+      ],
+      "characters": []
+    },
+    {
+      "id": "case2-containment",
+      "summary": "书在桌上，笔在书中 — 验证包含关系",
+      "shots": [
+        {
+          "id": "shot_c2a",
+          "prompt": "A dark wooden desk with an open book on it. A silver fountain pen rests inside the open book. Warm desk lamp lighting. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "floating book, pen off desk, pen under table, book not on desk"
+        },
+        {
+          "id": "shot_c2b",
+          "prompt": "The same wooden desk from a 30-degree side angle. The open book is still on the desk, and the silver fountain pen is still resting inside the open book. Containment relationships preserved. Warm lamp light. Photorealistic, cinematic 24fps.",
+          "character_mapping": {},
+          "negative_prompt": "floating book, pen missing, pen not in book, book not on desk"
+        }
+      ],
+      "characters": []
+    },
+    {
+      "id": "case3-distance",
+      "summary": "人与车相距约两米 — 验证距离关系",
+      "shots": [
+        {
+          "id": "shot_c3a",
+          "prompt": "A white sedan parked on a quiet street. A person in casual clothes stands about 2 meters away from the car, facing it. Daylight, residential street. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_person" },
+          "negative_prompt": "person too close to car, person far away, multiple people"
+        },
+        {
+          "id": "shot_c3b",
+          "prompt": "Same scene from a low angle near the car front. The person is still standing about 2 meters from the white sedan. Distance relationship preserved despite perspective change. Daylight. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人": "char_person" },
+          "negative_prompt": "person touching car, person far away, car close to person"
+        }
+      ],
+      "characters": [
+        { "id": "char_person", "name": "人", "gender": "male", "appearance": "休闲装扮的男性" }
+      ]
+    },
+    {
+      "id": "case4-ordering",
+      "summary": "三人排队 A→B→C — 验证排序关系",
+      "shots": [
+        {
+          "id": "shot_c4a",
+          "prompt": "Three people standing in a line outdoors. First person wears a red T-shirt, second person wears a blue jacket, third person wears a green hoodie. The order is clearly red first, then blue, then green. Daylight, photorealistic, cinematic 24fps.",
+          "character_mapping": { "人A": "char_A", "人B": "char_B", "人C": "char_C" },
+          "negative_prompt": "people in wrong order, disorder, scattered people"
+        },
+        {
+          "id": "shot_c4b",
+          "prompt": "The same three people in line from a rear angle. The order is unchanged: red T-shirt first, then blue jacket, then green hoodie. Queue order preserved from behind. Daylight. Photorealistic, cinematic 24fps.",
+          "character_mapping": { "人A": "char_A", "人B": "char_B", "人C": "char_C" },
+          "negative_prompt": "changed order, different sequence, reorganized"
+        }
+      ],
+      "characters": [
+        { "id": "char_A", "name": "人A", "gender": "male", "appearance": "穿红色T恤的年轻男性" },
+        { "id": "char_B", "name": "人B", "gender": "female", "appearance": "穿蓝色外套的年轻女性" },
+        { "id": "char_C", "name": "人C", "gender": "male", "appearance": "穿绿色卫衣的男性" }
+      ]
+    }
+  ],
+  "render_config": {
+    "fps": 24,
+    "output_format": "mp4",
+    "resolution": "1920x1080"
+  }
+}

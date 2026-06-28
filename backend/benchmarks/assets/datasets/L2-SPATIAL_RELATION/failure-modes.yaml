@@ -1,0 +1,29 @@
+- id: FM-SR-001
+  category: relation_swapped
+  description: Two objects' relative positions are reversed across shots (e.g., A-left-of-B becomes A-right-of-B)
+  expectedBehavior: Relative spatial ordering of objects should remain consistent across camera cuts
+  severity: high
+
+- id: FM-SR-002
+  category: impossible_position
+  description: An object occupies a physically impossible position relative to another (e.g., floating without support, inside another solid object)
+  expectedBehavior: Physical support and containment relationships should be maintained
+  severity: high
+
+- id: FM-SR-003
+  category: containment_lost
+  description: A containment relationship is violated (e.g., pen on table → pen floating in air, book on table → book under table)
+  expectedBehavior: Containment relationships (X-on-Y, X-in-Y) should persist unless explicitly changed
+  severity: high
+
+- id: FM-SR-004
+  category: ordering_changed
+  description: The sequential ordering of multiple objects/characters changes randomly across shots (e.g., queue order A→B→C becomes C→A→B)
+  expectedBehavior: Lineup or queue ordering should remain consistent across camera cuts
+  severity: medium
+
+- id: FM-SR-005
+  category: distance_drift
+  description: The relative distance between two objects changes by an order of magnitude across shots without camera perspective justification
+  expectedBehavior: Inter-object distance scale should remain within plausible range; perspective-consistent variation only
+  severity: medium

@@ -1,0 +1,29 @@
+- id: EC-SR-01
+  name: Relative Position
+  description: Objects maintain left-of/right-of/above/below relationships across cuts
+  weight: 0.35
+  passThreshold: 90
+
+- id: EC-SR-02
+  name: Containment Integrity
+  description: Containment relationships (on, in, under) remain physically plausible across shots
+  weight: 0.25
+  passThreshold: 90
+
+- id: EC-SR-03
+  name: Distance Plausibility
+  description: Inter-object distance remains within plausible range; perspective-consistent variation only
+  weight: 0.20
+  passThreshold: 85
+
+- id: EC-SR-04
+  name: Ordering Consistency
+  description: Sequential ordering of objects/characters in a lineup remains consistent across cuts
+  weight: 0.15
+  passThreshold: 90
+
+- id: EC-SR-05
+  name: Scene Gravity
+  description: No floating or physically impossible object positions
+  weight: 0.05
+  passThreshold: 95

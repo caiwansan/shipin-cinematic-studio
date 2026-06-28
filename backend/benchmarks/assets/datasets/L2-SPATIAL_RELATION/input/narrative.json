@@ -1,0 +1,114 @@
+{
+  "title": "空间拓扑关系 — 四种场景",
+  "scenes": [
+    {
+      "id": "case1-relative-position",
+      "summary": "蓝色花瓶在红色书本的左侧",
+      "shots": [
+        {
+          "id": "shot_c1a",
+          "description": "一个木架子上，左边放着一个蓝色花瓶，右边放着一本红色书本。蓝色花瓶在红色书本的左侧。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "front medium shot",
+          "lighting": "warm interior light",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_c1b",
+          "description": "同一木架子，从右侧45度角拍摄。蓝色花瓶仍然在红色书本的左侧。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "right 45-degree angle",
+          "lighting": "warm interior light",
+          "duration_seconds": 4
+        }
+      ]
+    },
+    {
+      "id": "case2-containment",
+      "summary": "书在桌上，钢笔在打开的书中间",
+      "shots": [
+        {
+          "id": "shot_c2a",
+          "description": "一张深色木桌上有一本打开的书，一支银色钢笔放在打开的书中间。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "top-down medium shot",
+          "lighting": "desk lamp",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_c2b",
+          "description": "同一张桌子，从侧面30度拍摄。书仍然在桌上，钢笔仍然在打开的书中间。",
+          "characters": [],
+          "dialogues": [],
+          "actions": [],
+          "camera": "side 30-degree angle",
+          "lighting": "desk lamp",
+          "duration_seconds": 4
+        }
+      ]
+    },
+    {
+      "id": "case3-distance",
+      "summary": "一个人站在距白色轿车约两米处",
+      "shots": [
+        {
+          "id": "shot_c3a",
+          "description": "一辆白色轿车停在路边，一个人站在距离车约两米处，面向车。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["standing"],
+          "camera": "wide shot from sidewalk",
+          "lighting": "daylight",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_c3b",
+          "description": "同一场景，从车头方向拍摄。人仍然站在距离车大约两米的位置。",
+          "characters": ["人"],
+          "dialogues": [],
+          "actions": ["standing"],
+          "camera": "low angle from car front",
+          "lighting": "daylight",
+          "duration_seconds": 4
+        }
+      ]
+    },
+    {
+      "id": "case4-ordering",
+      "summary": "三人排队：红衣服→蓝衣服→绿衣服",
+      "shots": [
+        {
+          "id": "shot_c4a",
+          "description": "三个人排成一队：第一个人穿红衣服，第二个人穿蓝衣服，第三个人穿绿衣服。排队顺序是红→蓝→绿。",
+          "characters": ["人A", "人B", "人C"],
+          "dialogues": [],
+          "actions": ["standing in line"],
+          "camera": "side medium shot",
+          "lighting": "outdoor daylight",
+          "duration_seconds": 4
+        },
+        {
+          "id": "shot_c4b",
+          "description": "同一队伍，从后方拍摄。排队顺序没有变化，仍然是红→蓝→绿。",
+          "characters": ["人A", "人B", "人C"],
+          "dialogues": [],
+          "actions": ["standing in line"],
+          "camera": "rear medium shot",
+          "lighting": "outdoor daylight",
+          "duration_seconds": 4
+        }
+      ]
+    }
+  ],
+  "characters": [
+    { "id": "char_A", "name": "人A", "gender": "male", "appearance": "穿红色T恤的年轻男性" },
+    { "id": "char_B", "name": "人B", "gender": "female", "appearance": "穿蓝色外套的年轻女性" },
+    { "id": "char_C", "name": "人C", "gender": "male", "appearance": "穿绿色卫衣的男性" }
+  ]
+}

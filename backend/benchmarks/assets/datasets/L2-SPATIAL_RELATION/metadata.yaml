@@ -1,0 +1,49 @@
+# L2-SPATIAL_RELATION
+# 空间关系 — 对象之间的拓扑关系保持
+#
+# 核心关注：逻辑空间关系的连续性，而非像素坐标一致性。
+# 摄像机切换和运动都会改变画面坐标，但对象之间的拓扑关系应保持稳定。
+#
+# 四种拓扑关系验证：
+#
+# 1. Relative Position（相对位置）:
+#    A（花瓶）在 B（一本书）的左侧。
+#    切镜后：A 仍然在 B 左侧。
+#    失败：A 和 B 交换位置。
+#
+# 2. Containment（包含关系）:
+#    一本书在桌子上。一支笔在书中。
+#    切镜后：书仍在桌上，笔仍在书中。
+#    失败：书悬浮或笔出现在桌下。
+#
+# 3. Distance（距离关系）:
+#    人物与汽车相距约两米。
+#    允许透视变化，但距离级不应突变。
+#    失败：紧贴或数十米外。
+#
+# 4. Ordering（排序关系）:
+#    三个人排队：A → B → C。
+#    切镜后排序不变。
+#    失败：排序随机改变。
+#
+# 与 OBJECT_PERSISTENCE 的区别：
+#   OBJECT_PERSISTENCE：物体"本身"是否一致
+#   SPATIAL_RELATION：物体"之间的关系"是否正确
+#
+
+id: L2-SPATIAL_RELATION
+primaryCapability: SPATIAL_RELATIONSHIP
+secondaryCapabilities:
+  - OBJECT_PERSISTENCE
+  - TEMPORAL_CONSISTENCY
+difficulty: L2
+stage: full
+name: Spatial Relation — Topological Relationship Persistence
+description: Verifies topological spatial relationships between objects persist across camera cuts — relative position, containment, distance, and ordering. Not about absolute coordinates.
+scenario: |
+  一个安静的客厅，四种场景验证不同类型的空间拓扑关系。
+  Case 1 花瓶在书本左侧 — 验证相对位置保持。
+  Case 2 书在桌上，笔在书中 — 验证包含关系保持。
+  Case 3 人物与车相距两米 — 验证距离量级保持。
+  Case 4 三人排队 A→B→C — 验证排序保持。
+created: 2026-06-28
