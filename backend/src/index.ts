@@ -543,6 +543,31 @@ await app.register(projectV2Routes)
     console.warn('[SemanticRuntime] Failed to initialize:', (err as Error).message)
   }
 
+  // Goal Runtime routes (Phase 4 — Platform Level Growth Execution Layer)
+  await app.register(await import('./routes/goal/goal.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/strategy.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/workflow.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/task.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/action.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/execution.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/review.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/goal-main.route.js').then(m => m.default))
+
+  // 初始化 Goal Runtime（Phase 4 平台级增长执行层）
+  try {
+    const { goalRuntime } = await import('./services/goal/runtime/goal.runtime.js')
+    await goalRuntime.initialize()
+    console.log('[GoalRuntime] ✅ Goal Runtime initialized')
+
+    // Register placeholder action handlers
+    await import('./services/goal/registry/actions/generate-faq.js')
+    await import('./services/goal/registry/actions/publish-cms.js')
+    await import('./services/goal/registry/actions/update-knowledge-graph.js')
+    console.log('[GoalRuntime] ✅ Registered placeholder action handlers')
+  } catch (err) {
+    console.warn('[GoalRuntime] Failed to initialize:', (err as Error).message)
+  }
+
   // F6 System Dashboard
   // REMOVED: systemDashboardRoutes
 

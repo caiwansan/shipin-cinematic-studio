@@ -54,6 +54,9 @@ export type GeoPanelId =
   // Phase 2.5
   // Phase 3: Semantic Explorer
   | 'semantic-explorer'
+  // Phase 4: Goal Runtime (Growth Execution Layer)
+  | 'growth-dashboard'
+  | 'goal-timeline'
 
 /** GEO Runtime */
 export interface BrandGEORuntime {

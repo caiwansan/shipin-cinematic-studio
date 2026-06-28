@@ -204,6 +204,61 @@
       </div>
     </div>
 
+    <!-- Phase 4: Goal Runtime Stats -->
+    <div class="geo-dashboard-section">
+      <h3 class="geo-section-title">🚀 增长目标概览</h3>
+      <div class="geo-asset-mini-stats" v-if="goalStats && (goalStats.totalGoals > 0)">
+        <div class="geo-asset-mini-card" style="border-left-color: #4f46e5">
+          <span class="geo-asset-mini-icon">🎯</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ goalStats.totalGoals }}</span>
+            <span class="geo-asset-mini-label">总目标</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #22c55e">
+          <span class="geo-asset-mini-icon">⚡</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ goalStats.activeGoals }}</span>
+            <span class="geo-asset-mini-label">活跃中</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #3b82f6">
+          <span class="geo-asset-mini-icon">✅</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ goalStats.completedGoals }}</span>
+            <span class="geo-asset-mini-label">已完成</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #f59e0b">
+          <span class="geo-asset-mini-icon">📋</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ goalStats.pendingTasks }}</span>
+            <span class="geo-asset-mini-label">待执行</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #8b5cf6">
+          <span class="geo-asset-mini-icon">🔄</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ goalStats.totalExecutions }}</span>
+            <span class="geo-asset-mini-label">执行中</span>
+          </div>
+        </div>
+        <div class="geo-asset-mini-card" style="border-left-color: #ec4899">
+          <span class="geo-asset-mini-icon">👁️</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ goalStats.pendingReviews }}</span>
+            <span class="geo-asset-mini-label">待审核</span>
+          </div>
+        </div>
+      </div>
+      <div v-else class="geo-asset-no-data">
+        <p>暂无增长目标数据</p>
+        <button class="geo-btn-small" @click="navigateToPanel('growth-dashboard')">
+          前往增长目标
+        </button>
+      </div>
+    </div>
+
     <!-- Bottom Panels -->
     <div class="geo-dashboard-panels">
       <div class="geo-panel geo-panel-recent">
@@ -427,6 +482,12 @@ const semanticStats = ref<Record<string, number>>({
   relationCount: 0,
 })
 
+// ── Goal Runtime Stats (Phase 4) ──
+const goalStats = ref<Record<string, number>>({
+  totalGoals: 0, activeGoals: 0, completedGoals: 0,
+  pendingTasks: 0, totalExecutions: 0, pendingReviews: 0,
+})
+
 watch(() => store.selectedV2ProjectId.value, async (newId) => {
   if (newId) {
     try {
@@ -449,6 +510,26 @@ watch(() => store.selectedV2ProjectId.value, async (newId) => {
       }
     } catch {
       // Semantics not available yet
+    }
+    try {
+      const res = await fetch(`/api/goal/stats/${newId}`, {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (res.ok) {
+        const json = await res.json()
+        if (json.success && json.data) {
+          goalStats.value = {
+            totalGoals: json.data.totalGoals || 0,
+            activeGoals: json.data.activeGoals || 0,
+            completedGoals: json.data.completedGoals || 0,
+            pendingTasks: json.data.pendingTasks || 0,
+            totalExecutions: json.data.totalExecutions || 0,
+            pendingReviews: json.data.pendingReviews || 0,
+          }
+        }
+      }
+    } catch {
+      // Goal stats not available yet
     }
   }
 })

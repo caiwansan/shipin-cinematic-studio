@@ -41,6 +41,19 @@ export const GEO_SIDEBAR_MENU: SidebarMenuItem[] = [
     icon: '🧠',
     route: '/workspace/geo?panel=semantic-explorer',
   },
+  // Phase 4: Goal Runtime (Growth Execution Layer)
+  {
+    id: 'growth-dashboard',
+    label: '增长目标',
+    icon: '🚀',
+    route: '/workspace/geo?panel=growth-dashboard',
+  },
+  {
+    id: 'goal-timeline',
+    label: '目标追踪',
+    icon: '📈',
+    route: '/workspace/geo?panel=goal-timeline',
+  },
   {
     id: 'entities',
     label: '实体图谱',

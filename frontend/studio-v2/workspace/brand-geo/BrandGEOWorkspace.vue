@@ -92,6 +92,16 @@
           :project-id="selectedV2ProjectId"
         />
 
+        <!-- Phase 4: Goal Runtime (Growth Execution Layer) -->
+        <GrowthDashboard
+          v-else-if="activePanelId === 'growth-dashboard'"
+          :project-id="selectedV2ProjectId || ''"
+        />
+
+        <GoalTimeline
+          v-else-if="activePanelId === 'goal-timeline'"
+        />
+
         <!-- Placeholder panels for Phase 1 items -->
         <GeoPlaceholderPanel
           v-else
@@ -118,6 +128,8 @@ import WebsiteScannerPage from '~/studio-v2/workspace/brand-geo/pages/WebsiteSca
 import KnowledgeGraphPage from '~/studio-v2/workspace/brand-geo/pages/KnowledgeGraphPage.vue'
 import AssetCenterPage from '~/studio-v2/workspace/brand-geo/pages/AssetCenterPage.vue'
 import SemanticExplorer from '~/studio-v2/workspace/brand-geo/pages/SemanticExplorer.vue'
+import GrowthDashboard from '~/modules/goal/components/GrowthDashboard.vue'
+import GoalTimeline from '~/modules/goal/components/GoalTimeline.vue'
 import type { GeoPanelId } from '~/studio-v2/types/geo'
 
 const runtime = useBrandGEORuntime()
