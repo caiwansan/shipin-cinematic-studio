@@ -761,6 +761,130 @@ ${payload.input.scenes.map((sc: any) => {
 
   console.log(`[Video Worker] 📝 单段生成: prompt=${videoPrompt.length}字, 参考图${frameImageUrls.length}张, ${duration}s`)
 
+  // ── FSE Shot Scheduler Integration ──
+  // 长视频（>8s）且有 optimizedShots 时，拆分为多个短 shot 独立生成后拼接
+  const { shouldUseFSE, scheduleShots } = await import('./frame-sequence-engine.js')
+
+  if (shouldUseFSE(duration, optimizedShots)) {
+    console.log(`[Video Worker] 🎬 FSE Shot Scheduler 激活: ${duration}s, ${optimizedShots.length} shots`)
+
+    // 构建 FSE 输入（复用当前函数参数）
+    const referenceImages = {
+      characters: Array.isArray(payload.input?.characterReferenceUrls) ? payload.input.characterReferenceUrls
+        : Array.isArray(payload.input?.referenceImages) ? payload.input.referenceImages
+        : [],
+      scenes: Array.isArray(payload.input?.sceneReferenceUrls) ? payload.input.sceneReferenceUrls : [],
+      props: [],
+    }
+
+    // 角色和场景的结构化数据
+    const fseCharacters = payload.input?.characters || undefined
+    const fseScenes = payload.input?.scenes || undefined
+    const fseStoryboard = payload.input?.storyboard || undefined
+
+    // 视频风格
+    const videoStyle = payload.input?.videoStyle || ''
+    let styleTokens = ''
+    if (videoStyle) {
+      try {
+        const { StyleProfileService } = await import('../services/style-profile.service.js')
+        const profile = await StyleProfileService.getByName(videoStyle)
+        if (profile?.styleTokens) {
+          styleTokens = profile.styleTokens
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 调度 shot
+    const shotPlan = scheduleShots({
+      optimizedShots,
+      firstFrameUrl,
+      lastFrameUrl,
+      referenceImages,
+      model: payload.runtime?.model || '',
+      apiKey: payload.runtime?.apiKey || '',
+      baseUrl: payload.runtime?.baseURL,
+      userId: payload.userId,
+      projectId: payload.projectId,
+      duration,
+      ratio: payload.input?.ratio || '9:16',
+      narrative,
+      dialogue,
+      effects,
+      firstFrameDesc,
+      lastFrameDesc,
+      characters: fseCharacters,
+      scenes: fseScenes,
+      storyboard: fseStoryboard,
+      videoStyle,
+      styleTokens,
+    })
+
+    console.log(`[Video Worker] 🎬 FSE 分 ${shotPlan.shots.length} 段生成`)
+
+    // 逐段生成视频
+    const segmentUrls: string[] = []
+    for (let i = 0; i < shotPlan.shots.length; i++) {
+      const shot = shotPlan.shots[i]
+      console.log(`[Video Worker] 🎬 FSE 第 ${i + 1}/${shotPlan.shots.length} 段: ${shot.duration}s, prompt=${shot.prompt.length}字`)
+
+      // 为当前 shot 创建独立的 payload 副本
+      const shotPayload: TaskPayload = JSON.parse(JSON.stringify(payload))
+      shotPayload.input = {
+        ...shotPayload.input,
+        prompt: shot.prompt,
+        duration: shot.duration,
+        referenceImages: shot.referenceImages.length > 0 ? shot.referenceImages : undefined,
+        imageUrl: shot.referenceImages[0] || '',
+        imageUrl2: shot.referenceImages.length > 1 ? shot.referenceImages[1] : '',
+        segmentIndex: i,
+        totalSegments: shotPlan.shots.length,
+      }
+
+      // 调用 provider 生成该段视频
+      const shotResult = await callProvider('video', payload.userId, payload.projectId, shotPayload)
+
+      const shotVideoUrl = shotResult?.url || ''
+      if (shotVideoUrl) {
+        segmentUrls.push(shotVideoUrl)
+        console.log(`[Video Worker] 🎬 FSE 第 ${i + 1} 段完成: ${shotVideoUrl.substring(0, 60)}...`)
+      } else {
+        console.error(`[Video Worker] ❌ FSE 第 ${i + 1} 段生成失败: ${shotResult?.error || '无 URL 返回'}`)
+      }
+    }
+
+    if (segmentUrls.length === 0) {
+      console.error('[Video Worker] ❌ FSE 所有段生成均失败')
+      // 回退到单段生成
+      console.log('[Video Worker] ⚠️ 回退到单段生成')
+      const result = await callProvider('video', payload.userId, payload.projectId, payload)
+      if (result?.url?.startsWith('http')) return await persistVideoResult(payload, result)
+      return result
+    }
+
+    // 单段直接返回
+    if (segmentUrls.length === 1) {
+      const result = { url: segmentUrls[0] }
+      return await persistVideoResult(payload, result)
+    }
+
+    // 多段拼接
+    console.log(`[Video Worker] 🎬 FSE 拼接 ${segmentUrls.length} 段视频...`)
+    const mergedUrl = await concatVideoSegments(segmentUrls, payload)
+    if (mergedUrl) {
+      const result = { url: mergedUrl }
+      return await persistVideoResult(payload, result)
+    }
+
+    // 拼接失败，返回最后一段
+    console.warn('[Video Worker] ⚠️ 拼接失败，返回最后一段视频')
+    const result = { url: segmentUrls[segmentUrls.length - 1] }
+    return await persistVideoResult(payload, result)
+  }
+
+  // ── 原有单段生成逻辑 ──
   const result = await callProvider('video', payload.userId, payload.projectId, payload)
   
   // ── CTBL Observation Metrics ──
@@ -841,6 +965,70 @@ async function concatTwoVideos(url1: string, url2: string, payload: TaskPayload)
   } catch (err: any) {
     console.error('[Video Worker] ❌ 拼接失败:', err.message)
     // 清理
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }) } catch {}
+    try { fs.unlinkSync(outputFile) } catch {}
+    return ''
+  }
+}
+
+/**
+ * 通用多段视频拼接（FFmpeg concat demuxer，不重新编码）
+ * 用于 FSE shot 调度后合并多个视频片段
+ */
+async function concatVideoSegments(urls: string[], payload: TaskPayload): Promise<string> {
+  if (urls.length === 0) return ''
+  if (urls.length === 1) return urls[0]
+
+  const tmpDir = `/tmp/video-concat-${payload.traceId || Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const outputFile = `/tmp/video-concat-${payload.traceId || Date.now()}.mp4`
+
+  try {
+    await execAsync(`mkdir -p ${tmpDir}`)
+
+    // 下载所有视频段
+    const localFiles: string[] = []
+    const download = (url: string, dest: string) => new Promise<void>((resolve, reject) => {
+      const file = fs.createWriteStream(dest)
+      const proto = url.startsWith('https') ? https : http
+      proto.get(url, res => {
+        res.pipe(file)
+        file.on('finish', () => { file.close(); resolve() })
+      }).on('error', reject)
+    })
+
+    for (let i = 0; i < urls.length; i++) {
+      const localPath = `${tmpDir}/seg${i}.mp4`
+      await download(urls[i], localPath)
+      localFiles.push(localPath)
+      console.log(`[Video Worker] 📥 已下载第 ${i + 1} 段用于拼接: ${urls[i].substring(0, 60)}...`)
+    }
+
+    // 创建 concat demuxer 列表文件
+    const concatList = `${tmpDir}/list.txt`
+    const fileEntries = localFiles.map(f => `file '${f}'`).join('\n')
+    fs.writeFileSync(concatList, fileEntries + '\n')
+
+    // FFmpeg 无损拼接
+    await execAsync(
+      `ffmpeg -f concat -safe 0 -i ${concatList} -c copy -movflags +faststart ${outputFile} -y`,
+      { timeout: 120000 }
+    )
+
+    // 上传到 public/uploads/
+    const uploadsDir = '/root/shipin-cinematic-studio/frontend/.output/public/uploads'
+    fs.mkdirSync(uploadsDir, { recursive: true })
+    const fileName = `fse_merged_${payload.traceId || Date.now()}.mp4`
+    const localPath = `${uploadsDir}/${fileName}`
+    fs.copyFileSync(outputFile, localPath)
+
+    // 清理临时文件
+    fs.rmSync(tmpDir, { recursive: true, force: true })
+    try { fs.unlinkSync(outputFile) } catch {}
+
+    console.log(`[Video Worker] ✅ FSE 拼接完成: ${localPath}`)
+    return `/uploads/${fileName}`
+  } catch (err: any) {
+    console.error('[Video Worker] ❌ FSE 多段拼接失败:', err.message)
     try { fs.rmSync(tmpDir, { recursive: true, force: true }) } catch {}
     try { fs.unlinkSync(outputFile) } catch {}
     return ''

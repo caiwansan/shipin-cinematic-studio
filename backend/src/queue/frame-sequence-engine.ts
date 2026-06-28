@@ -3,60 +3,47 @@
  *
  * 帧序列引擎 — Frame Sequence Engine (FSE)
  *
- * 职责：
- *   把 optimizedShots[]（0.5 秒级逐帧描述）转化为关键帧图像序列。
- *   每帧基于前一帧做增量 img2img 生成，确保微表情/动作/特效的连贯性。
+ * ⭐ 当前实现：Shot Scheduler（镜头调度器）
+ *   不是逐帧 img2img 生成器，而是把长 prompt (10-30秒) 拆成多个短 shot (每个3-5秒)，
+ *   每个 shot 独立调用豆包视频模型生成，shot 间通过 prompt 约束保证继承连续性。
  *
  * 架构位置：
- *   Runtime Core 层 → processVideo → FSE → 图像 adapter → 视频合成器
+ *   Runtime Core 层 → innerGenerateSingleVideo → FSE → 多个短 shot → volcengine adapter → 拼接
  *
  * 输入：
  *   {
- *     optimizedShots: Array<{
- *       second: number        // 0, 0.5, 1, 1.5, ...
- *       camera: string        // 镜头语言
- *       action: string        // 角色动作
- *       expression: string    // 微表情
- *       dialogue: string      // 台词（如有）
- *       fx: string            // 特效音效
- *     }>,
- *     firstFrameUrl: string,  // 分镜图 URL（第 0 秒的图片）
- *     referenceImages: {
- *       characters: string[], // 角色引用图
- *       scenes: string[],     // 场景引用图
- *       props: string[],      // 道具引用图
- *     },
- *     model: string,          // 图像生成模型
- *     apiKey: string,
- *     baseUrl?: string,
- *     userId: string,
- *     projectId: string,
- *     duration: number,        // 总时长（秒）
- *     ratio: string,           // 画面比例 9:16
+ *     optimizedShots: array of { second, camera, action, expression, dialogue?, fx },
+ *     firstFrameUrl: string,
+ *     referenceImages: { characters, scenes, props },
+ *     model: string,
+ *     duration: number,
+ *     ratio: string,
  *   }
  *
  * 输出：
  *   {
- *     frames: Array<{
- *       second: number,
- *       imageUrl: string,        // 生成的图片 URL
+ *     shots: Array<{
+ *       prompt: string,           // 该shot 的完整 video prompt
+ *       referenceImages: string[], // 该 shot 的参考图
+ *       duration: number,         // 该 shot 时长(秒)
+ *       second: number,           // 起始秒数
  *       camera: string,
  *       action: string,
  *       expression: string,
  *       dialogue: string,
  *       fx: string,
  *     }>,
- *     totalFrames: number,
+ *     totalShots: number,
  *     duration: number,
  *   }
  *
  * 宪法约束：
- *   - 禁止硬编码 provider/model，全部从 runtime payload 读取
- *   - 不感知具体 provider 实现（只通过 modelAdapterRegistry 调用）
- *   - 事件溯源记录每一步
+ *   - 禁止硬编码 provider/model
+ *   - 不感知具体 provider 实现
+ *   - 保持事件溯源兼容
  */
 
-import { modelAdapterRegistry } from '../model-adapters/index.js'
+// ─── 类型定义 ───────────────────────────────────────
 
 export interface FrameShot {
   second: number
@@ -83,231 +70,400 @@ export interface FSEInput {
   duration: number
   ratio: string
   negativePrompt?: string
-  /** 图像生成的 callProvider 回调，复用 worker-runtime.ts 的 callProvider */
-  callImageProvider: (taskType: string, userId: string, projectId: string, payload: any) => Promise<any>
+  narrative?: string
+  dialogue?: string
+  effects?: string
+  firstFrameDesc?: string
+  lastFrameDesc?: string
+  lastFrameUrl?: string
+  characters?: Array<{ name: string; gender?: string; age?: string; clothing?: string; appearance?: string; emotion?: string }>
+  scenes?: Array<{ name: string; environment?: string; lighting?: string; mood?: string; timeOfDay?: string }>
+  storyboard?: { shotPattern?: string; emotion?: string; narrativePurpose?: string; duration?: number }
+  videoStyle?: string
+  styleTokens?: string
+  callImageProvider?: (taskType: string, userId: string, projectId: string, payload: any) => Promise<any>
 }
 
-export interface FSEResult {
-  frames: Array<{
-    second: number
-    imageUrl: string
-    camera: string
-    action: string
-    expression: string
-    dialogue?: string
-    fx: string
-  }>
-  totalFrames: number
+export interface FSEOutputShot {
+  prompt: string
+  referenceImages: string[]
+  duration: number
+  second: number
+  camera: string
+  action: string
+  expression: string
+  dialogue: string
+  fx: string
+}
+
+export interface FSEOutput {
+  shots: FSEOutputShot[]
+  totalShots: number
   duration: number
 }
 
+// ─── 常量 ────────────────────────────────────────────
+
+/** 每个 shot 的推荐时长（秒）。3-5 秒豆包视频模型效果最佳 */
+const SHOT_DURATION = 4
+
+/** 最小激活 FSE 的总时长（秒） */
+const MIN_DURATION_FOR_FSE = 8
+
+// ─── 工具函数 ────────────────────────────────────────
+
 /**
- * 生成单帧的图像 prompt
- * 基于首帧（第 0s 分镜图）的描述和当前帧需要的变化，生成 img2img prompt
- * 所有帧独立基于首帧，支持并发生成
+ * 将 optimizedShots 按 SHOT_DURATION 分组
+ * 返回 chunk 数组，每个 chunk 包含该时间段内的 shots + 起止秒数
  */
-function buildFramePrompt(
-  currentShot: FrameShot,
-  firstShot: FrameShot,
-  referenceImages: { characters: string[]; scenes: string[]; props: string[] }
+function chunkShots(
+  shots: FrameShot[],
+  totalDuration: number
+): Array<{ startSecond: number; endSecond: number; chunkShots: FrameShot[] }> {
+  if (shots.length === 0) {
+    // 没有逐秒镜头脚本时，按 duration 平均分
+    const numChunks = Math.ceil(totalDuration / SHOT_DURATION)
+    const actualShotDuration = totalDuration / numChunks
+    const result: Array<{ startSecond: number; endSecond: number; chunkShots: FrameShot[] }> = []
+    for (let i = 0; i < numChunks; i++) {
+      const start = Math.round(i * actualShotDuration * 10) / 10
+      const end = Math.round(Math.min((i + 1) * actualShotDuration, totalDuration) * 10) / 10
+      result.push({ startSecond: start, endSecond: end, chunkShots: [] })
+    }
+    return result
+  }
+
+  const numChunks = Math.max(1, Math.ceil(totalDuration / SHOT_DURATION))
+  const actualShotDuration = totalDuration / numChunks
+  const chunks: Array<{ startSecond: number; endSecond: number; chunkShots: FrameShot[] }> = []
+
+  for (let i = 0; i < numChunks; i++) {
+    const start = Math.round(i * actualShotDuration * 10) / 10
+    const end = Math.round(Math.min((i + 1) * actualShotDuration, totalDuration) * 10) / 10
+    const chunkShotsInRange = shots.filter(s => s.second >= start && s.second < end)
+    chunks.push({ startSecond: start, endSecond: end, chunkShots: chunkShotsInRange })
+  }
+
+  return chunks
+}
+
+/**
+ * 从 chunk 内的 shots 提取镜头运动描述
+ */
+function summarizeChunkAction(chunkShots: FrameShot[]): string {
+  if (chunkShots.length === 0) return '场景持续'
+  
+  // 提取 camera 变化
+  const cameras = [...new Set(chunkShots.map(s => s.camera).filter(Boolean))]
+  // 提取 action
+  const actions = [...new Set(chunkShots.map(s => s.action).filter(Boolean))]
+  // 提取 expression
+  const expressions = [...new Set(chunkShots.map(s => s.expression).filter(Boolean))]
+  // 提取 fx
+  const fxList = [...new Set(chunkShots.map(s => s.fx).filter(Boolean))]
+  
+  const parts: string[] = []
+  if (cameras.length > 0) parts.push(`运镜: ${cameras.join(' → ')}`)
+  if (actions.length > 0) parts.push(`动作: ${actions.join('，')}`)
+  if (expressions.length > 0) parts.push(`表情: ${expressions.join(' → ')}`)
+  if (fxList.length > 0) parts.push(`特效: ${fxList.join('，')}`)
+  
+  return parts.join(' | ') || '场景持续'
+}
+
+/**
+ * 为每个 shot 构建它独有的视频 prompt
+ */
+function buildShotPrompt(
+  chunkIndex: number,
+  totalChunks: number,
+  startSecond: number,
+  endSecond: number,
+  chunkShots: FrameShot[],
+  firstFrameDesc: string,
+  lastFrameDesc: string,
+  narrative: string,
+  dialogue: string,
+  effects: string,
+  characters: Array<{ name: string; gender?: string; age?: string; clothing?: string; appearance?: string; emotion?: string }> | undefined,
+  scenes: Array<{ name: string; environment?: string; lighting?: string; mood?: string; timeOfDay?: string }> | undefined,
+  storyboard: { shotPattern?: string; emotion?: string; narrativePurpose?: string; duration?: number } | undefined,
+  videoStyle: string,
+  styleTokens: string,
+  isFirstShot: boolean,
+  isLastShot: boolean,
+  prevShotSummary: string,
 ): string {
   const parts: string[] = []
 
+  // 视频时长
+  parts.push(`视频时长：${Math.round(endSecond - startSecond)} 秒`)
+
+  // 剧情描述（如果是多段，只取对应时间段）
+  if (narrative) {
+    // 对于中间的 shot，简化剧情描述以避免超出 token 限制
+    if (totalChunks <= 1) {
+      parts.push(`【剧情描述】\n${narrative}`)
+    } else {
+      // 多段模式：只传关键剧情，让模型自行补全
+      const truncatedNarrative = narrative.length > 300
+        ? narrative.substring(0, 300) + `...（第 ${chunkIndex + 1}/${totalChunks} 段）`
+        : narrative
+      parts.push(`【剧情描述】\n${truncatedNarrative}`)
+    }
+  }
+
+  // 对话
+  if (dialogue) {
+    parts.push(`【对话】\n${dialogue}`)
+  }
+
+  // 特效音效
+  if (effects) {
+    parts.push(`【特效音效】\n${effects}`)
+  }
+
+  // 角色约束
+  if (characters && characters.length > 0) {
+    parts.push(`## [角色约束]
+${characters.map((ch: any) => {
+      const attrs = [`角色名：${ch.name || ''}`]
+      if (ch.gender) attrs.push(`性别：${ch.gender}`)
+      if (ch.age) attrs.push(`年龄：${ch.age}`)
+      if (ch.clothing) attrs.push(`服装：${ch.clothing}`)
+      if (ch.appearance) attrs.push(`外貌：${ch.appearance}`)
+      return attrs.join(' | ')
+    }).join('\n')}
+
+⚠️ 角色约束优先级高于剧情描述。`)
+  }
+
+  // 场景约束
+  if (scenes && scenes.length > 0) {
+    parts.push(`## [场景约束]
+${scenes.map((sc: any) => {
+      const attrs = [`场景名：${sc.name || ''}`]
+      if (sc.environment) attrs.push(`环境：${sc.environment}`)
+      if (sc.lighting) attrs.push(`光照：${sc.lighting}`)
+      if (sc.mood) attrs.push(`氛围：${sc.mood}`)
+      if (sc.timeOfDay) attrs.push(`时间：${sc.timeOfDay}`)
+      return attrs.join(' | ')
+    }).join('\n')}
+
+⚠️ 场景约束优先级高于剧情描述。`)
+  }
+
   // 镜头语言
-  parts.push(`【镜头】${currentShot.camera}`)
-
-  // 角色动作
-  parts.push(`【动作】${currentShot.action}`)
-
-  // 微表情（如果有）
-  if (currentShot.expression) {
-    parts.push(`【微表情】${currentShot.expression}`)
+  if (storyboard) {
+    parts.push(`## [镜头语言]
+景别/拍摄模式：${storyboard.shotPattern || '未指定'}
+情绪基调：${storyboard.emotion || '未指定'}
+片段时长：${Math.round(endSecond - startSecond)} 秒`)
   }
 
-  // 特效
-  if (currentShot.fx) {
-    parts.push(`【特效】${currentShot.fx}`)
+  // 风格指令
+  if (videoStyle) {
+    if (styleTokens) {
+      parts.push(`## 锁定视频风格
+当前风格：【${videoStyle}】
+风格特征：${styleTokens}
+所有画面（光影、色彩、线条、材质、构图、渲染质感）都必须严格遵循此风格。`)
+    } else {
+      parts.push(`## 锁定视频风格
+当前风格：【${videoStyle}】`)
+    }
   }
 
-  // 相对于首帧的变化说明
-  const changes: string[] = []
-  if (firstShot.camera !== currentShot.camera) {
-    changes.push(`镜头从"${firstShot.camera}"变为"${currentShot.camera}"`)
-  }
-  if (firstShot.expression !== currentShot.expression && firstShot.expression && currentShot.expression) {
-    changes.push(`微表情从"${firstShot.expression}"变为"${currentShot.expression}"`)
-  }
-  if (firstShot.action !== currentShot.action && firstShot.action && currentShot.action) {
-    changes.push(`动作从"${firstShot.action}"变为"${currentShot.action}"`)
-  }
-  if (changes.length > 0) {
-    parts.push(`【变化】${changes.join('；')}`)
+  // 该 shot 的逐秒镜头描述
+  const shotDescLines = chunkShots.map((shot: FrameShot) => {
+    const sec = Math.round(shot.second - startSecond)
+    const camera = shot.camera || ''
+    const action = shot.action || ''
+    const expression = shot.expression || ''
+    const fx = shot.fx || ''
+    const parts = [`【第${sec}秒】`]
+    if (camera) parts.push(`运镜: ${camera}`)
+    if (action) parts.push(`动作: ${action}`)
+    if (expression) parts.push(`表情: ${expression}`)
+    if (fx) parts.push(`特效: ${fx}`)
+    return parts.join(' | ')
+  }).join('\n')
+
+  if (shotDescLines) {
+    parts.push(`\n## 逐秒镜头脚本（${startSecond}-${endSecond} 秒）\n${shotDescLines}\n`)
+  } else {
+    // 没有逐秒描述时，用简短的动作摘要
+    const actionSummary = summarizeChunkAction(chunkShots)
+    parts.push(`\n## 镜头描述（${startSecond}-${endSecond} 秒）\n${actionSummary}\n`)
   }
 
-  // 引用角色/场景/道具
-  const refs: string[] = []
-  if (referenceImages.characters.length > 0) refs.push('保持角色一致性')
-  if (referenceImages.scenes.length > 0) refs.push('保持场景一致性')
-  if (referenceImages.props.length > 0) refs.push('道具出现在对应位置')
-  if (refs.length > 0) {
-    parts.push(`【一致性】${refs.join('，')}`)
+  // ⭐ 帧间继承约束 — 这是 FSE 的核心价值
+  if (!isFirstShot) {
+    parts.push(`\n## [帧间继承约束]`)
+    parts.push(`⚠️ 本段不是独立视频。它必须严格继承上一段的全部状态作为起始条件。`)
+    parts.push(`上一段的状态摘要：${prevShotSummary || '场景持续、角色位置不变'}`)
+    parts.push(`- 角色位置、姿势、朝向必须与上一段结尾完全一致。禁止角色重新出现或瞬移。`)
+    parts.push(`- 角色服装、发型、体型、面部特征必须与上一段保持完全一致。`)
+    parts.push(`- 场景环境、光照、氛围、物体位置必须与上一段结尾完全一致。`)
+    parts.push(`- 手持物品、道具必须连续存在，不能消失或凭空出现。`)
+    parts.push(`- 禁止：角色忽然变矮/变高、肢体扭曲、身体比例变化、角色穿透物体、背景跳变。`)
+    parts.push(`- ⚠️ 物理规则：人体关节不可反向弯曲，物品不可悬浮，影子方向须符合光源位置。`)
+  } else {
+    parts.push(`\n## [物理一致性约束]`)
+    parts.push(`- 保持人物、场景、道具在画面中的位置和形状稳定不变。`)
+    parts.push(`- 角色身体比例不得突变，肢体不得变形或消失。`)
+    parts.push(`- 禁止：角色忽然变矮/变高、肢体扭曲、手部物品消失、身体嵌入物体、角色穿透物体。`)
   }
 
-  // 通用稳定性
-  parts.push('保持人物、场景、道具在画面中的位置和形状稳定不变。仅按以上描述做出精确变化。人物面部特征、服装、发型保持一致。')
+  // 参考图片说明
+  const refLines: string[] = []
+  if (isFirstShot) refLines.push('首帧图（视频开头画面，必须严格以此图为起始画面）')
+  if (isLastShot) refLines.push('尾帧图（视频结尾画面）')
+  if (refLines.length > 0) {
+    parts.push(`\n## 参考图片使用说明\n${refLines.join('\n')}\n请严格按以下规则使用参考图片：\n- 视频大模型需在参考图之间自动生成连贯的过渡动画\n- 保持人物、场景、道具连续\n- ⚠️ 物理规则同上`)
+  }
 
-  return parts.join('\n')
+  parts.push(`\n（注：这是视频的第 ${chunkIndex + 1}/${totalChunks} 段，要求在该时间段内独立生成一段连贯的视频片段）`)
+
+  return parts.join('\n\n')
 }
 
 /**
- * 调用图像 adapter 生成单帧
- * 通过 callProvider('image', ...) 复用现有的 provider 路由和事件溯源
+ * 调度 shot：把长 prompt 拆成多个短 video prompt
  */
-async function generateFrame(
-  prompt: string,
-  referenceImage: string,
-  model: string,
-  apiKey: string,
-  baseUrl: string | undefined,
-  userId: string,
-  projectId: string,
-  ratio: string,
-  second: number,
-  shot: FrameShot,
-  /** callProvider 的回调 */
-  callImageProvider: (taskType: string, userId: string, projectId: string, payload: any) => Promise<any>
-): Promise<string> {
-  const framePrompt = `【第 ${second} 秒】\n${prompt}\n\n注意：这是视频关键帧生成。请精确按照以上描述生成图像。人脸、场景、道具必须与上一帧保持高度一致，仅按描述变化。`
+export function scheduleShots(input: FSEInput): FSEOutput {
+  const {
+    optimizedShots,
+    duration,
+    narrative,
+    dialogue: dialogueText,
+    effects,
+    firstFrameDesc,
+    lastFrameDesc,
+    characters,
+    scenes,
+    storyboard,
+    videoStyle,
+    referenceImages,
+  } = input
 
-  try {
-    // 事件溯源
-    try {
-      const { appendExecutionEvent } = await import('../kernel/event-sourcing/execution-event-store.js')
-      appendExecutionEvent({
-        taskId: `fse-${projectId}-${second}`,
-        type: 'frame_generate',
-        runtime: { userId, model },
-        input: { second, model },
-      })
-    } catch (_) {}
+  console.log(`[FSE] 🎬 Shot Scheduler 启动: ${duration}s, ${optimizedShots.length} 帧镜头, videoStyle=${videoStyle || '无'}`)
 
-    // ⭐ 复用 callProvider('image') 走完整的 provider 路由
-    const result = await callImageProvider('image', userId, projectId, {
-      model,
-      apiKey,
-      baseUrl,
-      runtime: {
-        model,
-        apiKey,
-        baseURL: baseUrl || '',
-        userId,
-        taskType: 'image',
-        provider: '',
-      },
-      input: {
-        prompt: framePrompt,
-        imageUrl: referenceImage,
-        ratio,
-        size: ratio === '9:16' ? '1080x1920' : '1920x1080',
-        n: 1,
-        temperature: 0.01,
-      },
-      traceId: `fse-${projectId}-${second}`,
-      projectId,
+  // 按 SHOT_DURATION 分组
+  const chunks = chunkShots(optimizedShots, duration)
+
+  console.log(`[FSE] 📦 拆分为 ${chunks.length} 个 shot`)
+
+  // styleTokens 放在 videoStyle 之后，这里从 input 取
+  const styleTokens = (input as any).styleTokens || ''
+
+  const shots: FSEOutputShot[] = []
+  let prevShotSummary = ''
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i]
+    const isFirstShot = i === 0
+    const isLastShot = i === chunks.length - 1
+    const chunkDuration = Math.round((chunk.endSecond - chunk.startSecond) * 10) / 10
+
+    // 构建该 shot 的 prompt
+    const prompt = buildShotPrompt(
+      i,
+      chunks.length,
+      chunk.startSecond,
+      chunk.endSecond,
+      chunk.chunkShots,
+      firstFrameDesc || '',
+      lastFrameDesc || '',
+      narrative || '',
+      dialogueText || '',
+      effects || '',
+      characters,
+      scenes,
+      storyboard,
+      videoStyle || '',
+      styleTokens,
+      isFirstShot,
+      isLastShot,
+      prevShotSummary,
+    )
+
+    // 分配参考图：首帧图只在第一 shot 使用；尾帧图只在最后 shot 使用；角色图全部使用
+    const shotRefImages: string[] = []
+    if (isFirstShot && input.firstFrameUrl) {
+      shotRefImages.push(input.firstFrameUrl)
+    }
+    if (isLastShot && input.lastFrameUrl) {
+      shotRefImages.push(input.lastFrameUrl)
+    }
+    // 角色/场景参考图只在第一 shot 传入，避免重复浪费
+    if (isFirstShot) {
+      for (const key of ['characters', 'scenes', 'props'] as const) {
+        for (const url of referenceImages[key]) {
+          if (url && !shotRefImages.includes(url)) {
+            shotRefImages.push(url)
+          }
+        }
+      }
+    }
+
+    // 合并 chunk 内的 shot 信息
+    const combinedCamera = chunk.chunkShots.map(s => s.camera).filter(Boolean).join(' → ') || ''
+    const combinedAction = chunk.chunkShots.map(s => s.action).filter(Boolean).join('，') || ''
+    const combinedExpression = chunk.chunkShots.map(s => s.expression).filter(Boolean).join(' → ') || ''
+    const combinedDialogue = chunk.chunkShots.map(s => s.dialogue || '').filter(Boolean).join(' ') || ''
+    const combinedFx = chunk.chunkShots.map(s => s.fx).filter(Boolean).join('，') || ''
+
+    shots.push({
+      prompt,
+      referenceImages: shotRefImages,
+      duration: chunkDuration,
+      second: chunk.startSecond,
+      camera: combinedCamera,
+      action: combinedAction,
+      expression: combinedExpression,
+      dialogue: combinedDialogue,
+      fx: combinedFx,
     })
 
-    const url = result?.url || result?.imageUrl || result?.images?.[0] || ''
-    if (!url) {
-      throw new Error(`帧序列引擎：第 ${second} 秒生成返回空 URL`)
-    }
+    // 更新 prevShotSummary 供下一 shot 继承
+    prevShotSummary = summarizeChunkAction(chunk.chunkShots)
+  }
 
-    console.log(`[FSE] ✅ 第 ${second}s 帧生成成功: ${url.substring(0, 50)}...`)
-    return url
-  } catch (err: any) {
-    console.error(`[FSE] ❌ 第 ${second}s 帧生成失败: ${err.message}`)
+  console.log(`[FSE] ✅ Shot 调度完成: ${shots.length} shots, ${duration}s 总时长`)
 
-    // 事件溯源失败
-    try {
-      const { appendExecutionEvent } = await import('../kernel/event-sourcing/execution-event-store.js')
-      appendExecutionEvent({
-        taskId: `fse-${projectId}-${second}`,
-        type: 'frame_failed',
-        runtime: { userId, model },
-        error: err.message,
-      })
-    } catch (_) {}
-
-    throw err
+  return {
+    shots,
+    totalShots: shots.length,
+    duration,
   }
 }
 
 /**
- * 帧序列引擎主入口
- *
- * 逐帧生成流程：
- *   第 0s → 用分镜图作为首帧（不额外生成）
- *   第 0.5s+n → 全部基于第 0s 分镜图并发做 img2img
+ * 判断是否应该使用 FSE shot 调度
  */
-export async function executeFrameSequence(input: FSEInput): Promise<FSEResult> {
-  const { optimizedShots, firstFrameUrl, model, apiKey, baseUrl, userId, projectId, ratio } = input
+export function shouldUseFSE(duration: number, optimizedShots: any[]): boolean {
+  return duration >= MIN_DURATION_FOR_FSE && (optimizedShots.length > 0 || duration > 8)
+}
 
-  console.log(`[FSE] 🎬 帧序列引擎启动: ${optimizedShots.length} 帧, model=${model}, ratio=${ratio}`)
-
-  const startTs = Date.now()
-  const frames: FSEResult['frames'] = []
-
-  // 第 0 秒用分镜图（不生成）
-  frames.push({
-    second: optimizedShots[0].second,
-    imageUrl: firstFrameUrl,
-    camera: optimizedShots[0].camera,
-    action: optimizedShots[0].action,
-    expression: optimizedShots[0].expression || '',
-    dialogue: optimizedShots[0].dialogue || '',
-    fx: optimizedShots[0].fx,
-  })
-  console.log(`[FSE] 📷 第 0s 使用分镜图: ${firstFrameUrl.substring(0, 50)}...`)
-
-  // 第 1~N 帧基于第 0s 帧并发生成
-  const remainingShots = optimizedShots.slice(1)
-  const concurrentTasks = remainingShots.map(async (shot) => {
-    const framePrompt = buildFramePrompt(shot, optimizedShots[0], input.referenceImages)
-    const imageUrl = await generateFrame(
-      framePrompt,
-      firstFrameUrl,  // 全部基于第 0s 分镜图
-      model,
-      apiKey,
-      baseUrl,
-      userId,
-      projectId,
-      ratio,
-      shot.second,
-      shot,
-      input.callImageProvider
-    )
-    return {
-      second: shot.second,
-      imageUrl,
-      camera: shot.camera,
-      action: shot.action,
-      expression: shot.expression || '',
-      dialogue: shot.dialogue || '',
-      fx: shot.fx,
-    }
-  })
-
-  // 并发等待所有帧完成
-  const concurrentResults = await Promise.all(concurrentTasks)
-  // 按 second 排序后追加
-  concurrentResults.sort((a, b) => a.second - b.second)
-  frames.push(...concurrentResults)
-
-  const latency = Date.now() - startTs
-  console.log(`[FSE] ✅ 帧序列完成: ${frames.length} 帧, ${latency}ms, 首帧=${frames[0]?.imageUrl?.substring(0, 40)}...`)
-
+/**
+ * 旧接口兼容：executeFrameSequence 现在委托给 scheduleShots
+ * 保留导出以避免破坏调用方（如果有的话）
+ */
+export async function executeFrameSequence(input: FSEInput): Promise<{ frames: any[]; totalFrames: number; duration: number }> {
+  console.log(`[FSE] ⚠️ executeFrameSequence 已弃用，使用 scheduleShots 替代`)
+  const output = scheduleShots(input)
   return {
-    frames,
-    totalFrames: frames.length,
-    duration: input.duration,
+    frames: output.shots.map(s => ({
+      second: s.second,
+      imageUrl: '',
+      camera: s.camera,
+      action: s.action,
+      expression: s.expression,
+      dialogue: s.dialogue,
+      fx: s.fx,
+    })),
+    totalFrames: output.totalShots,
+    duration: output.duration,
   }
 }
