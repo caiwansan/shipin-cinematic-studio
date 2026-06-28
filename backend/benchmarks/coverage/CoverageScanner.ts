@@ -11,6 +11,7 @@ import { CapabilityRegistry } from '../capabilities/registry.js'
 import type { CoverageEntry } from './CoverageIndex.js'
 
 const DATASETS_DIR = path.resolve(process.cwd(), 'benchmarks', 'datasets')
+const ASSETS_DIR = path.resolve(process.cwd(), 'benchmarks', 'assets', 'datasets')
 
 /**
  * 使用 CJS require 加载 js-yaml（规避 vitest ESM import 问题）
@@ -21,24 +22,36 @@ function loadYaml(filePath: string): any {
   return yaml.load(fs.readFileSync(filePath, 'utf-8'))
 }
 
-function readAllDatasets(): { id: string; capabilities: string[]; primaryCapability?: string }[] {
+function scanDir(dir: string): { id: string; capabilities: string[]; primaryCapability?: string }[] {
   const results: { id: string; capabilities: string[]; primaryCapability?: string }[] = []
-  if (!fs.existsSync(DATASETS_DIR)) return results
+  if (!fs.existsSync(dir)) return results
 
-  const entries = fs.readdirSync(DATASETS_DIR, { withFileTypes: true })
+  const entries = fs.readdirSync(dir, { withFileTypes: true })
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
-    const metaPath = path.join(DATASETS_DIR, entry.name, 'metadata.yaml')
+    const metaPath = path.join(dir, entry.name, 'metadata.yaml')
     if (!fs.existsSync(metaPath)) continue
 
     try {
       const raw = loadYaml(metaPath)
-      if (raw?.capabilities) {
-        results.push({
-          id: entry.name,
-          capabilities: Array.isArray(raw.capabilities) ? raw.capabilities : [],
-          primaryCapability: raw.primaryCapability,
-        })
+      if (raw) {
+        // Support both 'capabilities' (old) and 'secondaryCapabilities' (Asset template)
+        const caps = raw.capabilities && Array.isArray(raw.capabilities)
+          ? raw.capabilities
+          : (raw.secondaryCapabilities && Array.isArray(raw.secondaryCapabilities)
+            ? raw.secondaryCapabilities
+            : [])
+        // Include primaryCapability in capabilities list if not already there
+        if (raw.primaryCapability && !caps.includes(raw.primaryCapability)) {
+          caps.push(raw.primaryCapability)
+        }
+        if (caps.length > 0) {
+          results.push({
+            id: entry.name,
+            capabilities: caps,
+            primaryCapability: raw.primaryCapability,
+          })
+        }
       }
     } catch {
       // skip malformed
@@ -46,6 +59,10 @@ function readAllDatasets(): { id: string; capabilities: string[]; primaryCapabil
   }
 
   return results
+}
+
+function readAllDatasets(): { id: string; capabilities: string[]; primaryCapability?: string }[] {
+  return [...scanDir(DATASETS_DIR), ...scanDir(ASSETS_DIR)]
 }
 
 export function scanAllDatasets(): CoverageEntry[] {
