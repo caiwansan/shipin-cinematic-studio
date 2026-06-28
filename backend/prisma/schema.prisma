@@ -1,0 +1,3674 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AiStageModelConfig {
+  stage     String   @id
+  provider  String   @default("bailian")
+  model     String   @default("wan2.7-t2v")
+  size      String   @default("1024x1024")
+  params    Json     @default("{}")
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_stage_model_config")
+}
+
+model User {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  email                 String                 @unique
+  username              String                 @unique
+  passwordHash          String
+  phone                 String?                @unique
+  phoneVerified         Boolean                @default(false)
+  memberTier            String                 @default("free")
+  memberExpiresAt       DateTime?
+  createdAt             DateTime               @default(now())
+  wechatOpenId          String?                @unique
+  tokenVersion          Int                    @default(1)
+  qqOpenId              String?                @unique
+  marketAgentId         String?
+  agentPlanId           String?
+  agentExpiresAt        DateTime?
+  agentLevel            String?
+  agentStatus           String                 @default("none")
+  agentCreatedAt        DateTime?
+  provinceCode          String?
+  provinceName          String?
+  cityCode              String?
+  cityName              String?
+  districtCode          String?
+  districtName          String?
+  updatedAt             DateTime               @updatedAt
+  lastActiveAt          DateTime?
+  comments              AssetComment[]
+  dna                   CreatorDnaProfile?
+  dailyUsage            DailyUsage[]
+  membership            Membership?
+  projects              Project[]
+  userModelConfigV2     UserModelConfigV2?
+  communityCommentLikes CommunityCommentLike[]
+  communityComments     CommunityComment[]
+  communityLikes        CommunityLike[]
+  communityPosts        CommunityPost[]
+  communityRewards      CommunityReward[]
+  messagesSent          UserMessage[]          @relation("messages_sent")
+  messagesReceived      UserMessage[]          @relation("messages_received")
+}
+
+model CreatorDnaProfile {
+  id                      String   @id @default(uuid()) @db.Uuid
+  userId                  String   @unique @db.Uuid
+  cinematicStyleSignature String?
+  pacingProfile           String?
+  emotionalProfile        String?
+  visualProfile           String?
+  directorSpeciesType     String?
+  dominantGenres          String?
+  creatorRank             Int      @default(0)
+  updatedAt               DateTime @updatedAt
+  createdAt               DateTime @default(now())
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Captcha {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SmsCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  phone     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model EmailCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Project {
+  id                  String               @id @default(uuid()) @db.Uuid
+  name                String
+  description         String?
+  status              String               @default("draft")
+  version             Int                  @default(1)
+  userId              String               @db.Uuid
+  budgetLimit         Float?
+  budgetSpent         Float                @default(0)
+  budgetAlertAt       Float?
+  budgetNotified      Boolean              @default(false)
+  executionResults    Json?                @map("execution_results")
+  mergedVideoUrl      String?              @map("merged_video_url")
+  mergeStatus         String?              @map("merge_status")
+  runtimeCheckpoint   Json?                @map("runtime_checkpoint")
+  failureEvents       Json?                @map("failure_events")
+  executionJournal    Json?                @map("execution_journal")
+  script              String?
+  plotBlueprint       Json?                @map("plot_blueprint")
+  continuationFrom    String?              @map("continuation_from") @db.Uuid
+  workspaceId         String?              @map("workspace_id") @db.Uuid
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  assets              Asset[]
+  assetGraphEdges     AssetGraphEdge[]
+  assetRegistries     AssetRegistry[]
+  characterProfiles   CharacterProfile[]
+  continuities        ContinuityLink[]
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace           Workspace?           @relation(fields: [workspaceId], references: [id])
+  sceneProfiles       SceneProfile[]
+  storyboards         Storyboard[]
+  videoTasks          VideoTask[]
+  aiActionSpecs       AiActionSpec[]
+  aiCameraSpecs       AiCameraSpec[]
+  aiCharacterSpecs    AiCharacterSpec[]
+  aiEffectSpecs       AiEffectSpec[]
+  aiEmotionSpecs      AiEmotionSpec[]
+  aiFrameDesigns      AiFrameDesign[]
+  aiPropSpecs         AiPropSpec[]
+  aiSceneSpecs        AiSceneSpec[]
+  aiSegmentEdits      AiSegmentEdit[]
+  aiVideoProduction   AiVideoProduction?
+  aiVideoSegments     AiVideoSegment[]
+  aiVoiceConfigs      AiVoiceConfig[]
+  characterImages     CharacterImage[]
+  characterReferences CharacterReference[]
+  exportTasks         ExportTask[]
+  frameImages         FrameImage[]
+  pipelineJobs        PipelineJob[]
+  pipelineStages      PipelineStage[]
+  propImages          PropImage[]
+  sceneImages         SceneImage[]
+  sceneReferences     SceneReference[]
+  storyboardImages    StoryboardImage[]
+  ttsRecords          TTSRecord[]
+}
+
+model AiCharacterSpec {
+  id                  String   @id @default(uuid()) @db.Uuid
+  projectId           String   @db.Uuid
+  characterName       String
+  variant             String   @default("")
+  gender              String?
+  age                 String?
+  role                String?
+  voiceType           String?  @map("voice_type")
+  physicalDescription String?
+  clothing            String?
+  imagePrompt         String   @default("")
+  negativePrompt      String?
+  referenceImageUrl   String?
+  confirmed           Boolean  @default(false)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  project             Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, characterName, variant])
+  @@map("ai_character_specs")
+}
+
+model TTSRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @db.Uuid
+  characterName String
+  voiceId       String
+  audioUrl      String
+  duration      Int      @default(0)
+  sequenceIndex Int      @default(0)
+  text          String   @default("")
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, characterName])
+  @@map("tts_records")
+}
+
+model AiSceneSpec {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @db.Uuid
+  sceneId        String
+  sceneName      String
+  description    String?
+  type           String?  @map("type")
+  timeOfDay      String?  @map("time_of_day")
+  lighting       String?  @map("lighting")
+  mood           String?  @map("mood")
+  colorTone      String?  @map("color_tone")
+  environment    String?  @map("environment")
+  imagePrompt    String   @default("")
+  negativePrompt String?
+  aspectRatio    String   @default("16:9")
+  confirmed      Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_scene_specs")
+}
+
+model ImagePromptTemplates {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String
+  templateKey String
+  title       String
+  content     String
+  sortOrder   Int      @default(0)
+  enabled     Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([type, templateKey])
+  @@map("image_prompt_templates")
+}
+
+model AiVoiceConfig {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @db.Uuid
+  characterName String
+  voiceType     String?
+  speakingStyle String?
+  pitch         Float    @default(1.0)
+  speed         Float    @default(1.0)
+  ttsPrompt     String?
+  audioUrl      String?  @map("audio_url")
+  voiceId       String?  @map("voice_id")
+  confirmed     Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_voice_configs")
+}
+
+model AiVideoSegment {
+  id               String   @id @default(uuid()) @db.Uuid
+  projectId        String   @db.Uuid
+  segmentId        String
+  title            String?
+  associatedScenes String?
+  duration         Int?
+  narrativePurpose String?
+  fullText         String?  @map("full_text")
+  shotPattern      String?
+  emotionArc       String?
+  backgroundMusic  String?
+  videoUrl         String?  @map("video_url")
+  firstFrameUrl    String?  @map("first_frame_url")
+  midFrameUrl      String?  @map("mid_frame_url")
+  lastFrameUrl     String?  @map("last_frame_url")
+  firstFrameDesc   String?  @map("first_frame_desc")
+  midFrameDesc     String?  @map("mid_frame_desc")
+  lastFrameDesc    String?  @map("last_frame_desc")
+  confirmed        Boolean  @default(false)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  narrative        String?  @map("narrative")
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, segmentId])
+  @@map("ai_video_segments")
+}
+
+model AiSegmentEdit {
+  id               String   @id @default(uuid()) @db.Uuid
+  projectId        String   @db.Uuid
+  segmentId        String
+  narrative        String?  @map("narrative")
+  dialogue         String?  @map("dialogue")
+  effects          String?  @map("effects")
+  emotion          String?  @map("emotion")
+  negativePrompt   String?  @map("negative_prompt")
+  duration         Int?     @map("duration")
+  firstFramePrompt String?  @map("first_frame_prompt")
+  firstFrameNeg    String?  @map("first_frame_neg")
+  midFramePrompt   String?  @map("mid_frame_prompt")
+  midFrameNeg      String?  @map("mid_frame_neg")
+  lastFramePrompt  String?  @map("last_frame_prompt")
+  lastFrameNeg     String?  @map("last_frame_neg")
+  charImageUrls    String?  @map("char_image_urls")
+  sceneImageUrls   String?  @map("scene_image_urls")
+  propImageUrls    String?  @map("prop_image_urls")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, segmentId])
+  @@map("ai_segment_edits")
+}
+
+model AiFrameDesign {
+  id               String   @id @default(uuid()) @db.Uuid
+  projectId        String   @db.Uuid
+  segmentId        String
+  firstFrameDesc   String?
+  firstFramePrompt String?
+  firstFrameAngle  String?
+  lastFrameDesc    String?
+  lastFramePrompt  String?
+  lastFrameAngle   String?
+  confirmed        Boolean  @default(false)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_frame_designs")
+}
+
+model AiVideoProduction {
+  id                   String   @id @default(uuid()) @db.Uuid
+  projectId            String   @unique @db.Uuid
+  overallStyle         String?
+  fps                  Int      @default(24)
+  resolution           String   @default("1920x1080")
+  colorPalette         String?
+  transitionStyle      String?
+  subtitleStyle        String?
+  globalNegativePrompt String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("ai_video_productions")
+}
+
+model AiEffectSpec {
+  id                String   @id @default(uuid()) @db.Uuid
+  projectId         String   @db.Uuid
+  effectName        String
+  effectType        String?
+  triggerScene      String?
+  triggerEvent      String?
+  visualDescription String?
+  colorPalette      String?
+  duration          Float?
+  intensity         String?
+  notes             String?
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_effect_specs")
+}
+
+model AiActionSpec {
+  id               String   @id @default(uuid()) @db.Uuid
+  projectId        String   @db.Uuid
+  characterName    String
+  actionName       String
+  triggerCondition String?
+  movementDesc     String?
+  facialExpression String?
+  bodyLanguage     String?
+  cameraFocus      String?
+  duration         Float?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_action_specs")
+}
+
+model AiPropSpec {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  name           String
+  category       String   @default("通用")
+  description    String?
+  sceneIds       Json?    @map("scene_ids")
+  characterNames Json?    @map("character_names")
+  imagePrompt    String?  @map("image_prompt")
+  sortOrder      Int      @default(0) @map("sort_order")
+  confirmed      Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_prop_specs")
+}
+
+model AiCameraSpec {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @db.Uuid
+  segmentId      String?
+  cameraMovement String
+  shotSize       String?
+  angle          String?
+  duration       Float?
+  transition     String?
+  purpose        String?
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_camera_specs")
+}
+
+model AiEmotionSpec {
+  id               String   @id @default(uuid()) @db.Uuid
+  projectId        String   @db.Uuid
+  characterName    String
+  emotionType      String
+  intensity        String?
+  facialDesc       String?
+  bodyLanguage     String?
+  voiceTone        String?
+  triggerEvent     String?
+  timing           String?
+  cameraPreference String?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("ai_emotion_specs")
+}
+
+model Storyboard {
+  id              String      @id @default(uuid()) @db.Uuid
+  projectId       String      @db.Uuid
+  shotIndex       Int
+  duration        Float?
+  shotType        String?
+  subject         String?
+  action          String?
+  expression      String?
+  cameraMovement  String?
+  lens            String?
+  lighting        String?
+  emotion         String?
+  environment     String?
+  cinematicStyle  String?
+  colorStyle      String?
+  realism         Boolean?
+  motionBlur      Boolean?
+  continuityNotes String?
+  negativePrompt  String?
+  storyboardImage String?
+  startFrame      Int?
+  endFrame        Int?
+  createdAt       DateTime    @default(now())
+  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  videoTask       VideoTask[]
+
+  @@index([projectId])
+}
+
+model VideoTask {
+  id             String          @id @default(uuid()) @db.Uuid
+  projectId      String          @db.Uuid
+  storyboardId   String?         @db.Uuid
+  status         VideoTaskStatus @default(queued)
+  progress       Int             @default(0)
+  error          String?
+  idempotencyKey String?         @unique
+  lockedBy       String?
+  heartbeatAt    DateTime?
+  retryCount     Int             @default(0)
+  maxRetries     Int             @default(3)
+  priority       Int             @default(1)
+  taskType       String          @default("video")
+  scheduledFor   DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  taskLogs       TaskLog[]
+  segments       VideoSegment[]
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  storyboard     Storyboard?     @relation(fields: [storyboardId], references: [id])
+
+  @@index([projectId])
+}
+
+model VideoSegment {
+  id            String    @id @default(uuid()) @db.Uuid
+  taskId        String    @db.Uuid
+  shotIndex     Int
+  filePath      String?
+  thumbnailPath String?
+  duration      Float?
+  status        String    @default("pending")
+  createdAt     DateTime  @default(now())
+  task          VideoTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model ExportTask {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String
+  projectId   String    @db.Uuid
+  status      String    @default("queued")
+  exportType  String    @default("zip")
+  progress    Int       @default(0)
+  outputUrl   String?
+  packageSize Int?
+  error       String?
+  traceId     String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("export_tasks")
+}
+
+model CharacterProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  name            String
+  age             Int?
+  gender          String?
+  face            String?
+  hair            String?
+  clothes         String?
+  body            String?
+  identity        String?
+  speakingStyle   String?
+  personality     String?
+  frontImage      String?
+  sideImage       String?
+  fullBodyImage   String?
+  expressionImage String?
+  createdAt       DateTime @default(now())
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model SceneProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @db.Uuid
+  location       String?
+  architecture   String?
+  weather        String?
+  lighting       String?
+  timeOfDay      String?
+  atmosphere     String?
+  colorPalette   String?
+  referenceImage String?
+  createdAt      DateTime @default(now())
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+/// 视觉风格配置档案
+/// 每种视觉风格（anime/realistic/3d/cartoon 等）定义全链路 prompt 模板 + 模型路由 + 画风参数
+model StyleProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String   @unique
+  displayName       String
+  icon              String   @default("🎨")
+  /// 风格描述（prompt 语句块，注入各环节）
+  description       String   @default("")
+  /// 正面风格修饰词（追加到所有 image/video prompt 末尾）
+  styleTokens       String   @default("")
+  /// 负面风格修饰词（追加到所有 negative prompt 末尾）
+  negativeTokens    String   @default("")
+  /// 各环节的 prompt 模板覆盖（JSON）
+  /// {
+  /// "character": "…",
+  /// "scene": "…",
+  /// "storyboard": "…",
+  /// "video": "…",
+  /// "narrative": "…"
+  /// }
+  promptOverrides   Json?    @map("prompt_overrides")
+  /// 推荐模型路由（JSON）
+  /// {
+  /// "image": { "provider": "volcengine", "model": "doubao-seedream-4-0-250828" },
+  /// "video": { "provider": "volcengine", "model": "doubao-seedance-2-0-260128" },
+  /// "llm": { "provider": "deepseek", "model": "deepseek-chat" }
+  /// }
+  modelRoutes       Json?    @map("model_routes")
+  /// 画风参考图 URL（可选）
+  referenceImageUrl String?  @map("reference_image_url")
+  /// 额外参数（JSON）
+  parameters        Json?    @default("{}")
+  sortOrder         Int      @default(0)
+  enabled           Boolean  @default(true)
+  isDefault         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("style_profiles")
+}
+
+model PromptTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  category    String?
+  content     Json?
+  variables   Json?
+  createdAt   DateTime @default(now())
+}
+
+model Asset {
+  id        String    @id @default(uuid()) @db.Uuid
+  projectId String?   @db.Uuid
+  type      AssetType @default(other)
+  fileName  String
+  filePath  String
+  mimeType  String?
+  fileSize  Int?
+  width     Int?
+  height    Int?
+  duration  Float?
+  taskId    String?
+  createdAt DateTime  @default(now())
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, type])
+  @@index([projectId])
+}
+
+model Membership {
+  id             String          @id @default(uuid()) @db.Uuid
+  userId         String          @unique @db.Uuid
+  tier           String          @default("free")
+  credits        Int             @default(0)
+  creditsUsed    Int             @default(0)
+  storageUsed    BigInt          @default(0)
+  storageLimit   BigInt          @default(524288000)
+  agentLevel     String          @default("none")
+  parentId       String?         @db.Uuid
+  monthlyBudget  Float?
+  monthlySpent   Float           @default(0)
+  monthlyResetAt DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  coinLogs       CoinLog[]
+  parent         Membership?     @relation("AgentReferral", fields: [parentId], references: [userId])
+  children       Membership[]    @relation("AgentReferral")
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders         RechargeOrder[]
+  storagePacks   StoragePack[]
+  assets         UserAsset[]
+}
+
+model CoinLog {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @db.Uuid
+  amount     Int
+  type       String
+  remark     String?
+  relatedId  String?
+  createdAt  DateTime   @default(now())
+  membership Membership @relation(fields: [userId], references: [userId], map: "coinlog_membership_fkey")
+
+  @@index([userId, createdAt])
+}
+
+model UserAsset {
+  id                 String           @id @default(uuid()) @db.Uuid
+  userId             String           @db.Uuid
+  title              String
+  type               String
+  url                String
+  thumbnail          String?
+  prompt             String?
+  style              String?
+  mode               String?
+  fileSize           Int              @default(0)
+  isFeatured         Boolean          @default(false)
+  source             String?
+  modifiedBy         String?
+  universeScore      Float            @default(0)
+  cinematicScore     Float            @default(0)
+  narrativeScore     Float            @default(0)
+  emotionalScore     Float            @default(0)
+  consistencyScore   Float            @default(0)
+  renderQualityScore Float            @default(0)
+  worldDepthScore    Float            @default(0)
+  engagementScore    Float            @default(0)
+  retentionScore     Float            @default(0)
+  freshnessScore     Float            @default(0)
+  universeClusterId  String?          @db.Uuid
+  createdAt          DateTime         @default(now())
+  comments           AssetComment[]
+  likes              AssetLike[]
+  cluster            UniverseCluster? @relation(fields: [universeClusterId], references: [id])
+  membership         Membership       @relation(fields: [userId], references: [userId], map: "userasset_membership_fkey")
+
+  @@index([userId, createdAt])
+  @@index([universeScore(sort: Desc)])
+  @@index([universeClusterId])
+}
+
+model UniverseCluster {
+  id              String      @id @default(uuid()) @db.Uuid
+  name            String
+  genre           String?
+  description     String?
+  embeddingCenter String?
+  activityScore   Float       @default(0)
+  evolutionState  String      @default("active")
+  workCount       Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  assets          UserAsset[]
+}
+
+model AssetLike {
+  id        String    @id @default(uuid()) @db.Uuid
+  assetId   String    @db.Uuid
+  userId    String    @db.Uuid
+  createdAt DateTime  @default(now())
+  asset     UserAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, userId])
+  @@index([assetId])
+}
+
+model AssetComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  assetId   String    @db.Uuid
+  userId    String    @db.Uuid
+  content   String
+  createdAt DateTime  @default(now())
+  asset     UserAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, createdAt])
+}
+
+model RechargeOrder {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @db.Uuid
+  orderNo     String?    @unique
+  planLevel   String?
+  coins       Int
+  amount      Float
+  status      String     @default("pending")
+  payMethod   String?
+  accountName String?
+  tradeNo     String?
+  remark      String?
+  payTime     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  membership  Membership @relation(fields: [userId], references: [userId], map: "recharge_membership_fkey")
+}
+
+model MemberPlan {
+  id                String   @id @default(uuid()) @db.Uuid
+  level             String   @unique
+  name              String
+  price             Float    @default(0)
+  originalPrice     Int      @default(0)
+  months            Float    @default(1)
+  storageLimit      Int      @default(500)
+  dailyQuota        Int      @default(5)
+  maxResolution     String   @default("720p")
+  maxDuration       Int      @default(15)
+  concurrentTasks   Int      @default(1)
+  watermark         Boolean  @default(true)
+  apiAccess         Boolean  @default(false)
+  coins             Int      @default(0)
+  icon              String   @default("🎬")
+  color             String   @default("#818cf8")
+  sortOrder         Int      @default(0)
+  enabled           Boolean  @default(true)
+  onlineApiEnabled  Boolean  @default(false)
+  localModelEnabled Boolean  @default(false)
+  renewable         Boolean  @default(true)
+  dayPrice          Float    @default(0)
+  firstPurchaseOnly Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now())
+
+  @@map("MemberPlan")
+}
+
+model StoragePack {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @db.Uuid
+  size       BigInt
+  coins      Int
+  startAt    DateTime   @default(now())
+  expireAt   DateTime
+  createdAt  DateTime   @default(now())
+  membership Membership @relation(fields: [userId], references: [userId], map: "storagepack_membership_fkey")
+}
+
+model AgentLevelConfig {
+  id         String   @id @default(uuid()) @db.Uuid
+  level      String   @unique
+  name       String
+  priceCoins Int
+  discount   Float
+  createdAt  DateTime @default(now())
+}
+
+model TaskLog {
+  id        String       @id @default(uuid()) @db.Uuid
+  taskId    String       @db.Uuid
+  level     TaskLogLevel @default(info)
+  message   String
+  metadata  Json?
+  eventId   String?
+  createdAt DateTime     @default(now())
+  task      VideoTask    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, eventId])
+}
+
+model WorkerRegistration {
+  id                String                 @id @map("id")
+  hostname          String                 @map("hostname")
+  version           String                 @default("1.0") @map("version")
+  status            String                 @default("active") @map("status")
+  capacity          Int                    @default(5) @map("capacity")
+  currentLoad       Int                    @default(0) @map("currentload")
+  healthy           Boolean                @default(true) @map("healthy")
+  tags              Json                   @default("[]") @map("tags")
+  capabilities      Json                   @default("{}") @map("capabilities")
+  lastError         String?                @map("lasterror")
+  consecutiveErrors Int                    @default(0) @map("consecutiveerrors")
+  successCount      Int                    @default(0) @map("successcount")
+  failureCount      Int                    @default(0) @map("failurecount")
+  avgResponseTime   Float                  @default(0) @map("avgresponsetime")
+  score             Float                  @default(1.0) @map("score")
+  weight            Float                  @default(1.0) @map("weight")
+  lastWeightedAt    DateTime?              @map("lastweightedat")
+  autoUnhealthyAt   DateTime?              @map("autounhealthyat")
+  lastHeartbeat     DateTime               @default(now()) @map("lastheartbeat")
+  createdAt         DateTime               @default(now()) @map("createdat")
+  healthHistory     WorkerHealthHistory[]
+  assignments       WorkerTaskAssignment[]
+
+  @@map("WorkerRegistration")
+}
+
+model WorkerTaskAssignment {
+  id                 String             @id @default(uuid()) @map("id") @db.Uuid
+  workerId           String             @map("workerid")
+  taskId             String             @map("taskid")
+  startedAt          DateTime           @default(now()) @map("startedat")
+  estimatedDuration  Float?             @map("estimatedduration")
+  actualResponseTime Float?             @map("actualresponsetime")
+  worker             WorkerRegistration @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@index([workerId], map: "WorkerTaskAssignment_workerId_idx")
+  @@index([taskId], map: "WorkerTaskAssignment_taskId_idx")
+  @@map("WorkerTaskAssignment")
+}
+
+model WorkerHealthHistory {
+  id         String             @id @default(uuid()) @map("id") @db.Uuid
+  workerId   String             @map("workerid")
+  score      Float              @map("score")
+  healthy    Boolean            @map("healthy")
+  load       Int                @default(0) @map("load")
+  recordedAt DateTime           @default(now()) @map("recordedat")
+  worker     WorkerRegistration @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@index([workerId, recordedAt], map: "WorkerHealthHistory_workerId_recordedAt_idx")
+  @@map("WorkerHealthHistory")
+}
+
+model DeadLetterTask {
+  id             String   @id @default(uuid()) @db.Uuid
+  originalTaskId String
+  projectId      String
+  taskType       String   @default("video")
+  error          String?
+  retryCount     Int      @default(0)
+  lastErrorAt    DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model AiModel {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String           @unique
+  provider        String
+  modelType       String
+  taskTypes       String[]
+  status          String           @default("active")
+  deprecateAt     DateTime?
+  costPerRequest  Float            @default(0)
+  costPerToken    Float            @default(0)
+  costUnit        String           @default("USD")
+  qualityScore    Float            @default(0.8)
+  avgLatency      Float            @default(0)
+  successCount    Int              @default(0)
+  failureCount    Int              @default(0)
+  totalCost       Float            @default(0)
+  rateLimit       String?
+  dailyTokenLimit Int?
+  concurrencyMax  Int              @default(5)
+  currentLoad     Int              @default(0)
+  endpointUrl     String?
+  apiKeyRef       String?
+  params          Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  fallbackTo      AiFallbackRule[] @relation("FallbackModel")
+  fallbackFrom    AiFallbackRule[] @relation("PrimaryModel")
+
+  @@index([modelType, status])
+  @@map("AiModel")
+}
+
+model AiFallbackRule {
+  id         String   @id @default(uuid()) @db.Uuid
+  taskType   String
+  priority   Int      @default(0)
+  primaryId  String   @db.Uuid
+  fallbackId String   @db.Uuid
+  condition  String?
+  createdAt  DateTime @default(now())
+  fallback   AiModel  @relation("FallbackModel", fields: [fallbackId], references: [id], onDelete: Cascade)
+  primary    AiModel  @relation("PrimaryModel", fields: [primaryId], references: [id], onDelete: Cascade)
+
+  @@index([taskType, priority])
+  @@map("AiFallbackRule")
+}
+
+model AiRoutingPolicy {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @unique
+  description   String?
+  weightCost    Float    @default(0.25)
+  weightQuality Float    @default(0.25)
+  weightLatency Float    @default(0.25)
+  weightSuccess Float    @default(0.25)
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@map("AiRoutingPolicy")
+}
+
+model AiTaskTypeMapping {
+  id          String   @id @default(uuid()) @db.Uuid
+  taskType    String   @unique
+  description String?
+  modelIds    String[]
+  policyId    String?
+  createdAt   DateTime @default(now())
+
+  @@map("AiTaskTypeMapping")
+}
+
+model AiExecutionLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  taskId       String   @db.Uuid
+  projectId    String?  @db.Uuid
+  modelId      String
+  taskType     String
+  requestType  String   @default("api")
+  status       String
+  latency      Float
+  cost         Float    @default(0)
+  tokensInput  Int?
+  tokensOutput Int?
+  error        String?
+  policyUsed   String?
+  scoreBefore  Float?
+  scoreAfter   Float?
+  createdAt    DateTime @default(now())
+
+  @@index([modelId, createdAt])
+  @@index([taskId])
+  @@index([projectId])
+  @@map("AiExecutionLog")
+}
+
+model AiCircuitBreaker {
+  id               String    @id @default(uuid()) @db.Uuid
+  modelId          String    @unique
+  state            String    @default("closed")
+  failureCount     Int       @default(0)
+  successCount     Int       @default(0)
+  failureThreshold Int       @default(5)
+  successThreshold Int       @default(3)
+  resetTimeoutMs   Int       @default(30000)
+  lastFailureAt    DateTime?
+  lastSuccessAt    DateTime?
+  openedAt         DateTime?
+  halfOpenAt       DateTime?
+  lastError        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("AiCircuitBreaker")
+}
+
+model AiSandboxLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  executionLogId  String   @db.Uuid
+  modelName       String
+  requestType     String   @default("chat_completion")
+  status          String
+  latencyMs       Int      @default(0)
+  timeoutMs       Int      @default(30000)
+  retryCount      Int      @default(0)
+  tokenCount      Int?
+  promptPreview   String?
+  responsePreview String?
+  errorType       String?
+  errorDetail     String?
+  cost            Float    @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([modelName, createdAt])
+  @@index([status])
+  @@index([executionLogId])
+  @@map("AiSandboxLog")
+}
+
+model AiTimeoutConfig {
+  id           String   @id @default(uuid()) @db.Uuid
+  taskType     String   @unique
+  timeoutMs    Int      @default(30000)
+  retryCount   Int      @default(2)
+  retryDelayMs Int      @default(1000)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ShadowConfig {
+  id              String               @id @default(uuid())
+  enabled         Boolean              @default(false)
+  grayThreshold   Int                  @default(0)
+  maxConcurrent   Int                  @default(5)
+  rateLimitPerMin Int                  @default(10)
+  costBudget      Decimal              @default(1.0) @db.Decimal(12, 6)
+  costSpent       Decimal              @default(0.0) @db.Decimal(12, 6)
+  autoRollback    Boolean              @default(true)
+  lastRolledBack  DateTime?
+  updatedAt       DateTime             @updatedAt
+  executionLogs   ShadowExecutionLog[]
+}
+
+model ShadowExecutionLog {
+  id             String            @id @default(uuid())
+  shadowConfigId String
+  sandboxLogId   String?
+  taskId         String?
+  projectId      String?
+  userId         String?
+  taskType       String
+  modelName      String
+  promptPreview  String?
+  mockOutput     Json?
+  realOutput     Json?
+  mockLatencyMs  Int?
+  realLatencyMs  Int?
+  mockCost       Decimal           @default(0) @db.Decimal(12, 6)
+  realCost       Decimal           @default(0) @db.Decimal(12, 6)
+  status         String            @default("pending")
+  errorMessage   String?
+  retryCount     Int               @default(0)
+  executedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  diffResult     ShadowDiffResult?
+  shadowConfig   ShadowConfig      @relation(fields: [shadowConfigId], references: [id])
+}
+
+model ShadowDiffResult {
+  id             String             @id @default(uuid())
+  executionLogId String             @unique
+  taskType       String
+  modelName      String
+  structureMatch Boolean            @default(false)
+  structureScore Decimal            @default(0) @db.Decimal(5, 2)
+  contentScore   Decimal            @default(0) @db.Decimal(5, 2)
+  latencyDelta   Decimal            @default(0) @db.Decimal(10, 2)
+  costDelta      Decimal            @default(0) @db.Decimal(12, 6)
+  driftScore     Decimal            @default(0) @db.Decimal(5, 2)
+  overallScore   Decimal            @default(0) @db.Decimal(5, 2)
+  judgedAt       DateTime?
+  createdAt      DateTime           @default(now())
+  executionLog   ShadowExecutionLog @relation(fields: [executionLogId], references: [id])
+}
+
+model ShadowDriftHistory {
+  id                String    @id @default(uuid())
+  modelName         String
+  taskType          String
+  windowCount       Int       @default(0)
+  avgDriftScore     Decimal   @default(0) @db.Decimal(5, 2)
+  avgStructureScore Decimal   @default(0) @db.Decimal(5, 2)
+  avgContentScore   Decimal   @default(0) @db.Decimal(5, 2)
+  avgLatencyDelta   Decimal   @default(0) @db.Decimal(10, 2)
+  avgCostDelta      Decimal   @default(0) @db.Decimal(12, 6)
+  sampleStartAt     DateTime  @default(now())
+  sampleEndAt       DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([modelName, taskType])
+}
+
+model CostBudget {
+  id             String    @id @default(uuid())
+  scope          String
+  scopeId        String?
+  budgetAmount   Decimal   @db.Decimal(12, 6)
+  spentAmount    Decimal   @default(0) @db.Decimal(12, 6)
+  alertThreshold Int       @default(80)
+  blockThreshold Int       @default(100)
+  period         String    @default("monthly")
+  enabled        Boolean   @default(true)
+  lastAlertAt    DateTime?
+  lastBlockedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([scope, scopeId])
+}
+
+model SystemMetric {
+  id               BigInt   @id @default(autoincrement())
+  timestamp        DateTime @default(now())
+  cpuPercent       Float    @default(0)
+  memoryMb         Float    @default(0)
+  eventLoopLag     Float?
+  queueLength      Int      @default(0)
+  queuePressure    Float    @default(0)
+  activeWorkers    Int      @default(0)
+  workerEfficiency Float    @default(0)
+  workerCompleted  Int      @default(0)
+  pidPressure      Float    @default(0)
+  generatorRate    Float    @default(0)
+  costPerMin       Float    @default(0)
+  totalCost        Float    @default(0)
+  ses              Float    @default(1)
+  degraded         Boolean  @default(false)
+  stabilityScore   Float?
+  stabilityGrade   String?
+
+  @@index([timestamp])
+  @@map("system_metrics")
+}
+
+model ReplayFrame {
+  id               BigInt            @id @default(autoincrement())
+  timestamp        DateTime          @default(now())
+  queueLength      Int               @default(0)
+  queuePressure    Float             @default(0)
+  activeWorkers    Int               @default(0)
+  workerThroughput Float             @default(0)
+  workerEfficiency Float             @default(0)
+  pidPressure      Float             @default(0)
+  generatorRate    Float             @default(0)
+  ses              Float             @default(1)
+  memoryMb         Float             @default(0)
+  costPerMin       Float             @default(0)
+  totalCost        Float             @default(0)
+  queueGrowthRate  Float?
+  workerTrend      Float?
+  memorySlope      Float?
+  pidVariance      Float?
+  stabilityScore   Float?
+  stabilityGrade   String?
+  label            String?
+  sessionId        BigInt?
+  session          StabilitySession? @relation(fields: [sessionId], references: [id])
+
+  @@index([timestamp])
+  @@index([sessionId])
+  @@map("replay_frames")
+}
+
+model StabilitySession {
+  id               BigInt             @id @default(autoincrement())
+  label            String?
+  status           String             @default("running")
+  startedAt        DateTime           @default(now())
+  finishedAt       DateTime?
+  durationSec      Int                @default(0)
+  queuePattern     String?
+  workerDecayCurve String?
+  pidSignature     String?
+  costProfile      String?
+  recoveryProfile  String?
+  grade            String?
+  score            Float?
+  eventCount       Int                @default(0)
+  worstEvent       String?
+  phases           Json?
+  events           DegradationEvent[]
+  frames           ReplayFrame[]
+
+  @@index([status])
+  @@index([startedAt])
+  @@map("stability_sessions")
+}
+
+model DegradationEvent {
+  id           BigInt           @id @default(autoincrement())
+  sessionId    BigInt
+  timestamp    DateTime         @default(now())
+  elapsedSec   Int              @default(0)
+  eventType    String
+  severity     String
+  message      String
+  metricValues Json?
+  session      StabilitySession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([timestamp])
+  @@map("degradation_events")
+}
+
+model PromptMemory {
+  id               BigInt   @id @default(autoincrement())
+  userId           String
+  prompt           String
+  optimizedPrompt  String
+  provider         String
+  modelName        String
+  taskType         String
+  style            String?
+  mode             String?
+  qualityScore     Float?
+  consistencyScore Float?
+  realismScore     Float?
+  renderTimeMs     Int      @default(0)
+  cost             Float    @default(0)
+  success          Boolean  @default(true)
+  failureReason    String?
+  feedback         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@index([taskType])
+  @@index([provider])
+  @@index([qualityScore])
+  @@map("prompt_memory")
+}
+
+model ApiKey {
+  id        String   @id @default(uuid()) @db.Uuid
+  provider  String   @unique
+  keyName   String
+  keyValue  String
+  updatedAt DateTime @updatedAt
+
+  @@map("ApiKey")
+}
+
+model UserModelConfigV2 {
+  userId        String   @id @db.Uuid
+  imageProvider String   @default("volcengine")
+  videoProvider String   @default("volcengine")
+  ttsProvider   String   @default("volcengine")
+  imageApiKey   String?
+  videoApiKey   String?
+  ttsApiKey     String?
+  llmProvider   String   @default("volcengine")
+  llmApiKey     String?
+  llmModel      String   @default("doubao-seed-2-0-plus-260428")
+  llmEnabled    Boolean  @default(true)
+  baseUrl       String?
+  llmBaseUrl    String?
+  imageBaseUrl  String?
+  videoBaseUrl  String?
+  ttsBaseUrl    String?
+  imageModel    String   @default("wan2.7-image-pro")
+  imageEnabled  Boolean  @default(true)
+  videoModel    String   @default("wan2.7-t2v")
+  videoEnabled  Boolean  @default(true)
+  ttsModel      String   @default("cosyvoice-v3.5-plus")
+  ttsEnabled    Boolean  @default(true)
+  musicProvider String   @default("")
+  musicApiKey   String?
+  musicModel    String   @default("")
+  musicEnabled  Boolean  @default(false)
+  musicBaseUrl  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("UserModelConfigV2")
+}
+
+model ModelProvider {
+  id             String   @id @default(uuid()) @db.Uuid
+  provider       String   @unique
+  label          String
+  modelType      String
+  modelName      String
+  apiKeyEnv      String
+  endpoint       String?
+  aspectRatioMap Json?
+  defaultParams  Json?
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("ModelProvider")
+}
+
+model VoicePreset {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  voiceId     String
+  type        String   @default("designed")
+  description String?
+  targetModel String   @default("cosyvoice-v3.5-plus")
+  sampleUrl   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([voiceId, targetModel])
+  @@map("voice_presets")
+}
+
+model DailyUsage {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  date       DateTime
+  videoCount Int      @default(0)
+  imageCount Int      @default(0)
+  ttsCount   Int      @default(0)
+  llmCount   Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("DailyUsage")
+}
+
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  displayName  String   @default("") @map("display_name")
+  role         String   @default("operator")
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("AdminUser")
+}
+
+model AssetDna {
+  id                 String   @id @default(uuid()) @db.Uuid
+  assetId            String   @unique @db.Uuid
+  creatorId          String   @db.Uuid
+  projectId          String   @db.Uuid
+  type               String
+  promptStructure    String?
+  styleVector        String?
+  characterEmbedding String?
+  compositionVector  String?
+  colorDistribution  String?
+  modelInfo          String?
+  workflowInfo       String?
+  createdAt          DateTime @default(now())
+
+  @@map("AssetDna")
+}
+
+model AssetLineage {
+  id             String   @id @default(uuid()) @db.Uuid
+  assetId        String   @unique @db.Uuid
+  parentAssetIds String?
+  rootAssetId    String?  @db.Uuid
+  lineageDepth   Int      @default(0)
+  creatorChain   String?
+  createdAt      DateTime @default(now())
+
+  @@map("AssetLineage")
+}
+
+model AssetReference {
+  id            String   @id @default(uuid()) @db.Uuid
+  sourceAssetId String   @db.Uuid
+  targetAssetId String   @db.Uuid
+  userId        String   @db.Uuid
+  projectId     String   @db.Uuid
+  referenceType String
+  coinsPaid     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([sourceAssetId])
+  @@index([targetAssetId])
+  @@map("AssetReference")
+}
+
+model ContributionWeight {
+  id                String   @id @default(uuid()) @db.Uuid
+  assetId           String   @db.Uuid
+  creatorId         String   @db.Uuid
+  contributionScore Float    @default(0)
+  inheritedWeight   Float    @default(0)
+  role              String?
+  createdAt         DateTime @default(now())
+
+  @@index([assetId])
+  @@index([creatorId])
+  @@map("ContributionWeight")
+}
+
+model RevenueSplit {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @db.Uuid
+  creatorId     String   @db.Uuid
+  assetId       String?  @db.Uuid
+  amount        Int
+  percentage    Float
+  role          String
+  createdAt     DateTime @default(now())
+
+  @@index([creatorId])
+  @@index([transactionId])
+  @@map("RevenueSplit")
+}
+
+model AssetTransaction {
+  id              String   @id @default(uuid()) @db.Uuid
+  fromUserId      String?  @db.Uuid
+  toUserId        String?  @db.Uuid
+  assetId         String   @db.Uuid
+  projectId       String?  @db.Uuid
+  transactionType String
+  coinsAmount     Int
+  platformFee     Int      @default(0)
+  status          String   @default("completed")
+  createdAt       DateTime @default(now())
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([assetId])
+  @@map("AssetTransaction")
+}
+
+model CreatorWallet {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @db.Uuid
+  totalEarned    Int      @default(0)
+  totalSpent     Int      @default(0)
+  balance        Int      @default(0)
+  referenceCount Int      @default(0)
+  reuseCount     Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@map("CreatorWallet")
+}
+
+model ModerationQueue {
+  id              String    @id @default(uuid()) @db.Uuid
+  assetId         String    @db.Uuid
+  reason          String
+  similarityScore Float?
+  reportedBy      String?
+  status          String    @default("pending")
+  reviewerId      String?
+  reviewedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([status])
+  @@map("ModerationQueue")
+}
+
+model PaymentConfig {
+  id        String   @id @default(uuid()) @db.Uuid
+  method    String   @unique
+  name      String
+  qrCodeUrl String?
+  account   String?
+  enabled   Boolean  @default(true)
+  sort      Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("PaymentConfig")
+}
+
+model PaymentSecret {
+  id        String   @id @default(uuid()) @db.Uuid
+  channel   String   @unique
+  config    String
+  enabled   Boolean  @default(true)
+  remark    String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("PaymentSecret")
+}
+
+model PaymentOrder {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  orderNo        String    @unique
+  type           String    @default("credit")
+  amount         Float
+  coins          Int
+  method         String
+  status         String    @default("pending")
+  planType       String?
+  prepayId       String?
+  qrCode         String?
+  payUrl         String?
+  outTradeNo     String?
+  rawNotify      String?
+  remark         String?
+  payTime        DateTime?
+  confirmAdminId Int?
+  confirmTime    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([orderNo])
+  @@index([status])
+  @@index([createdAt])
+  @@map("PaymentOrder")
+}
+
+model AgentDef {
+  id            String           @id
+  name          String
+  type          String
+  role          String
+  model         String?
+  systemPrompt  String           @default("") @map("system_prompt")
+  capabilities  String           @default("[]")
+  memoryEnabled Boolean          @default(false) @map("memory_enabled")
+  costLevel     Int              @default(1) @map("cost_level")
+  status        String           @default("active")
+  version       String           @default("v1")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  edgesFrom     AgentEdge[]      @relation("from_agent")
+  edgesTo       AgentEdge[]      @relation("to_agent")
+  executions    AgentExecution[]
+  memories      AgentMemory[]
+  entryWorkflow WorkflowDef[]    @relation("entry_agent")
+
+  @@map("AgentDef")
+}
+
+model AgentEdge {
+  id            String   @id @default(uuid()) @db.Uuid
+  fromAgentId   String   @map("from_agent_id")
+  toAgentId     String   @map("to_agent_id")
+  condition     String?
+  priority      Int      @default(0)
+  executionMode String   @default("sync") @map("execution_mode")
+  createdAt     DateTime @default(now()) @map("created_at")
+  fromAgent     AgentDef @relation("from_agent", fields: [fromAgentId], references: [id])
+  toAgent       AgentDef @relation("to_agent", fields: [toAgentId], references: [id])
+
+  @@map("AgentEdge")
+}
+
+model WorkflowDef {
+  id           String    @id
+  name         String
+  entryAgentId String?   @map("entry_agent_id")
+  graphJson    String?   @map("graph_json")
+  version      String    @default("v1")
+  isDefault    Boolean   @default(false) @map("is_default")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  entryAgent   AgentDef? @relation("entry_agent", fields: [entryAgentId], references: [id])
+
+  @@map("WorkflowDef")
+}
+
+model AgentExecution {
+  id         String   @id @default(uuid()) @db.Uuid
+  workflowId String?  @map("workflow_id")
+  runId      String?  @map("run_id")
+  agentId    String   @map("agent_id")
+  input      String?
+  output     String?
+  llmCalls   Int      @default(0) @map("llm_calls")
+  tokensUsed Int      @default(0) @map("tokens_used")
+  cost       Float    @default(0)
+  latency    Int      @default(0)
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+  agent      AgentDef @relation(fields: [agentId], references: [id])
+
+  @@index([runId])
+  @@index([workflowId])
+  @@map("AgentExecution")
+}
+
+model AgentMemory {
+  id              String   @id @default(uuid()) @db.Uuid
+  agentId         String   @map("agent_id")
+  projectId       String?
+  memoryType      String   @map("memory_type")
+  content         String
+  embeddingVector String?  @map("embedding_vector")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  agent           AgentDef @relation(fields: [agentId], references: [id])
+
+  @@index([agentId, memoryType])
+  @@map("AgentMemory")
+}
+
+model AssetRights {
+  id                String   @id @default(uuid()) @db.Uuid
+  assetId           String   @unique @db.Uuid
+  publicView        Boolean  @default(true)
+  reuseAllowed      Boolean  @default(true)
+  downloadAllowed   Boolean  @default(false)
+  commercialAllowed Boolean  @default(false)
+  externalAsset     Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+
+  @@map("AssetRights")
+}
+
+model UserLimit {
+  id             String @id @default(uuid()) @db.Uuid
+  userId         String @unique @map("user_id")
+  llmLimitPerMin Int    @default(30) @map("llm_limit_per_min")
+  gpuLimitPerDay Int    @default(100) @map("gpu_limit_per_day")
+  agentLimit     Int    @default(10) @map("agent_limit")
+  burstLimit     Int    @default(5) @map("burst_limit")
+
+  @@map("UserLimit")
+}
+
+model TaskQueue {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id")
+  type          String
+  priority      Int       @default(50)
+  status        String    @default("pending")
+  payload       String?
+  enqueueTime   DateTime  @default(now()) @map("enqueue_time")
+  startTime     DateTime? @map("start_time")
+  endTime       DateTime? @map("end_time")
+  estimatedCost Float?    @map("estimated_cost")
+  retryCount    Int       @default(0) @map("retry_count")
+  maxRetries    Int       @default(3) @map("max_retries")
+  lockWorkerId  String?   @map("lock_worker_id")
+  error         String?
+
+  @@index([userId])
+  @@index([status, priority])
+  @@index([enqueueTime])
+  @@map("TaskQueue")
+}
+
+model TaskExecution {
+  id          String   @id @default(uuid()) @db.Uuid
+  taskId      String   @map("task_id")
+  workflowId  String?  @map("workflow_id")
+  dagId       String?  @map("dag_id")
+  status      String   @default("pending")
+  currentNode String?  @map("current_node")
+  progress    Float    @default(0)
+  error       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([taskId])
+  @@index([status])
+  @@map("TaskExecution")
+}
+
+model AgentExecutionLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  executionId String   @map("execution_id")
+  agentId     String   @map("agent_id")
+  input       String?
+  output      String?
+  latency     Int      @default(0)
+  tokensUsed  Int      @default(0) @map("tokens_used")
+  cost        Float    @default(0)
+  workerId    String?  @map("worker_id")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([executionId])
+  @@index([agentId])
+  @@map("AgentExecutionLog")
+}
+
+model MarketAgent {
+  id                String            @id @default(uuid())
+  name              String
+  contactPerson     String
+  phone             String
+  email             String            @default("")
+  level             String            @default("normal")
+  commissionRate    Float             @default(0)
+  settlementCycle   String            @default("monthly")
+  bankName          String            @default("")
+  bankAccount       String            @default("")
+  accountName       String            @default("")
+  remark            String            @default("")
+  referredUsers     Int               @default(0)
+  totalCommission   Float             @default(0)
+  settledCommission Float             @default(0)
+  pendingCommission Float             @default(0)
+  status            String            @default("active")
+  agentType         String?
+  regionCode        String?
+  regionName        String?
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  orderRecords      CommissionOrder[] @relation("AgentOrderRecords")
+
+  @@map("MarketAgent")
+}
+
+model CommissionConfig {
+  id             String   @id @default(uuid())
+  level          String   @unique
+  rate           Float    @default(0)
+  minOrderAmount Float    @default(0)
+  maxCommission  Float    @default(0)
+  enabled        Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  @@map("CommissionConfig")
+}
+
+model CommissionOrder {
+  id               String      @id @default(uuid())
+  agentId          String
+  orderAmount      Float
+  commissionRate   Float
+  commissionAmount Float
+  status           String      @default("pending")
+  remark           String      @default("")
+  createdAt        DateTime    @default(now())
+  settledAt        DateTime?
+  userId           String      @db.Uuid
+  orderId          String      @db.Uuid
+  agent            MarketAgent @relation("AgentOrderRecords", fields: [agentId], references: [id])
+
+  @@index([agentId])
+  @@index([userId])
+  @@map("CommissionOrder")
+}
+
+model AgentPlan {
+  id             String   @id @default(uuid())
+  level          String   @unique
+  name           String
+  price          Float
+  months         Int      @default(12)
+  commissionRate Float    @default(0)
+  benefits       String   @default("")
+  icon           String   @default("⭐")
+  color          String   @default("#818cf8")
+  sortOrder      Int      @default(0)
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("AgentPlan")
+}
+
+model AgentWithdraw {
+  id          String    @id @default(uuid())
+  userId      String    @db.Uuid
+  amount      Float
+  accountName String    @default("")
+  status      String    @default("pending")
+  remark      String    @default("")
+  createdAt   DateTime  @default(now())
+  approvedAt  DateTime?
+  adminId     Int?
+  bankAccount String    @default("")
+  bankName    String    @default("")
+
+  @@index([userId])
+  @@map("AgentWithdraw")
+}
+
+model DAGGraph {
+  id             String   @id @default(uuid()) @db.Uuid
+  workflowId     String   @map("workflow_id")
+  dagHash        String?  @map("dag_hash")
+  optimizedGraph String   @map("optimized_graph")
+  parallelGroups String?  @map("parallel_groups")
+  executionOrder String?  @map("execution_order")
+  compiledAt     DateTime @default(now()) @map("compiled_at")
+  version        Int      @default(1)
+
+  @@index([workflowId])
+  @@index([dagHash])
+  @@map("DAGGraph")
+}
+
+model DAGState {
+  id             String   @id @default(uuid()) @db.Uuid
+  dagId          String   @map("dag_id")
+  executionId    String   @unique @map("execution_id")
+  status         String   @default("pending")
+  activeNodes    String?  @map("active_nodes")
+  completedNodes String?  @map("completed_nodes")
+  failedNodes    String?  @map("failed_nodes")
+  currentLoad    Float    @default(0) @map("current_load")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([dagId])
+  @@index([status])
+  @@map("DAGState")
+}
+
+model GPUNode {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  type          String
+  status        String   @default("online")
+  maxCapacity   Int      @default(4) @map("max_capacity")
+  currentLoad   Int      @default(0) @map("current_load")
+  queueDepth    Int      @default(0) @map("queue_depth")
+  temperature   Float?   @default(0)
+  lastHeartbeat DateTime @default(now()) @map("last_heartbeat")
+
+  @@map("GPUNode")
+}
+
+model GPUTaskLog {
+  id               String    @id @default(uuid()) @db.Uuid
+  taskId           String    @map("task_id")
+  model            String
+  priority         Int       @default(50)
+  status           String    @default("queued")
+  assignedGpu      String?   @map("assigned_gpu")
+  userId           String?   @map("user_id")
+  prompt           String?
+  enqueueTime      DateTime  @default(now()) @map("enqueue_time")
+  startTime        DateTime? @map("start_time")
+  endTime          DateTime? @map("end_time")
+  estimatedSeconds Int?      @default(60) @map("estimated_seconds")
+  retryCount       Int       @default(0) @map("retry_count")
+  error            String?
+
+  @@index([status, priority])
+  @@index([assignedGpu])
+  @@index([userId])
+  @@map("GPUTaskLog")
+}
+
+model GPUThrottleState {
+  id            String   @id @default(uuid()) @db.Uuid
+  gpuId         String   @unique @map("gpu_id")
+  loadPercent   Float    @default(0) @map("load_percent")
+  throttleLevel Int      @default(0) @map("throttle_level")
+  mode          String   @default("normal")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("GPUThrottleState")
+}
+
+model SystemMonitor {
+  id                String   @id @default(uuid()) @db.Uuid
+  cpuUsage          Float    @default(0) @map("cpu_usage")
+  gpuUsage          Float    @default(0) @map("gpu_usage")
+  memoryUsage       Float    @default(0) @map("memory_usage")
+  queueDepth        Int      @default(0) @map("queue_depth")
+  llmRequestsPerSec Float    @default(0) @map("llm_requests_per_sec")
+  errorRate         Float    @default(0) @map("error_rate")
+  timestamp         DateTime @default(now())
+
+  @@index([timestamp])
+  @@map("SystemMonitor")
+}
+
+model RateLimit {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id")
+  apiType      String   @map("api_type")
+  limitPerSec  Int      @default(10) @map("limit_per_sec")
+  limitPerMin  Int      @default(60) @map("limit_per_min")
+  limitPerDay  Int      @default(1000) @map("limit_per_day")
+  currentUsage Int      @default(0) @map("current_usage")
+  windowStart  DateTime @default(now()) @map("window_start")
+
+  @@index([userId, apiType])
+  @@map("RateLimit")
+}
+
+model CircuitBreaker {
+  id              String    @id @default(uuid()) @db.Uuid
+  service         String    @unique
+  status          String    @default("closed")
+  failureCount    Int       @default(0) @map("failure_count")
+  successCount    Int       @default(0) @map("success_count")
+  threshold       Int       @default(5)
+  lastFailureTime DateTime? @map("last_failure_time")
+  lastSuccessTime DateTime? @map("last_success_time")
+  cooldownTime    Int       @default(30000)
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("CircuitBreaker")
+}
+
+model WorkerHeartbeat {
+  id           String   @id @default(uuid()) @db.Uuid
+  workerId     String   @map("worker_id")
+  type         String
+  status       String   @default("online")
+  currentTasks Int      @default(0) @map("current_tasks")
+  heartbeatAt  DateTime @default(now()) @map("heartbeat_at")
+  lastActiveAt DateTime @default(now()) @map("last_active_at")
+
+  @@index([workerId])
+  @@index([heartbeatAt])
+  @@map("WorkerHeartbeat")
+}
+
+model DesktopRuntimeConfig {
+  id            String   @id @default(cuid())
+  platform      String
+  runtimeMode   String   @default("desktop")
+  gpuPreference String?
+  autoDetect    Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("DesktopRuntimeConfig")
+}
+
+model LocalGPUNode {
+  id            String   @id @default(cuid())
+  adapterName   String
+  platform      String
+  memoryMB      Int
+  computeUnits  Int
+  driverVersion String?
+  temperature   Float?
+  usagePercent  Float?
+  isAvailable   Boolean  @default(true)
+  lastSeen      DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@map("LocalGPUNode")
+}
+
+model LicenseCache {
+  id           String   @id @default(cuid())
+  userId       String
+  licenseToken String
+  isActive     Boolean  @default(true)
+  expiresAt    DateTime
+  cachedAt     DateTime @default(now())
+  lastVerified DateTime @default(now())
+
+  @@index([userId])
+  @@index([licenseToken])
+  @@index([expiresAt])
+  @@map("LicenseCache")
+}
+
+model LocalAssetIndex {
+  id              String   @id @default(cuid())
+  category        String
+  name            String
+  localPath       String
+  sizeBytes       BigInt
+  checksum        String?
+  syncedFromCloud Boolean  @default(false)
+  lastUsed        DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([category])
+  @@index([syncedFromCloud])
+  @@map("LocalAssetIndex")
+}
+
+model KernelEvent {
+  id            String   @id @default(cuid())
+  eventType     String
+  priority      String   @default("NORMAL")
+  source        String
+  payload       Json?
+  chainDepth    Int      @default(0)
+  traceId       String?
+  isLoopBreaker Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([traceId])
+  @@map("KernelEvent")
+}
+
+model KernelStateSnapshot {
+  id         String   @id @default(cuid())
+  snapshot   Json
+  diff       Json?
+  recordedBy String   @default("kernel")
+  checksum   String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("KernelStateSnapshot")
+}
+
+model RuntimeRegistry {
+  id           String   @id @default(cuid())
+  moduleId     String   @unique
+  name         String
+  dependencies String[]
+  phase        String   @default("BOOTING")
+  priority     Int      @default(0)
+  isActive     Boolean  @default(true)
+  registeredAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([moduleId])
+  @@index([phase])
+  @@map("RuntimeRegistry")
+}
+
+model KernelHealthLog {
+  id              String   @id @default(cuid())
+  moduleId        String
+  status          String
+  score           Float
+  metrics         Json
+  recommendations String[]
+  createdAt       DateTime @default(now())
+
+  @@index([moduleId])
+  @@index([createdAt])
+  @@index([status])
+  @@map("KernelHealthLog")
+}
+
+model SchedulerTask {
+  id           String    @id @default(cuid())
+  taskType     String
+  priority     String    @default("NORMAL")
+  moduleId     String
+  status       String
+  retries      Int       @default(0)
+  maxRetries   Int       @default(3)
+  timeout      Int?
+  submittedAt  DateTime  @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  errorMessage String?
+
+  @@index([taskType])
+  @@index([status])
+  @@index([priority])
+  @@map("SchedulerTask")
+}
+
+model ResourceAllocation {
+  id           String    @id @default(cuid())
+  resourceType String
+  resourceId   String
+  sessionId    String?
+  allocatedTo  String
+  amount       Float
+  unit         String
+  isActive     Boolean   @default(true)
+  allocatedAt  DateTime  @default(now())
+  releasedAt   DateTime?
+
+  @@index([resourceType])
+  @@index([allocatedTo])
+  @@index([isActive])
+  @@map("ResourceAllocation")
+}
+
+model EventLoopViolation {
+  id           String   @id @default(cuid())
+  eventChain   String[]
+  triggerEvent String
+  depth        Int
+  breachedRule String
+  actionTaken  String
+  createdAt    DateTime @default(now())
+
+  @@index([triggerEvent])
+  @@index([createdAt])
+  @@map("EventLoopViolation")
+}
+
+model RuntimeDependencyGraph {
+  id            String   @id @default(cuid())
+  graphId       String
+  version       Int      @default(1)
+  nodes         Json
+  edges         Json
+  cycleDetected Boolean  @default(false)
+  cyclePaths    String[]
+  createdAt     DateTime @default(now())
+
+  @@index([graphId])
+  @@map("RuntimeDependencyGraph")
+}
+
+model KernelShadowEventLog {
+  id            String   @id @default(cuid())
+  eventType     String
+  source        String
+  mirroredAt    DateTime
+  consistency   Float?
+  originalEvent Json?
+  shadowEvent   Json?
+  isMatch       Boolean?
+  createdAt     DateTime @default(now())
+
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([isMatch])
+  @@map("KernelShadowEventLog")
+}
+
+model KernelCutoverScore {
+  id                 String   @id @default(cuid())
+  overallScore       Float
+  eventConsistency   Float
+  stateConsistency   Float
+  schedulerStability Float
+  gpuCorrectness     Float
+  latencyImpact      Float
+  decision           String
+  phase              String
+  createdAt          DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([decision])
+  @@map("KernelCutoverScore")
+}
+
+model KernelDualExecutionLog {
+  id            String   @id @default(cuid())
+  taskId        String
+  taskType      String
+  oldLatency    Float
+  kernelLatency Float
+  matchRate     Float
+  oldResult     Json?
+  kernelResult  Json?
+  diff          Json?
+  passed        Boolean
+  createdAt     DateTime @default(now())
+
+  @@index([taskId])
+  @@index([passed])
+  @@index([createdAt])
+  @@map("KernelDualExecutionLog")
+}
+
+model KernelStateDiffLog {
+  id           String   @id @default(cuid())
+  statePath    String
+  oldValue     Json?
+  kernelValue  Json?
+  diff         Json?
+  isConsistent Boolean
+  severity     String
+  createdAt    DateTime @default(now())
+
+  @@index([isConsistent])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("KernelStateDiffLog")
+}
+
+model KernelRollbackHistory {
+  id            String   @id @default(cuid())
+  reason        String
+  triggerSource String
+  phase         String
+  snapshotId    String?
+  errorRate     Float?
+  duration      Int?
+  success       Boolean
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([success])
+  @@map("KernelRollbackHistory")
+}
+
+model KernelHealthMetrics {
+  id             String   @id @default(cuid())
+  eventLatency   Float
+  schedulerDelay Float
+  gpuUtilization Float
+  workerLoad     Float
+  stateSyncDelay Float
+  errorRate      Float
+  memoryUsage    Float
+  healthScore    Float
+  recordedAt     DateTime @default(now())
+
+  @@index([recordedAt])
+  @@map("KernelHealthMetrics")
+}
+
+/// 生成任务的参考图记录
+model GenerationReference {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  taskId    String
+  assetUrl  String
+  assetId   String?  @db.Uuid
+  refType   String   @default("style")
+  weight    Float    @default(0.5)
+  priority  String   @default("secondary")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([taskId])
+  @@map("GenerationReference")
+}
+
+/// 作品生成记录（包含参考图和参数快照）
+model ProductionRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  projectId      String?  @db.Uuid
+  title          String   @default("未命名")
+  prompt         String   @default("")
+  resultType     String
+  resultUrl      String?
+  thumbnail      String?
+  referenceMode  String   @default("soft")
+  directorParams Json?
+  version        Int      @default(1)
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("ProductionRecord")
+}
+
+model World {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String           @default("新世界")
+  state           Json             @default("{}")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  characters      Character[]      @relation("WorldCharacters")
+  events          Event[]          @relation("WorldEvents")
+  narrativeScenes NarrativeScene[] @relation("WorldScenes")
+  observers       Observer[]       @relation("WorldObservers")
+
+  @@map("World")
+}
+
+model Observer {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String?  @db.Uuid
+  worldId         String   @db.Uuid
+  role            String   @default("observer")
+  influenceWeight Float    @default(0.1)
+  stats           Json     @default("{}")
+  createdAt       DateTime @default(now())
+  world           World    @relation("WorldObservers", fields: [worldId], references: [id])
+
+  @@index([worldId])
+  @@map("Observer")
+}
+
+model Event {
+  id        String   @id @default(uuid()) @db.Uuid
+  worldId   String   @db.Uuid
+  type      String
+  tick      Int      @default(0)
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+  world     World    @relation("WorldEvents", fields: [worldId], references: [id])
+
+  @@index([worldId, tick])
+  @@map("Event")
+}
+
+model NarrativeScene {
+  id         String   @id @default(uuid()) @db.Uuid
+  worldId    String   @db.Uuid
+  summary    String   @default("")
+  importance Float    @default(0.5)
+  tickRange  String   @default("")
+  data       Json?    @default("{}")
+  createdAt  DateTime @default(now())
+  world      World    @relation("WorldScenes", fields: [worldId], references: [id])
+
+  @@index([worldId])
+  @@map("NarrativeScene")
+}
+
+model Character {
+  id          String              @id @default(uuid())
+  worldId     String              @db.Uuid
+  name        String
+  age         Int                 @default(30)
+  faction     String              @default("civilian")
+  location    String              @default("city_center")
+  activity    String              @default("observing")
+  alive       Boolean             @default(true)
+  personality String              @default("{\"logic\":0.5,\"emotion\":0.5,\"aggression\":0.3,\"empathy\":0.5}")
+  emotion     String              @default("{\"joy\":0.5,\"anger\":0.1,\"fear\":0.2,\"sadness\":0.1,\"trust\":0.5}")
+  state       String              @default("{}")
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  tickBorn    Int                 @default(0)
+  tickDied    Int?
+  world       World               @relation("WorldCharacters", fields: [worldId], references: [id])
+  behaviors   CharacterBehavior[]
+  memories    CharacterMemory[]
+  relations   CharacterRelation[] @relation("fromChar")
+  relationsTo CharacterRelation[] @relation("toChar")
+
+  @@index([worldId])
+  @@map("Character")
+}
+
+model CharacterMemory {
+  id           String    @id @default(uuid())
+  characterId  String
+  type         String    @default("event")
+  content      String
+  importance   Float     @default(0.5)
+  tick         Int
+  emotionalTag String    @default("neutral")
+  createdAt    DateTime  @default(now())
+  character    Character @relation(fields: [characterId], references: [id])
+
+  @@index([characterId])
+  @@map("CharacterMemory")
+}
+
+model CharacterRelation {
+  id        String    @id @default(uuid())
+  fromId    String
+  toId      String
+  type      String    @default("trust")
+  value     Float     @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  from      Character @relation("fromChar", fields: [fromId], references: [id])
+  to        Character @relation("toChar", fields: [toId], references: [id])
+
+  @@index([fromId])
+  @@index([toId])
+  @@map("CharacterRelation")
+}
+
+model CharacterBehavior {
+  id          String    @id @default(uuid())
+  characterId String
+  action      String    @default("observe")
+  targetId    String?
+  context     String    @default("")
+  tick        Int
+  score       Float     @default(0)
+  executed    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  character   Character @relation(fields: [characterId], references: [id])
+
+  @@index([characterId])
+  @@map("CharacterBehavior")
+}
+
+model PipelineStage {
+  id             String    @id @default(uuid()) @db.Uuid
+  projectId      String    @db.Uuid
+  stageKey       String    @map("stage_key")
+  status         String    @default("pending")
+  inputData      Json?     @map("input_data")
+  outputData     Json?     @map("output_data")
+  referenceUrls  Json?     @map("reference_urls")
+  runtimeVersion String?   @map("runtime_version")
+  blockedBy      String?   @map("blocked_by")
+  blockReason    String?   @map("block_reason")
+  error          String?
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, stageKey])
+  @@map("pipeline_stages")
+}
+
+model PipelineJob {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @db.Uuid
+  stageKey    String    @map("stage_key")
+  jobType     String    @map("job_type")
+  status      String    @default("pending")
+  payload     Json?
+  result      Json?
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  priority    Int       @default(0)
+  sortKey     Int?      @map("sort_key")
+  error       String?
+  lockedBy    String?   @map("locked_by")
+  lockedAt    DateTime? @map("locked_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, stageKey])
+  @@index([status, lockedBy])
+  @@index([status, priority])
+  @@map("pipeline_jobs")
+}
+
+model CharacterImage {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @db.Uuid
+  characterName String
+  variant       String   @default("")
+  imageUrl      String
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, characterName, variant])
+  @@map("character_images")
+}
+
+model SceneImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  sceneName String
+  imageUrl  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sceneName])
+  @@map("scene_images")
+}
+
+model StoryboardImage {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  segmentId   String
+  description String?
+  imageUrl    String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, segmentId])
+  @@map("storyboard_images")
+}
+
+model PropImage {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @db.Uuid
+  propName       String   @map("prop_name")
+  category       String   @default("通用")
+  description    String?
+  imageUrl       String   @map("image_url")
+  imagePrompt    String?  @map("image_prompt")
+  negativePrompt String?  @map("negative_prompt")
+  referenceUrl   String?  @map("reference_url")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("prop_images")
+}
+
+model PropLibrary {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  category      String   @default("通用")
+  description   String?
+  defaultPrompt String?
+  imageUrl      String?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@map("prop_library")
+}
+
+model FrameImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  segmentId String
+  frameType String
+  imageUrl  String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, segmentId, frameType])
+  @@map("frame_images")
+}
+
+model CharacterReference {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @db.Uuid
+  characterName String
+  imageUrl      String
+  refType       String   @default("standard")
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, characterName, refType])
+  @@map("character_references")
+}
+
+model SceneReference {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  sceneName String
+  imageUrl  String
+  refType   String   @default("standard")
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sceneName, refType])
+  @@map("scene_references")
+}
+
+model CustomerChatSession {
+  id        String                @id @default(cuid())
+  userId    String                @map("user_id")
+  status    String                @default("active")
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt @map("updated_at")
+  messages  CustomerChatMessage[]
+
+  @@map("customer_chat_sessions")
+}
+
+model CustomerChatMessage {
+  id        String              @id @default(cuid())
+  sessionId String              @map("session_id")
+  role      String
+  content   String
+  createdAt DateTime            @default(now()) @map("created_at")
+  session   CustomerChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("customer_chat_messages")
+}
+
+model CustomerChatMemory {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  key       String
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, key])
+  @@map("customer_chat_memories")
+}
+
+model Job {
+  id        String   @id
+  projectId String?
+  type      String
+  status    String
+  stage     String
+  progress  Int      @default(0)
+  payload   Json?
+  result    Json?
+  trace     Json?
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([status])
+  @@index([type])
+  @@map("jobs")
+}
+
+model UsageLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  projectId  String?  @db.Uuid
+  taskId     String?
+  cost       Float    @default(0)
+  taskType   String
+  provider   String
+  tokens     String?
+  isPlatform Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([taskType])
+  @@map("usage_logs")
+}
+
+model WorldMemory {
+  id         String   @id @default(cuid())
+  projectId  String
+  entityType String
+  entityId   String   @map("entity_id")
+  name       String?
+  memory     Json
+  tags       String[] @default([])
+  episodeRef Int?     @map("episode_ref")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([projectId, entityType, entityId])
+  @@index([projectId])
+  @@index([projectId, entityType])
+  @@map("world_memory")
+}
+
+model StoryConstitution {
+  id                  String   @id @default(cuid())
+  projectId           String   @map("project_id")
+  schemaVersion       String   @map("schema_version")
+  constitutionVersion String   @map("constitution_version")
+  constitutionHash    String   @unique @map("constitution_hash")
+  constitution        Json
+  immutable           Boolean  @default(true)
+  degraded            Boolean  @default(false)
+  degradeReason       String?  @map("degrade_reason")
+  confidence          Float    @default(0)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([projectId])
+  @@index([constitutionHash])
+  @@map("story_constitution")
+}
+
+model DirectorMemory {
+  id               String   @id @default(cuid())
+  projectId        String   @unique @map("project_id")
+  continuityState  Json     @map("continuity_state")
+  emotionalHistory Json     @map("emotional_history")
+  visualAnchors    Json     @map("visual_anchors")
+  characterLocks   Json     @map("character_locks")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("director_memory")
+}
+
+model JobQueue {
+  id        String    @id @default(cuid())
+  jobId     String    @map("job_id")
+  type      String
+  status    String
+  priority  Int       @default(1)
+  lockedBy  String?   @map("locked_by")
+  lockedAt  DateTime? @map("locked_at")
+  projectId String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, priority])
+  @@index([projectId])
+  @@map("job_queue")
+}
+
+model AssetRegistry {
+  id             String         @id @default(uuid()) @db.Uuid
+  projectId      String         @db.Uuid
+  type           String
+  sourceId       String
+  status         String         @default("draft")
+  currentVersion Int            @default(1)
+  sortOrder      Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions       AssetVersion[]
+
+  @@unique([projectId, type, sourceId])
+  @@index([projectId, type, status])
+  @@map("AssetRegistry")
+}
+
+model AssetVersion {
+  id               String        @id @default(uuid()) @db.Uuid
+  assetRegistryId  String        @db.Uuid
+  version          Int           @default(1)
+  optimizationType String?
+  agent            String?
+  diffSummary      String?
+  content          Json
+  prompt           Json?
+  userEdited       Boolean       @default(false) @map("user_edited")
+  parentVersion    Int?          @map("parent_version")
+  locked           Boolean       @default(false)
+  referenceImages  Json?         @map("reference_images")
+  createdAt        DateTime      @default(now())
+  asset            AssetRegistry @relation(fields: [assetRegistryId], references: [id], onDelete: Cascade)
+
+  @@unique([assetRegistryId, version])
+  @@index([assetRegistryId, createdAt])
+  @@map("AssetVersion")
+}
+
+model ContinuityLink {
+  id               String   @id @default(uuid()) @db.Uuid
+  projectId        String   @db.Uuid
+  fromSegmentId    String   @db.Uuid
+  fromType         String
+  toSegmentId      String   @db.Uuid
+  toType           String
+  linkType         String   @default("next_scene")
+  inheritedContent Json?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, fromSegmentId])
+  @@map("ContinuityLink")
+}
+
+model InvocationLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  projectId       String?
+  traceId         String?
+  executionId     String?
+  stageId         String?
+  capability      String
+  provider        String?
+  model           String
+  status          String
+  latencyMs       Int?
+  tokenUsage      Int?
+  errorMsg        String?
+  fallbackChain   Json?
+  sourcePath      String?
+  runtimeVersion  String?
+  agentType       String?
+  operationType   String?
+  assetRegistryId String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([projectId, capability])
+  @@index([traceId])
+  @@index([executionId])
+  @@map("InvocationLog")
+}
+
+model AssetGraphEdge {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @db.Uuid
+  fromAssetId  String   @db.Uuid
+  fromType     String
+  toAssetId    String   @db.Uuid
+  toType       String
+  relationType String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, fromAssetId])
+  @@index([projectId, toAssetId])
+  @@index([projectId, relationType])
+  @@map("AssetGraphEdge")
+}
+
+model Organization {
+  id         String      @id @default(uuid()) @db.Uuid
+  name       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  members    OrgMember[]
+  workspaces Workspace[]
+
+  @@map("Organization")
+}
+
+model OrgMember {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  userId         String       @db.Uuid
+  role           String       @default("member")
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("OrgMember")
+}
+
+model Workspace {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  projects       Project[]
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("Workspace")
+}
+
+model CommunityCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String?
+  sortOrder   Int      @default(0)
+  postCount   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@map("community_categories")
+}
+
+model CommunitySensitiveWord {
+  id          String   @id @default(uuid()) @db.Uuid
+  word        String   @unique
+  replaceWith String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("community_sensitive_words")
+}
+
+model CommunityPost {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @db.Uuid
+  title        String
+  content      String
+  mediaJson    String             @default("[]")
+  tags         String             @default("")
+  category     String             @default("general")
+  status       String             @default("pending")
+  rejectReason String?
+  viewCount    Int                @default(0)
+  likeCount    Int                @default(0)
+  commentCount Int                @default(0)
+  rewardCoins  Int                @default(0)
+  isPinned     Boolean            @default(false)
+  isEssence    Boolean            @default(false)
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  comments     CommunityComment[]
+  likes        CommunityLike[]
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewards      CommunityReward[]
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([category])
+  @@map("community_posts")
+}
+
+model CommunityComment {
+  id        String                 @id @default(uuid()) @db.Uuid
+  postId    String                 @db.Uuid
+  userId    String                 @db.Uuid
+  parentId  String?                @db.Uuid
+  content   String
+  likeCount Int                    @default(0)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  likes     CommunityCommentLike[]
+  parent    CommunityComment?      @relation("CommentReply", fields: [parentId], references: [id])
+  replies   CommunityComment[]     @relation("CommentReply")
+  post      CommunityPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId])
+  @@map("community_comments")
+}
+
+model CommunityLike {
+  id        String        @id @default(uuid()) @db.Uuid
+  postId    String        @db.Uuid
+  userId    String        @db.Uuid
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("community_likes")
+}
+
+model CommunityCommentLike {
+  id        String           @id @default(uuid()) @db.Uuid
+  commentId String           @db.Uuid
+  userId    String           @db.Uuid
+  createdAt DateTime         @default(now())
+  comment   CommunityComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("community_comment_likes")
+}
+
+model CommunityReward {
+  id        String        @id @default(uuid()) @db.Uuid
+  postId    String        @db.Uuid
+  userId    String        @db.Uuid
+  coins     Int
+  remark    String?       @default("")
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("community_rewards")
+}
+
+model StorageConfig {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  type      String   @default("minio")
+  endpoint  String
+  region    String?
+  accessKey String
+  secretKey String
+  bucket    String   @default("aigc-assets")
+  isDefault Boolean  @default(false)
+  enabled   Boolean  @default(true)
+  remark    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("storage_configs")
+}
+
+model ProviderState {
+  id              String    @id @default(cuid())
+  userId          String
+  provider        String
+  status          String
+  lastError       String?
+  errorCode       String?
+  lastSuccessAt   DateTime?
+  lastFailAt      DateTime?
+  failureCount    Int       @default(0)
+  circuitOpenedAt DateTime?
+  keyFingerprint  String?
+  enabled         Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, provider])
+  @@index([userId, provider])
+  @@map("provider_state")
+}
+
+model LlmExecutionTrace {
+  id           String   @id @default(cuid())
+  traceId      String
+  userId       String
+  provider     String
+  model        String
+  success      Boolean
+  latencyMs    Int
+  decisionPath Json?
+  sourcePath   String?
+  error        String?
+  timestamp    DateTime @default(now())
+
+  @@index([traceId])
+  @@index([userId])
+  @@index([userId, timestamp(sort: Desc)])
+  @@map("llm_execution_trace")
+}
+
+model UserMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  fromId    String   @map("from_id") @db.Uuid
+  toId      String   @map("to_id") @db.Uuid
+  content   String
+  media     String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  fromUser  User     @relation("messages_sent", fields: [fromId], references: [id], onDelete: Cascade)
+  toUser    User     @relation("messages_received", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([toId, createdAt])
+  @@index([fromId, createdAt])
+  @@index([toId, read])
+  @@map("user_messages")
+}
+
+model AnalyticsEvent {
+  id        BigInt   @id @default(autoincrement())
+  userId    String   @db.Uuid
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([event, createdAt])
+  @@index([createdAt])
+  @@map("analytics_events")
+}
+
+model NarrativeV3Metrics {
+  id                      BigInt   @id @default(autoincrement())
+  scriptId                String   @db.Uuid
+  userId                  String   @db.Uuid
+  fillCameraShot          Float    @default(0)
+  fillCameraMovement      Float    @default(0)
+  fillCameraAngle         Float    @default(0)
+  fillCameraLens          Float    @default(0)
+  fillEnvLocation         Float    @default(0)
+  fillEnvLighting         Float    @default(0)
+  fillEnvAtmosphere       Float    @default(0)
+  fillEnvColorPalette     Float    @default(0)
+  fillEmotionType         Float    @default(0)
+  fillEmotionIntensity    Float    @default(0)
+  fillCharacterPresence   Float    @default(0)
+  fillAction              Float    @default(0)
+  fillDialogue            Float    @default(0)
+  qualityCameraAngle      Float    @default(0)
+  qualityEmotionIntensity Float    @default(0)
+  qualityColorPalette     Float    @default(0)
+  semanticYield           Float    @default(0)
+  segmentCount            Int      @default(0)
+  rawStats                Json?
+  createdAt               DateTime @default(now())
+
+  @@index([createdAt], map: "idx_narrative_v3_metrics_created_at")
+  @@index([scriptId], map: "idx_narrative_v3_metrics_script_id")
+  @@index([userId, createdAt], map: "idx_narrative_v3_metrics_user_id")
+  @@map("narrative_v3_metrics")
+}
+
+model RouteConfig {
+  id        String   @id @default(cuid())
+  scope     String
+  key       String
+  value     Json
+  label     String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scope, key])
+  @@map("route_config")
+}
+
+model ScriptBreakdown {
+  id                String   @id @default(uuid()) @db.Uuid
+  projectId         String?
+  title             String
+  script            String
+  targetDuration    Int
+  segmentDuration   Int      @default(10)
+  fixedSystemPrompt String
+  status            Int      @default(0)
+  resultScript      String?
+  userId            String   @db.Uuid
+  characters        Json?
+  scenes            Json?
+  dialogues         Json?
+  actions           Json?
+  videoSegments     Json?
+  voices            Json?
+  meta              Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("ScriptBreakdown")
+}
+
+model P18Pair {
+  pairId              String                  @id
+  projectId           String                  @db.Uuid
+  userId              String                  @db.Uuid
+  scriptContent       String?
+  v2TaskId            String?
+  v3TaskId            String?
+  status              String                  @default("pending")
+  error               String?
+  v3FillRate          Json?
+  v3QualityRate       Json?
+  v3SemanticYield     Float                   @default(0)
+  v3FallbackRate      Float                   @default(0)
+  v3MissingFieldRate  Float                   @default(0)
+  v3PromptFailureRate Float                   @default(0)
+  v3PerceptualScores  Json?
+  createdAt           DateTime                @default(now()) @db.Timestamp(6)
+  completedAt         DateTime?               @db.Timestamp(6)
+  V3RenderResult      public_V3RenderResult[]
+}
+
+model V3RenderResult {
+  taskId      String    @id
+  pairId      String
+  userId      String    @db.Uuid
+  success     Boolean   @default(false)
+  spec        Json?
+  prompt      String?
+  traceId     String?
+  error       String?
+  stage       String?
+  code        String?
+  shotCount   Int?      @default(0)
+  factGrid    Json?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([pairId])
+  @@index([userId])
+  @@map("v3_render_results")
+}
+
+model public_V3RenderResult {
+  taskId      String    @id
+  pairId      String
+  userId      String    @db.Uuid
+  success     Boolean   @default(false)
+  spec        Json?
+  prompt      String?
+  traceId     String?
+  error       String?
+  stage       String?
+  code        String?
+  shotCount   Int       @default(0)
+  factGrid    Json?
+  createdAt   DateTime  @default(now()) @db.Timestamp(6)
+  completedAt DateTime? @db.Timestamp(6)
+  P18Pair     P18Pair   @relation(fields: [pairId], references: [pairId], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("V3RenderResult")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model p18_pairs {
+  pairId              String
+  projectId           String    @db.Uuid
+  userId              String    @db.Uuid
+  scriptContent       String?
+  v2TaskId            String?
+  v3TaskId            String?
+  status              String    @default("pending")
+  error               String?
+  v3FillRate          Json?
+  v3QualityRate       Json?
+  v3SemanticYield     Float     @default(0)
+  v3FallbackRate      Float     @default(0)
+  v3MissingFieldRate  Float     @default(0)
+  v3PromptFailureRate Float     @default(0)
+  v3PerceptualScores  Json?
+  createdAt           DateTime  @default(now()) @db.Timestamp(6)
+  completedAt         DateTime? @db.Timestamp(6)
+
+  @@ignore
+}
+
+enum VideoTaskStatus {
+  queued
+  processing
+  optimizing
+  storyboarding
+  generating
+  stitching
+  completed
+  failed
+  cancelled
+}
+
+enum TaskLogLevel {
+  info
+  warn
+  error
+}
+
+enum AssetType {
+  image
+  video
+  audio
+  other
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 混沌珠小说工作台 — Hdz 模型（独立于昆仑镜短剧系统）
+// ═══════════════════════════════════════════════════════════════════════════
+
+model HdzProject {
+  id                String     @id @default(uuid()) @db.Uuid
+  userId            String
+  title             String
+  genre             String?                   // 小说类型：玄幻/科幻/言情/悬疑...
+  wordTarget        Int?                      // 目标总字数（0=不限）
+  chapterWordTarget Int?                      // 单章目标字数
+  styleDesc         String?                   // 写作风格描述
+  status            String     @default("draft")  // draft / active / completed
+  locks             Json       @default("{}")     // {styleLocked, outlineLocked, logicLocked}
+  // 封面
+  authorNickname    String?
+  coverPrompt       String?   @db.Text
+  coverImgUrl       String?
+  masterStyle       String?                   // 选中的大师风格标识（如: wangzengqi, laoshe...）
+  // 发布
+  isPublished       Boolean   @default(false)
+  publishedAt       DateTime?
+  publishWordCount  Int?
+
+  // 图书馆管理员
+  libraryReaderEnabled   Boolean   @default(false)   // 是否启用图书馆管理员自动阅读
+  libraryReaderCache     Json?     @default("{}")   // [{chapterNo, title, summary}] — 近5章逐章摘要
+  libraryReaderSummaries Json?     @default("{}")   // {batches: [{level, batchIndex, chapterStart, chapterEnd, summary}]} — 各层级批次小结
+
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  sessions   HdzSession[]
+  characters HdzCharacter[]
+  factions   HdzFaction[]
+  chapters   HdzChapter[]
+  memories   HdzMemory[]
+  styleDna   HdzStyleDna?
+  agentTasks HdzAgentTask[]
+  manuscripts HdzManuscript[]
+  outlines   HdzOutline[]
+  publishLogs HdzPublishLog[]
+  entityRegistries    EntityRegistry[]
+  sceneDags           SceneDag[]
+  worldStates         WorldState[]
+  writerAlignmentMetrics WriterAlignmentMetric[]
+  plotDagEdges        PlotDagEdge[]
+
+  @@index([userId])
+  @@map("hdz_projects")
+}
+
+model HdzSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  userId    String
+  status    String   @default("active")  // active / paused / completed
+  messages  Json     @default("[]")      // [{role, content, timestamp}]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("hdz_sessions")
+}
+
+model HdzChapter {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  chapterNo   Int
+  title       String?
+  status      String   @default("outline")  // outline / draft / reviewed / final
+  outline     String?  @db.Text             // 大纲 / 段落指导
+  content     String?  @db.Text             // 正文
+  wordCount   Int?                          // 字数
+  summary     String?   @db.Text            // 章节摘要（上下文管理用）
+  reviewNotes Json?    @default("[]")       // [{issue, severity, suggestion}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, chapterNo])
+  @@index([projectId, chapterNo])
+  @@map("hdz_chapters")
+}
+
+model HdzCharacter {
+  id         String   @id @default(uuid()) @db.Uuid
+  projectId  String   @db.Uuid
+  name       String
+  role       String   @default("supporting")  // protagonist / antagonist / supporting / minor
+  properties Json     @default("{}")           // {age, gender, appearance, personality, background, motivation}
+  relations  Json?    @default("[]")           // [{target, type, description}]
+  arc        String?                          // 角色弧线描述
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("hdz_characters")
+}
+
+model HdzFaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  name        String
+  type        String   @default("sect")     // sect/kingdom/company/family/gang/military/other
+  description String?  @db.Text             // 组织介绍
+  leaderIds   String[] @default([])         // 领导者角色ID列表
+  memberIds   String[] @default([])         // 成员角色ID列表
+  properties  Json?    @default("{}")       // {location, ranking, scale, culture, era}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("hdz_factions")
+}
+
+model HdzMemory {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  type      String                            // world_state / character_matrix / pending_hooks / chapter_summary / location_state / pov_tracker / timeline
+  content   Json                              // 结构化记忆数据
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type])
+  @@map("hdz_memories")
+}
+
+model HdzStyleDna {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @unique @db.Uuid
+  sourceText  String?  @db.Text             // 用户上传的参考文本
+  fingerprint Json     @default("{}")          // 文风指纹：{sentenceLength, vocabulary, emotionPatterns, ...}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("hdz_style_dna")
+}
+
+model HdzAgentTask {
+  id              String    @id @default(uuid()) @db.Uuid
+  projectId       String    @db.Uuid
+  sessionId       String?   @db.Uuid
+  agentType       String                           // planner / character_agent / director / writer / reviewer
+  status          String    @default("queued")      // queued / running / completed / failed / waiting_approval
+  input           Json      @default("{}")          // 输入参数
+  output          Json?                             // 输出结果
+  approvalStatus  String?                           // pending / approved / rejected / modified
+  approvalNote    String?                           // 用户修改意见
+  tokenCost       Int?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("hdz_agent_tasks")
+}
+
+model HdzManuscript {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  title       String?
+  content     Json     @default("[]")  // [{type: "paragraph"|"heading"|"dialogue"|"scene_break", content: "..."}]
+  wordCount   Int      @default(0)
+  sectionNo   Int      @default(0)
+  isFinal     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sectionNo])
+  @@map("hdz_manuscripts")
+}
+
+model HdzOutline {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  title       String
+  content     Json     @default("[]")  // [{type: "act"|"chapter"|"section", title: "...", summary: "...", keyEvents: ["..."]}]
+  status      String   @default("draft")  // draft / active / locked
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("hdz_outlines")
+}
+
+model HdzPublishLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  target      String                            // platform name
+  status      String   @default("pending")       // pending / published / failed
+  result      Json?
+  createdAt   DateTime @default(now())
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("hdz_publish_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HDZ Schema Reconcile — Phase X 基础设施模型（于 2026-06-26 补齐）
+// 6 个模型在代码中被引用但 Prisma Schema 缺失，属于架构完整性修复。
+// ═══════════════════════════════════════════════════════════════════════════
+
+model EntityRegistry {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  entityType  String                        // 'character' | 'item' | 'location' | 'event'
+  name        String
+  aliases     String[] @default([])         // 别名列表
+  createdAt   DateTime @default(now())
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId, entityType])
+  @@map("entity_registry")
+}
+
+model EventLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityType  String                        // 'task' | 'chapter' | 'character'
+  entityId    String                        // 关联实体 ID
+  eventType   String                        // 'TASK_STARTED' | 'TASK_COMPLETED' | 'TASK_FAILED' | 'TASK_REJECTED' | 'TASK_APPROVED' | 'CHAPTER_STATUS_CHANGED'
+  payload     Json     @default("{}")       // 事件负载数据
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([eventType])
+  @@map("event_log")
+}
+
+model SceneDag {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  sceneId     String                        // e.g. 'ch1_s1'
+  chapterNo   Int
+  sceneNo     Int
+  dagJson     Json     @default("{}")       // { involvedEntities, constraints, entityCount, entityContract? }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sceneId])
+  @@index([projectId, chapterNo])
+  @@map("scene_dag")
+}
+
+model WorldState {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  entityId    String                        // 关联 entityRegistry.id
+  stateJson   Json     @default("{}")       // { health, inventory, location, relationships, statusFlags... }
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, entityId])
+  @@index([projectId])
+  @@map("world_state")
+}
+
+model WriterAlignmentMetric {
+  id                String   @id @default(uuid()) @db.Uuid
+  projectId         String   @db.Uuid
+  chapterId         String?  @db.Uuid          // 可选关联章节
+  scoreJson         Json     @default("{}")   // { overall_score, character, plot, style, pacing, dialogue... }
+  shadowStateDelta  Json?                       // Writer Shadow 状态差异
+  createdAt         DateTime @default(now())
+
+  project HdzProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("writer_alignment_metrics")
+}
+
+model PlotDagEdge {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  sourceId    String                        // 源节点 sceneId
+  targetId    String                        // 目标节点 sceneId
+  edgeType    String   @default("causality")// 'causality' | 'parallel' | 'alternative'
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("plot_dag_edges")
+}
+
+
+model PromptVariant {
+  id            String   @id @default(uuid())
+  name          String
+  version       String   @default("v1")
+  label         String   @default("canary")
+  description   String?
+  parentVersion String?
+  content       Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([name, version])
+  @@map("prompt_variant")
+}
+
+// ============================================================
+// Brand GEO — Phase 2 Models
+// ============================================================
+
+model GeoProject {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  website   String?
+  industry  String?
+  language  String?
+  country   String?
+  status    String   @default("active")
+
+  brandProfile    GeoBrandProfile?
+  websiteSnapshot WebsiteSnapshot?
+  knowledgeGraph  GeoGraphNode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  schemaVersion Int @default(1)
+
+  @@map("geo_projects")
+}
+
+model GeoBrandProfile {
+  id             String   @id @default(uuid())
+  projectId      String   @unique
+  project        GeoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  brandName      String?
+  website        String?
+  company        String?
+  industry       String?
+  primaryProducts String?
+  coreServices   String?
+  targetAudience String?
+  targetRegions  String?
+  primaryLanguage String?
+  competitors    String? // JSON array
+  keywords       String? // JSON array
+  brandDesc      String?
+  socialLinks    String? // JSON array
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  schemaVersion Int @default(1)
+
+  @@map("geo_brand_profiles")
+}
+
+model WebsiteSnapshot {
+  id          String   @id @default(uuid())
+  projectId   String   @unique
+  project     GeoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url         String
+  title       String?
+  description String?
+  language    String?
+  robots      String?  // JSON
+  sitemap     String?  // JSON
+  meta        String?  // JSON
+  openGraph   String?  // JSON
+  schema      String?  // JSON
+  jsonLd      String?  // JSON array
+  pages       String?  // JSON array
+  images      String?  // JSON array
+  scripts     String?  // JSON array
+  styles      String?  // JSON array
+  headers     String?  // JSON
+  status      String   @default("pending")
+  error       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  scanVersion Int @default(1)
+
+  @@map("website_snapshots")
+}
+
+model GeoGraphNode {
+  id        String   @id @default(uuid())
+  projectId String
+  project   GeoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String   // brand, product, service, page, article, faq, api, document, person, organization, concept
+  label     String
+  properties String? // JSON
+
+  outgoing GeoGraphEdge[] @relation("outgoing")
+  incoming GeoGraphEdge[] @relation("incoming")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  schemaVersion Int @default(1)
+
+  @@index([projectId])
+  @@map("geo_graph_nodes")
+}
+
+model GeoGraphEdge {
+  id        String   @id @default(uuid())
+  sourceId  String
+  targetId  String
+  type      String   // contains, belongs_to, mentions, references, related_to, supports, competes_with
+  properties String? // JSON
+
+  source    GeoGraphNode @relation("outgoing", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    GeoGraphNode @relation("incoming", fields: [targetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  schemaVersion Int @default(1)
+
+  @@index([sourceId])
+  @@index([targetId])
+  @@map("geo_graph_edges")
+}

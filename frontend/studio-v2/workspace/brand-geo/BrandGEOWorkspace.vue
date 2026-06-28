@@ -14,12 +14,23 @@
           <h2 class="geo-topbar-title">{{ runtime.currentPanelTitle.value }}</h2>
         </div>
         <div class="geo-topbar-right">
+          <!-- Workspace Flow Stage Badge -->
+          <span v-if="selectedV2Project" class="geo-topbar-stage-badge">
+            📋 {{ runtime.stageLabel(runtime.workspaceFlow.value.currentStage) }}
+          </span>
+
+          <span v-if="selectedV2Project" class="geo-topbar-brand-tag">
+            📦 {{ selectedV2Project.name }}
+          </span>
+
           <span v-if="runtime.selectedBrandId.value" class="geo-topbar-brand-tag">
             🏷️ {{ selectedBrandName }}
           </span>
+
           <button v-if="runtime.error.value" class="geo-topbar-error-btn" @click="runtime.setError(null)">
             ⚠️ {{ runtime.error.value }}
           </button>
+
           <div v-if="runtime.loading.value" class="geo-topbar-loading">
             <span class="geo-loading-spinner"></span>
             <span>加载中...</span>
@@ -29,14 +40,45 @@
 
       <!-- 内容区 -->
       <div class="geo-content-area">
-        <!-- Dashboard -->
+        <!-- Dashboard (V2) -->
         <GeoDashboard
           v-if="activePanelId === 'dashboard'"
           :stats="runtime.dashboardStats.value"
           @navigate="onNavigate"
         />
 
-        <!-- Placeholder panels for other 11 menu items -->
+        <!-- V2 Pages -->
+        <ProjectSelectPage
+          v-else-if="activePanelId === 'project-select'"
+          @create="onNavigate('project-create')"
+          @select="onProjectSelected"
+        />
+
+        <ProjectCreatePage
+          v-else-if="activePanelId === 'project-create'"
+          @created="onProjectCreated"
+          @cancel="onNavigate('dashboard')"
+        />
+
+        <BrandProfilePage
+          v-else-if="activePanelId === 'brand-profile'"
+          :project-id="selectedV2ProjectId"
+          @saved="onBrandProfileSaved"
+          @skipped="onNavigate('website-scanner')"
+        />
+
+        <WebsiteScannerPage
+          v-else-if="activePanelId === 'website-scanner'"
+          :project-id="selectedV2ProjectId"
+          @scanned="onWebsiteScanned"
+        />
+
+        <KnowledgeGraphPage
+          v-else-if="activePanelId === 'knowledge-graph'"
+          :project-id="selectedV2ProjectId"
+        />
+
+        <!-- Placeholder panels for Phase 1 items -->
         <GeoPlaceholderPanel
           v-else
           :title="panelTitle"
@@ -49,17 +91,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useBrandGEORuntime } from '~/studio-v2/workspace/brand-geo/composables/useBrandGEORuntime'
+import { useBrandGeoStore } from '~/studio-v2/workspace/brand-geo/stores/useBrandGeoStore'
 import BrandGEOSidebar from '~/studio-v2/workspace/brand-geo/components/BrandGEOSidebar.vue'
 import GeoDashboard from '~/studio-v2/workspace/brand-geo/components/GeoDashboard.vue'
 import GeoPlaceholderPanel from '~/studio-v2/workspace/brand-geo/components/GeoPlaceholderPanel.vue'
+import ProjectSelectPage from '~/studio-v2/workspace/brand-geo/pages/ProjectSelectPage.vue'
+import ProjectCreatePage from '~/studio-v2/workspace/brand-geo/pages/ProjectCreatePage.vue'
+import BrandProfilePage from '~/studio-v2/workspace/brand-geo/pages/BrandProfilePage.vue'
+import WebsiteScannerPage from '~/studio-v2/workspace/brand-geo/pages/WebsiteScannerPage.vue'
+import KnowledgeGraphPage from '~/studio-v2/workspace/brand-geo/pages/KnowledgeGraphPage.vue'
 import type { GeoPanelId } from '~/studio-v2/types/geo'
 
 const runtime = useBrandGEORuntime()
+const store = useBrandGeoStore()
 const activePanelId = ref<GeoPanelId>('dashboard')
 
-// Panel titles/descriptions/icons for placeholders
+// Panel metadata for Phase 1 panels
 const panelMeta: Record<string, { title: string; description: string; icon: string }> = {
   brands: { title: '品牌管理', description: '管理品牌档案与基础信息，追踪品牌健康度', icon: '🏷️' },
   entities: { title: '实体图谱', description: '构建品牌的关联实体网络，发现潜在影响力节点', icon: '🔗' },
@@ -83,11 +132,14 @@ const selectedBrandName = computed(() => {
   return brand ? brand.name : ''
 })
 
+const selectedV2Project = computed(() => store.selectedV2Project.value)
+const selectedV2ProjectId = computed(() => store.selectedV2ProjectId.value)
+
 function onNavigate(panelId: GeoPanelId) {
   activePanelId.value = panelId
   runtime.setActivePanel(panelId)
 
-  // 更新 URL query 参数
+  // Update URL query
   try {
     const url = new URL(window.location.href)
     url.searchParams.set('panel', panelId)
@@ -95,8 +147,33 @@ function onNavigate(panelId: GeoPanelId) {
   } catch {}
 }
 
+function onProjectSelected(projectId: string) {
+  store.setSelectedV2ProjectId(projectId)
+  store.setStageStatus('create_project', 'completed')
+  store.setCurrentStage('edit_brand_profile')
+
+  // Load project data
+  runtime.loadV2ProjectData(projectId)
+  onNavigate('dashboard')
+}
+
+function onProjectCreated(projectId: string) {
+  store.setSelectedV2ProjectId(projectId)
+  runtime.loadV2ProjectData(projectId)
+  onNavigate('brand-profile')
+}
+
+function onBrandProfileSaved() {
+  onNavigate('website-scanner')
+}
+
+function onWebsiteScanned() {
+  store.setCurrentStage('build_graph')
+  onNavigate('knowledge-graph')
+}
+
 onMounted(async () => {
-  // 从 URL 解析 panel
+  // Parse panel from URL
   try {
     const params = new URLSearchParams(window.location.search)
     const panel = params.get('panel') as GeoPanelId | null
@@ -105,8 +182,14 @@ onMounted(async () => {
     }
   } catch {}
 
-  // 初始化数据
+  // Initialize
   await runtime.initialize()
+
+  // If no V2 project selected and we have projects, try to auto-select
+  if (!selectedV2ProjectId.value && store.v2Projects.value.length > 0) {
+    store.setSelectedV2ProjectId(store.v2Projects.value[0].id)
+    runtime.loadV2ProjectData(store.v2Projects.value[0].id)
+  }
 })
 </script>
 
@@ -158,6 +241,13 @@ onMounted(async () => {
   color: #a78bfa;
   background: rgba(167, 139, 250, 0.1);
   padding: 4px 10px;
+  border-radius: 6px;
+}
+.geo-topbar-stage-badge {
+  font-size: 11px;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 3px 8px;
   border-radius: 6px;
 }
 .geo-topbar-error-btn {

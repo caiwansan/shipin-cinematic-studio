@@ -1,6 +1,7 @@
 // ============================================================
-// BrandGEO Store — 品牌GEO 工作台状态管理
+// BrandGEO Store — 品牌GEO 工作台状态管理 (Phase 1 + 2)
 // 遵循 Studio v2 Store → Runtime → UI 单向数据流
+// Repository 模式：Service 不直接访问 Store
 // ============================================================
 
 import { reactive, computed, readonly } from 'vue'
@@ -17,6 +18,13 @@ import type {
   GeoDashboardStats,
   GeoPanelId,
   BrandGEORuntime,
+  GeoProjectV2,
+  GeoBrandProfile,
+  WebsiteSnapshot,
+  GeoGraphNode,
+  GeoGraphEdge,
+  WorkspaceFlowStage,
+  WorkspaceFlowState,
 } from '~/studio-v2/types/geo'
 
 // ─── Helpers ───
@@ -37,23 +45,8 @@ function getAuthToken(): string {
 
 function authHeaders(): Record<string, string> {
   const t = getAuthToken()
-  return t
-    ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }
-    : { 'Content-Type': 'application/json' }
-}
-
-function httpErrorMessage(status: number, defaultMsg: string): string {
-  const map: Record<number, string> = {
-    400: '请求参数有误，请检查输入',
-    401: '登录已过期，请重新登录',
-    403: '权限不足',
-    404: '请求的资源不存在',
-    429: '请求过于频繁，请稍后重试',
-    500: '服务器内部错误',
-    502: '网关异常',
-    503: '服务暂时不可用',
-  }
-  return map[status] || defaultMsg
+  if (!t) return { 'Content-Type': 'application/json' }
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }
 }
 
 // ─── Default Dashboard Stats ───
@@ -68,6 +61,18 @@ const defaultDashboardStats: GeoDashboardStats = {
   competitorCount: 0,
 }
 
+const defaultFlowState: WorkspaceFlowState = {
+  currentStage: 'create_project',
+  stages: {
+    create_project: 'active',
+    edit_brand_profile: 'pending',
+    website_scan: 'pending',
+    generate_snapshot: 'pending',
+    build_graph: 'pending',
+    ready: 'pending',
+  },
+}
+
 // ─── State ───
 const state = reactive<BrandGEORuntime>({
   activePanelId: 'dashboard',
@@ -80,12 +85,41 @@ const state = reactive<BrandGEORuntime>({
   competitors: [],
   projects: [],
   tasks: [],
+  // V2 state
+  v2Projects: [],
+  brandProfile: null,
+  websiteSnapshot: null,
+  graphNodes: [],
+  graphEdges: [],
+  workspaceFlow: { ...defaultFlowState },
+  // Dashboard stats
   dashboardStats: { ...defaultDashboardStats },
+  // UI state
   loading: false,
   error: null,
   selectedBrandId: null,
   selectedProjectId: null,
+  selectedV2ProjectId: null,
 })
+
+function apiUrl(path: string): string {
+  return `/api/geo${path}`
+}
+
+async function apiFetch<T = any>(path: string, options?: RequestInit): Promise<T | null> {
+  try {
+    const res = await fetch(apiUrl(path), { headers: authHeaders(), ...options })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`API error ${res.status}: ${text}`)
+    }
+    const json = await res.json()
+    return json as T
+  } catch (err: any) {
+    state.error = err.message
+    return null
+  }
+}
 
 export function useBrandGeoStore() {
   // ─── Panel Navigation ───
@@ -93,163 +127,367 @@ export function useBrandGeoStore() {
     state.activePanelId = panelId
   }
 
-  // ─── Brand ───
-  function setBrands(brands: Brand[]) {
-    state.brands = brands
-  }
-
-  function addBrand(brand: Brand) {
-    state.brands.push(brand)
-  }
-
+  // ─── Brand (Phase 1) ───
+  function setBrands(brands: Brand[]) { state.brands = brands }
+  function addBrand(brand: Brand) { state.brands.push(brand) }
   function updateBrand(id: string, patch: Partial<Brand>) {
     const idx = state.brands.findIndex(b => b.id === id)
-    if (idx >= 0) {
-      state.brands[idx] = { ...state.brands[idx], ...patch }
-    }
+    if (idx >= 0) state.brands[idx] = { ...state.brands[idx], ...patch }
   }
+  function removeBrand(id: string) { state.brands = state.brands.filter(b => b.id !== id) }
 
-  function removeBrand(id: string) {
-    state.brands = state.brands.filter(b => b.id !== id)
-  }
-
-  // ─── Entity ───
-  function setEntities(entities: Entity[]) {
-    state.entities = entities
-  }
-
-  function addEntity(entity: Entity) {
-    state.entities.push(entity)
-  }
-
+  // ─── Entity (Phase 1) ───
+  function setEntities(entities: Entity[]) { state.entities = entities }
+  function addEntity(entity: Entity) { state.entities.push(entity) }
   function updateEntity(id: string, patch: Partial<Entity>) {
     const idx = state.entities.findIndex(e => e.id === id)
-    if (idx >= 0) {
-      state.entities[idx] = { ...state.entities[idx], ...patch }
-    }
+    if (idx >= 0) state.entities[idx] = { ...state.entities[idx], ...patch }
   }
+  function removeEntity(id: string) { state.entities = state.entities.filter(e => e.id !== id) }
 
-  function removeEntity(id: string) {
-    state.entities = state.entities.filter(e => e.id !== id)
-  }
+  // ─── Visibility (Phase 1) ───
+  function setVisibilityMetrics(metrics: VisibilityMetric[]) { state.visibilityMetrics = metrics }
+  function setSearchVisibility(vis: SearchVisibility[]) { state.searchVisibility = vis }
 
-  // ─── Visibility ───
-  function setVisibilityMetrics(metrics: VisibilityMetric[]) {
-    state.visibilityMetrics = metrics
-  }
+  // ─── Citations (Phase 1) ───
+  function setCitations(citations: Citation[]) { state.citations = citations }
+  function addCitation(citation: Citation) { state.citations.push(citation) }
 
-  function setSearchVisibility(vis: SearchVisibility[]) {
-    state.searchVisibility = vis
-  }
+  // ─── Topics (Phase 1) ───
+  function setTopics(topics: Topic[]) { state.topics = topics }
 
-  // ─── Citations ───
-  function setCitations(citations: Citation[]) {
-    state.citations = citations
-  }
+  // ─── Competitors (Phase 1) ───
+  function setCompetitors(competitors: Competitor[]) { state.competitors = competitors }
 
-  function addCitation(citation: Citation) {
-    state.citations.push(citation)
-  }
-
-  // ─── Topics ───
-  function setTopics(topics: Topic[]) {
-    state.topics = topics
-  }
-
-  // ─── Competitors ───
-  function setCompetitors(competitors: Competitor[]) {
-    state.competitors = competitors
-  }
-
-  // ─── Projects ───
-  function setProjects(projects: GeoProject[]) {
-    state.projects = projects
-  }
-
-  function addProject(project: GeoProject) {
-    state.projects.push(project)
-  }
-
+  // ─── Projects (Phase 1) ───
+  function setProjects(projects: GeoProject[]) { state.projects = projects }
+  function addProject(project: GeoProject) { state.projects.push(project) }
   function updateProject(id: string, patch: Partial<GeoProject>) {
     const idx = state.projects.findIndex(p => p.id === id)
-    if (idx >= 0) {
-      state.projects[idx] = { ...state.projects[idx], ...patch }
-    }
+    if (idx >= 0) state.projects[idx] = { ...state.projects[idx], ...patch }
   }
+  function removeProject(id: string) { state.projects = state.projects.filter(p => p.id !== id) }
+  function setSelectedProjectId(id: string | null) { state.selectedProjectId = id }
 
-  function removeProject(id: string) {
-    state.projects = state.projects.filter(p => p.id !== id)
-  }
-
-  function setSelectedProjectId(id: string | null) {
-    state.selectedProjectId = id
-  }
-
-  // ─── Tasks ───
-  function setTasks(tasks: GeoTask[]) {
-    state.tasks = tasks
-  }
-
-  function addTask(task: GeoTask) {
-    state.tasks.push(task)
-  }
-
+  // ─── Tasks (Phase 1) ───
+  function setTasks(tasks: GeoTask[]) { state.tasks = tasks }
+  function addTask(task: GeoTask) { state.tasks.push(task) }
   function updateTask(id: string, patch: Partial<GeoTask>) {
     const idx = state.tasks.findIndex(t => t.id === id)
-    if (idx >= 0) {
-      state.tasks[idx] = { ...state.tasks[idx], ...patch }
-    }
+    if (idx >= 0) state.tasks[idx] = { ...state.tasks[idx], ...patch }
   }
+  function removeTask(id: string) { state.tasks = state.tasks.filter(t => t.id !== id) }
 
-  function removeTask(id: string) {
-    state.tasks = state.tasks.filter(t => t.id !== id)
-  }
-
-  // ─── Dashboard Stats ───
-  function setDashboardStats(stats: GeoDashboardStats) {
-    state.dashboardStats = stats
-  }
-
+  // ─── Dashboard Stats (Phase 1) ───
+  function setDashboardStats(stats: GeoDashboardStats) { state.dashboardStats = stats }
   function updateDashboardStats(patch: Partial<GeoDashboardStats>) {
     Object.assign(state.dashboardStats, patch)
   }
 
-  // ─── Loading / Error ───
-  function setLoading(loading: boolean) {
-    state.loading = loading
-  }
+  // ─── Loading / Error (Phase 1) ───
+  function setLoading(loading: boolean) { state.loading = loading }
+  function setError(error: string | null) { state.error = error }
 
-  function setError(error: string | null) {
-    state.error = error
-  }
+  // ─── Selection (Phase 1) ───
+  function setSelectedBrandId(id: string | null) { state.selectedBrandId = id }
 
-  // ─── Selection ───
-  function setSelectedBrandId(id: string | null) {
-    state.selectedBrandId = id
-  }
-
-  // ─── Computed ───
+  // ─── Computed (Phase 1) ───
   const selectedBrand = computed(() =>
     state.brands.find(b => b.id === state.selectedBrandId) || null
   )
-
   const selectedProject = computed(() =>
     state.projects.find(p => p.id === state.selectedProjectId) || null
   )
-
   const activeBrandProjects = computed(() =>
     state.selectedBrandId
       ? state.projects.filter(p => p.brandId === state.selectedBrandId)
       : state.projects
   )
-
   const pendingTasks = computed(() =>
     state.tasks.filter(t => t.status === 'pending')
   )
 
-  // ─── API Methods ───
+  // ==================================================================
+  // V2 — GeoProject
+  // ==================================================================
 
-  /** 获取品牌列表 */
+  function setV2Projects(projects: GeoProjectV2[]) { state.v2Projects = projects }
+  function addV2Project(project: GeoProjectV2) { state.v2Projects.push(project) }
+  function setSelectedV2ProjectId(id: string | null) { state.selectedV2ProjectId = id }
+
+  const selectedV2Project = computed(() =>
+    state.v2Projects.find(p => p.id === state.selectedV2ProjectId) || null
+  )
+
+  async function fetchV2Projects(): Promise<boolean> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { projects: GeoProjectV2[] } }>('/projects')
+      if (result?.data?.projects) setV2Projects(result.data.projects)
+      return true
+    } catch (err: any) {
+      state.error = err.message
+      return false
+    } finally {
+      state.loading = false
+    }
+  }
+
+  async function createV2Project(data: {
+    name: string
+    website?: string
+    industry?: string
+    language?: string
+    country?: string
+  }): Promise<string | null> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { project: GeoProjectV2 } }>('/projects', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      if (result?.data?.project) {
+        addV2Project(result.data.project)
+        return result.data.project.id
+      }
+      return null
+    } catch (err: any) {
+      state.error = err.message
+      return null
+    } finally {
+      state.loading = false
+    }
+  }
+
+  async function fetchV2ProjectById(id: string): Promise<GeoProjectV2 | null> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { project: GeoProjectV2 } }>(`/projects/${id}`)
+      return result?.data?.project || null
+    } catch (err: any) {
+      state.error = err.message
+      return null
+    } finally {
+      state.loading = false
+    }
+  }
+
+  // ==================================================================
+  // V2 — Brand Profile
+  // ==================================================================
+
+  function setBrandProfile(profile: GeoBrandProfile | null) { state.brandProfile = profile }
+
+  async function fetchBrandProfile(projectId: string): Promise<GeoBrandProfile | null> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { brand: GeoBrandProfile } }>(`/brand/${projectId}`)
+      const profile = result?.data?.brand || null
+      setBrandProfile(profile)
+      return profile
+    } catch (err: any) {
+      state.error = err.message
+      return null
+    } finally {
+      state.loading = false
+    }
+  }
+
+  async function saveBrandProfile(projectId: string, data: Partial<GeoBrandProfile>): Promise<GeoBrandProfile | null> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { brand: GeoBrandProfile } }>(`/brand/${projectId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      })
+      const profile = result?.data?.brand || null
+      setBrandProfile(profile)
+      return profile
+    } catch (err: any) {
+      state.error = err.message
+      return null
+    } finally {
+      state.loading = false
+    }
+  }
+
+  // ==================================================================
+  // V2 — Website Scanner / Snapshot
+  // ==================================================================
+
+  function setWebsiteSnapshot(snapshot: WebsiteSnapshot | null) { state.websiteSnapshot = snapshot }
+
+  async function triggerScan(projectId: string, url: string): Promise<WebsiteSnapshot | null> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { snapshot: WebsiteSnapshot } }>('/scan', {
+        method: 'POST',
+        body: JSON.stringify({ projectId, url }),
+      })
+      const snapshot = result?.data?.snapshot || null
+      setWebsiteSnapshot(snapshot)
+      return snapshot
+    } catch (err: any) {
+      state.error = err.message
+      return null
+    } finally {
+      state.loading = false
+    }
+  }
+
+  async function fetchScanStatus(projectId: string): Promise<{ status: string; error?: string } | null> {
+    try {
+      const result = await apiFetch<{ success: boolean; data: { status: { status: string; error?: string } } }>(`/scan/${projectId}/status`)
+      return result?.data?.status || null
+    } catch {
+      return null
+    }
+  }
+
+  async function fetchSnapshot(projectId: string): Promise<WebsiteSnapshot | null> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { snapshot: WebsiteSnapshot } }>(`/snapshot/${projectId}`)
+      const snapshot = result?.data?.snapshot || null
+      setWebsiteSnapshot(snapshot)
+      return snapshot
+    } catch (err: any) {
+      state.error = err.message
+      return null
+    } finally {
+      state.loading = false
+    }
+  }
+
+  // ==================================================================
+  // V2 — Knowledge Graph
+  // ==================================================================
+
+  function setGraphNodes(nodes: GeoGraphNode[]) { state.graphNodes = nodes }
+  function setGraphEdges(edges: GeoGraphEdge[]) { state.graphEdges = edges }
+  function addGraphNode(node: GeoGraphNode) { state.graphNodes.push(node) }
+  function addGraphEdge(edge: GeoGraphEdge) { state.graphEdges.push(edge) }
+
+  async function fetchGraphNodes(projectId: string): Promise<GeoGraphNode[]> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { nodes: GeoGraphNode[] } }>(`/projects/${projectId}/graph/nodes`)
+      const nodes = result?.data?.nodes || []
+      setGraphNodes(nodes)
+      return nodes
+    } catch (err: any) {
+      state.error = err.message
+      return []
+    } finally {
+      state.loading = false
+    }
+  }
+
+  async function createGraphNode(data: {
+    projectId: string
+    type: string
+    label: string
+    properties?: string
+  }): Promise<GeoGraphNode | null> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { node: GeoGraphNode } }>(`/projects/${data.projectId}/graph/nodes`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      const node = result?.data?.node || null
+      if (node) addGraphNode(node)
+      return node
+    } catch (err: any) {
+      state.error = err.message
+      return null
+    } finally {
+      state.loading = false
+    }
+  }
+
+  async function fetchGraphEdges(projectId: string): Promise<GeoGraphEdge[]> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { edges: GeoGraphEdge[] } }>(`/projects/${projectId}/graph/edges`)
+      const edges = result?.data?.edges || []
+      setGraphEdges(edges)
+      return edges
+    } catch (err: any) {
+      state.error = err.message
+      return []
+    } finally {
+      state.loading = false
+    }
+  }
+
+  async function createGraphEdge(data: {
+    sourceId: string
+    targetId: string
+    type: string
+    properties?: string
+  }): Promise<GeoGraphEdge | null> {
+    state.loading = true
+    state.error = null
+    try {
+      const result = await apiFetch<{ success: boolean; data: { edge: GeoGraphEdge } }>('/graph/edges', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      const edge = result?.data?.edge || null
+      if (edge) addGraphEdge(edge)
+      return edge
+    } catch (err: any) {
+      state.error = err.message
+      return null
+    } finally {
+      state.loading = false
+    }
+  }
+
+  // ==================================================================
+  // V2 — Workspace Flow
+  // ==================================================================
+
+  function setCurrentStage(stage: WorkspaceFlowStage) {
+    state.workspaceFlow.currentStage = stage
+  }
+
+  function setStageStatus(stage: WorkspaceFlowStage, status: 'pending' | 'active' | 'completed' | 'skipped') {
+    state.workspaceFlow.stages[stage] = status
+  }
+
+  function advanceFlow() {
+    const order: WorkspaceFlowStage[] = [
+      'create_project',
+      'edit_brand_profile',
+      'website_scan',
+      'generate_snapshot',
+      'build_graph',
+      'ready',
+    ]
+    const currentIdx = order.indexOf(state.workspaceFlow.currentStage)
+    if (currentIdx < order.length - 1) {
+      state.workspaceFlow.stages[state.workspaceFlow.currentStage] = 'completed'
+      state.workspaceFlow.currentStage = order[currentIdx + 1]
+      state.workspaceFlow.stages[order[currentIdx + 1]] = 'active'
+    }
+  }
+
+  // ==================================================================
+  // Phase 1 API Methods (Keep)
+  // ==================================================================
+
   async function fetchBrands(): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -267,7 +505,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 获取品牌可见性 */
   async function fetchVisibility(brandId: string): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -286,7 +523,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 获取引用列表 */
   async function fetchCitations(brandId: string): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -304,7 +540,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 获取热门话题 */
   async function fetchTopics(brandId: string): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -322,7 +557,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 获取竞品分析 */
   async function fetchCompetitors(brandId: string): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -340,7 +574,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 获取仪表盘统计数据 */
   async function fetchDashboardStats(): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -358,7 +591,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 获取项目列表 */
   async function fetchProjects(brandId?: string): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -377,7 +609,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 创建项目 */
   async function createProject(project: Partial<GeoProject>): Promise<string | null> {
     state.loading = true
     state.error = null
@@ -402,7 +633,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 获取任务列表 */
   async function fetchTasks(projectId?: string): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -421,7 +651,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 创建任务 */
   async function createTask(task: Partial<GeoTask>): Promise<string | null> {
     state.loading = true
     state.error = null
@@ -446,7 +675,6 @@ export function useBrandGeoStore() {
     }
   }
 
-  /** 获取品牌实体 */
   async function fetchEntities(brandId: string): Promise<boolean> {
     state.loading = true
     state.error = null
@@ -473,73 +701,74 @@ export function useBrandGeoStore() {
     setActivePanel,
     // Brands
     brands: computed(() => state.brands),
-    setBrands,
-    addBrand,
-    updateBrand,
-    removeBrand,
+    setBrands, addBrand, updateBrand, removeBrand,
     // Entities
     entities: computed(() => state.entities),
-    setEntities,
-    addEntity,
-    updateEntity,
-    removeEntity,
+    setEntities, addEntity, updateEntity, removeEntity,
     // Visibility
     visibilityMetrics: computed(() => state.visibilityMetrics),
     searchVisibility: computed(() => state.searchVisibility),
-    setVisibilityMetrics,
-    setSearchVisibility,
+    setVisibilityMetrics, setSearchVisibility,
     // Citations
     citations: computed(() => state.citations),
-    setCitations,
-    addCitation,
+    setCitations, addCitation,
     // Topics
     topics: computed(() => state.topics),
     setTopics,
     // Competitors
     competitors: computed(() => state.competitors),
     setCompetitors,
-    // Projects
+    // Projects (P1)
     projects: computed(() => state.projects),
-    setProjects,
-    addProject,
-    updateProject,
-    removeProject,
+    setProjects, addProject, updateProject, removeProject,
     setSelectedProjectId,
     // Tasks
     tasks: computed(() => state.tasks),
-    setTasks,
-    addTask,
-    updateTask,
-    removeTask,
+    setTasks, addTask, updateTask, removeTask,
     // Dashboard
     dashboardStats: computed(() => state.dashboardStats),
-    setDashboardStats,
-    updateDashboardStats,
+    setDashboardStats, updateDashboardStats,
     // Loading / Error
     loading: computed(() => state.loading),
     error: computed(() => state.error),
-    setLoading,
-    setError,
+    setLoading, setError,
     // Selection
     selectedBrandId: computed(() => state.selectedBrandId),
     selectedProjectId: computed(() => state.selectedProjectId),
-    setSelectedBrandId,
-    selectedBrand,
-    selectedProject,
-    // Computed
-    activeBrandProjects,
-    pendingTasks,
-    // API
-    fetchBrands,
-    fetchVisibility,
-    fetchCitations,
-    fetchTopics,
-    fetchCompetitors,
-    fetchDashboardStats,
-    fetchProjects,
-    createProject,
-    fetchTasks,
-    createTask,
+    selectedV2ProjectId: computed(() => state.selectedV2ProjectId),
+    setSelectedBrandId, setSelectedV2ProjectId,
+    selectedBrand, selectedProject, selectedV2Project,
+    activeBrandProjects, pendingTasks,
+
+    // V2 — Projects
+    v2Projects: computed(() => state.v2Projects),
+    setV2Projects, addV2Project,
+    fetchV2Projects, createV2Project, fetchV2ProjectById,
+
+    // V2 — Brand Profile
+    brandProfile: computed(() => state.brandProfile),
+    setBrandProfile,
+    fetchBrandProfile, saveBrandProfile,
+
+    // V2 — Scanner / Snapshot
+    websiteSnapshot: computed(() => state.websiteSnapshot),
+    setWebsiteSnapshot,
+    triggerScan, fetchScanStatus, fetchSnapshot,
+
+    // V2 — Knowledge Graph
+    graphNodes: computed(() => state.graphNodes),
+    graphEdges: computed(() => state.graphEdges),
+    setGraphNodes, setGraphEdges, addGraphNode, addGraphEdge,
+    fetchGraphNodes, createGraphNode, fetchGraphEdges, createGraphEdge,
+
+    // V2 — Workspace Flow
+    workspaceFlow: computed(() => state.workspaceFlow),
+    setCurrentStage, setStageStatus, advanceFlow,
+
+    // Phase 1 API methods (keep)
+    fetchBrands, fetchVisibility, fetchCitations,
+    fetchTopics, fetchCompetitors, fetchDashboardStats,
+    fetchProjects, createProject, fetchTasks, createTask,
     fetchEntities,
   }
 }

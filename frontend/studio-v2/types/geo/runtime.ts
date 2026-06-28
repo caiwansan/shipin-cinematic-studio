@@ -1,8 +1,13 @@
 // ============================================================
-// BrandGEO — 运行时状态类型
+// BrandGEO — 运行时状态类型 (Phase 1 + Phase 2)
 // ============================================================
 
-import type { Brand, Entity, VisibilityMetric, SearchVisibility, Citation, Topic, Competitor, GeoProject, GeoTask } from './brand'
+import type {
+  Brand, Entity, VisibilityMetric, SearchVisibility,
+  Citation, Topic, Competitor, GeoProject, GeoTask,
+  GeoProjectV2, GeoBrandProfile, WebsiteSnapshot, GeoGraphNode, GeoGraphEdge,
+  WorkspaceFlowState,
+} from './brand'
 
 /** BrandGEO 仪表盘统计 */
 export interface GeoDashboardStats {
@@ -40,6 +45,12 @@ export type GeoPanelId =
   | 'settings'
   | 'reports'
   | 'help'
+  // V2 panels
+  | 'project-create'
+  | 'project-select'
+  | 'brand-profile'
+  | 'website-scanner'
+  | 'knowledge-graph'
 
 /** GEO Runtime */
 export interface BrandGEORuntime {
@@ -57,6 +68,14 @@ export interface BrandGEORuntime {
   projects: GeoProject[]
   tasks: GeoTask[]
 
+  // V2 data
+  v2Projects: GeoProjectV2[]
+  brandProfile: GeoBrandProfile | null
+  websiteSnapshot: WebsiteSnapshot | null
+  graphNodes: GeoGraphNode[]
+  graphEdges: GeoGraphEdge[]
+  workspaceFlow: WorkspaceFlowState
+
   // 仪表盘统计
   dashboardStats: GeoDashboardStats
 
@@ -65,4 +84,5 @@ export interface BrandGEORuntime {
   error: string | null
   selectedBrandId: string | null
   selectedProjectId: string | null
+  selectedV2ProjectId: string | null
 }

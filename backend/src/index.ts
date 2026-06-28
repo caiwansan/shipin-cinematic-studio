@@ -83,6 +83,10 @@ import { Capability } from './core/runtime/capabilities.js'
 
 async function main() {
   const app = Fastify({ logger: true })
+  // 允许空 JSON body（DELETE 请求不带 body 时不被 reject）
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req: any, body: string, done: any) => {
+    try { done(null, body ? JSON.parse(body) : {}) } catch (e: any) { done(e) }
+  })
 
   // Bootstrap real LLM executors
 
@@ -468,6 +472,11 @@ await app.register(projectV2Routes)
   await app.register(desktopComfyRoutes)
   // Desktop video routes（本地视频引擎检测）
   await app.register(desktopVideoRoutes)
+  // Brand GEO routes (Phase 2)
+  await app.register(await import('./routes/geo/geo-project.js').then(m => m.default))
+  await app.register(await import('./routes/geo/geo-brand.js').then(m => m.default))
+  await app.register(await import('./routes/geo/geo-scanner.js').then(m => m.default))
+  await app.register(await import('./routes/geo/geo-graph.js').then(m => m.default))
   // Production health / monitoring routes
   await app.register(healthRoutes)
   // REMOVED: observabilityRoutes

@@ -1,6 +1,8 @@
 // ============================================================
-// BrandGEO — 品牌领域模型
+// BrandGEO — 品牌领域模型 (Phase 1 + Phase 2)
 // ============================================================
+
+// ─── Phase 1 Types (Keep) ───
 
 /** 品牌基本信息 */
 export interface Brand {
@@ -108,7 +110,7 @@ export interface Competitor {
   visibilityScore: number
 }
 
-/** GEO 项目 */
+/** GEO 项目 (Phase 1) */
 export interface GeoProject {
   id: string
   brandId: string
@@ -164,3 +166,110 @@ export type GeoTaskStatus =
   | 'completed'
   | 'failed'
   | 'cancelled'
+
+// ─── Phase 2 Types (New) ───
+
+/** Brand GEO V2 项目模型 (对应 GeoProject 表) */
+export interface GeoProjectV2 {
+  id: string
+  userId: string
+  name: string
+  website?: string
+  industry?: string
+  language?: string
+  country?: string
+  status: string
+  brandProfile?: GeoBrandProfile
+  websiteSnapshot?: WebsiteSnapshot
+  knowledgeGraph?: GeoGraphNode[]
+  createdAt: string
+  updatedAt: string
+  schemaVersion: number
+}
+
+/** 品牌配置 (对应 GeoBrandProfile 表) */
+export interface GeoBrandProfile {
+  id: string
+  projectId: string
+  brandName?: string
+  website?: string
+  company?: string
+  industry?: string
+  primaryProducts?: string
+  coreServices?: string
+  targetAudience?: string
+  targetRegions?: string
+  primaryLanguage?: string
+  competitors?: string
+  keywords?: string
+  brandDesc?: string
+  socialLinks?: string
+  createdAt: string
+  updatedAt: string
+  schemaVersion: number
+}
+
+/** 网站快照 (对应 WebsiteSnapshot 表) */
+export interface WebsiteSnapshot {
+  id: string
+  projectId: string
+  url: string
+  title?: string
+  description?: string
+  language?: string
+  robots?: string
+  sitemap?: string
+  meta?: string
+  openGraph?: string
+  schema?: string
+  jsonLd?: string
+  pages?: string
+  images?: string
+  scripts?: string
+  styles?: string
+  headers?: string
+  status: string
+  error?: string
+  createdAt: string
+  updatedAt: string
+  scanVersion: number
+}
+
+/** 图谱节点 (对应 GeoGraphNode 表) */
+export interface GeoGraphNode {
+  id: string
+  projectId: string
+  type: string
+  label: string
+  properties?: string
+  outgoing?: GeoGraphEdge[]
+  incoming?: GeoGraphEdge[]
+  createdAt: string
+  updatedAt: string
+  schemaVersion: number
+}
+
+/** 图谱边 (对应 GeoGraphEdge 表) */
+export interface GeoGraphEdge {
+  id: string
+  sourceId: string
+  targetId: string
+  type: string
+  properties?: string
+  createdAt: string
+  schemaVersion: number
+}
+
+/** Workspace Flow Stage */
+export type WorkspaceFlowStage =
+  | 'create_project'
+  | 'edit_brand_profile'
+  | 'website_scan'
+  | 'generate_snapshot'
+  | 'build_graph'
+  | 'ready'
+
+export interface WorkspaceFlowState {
+  currentStage: WorkspaceFlowStage
+  stages: Record<WorkspaceFlowStage, 'pending' | 'active' | 'completed' | 'skipped'>
+}

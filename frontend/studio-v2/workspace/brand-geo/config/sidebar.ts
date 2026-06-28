@@ -1,6 +1,6 @@
 // ============================================================
-// BrandGEO — Sidebar 菜单配置
-// 12 个一级菜单项
+// BrandGEO — Sidebar 菜单配置 (Phase 1 + Phase 2)
+// 更新为 11 项菜单结构
 // ============================================================
 
 import type { SidebarMenuItem } from '~/studio-v2/types/geo/runtime'
@@ -13,10 +13,22 @@ export const GEO_SIDEBAR_MENU: SidebarMenuItem[] = [
     route: '/workspace/geo?panel=dashboard',
   },
   {
-    id: 'brands',
-    label: '品牌管理',
+    id: 'brand-profile',
+    label: '品牌档案',
     icon: '🏷️',
-    route: '/workspace/geo?panel=brands',
+    route: '/workspace/geo?panel=brand-profile',
+  },
+  {
+    id: 'website-scanner',
+    label: '网站扫描',
+    icon: '🔍',
+    route: '/workspace/geo?panel=website-scanner',
+  },
+  {
+    id: 'knowledge-graph',
+    label: '知识图谱',
+    icon: '🔗',
+    route: '/workspace/geo?panel=knowledge-graph',
   },
   {
     id: 'entities',
@@ -43,12 +55,6 @@ export const GEO_SIDEBAR_MENU: SidebarMenuItem[] = [
     route: '/workspace/geo?panel=topics',
   },
   {
-    id: 'competitors',
-    label: '竞品分析',
-    icon: '🎯',
-    route: '/workspace/geo?panel=competitors',
-  },
-  {
     id: 'projects',
     label: '项目管理',
     icon: '📋',
@@ -61,21 +67,9 @@ export const GEO_SIDEBAR_MENU: SidebarMenuItem[] = [
     route: '/workspace/geo?panel=tasks',
   },
   {
-    id: 'reports',
-    label: '报告中心',
-    icon: '📈',
-    route: '/workspace/geo?panel=reports',
-  },
-  {
     id: 'settings',
     label: '设置',
     icon: '⚙️',
     route: '/workspace/geo?panel=settings',
-  },
-  {
-    id: 'help',
-    label: '帮助与教程',
-    icon: '❓',
-    route: '/workspace/geo?panel=help',
   },
 ]
