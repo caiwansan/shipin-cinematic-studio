@@ -1,0 +1,245 @@
+/**
+ * 叙事→画面语言 LLM 分析 API
+ *
+ * 用 DeepSeek 真正理解小说，拆解成：
+ *   - 原子事件（可渲染的物理动作）
+ *   - 空间布局（实体位置关系）
+ *   - 情绪曲线（每拍的情绪 + 强度）
+ *   - 相机推理（镜头类型/运动/焦距）
+ *   - 动作翻译（抽象行为→可渲染物理动作）
+ *
+ * 取代前端硬编码的规则映射表。
+ */
+
+import { FastifyInstance } from 'fastify'
+import { readFileSync } from "fs"
+import { dirname, join } from "path"
+import { fileURLToPath } from "url"
+
+// eslint-disable-next-line
+const __promptDir = join(dirname(new URL(import.meta.url).pathname), "aigc-prompt.txt")
+const __AIGC_PROMPT_RAW = readFileSync(__promptDir, "utf-8")
+
+import { getProvider, listProviders } from '../runtime/providers/provider.registry.js'
+
+const NARRATIVE_SYSTEM_PROMPT = `你是一个专业的电影叙事分析师。你的任务是把一段小说/故事文本拆解成可直接用于画面生成的结构化数据。
+
+你必须严格遵守以下规则：
+
+1. **叙事分解**：把叙事分解成原子事件序列。每个事件 = 单个物理动作。禁止复合句。
+2. **视觉锚定**：每个实体的空间位置（x: -1~1, y: -1~1, depth: 0~1），必须有前景、中景、背景三层。
+3. **动作翻译**：把抽象动词（"感到""思考""回忆""想象""希望"）转化为可渲染的物理动作（"站着凝视远方""转身""握紧拳头"）。
+4. **相机推理**：根据情绪选择镜头：
+   - calm → wide_establishing (35mm, 静态)
+   - tension → medium_follow (85mm f/2.8, dolly)
+   - shock → close_reaction (135mm f/1.4, 静态)
+   - action → tracking_motion (50mm f/4, follow)
+   - sadness → over_shoulder (50mm f/4, dolly)
+   - joy → wide_establishing (35mm, orbit)
+   - mystery → over_shoulder (75mm f/2.0, dolly)
+5. **动作映射**：抽象行为必须有明确的物理动作对应。
+6. **输出格式必须是严格的 JSON，不要任何额外文字。**
+
+输出 schema:
+{
+  "title": "故事标题",
+  "genre": "体裁",
+  "atomicEvents": [
+    {
+      "eventId": "evt_0",
+      "subject": "角色名",
+      "action": "物理动作（必须是可渲染的）",
+      "object": "对象/环境",
+      "emotion": "calm|tension|shock|action|sadness|joy|mystery",
+      "intensity": 0.0~1.0,
+      "abstractVerbWarning": "如果有抽象动词，写在这里；否则 null"
+    }
+  ],
+  "spatialLayouts": [
+    {
+      "eventId": "evt_0",
+      "foreground": [{ "entityId": "name", "position": {"x": 0, "y": -0.3, "depth": 0}, "size": 0.4 }],
+      "midground": [],
+      "background": [{ "entityId": "环境", "position": {"x": 0, "y": 0, "depth": 1}, "size": 1.0 }],
+      "relationships": ["A in_front_of B"]
+    }
+  ],
+  "motionTranslations": [
+    {
+      "eventId": "evt_0",
+      "entityId": "name",
+      "motionType": "static|walking|turning|emitting|interacting|collapsing",
+      "direction": {"x": 0, "y": 0, "z": 0},
+      "intensity": 0.0~1.0,
+      "originalAbstractVerb": "如果从抽象动词翻译来的，写原文"
+    }
+  ],
+  "cameraReasoning": [
+    {
+      "eventId": "evt_0",
+      "shotType": "wide_establishing|medium_follow|close_reaction|over_shoulder|tracking_motion",
+      "framing": "tight|medium|wide",
+      "lensFocalLength": 35,
+      "aperture": 5.6,
+      "movement": "static|dolly|follow|orbit",
+      "reason": "为什么选这个镜头"
+    }
+  ],
+  "emotionalCurve": {
+    "segments": [
+      {"timeIndex": 0, "emotion": "calm", "intensity": 0.1}
+    ],
+    "turningPoints": [2],
+    "arcType": "rising|falling|wave|plateau"
+  },
+  "overallTone": "故事的整体基调"
+}`
+
+interface NarrativeAnalysisRequest {
+  text: string
+  title?: string
+}
+
+export default async function narrativeLLMRoutes(app: FastifyInstance) {
+
+  // POST /api/v1/narrative/analyze — 用 LLM 分析叙事
+  app.post('/api/v1/narrative/analyze', async (request, reply) => {
+    const start = Date.now()
+    const body = request.body as NarrativeAnalysisRequest
+    const { text } = body
+
+    if (!text || text.trim().length < 10) {
+      return reply.status(400).send({
+        success: false,
+        error: '文本太短，至少 10 个字符',
+      })
+    }
+
+    try {
+      const provider = getProvider('deepseek')
+      if (!provider) {
+        return reply.status(500).send({
+          success: false,
+          error: 'LLM provider 不可用',
+        })
+      }
+
+      const response = await provider.call({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: NARRATIVE_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: `请分析以下故事文本，严格按照 JSON schema 输出：\n\n${text.slice(0, 8000)}`,
+          },
+        ],
+        temperature: 0.1,
+        maxTokens: 4096,
+      })
+
+      // 解析 JSON
+      let analysis: any = null
+      try {
+        // 提取 JSON block
+        const jsonMatch = response.content.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/) || [null, response.content]
+        const jsonStr = jsonMatch[1].trim()
+        analysis = JSON.parse(jsonStr)
+      } catch (parseErr) {
+        console.error('[Narrative-LLM] JSON parse failed:', parseErr)
+        console.log('[Narrative-LLM] Raw:', response.content.slice(0, 500))
+        return reply.status(422).send({
+          success: false,
+          error: 'LLM 返回格式无法解析',
+          raw: response.content.slice(0, 1000),
+        })
+      }
+
+      const latency = Date.now() - start
+
+      console.log(`[Narrative-LLM] ✅ ${analysis.title || 'untitled'} | ${analysis.atomicEvents?.length || 0} events | ${latency}ms | tokens: ${response.usage.totalTokens}`)
+
+      return {
+        success: true,
+        data: analysis,
+        meta: {
+          latencyMs: latency,
+          totalTokens: response.usage.totalTokens,
+          textLength: text.length,
+        },
+      }
+    } catch (err: any) {
+      console.error('[Narrative-LLM] Error:', err)
+      return reply.status(500).send({
+        success: false,
+        error: err.message,
+      })
+    }
+  })
+
+  // POST /api/v1/narrative/simple-parse — 轻量分析（不调 LLM，用启发式）
+  app.post('/api/v1/narrative/simple-parse', async (request, reply) => {
+    const body = request.body as NarrativeAnalysisRequest
+    const { text } = body
+
+    if (!text) {
+      return reply.status(400).send({ success: false, error: '缺少文本' })
+    }
+
+    // 用换行/句号分段
+    const sentences = text.split(/[。！？\n]+/).filter(s => s.trim().length > 5)
+    const events = sentences.map((s, i) => {
+      const hasAction = ['打', '跑', '走', '看', '说', '拿', '放', '跳', '飞', '追'].some(v => s.includes(v))
+      const hasEmotion = ['愤怒', '悲伤', '快乐', '恐惧', '惊讶', '紧张', '平静'].some(v => s.includes(v))
+
+      return {
+        eventId: `evt_${i}`,
+        subject: 'unknown',
+        action: hasAction ? s.trim().slice(0, 20) : 'static',
+        object: 'unknown',
+        emotion: hasEmotion ? 'tension' : 'calm',
+        intensity: hasAction ? 0.7 : 0.3,
+        abstractVerbWarning: null,
+      }
+    })
+
+    return {
+      success: true,
+      data: {
+        title: body.title || '未命名',
+        genre: 'auto',
+        atomicEvents: events,
+        spatialLayouts: events.map((_, i) => ({
+          eventId: `evt_${i}`,
+          foreground: [{ entityId: 'subject', position: { x: 0, y: -0.3, depth: 0 }, size: 0.4 }],
+          midground: [],
+          background: [{ entityId: 'background', position: { x: 0, y: 0, depth: 1 }, size: 1.0 }],
+          relationships: [],
+        })),
+        motionTranslations: events.map((e, i) => ({
+          eventId: `evt_${i}`,
+          entityId: e.subject,
+          motionType: e.action === 'static' ? 'static' : 'walking',
+          direction: { x: 0, y: 0, z: 0 },
+          intensity: e.intensity,
+          originalAbstractVerb: null,
+        })),
+        cameraReasoning: events.map((e, i) => ({
+          eventId: `evt_${i}`,
+          shotType: e.emotion === 'calm' ? 'wide_establishing' : 'medium_follow',
+          framing: 'medium',
+          lensFocalLength: e.emotion === 'calm' ? 35 : 85,
+          aperture: e.emotion === 'calm' ? 5.6 : 2.8,
+          movement: 'static',
+          reason: 'auto',
+        })),
+        emotionalCurve: {
+          segments: events.map((e, i) => ({ timeIndex: i, emotion: e.emotion, intensity: e.intensity })),
+          turningPoints: [],
+          arcType: 'plateau',
+        },
+        overallTone: 'auto',
+      },
+      meta: { method: 'heuristic', textLength: text.length },
+    }
+  })
+}

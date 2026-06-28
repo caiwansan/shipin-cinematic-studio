@@ -1,0 +1,57 @@
+{
+  "id": "wing-chun-3r",
+  "name": "咏春标指",
+  "category": "fight",
+  "school": "咏春",
+  "description": "咏春拳标指套路：近距离短打，以摊手开路、连环冲拳、标指封眼、转身后蹬为核心，适合狭窄空间的快速制敌",
+  "totalRounds": 3,
+  "matchKeywords": ["咏春","近身","短打","寸拳","标指","窄巷","室内","近距离"],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "label": "破防",
+      "description": "角色A二字钳羊马→摊手开路→日字冲拳",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "前手摊手格开B防御→后手日字冲拳直击", "position": "二字钳羊马，身体微侧", "expression": "冷静果断"},
+        {"id": "B", "headMark": "△", "action": "前手格挡被摊开，胸口露出空当", "position": "正身站立，双拳护胸", "expression": "惊讶"}
+      ],
+      "camera": "正面对冲中景→快速推近特写",
+      "effects": [],
+      "physics": "A摊手横向发力打开B前臂→日字冲拳直线贯穿击中B胸口",
+      "duration": 3
+    },
+    {
+      "roundNumber": 2,
+      "label": "连击",
+      "description": "角色A连环冲拳+拦手截击",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "连环冲拳（连续直线拳）→拦手截击B的进攻", "position": "马步前移，腰马合一持续发力", "expression": "凌厉锐进"},
+        {"id": "B", "headMark": "△", "action": "不断后退格挡，尝试反击被拦手截断", "position": "后退中试图摆拳反击", "expression": "被动焦急"}
+      ],
+      "camera": "跟拍A的拳速→过肩视角看B格挡",
+      "effects": ["拳速残影特效"],
+      "physics": "A每拳都被B格挡但B不断后撤→B右摆拳被A拦手截住",
+      "duration": 3
+    },
+    {
+      "roundNumber": 3,
+      "label": "终式",
+      "description": "角色A标指封眼→转身后蹬腿",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "标指插向B双眼（虚招）→转身蹬腿击中B腹部", "position": "转身180度，蹬地发腰力", "expression": "一往无前"},
+        {"id": "B", "headMark": "△", "action": "仰头躲避标指→腹部被后蹬腿击中飞退", "position": "后仰失衡→腹部受击腾空", "expression": "惊恐"}
+      ],
+      "camera": "突切侧方→慢动作定格后蹬→全景B飞退",
+      "effects": ["冲击波空气扭曲+慢镜头定格"],
+      "physics": "A标指虚晃→转身爆发腰力→后蹬腿击中B腹部→B被击飞2米",
+      "duration": 3
+    }
+  ],
+  "cameraLayout": {
+    "cameras": [
+      {"id": "C1", "label": "正面中景", "x": 0, "y": -2.5, "movement": "固定"},
+      {"id": "C2", "label": "侧方过肩", "x": 2, "y": -1, "movement": "跟拍冲拳方向"},
+      {"id": "C3", "label": "侧方全景", "x": 3, "y": 0, "movement": "固定"}
+    ]
+  }
+}

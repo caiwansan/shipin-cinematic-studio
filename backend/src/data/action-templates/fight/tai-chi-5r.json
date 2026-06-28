@@ -1,0 +1,84 @@
+{
+  "id": "tai-chi-5r",
+  "name": "太极拳揽雀尾",
+  "category": "fight",
+  "school": "太极拳",
+  "description": "太极拳「揽雀尾」五式：掤捋挤按採挒肘靠，以柔克刚、圆转如意，借力打力",
+  "totalRounds": 5,
+  "matchKeywords": ["太极","以柔克刚","四两拨千斤","内家拳","圆转","借力"],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "label": "掤",
+      "description": "角色A掤手迎接B的攻势，以柔化刚",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "双手向前上方掤出，接手B的来拳", "position": "虚步站立，双臂圆撑", "expression": "从容平和"},
+        {"id": "B", "headMark": "△", "action": "直拳猛攻A面部", "position": "弓步冲拳", "expression": "刚猛"}
+      ],
+      "camera": "正面中景，缓慢推进",
+      "effects": [],
+      "physics": "A掤手接触B手臂→顺B来力方向化解",
+      "duration": 3
+    },
+    {
+      "roundNumber": 2,
+      "label": "捋",
+      "description": "角色A捋手牵引B失去重心",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "双手顺势向后下方捋带，牵引B前倾", "position": "重心后移，转腰下沉", "expression": "从容"},
+
+        {"id": "B", "headMark": "△", "action": "被捋带失去重心，身体前栽", "position": "重心前移失控，踉跄", "expression": "惊愕"}
+      ],
+      "camera": "侧方中景，跟随捋带方向",
+      "effects": [],
+      "physics": "A顺B来力方向转腰→B重心被牵引前栽",
+      "duration": 3
+    },
+    {
+      "roundNumber": 3,
+      "label": "挤",
+      "description": "角色A挤靠B，乘势进逼",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "后腿蹬地，前臂挤靠B的胸部", "position": "弓步前挤，腰腿发力", "expression": "沉稳推进"},
+        {"id": "B", "headMark": "△", "action": "被挤靠后退，失去平衡", "position": "连续后退", "expression": "被动"}
+      ],
+      "camera": "侧方全景，跟随A的推进",
+      "effects": [],
+      "physics": "A蹬地发力→前臂挤靠B胸口→B后退",
+      "duration": 3
+    },
+    {
+      "roundNumber": 4,
+      "label": "按",
+      "description": "角色A双手下按B的反击",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "双手下按B抬起的攻击手", "position": "身体下沉，双手下按", "expression": "专注"},
+        {"id": "B", "headMark": "△", "action": "试图反击被按回", "position": "双手被按下压", "expression": "吃力"}
+      ],
+      "camera": "正面特写双手→拉远中景",
+      "effects": [],
+      "physics": "A双掌按B双臂→B反击被压制",
+      "duration": 3
+    },
+    {
+      "roundNumber": 5,
+      "label": "靠",
+      "description": "角色A靠劲发人，B被送出",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "肩背靠向B，整体爆发靠劲", "position": "侧身靠进，周身发力", "expression": "一瞬爆发"},
+        {"id": "B", "headMark": "△", "action": "被靠劲发出，腾空飞退", "position": "被震飞", "expression": "无法抗拒"}
+      ],
+      "camera": "慢动作侧写靠劲→全景B飞出",
+      "effects": ["慢镜头定格靠劲爆发瞬间"],
+      "physics": "A周身整劲爆发→靠劲击中B→B腾空飞出",
+      "duration": 4
+    }
+  ],
+  "cameraLayout": {
+    "cameras": [
+      {"id": "C1", "label": "正面中景", "x": 0, "y": -2.5, "movement": "慢推"},
+      {"id": "C2", "label": "侧方全景", "x": 3.5, "y": 0, "movement": "跟拍"},
+      {"id": "C3", "label": "特写近景", "x": 0.5, "y": -1, "movement": "固定"}
+    ]
+  }
+}

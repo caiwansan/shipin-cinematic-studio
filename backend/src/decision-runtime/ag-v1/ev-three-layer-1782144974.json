@@ -1,0 +1,108 @@
+{
+  "timestamp": 1782144974,
+  "phase": "P1.2.2 Three-Layer Architecture",
+  "total_queries": 197,
+  "cluster_ev_stats": {
+    "corporate_info": {
+      "count": 2,
+      "ev_mean": 4.0,
+      "ev_std": 0.0,
+      "ev_max": 4,
+      "ev_min": 4,
+      "summary": {
+        "factual": 2
+      }
+    },
+    "definition": {
+      "count": 50,
+      "ev_mean": 1.0,
+      "ev_std": 0.0,
+      "ev_max": 1,
+      "ev_min": 1,
+      "summary": {
+        "definition": 50
+      }
+    },
+    "factual_search": {
+      "count": 19,
+      "ev_mean": 7.16,
+      "ev_std": 7.04,
+      "ev_max": 17,
+      "ev_min": 0,
+      "summary": {
+        "factual": 19
+      }
+    },
+    "general_mixed": {
+      "count": 93,
+      "ev_mean": 4.47,
+      "ev_std": 6.35,
+      "ev_max": 25,
+      "ev_min": 0,
+      "summary": {
+        "how_to": 22,
+        "factual": 29,
+        "medical": 42
+      }
+    },
+    "how_to": {
+      "count": 33,
+      "ev_mean": 1.15,
+      "ev_std": 2.92,
+      "ev_max": 13,
+      "ev_min": 0,
+      "summary": {
+        "how_to": 28,
+        "medical": 5
+      }
+    }
+  },
+  "domain_prior_impact": {
+    "queries_with_domain_keywords": 38,
+    "prior_applied": 38,
+    "prior_hit_ratio": 1.0,
+    "medical_prior_count": 29,
+    "financial_prior_count": 9
+  },
+  "entropy_comparison": {
+    "pre_calibration_entropy": 0.5494,
+    "post_calibration_entropy": 1.2738,
+    "entropy_change_pct": 131.84,
+    "cluster_migrations": 197,
+    "migration_rate": 1.0
+  },
+  "acceptance": false,
+  "acceptance_details": {
+    "ev_std_definition": {
+      "value": 0.0,
+      "threshold": 2.0,
+      "pass": true
+    },
+    "ev_std_factual_search": {
+      "value": 7.04,
+      "threshold": 14.32,
+      "pass": true
+    },
+    "ev_std_general_mixed": {
+      "value": 6.35,
+      "threshold": 8.94,
+      "pass": true
+    },
+    "ev_std_how_to": {
+      "value": 2.92,
+      "threshold": 2.3,
+      "pass": false
+    },
+    "prior_hit_ratio": {
+      "value": 1.0,
+      "threshold": 1.0,
+      "pass": true,
+      "note": "Domain prior is now only a score bias, not a cluster override. Ratio=1.0 is expected."
+    },
+    "entropy_change": {
+      "value": 131.84,
+      "threshold": 15.0,
+      "pass": false
+    }
+  }
+}

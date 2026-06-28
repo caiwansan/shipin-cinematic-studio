@@ -1,0 +1,64 @@
+{
+  "id": "shaolin-6r",
+  "name": "少林罗汉拳六式",
+  "category": "fight",
+  "school": "少林拳",
+  "description": "少林罗汉拳六式：起手→罗汉伏虎→金刚捣碓→罗汉撞钟→韦陀献杵→收势。刚猛有力、大开大合",
+  "totalRounds": 6,
+  "matchKeywords": ["少林","罗汉拳","武术","拳脚","拳法","刚猛","大开大合"],
+  "rounds": [
+    {
+      "roundNumber": 1, "label": "起手亮掌", "description": "角色A起手亮掌蓄势，角色B弓步探拳",
+      "chars": [
+        {"id":"A","headMark":"○","action":"左掌前亮，右拳抱腰","position":"左虚步，身体微侧","expression":"沉着冷静"},
+        {"id":"B","headMark":"△","action":"右拳前探，左掌护胸","position":"右弓步，重心前倾","expression":"试探"}
+      ],
+      "camera":"正面中景固定", "effects":[], "physics":"双方相距约2米，目光对峙", "duration":3
+    },
+    {
+      "roundNumber": 2, "label": "罗汉伏虎", "description": "角色A下蹲伏虎式扫腿，角色B跃起躲避",
+      "chars": [
+        {"id":"A","headMark":"○","action":"下蹲转身低扫腿→左掌撑地","position":"深蹲伏地扫腿","expression":"迅猛"},
+        {"id":"B","headMark":"△","action":"跃起躲避扫腿→凌空后翻","position":"腾空后翻","expression":"灵活"}
+      ],
+      "camera":"低机位仰拍扫腿→仰拍腾空", "effects":[], "physics":"A扫腿低空掠过·B惊险跃起", "duration":3
+    },
+    {
+      "roundNumber": 3, "label": "金刚捣碓", "description": "角色A起身冲拳猛击B胸口，B格挡后退",
+      "chars": [
+        {"id":"A","headMark":"○","action":"起身右弓步→右拳金刚捣碓直击","position":"弓步发力，腰马合一","expression":"刚猛爆发"},
+        {"id":"B","headMark":"△","action":"双臂交叉格挡→被冲击力推退","position":"后退三步","expression":"震惊吃力"}
+      ],
+      "camera":"正面突冲→跟拍后退", "effects":[], "physics":"A拳击中B格挡双臂→B滑退三步", "duration":3
+    },
+    {
+      "roundNumber": 4, "label": "罗汉撞钟", "description": "角色A肩靠撞钟，角色B侧闪反击",
+      "chars": [
+        {"id":"A","headMark":"○","action":"侧身进步→右肩靠撞B","position":"侧身肩靠","expression":"沉重"},
+        {"id":"B","headMark":"△","action":"横向侧闪避过→右拳反击A肋部","position":"侧闪+反身出拳","expression":"反击"}
+      ],
+      "camera":"侧方全景跟拍", "effects":[], "physics":"A肩靠落空·B反击拳击中A肋部", "duration":3
+    },
+    {
+      "roundNumber": 5, "label": "韦陀献杵", "description": "角色A双掌推出，B被推飞",
+      "chars": [
+        {"id":"A","headMark":"○","action":"双掌齐出推B胸口→吐气发力","position":"马步推掌","expression":"一往无前"},
+        {"id":"B","headMark":"△","action":"被双掌击中胸口→腾空飞退","position":"双脚离地腾空","expression":"被击飞"}
+      ],
+      "camera":"正面推进→慢动作特写B腾空", "effects":["慢镜头定格"], "physics":"A双掌爆发→B胸口受击腾空飞出", "duration":3
+    },
+    {
+      "roundNumber": 6, "label": "收势归元", "description": "角色A收势归元，气沉丹田",
+      "chars": [
+        {"id":"A","headMark":"○","action":"双拳抱腰→缓缓吐气收势","position":"并步站立·双拳缓缓收回","expression":"沉稳平和"},
+        {"id":"B","headMark":"△","action":"倒地后艰难撑起","position":"单膝跪地撑起","expression":"敬佩"}
+      ],
+      "camera":"全景拉远","effects":[],"physics":"A气息平稳收势","duration":3
+    }
+  ],
+  "cameraLayout": {"cameras":[
+    {"id":"C1","label":"正面中景","x":0,"y":-2.5,"movement":"固定"},
+    {"id":"C2","label":"低机位","x":0,"y":-0.5,"movement":"地面跟拍"},
+    {"id":"C3","label":"侧方全景","x":3,"y":0,"movement":"侧向跟拍"}
+  ]}
+}

@@ -1,0 +1,57 @@
+{
+  "timestamp": 1782141570,
+  "type": "BASELINE_V2",
+  "totalQueries": 200,
+  "errors": 0,
+  "global": {
+    "avgEvidence": 2.52,
+    "zeroEvidencePct": 49.0,
+    "coverageGapPct": 69.5,
+    "seedHitPct": 25.0
+  },
+  "perDomain": {
+    "local": {
+      "avgEvidence": 2.36,
+      "zeroEvidencePct": 20.0,
+      "coverageGapPct": 70.0,
+      "seedHitPct": 78.0
+    },
+    "enterprise": {
+      "avgEvidence": 2.1,
+      "zeroEvidencePct": 66.0,
+      "coverageGapPct": 70.0,
+      "seedHitPct": 4.0
+    },
+    "product": {
+      "avgEvidence": 3.92,
+      "zeroEvidencePct": 54.0,
+      "coverageGapPct": 60.0,
+      "seedHitPct": 16.0
+    },
+    "general": {
+      "avgEvidence": 1.72,
+      "zeroEvidencePct": 56.0,
+      "coverageGapPct": 78.0,
+      "seedHitPct": 2.0
+    }
+  },
+  "seedHits": {
+    "local_service_recommendation": 5,
+    "local_food_recommendation": 18,
+    "product-comparison": 1,
+    "local_travel_accommodation": 6,
+    "local_travel_attraction": 8,
+    "diet-advice": 2,
+    "huawei-phone": 4,
+    "book-recommend": 2,
+    "computer-general": 1,
+    "phone-general-review": 2,
+    "iphone": 1
+  },
+  "matchLevelDist": {
+    "strong": 9,
+    "acceptable": 41,
+    "weak": 0,
+    "none": 150
+  }
+}

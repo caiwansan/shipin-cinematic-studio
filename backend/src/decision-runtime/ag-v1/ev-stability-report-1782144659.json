@@ -1,0 +1,485 @@
+{
+  "timestamp": 1782144659,
+  "phase": "P1.2.1 Stage 2.0.5",
+  "total_queries": 200,
+  "classification_accuracy": "62.0%",
+  "cluster_ev_stats": {
+    "corporate_info": {
+      "count": 2,
+      "ev_mean": 4.0,
+      "ev_std": 0.0,
+      "ev_max": 4,
+      "ev_min": 4,
+      "ev_median": 4,
+      "sum_ev": 8,
+      "target_mix": {
+        "factual_search": 2
+      }
+    },
+    "definition": {
+      "count": 50,
+      "ev_mean": 1.0,
+      "ev_std": 0.0,
+      "ev_max": 1,
+      "ev_min": 1,
+      "ev_median": 1,
+      "sum_ev": 50,
+      "target_mix": {
+        "definition": 50
+      }
+    },
+    "factual_search": {
+      "count": 17,
+      "ev_mean": 8.12,
+      "ev_std": 6.89,
+      "ev_max": 17,
+      "ev_min": 0,
+      "ev_median": 4,
+      "sum_ev": 138,
+      "target_mix": {
+        "factual_search": 17
+      }
+    },
+    "financial": {
+      "count": 9,
+      "ev_mean": 2.44,
+      "ev_std": 4.95,
+      "ev_max": 15,
+      "ev_min": 0,
+      "ev_median": 0,
+      "sum_ev": 22,
+      "target_mix": {
+        "how_to": 1,
+        "factual_search": 8
+      }
+    },
+    "general_mixed": {
+      "count": 63,
+      "ev_mean": 3.25,
+      "ev_std": 5.81,
+      "ev_max": 25,
+      "ev_min": 0,
+      "ev_median": 0,
+      "sum_ev": 205,
+      "target_mix": {
+        "how_to": 21,
+        "factual_search": 23,
+        "medical_info": 19
+      }
+    },
+    "how_to": {
+      "count": 30,
+      "ev_mean": 1.33,
+      "ev_std": 3.06,
+      "ev_max": 13,
+      "ev_min": 0,
+      "ev_median": 0,
+      "sum_ev": 40,
+      "target_mix": {
+        "how_to": 28,
+        "medical_info": 2
+      }
+    },
+    "medical_info": {
+      "count": 29,
+      "ev_mean": 6.83,
+      "ev_std": 6.88,
+      "ev_max": 18,
+      "ev_min": 0,
+      "ev_median": 5,
+      "sum_ev": 198,
+      "target_mix": {
+        "medical_info": 29
+      }
+    }
+  },
+  "override_impact": {
+    "override_keyword_queries": 38,
+    "override_actual_applied": 38,
+    "override_ratio": 1.0,
+    "medical_override_count": 29,
+    "financial_override_count": 9
+  },
+  "entropy_comparison": {
+    "pre_calibration_entropy": 1.587,
+    "post_calibration_entropy": 1.6702,
+    "entropy_change_pct": 5.24,
+    "cluster_migrations": 13,
+    "pre_distribution": {
+      "definition": 50,
+      "how_to": 33,
+      "general_mixed": 71,
+      "financial": 3,
+      "factual_search": 19,
+      "corporate_info": 2,
+      "medical_info": 22
+    },
+    "post_distribution": {
+      "definition": 50,
+      "how_to": 30,
+      "general_mixed": 63,
+      "financial": 9,
+      "factual_search": 17,
+      "corporate_info": 2,
+      "medical_info": 29
+    },
+    "migration_rate": 0.065
+  },
+  "acceptance": false,
+  "acceptance_details": {
+    "ev_std_definition": {
+      "value": 0.0,
+      "threshold": 2.0,
+      "pass": true
+    },
+    "ev_std_factual_search": {
+      "value": 6.89,
+      "threshold": 16.24,
+      "pass": true
+    },
+    "ev_std_financial": {
+      "value": 4.95,
+      "threshold": 4.88,
+      "pass": false
+    },
+    "ev_std_general_mixed": {
+      "value": 5.81,
+      "threshold": 6.5,
+      "pass": true
+    },
+    "ev_std_how_to": {
+      "value": 3.06,
+      "threshold": 2.66,
+      "pass": false
+    },
+    "ev_std_medical_info": {
+      "value": 6.88,
+      "threshold": 13.66,
+      "pass": true
+    },
+    "override_ratio": {
+      "value": 1.0,
+      "threshold": 0.4,
+      "pass": false
+    },
+    "entropy_change": {
+      "value": 5.24,
+      "threshold": 15.0,
+      "pass": true
+    },
+    "cluster_ev_ordering": {
+      "order": [
+        "definition(1.0)",
+        "how_to(1.33)",
+        "financial(2.44)",
+        "general_mixed(3.25)",
+        "corporate_info(4.0)",
+        "medical_info(6.83)",
+        "factual_search(8.12)"
+      ],
+      "pass": true
+    }
+  },
+  "sample_results": [
+    {
+      "query": "什么是通货膨胀",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "区块链技术原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "量子计算机原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "碳中和是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是GPT",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是ChatGPT",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是元宇宙",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是5G技术",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是云计算",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是NFT",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是大数据",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "人工智能是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "机器学习原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "深度学习本质",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "神经网络的原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是区块链",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是算法",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是编程语言",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是数据库",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "加密技术原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是API",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是操作系统",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "前端开发是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "后端开发原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是云存储",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是CDN",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是Docker",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "微服务是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是Kubernetes",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "芯片制造原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "光刻机是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是EDA",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是RISC-V",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "ARM架构是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是GPU",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是TPU",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "NPU是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "算力是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是量子比特",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "量子纠缠是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是超导",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "核聚变原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是光伏",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "氢能源原理",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是碳交易",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "碳足迹是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "ESG是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "什么是碳中和",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "碳达峰是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    },
+    {
+      "query": "LPR是什么意思",
+      "target": "definition",
+      "predicted": "definition",
+      "ev": 1
+    }
+  ]
+}

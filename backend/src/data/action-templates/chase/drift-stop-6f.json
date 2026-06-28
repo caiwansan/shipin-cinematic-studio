@@ -1,0 +1,97 @@
+{
+  "id": "drift-stop-6f",
+  "name": "漂移截停",
+  "category": "chase",
+  "school": "飙车追逐",
+  "description": "标准追车截停动作序列：逼近→挤压→漂移截停→并行→撞击→刹停，适合警匪追车或赛车场景",
+  "totalRounds": 6,
+  "matchKeywords": ["追车","飙车","漂移","截停","追逐","撞车","赛车","警匪"],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "label": "逼近",
+      "description": "追逐车（角色A车）从后方高速逼近前车（B车）",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "追逐车引擎轰鸣，从后方高速逼近，车头接近B车尾部", "position": "A车在B车正后方约5米", "expression": "高速逼近"},
+        {"id": "B", "headMark": "△", "action": "前车（B车）意识到被追，加速试图摆脱", "position": "B车在前方，排气管喷气加速", "expression": "加速逃离"}
+      ],
+      "camera": "俯拍双车→切A车驾驶员面部中景",
+      "effects": ["引擎轰鸣声","尾灯残影"],
+      "physics": "A车加速→距离B车从10米缩短到5米",
+      "duration": 2
+    },
+    {
+      "roundNumber": 2,
+      "label": "挤压",
+      "description": "追逐车逼近到B车侧后方，施加压力",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "A车向左偏移，车头到B车右后门位置，并行挤压", "position": "A车在B车右后方，两车相距1米", "expression": "施压逼近"},
+        {"id": "B", "headMark": "△", "action": "B车向右挤压试图阻止A车超车", "position": "B车向右靠，试图阻挡", "expression": "防守压制"}
+      ],
+      "camera": "侧方跟拍两车并行→推近驾驶位",
+      "effects": ["轮胎摩擦地面烟雾"],
+      "physics": "两车相距1米并行→轮毂擦出火星",
+      "duration": 2
+    },
+    {
+      "roundNumber": 3,
+      "label": "漂移",
+      "description": "追逐车拉手刹甩尾，车身横摆插入",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "A车猛打方向拉手刹，车尾甩向B车前方", "position": "A车横摆90度插在B车前方", "expression": "精准操控"},
+        {"id": "B", "headMark": "△", "action": "B车急刹车，轮胎抱死冒烟，车头几乎贴上A车侧面", "position": "B车急刹前倾", "expression": "震惊急停"}
+      ],
+      "camera": "俯拍鸟瞰漂移轨迹→地面摄像机拍轮胎烟雾",
+      "effects": ["轮胎烟雾滚滚","地面刹车痕"],
+      "physics": "A车横摆漂移→B车紧急制动→两车相距仅0.5米",
+      "duration": 3
+    },
+    {
+      "roundNumber": 4,
+      "label": "并行",
+      "description": "两车短暂并行，驾驶员对视",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "A车驾驶员转头与B对视，打方向盘封堵", "position": "A车横在B车前缓缓后退调整", "expression": "冷静自信"},
+        {"id": "B", "headMark": "△", "action": "B车试图倒车调头逃窜", "position": "B车倒车后退", "expression": "紧张焦急"}
+      ],
+      "camera": "侧方摇拍→切对视角",
+      "effects": ["引擎空转声","交错的灯光"],
+      "physics": "两车短暂静止对峙",
+      "duration": 2
+    },
+    {
+      "roundNumber": 5,
+      "label": "撞击",
+      "description": "追逐车油门到底猛撞B车，B车旋转失控",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "A车挂倒档后退几米→挂前进档猛踩油门撞向B车侧门", "position": "A车从斜前方撞击B车左侧", "expression": "果断"},
+        {"id": "B", "headMark": "△", "action": "B车被撞击后旋转360度，车门凹陷", "position": "B车原地旋转，轮胎抱死", "expression": "失控惊恐"}
+      ],
+      "camera": "正面特写A车撞击→慢镜头旋转→弹开",
+      "effects": ["金属碰撞巨响","碎片飞溅","冲击波"],
+      "physics": "A车撞击B车左前门→B车旋转→车门变形",
+      "duration": 3
+    },
+    {
+      "roundNumber": 6,
+      "label": "刹停",
+      "description": "B车撞停，A车刹停下车",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "A车急刹停下，引擎盖微冒烟→驾驶员开门下车", "position": "A车停在B车前5米", "expression": "沉稳"},
+        {"id": "B", "headMark": "△", "action": "B车撞上护栏停下，安全气囊弹出，驾驶员伏在方向盘上", "position": "B车撞护栏停住", "expression": "昏迷"}
+      ],
+      "camera": "全景拉远→A车驾驶员下车脚步特写→远景两车",
+      "effects": ["冒烟粒子","破碎玻璃反光"],
+      "physics": "A车急刹·B车撞击护栏停止",
+      "duration": 3
+    }
+  ],
+  "cameraLayout": {
+    "cameras": [
+      {"id": "C1", "label": "俯拍无人机视角", "x": 0, "y": 10, "movement": "跟随俯拍"},
+      {"id": "C2", "label": "侧方地面跟拍", "x": 5, "y": 0, "movement": "侧向飞驰跟拍"},
+      {"id": "C3", "label": "前方低机位", "x": 0, "y": -5, "movement": "正面低位"},
+      {"id": "C4", "label": "车内对视角", "x": 0.5, "y": 0, "movement": "固定"}
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+export { SegmentBuilder } from './segment-builder'
+export { VoiceRuntime, voiceRuntime, EspeakProvider, EdgeTtsProvider, AliyunTtsProvider } from './voice-runtime/index'
+export type { VoiceProvider, AudioChunk } from './voice-runtime/provider'
+export { StreamingAudioRuntime } from './streaming-audio-runtime'
+export { AudioCacheService } from './audio-cache-service'
+export { AudioPlayerRuntime, PlayerState } from './audio-player-runtime'
+export type { PlayerChunk, PlayerOptions, PlayerStateChange } from './audio-player-runtime'
+export { type SpeakerRole, type RoleVoiceConfig, type Emotion, type RoleVoiceMap } from './role-voice-runtime'

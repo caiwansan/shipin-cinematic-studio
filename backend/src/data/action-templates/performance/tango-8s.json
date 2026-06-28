@@ -1,0 +1,123 @@
+{
+  "id": "tango-8s",
+  "name": "探戈八步",
+  "category": "performance",
+  "school": "探戈",
+  "description": "标准探戈8步套路：起势→X步→前进步→拖拽→旋转→停顿→收势，适合双人舞蹈场景",
+  "totalRounds": 8,
+  "matchKeywords": ["探戈","双人舞","舞蹈","舞池","跳舞","舞伴","交谊舞"],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "label": "起势",
+      "description": "舞伴相对站立，男子左手握女子右手",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "左手握B右手，右手扶B后背，挺胸收腹", "position": "正面站立，右脚在前", "expression": "优雅自信"},
+        {"id": "B", "headMark": "△", "action": "右手握A左手，左手搭A右肩，微微后仰", "position": "正面站立，左脚在前", "expression": "优雅期待"}
+      ],
+      "camera": "正面中景",
+      "effects": [],
+      "physics": "两人间距约30厘米",
+      "duration": 2
+    },
+    {
+      "roundNumber": 2,
+      "label": "X步",
+      "description": "男子左脚横跨，女子右脚跟步交叉",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "左脚向左横跨一步，引导B", "position": "横跨步", "expression": "专注"},
+        {"id": "B", "headMark": "△", "action": "右脚跟随交叉至A左侧", "position": "交叉步跟隨", "expression": "配合"}
+      ],
+      "camera": "中景跟随脚步",
+      "effects": [],
+      "physics": "两人同步横移",
+      "duration": 2
+    },
+    {
+      "roundNumber": 3,
+      "label": "前进步",
+      "description": "男子右脚前进步，女子左脚后退步",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "右脚向前大步迈出，带动B后退", "position": "重心前移前弓步", "expression": "坚定推进"},
+        {"id": "B", "headMark": "△", "action": "左脚后退一大步，身体随A前移", "position": "后弓步后退", "expression": "流畅跟随"}
+      ],
+      "camera": "侧方中景跟拍脚步",
+      "effects": [],
+      "physics": "A向前·B后退，两人同步移动",
+      "duration": 2
+    },
+    {
+      "roundNumber": 4,
+      "label": "拖拽",
+      "description": "男子快速拖拽女子旋转",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "左手高举引导B旋转，右手放B腰间发力", "position": "站定，手臂上举", "expression": "主导掌控"},
+        {"id": "B", "headMark": "△", "action": "跟随A手臂力量旋转360度，裙摆飞扬", "position": "原地旋转，裙摆飞起", "expression": "热情投入"}
+      ],
+      "camera": "仰拍旋转裙摆→特写脚步",
+      "effects": ["裙摆旋转拖影"],
+      "physics": "B旋转时裙摆画出圆形轨迹",
+      "duration": 3
+    },
+    {
+      "roundNumber": 5,
+      "label": "CROSS",
+      "description": "男子牵引女子交叉步",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "左脚向左后撤步，同时牵引B向右侧交叉", "position": "后撤步", "expression": "稳健"},
+        {"id": "B", "headMark": "△", "action": "右脚交叉到A左侧，身体紧靠A", "position": "交叉步贴近", "expression": "亲密"}
+      ],
+      "camera": "中景侧拍交叉姿势",
+      "effects": [],
+      "physics": "两人身体几乎贴合",
+      "duration": 2
+    },
+    {
+      "roundNumber": 6,
+      "label": "旋转",
+      "description": "男子带动女子再次旋转，女子头后仰",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "手臂引领B旋转，目光注视B", "position": "半蹲马步稳定重心", "expression": "深情注视"},
+        {"id": "B", "headMark": "△", "action": "再次旋转一周，上身后仰头朝后，被A揽腰", "position": "旋转后仰，被A单手揽腰", "expression": "陶醉"}
+      ],
+      "camera": "环绕360度拍摄旋转",
+      "effects": ["慢镜头定格后仰瞬间"],
+      "physics": "B旋转后仰·A稳稳扶住",
+      "duration": 3
+    },
+    {
+      "roundNumber": 7,
+      "label": "停顿",
+      "description": "两人突然停顿，定格造型",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "保持扶B腰部的姿势，身体微前倾", "position": "身体前倾俯视B", "expression": "深情"},
+        {"id": "B", "headMark": "△", "action": "身体后仰至接近水平，右腿抬起，被A扶住", "position": "后仰悬空，右腿高抬", "expression": "魅惑得意"}
+      ],
+      "camera": "固定中景拍定格造型→推进面部特写",
+      "effects": ["周围灯光渐暗→聚光灯打在两人身上"],
+      "physics": "B全身重量由A手臂支撑",
+      "duration": 2
+    },
+    {
+      "roundNumber": 8,
+      "label": "收势",
+      "description": "男子扶起女子，携手鞠躬",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "缓缓扶起B，退后半步，两人同时鞠躬", "position": "退后半步，鞠躬", "expression": "绅士"},
+        {"id": "B", "headMark": "△", "action": "被扶起→整理裙摆→牵裙角鞠躬", "position": "牵裙角屈膝鞠躬", "expression": "优雅"}
+      ],
+      "camera": "中景拍鞠躬→拉远至全景",
+      "effects": [],
+      "physics": "两人动作一致同步",
+      "duration": 3
+    }
+  ],
+  "cameraLayout": {
+    "cameras": [
+      {"id": "C1", "label": "正面中景", "x": 0, "y": -3, "movement": "固定/慢推"},
+      {"id": "C2", "label": "侧方跟拍", "x": 4, "y": 0, "movement": "侧向滑轨"},
+      {"id": "C3", "label": "顶部俯拍", "x": 0, "y": 5, "movement": "固定俯拍"},
+      {"id": "C4", "label": "特效环绕", "x": 0, "y": 0, "movement": "环绕360°"}
+    ]
+  }
+}

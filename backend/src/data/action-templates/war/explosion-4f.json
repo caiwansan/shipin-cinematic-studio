@@ -1,0 +1,71 @@
+{
+  "id": "explosion-4f",
+  "name": "爆炸冲击波",
+  "category": "disaster",
+  "school": "灾难特效",
+  "description": "标准爆炸动作序列：闪光→火球膨胀→冲击波扩散→碎片飞溅→余烬消散，适合爆破、空袭、特效场景",
+  "totalRounds": 4,
+  "matchKeywords": ["爆炸","轰炸","爆破","火球","炸弹","爆炸特效","爆炸波"],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "label": "爆闪光",
+      "description": "爆炸中心瞬间白光闪光，场景过曝",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "被爆炸气浪掀飞，身体腾空", "position": "距爆炸中心5米，背对爆炸", "expression": "惊恐"},
+        {"id": "B", "headMark": "△", "action": "抱头蹲下，被冲击波推倒", "position": "距爆炸中心8米，面向爆炸", "expression": "恐惧"}
+      ],
+      "camera": "正对爆炸中心→瞬间过曝白化",
+      "effects": ["爆闪白光","音爆巨响","瞬间静音→轰鸣"],
+      "physics": "光速先到→冲击波随后",
+      "duration": 1
+    },
+    {
+      "roundNumber": 2,
+      "label": "火球膨胀",
+      "description": "橙红色火球从爆炸中心迅速膨胀",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "被气浪掀翻在地，翻滚", "position": "躺地翻滚", "expression": "痛苦"},
+        {"id": "B", "headMark": "△", "action": "被震倒在地，捂住耳朵张嘴喊叫", "position": "伏地", "expression": "骇然"}
+      ],
+      "camera": "慢动作拍火球膨胀→切角色面部反应",
+      "effects": ["火球翻滚","热浪扭曲空气"],
+      "physics": "火球以超音速膨胀→热浪扭曲空气可见",
+      "duration": 2
+    },
+    {
+      "roundNumber": 3,
+      "label": "碎片飞溅",
+      "description": "建筑碎片、玻璃、石块向四面八方飞射",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "双手护头躲避飞来的碎片", "position": "蜷缩掩体后", "expression": "恐惧"},
+        {"id": "B", "headMark": "△", "action": "被一块碎片擦过肩膀，流血", "position": "侧身躲避", "expression": "剧痛"}
+      ],
+      "camera": "碎片迎面视角→摇晃手持跟拍",
+      "effects": ["玻璃碎裂漫飞","石块翻滚","钢筋扭曲"],
+      "physics": "碎片呈放射状飞散→动能逐渐衰减",
+      "duration": 3
+    },
+    {
+      "roundNumber": 4,
+      "label": "余烬消散",
+      "description": "爆炸威力衰减，火势持续燃烧，浓烟升腾",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "艰难爬起，看向爆炸废墟", "position": "站立遥望废墟", "expression": "劫后余生的震惊"},
+        {"id": "B", "headMark": "△", "action": "用衣服捂住口鼻，咳嗽", "position": "半蹲捂住口鼻", "expression": "呛咳痛苦"}
+      ],
+      "camera": "全景拉远拍废墟→升格镜头拍烟尘",
+      "effects": ["火焰燃烧声","建筑余烬坠落","烟尘弥漫"],
+      "physics": "爆炸能量消散→重力主导碎片坠落",
+      "duration": 4
+    }
+  ],
+  "cameraLayout": {
+    "cameras": [
+      {"id": "C1", "label": "正面爆炸中心", "x": 0, "y": -5, "movement": "固定"},
+      {"id": "C2", "label": "侧面安全距离", "x": 6, "y": 0, "movement": "手持摇晃"},
+      {"id": "C3", "label": "俯拍全景", "x": 0, "y": 12, "movement": "固定高空俯拍"},
+      {"id": "C4", "label": "角色主观", "x": 0.5, "y": 0, "movement": "主观视角"}
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "id": "fight-combo-5r",
+  "name": "自由搏击组合拳低扫",
+  "category": "fight",
+  "school": "自由搏击",
+  "description": "标准的自由搏击五回合节奏：试探→突破→重击→追击→终结，包含刺拳、重拳、低扫、组合拳、顶膝等标准化动作序列",
+  "totalRounds": 5,
+  "matchKeywords": ["擂台","格斗","拳击","搏击","对战","单挑","打架","格斗技","肉搏","单挑","1v1"],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "label": "试探",
+      "description": "角色A左架刺拳试探，角色B后撤防御",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "前手刺拳试探", "position": "左侧前弓步，重心在前脚", "expression": "专注试探"},
+        {"id": "B", "headMark": "△", "action": "后撤步双手护头防御", "position": "右侧后撤步，重心在后脚", "expression": "警惕观察"}
+      ],
+      "camera": "中景侧拍，固定镜头",
+      "effects": [],
+      "physics": "A刺拳未中，B前手格挡偏移，拳风擦过",
+      "duration": 3
+    },
+    {
+      "roundNumber": 2,
+      "label": "突破",
+      "description": "角色A虚晃前手→后手重拳突击，角色B摇闪躲避",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "前手虚晃→后手重拳直线击出", "position": "重心前移，跨步跟进", "expression": "凌厉爆发"},
+        {"id": "B", "headMark": "△", "action": "摇闪下潜→侧向横移", "position": "身体下压，向左横移两步", "expression": "沉着闪避"}
+      ],
+      "camera": "低机位仰拍（A视角），突切正面中景",
+      "effects": [],
+      "physics": "B摇闪躲过，A重拳打空，身体因惯性前冲",
+      "duration": 3
+    },
+    {
+      "roundNumber": 3,
+      "label": "重击",
+      "description": "角色A低扫腿+左勾拳连击，角色B被命中",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "右低扫腿踢B左膝外侧→衔接左勾拳", "position": "重心下沉转腰发力→起身跟拳", "expression": "凶狠果断"},
+        {"id": "B", "headMark": "△", "action": "左膝被扫中弯曲→护头后退", "position": "左腿站立不稳，后退两步", "expression": "吃痛皱眉"}
+      ],
+      "camera": "俯拍扫腿→中景跟拍A出拳方向",
+      "effects": ["慢动作特写扫腿接触瞬间"],
+      "physics": "A扫腿击中B左膝外侧→B左腿弯曲失稳→A左勾拳擦过B下巴",
+      "duration": 4
+    },
+    {
+      "roundNumber": 4,
+      "label": "追击",
+      "description": "角色A追击连续组合拳，角色B搂抱防守",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "连续组合拳（刺拳+直拳+摆拳），步步紧逼", "position": "连续前移，压进", "expression": "凶猛追击"},
+        {"id": "B", "headMark": "△", "action": "双手护头后退→上前搂抱A的双臂", "position": "后退至角落→主动前冲贴近", "expression": "顽强防守"}
+      ],
+      "camera": "侧向跟拍，镜头随A推进",
+      "effects": ["汗水飞溅粒子特效"],
+      "physics": "A组合拳击中B护臂→B双臂格挡吸收冲击→B撞到围绳",
+      "duration": 4
+    },
+    {
+      "roundNumber": 5,
+      "label": "终结",
+      "description": "角色A后撤拉开距离→前冲顶膝，角色B腹部受击倒地",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "后撤一步蓄力→前冲飞膝", "position": "后撤拉开→蹬地前冲腾空", "expression": "决杀之势"},
+        {"id": "B", "headMark": "△", "action": "躲避不及腹部受击→身体折叠跪地", "position": "弓腰跪地，双手捂腹", "expression": "痛苦不堪"}
+      ],
+      "camera": "慢动作侧写推进→推进膝部特写→全景俯拍B倒地",
+      "effects": ["冲击波空气扭曲特效","慢镜头定格"],
+      "physics": "A蹬地发力→膝撞B腹部→B身体对折→双膝跪地",
+      "duration": 3
+    }
+  ],
+  "cameraLayout": {
+    "cameras": [
+      {"id": "C1", "label": "正面中景", "x": 0, "y": -3, "movement": "固定→前推"},
+      {"id": "C2", "label": "侧面低机位", "x": -4, "y": 0, "movement": "侧向跟拍"},
+      {"id": "C3", "label": "俯拍顶机位", "x": 0, "y": 5, "movement": "俯视固定"}
+    ]
+  }
+}

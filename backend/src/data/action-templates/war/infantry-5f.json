@@ -1,0 +1,84 @@
+{
+  "id": "infantry-5f",
+  "name": "步兵方阵冲锋",
+  "category": "war",
+  "school": "战争群戏",
+  "description": "古风步兵方阵：布阵列→击鼓冲锋→接战→混战→溃散五个阶段，适合大规模战争场景",
+  "totalRounds": 5,
+  "matchKeywords": ["军队","步兵","方阵","战争","大战","战场","大军","阵列","进攻","冲锋"],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "label": "布阵列",
+      "description": "甲胄士兵排列整齐方阵，缓缓推进",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "将军拔剑指向前方，号令进攻", "position": "军阵后方高台", "expression": "威严"},
+        {"id": "B", "headMark": "△", "action": "士兵方阵齐步推进，盾牌在前，长矛在后", "position": "方阵阵列，每排10人", "expression": "肃杀"}
+      ],
+      "camera": "无人机俯拍全景→缓慢推近阵列",
+      "effects": ["战鼓声","号角声","尘土飞扬"],
+      "physics": "千军万马整齐划一的脚步声震动大地",
+      "duration": 4
+    },
+    {
+      "roundNumber": 2,
+      "label": "冲锋",
+      "description": "战鼓节奏加快，士兵喊杀冲锋",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "将军战旗前挥，骑兵领头冲锋", "position": "骑兵队前方冲锋", "expression": "勇猛"},
+        {"id": "B", "headMark": "△", "action": "士兵高喊杀声，从缓步变跑步，阵列保持", "position": "方阵变化为冲锋队列", "expression": "激昂"}
+      ],
+      "camera": "前方低机位迎面拍冲锋→侧方快速跟拍",
+      "effects": ["喊杀声","旗帜飘扬","马蹄轰鸣"],
+      "physics": "地面震颤·阵列变形为冲锋箭头状",
+      "duration": 3
+    },
+    {
+      "roundNumber": 3,
+      "label": "接战",
+      "description": "两军对撞，盾牌相击，长矛穿刺",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "骑兵撞入敌阵，挥舞兵器砍杀", "position": "冲锋箭头前端，冲击敌军阵列", "expression": "杀红眼"},
+        {"id": "B", "headMark": "△", "action": "敌军方阵被冲开缺口，前排士兵倒下", "position": "阵列第一排被冲击变形", "expression": "惨烈"}
+      ],
+      "camera": "冲刺碰撞瞬间慢镜头→侧方中景混战",
+      "effects": ["兵器碰撞巨响","血雾","尘土冲天"],
+      "physics": "冲击力使双方阵列第一排人员飞退/倒地",
+      "duration": 4
+    },
+    {
+      "roundNumber": 4,
+      "label": "混战",
+      "description": "阵型瓦解，转为混战厮杀",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "将军下马步战，与敌军将领短兵相接", "position": "混战中心", "expression": "勇不可挡"},
+        {"id": "B", "headMark": "△", "action": "普通士兵两两对战，刀来枪往", "position": "全景各处混战", "expression": "混战"}
+      ],
+      "camera": "手持摇晃跟拍→环绕拍摄A与敌将对战",
+      "effects": ["烟尘弥漫","刀光剑影"],
+      "physics": "混乱的力学分布·各处小规模格斗",
+      "duration": 5
+    },
+    {
+      "roundNumber": 5,
+      "label": "溃散",
+      "description": "一方溃败，追击败兵",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "将军高举战旗，号令追击", "position": "战场前沿高举旗帜", "expression": "胜利豪情"},
+        {"id": "B", "headMark": "△", "action": "败军弃甲逃散，兵器丢落一地", "position": "四散奔逃", "expression": "狼狈恐惧"}
+      ],
+      "camera": "全景拉远拍溃散→俯拍败兵逃散路线",
+      "effects": ["落日残阳","硝烟弥漫","尸横遍野"],
+      "physics": "败方失去阵型，各自无组织逃命",
+      "duration": 4
+    }
+  ],
+  "cameraLayout": {
+    "cameras": [
+      {"id": "C1", "label": "俯拍全景", "x": 0, "y": 15, "movement": "高空俯拍推移"},
+      {"id": "C2", "label": "前线低机位", "x": 0, "y": -1, "movement": "地面跟拍冲锋"},
+      {"id": "C3", "label": "侧方中景", "x": 8, "y": 0, "movement": "侧方快速横移"},
+      {"id": "C4", "label": "随军移动", "x": 2, "y": 0, "movement": "跟拍主角视角"}
+    ]
+  }
+}

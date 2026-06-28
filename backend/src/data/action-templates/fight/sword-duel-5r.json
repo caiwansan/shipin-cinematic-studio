@@ -1,0 +1,83 @@
+{
+  "id": "sword-duel-5r",
+  "name": "剑术对决五回合",
+  "category": "fight",
+  "school": "剑术",
+  "description": "古风剑术对决：持剑对峙→试探→交锋缠剑→破招制胜，包含挑、刺、劈、撩、格挡等标准化剑招",
+  "totalRounds": 5,
+  "matchKeywords": ["剑","剑术","对决","兵器","刀剑","利刃","武侠","江湖"],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "label": "起势对峙",
+      "description": "角色A与角色B持剑对峙，剑尖相对，缓缓绕圈",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "右手持剑斜指前方，左手剑诀，缓缓横移", "position": "侧身站位，剑尖指向B眉心", "expression": "冷峻"},
+        {"id": "B", "headMark": "△", "action": "右手持剑平举，剑尖微颤，缓缓横移", "position": "侧身站位，剑尖指向A胸口", "expression": "警惕"}
+      ],
+      "camera": "全景侧拍，缓慢环绕摇移",
+      "effects": ["剑尖反射光晕"],
+      "physics": "双方剑尖相距约1.5米，缓缓绕圈寻找破绽",
+      "duration": 4
+    },
+    {
+      "roundNumber": 2,
+      "label": "出剑试探",
+      "description": "角色A虚刺三剑引诱，角色B格挡",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "前滑步→上刺B面部→回收→再刺左肩", "position": "前滑步突进，步法灵活", "expression": "试探锋芒"},
+        {"id": "B", "headMark": "△", "action": "后撤步→剑身格挡A第一剑→侧身闪避第二剑", "position": "后撤步闪避，剑身横向格挡", "expression": "沉稳"}
+      ],
+      "camera": "中景跟拍A的剑→切B格挡的特写",
+      "effects": ["刀剑相击火星"],
+      "physics": "A剑刺入B格挡范围→B剑身格挡发出金属碰撞",
+      "duration": 4
+    },
+    {
+      "roundNumber": 3,
+      "label": "缠剑交锋",
+      "description": "双方剑身交缠，近身角力",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "转腕搅动剑身，试图缠B的剑→进步刺B腹部", "position": "进步刺出，剑身旋转", "expression": "凌厉"},
+        {"id": "B", "headMark": "△", "action": "剑身被缠后顺势翻转→下截格挡A的刺", "position": "下蹲截剑，剑身斜向下", "expression": "专注"}
+      ],
+      "camera": "特写剑身交缠细节→拉远至中景",
+      "effects": ["剑身摩擦火花"],
+      "physics": "A转腕缠剑→B反方向翻转→A剑被B下截格挡住",
+      "duration": 4
+    },
+    {
+      "roundNumber": 4,
+      "label": "破招",
+      "description": "角色A虚招上挑→下劈突袭",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "剑尖上挑虚晃B面部→顺势转身下劈B左肩", "position": "转身180度手臂轮圆下劈", "expression": "杀招突现"},
+        {"id": "B", "headMark": "△", "action": "仰头躲避上挑→横剑格挡下劈被压制", "position": "举剑横格，单膝跪地", "expression": "吃力"}
+      ],
+      "camera": "正面跟拍上挑→快速横摇+跟随下劈方向",
+      "effects": ["重击火花爆炸"],
+      "physics": "A虚招吸引B注意力→下劈势大力沉→B单膝跪地格挡",
+      "duration": 4
+    },
+    {
+      "roundNumber": 5,
+      "label": "决胜",
+      "description": "角色A追击一剑制胜，剑指B咽喉停住",
+      "chars": [
+        {"id": "A", "headMark": "○", "action": "趁B跪地失衡→突刺B咽喉→剑尖在咽喉前分毫停住", "position": "弓步突刺，剑如白虹", "expression": "克制冷静"},
+        {"id": "B", "headMark": "△", "action": "无力格挡→仰头闭目待死→睁眼见剑尖停在咽喉", "position": "仰坐在地，剑落于地", "expression": "绝望→惊愕"}
+      ],
+      "camera": "慢动作突刺推进→剑尖特写定格→环绕全景",
+      "effects": ["慢镜头推进","定格"],
+      "physics": "A腰腿合一突刺→剑尖在距B咽喉0.5cm处精准停住",
+      "duration": 4
+    }
+  ],
+  "cameraLayout": {
+    "cameras": [
+      {"id": "C1", "label": "全景侧拍", "x": 3, "y": -1, "movement": "环绕摇移"},
+      {"id": "C2", "label": "特写近景", "x": 1, "y": 0, "movement": "固定"},
+      {"id": "C3", "label": "正面中景", "x": 0, "y": -2.5, "movement": "前推/后拉"}
+    ]
+  }
+}

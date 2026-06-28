@@ -1,0 +1,16 @@
+export {
+  RecoveryAction,
+  RecoveryActionId,
+  createRecoveryActionId,
+  RecoveryRunId,
+  RecoveryScope,
+  RecoveryTargetProtocol,
+  RecoveryActionType,
+  FailureCategory,
+  RootCauseGraph,
+  RootCauseNode,
+  DiagnosisChainEntry,
+  RecoveryHistoryEntry,
+  ContinuityReport,
+  ContinuityIssue,
+} from './recovery-action';
