@@ -1,0 +1,22 @@
+{
+  "generated": "2026-06-28T15:07:00Z",
+  "baselineVersion": "benchmark-wave1-v1",
+  "registryId": "v1",
+  "registryVersion": "1.0.0",
+  "coverageScore": 39,
+  "healthScore": 39,
+  "totalCapabilities": 31,
+  "coveredCapabilities": 12,
+  "p0Gaps": 19,
+  "wave1CapabilitiesMet": true,
+  "summary": {
+    "total": 31,
+    "healthy": 12,
+    "weak": 0,
+    "critical": 19,
+    "healthScore": 39,
+    "averageCoverage": 39
+  },
+  "analytics": null,
+  "trendHistory": []
+}

@@ -1,0 +1,88 @@
+# Wave 1 Baseline — 不可变回归基线
+#
+# 版本: benchmark-wave1-v1
+# 冻结时间: 2026-06-28
+# 说明: Wave 1（基础时空能力）完成后的完整 Benchmark 基线。
+#       所有后续 Wave 必须与此基线对比进行 Regression 检测。
+
+# ─── 元信息 ──────────────────────────────
+baseline_version: benchmark-wave1-v1
+frozen_at: 2026-06-28T15:07:00Z
+
+# ─── 覆盖概览 ────────────────────────────
+coverage:
+  total_capabilities: 31
+  covered: 12
+  coverage_percent: 39
+  p0_gaps: 19
+  wave1_target_met: true
+
+# ─── Wave 1 能力清单 ─────────────────────
+wave1_capabilities:
+  - CAMERA_PATH
+  - CAMERA_MOTION
+  - OBJECT_PERSISTENCE
+  - SPATIAL_RELATIONSHIP
+  - TEMPORAL_CONSISTENCY
+
+# ─── 测试统计 ────────────────────────────
+testing:
+  test_files: 31
+  total_tests: 365
+  passed: 365
+  failed: 0
+  validation_errors: 0
+  validation_warnings: 0
+
+# ─── 功能完整性 ──────────────────────────
+capabilities:
+  registry: passed
+  validation: passed
+  coverage_index: passed
+  analytics: passed
+  asset_factory: passed
+  quality_gate: passed
+
+# ─── Dataset 清单 ────────────────────────
+datasets:
+  - id: L0-001
+    primaryCapability: CHARACTER_REFERENCE
+    difficulty: L0
+    type: legacy
+  - id: L1-001
+    primaryCapability: CHARACTER_REFERENCE
+    difficulty: L1
+    type: legacy
+  - id: L2-CAMERA_PATH
+    primaryCapability: CAMERA_PATH
+    difficulty: L2
+    type: asset_v1
+    wave: 1
+  - id: L2-CAMERA_MOTION
+    primaryCapability: CAMERA_MOTION
+    difficulty: L2
+    type: asset_v1
+    wave: 1
+  - id: L2-OBJECT_PERSISTENCE
+    primaryCapability: OBJECT_PERSISTENCE
+    difficulty: L2
+    type: asset_v1
+    wave: 1
+  - id: L2-SPATIAL_RELATION
+    primaryCapability: SPATIAL_RELATIONSHIP
+    difficulty: L2
+    type: asset_v1
+    wave: 1
+  - id: L2-TEMPORAL_CONTINUITY
+    primaryCapability: TEMPORAL_CONSISTENCY
+    difficulty: L2
+    type: asset_v1
+    wave: 1
+
+# ─── 验证状态 ────────────────────────────
+quality_gates:
+  wave1_capabilities_met: true
+  wave1_coverage_target: 39_percent
+  all_datasets_have_gold_reference: true
+  all_datasets_pass_validation: true
+  no_dataset_without_primary_capability: true
