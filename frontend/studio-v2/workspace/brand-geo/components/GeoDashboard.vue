@@ -124,6 +124,31 @@
       </div>
     </div>
 
+    <!-- Asset Stats Section (Phase 2.5) -->
+    <div class="geo-dashboard-section">
+      <h3 class="geo-section-title">📦 资产概览</h3>
+      <div class="geo-asset-mini-stats" v-if="assetStats && Object.keys(assetStats).length > 1">
+        <div
+          v-for="s in assetStatCards"
+          :key="s.label"
+          class="geo-asset-mini-card"
+          :style="{ borderLeftColor: s.color }"
+        >
+          <span class="geo-asset-mini-icon">{{ s.icon }}</span>
+          <div class="geo-asset-mini-body">
+            <span class="geo-asset-mini-number">{{ s.value }}</span>
+            <span class="geo-asset-mini-label">{{ s.label }}</span>
+          </div>
+        </div>
+      </div>
+      <div v-else class="geo-asset-no-data">
+        <p>暂无资产数据</p>
+        <button class="geo-btn-small" @click="navigateToPanel('asset-center')">
+          前往资产中心
+        </button>
+      </div>
+    </div>
+
     <!-- Bottom Panels -->
     <div class="geo-dashboard-panels">
       <div class="geo-panel geo-panel-recent">
@@ -202,10 +227,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { GeoPanelId, GeoTask, WebsiteSnapshot, WorkspaceFlowStage } from '~/studio-v2/types/geo'
 import { useBrandGeoStore } from '~/studio-v2/workspace/brand-geo/stores/useBrandGeoStore'
 import { useBrandGEORuntime } from '~/studio-v2/workspace/brand-geo/composables/useBrandGEORuntime'
+import { assetService } from '~/modules/asset/services/asset.service'
 
 interface FeatureCard {
   id: string
@@ -319,6 +345,32 @@ function formatDate(dateStr: string): string {
     return dateStr
   }
 }
+
+// ── Asset Stats (Phase 2.5) ──
+const assetStats = ref<Record<string, number>>({})
+
+const assetStatCards = computed(() => {
+  const s = assetStats.value
+  return [
+    { icon: '📦', label: '总资产', value: s.total || 0, color: '#6366f1' },
+    { icon: '📄', label: '文章', value: (s as any).Article || 0, color: '#06b6d4' },
+    { icon: '❓', label: 'FAQ', value: (s as any).FAQ || 0, color: '#10b981' },
+    { icon: '📚', label: '文档', value: ((s as any).Document || 0) + ((s as any).API || 0), color: '#8b5cf6' },
+    { icon: '🖼️', label: '图片', value: (s as any).Image || 0, color: '#f59e0b' },
+    { icon: '🎬', label: '视频', value: (s as any).Video || 0, color: '#ef4444' },
+  ]
+})
+
+watch(() => store.selectedV2ProjectId.value, async (newId) => {
+  if (newId) {
+    try {
+      const stats = await assetService.getStats(newId)
+      assetStats.value = stats
+    } catch {
+      assetStats.value = { total: 0 }
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -464,4 +516,19 @@ function formatDate(dateStr: string): string {
 .geo-btn { padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
 .geo-btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
 .geo-btn-primary:hover { opacity: 0.9; }
+
+/* Asset Mini Stats (Phase 2.5) */
+.geo-asset-mini-stats {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+}
+.geo-asset-mini-card {
+  background: #11151c; border-radius: 10px; padding: 12px;
+  display: flex; align-items: center; gap: 10px; border-left: 3px solid;
+}
+.geo-asset-mini-icon { font-size: 20px; }
+.geo-asset-mini-body { display: flex; flex-direction: column; }
+.geo-asset-mini-number { font-size: 16px; font-weight: 700; color: #e2e8f0; }
+.geo-asset-mini-label { font-size: 10px; color: #6b7280; }
+.geo-asset-no-data { text-align: center; padding: 20px; color: #6b7280; background: #11151c; border-radius: 12px; }
+
 </style>

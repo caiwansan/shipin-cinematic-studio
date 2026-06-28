@@ -3672,3 +3672,87 @@ model GeoGraphEdge {
   @@index([targetId])
   @@map("geo_graph_edges")
 }
+
+// ===== Unified Asset Runtime (Platform Level) =====
+
+model UnifiedAsset {
+  id        String   @id @default(uuid())
+  projectId String
+  type      String
+  title     String
+  language  String   @default("zh")
+  source    String?  // scanner, import, manual, api
+  sourceUrl String?
+  content   String?  // plain text content
+  summary   String?  // AI summary (optional)
+  metadata  String?  // JSON - extensible metadata
+  hash      String?  // SHA256 for dedup
+  status    String   @default("draft") // draft, published, archived
+  schemaVersion Int  @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  versions  UnifiedAssetVersion[]
+  tags      UnifiedAssetTag[]
+  relationsFrom UnifiedAssetRelation[] @relation("fromAsset")
+  relationsTo   UnifiedAssetRelation[] @relation("toAsset")
+
+  @@index([projectId])
+  @@index([projectId, type])
+  @@index([hash])
+  @@map("unified_assets")
+}
+
+model UnifiedAssetVersion {
+  id        String        @id @default(uuid())
+  assetId   String
+  version   Int
+  content   String?
+  hash      String?
+  createdAt DateTime      @default(now())
+  asset     UnifiedAsset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, version])
+  @@map("unified_asset_versions")
+}
+
+model UnifiedAssetTag {
+  id      String       @id @default(uuid())
+  assetId String
+  tag     String
+  asset   UnifiedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, tag])
+  @@map("unified_asset_tags")
+}
+
+model UnifiedAssetRelation {
+  id          String       @id @default(uuid())
+  fromAssetId String
+  toAssetId   String
+  relation    String // depends_on, references, related_to, derived_from, etc.
+  fromAsset   UnifiedAsset @relation("fromAsset", fields: [fromAssetId], references: [id], onDelete: Cascade)
+  toAsset     UnifiedAsset @relation("toAsset", fields: [toAssetId], references: [id], onDelete: Cascade)
+
+  @@index([fromAssetId])
+  @@index([toAssetId])
+  @@map("unified_asset_relations")
+}
+
+model RawDocument {
+  id        String   @id @default(uuid())
+  projectId String
+  url       String
+  mime      String?
+  headers   String?  // JSON
+  html      String?
+  markdown  String?
+  text      String?
+  status    Int      @default(0)
+  fetchedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@map("raw_documents")
+}

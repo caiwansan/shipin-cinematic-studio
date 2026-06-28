@@ -1,6 +1,5 @@
 // ============================================================
-// BrandGEO — Sidebar 菜单配置 (Phase 1 + Phase 2)
-// 更新为 11 项菜单结构
+// BrandGEO — Sidebar 菜单配置 (Phase 1 + Phase 2 + Phase 2.5)
 // ============================================================
 
 import type { SidebarMenuItem } from '~/studio-v2/types/geo/runtime'
@@ -11,6 +10,12 @@ export const GEO_SIDEBAR_MENU: SidebarMenuItem[] = [
     label: '总览仪表盘',
     icon: '📊',
     route: '/workspace/geo?panel=dashboard',
+  },
+  {
+    id: 'asset-center',
+    label: '资产中心',
+    icon: '📦',
+    route: '/workspace/geo?panel=asset-center',
   },
   {
     id: 'brand-profile',

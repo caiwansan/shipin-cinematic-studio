@@ -477,6 +477,11 @@ await app.register(projectV2Routes)
   await app.register(await import('./routes/geo/geo-brand.js').then(m => m.default))
   await app.register(await import('./routes/geo/geo-scanner.js').then(m => m.default))
   await app.register(await import('./routes/geo/geo-graph.js').then(m => m.default))
+
+  // Unified Asset Runtime routes (Platform Level, Phase 2.5)
+  await app.register(await import('./routes/asset/asset.route.js').then(m => m.default))
+  await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default))
+  await app.register(await import('./routes/asset/asset-scanner.route.js').then(m => m.default))
   // Production health / monitoring routes
   await app.register(healthRoutes)
   // REMOVED: observabilityRoutes
@@ -510,6 +515,15 @@ await app.register(projectV2Routes)
     console.log('[Autonomous] P7 EvolutionEngine started (every 60s)')
   } catch (err) {
     console.warn('[Autonomous] Failed to start:', (err as Error).message)
+  }
+
+  // 初始化 Asset Runtime（Phase 2.5 平台级基础设施）
+  try {
+    const { assetRuntime } = await import('./services/asset/runtime/asset.runtime.js')
+    await assetRuntime.initialize()
+    console.log('[AssetRuntime] ✅ Unified Asset Runtime initialized')
+  } catch (err) {
+    console.warn('[AssetRuntime] Failed to initialize:', (err as Error).message)
   }
 
   // F6 System Dashboard

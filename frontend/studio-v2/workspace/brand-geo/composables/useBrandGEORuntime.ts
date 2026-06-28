@@ -18,7 +18,7 @@ export function useBrandGEORuntime() {
       'citations', 'topics', 'competitors', 'projects',
       'tasks', 'settings', 'reports', 'help',
       'project-create', 'project-select', 'brand-profile',
-      'website-scanner', 'knowledge-graph',
+      'website-scanner', 'knowledge-graph', 'asset-center',
     ]
     if (panel && validPanels.includes(panel)) {
       return panel
@@ -184,6 +184,7 @@ export function useBrandGEORuntime() {
       'brand-profile': '品牌档案',
       'website-scanner': '网站扫描',
       'knowledge-graph': '知识图谱',
+      'asset-center': '资产中心',
     }
     return titles[store.activePanelId.value] || '品牌GEO'
   })

@@ -78,6 +78,14 @@
           :project-id="selectedV2ProjectId"
         />
 
+        <!-- Phase 2.5: Asset Center -->
+        <AssetCenterPage
+          v-else-if="activePanelId === 'asset-center'"
+          :project-id="selectedV2ProjectId"
+          @select="onAssetSelected"
+          @navigate="onNavigate"
+        />
+
         <!-- Placeholder panels for Phase 1 items -->
         <GeoPlaceholderPanel
           v-else
@@ -102,6 +110,7 @@ import ProjectCreatePage from '~/studio-v2/workspace/brand-geo/pages/ProjectCrea
 import BrandProfilePage from '~/studio-v2/workspace/brand-geo/pages/BrandProfilePage.vue'
 import WebsiteScannerPage from '~/studio-v2/workspace/brand-geo/pages/WebsiteScannerPage.vue'
 import KnowledgeGraphPage from '~/studio-v2/workspace/brand-geo/pages/KnowledgeGraphPage.vue'
+import AssetCenterPage from '~/studio-v2/workspace/brand-geo/pages/AssetCenterPage.vue'
 import type { GeoPanelId } from '~/studio-v2/types/geo'
 
 const runtime = useBrandGEORuntime()
@@ -170,6 +179,11 @@ function onBrandProfileSaved() {
 function onWebsiteScanned() {
   store.setCurrentStage('build_graph')
   onNavigate('knowledge-graph')
+}
+
+function onAssetSelected(asset: any) {
+  // Phase 2.5: Asset selection — future detail view
+  console.log('[AssetCenter] Selected asset:', asset.id)
 }
 
 onMounted(async () => {

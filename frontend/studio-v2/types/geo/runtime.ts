@@ -51,6 +51,8 @@ export type GeoPanelId =
   | 'brand-profile'
   | 'website-scanner'
   | 'knowledge-graph'
+  // Phase 2.5
+  | 'asset-center'
 
 /** GEO Runtime */
 export interface BrandGEORuntime {
