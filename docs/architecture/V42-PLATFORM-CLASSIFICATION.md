@@ -151,6 +151,39 @@ REMOVE
 
 ---
 
+## 执行路线（V4.2 Phase A）
+
+| 批次 | 焦点 | 模块 | 状态 |
+|------|------|------|------|
+| **Batch 1** | 安全删除（零引用孤岛） | constraint-physics, style-evolution, .bak 文件 | ✅ **已关闭** |
+| **Batch 2** | 业务退出 | 生活助手 (WebSocket/API/页面) | ✅ **已关闭** |
+| **Batch 2.1** | Access Lock | 前端 modules/geo, brand-geo | ✅ **已关闭** |
+| **Batch 3** | P18 收敛 | P18 实验（9 后端文件 + 4 表） | ⏳ **当前** |
+| **Batch 4** | V3 + 数据库收敛 | V3 遗留表 + DB Schema Guard | 📋 待 Batch 3 Gate |
+| **Batch 5** | p0-gateway 退役（独立批次） | p0-gateway 子系统（15 文件 + 前端） | 📋 待 Batch 4 Gate |
+| **Phase A Exit** | 收敛完成审计 | 全平台 | 📋 |
+
+> **原则**: 每个 Batch 聚焦一种类型的收敛。执行 → Audit → Gate 验收后再进入下一批。
+
+---
+
+## Phase B（Platform Foundation）
+
+Phase A 全部关闭后启动。排序：
+
+| 优先级 | 能力 | 类型 | 说明 |
+|--------|------|------|------|
+| **1** | **AI Center** | Platform AI Control Plane | Provider / Credential / 默认模型 / 连接 / 路由 |
+| **2** | kmki-ui | 统一组件库 | UserCard / MembershipCard / ModelCard / SidebarFooter |
+| **3** | Unified Admin | 后台统一 | Director OS 补齐 |
+| **4** | Asset Center | 资产中心 | Asset Economy UI |
+| **5** | Knowledge Infra | 知识智能 | Citation → Evidence → Claim → Trust |
+
+> **平台设计原则**: "工作台负责生产 AI，AI Center 负责管理 AI。"  
+> Workspace 不管理 API Key / Provider / Model。这些全部归属 Platform AI Center。
+
+---
+
 ## 使用规则
 
 1. 所有模块的最终分类以本文档为准
