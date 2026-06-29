@@ -46,7 +46,7 @@ class Dispatcher {
       throw new NotFoundError(`Agent not found: ${input.agentCode}`)
     }
 
-    const { v4: uuid } = await import('uuid')
+    const { default: uuid } = await import("uuid")
     const sessionId = uuid()
     const eventBus = getAgentEventBus()
 

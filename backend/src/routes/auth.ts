@@ -122,6 +122,20 @@ export default async function authRoutes(fastify: FastifyInstance) {
       select: { id: true, email: true, username: true, phone: true, qqOpenId: true, createdAt: true, membership: { select: { credits: true } } },
     })
 
+    // Personal Tenant (Phase 1.0): 自动创建
+    let personalTenantId: string | undefined
+    try {
+      const { ensurePersonalTenant } = await import('../services/platform/governance/services/personal-tenant.service.js')
+      const result = await ensurePersonalTenant({
+        userId: user.id,
+        userName: finalNickname,
+      })
+      personalTenantId = result.tenantId
+    } catch (e) {
+      console.error('[Auth/Register] Failed to create Personal Tenant:', e)
+      // 不阻塞注册流程
+    }
+
     // 赠送注册积分
     try {
       await prisma.membership.update({

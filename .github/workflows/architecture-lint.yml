@@ -1,0 +1,9 @@
+name: Architecture Lint
+on: [pull_request]
+jobs:
+  architecture-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Architecture Linter
+        run: bash scripts/architecture-linter.sh

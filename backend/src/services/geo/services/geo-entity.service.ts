@@ -5,7 +5,10 @@
 import { prisma } from '../../../utils/index'
 import { EntityType, createProvenanceRecord, createLineageRecord } from '../types'
 import type { Entity, EntityRelation, ResearchOutput } from '../types'
+import type { KOProvenance } from '../runtime/knowledge/KnowledgeObjectSchema'
 import { executeEntityDiscovery } from '../agents/entity.agent'
+import { knowledgePipeline } from '../runtime/knowledge/KnowledgePipeline'
+import type { KnowledgeObjectData } from '../runtime/knowledge/KnowledgeObjectSchema'
 
 function mapPrismaEntity(e: any): Entity {
   return {
@@ -38,9 +41,9 @@ function mapPrismaRelation(r: any): EntityRelation {
 export const geoEntityService = {
   /**
    * Discover entities for a project based on topic research.
-   * Calls Entity Agent via Agent Dispatcher.
+   * Calls Entity Agent → Knowledge Pipeline → Legacy Graph Sync
    */
-  async discoverEntities(projectId: string, topic: ResearchOutput | string): Promise<{ entities: Entity[]; relations: EntityRelation[] }> {
+  async discoverEntities(projectId: string, topic: ResearchOutput | string, userId?: string): Promise<KnowledgeObjectData> {
     const project = await prisma.gEOProject.findUnique({ where: { id: projectId } })
     if (!project) throw new Error('Project not found')
 
@@ -56,68 +59,50 @@ export const geoEntityService = {
       : topic
 
     // Execute entity discovery via Agent Dispatcher
+    console.log('[EntityService] Calling executeEntityDiscovery with research:', JSON.stringify(research))
     const discoveryResult = await executeEntityDiscovery({
       research,
-      config: { maxEntities: 10 },
+      config: { maxEntities: 12, userId },
+    })
+    console.log('[EntityService] executeEntityDiscovery returned entities:', discoveryResult.entities.length, 'relations:', discoveryResult.relations.length)
+
+    // Convert EntityDiscoveryOutput → EntitySnapshot[] / RelationSnapshot[]
+    const entitySnapshots = discoveryResult.entities.map((e, i) => ({
+      id: e.name,  // use name as temporary id; GraphSync upserts by name
+      name: e.name,
+      type: e.type,
+      description: e.description,
+      metadata: (e.metadata || {}) as Record<string, unknown>,
+    }))
+
+    const relationSnapshots = discoveryResult.relations.map((r, i) => ({
+      id: `rel-${i}`,
+      sourceId: r.sourceId,
+      targetId: r.targetId,
+      type: r.type,
+      metadata: (r.metadata || {}) as Record<string, unknown>,
+    }))
+
+    // Provenance for KO
+    const provenance: KOProvenance = {
+      provider: 'structured-generation',
+      model: 'default',
+      promptVersion: 'entity.v1@1.0.0',
+      traceId: projectId,  // will be overwritten by route with proper traceId
+      runtimeVersion: '1.0.0-rc',
+    }
+
+    // Ingest via Knowledge Pipeline (creates KO + syncs to graph tables)
+    const ko = await knowledgePipeline.ingestEntityDiscovery({
+      projectId,
+      topic: research.primaryTopic,
+      entities: entitySnapshots,
+      relations: relationSnapshots,
+      provenance,
     })
 
-    const createdEntities: Entity[] = []
-    const createdRelations: EntityRelation[] = []
-
-    // Create entities in DB
-    for (const entityInput of discoveryResult.entities) {
-      const provenance = entityInput.provenance || createProvenanceRecord({
-        source: 'geo.entity',
-        action: 'created',
-        actor: 'agent:geo.entity',
-        reason: `Entity discovery for topic: ${research.primaryTopic}`,
-      })
-
-      const entity = await prisma.gEOEntity.create({
-        data: {
-          projectId,
-          name: entityInput.name,
-          type: entityInput.type,
-          description: entityInput.description || '',
-          metadata: JSON.parse(JSON.stringify(entityInput.metadata || {})),
-          provenance: provenance as any,
-          sortOrder: entityInput.sortOrder || 0,
-        },
-      })
-      createdEntities.push(mapPrismaEntity(entity))
-    }
-
-    // Build a name→id map for relation resolution
-    const nameToId = new Map<string, string>()
-    for (const e of createdEntities) {
-      nameToId.set(e.name, e.id)
-    }
-
-    // Create relations
-    for (const relationInput of discoveryResult.relations) {
-      const sourceId = nameToId.get(relationInput.sourceId) || relationInput.sourceId
-      const targetId = nameToId.get(relationInput.targetId) || relationInput.targetId
-
-      const lineage = relationInput.lineage || createLineageRecord(
-        createdEntities.find((e) => e.id === sourceId)?.name || sourceId,
-        createdEntities.find((e) => e.id === targetId)?.name || targetId,
-        relationInput.type,
-      )
-
-      const relation = await prisma.gEOEntityRelation.create({
-        data: {
-          projectId,
-          sourceId,
-          targetId,
-          type: relationInput.type || 'related_to',
-          lineage: lineage as any,
-          metadata: JSON.parse(JSON.stringify(relationInput.metadata || {})),
-        },
-      })
-      createdRelations.push(mapPrismaRelation(relation))
-    }
-
-    return { entities: createdEntities, relations: createdRelations }
+    console.log('[EntityService] KO ingested:', ko.id, 'entities:', ko.entities.length, 'relations:', ko.relations.length)
+    return ko
   },
 
   /**

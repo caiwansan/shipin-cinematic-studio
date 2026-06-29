@@ -51,6 +51,16 @@ export type GeoPanelId =
   | 'brand-profile'
   | 'website-scanner'
   | 'knowledge-graph'
+  // Sprint P1 — Brand GEO MVP panels
+  | 'website'
+  | 'keywords'
+  | 'knowledge'
+  // Developer panels
+  | 'execution-studio'
+  | 'execution-trace'
+  | 'system-lens'
+  | 'system-control'
+  | 'system-metadata'
   // Phase 2.5
   // Phase 3: Semantic Explorer
   | 'semantic-explorer'

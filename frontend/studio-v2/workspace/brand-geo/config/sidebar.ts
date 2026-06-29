@@ -1,99 +1,24 @@
-// ============================================================
-// BrandGEO — Sidebar 菜单配置 (Phase 1 + Phase 2 + Phase 2.5)
-// ============================================================
+// Brand GEO Product Navigation
+// 分两部分：Product Nav + Developer Nav（管理员可见）
 
 import type { SidebarMenuItem } from '~/studio-v2/types/geo/runtime'
 
 export const GEO_SIDEBAR_MENU: SidebarMenuItem[] = [
-  {
-    id: 'dashboard',
-    label: '总览仪表盘',
-    icon: '📊',
-    route: '/workspace/geo?panel=dashboard',
-  },
-  {
-    id: 'asset-center',
-    label: '资产中心',
-    icon: '📦',
-    route: '/workspace/geo?panel=asset-center',
-  },
-  {
-    id: 'brand-profile',
-    label: '品牌档案',
-    icon: '🏷️',
-    route: '/workspace/geo?panel=brand-profile',
-  },
-  {
-    id: 'website-scanner',
-    label: '网站扫描',
-    icon: '🔍',
-    route: '/workspace/geo?panel=website-scanner',
-  },
-  {
-    id: 'knowledge-graph',
-    label: '知识图谱',
-    icon: '🔗',
-    route: '/workspace/geo?panel=knowledge-graph',
-  },
-  {
-    id: 'semantic-explorer',
-    label: '语义管理器',
-    icon: '🧠',
-    route: '/workspace/geo?panel=semantic-explorer',
-  },
-  // Phase 4: Goal Runtime (Growth Execution Layer)
-  {
-    id: 'growth-dashboard',
-    label: '增长目标',
-    icon: '🚀',
-    route: '/workspace/geo?panel=growth-dashboard',
-  },
-  {
-    id: 'goal-timeline',
-    label: '目标追踪',
-    icon: '📈',
-    route: '/workspace/geo?panel=goal-timeline',
-  },
-  {
-    id: 'entities',
-    label: '实体图谱',
-    icon: '🔗',
-    route: '/workspace/geo?panel=entities',
-  },
-  {
-    id: 'visibility',
-    label: '可见性分析',
-    icon: '👁️',
-    route: '/workspace/geo?panel=visibility',
-  },
-  {
-    id: 'citations',
-    label: '引用追踪',
-    icon: '📝',
-    route: '/workspace/geo?panel=citations',
-  },
-  {
-    id: 'topics',
-    label: '热门话题',
-    icon: '🔥',
-    route: '/workspace/geo?panel=topics',
-  },
-  {
-    id: 'projects',
-    label: '项目管理',
-    icon: '📋',
-    route: '/workspace/geo?panel=projects',
-  },
-  {
-    id: 'tasks',
-    label: '任务中心',
-    icon: '✅',
-    route: '/workspace/geo?panel=tasks',
-  },
-  {
-    id: 'settings',
-    label: '设置',
-    icon: '⚙️',
-    route: '/workspace/geo?panel=settings',
-  },
+  // 产品导航
+  { id: 'dashboard', label: 'Dashboard', icon: '📊', route: '/workspace/geo?panel=dashboard' },
+  { id: 'brands', label: '品牌管理', icon: '🏢', route: '/workspace/geo?panel=brands' },
+  { id: 'website', label: '官网管理', icon: '🌐', route: '/workspace/geo?panel=website' },
+  { id: 'keywords', label: '关键词管理', icon: '🔑', route: '/workspace/geo?panel=keywords' },
+  { id: 'knowledge', label: 'Knowledge', icon: '📚', route: '/workspace/geo?panel=knowledge' },
+  { id: 'knowledge-graph', label: '知识图谱', icon: '🔗', route: '/workspace/geo?panel=knowledge-graph' },
+  { id: 'settings', label: '设置', icon: '⚙️', route: '/workspace/geo?panel=settings' },
+]
+
+export const GEO_DEVELOPER_MENU: SidebarMenuItem[] = [
+  // 开发导航（仅管理员可见）
+  { id: 'execution-studio', label: '执行工作室', icon: '🎬', route: '/workspace/geo?panel=execution-studio' },
+  { id: 'execution-trace', label: '执行轨迹', icon: '📋', route: '/workspace/geo?panel=execution-trace' },
+  { id: 'system-lens', label: '系统镜头', icon: '🔬', route: '/workspace/geo?panel=system-lens' },
+  { id: 'system-control', label: '系统控制', icon: '⚙️', route: '/workspace/geo?panel=system-control' },
+  { id: 'system-metadata', label: '系统元数据', icon: '🌐', route: '/workspace/geo?panel=system-metadata' },
 ]

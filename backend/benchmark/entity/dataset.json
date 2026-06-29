@@ -1,0 +1,269 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "created": "2026-06-29",
+    "description": "GEO Entity Quality Benchmark — 20 samples covering 8 categories",
+    "total": 20
+  },
+  "samples": [
+    {
+      "id": "saas-001",
+      "category": "SaaS",
+      "url": "https://aigc.fushtn.com",
+      "expected_primary_entities": [
+        { "name": "昆仑镜", "type": "Product", "minCount": 5 },
+        { "name": "短剧生成", "type": "Concept", "minCount": 3 },
+        { "name": "南波万", "type": "Organization", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Product", "Organization", "Concept", "Technology", "Feature"],
+      "min_entities": 8,
+      "max_entities": 20,
+      "notes": "GEO 平台自身的实体发现能力"
+    },
+    {
+      "id": "saas-002",
+      "category": "SaaS",
+      "url": "https://openai.com",
+      "expected_primary_entities": [
+        { "name": "OpenAI", "type": "Organization", "minCount": 1 },
+        { "name": "ChatGPT", "type": "Product", "minCount": 1 },
+        { "name": "GPT-4", "type": "Product", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Person", "Technology", "Concept"],
+      "min_entities": 8,
+      "max_entities": 20,
+      "notes": "AI 领军企业"
+    },
+    {
+      "id": "saas-003",
+      "category": "SaaS",
+      "url": "https://www.notion.so",
+      "expected_primary_entities": [
+        { "name": "Notion", "type": "Product", "minCount": 1 },
+        { "name": "笔记", "type": "Concept", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Product", "Organization", "Concept", "Technology"],
+      "min_entities": 6,
+      "max_entities": 18,
+      "notes": "协作平台"
+    },
+    {
+      "id": "ai-001",
+      "category": "AI",
+      "url": "https://huggingface.co",
+      "expected_primary_entities": [
+        { "name": "Hugging Face", "type": "Organization", "minCount": 1 },
+        { "name": "Transformers", "type": "Product", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Technology", "Concept", "Community"],
+      "min_entities": 6,
+      "max_entities": 20,
+      "notes": "AI 模型社区"
+    },
+    {
+      "id": "ai-002",
+      "category": "AI",
+      "url": "https://ollama.com",
+      "expected_primary_entities": [
+        { "name": "Ollama", "type": "Product", "minCount": 1 },
+        { "name": "本地部署", "type": "Concept", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Product", "Organization", "Concept", "Technology"],
+      "min_entities": 5,
+      "max_entities": 15,
+      "notes": "本地 AI 推理"
+    },
+    {
+      "id": "ai-003",
+      "category": "AI",
+      "url": "https://www.deepseek.com",
+      "expected_primary_entities": [
+        { "name": "DeepSeek", "type": "Organization", "minCount": 1 },
+        { "name": "DeepSeek-V4", "type": "Product", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Person", "Technology", "Concept"],
+      "min_entities": 6,
+      "max_entities": 18,
+      "notes": "中国 AI 公司"
+    },
+    {
+      "id": "enterprise-001",
+      "category": "Enterprise",
+      "url": "https://www.microsoft.com",
+      "expected_primary_entities": [
+        { "name": "Microsoft", "type": "Organization", "minCount": 1 },
+        { "name": "Azure", "type": "Product", "minCount": 1 },
+        { "name": "Windows", "type": "Product", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Person", "Technology", "Brand"],
+      "min_entities": 10,
+      "max_entities": 25,
+      "notes": "全球科技巨头"
+    },
+    {
+      "id": "enterprise-002",
+      "category": "Enterprise",
+      "url": "https://www.salesforce.com",
+      "expected_primary_entities": [
+        { "name": "Salesforce", "type": "Organization", "minCount": 1 },
+        { "name": "CRM", "type": "Concept", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Concept", "Technology", "Brand"],
+      "min_entities": 6,
+      "max_entities": 20,
+      "notes": "企业软件"
+    },
+    {
+      "id": "finance-001",
+      "category": "Finance",
+      "url": "https://stripe.com",
+      "expected_primary_entities": [
+        { "name": "Stripe", "type": "Organization", "minCount": 1 },
+        { "name": "支付", "type": "Concept", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Concept", "Technology", "Brand"],
+      "min_entities": 5,
+      "max_entities": 18,
+      "notes": "支付基础设施"
+    },
+    {
+      "id": "finance-002",
+      "category": "Finance",
+      "url": "https://wise.com",
+      "expected_primary_entities": [
+        { "name": "Wise", "type": "Organization", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Concept", "Brand"],
+      "min_entities": 4,
+      "max_entities": 15,
+      "notes": "跨境汇款"
+    },
+    {
+      "id": "healthcare-001",
+      "category": "Healthcare",
+      "url": "https://www.mayoclinic.org",
+      "expected_primary_entities": [
+        { "name": "Mayo Clinic", "type": "Organization", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Person", "Concept", "Location"],
+      "min_entities": 5,
+      "max_entities": 18,
+      "notes": "医疗机构"
+    },
+    {
+      "id": "healthcare-002",
+      "category": "Healthcare",
+      "url": "https://www.who.int",
+      "expected_primary_entities": [
+        { "name": "WHO", "type": "Organization", "minCount": 1 },
+        { "name": "World Health Organization", "type": "Organization", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Person", "Concept", "Location", "Event"],
+      "min_entities": 6,
+      "max_entities": 20,
+      "notes": "国际卫生组织"
+    },
+    {
+      "id": "education-001",
+      "category": "Education",
+      "url": "https://web.mit.edu",
+      "expected_primary_entities": [
+        { "name": "MIT", "type": "Organization", "minCount": 1 },
+        { "name": "Massachusetts Institute of Technology", "type": "Organization", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Person", "Concept", "Location", "Field"],
+      "min_entities": 6,
+      "max_entities": 20,
+      "notes": "顶尖高校"
+    },
+    {
+      "id": "education-002",
+      "category": "Education",
+      "url": "https://www.coursera.org",
+      "expected_primary_entities": [
+        { "name": "Coursera", "type": "Organization", "minCount": 1 },
+        { "name": "在线课程", "type": "Concept", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Concept", "Brand"],
+      "min_entities": 5,
+      "max_entities": 18,
+      "notes": "在线教育"
+    },
+    {
+      "id": "government-001",
+      "category": "Government",
+      "url": "https://www.nasa.gov",
+      "expected_primary_entities": [
+        { "name": "NASA", "type": "Organization", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Person", "Concept", "Location", "Event", "Technology"],
+      "min_entities": 7,
+      "max_entities": 22,
+      "notes": "航天机构"
+    },
+    {
+      "id": "government-002",
+      "category": "Government",
+      "url": "https://data.gov",
+      "expected_primary_entities": [
+        { "name": "Data.gov", "type": "Product", "minCount": 1 },
+        { "name": "开放数据", "type": "Concept", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Concept", "Brand"],
+      "min_entities": 4,
+      "max_entities": 15,
+      "notes": "政府开放数据"
+    },
+    {
+      "id": "opensource-001",
+      "category": "Open Source",
+      "url": "https://github.com",
+      "expected_primary_entities": [
+        { "name": "GitHub", "type": "Organization", "minCount": 1 },
+        { "name": "Git", "type": "Technology", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Concept", "Technology", "Community"],
+      "min_entities": 6,
+      "max_entities": 20,
+      "notes": "代码托管"
+    },
+    {
+      "id": "opensource-002",
+      "category": "Open Source",
+      "url": "https://kubernetes.io",
+      "expected_primary_entities": [
+        { "name": "Kubernetes", "type": "Technology", "minCount": 1 },
+        { "name": "K8s", "type": "Product", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Concept", "Technology", "Community"],
+      "min_entities": 5,
+      "max_entities": 18,
+      "notes": "容器编排"
+    },
+    {
+      "id": "ecommerce-001",
+      "category": "E-Commerce",
+      "url": "https://www.amazon.com",
+      "expected_primary_entities": [
+        { "name": "Amazon", "type": "Organization", "minCount": 1 },
+        { "name": "AWS", "type": "Product", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Person", "Concept", "Brand", "Technology"],
+      "min_entities": 8,
+      "max_entities": 22,
+      "notes": "电商和云服务巨头"
+    },
+    {
+      "id": "ecommerce-002",
+      "category": "E-Commerce",
+      "url": "https://www.shopify.com",
+      "expected_primary_entities": [
+        { "name": "Shopify", "type": "Organization", "minCount": 1 }
+      ],
+      "expected_entity_types": ["Organization", "Product", "Concept", "Brand", "Technology"],
+      "min_entities": 5,
+      "max_entities": 18,
+      "notes": "电商平台"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-06-29T12:00:00.000Z",
+  "provider": "default",
+  "model": "default",
+  "promptVersion": "1.0.0",
+  "totalSamples": 1,
+  "categories": [
+    "Finance"
+  ],
+  "summary": {
+    "avgEntityCount": 12.0,
+    "avgRelationCount": 11.0,
+    "avgTypeCoverage": 80.0,
+    "avgExpectedFound": 2.0,
+    "avgRuntimeMs": 15540.0,
+    "avgTotalTokens": 0,
+    "avgCost": 0.0,
+    "avgScore": 90.0,
+    "gradeDistribution": {
+      "A": 1,
+      "B": 0,
+      "C": 0,
+      "D": 0
+    }
+  },
+  "samples": [
+    {
+      "sampleId": "finance-001",
+      "category": "Finance",
+      "entityCount": 12,
+      "relationCount": 11,
+      "typeCoverage": 80.0,
+      "expectedFound": 2,
+      "expectedTotal": 2,
+      "runtimeMs": 15540,
+      "totalTokens": 0,
+      "estimatedCost": 0.0,
+      "precision": 100.0,
+      "recall": 100.0,
+      "overall": 90.0,
+      "grade": "A"
+    }
+  ]
+}

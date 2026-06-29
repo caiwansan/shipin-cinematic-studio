@@ -49,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useBrandGeoStore } from '~/studio-v2/workspace/brand-geo/stores/useBrandGeoStore'
 
 const emit = defineEmits<{
@@ -60,6 +60,11 @@ const emit = defineEmits<{
 const store = useBrandGeoStore()
 const selectedId = ref<string | null>(null)
 const projects = computed(() => store.v2Projects.value)
+
+onMounted(async () => {
+  // 页面自身管理项目列表加载 — 不依赖外部初始化
+  await store.fetchV2Projects()
+})
 
 function selectProject(id: string) {
   selectedId.value = id

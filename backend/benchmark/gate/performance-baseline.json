@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-06-29T12:23:18.063Z",
+  "agent": "geo.entity",
+  "totalRecords": 99,
+  "totalTokens": 214689,
+  "latencyMs": {
+    "p50": 121,
+    "p95": 206.79999999999995,
+    "p99": 265.4199999999999
+  },
+  "totalTokens_dist": {
+    "p50": 2173,
+    "p95": 2594.2,
+    "p99": 2665.02
+  },
+  "promptTokens": {
+    "p50": 303,
+    "p95": 307
+  },
+  "completionTokens": {
+    "p50": 1869,
+    "p95": 2292
+  },
+  "cost": {
+    "p50": 0
+  }
+}

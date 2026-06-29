@@ -1,696 +1,284 @@
 <template>
   <div class="geo-dashboard">
-    <!-- Welcome -->
+    <!-- Welcome Header -->
     <div class="geo-dashboard-welcome">
       <div class="geo-welcome-left">
-        <h1 class="geo-welcome-title">品牌GEO 工作台</h1>
+        <h1 class="geo-welcome-title">品牌 GEO 工作台</h1>
         <p class="geo-welcome-subtitle">
-          品牌搜索引擎优化（GEO）— 提升品牌在全网的可见性与影响力
+          品牌搜索引擎优化 — 创建品牌、配置官网、管理关键词、生成知识图谱
         </p>
       </div>
       <div class="geo-welcome-right">
-        <div class="geo-quick-stat" v-for="stat in quickStats" :key="stat.label">
-          <span class="geo-quick-stat-value">{{ stat.value }}</span>
-          <span class="geo-quick-stat-label">{{ stat.label }}</span>
-        </div>
+        <button class="geo-btn geo-btn-primary" @click="$emit('navigate', 'brands')">
+          + 创建品牌
+        </button>
       </div>
     </div>
 
-    <!-- Workspace Flow Progress -->
-    <div class="geo-flow-bar">
-      <div class="geo-flow-label">
-        <span>工作流进度</span>
-        <span class="geo-flow-percent">{{ flowProgress.percentage }}%</span>
-      </div>
-      <div class="geo-flow-track">
-        <div
-          v-for="(stage, i) in flowStages"
-          :key="stage"
-          class="geo-flow-step"
-          :class="{
-            active: flowProgress.current === stage,
-            completed: getStageStatus(stage) === 'completed',
-          }"
-          @click="navigateToFlowStage(stage)"
-        >
-          <div class="geo-flow-dot">
-            <span v-if="getStageStatus(stage) === 'completed'">✓</span>
-            <span v-else-if="flowProgress.current === stage">●</span>
-            <span v-else>○</span>
-          </div>
-          <span class="geo-flow-step-label">{{ stageLabel(stage) }}</span>
-        </div>
-      </div>
+    <!-- Provider Status Banner -->
+    <div v-if="providerStatus !== null && !providerStatus" class="geo-provider-banner">
+      <span class="geo-provider-banner-icon">⚠️</span>
+      <span class="geo-provider-banner-text">
+        尚未配置 AI Provider。请先前往
+        <a class="geo-banner-link" @click="$emit('navigate', 'settings')">设置</a>
+        配置你的 API Provider，才能调用 AI 生成知识图谱。
+      </span>
     </div>
 
-    <!-- Current Project Info -->
-    <div v-if="currentProject" class="geo-project-info">
-      <div class="geo-project-info-left">
-        <span class="geo-project-info-label">当前项目</span>
-        <span class="geo-project-info-name">{{ currentProject.name }}</span>
-        <span v-if="currentProject.website" class="geo-project-info-url">{{ currentProject.website }}</span>
-      </div>
-      <div class="geo-project-info-right">
-        <span class="geo-project-info-status" :class="currentProject.status">{{ currentProject.status }}</span>
-        <button class="geo-btn-small" @click="navigateToPanel('project-select')">切换</button>
-      </div>
-    </div>
-    <div v-else class="geo-no-project">
-      <p>还没有选择项目，请先创建或选择一个项目</p>
-      <button class="geo-btn geo-btn-primary" @click="navigateToPanel('project-select')">
-        📁 选择或创建项目
-      </button>
-    </div>
-
-    <!-- Stats Row (Phase 1) -->
+    <!-- Stats Cards -->
     <div class="geo-stats-row">
-      <div
-        v-for="s in statsCards"
-        :key="s.label"
-        class="geo-stat-card"
-        :style="{ borderLeftColor: s.color }"
-      >
-        <div class="geo-stat-icon">{{ s.icon }}</div>
+      <div class="geo-stat-card" style="border-left-color: #818cf8">
+        <div class="geo-stat-icon-wrapper" style="background: rgba(129,140,248,0.12)">
+          <span class="geo-stat-icon">🏢</span>
+        </div>
         <div class="geo-stat-body">
-          <span class="geo-stat-number">{{ s.value }}</span>
-          <span class="geo-stat-label">{{ s.label }}</span>
+          <span class="geo-stat-number">{{ stats.brandCount }}</span>
+          <span class="geo-stat-label">品牌数量</span>
+        </div>
+      </div>
+      <div class="geo-stat-card" style="border-left-color: #34d399">
+        <div class="geo-stat-icon-wrapper" style="background: rgba(52,211,153,0.12)">
+          <span class="geo-stat-icon">🔑</span>
+        </div>
+        <div class="geo-stat-body">
+          <span class="geo-stat-number">{{ stats.keywordCount }}</span>
+          <span class="geo-stat-label">关键词</span>
+        </div>
+      </div>
+      <div class="geo-stat-card" style="border-left-color: #f59e0b">
+        <div class="geo-stat-icon-wrapper" style="background: rgba(245,158,11,0.12)">
+          <span class="geo-stat-icon">📚</span>
+        </div>
+        <div class="geo-stat-body">
+          <span class="geo-stat-number">{{ stats.koCount }}</span>
+          <span class="geo-stat-label">Knowledge</span>
+        </div>
+      </div>
+      <div class="geo-stat-card" style="border-left-color: #ec4899">
+        <div class="geo-stat-icon-wrapper" style="background: rgba(236,72,153,0.12)">
+          <span class="geo-stat-icon">🔗</span>
+        </div>
+        <div class="geo-stat-body">
+          <span class="geo-stat-number">{{ stats.entityCount }}</span>
+          <span class="geo-stat-label">实体/关系</span>
         </div>
       </div>
     </div>
 
-    <!-- V2 Feature Cards (Two Rows) -->
+    <!-- Quick Actions -->
     <div class="geo-dashboard-section">
-      <h3 class="geo-section-title">核心功能</h3>
+      <h3 class="geo-section-title">🚀 快速入口</h3>
       <div class="geo-card-grid">
-        <div
-          v-for="card in v2FeatureCards"
-          :key="card.id"
-          class="geo-function-card"
-          :style="{ '--card-accent': card.color }"
-          @click="navigateToPanel(card.panelId as GeoPanelId)"
-        >
-          <div class="geo-card-icon-wrapper" :style="{ background: card.color + '20' }">
-            <span class="geo-card-icon">{{ card.icon }}</span>
+        <div class="geo-function-card" style="--card-accent: #818cf8" @click="$emit('navigate', 'brands')">
+          <div class="geo-function-card-header">
+            <span class="geo-function-card-icon">🏢</span>
+            <h4 class="geo-function-card-title">品牌管理</h4>
           </div>
-          <div class="geo-card-body">
-            <h3 class="geo-card-title">{{ card.title }}</h3>
-            <p class="geo-card-desc">{{ card.description }}</p>
+          <p class="geo-function-card-desc">创建和管理品牌项目，配置品牌基本信息</p>
+        </div>
+        <div class="geo-function-card" style="--card-accent: #34d399" @click="$emit('navigate', 'keywords')">
+          <div class="geo-function-card-header">
+            <span class="geo-function-card-icon">🔑</span>
+            <h4 class="geo-function-card-title">关键词管理</h4>
           </div>
-          <div class="geo-card-arrow">→</div>
+          <p class="geo-function-card-desc">管理品牌/AI/行业/长尾关键词，支持导入导出</p>
+        </div>
+        <div class="geo-function-card" style="--card-accent: #f59e0b" @click="$emit('navigate', 'knowledge')">
+          <div class="geo-function-card-header">
+            <span class="geo-function-card-icon">📚</span>
+            <h4 class="geo-function-card-title">Knowledge</h4>
+          </div>
+          <p class="geo-function-card-desc">查看知识对象，管理 Evidence/Claim/Citation</p>
+        </div>
+        <div class="geo-function-card" style="--card-accent: #ec4899" @click="$emit('navigate', 'knowledge-graph')">
+          <div class="geo-function-card-header">
+            <span class="geo-function-card-icon">🔗</span>
+            <h4 class="geo-function-card-title">知识图谱</h4>
+          </div>
+          <p class="geo-function-card-desc">可视化实体关系网络，探索品牌知识拓扑</p>
+        </div>
+        <div class="geo-function-card" style="--card-accent: #f97316" @click="$emit('navigate', 'settings')">
+          <div class="geo-function-card-header">
+            <span class="geo-function-card-icon">⚙️</span>
+            <h4 class="geo-function-card-title">设置</h4>
+          </div>
+          <p class="geo-function-card-desc">配置 AI Provider / API Key / Model，测试连接</p>
         </div>
       </div>
     </div>
 
+    <!-- Recent Scans -->
     <div class="geo-dashboard-section">
-      <h3 class="geo-section-title">扩展能力</h3>
-      <div class="geo-card-grid">
-        <div
-          v-for="card in comingSoonCards"
-          :key="card.id"
-          class="geo-function-card geo-card-coming"
-          :style="{ '--card-accent': card.color }"
-        >
-          <div class="geo-card-icon-wrapper" :style="{ background: card.color + '20' }">
-            <span class="geo-card-icon">{{ card.icon }}</span>
-          </div>
-          <div class="geo-card-body">
-            <h3 class="geo-card-title">
-              {{ card.title }}
-              <span class="geo-card-badge">Coming Soon</span>
-            </h3>
-            <p class="geo-card-desc">{{ card.description }}</p>
-          </div>
+      <h3 class="geo-section-title">📋 最近扫描</h3>
+      <div v-if="stats.recentScans && stats.recentScans.length > 0" class="geo-scan-list">
+        <div v-for="scan in stats.recentScans" :key="scan.id" class="geo-scan-item">
+          <span class="geo-scan-type">{{ scan.scanType }}</span>
+          <span :class="['geo-scan-status', `geo-scan-status--${scan.status}`]">{{ scan.status }}</span>
+          <span class="geo-scan-topic">{{ scan.topic || '-' }}</span>
+          <span class="geo-scan-time">{{ formatTime(scan.createdAt) }}</span>
         </div>
+      </div>
+      <div v-else class="geo-empty-state">
+        <p>暂无扫描记录，创建品牌后可进行扫描</p>
       </div>
     </div>
 
-    <!-- Asset Stats Section (Phase 2.5) -->
-    <div class="geo-dashboard-section">
-      <h3 class="geo-section-title">📦 资产概览</h3>
-      <div class="geo-asset-mini-stats" v-if="assetStats && Object.keys(assetStats).length > 1">
-        <div
-          v-for="s in assetStatCards"
-          :key="s.label"
-          class="geo-asset-mini-card"
-          :style="{ borderLeftColor: s.color }"
-        >
-          <span class="geo-asset-mini-icon">{{ s.icon }}</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ s.value }}</span>
-            <span class="geo-asset-mini-label">{{ s.label }}</span>
-          </div>
-        </div>
-      </div>
-      <div v-else class="geo-asset-no-data">
-        <p>暂无资产数据</p>
-        <button class="geo-btn-small" @click="navigateToPanel('asset-center')">
-          前往资产中心
-        </button>
-      </div>
-    </div>
-
-    <!-- Semantic Stats Section (Phase 3) -->
-    <div class="geo-dashboard-section">
-      <h3 class="geo-section-title">🧠 语义概览</h3>
-      <div class="geo-asset-mini-stats" v-if="Object.keys(semanticStats).length > 0 && semanticStats.entityCount > 0">
-        <div class="geo-asset-mini-card" style="border-left-color: #6366f1">
-          <span class="geo-asset-mini-icon">🏷️</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ semanticStats.entityCount }}</span>
-            <span class="geo-asset-mini-label">实体</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #06b6d4">
-          <span class="geo-asset-mini-icon">📌</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ semanticStats.topicCount }}</span>
-            <span class="geo-asset-mini-label">主题</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #10b981">
-          <span class="geo-asset-mini-icon">🌳</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ semanticStats.taxonomyCount }}</span>
-            <span class="geo-asset-mini-label">分类</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #f59e0b">
-          <span class="geo-asset-mini-icon">🔀</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ semanticStats.aliasCount }}</span>
-            <span class="geo-asset-mini-label">别名</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #ec4899">
-          <span class="geo-asset-mini-icon">🔑</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ semanticStats.keywordCount }}</span>
-            <span class="geo-asset-mini-label">关键词</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #8b5cf6">
-          <span class="geo-asset-mini-icon">🔗</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ semanticStats.relationCount }}</span>
-            <span class="geo-asset-mini-label">关系</span>
-          </div>
-        </div>
-      </div>
-      <div v-else class="geo-asset-no-data">
-        <p>暂无语义数据</p>
-        <button class="geo-btn-small" @click="navigateToPanel('semantic-explorer')">
-          前往语义管理器
-        </button>
-      </div>
-    </div>
-
-    <!-- Phase 4: Goal Runtime Stats -->
-    <div class="geo-dashboard-section">
-      <h3 class="geo-section-title">🚀 增长目标概览</h3>
-      <div class="geo-asset-mini-stats" v-if="goalStats && (goalStats.totalGoals > 0)">
-        <div class="geo-asset-mini-card" style="border-left-color: #4f46e5">
-          <span class="geo-asset-mini-icon">🎯</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ goalStats.totalGoals }}</span>
-            <span class="geo-asset-mini-label">总目标</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #22c55e">
-          <span class="geo-asset-mini-icon">⚡</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ goalStats.activeGoals }}</span>
-            <span class="geo-asset-mini-label">活跃中</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #3b82f6">
-          <span class="geo-asset-mini-icon">✅</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ goalStats.completedGoals }}</span>
-            <span class="geo-asset-mini-label">已完成</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #f59e0b">
-          <span class="geo-asset-mini-icon">📋</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ goalStats.pendingTasks }}</span>
-            <span class="geo-asset-mini-label">待执行</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #8b5cf6">
-          <span class="geo-asset-mini-icon">🔄</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ goalStats.totalExecutions }}</span>
-            <span class="geo-asset-mini-label">执行中</span>
-          </div>
-        </div>
-        <div class="geo-asset-mini-card" style="border-left-color: #ec4899">
-          <span class="geo-asset-mini-icon">👁️</span>
-          <div class="geo-asset-mini-body">
-            <span class="geo-asset-mini-number">{{ goalStats.pendingReviews }}</span>
-            <span class="geo-asset-mini-label">待审核</span>
-          </div>
-        </div>
-      </div>
-      <div v-else class="geo-asset-no-data">
-        <p>暂无增长目标数据</p>
-        <button class="geo-btn-small" @click="navigateToPanel('growth-dashboard')">
-          前往增长目标
-        </button>
-      </div>
-    </div>
-
-    <!-- Bottom Panels -->
-    <div class="geo-dashboard-panels">
-      <div class="geo-panel geo-panel-recent">
-        <div class="geo-panel-header">
-          <h3 class="geo-panel-title">📌 最近项目</h3>
-        </div>
-        <div class="geo-panel-body">
-          <div v-if="v2Projects.length === 0" class="geo-panel-empty">
-            还没有项目，快去创建一个
-          </div>
-          <div
-            v-for="project in v2Projects.slice(0, 5)"
-            :key="project.id"
-            class="geo-activity-item"
-            @click="selectAndNavigate(project.id)"
-          >
-            <span class="geo-activity-icon">📦</span>
-            <div class="geo-activity-content">
-              <span class="geo-activity-text">{{ project.name }}</span>
-              <span class="geo-activity-time">{{ formatDate(project.createdAt) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="geo-panel geo-panel-tasks">
-        <div class="geo-panel-header">
-          <h3 class="geo-panel-title">📋 运行任务</h3>
-        </div>
-        <div class="geo-panel-body">
-          <div v-if="pendingTaskCount === 0" class="geo-panel-empty">
-            没有运行中的任务
-          </div>
-          <div
-            v-for="task in pendingTasks.slice(0, 5)"
-            :key="task.id"
-            class="geo-task-item"
-          >
-            <div class="geo-task-priority" :class="'priority-' + task.priority"></div>
-            <div class="geo-task-content">
-              <span class="geo-task-title">{{ task.title }}</span>
-              <span class="geo-task-project">{{ task.projectName || '' }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="geo-panel geo-panel-snapshot">
-        <div class="geo-panel-header">
-          <h3 class="geo-panel-title">📸 最新快照</h3>
-        </div>
-        <div class="geo-panel-body">
-          <div v-if="!latestSnapshot" class="geo-panel-empty">
-            还没有扫描数据
-          </div>
-          <div v-else class="geo-snapshot-preview">
-            <div class="geo-snapshot-mini">
-              <span class="geo-snapshot-mini-label">URL</span>
-              <span class="geo-snapshot-mini-value">{{ latestSnapshot.url }}</span>
-            </div>
-            <div class="geo-snapshot-mini">
-              <span class="geo-snapshot-mini-label">状态</span>
-              <span class="geo-snapshot-mini-value" :class="latestSnapshot.status">
-                {{ latestSnapshot.status }}
-              </span>
-            </div>
-            <div class="geo-snapshot-mini">
-              <span class="geo-snapshot-mini-label">标题</span>
-              <span class="geo-snapshot-mini-value">{{ latestSnapshot.title || '—' }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Loading -->
+    <div v-if="loading" class="geo-loading-overlay">
+      <div class="geo-loading-spinner"></div>
+      <span>加载中...</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import type { GeoPanelId, GeoTask, WebsiteSnapshot, WorkspaceFlowStage } from '~/studio-v2/types/geo'
-import { useBrandGeoStore } from '~/studio-v2/workspace/brand-geo/stores/useBrandGeoStore'
-import { useBrandGEORuntime } from '~/studio-v2/workspace/brand-geo/composables/useBrandGEORuntime'
-import { assetService } from '~/modules/asset/services/asset.service'
-import { semanticService } from '~/modules/semantic/services/semantic.service'
+import { ref, onMounted } from 'vue'
 
-interface FeatureCard {
-  id: string
-  title: string
-  description: string
-  icon: string
-  panelId: string
-  color: string
-}
-
-const store = useBrandGeoStore()
-const runtime = useBrandGEORuntime()
-
-const emit = defineEmits<{
-  navigate: [panelId: GeoPanelId]
+defineEmits<{
+  navigate: [panelId: string]
 }>()
 
-const props = defineProps<{
-  stats?: {
-    totalBrands: number
-    activeProjects: number
-    pendingTasks: number
-    averageVisibility: number
-    totalMentions: number
-    positiveSentiment: number
-    coverageRate: number
-    competitorCount: number
-  }
-}>()
+const loading = ref(false)
+const providerStatus = ref<boolean | null>(null)
 
-const v2FeatureCards: FeatureCard[] = [
-  { id: 'brand-profile', title: '品牌档案', description: '管理品牌信息和资料', icon: '🏷️', panelId: 'brand-profile', color: '#6366f1' },
-  { id: 'website-scanner', title: '网站扫描', description: '扫描网站获取结构化数据', icon: '🔍', panelId: 'website-scanner', color: '#06b6d4' },
-  { id: 'knowledge-graph', title: '知识图谱', description: '构建品牌关联实体网络', icon: '🔗', panelId: 'knowledge-graph', color: '#8b5cf6' },
-  { id: 'snapshot', title: '网站快照', description: '查看网站完整快照数据', icon: '📸', panelId: 'website-scanner', color: '#10b981' },
-]
-
-const comingSoonCards: FeatureCard[] = [
-  { id: 'ai-visibility', title: 'AI 可见性', description: 'AI 搜索引擎排名监控', icon: '🤖', panelId: 'visibility', color: '#f59e0b' },
-  { id: 'citation', title: '引用追踪', description: '全网品牌提及追踪', icon: '📝', panelId: 'citations', color: '#ec4899' },
-  { id: 'entity', title: '实体分析', description: '发现品牌潜在关联实体', icon: '🧩', panelId: 'entities', color: '#3b82f6' },
-  { id: 'content', title: '内容策略', description: 'AI 驱动内容优化建议', icon: '✍️', panelId: 'topics', color: '#ef4444' },
-]
-
-const quickStats = computed(() => [
-  { label: 'V2 项目', value: store.v2Projects.value.length },
-  { label: '活跃项目', value: props.stats?.activeProjects ?? store.dashboardStats.value.activeProjects },
-  { label: '待办', value: props.stats?.pendingTasks ?? store.dashboardStats.value.pendingTasks },
-])
-
-const statsCards = computed(() => [
-  { icon: '👁️', label: '平均可见性', value: (props.stats?.averageVisibility ?? store.dashboardStats.value.averageVisibility).toFixed(0) + '%', color: '#06b6d4' },
-  { icon: '📝', label: '全网提及', value: (props.stats?.totalMentions ?? store.dashboardStats.value.totalMentions).toLocaleString(), color: '#10b981' },
-  { icon: '😊', label: '正面舆情', value: (props.stats?.positiveSentiment ?? store.dashboardStats.value.positiveSentiment).toFixed(0) + '%', color: '#f59e0b' },
-  { icon: '📊', label: '覆盖比率', value: (props.stats?.coverageRate ?? store.dashboardStats.value.coverageRate).toFixed(1) + '%', color: '#6366f1' },
-  { icon: '🎯', label: '竞品数量', value: props.stats?.competitorCount ?? store.dashboardStats.value.competitorCount, color: '#ef4444' },
-  { icon: '🏷️', label: '品牌总数', value: props.stats?.totalBrands ?? store.dashboardStats.value.totalBrands, color: '#8b5cf6' },
-])
-
-const pendingTasks = computed(() => {
-  const tasks = store.tasks.value
-  return tasks.filter((t: GeoTask) => t.status === 'pending').slice(0, 5)
-})
-
-const pendingTaskCount = computed(() => pendingTasks.value.length)
-const v2Projects = computed(() => store.v2Projects.value)
-const currentProject = computed(() => store.selectedV2Project.value)
-
-const latestSnapshot = computed<WebsiteSnapshot | null>(() => {
-  return store.websiteSnapshot.value
-})
-
-const flowStages: WorkspaceFlowStage[] = ['create_project', 'edit_brand_profile', 'website_scan', 'generate_snapshot', 'build_graph', 'ready']
-
-const flowProgress = computed(() => runtime.workspaceFlowProgress.value)
-
-function getStageStatus(stage: WorkspaceFlowStage): string {
-  return store.workspaceFlow.value.stages[stage]
+interface DashboardStats {
+  brandCount: number
+  keywordCount: number
+  koCount: number
+  entityCount: number
+  relationCount: number
+  claimsCount: number
+  recentScans: Array<{
+    id: string
+    projectId: string
+    scanType: string
+    status: string
+    topic: string | null
+    createdAt: string
+  }>
 }
 
-function stageLabel(stage: WorkspaceFlowStage): string {
-  return runtime.stageLabel(stage)
-}
-
-function navigateToPanel(panelId: string) {
-  emit('navigate', panelId as GeoPanelId)
-}
-
-function navigateToFlowStage(stage: WorkspaceFlowStage) {
-  const panelMap: Record<WorkspaceFlowStage, string> = {
-    create_project: 'project-create',
-    edit_brand_profile: 'brand-profile',
-    website_scan: 'website-scanner',
-    generate_snapshot: 'website-scanner',
-    build_graph: 'knowledge-graph',
-    ready: 'dashboard',
-  }
-  emit('navigate', panelMap[stage] as GeoPanelId)
-}
-
-function selectAndNavigate(projectId: string) {
-  store.setSelectedV2ProjectId(projectId)
-  emit('navigate', 'dashboard' as GeoPanelId)
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  } catch {
-    return dateStr
-  }
-}
-
-// ── Asset Stats (Phase 2.5) ──
-const assetStats = ref<Record<string, number>>({})
-
-const assetStatCards = computed(() => {
-  const s = assetStats.value
-  return [
-    { icon: '📦', label: '总资产', value: s.total || 0, color: '#6366f1' },
-    { icon: '📄', label: '文章', value: (s as any).Article || 0, color: '#06b6d4' },
-    { icon: '❓', label: 'FAQ', value: (s as any).FAQ || 0, color: '#10b981' },
-    { icon: '📚', label: '文档', value: ((s as any).Document || 0) + ((s as any).API || 0), color: '#8b5cf6' },
-    { icon: '🖼️', label: '图片', value: (s as any).Image || 0, color: '#f59e0b' },
-    { icon: '🎬', label: '视频', value: (s as any).Video || 0, color: '#ef4444' },
-  ]
-})
-
-// ── Semantic Stats (Phase 3) ──
-const semanticStats = ref<Record<string, number>>({
-  entityCount: 0,
-  topicCount: 0,
-  taxonomyCount: 0,
-  aliasCount: 0,
+const stats = ref<DashboardStats>({
+  brandCount: 0,
   keywordCount: 0,
+  koCount: 0,
+  entityCount: 0,
   relationCount: 0,
+  claimsCount: 0,
+  recentScans: [],
 })
 
-// ── Goal Runtime Stats (Phase 4) ──
-const goalStats = ref<Record<string, number>>({
-  totalGoals: 0, activeGoals: 0, completedGoals: 0,
-  pendingTasks: 0, totalExecutions: 0, pendingReviews: 0,
-})
+function authHeaders(): Record<string, string> {
+  try {
+    const ls = window.localStorage
+    for (const key of ['auth_token', 'accessToken', 'token']) {
+      const val = ls.getItem(key)
+      if (val) return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${val}` }
+    }
+  } catch { /* ignore */ }
+  return { 'Content-Type': 'application/json' }
+}
 
-watch(() => store.selectedV2ProjectId.value, async (newId) => {
-  if (newId) {
-    try {
-      const stats = await assetService.getStats(newId)
-      assetStats.value = stats
-    } catch {
-      assetStats.value = { total: 0 }
+async function fetchDashboardStats() {
+  loading.value = true
+  try {
+    const res = await fetch('/api/geo/dashboard/stats', { headers: authHeaders() })
+    const json = await res.json()
+    if (json.success) {
+      stats.value = json.data
     }
-    try {
-      const sStats = await semanticService.getStats(newId)
-      if (sStats) {
-        semanticStats.value = {
-          entityCount: sStats.entityCount,
-          topicCount: sStats.topicCount,
-          taxonomyCount: sStats.taxonomyCount,
-          aliasCount: sStats.aliasCount,
-          keywordCount: sStats.keywordCount,
-          relationCount: sStats.relationCount,
-        }
-      }
-    } catch {
-      // Semantics not available yet
-    }
-    try {
-      const res = await fetch(`/api/goal/stats/${newId}`, {
-        headers: { 'Content-Type': 'application/json' },
-      })
-      if (res.ok) {
-        const json = await res.json()
-        if (json.success && json.data) {
-          goalStats.value = {
-            totalGoals: json.data.totalGoals || 0,
-            activeGoals: json.data.activeGoals || 0,
-            completedGoals: json.data.completedGoals || 0,
-            pendingTasks: json.data.pendingTasks || 0,
-            totalExecutions: json.data.totalExecutions || 0,
-            pendingReviews: json.data.pendingReviews || 0,
-          }
-        }
-      }
-    } catch {
-      // Goal stats not available yet
-    }
+  } catch (err) {
+    console.error('Failed to fetch dashboard stats:', err)
+  } finally {
+    loading.value = false
   }
+}
+
+async function fetchProviderStatus() {
+  try {
+    const res = await fetch('/api/geo/dashboard/provider-status', { headers: authHeaders() })
+    const json = await res.json()
+    if (json.success) {
+      providerStatus.value = json.data.configured
+    }
+  } catch { /* ignore */ }
+}
+
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  } catch { return iso }
+}
+
+onMounted(() => {
+  fetchDashboardStats()
+  fetchProviderStatus()
 })
 </script>
 
 <style scoped>
-.geo-dashboard { padding: 24px; overflow-y: auto; height: 100%; }
+.geo-dashboard { padding: 24px; color: #e0e0e0; height: 100%; overflow-y: auto; }
 
-/* Wait */
-.geo-dashboard-welcome {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 20px; padding: 24px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.05));
-  border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.12);
-}
-.geo-welcome-title { font-size: 24px; font-weight: 700; color: #e2e8f0; margin: 0 0 6px; }
-.geo-welcome-subtitle { font-size: 14px; color: #6b7280; margin: 0; }
-.geo-welcome-right { display: flex; gap: 20px; }
-.geo-quick-stat { text-align: center; }
-.geo-quick-stat-value { display: block; font-size: 22px; font-weight: 700; color: #c084fc; }
-.geo-quick-stat-label { font-size: 12px; color: #6b7280; }
+.geo-dashboard-welcome { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.geo-welcome-title { font-size: 24px; font-weight: 700; margin: 0 0 6px; background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.geo-welcome-subtitle { color: #888; font-size: 14px; margin: 0; }
+.geo-welcome-right { display: flex; gap: 12px; align-items: center; }
 
-/* Flow Bar */
-.geo-flow-bar {
-  background: #11151c; border-radius: 12px; padding: 14px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.04); margin-bottom: 20px;
-}
-.geo-flow-label { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; margin-bottom: 10px; }
-.geo-flow-percent { color: #a5b4fc; font-weight: 600; }
-.geo-flow-track { display: flex; gap: 4px; justify-content: space-between; }
-.geo-flow-step {
-  display: flex; align-items: center; gap: 6px; cursor: pointer;
-  padding: 4px 8px; border-radius: 6px; font-size: 11px; color: #4b5563;
-  transition: all 0.15s;
-}
-.geo-flow-step:hover { background: rgba(255, 255, 255, 0.03); }
-.geo-flow-step.active { color: #a5b4fc; }
-.geo-flow-step.completed { color: #34d399; }
-.geo-flow-dot { font-size: 12px; }
+.geo-btn { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.15s; }
+.geo-btn-primary { background: linear-gradient(135deg, #818cf8, #6366f1); color: white; }
+.geo-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
 
-/* Project Info */
-.geo-project-info {
-  display: flex; justify-content: space-between; align-items: center;
-  background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.12);
-  border-radius: 10px; padding: 12px 18px; margin-bottom: 20px;
+.geo-provider-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #fbbf24;
 }
-.geo-project-info-left { display: flex; align-items: center; gap: 10px; }
-.geo-project-info-label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
-.geo-project-info-name { font-size: 15px; font-weight: 600; color: #e2e8f0; }
-.geo-project-info-url { font-size: 12px; color: #6366f1; }
-.geo-project-info-right { display: flex; align-items: center; gap: 10px; }
-.geo-project-info-status {
-  font-size: 11px; padding: 2px 8px; border-radius: 4px;
-  background: rgba(16, 185, 129, 0.1); color: #6ee7b7;
-}
-.geo-btn-small {
-  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 4px 12px; border-radius: 6px; font-size: 12px; color: #9ca3af; cursor: pointer;
-}
-.geo-no-project {
-  text-align: center; padding: 24px; background: #11151c; border-radius: 12px;
-  border: 1px dashed rgba(255,255,255,0.08); margin-bottom: 20px;
-}
-.geo-no-project p { color: #6b7280; margin: 0 0 12px; }
+.geo-provider-banner-icon { font-size: 18px; }
+.geo-provider-banner-text { flex: 1; }
+.geo-banner-link { color: #818cf8; cursor: pointer; text-decoration: underline; }
+.geo-banner-link:hover { color: #a5b4fc; }
 
-/* Stats */
-.geo-stats-row {
-  display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px;
-}
-.geo-stat-card {
-  background: #11151c; border-radius: 12px; padding: 16px;
-  display: flex; align-items: center; gap: 12px; border-left: 3px solid; transition: transform 0.15s;
-}
-.geo-stat-card:hover { transform: translateY(-2px); }
-.geo-stat-icon { font-size: 24px; }
+.geo-stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.geo-stat-card { display: flex; align-items: center; gap: 14px; padding: 18px; background: #1a1a2e; border-radius: 10px; border-left: 3px solid; border-top: 1px solid rgba(255,255,255,0.04); border-right: 1px solid rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.04); transition: all 0.15s; }
+.geo-stat-card:hover { background: #1e1e36; transform: translateY(-1px); }
+.geo-stat-icon-wrapper { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.geo-stat-icon { font-size: 20px; }
 .geo-stat-body { display: flex; flex-direction: column; }
-.geo-stat-number { font-size: 20px; font-weight: 700; color: #e2e8f0; }
-.geo-stat-label { font-size: 11px; color: #6b7280; }
+.geo-stat-number { font-size: 22px; font-weight: 700; }
+.geo-stat-label { font-size: 11px; color: #888; text-transform: uppercase; margin-top: 2px; letter-spacing: 0.5px; }
 
-/* Section Titles */
-.geo-dashboard-section { margin-bottom: 24px; }
-.geo-section-title { font-size: 15px; font-weight: 600; color: #9ca3af; margin: 0 0 12px; }
+.geo-dashboard-section { margin-bottom: 28px; }
+.geo-section-title { font-size: 16px; font-weight: 600; margin: 0 0 14px; color: #ccc; }
+.geo-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.geo-function-card { padding: 18px; background: #1a1a2e; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: all 0.15s; }
+.geo-function-card:hover { border-color: var(--card-accent); background: #1e1e36; transform: translateY(-2px); }
+.geo-function-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.geo-function-card-icon { font-size: 22px; }
+.geo-function-card-title { font-size: 14px; font-weight: 600; margin: 0; }
+.geo-function-card-desc { font-size: 12px; color: #888; margin: 0; line-height: 1.4; }
 
-/* Card Grid */
-.geo-card-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
-}
-.geo-function-card {
-  background: #11151c; border-radius: 14px; padding: 20px;
-  cursor: pointer; transition: all 0.2s;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  display: flex; flex-direction: column; gap: 12px; position: relative;
-}
-.geo-function-card:hover {
-  border-color: var(--card-accent); background: #161c26;
-  transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-.geo-card-coming { opacity: 0.7; cursor: default; }
-.geo-card-coming:hover { background: #11151c; transform: none; box-shadow: none; }
-.geo-card-icon-wrapper {
-  width: 44px; height: 44px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center; font-size: 22px;
-}
-.geo-card-body { flex: 1; }
-.geo-card-title { font-size: 15px; font-weight: 600; color: #e2e8f0; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
-.geo-card-badge { font-size: 9px; color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 1px 6px; border-radius: 4px; font-weight: 500; }
-.geo-card-desc { font-size: 12px; color: #6b7280; margin: 0; line-height: 1.4; }
-.geo-card-arrow {
-  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
-  font-size: 18px; color: #374151; transition: all 0.2s;
-}
-.geo-function-card:hover .geo-card-arrow { color: var(--card-accent); right: 12px; }
+.geo-scan-list { display: flex; flex-direction: column; gap: 6px; }
+.geo-scan-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #16162a; border-radius: 6px; font-size: 13px; border: 1px solid rgba(255,255,255,0.03); }
+.geo-scan-type { color: #818cf8; font-weight: 600; min-width: 70px; text-transform: uppercase; font-size: 11px; }
+.geo-scan-status { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; min-width: 70px; text-align: center; }
+.geo-scan-status--completed { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+.geo-scan-status--running { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+.geo-scan-status--pending { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
+.geo-scan-status--failed { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.geo-scan-topic { flex: 1; color: #aaa; }
+.geo-scan-time { color: #6b7280; font-size: 11px; }
 
-/* Bottom Panels */
-.geo-dashboard-panels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-.geo-panel { background: #11151c; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.04); overflow: hidden; }
-.geo-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
-.geo-panel-title { font-size: 14px; font-weight: 600; color: #d1d5db; margin: 0; }
-.geo-panel-body { padding: 12px 20px; min-height: 100px; }
-.geo-panel-empty { text-align: center; padding: 20px 0; color: #4b5563; font-size: 13px; }
-.geo-activity-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.03); cursor: pointer; }
-.geo-activity-item:last-child { border-bottom: none; }
-.geo-activity-item:hover { background: rgba(99, 102, 241, 0.03); margin: 0 -20px; padding: 8px 20px; }
-.geo-activity-icon { font-size: 16px; margin-top: 1px; }
-.geo-activity-content { display: flex; flex-direction: column; gap: 2px; }
-.geo-activity-text { font-size: 13px; color: #d1d5db; }
-.geo-activity-time { font-size: 11px; color: #4b5563; }
-.geo-task-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
-.geo-task-item:last-child { border-bottom: none; }
-.geo-task-priority { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.priority-low { background: #6b7280; }
-.priority-medium { background: #f59e0b; }
-.priority-high { background: #ef4444; }
-.geo-task-content { flex: 1; display: flex; flex-direction: column; gap: 1px; }
-.geo-task-title { font-size: 13px; color: #d1d5db; }
-.geo-task-project { font-size: 11px; color: #4b5563; }
+.geo-empty-state { padding: 40px; text-align: center; color: #666; font-size: 13px; background: #1a1a2e; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.06); }
 
-.snapshot-mini { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; }
-.geo-snapshot-preview { display: flex; flex-direction: column; gap: 8px; }
-.geo-snapshot-mini { display: flex; gap: 8px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.geo-snapshot-mini-label { color: #6b7280; min-width: 40px; }
-.geo-snapshot-mini-value { color: #d1d5db; }
-.geo-snapshot-mini-value.completed { color: #34d399; }
-.geo-snapshot-mini-value.error { color: #f87171; }
-
-.geo-btn { padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
-.geo-btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
-.geo-btn-primary:hover { opacity: 0.9; }
-
-/* Asset Mini Stats (Phase 2.5) */
-.geo-asset-mini-stats {
-  display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
-}
-.geo-asset-mini-card {
-  background: #11151c; border-radius: 10px; padding: 12px;
-  display: flex; align-items: center; gap: 10px; border-left: 3px solid;
-}
-.geo-asset-mini-icon { font-size: 20px; }
-.geo-asset-mini-body { display: flex; flex-direction: column; }
-.geo-asset-mini-number { font-size: 16px; font-weight: 700; color: #e2e8f0; }
-.geo-asset-mini-label { font-size: 10px; color: #6b7280; }
-.geo-asset-no-data { text-align: center; padding: 20px; color: #6b7280; background: #11151c; border-radius: 12px; }
-
+.geo-loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; gap: 10px; z-index: 100; }
+.geo-loading-spinner { width: 20px; height: 20px; border: 3px solid rgba(129,140,248,0.2); border-top-color: #818cf8; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>

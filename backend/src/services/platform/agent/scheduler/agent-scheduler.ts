@@ -31,7 +31,7 @@ class AgentScheduler {
     plan: AgentSchedulePlan,
     platformCtx?: PlatformContext,
   ): Promise<ScheduledJob> {
-    const { v4: uuid } = await import('uuid')
+    const { default: uuid } = await import("uuid")
     const jobId = plan.id || uuid()
 
     const job: ScheduledJob = {

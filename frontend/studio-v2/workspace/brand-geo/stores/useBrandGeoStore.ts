@@ -65,9 +65,6 @@ const defaultFlowState: WorkspaceFlowState = {
   currentStage: 'create_project',
   stages: {
     create_project: 'active',
-    edit_brand_profile: 'pending',
-    website_scan: 'pending',
-    generate_snapshot: 'pending',
     build_graph: 'pending',
     ready: 'pending',
   },
@@ -223,8 +220,8 @@ export function useBrandGeoStore() {
     state.loading = true
     state.error = null
     try {
-      const result = await apiFetch<{ success: boolean; data: { projects: GeoProjectV2[] } }>('/projects')
-      if (result?.data?.projects) setV2Projects(result.data.projects)
+      const result = await apiFetch<{ success: boolean; data: GeoProjectV2[] }>('/projects')
+      if (result?.success && Array.isArray(result.data)) setV2Projects(result.data as GeoProjectV2[])
       return true
     } catch (err: any) {
       state.error = err.message
@@ -240,17 +237,28 @@ export function useBrandGeoStore() {
     industry?: string
     language?: string
     country?: string
+    executionResults?: any
   }): Promise<string | null> {
     state.loading = true
     state.error = null
     try {
-      const result = await apiFetch<{ success: boolean; data: { project: GeoProjectV2 } }>('/projects', {
+      // Map frontend fields to backend API format
+      const body: Record<string, any> = {
+        name: data.name,
+        industry: data.industry,
+        language: data.language,
+        topic: data.website || data.country || '',
+      }
+      if (data.executionResults) {
+        body.config = data.executionResults
+      }
+      const result = await apiFetch<{ success: boolean; data: any }>('/projects', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       })
-      if (result?.data?.project) {
-        addV2Project(result.data.project)
-        return result.data.project.id
+      if (result?.data) {
+        addV2Project(result.data as GeoProjectV2)
+        return result.data.id
       }
       return null
     } catch (err: any) {
@@ -261,6 +269,7 @@ export function useBrandGeoStore() {
     }
   }
 
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   async function fetchV2ProjectById(id: string): Promise<GeoProjectV2 | null> {
     state.loading = true
     state.error = null
@@ -281,6 +290,7 @@ export function useBrandGeoStore() {
 
   function setBrandProfile(profile: GeoBrandProfile | null) { state.brandProfile = profile }
 
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   async function fetchBrandProfile(projectId: string): Promise<GeoBrandProfile | null> {
     state.loading = true
     state.error = null
@@ -297,6 +307,8 @@ export function useBrandGeoStore() {
     }
   }
 
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   async function saveBrandProfile(projectId: string, data: Partial<GeoBrandProfile>): Promise<GeoBrandProfile | null> {
     state.loading = true
     state.error = null
@@ -321,7 +333,9 @@ export function useBrandGeoStore() {
   // ==================================================================
 
   function setWebsiteSnapshot(snapshot: WebsiteSnapshot | null) { state.websiteSnapshot = snapshot }
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
 
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   async function triggerScan(projectId: string, url: string): Promise<WebsiteSnapshot | null> {
     state.loading = true
     state.error = null
@@ -341,6 +355,7 @@ export function useBrandGeoStore() {
     }
   }
 
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   async function fetchScanStatus(projectId: string): Promise<{ status: string; error?: string } | null> {
     try {
       const result = await apiFetch<{ success: boolean; data: { status: { status: string; error?: string } } }>(`/scan/${projectId}/status`)
@@ -350,6 +365,7 @@ export function useBrandGeoStore() {
     }
   }
 
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   async function fetchSnapshot(projectId: string): Promise<WebsiteSnapshot | null> {
     state.loading = true
     state.error = null
@@ -375,6 +391,7 @@ export function useBrandGeoStore() {
   function addGraphNode(node: GeoGraphNode) { state.graphNodes.push(node) }
   function addGraphEdge(edge: GeoGraphEdge) { state.graphEdges.push(edge) }
 
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   async function fetchGraphNodes(projectId: string): Promise<GeoGraphNode[]> {
     state.loading = true
     state.error = null
@@ -415,6 +432,7 @@ export function useBrandGeoStore() {
     }
   }
 
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   async function fetchGraphEdges(projectId: string): Promise<GeoGraphEdge[]> {
     state.loading = true
     state.error = null
@@ -429,6 +447,7 @@ export function useBrandGeoStore() {
     } finally {
       state.loading = false
     }
+  // @deprecated Phase 1 cleanup candidate — no UI consumer
   }
 
   async function createGraphEdge(data: {
@@ -488,210 +507,6 @@ export function useBrandGeoStore() {
   // Phase 1 API Methods (Keep)
   // ==================================================================
 
-  async function fetchBrands(): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch('/api/geo/brands', { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取品牌列表失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.brands) setBrands(json.data.brands)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function fetchVisibility(brandId: string): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch(`/api/geo/brands/${brandId}/visibility`, { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取可见性失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.metrics) setVisibilityMetrics(json.data.metrics)
-      if (json.data?.search) setSearchVisibility(json.data.search)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function fetchCitations(brandId: string): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch(`/api/geo/brands/${brandId}/citations`, { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取引用失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.citations) setCitations(json.data.citations)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function fetchTopics(brandId: string): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch(`/api/geo/brands/${brandId}/topics`, { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取话题失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.topics) setTopics(json.data.topics)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function fetchCompetitors(brandId: string): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch(`/api/geo/brands/${brandId}/competitors`, { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取竞品失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.competitors) setCompetitors(json.data.competitors)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function fetchDashboardStats(): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch('/api/geo/dashboard/stats', { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取统计数据失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.stats) setDashboardStats(json.data.stats)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function fetchProjects(brandId?: string): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const query = brandId ? `?brandId=${brandId}` : ''
-      const res = await fetch(`/api/geo/projects${query}`, { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取项目列表失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.projects) setProjects(json.data.projects)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function createProject(project: Partial<GeoProject>): Promise<string | null> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch('/api/geo/projects', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify(project),
-      })
-      if (!res.ok) throw new Error(`创建项目失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.project) {
-        addProject(json.data.project)
-        return json.data.project.id
-      }
-      return null
-    } catch (err: any) {
-      state.error = err.message
-      return null
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function fetchTasks(projectId?: string): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const query = projectId ? `?projectId=${projectId}` : ''
-      const res = await fetch(`/api/geo/tasks${query}`, { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取任务列表失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.tasks) setTasks(json.data.tasks)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function createTask(task: Partial<GeoTask>): Promise<string | null> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch('/api/geo/tasks', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify(task),
-      })
-      if (!res.ok) throw new Error(`创建任务失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.task) {
-        addTask(json.data.task)
-        return json.data.task.id
-      }
-      return null
-    } catch (err: any) {
-      state.error = err.message
-      return null
-    } finally {
-      state.loading = false
-    }
-  }
-
-  async function fetchEntities(brandId: string): Promise<boolean> {
-    state.loading = true
-    state.error = null
-    try {
-      const res = await fetch(`/api/geo/brands/${brandId}/entities`, { headers: authHeaders() })
-      if (!res.ok) throw new Error(`获取实体失败: ${res.status}`)
-      const json = await res.json()
-      if (json.data?.entities) setEntities(json.data.entities)
-      return true
-    } catch (err: any) {
-      state.error = err.message
-      return false
-    } finally {
-      state.loading = false
-    }
-  }
-
   // ─── Return ───
   return {
     // 只读 state
@@ -699,46 +514,12 @@ export function useBrandGeoStore() {
     // Panel
     activePanelId: computed(() => state.activePanelId),
     setActivePanel,
-    // Brands
-    brands: computed(() => state.brands),
-    setBrands, addBrand, updateBrand, removeBrand,
-    // Entities
-    entities: computed(() => state.entities),
-    setEntities, addEntity, updateEntity, removeEntity,
-    // Visibility
-    visibilityMetrics: computed(() => state.visibilityMetrics),
-    searchVisibility: computed(() => state.searchVisibility),
-    setVisibilityMetrics, setSearchVisibility,
-    // Citations
-    citations: computed(() => state.citations),
-    setCitations, addCitation,
-    // Topics
-    topics: computed(() => state.topics),
-    setTopics,
-    // Competitors
-    competitors: computed(() => state.competitors),
-    setCompetitors,
-    // Projects (P1)
-    projects: computed(() => state.projects),
-    setProjects, addProject, updateProject, removeProject,
-    setSelectedProjectId,
-    // Tasks
-    tasks: computed(() => state.tasks),
-    setTasks, addTask, updateTask, removeTask,
-    // Dashboard
-    dashboardStats: computed(() => state.dashboardStats),
-    setDashboardStats, updateDashboardStats,
-    // Loading / Error
-    loading: computed(() => state.loading),
-    error: computed(() => state.error),
-    setLoading, setError,
     // Selection
     selectedBrandId: computed(() => state.selectedBrandId),
     selectedProjectId: computed(() => state.selectedProjectId),
     selectedV2ProjectId: computed(() => state.selectedV2ProjectId),
     setSelectedBrandId, setSelectedV2ProjectId,
     selectedBrand, selectedProject, selectedV2Project,
-    activeBrandProjects, pendingTasks,
 
     // V2 — Projects
     v2Projects: computed(() => state.v2Projects),
@@ -764,11 +545,5 @@ export function useBrandGeoStore() {
     // V2 — Workspace Flow
     workspaceFlow: computed(() => state.workspaceFlow),
     setCurrentStage, setStageStatus, advanceFlow,
-
-    // Phase 1 API methods (keep)
-    fetchBrands, fetchVisibility, fetchCitations,
-    fetchTopics, fetchCompetitors, fetchDashboardStats,
-    fetchProjects, createProject, fetchTasks, createTask,
-    fetchEntities,
   }
 }

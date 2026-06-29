@@ -1,6 +1,17 @@
+// @deprecated GEO Runtime Legacy — Phase 1 removed
 // ============================================================
 // BrandGEORuntime — 品牌GEO 运行时逻辑层 (Phase 1 + Phase 2)
-// 封装业务逻辑，桥接 Store ↔ UI
+// 
+// ⚠️ DEPRECATED: 2026-07-30
+//
+// 原因：
+// - 所有数据源已统一到 useGeoHydrate composable
+// - 该 runtime 依赖的 useBrandGeoStore fetch 函数（dashboard/brand/task）
+//   均无后端实现，属于 Layer 3 Brand 扩展域的残留代码
+// - 页面切换逻辑已内敛至 BrandGEOWorkspace.vue
+//
+// 历史引用已全部移除。确认 0 引用后可删除此文件。
+// @deprecated GEO Runtime Legacy (Phase 1 deprecated)
 // ============================================================
 
 import { computed } from 'vue'
@@ -14,11 +25,9 @@ export function useBrandGEORuntime() {
   function resolvePanelFromRoute(query: Record<string, string>): GeoPanelId {
     const panel = query.panel as GeoPanelId
     const validPanels: GeoPanelId[] = [
-      'dashboard', 'brands', 'entities', 'visibility',
-      'citations', 'topics', 'competitors', 'projects',
-      'tasks', 'settings', 'reports', 'help',
+      'dashboard', 'visibility', 'projects',
       'project-create', 'project-select', 'brand-profile',
-      'website-scanner', 'knowledge-graph', 'asset-center',
+      'website-scanner', 'knowledge-graph', 'settings',
     ]
     if (panel && validPanels.includes(panel)) {
       return panel
@@ -137,8 +146,7 @@ export function useBrandGEORuntime() {
 
   const workspaceFlowProgress = computed(() => {
     const order: WorkspaceFlowStage[] = [
-      'create_project', 'edit_brand_profile', 'website_scan',
-      'generate_snapshot', 'build_graph', 'ready',
+      'create_project', 'build_graph', 'ready',
     ]
     const currentIdx = order.indexOf(store.workspaceFlow.value.currentStage)
     const completed = order.filter(s => store.workspaceFlow.value.stages[s] === 'completed').length
@@ -155,9 +163,6 @@ export function useBrandGEORuntime() {
   function stageLabel(stage: WorkspaceFlowStage): string {
     const labels: Record<WorkspaceFlowStage, string> = {
       create_project: '创建项目',
-      edit_brand_profile: '编辑品牌信息',
-      website_scan: '网站扫描',
-      generate_snapshot: '生成快照',
       build_graph: '构建图谱',
       ready: '就绪',
     }
@@ -168,23 +173,14 @@ export function useBrandGEORuntime() {
   const currentPanelTitle = computed(() => {
     const titles: Record<string, string> = {
       dashboard: '总览仪表盘',
-      brands: '品牌管理',
-      entities: '实体图谱',
-      visibility: '可见性分析',
-      citations: '引用追踪',
-      topics: '热门话题',
-      competitors: '竞品分析',
+      visibility: 'SEO优化',
       projects: '项目管理',
-      tasks: '任务中心',
-      reports: '报告中心',
-      settings: '设置',
-      help: '帮助与教程',
       'project-create': '创建项目',
       'project-select': '选择项目',
       'brand-profile': '品牌档案',
       'website-scanner': '网站扫描',
       'knowledge-graph': '知识图谱',
-      'asset-center': '资产中心',
+      settings: '设置',
     }
     return titles[store.activePanelId.value] || '品牌GEO'
   })

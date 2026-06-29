@@ -40,7 +40,7 @@ export default defineNuxtConfig({
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0',
-          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https: https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com https://dashscope-result-wlcb.oss-cn-wulanchabu.aliyuncs.com; connect-src 'self' https://aigc.fushtn.com; font-src 'self' data:; object-src 'none'; frame-ancestors 'none';",
+          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https: https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com https://dashscope-result-wlcb.oss-cn-wulanchabu.aliyuncs.com; connect-src 'self' https://aigc.fushtn.com http://127.0.0.1:* ws://127.0.0.1:*; font-src 'self' data:; object-src 'none'; frame-ancestors 'none';",
         },
       },
     },

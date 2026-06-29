@@ -7,9 +7,9 @@ import { geoProjectService } from '../services/geo-project.service'
 
 export default async function geoProjectRoutes(fastify: FastifyInstance) {
   // POST /api/geo/projects — Create project
-  fastify.post('/api/geo/projects', async (request, reply) => {
+  fastify.post('/api/geo/projects', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = request.body as any
-    const user = (request as any).user || { id: body.userId || 'anonymous' }
+    const user = request.user as any
 
     if (!body.name) {
       return reply.status(400).send({ success: false, error: 'name is required' })
@@ -31,13 +31,9 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects — List projects
-  fastify.get('/api/geo/projects', async (request, reply) => {
-    const user = (request as any).user || { id: (request.query as any).userId || '' }
-    const tenantId = (request.query as any).tenantId || user.id
-
-    if (!tenantId) {
-      return reply.status(400).send({ success: false, error: 'tenantId is required' })
-    }
+  fastify.get('/api/geo/projects', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const user = request.user as any
+    const tenantId = user.id
 
     try {
       const projects = await geoProjectService.listProjects(tenantId)
@@ -48,7 +44,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id — Get project
-  fastify.get('/api/geo/projects/:id', async (request, reply) => {
+  fastify.get('/api/geo/projects/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -63,7 +59,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // PUT /api/geo/projects/:id — Update project
-  fastify.put('/api/geo/projects/:id', async (request, reply) => {
+  fastify.put('/api/geo/projects/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
     const body = request.body as any
 
@@ -79,7 +75,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // DELETE /api/geo/projects/:id — Soft delete project
-  fastify.delete('/api/geo/projects/:id', async (request, reply) => {
+  fastify.delete('/api/geo/projects/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -94,7 +90,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/geo/projects/:id/snapshot — Snapshot project
-  fastify.post('/api/geo/projects/:id/snapshot', async (request, reply) => {
+  fastify.post('/api/geo/projects/:id/snapshot', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -106,7 +102,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/versions/:version — Get project version
-  fastify.get('/api/geo/projects/:id/versions/:version', async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/versions/:version', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id, version } = request.params as any
 
     try {

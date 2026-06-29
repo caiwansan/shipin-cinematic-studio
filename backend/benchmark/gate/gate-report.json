@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-06-29T12:23:18.063Z",
+  "version": "1.0.0",
+  "verdict": "FAIL",
+  "gates": [
+    {
+      "gate": "G1",
+      "name": "Benchmark Coverage",
+      "status": "PASS",
+      "details": "Dataset: 20 samples (req: 20)\nCategories: 9 (SaaS, AI, Enterprise, Finance, Healthcare, Education, Government, Open Source, E-Commerce)\nBaseline: 1 samples"
+    },
+    {
+      "gate": "G2",
+      "name": "Determinism",
+      "status": "PASS",
+      "details": "Token StdDev: 219.89 (threshold: 500) | Latency StdDev: 36.92ms | Samples: 99",
+      "evidence": "/root/shipin-cinematic-studio/backend/benchmark/gate/determinism.json"
+    },
+    {
+      "gate": "G3",
+      "name": "Regression",
+      "status": "SKIP",
+      "details": "baselineSamples is not defined"
+    },
+    {
+      "gate": "G4",
+      "name": "Trace Completeness",
+      "status": "PASS",
+      "details": "API returns 99 traces | Fields checked: 11 | Missing: none",
+      "evidence": "/root/shipin-cinematic-studio/backend/benchmark/gate/trace-verify.json"
+    },
+    {
+      "gate": "G5",
+      "name": "Runtime API Audit",
+      "status": "FAIL",
+      "details": "8 agents scanned | 7 with issues\n  citation.agent.ts: JSON.parse\n  evidence.agent.ts: JSON.parse\n  claim.agent.ts: JSON.parse\n  faq.agent.ts: JSON.parse\n  schema.agent.ts: JSON.parse\n  research.agent.ts: no SGR\n  knowledge-graph.agent.ts: no SGR",
+      "evidence": "/root/shipin-cinematic-studio/backend/benchmark/gate/runtime-audit.json"
+    },
+    {
+      "gate": "G6",
+      "name": "Performance Baseline",
+      "status": "PASS",
+      "details": "Records: 99 | Latency P50: 121ms P95: 206.79999999999995ms P99: 265.4199999999999ms | Tokens P50: 2173",
+      "evidence": "/root/shipin-cinematic-studio/backend/benchmark/gate/performance-baseline.json"
+    }
+  ]
+}

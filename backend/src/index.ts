@@ -12,8 +12,8 @@ import runtimeContextPlugin from './plugins/runtime-context.js'
 import projectV2Routes from './routes/projects-v2.js'
 import systemVersionRoutes from './routes/system-version.js'
 import workbenchProjectRoutes from './routes/workbench-project.js'
-// Platform Governance routes (KMKI-PLAT-012)
-import governanceMainRoute from './routes/platform/governance/governance-main.route.js'
+// Platform Governance routes (KMKI-PLAT-012) — dynamic import to avoid tsx path alias issue
+let governanceMainRoute: any = undefined
 // Route imports
 import communityCategoryRoutes from './routes/community/categories.js'
 import communityPostRoutes from './routes/community/posts.js'
@@ -49,12 +49,14 @@ import adminMembersStorageRoutes from './routes/admin-members-storage.js'
 import adminAgentRoutes from './routes/admin-agents.js'
 import adminMarketAgentRoutes from './routes/admin-market-agents.js'
 import agentPlanRoutes from './routes/agent-plan.js'
-import agentDefinitionRoutes from './routes/platform/agent/agent.route.js'
-import agentSessionRoutes from './routes/platform/agent/session.route.js'
-import agentDispatchRoutes from './routes/platform/agent/dispatch.route.js'
-import agentScheduleRoutes from './routes/platform/agent/schedule.route.js'
-import agentMemoryRoutes from './routes/platform/agent/memory.route.js'
-import agentToolRoutes from './routes/platform/agent/tool.route.js'
+// Platform Agent routes (KMKI-PLAT-010) — dynamic to avoid tsx @platform alias issue
+let agentDefinitionRoutes: any = undefined
+// Platform Agent routes (KMKI-PLAT-010) — dynamic to avoid tsx @platform alias issue
+let agentSessionRoutes: any = undefined
+let agentDispatchRoutes: any = undefined
+let agentScheduleRoutes: any = undefined
+let agentMemoryRoutes: any = undefined
+let agentToolRoutes: any = undefined
 import adminCustomerServiceRoutes from './routes/admin-customer-service.js'
 import modelRoutes from './routes/models.js'
 import styleProfileRoutes from './routes/style-profiles.js'
@@ -363,12 +365,42 @@ await app.register(projectV2Routes)
   // Agent Plans (前台+后台)
   await app.register(agentPlanRoutes)
   // Agent Runtime routes (KMKI-PLAT-010)
-  await app.register(agentDefinitionRoutes)
-  await app.register(agentSessionRoutes)
-  await app.register(agentDispatchRoutes)
-  await app.register(agentScheduleRoutes)
-  await app.register(agentMemoryRoutes)
-  await app.register(agentToolRoutes)
+  try {
+    const mod = await import('./routes/platform/agent/agent.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/session.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent session route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/dispatch.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent dispatch route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/schedule.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent schedule route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/memory.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent memory route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/tool.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent tool route skipped:', (err as Error).message)
+  }
 
   // GEO Agent registration (Sprint 1A Knowledge Skeleton)
   try {
@@ -378,6 +410,14 @@ await app.register(projectV2Routes)
     console.log('[startup] ✅ 3 GEO agents registered (research, entity, knowledge-graph)')
   } catch (err) {
     console.warn('[startup] ⚠️ GEO agent registration skipped (non-fatal):', (err as Error).message)
+  }
+
+  // Sprint 1B — Register KQ Workflow + Agents
+  try {
+    await (await import('./services/geo/registry/geo-workflow-registration.js')).registerGEOWorkflows()
+    console.log('[startup] ✅ GEO KQ Workflow registered (geo.knowledge-quality)')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO KQ Workflow registration skipped:', (err as Error).message)
   }
 
   // Workflow Runtime routes (KMKI-PLAT-011)
@@ -519,9 +559,23 @@ await app.register(projectV2Routes)
   await app.register(await import('./services/geo/routes/geo-project.route.js').then(m => m.default))
   await app.register(await import('./services/geo/routes/geo-entity.route.js').then(m => m.default))
   await app.register(await import('./services/geo/routes/geo-graph.route.js').then(m => m.default))
-  await app.register(await import('./routes/asset/asset.route.js').then(m => m.default))
-  await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default))
-  await app.register(await import('./routes/asset/asset-scanner.route.js').then(m => m.default))
+  // Stage 3.2.1 Watcher Events API
+  await app.register(await import('./services/geo/routes/geo-watcher.route.js').then(m => m.default))
+  // Sprint 1B Knowledge Quality Route (B4A Runtime)
+  await app.register(await import('./services/geo/routes/geo-knowledge-quality.route.js').then(m => m.default))
+  // KMKI-RUNTIME-010 — Execution Trace Route
+  await app.register(await import('./services/geo/routes/geo-trace.route.js').then(m => m.default))
+  // Sprint KO-1 — Knowledge Object CRUD API
+  await app.register(await import('./services/geo/routes/geo-knowledge.route.js').then(m => m.default))
+  // Sprint P1 — Brand GEO MVP Routes
+  await app.register(await import('./services/geo/routes/geo-brand.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-keyword.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-scan.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-dashboard.route.js').then(m => m.default))
+  // Unified Asset Runtime routes — wrapped to avoid tsx @platform alias issue
+  try { await app.register(await import('./routes/asset/asset.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset version route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/asset/asset-scanner.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset scanner route skipped:', (err as Error).message) }
   // Production health / monitoring routes
   await app.register(healthRoutes)
   // REMOVED: observabilityRoutes
@@ -542,7 +596,12 @@ await app.register(projectV2Routes)
   // REMOVED: globalRoutes
   // REMOVED: autonomousRoutes
   // Platform Governance routes (KMKI-PLAT-012)
-await app.register(governanceMainRoute)
+  try {
+    const govModule = await import('./routes/platform/governance/governance-main.route.js')
+    await app.register(govModule.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Governance routes skipped (non-fatal):', (err as Error).message)
+  }
   await app.register(workbenchProjectRoutes)
 
   // ⭐ 行政区划 API
@@ -584,20 +643,21 @@ await app.register(governanceMainRoute)
     console.warn('[SemanticRuntime] Failed to initialize:', (err as Error).message)
   }
 
-  // Capability Platform routes (Phase 6 — Platform Level Capability Contract Layer)
-  await app.register(await import('./routes/platform/capability/contract.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/capability/registry.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/capability/resolver.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/capability/validator.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/capability/catalog.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/capability/capability-main.route.js').then(m => m.default))
+  // Capability Platform routes — wrapped for tsx @platform compatibility
+  try { await app.register(await import('./routes/platform/capability/contract.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability contract route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/registry.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability registry route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/resolver.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability resolver route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/validator.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability validator route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/catalog.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability catalog route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/capability-main.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability main route skipped:', (err as Error).message) }
 
   // Resource Platform routes (KMKI-PLAT-008 — AI Resource Runtime)
-  await app.register(await import('./routes/platform/resource/contract.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/resource/credential.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/resource/resolver.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/resource/health.route.js').then(m => m.default))
-  await app.register(await import('./routes/platform/resource/usage.route.js').then(m => m.default))
+    // Resource Runtime routes (KMKI-PLAT-008) — wrapped for tsx @platform compatibility
+  try { await app.register(await import('./routes/platform/resource/contract.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource contract route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/resource/credential.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource credential route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/resource/resolver.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource resolver route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/resource/health.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource health route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/resource/usage.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource usage route skipped:', (err as Error).message) }
   await app.register(await import('./routes/platform/resource/cost.route.js').then(m => m.default))
   await app.register(await import('./routes/platform/resource/matrix.route.js').then(m => m.default))
   await app.register(await import('./routes/platform/resource/resource-main.route.js').then(m => m.default))
@@ -646,7 +706,11 @@ await app.register(governanceMainRoute)
   await app.register(await import('./routes/goal/goal-main.route.js').then(m => m.default))
 
   // Execution Runtime routes (KMKI-PLAT-007 — Platform Execution Kernel)
-  await app.register(await import('./routes/platform/execution/execution-main.route.js').then(m => m.default))
+  try {
+    await app.register(await import('./routes/platform/execution/execution-main.route.js').then(m => m.default))
+  } catch (err) {
+    console.warn('[startup] ⚠️ Execution runtime routes skipped:', (err as Error).message)
+  }
 
   // Initialize Execution Runtime (KMKI-PLAT-007 — Platform Execution Kernel)
   try {
@@ -722,6 +786,20 @@ await app.register(governanceMainRoute)
     console.error('[startup] ❌ Runtime boot failed:', (err as Error).message)
     // Phase 2, Rule 7: boot 失败 = 系统不启动
     process.exit(1)
+  }
+
+  // ═══ Stage 3: Dual Write Manager Init ═══
+  try {
+    const { PrismaClient } = await import('@prisma/client')
+    const { createDualWriteManager, featureFlagService } = await import('./services/platform/dualwrite/index.js')
+    const { PrismaEventSink } = await import('./services/platform/dualwrite/prisma-event-sink.js')
+    const dualWriteManager = createDualWriteManager(featureFlagService)
+    dualWriteManager.setEventSink(new PrismaEventSink(new PrismaClient()))
+    // Store on app for runtime access
+    app.decorate('dualWriteManager', dualWriteManager)
+    console.log('[startup] ✅ DualWriteManager initialized (Stage 3)')
+  } catch (err) {
+    console.warn('[startup] ⚠️ DualWriteManager init skipped:', (err as Error).message)
   }
 
   // 启动服务前注册全局 404 handler（API 路径返回 JSON）

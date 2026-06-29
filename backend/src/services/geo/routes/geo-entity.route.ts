@@ -3,11 +3,13 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
+import { v4 as uuidv4 } from 'uuid'
 import { geoEntityService } from '../services/geo-entity.service'
 
 export default async function geoEntityRoutes(fastify: FastifyInstance) {
   // POST /api/geo/projects/:projectId/discover — Discover entities
-  fastify.post('/api/geo/projects/:projectId/discover', async (request, reply) => {
+  // Returns KnowledgeObject (not raw entity array)
+  fastify.post('/api/geo/projects/:projectId/discover', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
     const body = request.body as any
 
@@ -16,15 +18,35 @@ export default async function geoEntityRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const result = await geoEntityService.discoverEntities(projectId, body.topic)
-      return { success: true, data: result }
+      const user = request.user as any
+      const traceId = body.traceId || uuidv4()
+      console.log('[EntityRoute] Discover starting for project:', projectId, 'topic:', body.topic, 'traceId:', traceId, 'user:', user?.id)
+      const ko = await geoEntityService.discoverEntities(projectId, body.topic, user?.id)
+      console.log('[EntityRoute] Discover result: KO', ko.id, 'entities:', ko.entities.length, 'relations:', ko.relations.length)
+      return {
+        success: true,
+        data: {
+          id: ko.id,
+          projectId: ko.projectId,
+          topic: ko.topic,
+          status: ko.status,
+          entities: ko.entities,
+          relations: ko.relations,
+          entityCount: ko.entities.length,
+          relationCount: ko.relations.length,
+          provenance: ko.provenance,
+          createdAt: ko.createdAt,
+          updatedAt: ko.updatedAt,
+        },
+      }
     } catch (err: any) {
+      console.error('[EntityRoute] Discover error:', err.message, err.stack?.slice(0, 500))
       return reply.status(500).send({ success: false, error: err.message })
     }
   })
 
   // GET /api/geo/entities/:id — Get entity
-  fastify.get('/api/geo/entities/:id', async (request, reply) => {
+  fastify.get('/api/geo/entities/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -39,7 +61,7 @@ export default async function geoEntityRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:projectId/entities — List entities
-  fastify.get('/api/geo/projects/:projectId/entities', async (request, reply) => {
+  fastify.get('/api/geo/projects/:projectId/entities', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
 
     try {
@@ -51,7 +73,7 @@ export default async function geoEntityRoutes(fastify: FastifyInstance) {
   })
 
   // PUT /api/geo/entities/:id — Update entity
-  fastify.put('/api/geo/entities/:id', async (request, reply) => {
+  fastify.put('/api/geo/entities/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
     const body = request.body as any
 
@@ -67,7 +89,7 @@ export default async function geoEntityRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/geo/entities/:sourceId/relations — Add relation
-  fastify.post('/api/geo/entities/:sourceId/relations', async (request, reply) => {
+  fastify.post('/api/geo/entities/:sourceId/relations', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { sourceId } = request.params as any
     const body = request.body as any
 
@@ -84,7 +106,7 @@ export default async function geoEntityRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/entities/:id/relations — Get entity relations
-  fastify.get('/api/geo/entities/:id/relations', async (request, reply) => {
+  fastify.get('/api/geo/entities/:id/relations', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -96,7 +118,7 @@ export default async function geoEntityRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/entities/:id/provenance — Get entity provenance
-  fastify.get('/api/geo/entities/:id/provenance', async (request, reply) => {
+  fastify.get('/api/geo/entities/:id/provenance', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {

@@ -112,8 +112,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { useBrandGeoStore } from '~/studio-v2/workspace/brand-geo/stores/useBrandGeoStore'
+import { useGeoHydrate } from '~/studio-v2/workspace/brand-geo/composables/useGeoHydrate'
 import type { GeoGraphNode, GeoGraphEdge } from '~/studio-v2/types/geo'
 
 const props = defineProps<{
@@ -124,22 +125,67 @@ const store = useBrandGeoStore()
 const tab = ref<'nodes' | 'edges' | 'create'>('nodes')
 const error = ref('')
 
-const nodes = computed(() => store.graphNodes.value)
-const edges = computed(() => store.graphEdges.value)
+// Hydrate as primary data source (for execution results context)
+const { loading } = useGeoHydrate(() => props.projectId)
+
+// Graph data fetched directly via existing backend routes (bypasses old store)
+const nodes = ref<GeoGraphNode[]>([])
+const edges = ref<GeoGraphEdge[]>([])
+
+// Inline authFetch — same pattern as useGeoHydrate  
+function getAuthHeaders(): Record<string, string> {
+  try {
+    const token = localStorage.getItem('token') || ''
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  } catch { return {} }
+}
+
+async function authFetch(url: string) {
+  const res = await fetch(url, { headers: getAuthHeaders() })
+  if (!res.ok) {
+    if (res.status === 404) return null
+    throw new Error(`HTTP ${res.status} ${res.statusText}`)
+  }
+  return res.json()
+}
+
+async function loadGraph() {
+  if (!props.projectId) return
+  error.value = ''
+  try {
+    const [graphRes, edgesRes] = await Promise.all([
+      authFetch(`/api/geo/projects/${props.projectId}/graph`),
+      authFetch(`/api/geo/projects/${props.projectId}/graph/edges`),
+    ])
+    if (graphRes?.data) {
+      nodes.value = Array.isArray(graphRes.data) ? graphRes.data
+        : graphRes.data.nodes || []
+    } else {
+      nodes.value = []
+    }
+    if (edgesRes?.data) {
+      edges.value = Array.isArray(edgesRes.data) ? edgesRes.data
+        : edgesRes.data.edges || []
+    } else {
+      edges.value = []
+    }
+  } catch (err: any) {
+    error.value = err.message
+    nodes.value = []
+    edges.value = []
+  }
+}
+
+watch(() => props.projectId, async (id) => {
+  if (!id) return
+  await loadGraph()
+}, { immediate: true })
 
 const newNode = reactive({
   label: '',
   type: '',
   properties: '',
 })
-
-watch(() => props.projectId, async (id) => {
-  if (!id) return
-  await Promise.all([
-    store.fetchGraphNodes(id),
-    store.fetchGraphEdges(id),
-  ])
-}, { immediate: true })
 
 async function createNode() {
   if (!newNode.label || !newNode.type) return
@@ -156,6 +202,7 @@ async function createNode() {
       newNode.type = ''
       newNode.properties = ''
       tab.value = 'nodes'
+      await loadGraph()
     } else {
       error.value = store.error.value || '创建失败'
     }

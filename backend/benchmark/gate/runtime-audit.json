@@ -1,0 +1,71 @@
+{
+  "agents": [
+    {
+      "file": "entity.agent.ts",
+      "lines": 202,
+      "violations": [],
+      "usesStructuredGeneration": true,
+      "clean": true
+    },
+    {
+      "file": "citation.agent.ts",
+      "lines": 86,
+      "violations": [
+        "JSON.parse"
+      ],
+      "usesStructuredGeneration": false,
+      "clean": false
+    },
+    {
+      "file": "evidence.agent.ts",
+      "lines": 109,
+      "violations": [
+        "JSON.parse"
+      ],
+      "usesStructuredGeneration": false,
+      "clean": false
+    },
+    {
+      "file": "claim.agent.ts",
+      "lines": 135,
+      "violations": [
+        "JSON.parse"
+      ],
+      "usesStructuredGeneration": false,
+      "clean": false
+    },
+    {
+      "file": "faq.agent.ts",
+      "lines": 91,
+      "violations": [
+        "JSON.parse"
+      ],
+      "usesStructuredGeneration": false,
+      "clean": false
+    },
+    {
+      "file": "schema.agent.ts",
+      "lines": 109,
+      "violations": [
+        "JSON.parse"
+      ],
+      "usesStructuredGeneration": false,
+      "clean": false
+    },
+    {
+      "file": "research.agent.ts",
+      "lines": 129,
+      "violations": [],
+      "usesStructuredGeneration": false,
+      "clean": false
+    },
+    {
+      "file": "knowledge-graph.agent.ts",
+      "lines": 123,
+      "violations": [],
+      "usesStructuredGeneration": false,
+      "clean": false
+    }
+  ],
+  "timestamp": "2026-06-29T12:23:18.063Z"
+}

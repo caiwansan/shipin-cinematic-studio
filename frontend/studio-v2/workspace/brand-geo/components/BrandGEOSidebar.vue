@@ -6,8 +6,10 @@
     </a>
 
     <nav class="geo-sidebar-nav">
+      <!-- 产品导航 -->
+      <div class="geo-nav-section-label" v-if="showDeveloper">产品功能</div>
       <div
-        v-for="item in menuItems"
+        v-for="item in productMenuItems"
         :key="item.id"
         class="geo-sidebar-item"
         :class="{ active: item.id === activePanelId }"
@@ -17,6 +19,23 @@
         <span class="geo-sidebar-label">{{ item.label }}</span>
         <span v-if="item.badge" class="geo-sidebar-badge">{{ item.badge }}</span>
       </div>
+
+      <!-- 开发者导航 -->
+      <template v-if="showDeveloper">
+        <div class="geo-nav-section-divider"></div>
+        <div class="geo-nav-section-label">开发者工具</div>
+        <div
+          v-for="item in developerMenuItems"
+          :key="item.id"
+          class="geo-sidebar-item"
+          :class="{ active: item.id === activePanelId }"
+          @click="navigate(item.id)"
+        >
+          <span class="geo-sidebar-icon">{{ item.icon }}</span>
+          <span class="geo-sidebar-label">{{ item.label }}</span>
+          <span v-if="item.badge" class="geo-sidebar-badge">{{ item.badge }}</span>
+        </div>
+      </template>
     </nav>
 
     <div class="geo-sidebar-footer">
@@ -29,7 +48,8 @@
 </template>
 
 <script setup lang="ts">
-import { GEO_SIDEBAR_MENU } from '~/studio-v2/workspace/brand-geo/config/sidebar'
+import { computed } from 'vue'
+import { GEO_SIDEBAR_MENU, GEO_DEVELOPER_MENU } from '~/studio-v2/workspace/brand-geo/config/sidebar'
 import type { SidebarMenuItem } from '~/studio-v2/types/geo'
 import type { GeoPanelId } from '~/studio-v2/types/geo'
 
@@ -41,7 +61,11 @@ const emit = defineEmits<{
   navigate: [panelId: GeoPanelId]
 }>()
 
-const menuItems: SidebarMenuItem[] = GEO_SIDEBAR_MENU
+// 开发者菜单默认可见，生产环境可改为 user store 判断
+const showDeveloper = computed(() => true)
+
+const productMenuItems: SidebarMenuItem[] = GEO_SIDEBAR_MENU
+const developerMenuItems: SidebarMenuItem[] = GEO_DEVELOPER_MENU
 
 function navigate(panelId: string) {
   emit('navigate', panelId as GeoPanelId)
@@ -90,6 +114,21 @@ function goHome() {
   display: flex;
   flex-direction: column;
   gap: 1px;
+}
+
+.geo-nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #6b7280;
+  padding: 12px 12px 4px;
+  letter-spacing: 1px;
+}
+
+.geo-nav-section-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 8px 12px;
 }
 
 .geo-sidebar-item {

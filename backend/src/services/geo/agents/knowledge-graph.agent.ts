@@ -72,7 +72,7 @@ async function kgExecutor(input: GraphBuildInput, ctx?: any): Promise<GraphBuild
   }
 
   console.log(`[KGAgent] Built graph with ${graphEntities.length} nodes and ${graphEdges.length} edges for project=${projectId}`)
-  return { graph }
+  return { success: true, output: { graph } }
 }
 
 let registered = false
@@ -112,9 +112,10 @@ export async function executeGraphBuild(input: GraphBuildInput): Promise<GraphBu
     agentCode: KG_AGENT_CODE,
     input: input as unknown as Record<string, unknown>,
   })
-  const output = result.result?.output as Record<string, unknown> | undefined
+  const agentResult = result.result
+  const output = agentResult?.output as Record<string, unknown> | undefined
   return {
-    graph: output?.graph as unknown as KnowledgeGraph || { entities: [], edges: [], metadata: { projectId: '', buildVersion: 0, nodeCount: 0, edgeCount: 0, builtAt: new Date().toISOString() } },
+    graph: (output?.graph as unknown as KnowledgeGraph) || { entities: [], edges: [], metadata: { projectId: '', buildVersion: 0, nodeCount: 0, edgeCount: 0, builtAt: new Date().toISOString() } },
   }
 }
 

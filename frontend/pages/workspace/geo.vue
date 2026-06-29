@@ -5,6 +5,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  middleware: 'auth'
+})
+
 console.log('[BrandGEO] geo.vue page mounted')
 import BrandGEOWorkspace from '~/studio-v2/workspace/brand-geo/BrandGEOWorkspace.vue'
 </script>

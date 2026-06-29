@@ -11,27 +11,16 @@
       <!-- 顶栏 -->
       <header class="geo-topbar">
         <div class="geo-topbar-left">
-          <h2 class="geo-topbar-title">{{ runtime.currentPanelTitle.value }}</h2>
+          <h2 class="geo-topbar-title">{{ panelTitle }}</h2>
         </div>
         <div class="geo-topbar-right">
-          <!-- Workspace Flow Stage Badge -->
-          <span v-if="selectedV2Project" class="geo-topbar-stage-badge">
-            📋 {{ runtime.stageLabel(runtime.workspaceFlow.value.currentStage) }}
-          </span>
-
           <span v-if="selectedV2Project" class="geo-topbar-brand-tag">
             📦 {{ selectedV2Project.name }}
           </span>
-
-          <span v-if="runtime.selectedBrandId.value" class="geo-topbar-brand-tag">
-            🏷️ {{ selectedBrandName }}
-          </span>
-
-          <button v-if="runtime.error.value" class="geo-topbar-error-btn" @click="runtime.setError(null)">
-            ⚠️ {{ runtime.error.value }}
+          <button v-if="error" class="geo-topbar-error-btn" @click="error = null">
+            ⚠️ {{ error }}
           </button>
-
-          <div v-if="runtime.loading.value" class="geo-topbar-loading">
+          <div v-if="loading" class="geo-topbar-loading">
             <span class="geo-loading-spinner"></span>
             <span>加载中...</span>
           </div>
@@ -40,37 +29,31 @@
 
       <!-- 内容区 -->
       <div class="geo-content-area">
-        <!-- Dashboard (V2) -->
+        <!-- 产品导航页面 -->
         <GeoDashboard
           v-if="activePanelId === 'dashboard'"
-          :stats="runtime.dashboardStats.value"
           @navigate="onNavigate"
         />
 
-        <!-- V2 Pages -->
-        <ProjectSelectPage
-          v-else-if="activePanelId === 'project-select'"
-          @create="onNavigate('project-create')"
-          @select="onProjectSelected"
+        <BrandListPage
+          v-else-if="activePanelId === 'brands'"
+          @navigate="onNavigate"
+          @select-brand="onSelectBrand"
         />
 
-        <ProjectCreatePage
-          v-else-if="activePanelId === 'project-create'"
-          @created="onProjectCreated"
-          @cancel="onNavigate('dashboard')"
+        <BrandDetailPage
+          v-else-if="activePanelId === 'website' && selectedProjectIdForDetail"
+          :brand-id="selectedProjectIdForDetail"
+          @back="onNavigate('brands')"
+          @navigate="onNavigate"
         />
 
-        <BrandProfilePage
-          v-else-if="activePanelId === 'brand-profile'"
-          :project-id="selectedV2ProjectId"
-          @saved="onBrandProfileSaved"
-          @skipped="onNavigate('website-scanner')"
+        <KeywordPage
+          v-else-if="activePanelId === 'keywords'"
         />
 
-        <WebsiteScannerPage
-          v-else-if="activePanelId === 'website-scanner'"
-          :project-id="selectedV2ProjectId"
-          @scanned="onWebsiteScanned"
+        <KnowledgeCenterPage
+          v-else-if="activePanelId === 'knowledge'"
         />
 
         <KnowledgeGraphPage
@@ -78,36 +61,40 @@
           :project-id="selectedV2ProjectId"
         />
 
-        <!-- Phase 2.5: Asset Center -->
-        <AssetCenterPage
-          v-else-if="activePanelId === 'asset-center'"
-          :project-id="selectedV2ProjectId"
-          @select="onAssetSelected"
-          @navigate="onNavigate"
+        <SettingsPage
+          v-else-if="activePanelId === 'settings'"
         />
 
-        <!-- Phase 3: Semantic Explorer -->
-        <SemanticExplorer
-          v-else-if="activePanelId === 'semantic-explorer'"
+        <!-- 开发者导航页面 -->
+        <ExecutionStudioPage
+          v-else-if="activePanelId === 'execution-studio'"
           :project-id="selectedV2ProjectId"
         />
 
-        <!-- Phase 4: Goal Runtime (Growth Execution Layer) -->
-        <GrowthDashboard
-          v-else-if="activePanelId === 'growth-dashboard'"
-          :project-id="selectedV2ProjectId || ''"
+        <SystemLensPage
+          v-else-if="activePanelId === 'system-lens'"
+          :project-id="selectedV2ProjectId"
         />
 
-        <GoalTimeline
-          v-else-if="activePanelId === 'goal-timeline'"
+        <SystemControlPage
+          v-else-if="activePanelId === 'system-control'"
+          :project-id="selectedV2ProjectId"
         />
 
-        <!-- Placeholder panels for Phase 1 items -->
+        <SystemMetadataPage
+          v-else-if="activePanelId === 'system-metadata'"
+          :project-id="selectedV2ProjectId"
+        />
+
+        <ExecutionTraceViewer
+          v-else-if="activePanelId === 'execution-trace'"
+        />
+
         <GeoPlaceholderPanel
           v-else
-          :title="panelTitle"
-          :description="panelDescription"
-          :icon="panelIcon"
+          title="功能开发中"
+          description="敬请期待"
+          icon="🚧"
         />
       </div>
     </main>
@@ -116,58 +103,57 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useBrandGEORuntime } from '~/studio-v2/workspace/brand-geo/composables/useBrandGEORuntime'
 import { useBrandGeoStore } from '~/studio-v2/workspace/brand-geo/stores/useBrandGeoStore'
 import BrandGEOSidebar from '~/studio-v2/workspace/brand-geo/components/BrandGEOSidebar.vue'
 import GeoDashboard from '~/studio-v2/workspace/brand-geo/components/GeoDashboard.vue'
 import GeoPlaceholderPanel from '~/studio-v2/workspace/brand-geo/components/GeoPlaceholderPanel.vue'
-import ProjectSelectPage from '~/studio-v2/workspace/brand-geo/pages/ProjectSelectPage.vue'
-import ProjectCreatePage from '~/studio-v2/workspace/brand-geo/pages/ProjectCreatePage.vue'
-import BrandProfilePage from '~/studio-v2/workspace/brand-geo/pages/BrandProfilePage.vue'
-import WebsiteScannerPage from '~/studio-v2/workspace/brand-geo/pages/WebsiteScannerPage.vue'
+// Product pages (Sprint P1)
+import BrandListPage from '~/studio-v2/workspace/brand-geo/pages/BrandListPage.vue'
+import BrandDetailPage from '~/studio-v2/workspace/brand-geo/pages/BrandDetailPage.vue'
+import KeywordPage from '~/studio-v2/workspace/brand-geo/pages/KeywordPage.vue'
+import KnowledgeCenterPage from '~/studio-v2/workspace/brand-geo/pages/KnowledgeCenterPage.vue'
+import SettingsPage from '~/studio-v2/workspace/brand-geo/pages/SettingsPage.vue'
+// Legacy pages (keep as-is)
 import KnowledgeGraphPage from '~/studio-v2/workspace/brand-geo/pages/KnowledgeGraphPage.vue'
-import AssetCenterPage from '~/studio-v2/workspace/brand-geo/pages/AssetCenterPage.vue'
-import SemanticExplorer from '~/studio-v2/workspace/brand-geo/pages/SemanticExplorer.vue'
-import GrowthDashboard from '~/modules/goal/components/GrowthDashboard.vue'
-import GoalTimeline from '~/modules/goal/components/GoalTimeline.vue'
+// Developer pages
+import ExecutionStudioPage from '~/studio-v2/workspace/brand-geo/pages/ExecutionStudioPage.vue'
+import SystemLensPage from '~/studio-v2/workspace/brand-geo/pages/SystemLensPage.vue'
+import SystemControlPage from '~/studio-v2/workspace/brand-geo/pages/SystemControlPage.vue'
+import SystemMetadataPage from '~/studio-v2/workspace/brand-geo/pages/SystemMetadataPage.vue'
+import ExecutionTraceViewer from '~/studio-v2/workspace/brand-geo/components/runtime/ExecutionTraceViewer.vue'
 import type { GeoPanelId } from '~/studio-v2/types/geo'
 
-const runtime = useBrandGEORuntime()
 const store = useBrandGeoStore()
 const activePanelId = ref<GeoPanelId>('dashboard')
+const selectedProjectIdForDetail = ref<string | null>(null)
 
-// Panel metadata for Phase 1 panels
-const panelMeta: Record<string, { title: string; description: string; icon: string }> = {
-  brands: { title: '品牌管理', description: '管理品牌档案与基础信息，追踪品牌健康度', icon: '🏷️' },
-  entities: { title: '实体图谱', description: '构建品牌的关联实体网络，发现潜在影响力节点', icon: '🔗' },
-  visibility: { title: '可见性分析', description: '追踪搜索引擎排名与品牌曝光度指标', icon: '👁️' },
-  citations: { title: '引用追踪', description: '追踪全网品牌提及与引用来源分析', icon: '📝' },
-  topics: { title: '热门话题', description: '发现行业趋势与热点话题，把握内容创作方向', icon: '🔥' },
-  competitors: { title: '竞品分析', description: '分析竞争对手策略与市场定位', icon: '🎯' },
-  projects: { title: '项目管理', description: '管理 GEO 优化项目，跟踪执行进度与成果', icon: '📋' },
-  tasks: { title: '任务中心', description: '查看待办任务，管理执行队列', icon: '✅' },
-  reports: { title: '报告中心', description: '生成和查看品牌 GEO 效果报告', icon: '📈' },
-  settings: { title: '设置', description: '配置品牌 GEO 工作台偏好与通知', icon: '⚙️' },
-  help: { title: '帮助与教程', description: '了解如何使用品牌 GEO 提升品牌影响力', icon: '❓' },
+// Local loading/error for topbar display
+const loading = computed(() => store.loading)
+const error = ref<string | null>(null)
+
+const panelMeta: Record<string, { title: string; icon: string }> = {
+  dashboard: { title: 'Dashboard', icon: '📊' },
+  brands: { title: '品牌管理', icon: '🏢' },
+  website: { title: '官网管理', icon: '🌐' },
+  keywords: { title: '关键词管理', icon: '🔑' },
+  knowledge: { title: 'Knowledge', icon: '📚' },
+  'knowledge-graph': { title: '知识图谱', icon: '🔗' },
+  settings: { title: '设置', icon: '⚙️' },
+  // Developer pages
+  'execution-studio': { title: '执行工作室', icon: '🎬' },
+  'execution-trace': { title: '执行轨迹', icon: '📋' },
+  'system-lens': { title: '系统镜头', icon: '🔬' },
+  'system-control': { title: '系统控制', icon: '⚙️' },
+  'system-metadata': { title: '系统元数据', icon: '🌐' },
 }
 
 const panelTitle = computed(() => panelMeta[activePanelId.value]?.title || '品牌GEO')
-const panelDescription = computed(() => panelMeta[activePanelId.value]?.description || '')
-const panelIcon = computed(() => panelMeta[activePanelId.value]?.icon || '🌐')
 
-const selectedBrandName = computed(() => {
-  const brand = runtime.selectedBrand.value
-  return brand ? brand.name : ''
-})
+const selectedV2Project = computed(() => store.selectedV2Project)
+const selectedV2ProjectId = computed(() => store.selectedV2ProjectId)
 
-const selectedV2Project = computed(() => store.selectedV2Project.value)
-const selectedV2ProjectId = computed(() => store.selectedV2ProjectId.value)
-
-function onNavigate(panelId: GeoPanelId) {
-  activePanelId.value = panelId
-  runtime.setActivePanel(panelId)
-
-  // Update URL query
+function onNavigate(panelId: string) {
+  activePanelId.value = panelId as GeoPanelId
   try {
     const url = new URL(window.location.href)
     url.searchParams.set('panel', panelId)
@@ -175,54 +161,19 @@ function onNavigate(panelId: GeoPanelId) {
   } catch {}
 }
 
-function onProjectSelected(projectId: string) {
-  store.setSelectedV2ProjectId(projectId)
-  store.setStageStatus('create_project', 'completed')
-  store.setCurrentStage('edit_brand_profile')
-
-  // Load project data
-  runtime.loadV2ProjectData(projectId)
-  onNavigate('dashboard')
-}
-
-function onProjectCreated(projectId: string) {
-  store.setSelectedV2ProjectId(projectId)
-  runtime.loadV2ProjectData(projectId)
-  onNavigate('brand-profile')
-}
-
-function onBrandProfileSaved() {
-  onNavigate('website-scanner')
-}
-
-function onWebsiteScanned() {
-  store.setCurrentStage('build_graph')
-  onNavigate('knowledge-graph')
-}
-
-function onAssetSelected(asset: any) {
-  // Phase 2.5: Asset selection — future detail view
-  console.log('[AssetCenter] Selected asset:', asset.id)
+function onSelectBrand(brandId: string) {
+  selectedProjectIdForDetail.value = brandId
+  onNavigate('website')
 }
 
 onMounted(async () => {
-  // Parse panel from URL
   try {
     const params = new URLSearchParams(window.location.search)
     const panel = params.get('panel') as GeoPanelId | null
     if (panel) {
-      activePanelId.value = runtime.resolvePanelFromRoute({ panel })
+      activePanelId.value = panel
     }
   } catch {}
-
-  // Initialize
-  await runtime.initialize()
-
-  // If no V2 project selected and we have projects, try to auto-select
-  if (!selectedV2ProjectId.value && store.v2Projects.value.length > 0) {
-    store.setSelectedV2ProjectId(store.v2Projects.value[0].id)
-    runtime.loadV2ProjectData(store.v2Projects.value[0].id)
-  }
 })
 </script>
 
@@ -274,13 +225,6 @@ onMounted(async () => {
   color: #a78bfa;
   background: rgba(167, 139, 250, 0.1);
   padding: 4px 10px;
-  border-radius: 6px;
-}
-.geo-topbar-stage-badge {
-  font-size: 11px;
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.1);
-  padding: 3px 8px;
   border-radius: 6px;
 }
 .geo-topbar-error-btn {

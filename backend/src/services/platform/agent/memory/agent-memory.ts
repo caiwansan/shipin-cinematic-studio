@@ -39,7 +39,7 @@ class AgentMemoryRuntime {
     relevanceScore?: number,
     ttl?: number,
   ): Promise<MemoryRecord> {
-    const { v4: uuid } = await import('uuid')
+    const { default: uuid } = await import("uuid")
 
     const record: MemoryRecord = {
       id: uuid(),

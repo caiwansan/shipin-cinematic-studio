@@ -1,0 +1,9 @@
+{
+  "method": "DB statistical analysis",
+  "samples": 99,
+  "tokenStdDev": 219.89,
+  "tokenAvg": 2169,
+  "latencyStdDev": 36.92,
+  "latencyAvg": 135,
+  "verdict": "STABLE"
+}

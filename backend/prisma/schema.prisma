@@ -60,6 +60,7 @@ model User {
   communityRewards      CommunityReward[]
   messagesSent          UserMessage[]          @relation("messages_sent")
   messagesReceived      UserMessage[]          @relation("messages_received")
+  ownedProjects         Project[]              @relation("ProjectOwner")
 }
 
 model CreatorDnaProfile {
@@ -111,6 +112,22 @@ model Project {
   status              String               @default("draft")
   version             Int                  @default(1)
   userId              String               @db.Uuid
+
+  // ── Phase 1a: Tenant & Project Center ──
+  tenantId            String?              @db.Uuid
+  ownerId             String?              @db.Uuid
+  type                String?              // 'geo' | 'video' | 'novel' | 'ppt' | 'custom'
+  resourceCount       Int                  @default(0)
+  lastExecutionAt     DateTime?
+  lastActivityAt      DateTime?
+
+  // ── Relations (Phase 1a, nullable until backfill) ──
+  tenant              Tenant?              @relation(fields: [tenantId], references: [id])
+  owner               User?                @relation("ProjectOwner", fields: [ownerId], references: [id])
+
+  // ── Profile extensions (Phase 1a) ──
+  geoProfile          GeoProjectProfile?
+
   budgetLimit         Float?
   budgetSpent         Float                @default(0)
   budgetAlertAt       Float?
@@ -2834,6 +2851,11 @@ model Workspace {
   id             String       @id @default(uuid()) @db.Uuid
   organizationId String       @db.Uuid
   name           String
+
+  // ── Phase 1a: Tenant & Project Center ──
+  tenantId       String?      @db.Uuid
+  workspaceType  String?      // 'geo' | 'video' | 'novel' | 'ppt' | 'custom'
+
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   projects       Project[]
@@ -3565,6 +3587,27 @@ model PromptVariant {
 // KMKI-GEO — Knowledge Skeleton (Sprint 1A)
 // ============================================================
 
+// ── Phase 1a: GEO Project Profile（统一 Project 的 GEO 扩展）──
+model GeoProjectProfile {
+  id         String   @id @default(uuid())
+  projectId  String   @unique @db.Uuid
+  website    String?
+  domain     String?
+  brand      String?
+  language   String   @default("zh")
+  country    String?
+  industry   String?
+  topic      String?
+  geoConfig  Json     @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("kmki_geo_project_profiles")
+}
+
 model GEOProject {
   id        String   @id @default(uuid())
   userId    String
@@ -3592,6 +3635,10 @@ model GEOProject {
 model GEOEntity {
   id          String   @id @default(uuid())
   projectId   String
+
+  // ── Phase 1a: Tenant (nullable until backfill) ──
+  tenantId    String?  @db.Uuid
+
   name        String
   type        String   @default("Concept")
   description String?
@@ -3605,6 +3652,10 @@ model GEOEntity {
   outgoing GEOEntityRelation[] @relation("outgoing")
   incoming GEOEntityRelation[] @relation("incoming")
 
+  claims        GEOClaim[]         // Sprint 1B: Knowledge Quality
+  faqs          GEOFAQ[]           // Sprint 1B: Knowledge Quality
+  schemaMarkups GEOSchemaMarkup[]  // Sprint 1B: Knowledge Quality
+
   @@index([projectId])
   @@index([projectId, type])
   @@map("kmki_geo_entities")
@@ -3614,6 +3665,7 @@ model GEOEntityRelation {
   id        String   @id @default(uuid())
   projectId String
   sourceId  String
+  tenantId    String?  @db.Uuid
   targetId  String
   type      String   @default("related_to")
   lineage   Json     @default("{}")
@@ -3633,6 +3685,7 @@ model GEOEntityRelation {
 model GEOProjectVersion {
   id         String   @id @default(uuid())
   projectId  String
+  tenantId    String?  @db.Uuid
   version    Int
   label      String?
   graphData  Json     @default("{}")
@@ -3645,6 +3698,231 @@ model GEOProjectVersion {
   @@unique([projectId, version])
   @@index([projectId])
   @@map("kmki_geo_project_versions")
+}
+
+// ============================================================
+// KMKI-GEO — Knowledge Quality Layer (Sprint 1B)
+// ============================================================
+
+model GEOClaim {
+  id          String   @id @default(uuid())
+  entityId    String
+  tenantId    String?  @db.Uuid
+  text        String
+  claimType   String   @default("fact")        // primary, derived, opinion, fact, hypothesis
+  confidence  Float    @default(0.0)
+  sourceType  String   @default("llm_extracted")
+  status      String   @default("draft")       // draft, review, approved, rejected, stale
+  provenance  Json     @default("{}")
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entity    GEOEntity     @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  evidences GEOEvidence[]
+
+  @@index([entityId])
+  @@index([claimType])
+  @@index([status])
+  @@index([confidence])
+  @@map("kmki_geo_claims")
+}
+
+model GEOEvidence {
+  id                 String   @id @default(uuid())
+  claimId            String
+  tenantId           String?  @db.Uuid
+  source             String   @default("")
+  content            String   @default("")
+  credibilityScore   Float    @default(0.0)
+  verificationMethod String   @default("llm")        // manual, llm, crawler, api, human_review
+  collectedAt        DateTime @default(now())
+  provenance         Json     @default("{}")
+  metadata           Json?    @default("{}")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  claim     GEOClaim      @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  citations GEOCitation[]
+
+  @@index([claimId])
+  @@index([verificationMethod])
+  @@index([credibilityScore])
+  @@map("kmki_geo_evidences")
+}
+
+model GEOCitation {
+  id            String   @id @default(uuid())
+  evidenceId    String
+  format        String   @default("custom")       // apa, mla, custom
+  tenantId       String?  @db.Uuid
+  citationText  String   @default("")
+  sourceUrl     String?
+  publisher     String?
+  author        String?
+  datePublished String?
+  authorityLevel String  @default("news")          // government, academic, industry, news, community
+  provenance    Json     @default("{}")
+  metadata      Json?    @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  evidence GEOEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@index([evidenceId])
+  @@index([authorityLevel])
+  @@map("kmki_geo_citations")
+}
+
+model GEOFAQ {
+  id          String   @id @default(uuid())
+  entityId    String
+  tenantId       String?  @db.Uuid
+  question    String
+  answer      String
+  schemaType  String   @default("FAQPage")
+  confidence  Float    @default(0.0)
+  status      String   @default("draft")
+  provenance  Json     @default("{}")
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entity GEOEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@index([status])
+  @@map("kmki_geo_faqs")
+}
+
+model GEOSchemaMarkup {
+  id               String   @id @default(uuid())
+  tenantId         String?  @db.Uuid
+  entityId         String
+  schemaType       String   @default("Article")   // Article, Product, FAQPage, VideoObject, etc.
+  markup           Json     @default("{}")         // The actual schema.org JSON-LD
+  validationStatus String   @default("pending")    // pending, valid, invalid
+  validationErrors Json?    @default("[]")
+  provenance       Json     @default("{}")
+  metadata         Json?    @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  entity GEOEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@index([schemaType])
+  @@index([validationStatus])
+  @@map("kmki_geo_schema_markups")
+}
+
+model GEOReviewQueue {
+  id             String   @id @default(uuid())
+  projectId      String
+  tenantId       String?  @db.Uuid
+  reviewableType String                           // claim, evidence, faq
+  reviewableId   String
+  state          String   @default("draft")       // draft, reviewed, approved, rejected, request_revision, escalated, stale, archived
+  reviewerId     String?
+  reviewNotes    String?
+  previousState  String?
+  provenance     Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([state])
+  @@index([reviewableType, reviewableId])
+  @@map("kmki_geo_review_queue")
+}
+
+model GEOQualityScore {
+  id          String   @id @default(uuid())
+  projectId   String
+  tenantId    String?  @db.Uuid
+  dimension   String                             // composite, authority, coverage, evidence, schema
+  score       Float    @default(0.0)
+  breakdown   Json?    @default("{}")
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@index([dimension])
+  @@map("kmki_geo_quality_scores")
+}
+
+model GEOFreshnessRecord {
+  id                String   @id @default(uuid())
+  tenantId          String?  @db.Uuid
+  projectId         String
+  objectType        String                             // claim, evidence, citation, faq, schema
+  objectId          String
+  freshnessState    String   @default("fresh")          // fresh, aging, stale, expired
+  verificationState String   @default("pending")        // pending, verified, verification_failed
+  lastChecked       DateTime @default(now())
+  lastVerifiedAt    DateTime?
+  nextReviewAt      DateTime?
+  ttlSeconds        Int      @default(604800)           // default 7 days
+  checkCount        Int      @default(0)
+  metadata          Json?    @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([projectId, objectType, freshnessState])
+  @@index([verificationState])
+  @@index([nextReviewAt])
+  @@index([lastChecked])
+  @@map("kmki_geo_freshness_records")
+}
+
+// ============================================================
+// KMKI-GEO — Sprint 1C Reservations (schema only, unused in Sprint 1B)
+// ============================================================
+
+model GEOBenchmarkRecord {
+  id          String   @id @default(uuid())
+  projectId   String
+  modelName   String                             // e.g., "qwen3.6-flash", "deepseek-r1"
+  tenantId    String?  @db.Uuid
+  pipeline    String                             // "knowledge_quality", "llm_visibility"
+  score       Float
+  breakdown   Json     @default("{}")
+  diagnostics Json?    @default("{}")
+  executedAt  DateTime @default(now())
+
+  @@index([projectId, pipeline])
+  @@index([modelName])
+  @@map("kmki_geo_benchmark_records")
+}
+
+model GEOScoreSnapshot {
+  id          String   @id @default(uuid())
+  projectId   String
+  tenantId    String?  @db.Uuid
+  snapshot    Json     @default("{}")            // Full dual score snapshot
+  scores      Json?    @default("{}")            // Per-dimension scores
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@map("kmki_geo_score_snapshots")
+}
+
+model GEOOptimizationHistory {
+  id           String   @id @default(uuid())
+  projectId    String
+  tenantId     String?  @db.Uuid
+  targetType   String                            // entity, claim, evidence, faq, schema
+  targetId     String
+  action       String                            // regenerate, expand, merge, split, refresh
+  reason       String
+  beforeScore  Float?
+  afterScore   Float?
+  diagnostics  Json?    @default("{}")
+  executedAt   DateTime @default(now())
+
+  @@index([projectId, targetType])
+  @@map("kmki_geo_optimization_histories")
 }
 
 // Brand GEO — Phase 2 Models
@@ -4757,6 +5035,7 @@ model Tenant {
   policies             Policy[]
   licenses             License[]
   analyticsDaily       AnalyticsDaily[]
+  projects             Project[]
 
   @@map("governance_tenant")
 }
@@ -4988,4 +5267,140 @@ model AnalyticsDaily {
   @@unique([tenantId, date, metric])
 
   @@map("governance_analytics_daily")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Dual Write Watcher Events (Stage 3.2.1)
+// 轻量事件流——Shadow Run 的对账证据链
+// 不关联外键，只记录纯事件
+// 后续可 truncate，不是永久存储
+// ═══════════════════════════════════════════════════════════════
+model DualWriteWatcherEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  entity     String   // Project / GeoProjectProfile
+  entityId   String   @map("entity_id") @db.Uuid
+  operation  String   // CREATE / UPDATE / DELETE
+  status     String   // SUCCESS / FAIL / SKIP
+  latencyMs  Int      @default(0) @map("latency_ms")
+  error      String?
+  flags      String?  // JSON — flag snapshot at write time
+  diff       String?  // JSON — before/after if relevant
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([entity, status, createdAt])
+  @@map("dual_write_watcher_events")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LLM Usage History — KMKI-RUNTIME-008
+// 每次 LLM 调用的 Token 消耗、延迟、成本记录
+// 不关联外键，纯日志型数据，可清理
+// ═══════════════════════════════════════════════════════════════
+model LLMUsageRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  projectId       String?  @map("project_id") @db.Uuid
+  agent           String   // e.g. geo.entity
+  provider        String   // deepseek / openai / volcengine
+  model           String   // deepseek-chat / gpt-4o
+  promptTokens    Int      @default(0) @map("prompt_tokens")
+  completionTokens Int     @default(0) @map("completion_tokens")
+  totalTokens     Int      @default(0) @map("total_tokens")
+  latencyMs       Int      @default(0) @map("latency_ms")
+  status          String   @default("success") // success / error
+  error           String?
+  cost            Float    @default(0)
+  promptKey       String?  @map("prompt_key")
+  promptVersion   String?  @map("prompt_version")
+  traceId         String?  @map("trace_id")
+  workflowId      String?  @map("workflow_id")
+  executionId     String?  @map("execution_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([projectId, status, createdAt])
+  @@index([agent, createdAt])
+  @@map("llm_usage_records")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Sprint KO-1 — Knowledge Object (Foundation for all Agents)
+// ═══════════════════════════════════════════════════════════════
+model KnowledgeObject {
+  id           String     @id @default(uuid()) @db.Uuid
+  projectId    String     @db.Uuid
+  workflowId   String?
+  topic        String?
+  status       String     @default("DISCOVERED")
+  confidence   Float?
+  qualityScore Float?
+  provenance   Json?
+  metadata     Json?
+  entities     Json?
+  relations    Json?
+  claims       Json?
+  evidence     Json?
+  citations    Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@map("knowledge_objects")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Sprint P1 — Brand GEO MVP (新增模型)
+// ═══════════════════════════════════════════════════════════════
+model GeoKeyword {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  keyword   String
+  type      String   @default("brand") // brand | ai | industry | long_tail
+  source    String?  // manual | import | ai_generated
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, type])
+  @@map("geo_keywords")
+}
+
+model GeoBrandSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @unique @db.Uuid
+  brandName   String
+  website     String?
+  industry    String?
+  region      String?
+  language    String?
+  description String?
+  logo        String?  // URL
+  status      String   @default("active") // active | inactive
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("geo_brand_settings")
+}
+
+model GeoScanHistory {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @db.Uuid
+  scanType     String   @default("website") // website | keyword
+  status       String   @default("pending") // pending | running | completed | failed
+  topic        String?
+  knowledgeObjectId String? @db.Uuid
+  result       Json?    // 扫描结果摘要
+  error        String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([projectId])
+  @@index([projectId, status])
+  @@map("geo_scan_history")
 }

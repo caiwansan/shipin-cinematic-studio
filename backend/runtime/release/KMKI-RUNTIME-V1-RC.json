@@ -1,0 +1,56 @@
+{
+  "runtimeVersion": "1.0.0-rc",
+  "architectureFrozen": true,
+  "freezeDate": "2026-06-29",
+  "label": "KMKI Runtime V1 RC",
+  "summary": "Runtime V1 Release Candidate — Architecture Freeze. All core modules completed and verified. Old Agents (Citation/Evidence/Claim/FAQ/Schema) remain on legacy path; new Agents must use Runtime V1.",
+  "benchmark": {
+    "framework": "benchmark/entity",
+    "dataset": "20 samples, 10 categories",
+    "completedRuns": 20,
+    "externalFailures": 0,
+    "runtimeFailures": 0,
+    "baseline": "benchmark/baseline.json",
+    "reportsDir": "benchmark/reports/20260629/",
+    "quality": {
+      "averageScore": 84.38,
+      "gradeA": 8,
+      "gradeB": 7,
+      "gradeC": 5,
+      "gradeD": 0,
+      "averageEntityCount": 11.95,
+      "averageRelationCount": 12.45
+    }
+  },
+  "performance": {
+    "latencyP50Ms": 121,
+    "latencyP95Ms": 207,
+    "averageTokensPerCall": 2169,
+    "totalRecords": 99
+  },
+  "modules": {
+    "providerRuntime": { "status": "frozen", "path": "src/services/geo/runtime/provider/" },
+    "structuredGeneration": { "status": "frozen", "path": "src/services/geo/runtime/generation/" },
+    "promptRegistry": { "status": "frozen", "path": "src/services/geo/runtime/prompt/" },
+    "capabilityRegistry": { "status": "frozen", "path": "src/services/geo/runtime/provider/capability-registry.ts" },
+    "outputParser": { "status": "frozen", "path": "src/services/geo/runtime/parser/" },
+    "schemaValidator": { "status": "frozen", "path": "src/services/geo/runtime/generation/SchemaValidator.ts" },
+    "usageRecorder": { "status": "frozen", "path": "src/services/geo/runtime/usage/" },
+    "benchmarkFramework": { "status": "frozen", "path": "benchmark/" },
+    "executionTraceViewer": { "status": "frozen", "path": "src/services/geo/runtime/trace/ + frontend/components/runtime/" }
+  },
+  "rcGateResults": [
+    { "gate": "G1", "name": "Benchmark Coverage", "status": "PASS", "detail": "20 samples, 10 categories, baseline generated" },
+    { "gate": "G2", "name": "Determinism", "status": "PASS", "detail": "Token σ=220, Latency σ=37ms, n=99" },
+    { "gate": "G3", "name": "Regression", "status": "WARN", "detail": "First full baseline — no prior comparison" },
+    { "gate": "G4", "name": "Trace Completeness", "status": "PASS", "detail": "99 traces, all fields present" },
+    { "gate": "G5", "name": "Runtime API Audit", "status": "WARN", "detail": "7/8 legacy agents not on Runtime — acceptable for RC freeze, enforced for new agents" },
+    { "gate": "G6", "name": "Performance Baseline", "status": "PASS", "detail": "Latency P50=121ms, P95=207ms" }
+  ],
+  "freezeRules": [
+    "Runtime V1 modules must not add new capabilities",
+    "All new Agent development MUST use StructuredGeneration Runtime",
+    "Legacy agents (Citation/Evidence/Claim/FAQ/Schema) may remain but must be migrated before V2",
+    "Runtime bug fixes and performance optimizations permitted without un-freezing"
+  ]
+}

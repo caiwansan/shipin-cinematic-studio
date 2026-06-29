@@ -1,0 +1,96 @@
+{
+  "timestamp": "2026-06-29T12:37:31.224Z",
+  "totalViolations": 0,
+  "bySeverity": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "INFO": 0
+  },
+  "writePath": {
+    "directWritesInDiscover": 0,
+    "directWritesInOtherPaths": 2,
+    "otherPathTypes": [
+      "updateEntity (UI edit)",
+      "createRelation (UI manual)"
+    ],
+    "verdict": "PASS \u2014 discover flow is clean. UI edit/relation paths are separate concerns."
+  },
+  "readPath": {
+    "graphReaders": 5,
+    "koReaders": 8,
+    "readers": [
+      {
+        "file": "routes/geo-entity.route.ts",
+        "readsGraph": false,
+        "readsKO": true
+      },
+      {
+        "file": "routes/geo-knowledge-quality.route.ts",
+        "readsGraph": true,
+        "readsKO": false
+      },
+      {
+        "file": "routes/geo-knowledge.route.ts",
+        "readsGraph": false,
+        "readsKO": true
+      },
+      {
+        "file": "runtime/knowledge/GraphSync.ts",
+        "readsGraph": true,
+        "readsKO": true
+      },
+      {
+        "file": "runtime/knowledge/KnowledgeObjectRepository.ts",
+        "readsGraph": false,
+        "readsKO": true
+      },
+      {
+        "file": "runtime/knowledge/KnowledgeObjectSchema.ts",
+        "readsGraph": false,
+        "readsKO": true
+      },
+      {
+        "file": "runtime/knowledge/KnowledgeObjectService.ts",
+        "readsGraph": false,
+        "readsKO": true
+      },
+      {
+        "file": "runtime/knowledge/KnowledgePipeline.ts",
+        "readsGraph": false,
+        "readsKO": true
+      },
+      {
+        "file": "services/geo-entity.service.ts",
+        "readsGraph": true,
+        "readsKO": true
+      },
+      {
+        "file": "services/geo-graph.service.ts",
+        "readsGraph": true,
+        "readsKO": false
+      },
+      {
+        "file": "services/geo-quality.service.ts",
+        "readsGraph": true,
+        "readsKO": false
+      }
+    ],
+    "migrationRecommendation": "Graph readers (geo-graph, geo-quality) can be migrated to KO later. Not blocking."
+  },
+  "audits": [
+    {
+      "severity": "INFO",
+      "file": "services/geo-entity.service.ts",
+      "issue": "2 graph writes in updateEntity / createRelation \u2014 UI operations, not discover flow",
+      "recommendation": "Keep as-is for now. Consider migrating UI paths to KO in future sprint."
+    },
+    {
+      "severity": "INFO",
+      "file": "agents/entity.agent.ts",
+      "issue": "Agent does not import Pipeline \u2014 correct. Agent is LLM-only, service layer orchestrates Pipeline.",
+      "recommendation": "Current architecture is correct."
+    }
+  ],
+  "verdict": "PASS"
+}

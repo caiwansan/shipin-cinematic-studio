@@ -7,7 +7,7 @@ import { geoGraphService } from '../services/geo-graph.service'
 
 export default async function geoGraphRoutes(fastify: FastifyInstance) {
   // POST /api/geo/projects/:projectId/graph/build — Build knowledge graph
-  fastify.post('/api/geo/projects/:projectId/graph/build', async (request, reply) => {
+  fastify.post('/api/geo/projects/:projectId/graph/build', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
 
     try {
@@ -19,7 +19,7 @@ export default async function geoGraphRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:projectId/graph — Get full graph
-  fastify.get('/api/geo/projects/:projectId/graph', async (request, reply) => {
+  fastify.get('/api/geo/projects/:projectId/graph', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
 
     try {
@@ -34,7 +34,7 @@ export default async function geoGraphRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:projectId/graph/node/:entityId — Get graph node
-  fastify.get('/api/geo/projects/:projectId/graph/node/:entityId', async (request, reply) => {
+  fastify.get('/api/geo/projects/:projectId/graph/node/:entityId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId, entityId } = request.params as any
 
     try {
@@ -49,7 +49,7 @@ export default async function geoGraphRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:projectId/graph/edges — Get all edges
-  fastify.get('/api/geo/projects/:projectId/graph/edges', async (request, reply) => {
+  fastify.get('/api/geo/projects/:projectId/graph/edges', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
 
     try {
@@ -61,7 +61,7 @@ export default async function geoGraphRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:projectId/graph/versions/:version — Get graph version
-  fastify.get('/api/geo/projects/:projectId/graph/versions/:version', async (request, reply) => {
+  fastify.get('/api/geo/projects/:projectId/graph/versions/:version', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId, version } = request.params as any
 
     try {
@@ -76,7 +76,7 @@ export default async function geoGraphRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:projectId/graph/visualize — Visualization data
-  fastify.get('/api/geo/projects/:projectId/graph/visualize', async (request, reply) => {
+  fastify.get('/api/geo/projects/:projectId/graph/visualize', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
 
     try {

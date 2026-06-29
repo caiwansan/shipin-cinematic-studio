@@ -1,0 +1,533 @@
+{
+  "timestamp": "2026-06-29T12:21:05.289Z",
+  "provider": "default",
+  "model": "default",
+  "promptVersion": "1.0.0",
+  "totalSamples": 1,
+  "summary": {
+    "avgEntityCount": 12,
+    "avgRelationCount": 11,
+    "avgTypeCoverage": 80,
+    "avgExpectedFound": 2,
+    "avgRuntimeMs": 15540,
+    "avgTotalTokens": 0,
+    "avgCost": 0,
+    "avgScore": 90,
+    "gradeDistribution": {
+      "A": 1,
+      "B": 0,
+      "C": 0,
+      "D": 0
+    }
+  },
+  "samples": [
+    {
+      "sample": {
+        "id": "finance-001",
+        "category": "Finance",
+        "url": "https://stripe.com",
+        "expected_primary_entities": [
+          {
+            "name": "Stripe",
+            "type": "Organization",
+            "minCount": 1
+          },
+          {
+            "name": "支付",
+            "type": "Concept",
+            "minCount": 1
+          }
+        ],
+        "expected_entity_types": [
+          "Organization",
+          "Product",
+          "Concept",
+          "Technology",
+          "Brand"
+        ],
+        "min_entities": 5,
+        "max_entities": 18,
+        "notes": "支付基础设施"
+      },
+      "metrics": {
+        "sampleId": "finance-001",
+        "entityCount": 12,
+        "relationCount": 11,
+        "entityTypes": [
+          "Organization",
+          "Product",
+          "Person",
+          "Technology",
+          "Concept",
+          "Field"
+        ],
+        "typeCoverage": 80,
+        "expectedFound": 2,
+        "expectedTotal": 2,
+        "duplicateRate": 0,
+        "runtimeMs": 15540,
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "estimatedCost": 0,
+        "schemaErrorRate": 0
+      },
+      "score": {
+        "overall": 90,
+        "grade": "A",
+        "breakdown": {
+          "precision": 100,
+          "recall": 100,
+          "typeCoverage": 80,
+          "efficiency": 60,
+          "costEfficiency": 80
+        }
+      },
+      "rawResult": {
+        "success": true,
+        "data": {
+          "entities": [
+            {
+              "id": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "Stripe",
+              "type": "Organization",
+              "description": "Stripe是一家全球领先的在线支付处理平台，成立于2010年，总部位于美国旧金山和南旧金山。它为互联网企业提供支付基础设施，支持信用卡、借记卡、数字钱包等多种支付方式，覆盖超过40个国家。Stripe以其简洁的API和开发者友好著称，被数百万企业用于处理在线交易，包括初创公司到大型企业。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"Stripe\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 0,
+              "createdAt": "2026-06-29T12:21:05.255Z",
+              "updatedAt": "2026-06-29T12:21:05.255Z"
+            },
+            {
+              "id": "3d43fff9-5e77-4c62-a2dd-f7cdd65eb345",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "Stripe Payments",
+              "type": "Product",
+              "description": "Stripe Payments是Stripe的核心产品，提供一套完整的支付处理解决方案，包括支付网关、订阅管理、欺诈检测和报告工具。它支持多种货币和支付方式，允许商家通过简单的API集成快速接受在线付款，并处理退款、争议等复杂流程。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"Stripe Payments\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 1,
+              "createdAt": "2026-06-29T12:21:05.258Z",
+              "updatedAt": "2026-06-29T12:21:05.258Z"
+            },
+            {
+              "id": "e2153e61-0065-436c-bb6f-64fb8dacf49f",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "Stripe Connect",
+              "type": "Product",
+              "description": "Stripe Connect是Stripe的一个平台产品，专为市场平台、众筹网站和按需服务设计。它允许平台处理第三方卖家的付款，支持资金托管、自动结算和身份验证，帮助平台轻松管理多方支付流程。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"Stripe Connect\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 2,
+              "createdAt": "2026-06-29T12:21:05.260Z",
+              "updatedAt": "2026-06-29T12:21:05.260Z"
+            },
+            {
+              "id": "2f13d0ab-59af-4822-ab34-934678139348",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "Stripe Atlas",
+              "type": "Product",
+              "description": "Stripe Atlas是Stripe提供的一项服务，帮助全球创业者在美国注册公司、开设银行账户并接入Stripe支付。它简化了跨境创业的行政流程，包括公司注册、税务文件和银行开户，特别适合远程团队和初创企业。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"Stripe Atlas\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 3,
+              "createdAt": "2026-06-29T12:21:05.261Z",
+              "updatedAt": "2026-06-29T12:21:05.261Z"
+            },
+            {
+              "id": "8d7050b2-2ea9-47de-bd5f-557497f4c094",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "Stripe Radar",
+              "type": "Product",
+              "description": "Stripe Radar是Stripe内置的欺诈检测和预防系统，利用机器学习算法实时分析交易数据，识别可疑行为并自动阻止欺诈交易。它提供可定制的规则引擎，帮助商家在降低风险的同时减少误报。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"Stripe Radar\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 4,
+              "createdAt": "2026-06-29T12:21:05.262Z",
+              "updatedAt": "2026-06-29T12:21:05.262Z"
+            },
+            {
+              "id": "8f16de00-a3e0-42f2-ae36-a550c13dec65",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "Stripe Billing",
+              "type": "Product",
+              "description": "Stripe Billing是Stripe的订阅和发票管理产品，支持定期计费、用量计费和发票生成。它提供灵活的定价模型，如按用户、按使用量或混合计费，并自动处理付款失败和重试，适用于SaaS和订阅制企业。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"Stripe Billing\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 5,
+              "createdAt": "2026-06-29T12:21:05.263Z",
+              "updatedAt": "2026-06-29T12:21:05.263Z"
+            },
+            {
+              "id": "7e1078e5-9d85-4c6f-be0a-c823f06ed9df",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "Stripe Terminal",
+              "type": "Product",
+              "description": "Stripe Terminal是Stripe的线下支付解决方案，提供硬件读卡器和SDK，允许商家在实体店接受信用卡和移动支付。它无缝集成Stripe的在线支付系统，实现线上线下统一管理。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"Stripe Terminal\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 6,
+              "createdAt": "2026-06-29T12:21:05.265Z",
+              "updatedAt": "2026-06-29T12:21:05.265Z"
+            },
+            {
+              "id": "999ba201-0e9f-46de-a16e-dffe5369020d",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "Patrick Collison",
+              "type": "Person",
+              "description": "Patrick Collison是Stripe的联合创始人兼CEO，出生于爱尔兰。他与弟弟John Collison于2010年共同创立Stripe，致力于简化互联网支付。Patrick拥有MIT的计算机科学背景，是科技界知名的创业者和投资者。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"Patrick Collison\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 7,
+              "createdAt": "2026-06-29T12:21:05.266Z",
+              "updatedAt": "2026-06-29T12:21:05.266Z"
+            },
+            {
+              "id": "dddc2969-bb2c-4821-831c-ba1daab79e92",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "John Collison",
+              "type": "Person",
+              "description": "John Collison是Stripe的联合创始人兼总裁，出生于爱尔兰。他与哥哥Patrick Collison共同创立Stripe，负责产品战略和业务发展。John是自学成才的程序员，曾在哈佛大学就读，后辍学创业。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"John Collison\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 8,
+              "createdAt": "2026-06-29T12:21:05.267Z",
+              "updatedAt": "2026-06-29T12:21:05.267Z"
+            },
+            {
+              "id": "d8141c2c-3d55-4f6d-9fdb-62f221d9b8d6",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "API",
+              "type": "Technology",
+              "description": "API（应用程序编程接口）是Stripe的核心技术组件，允许开发者通过简单的代码集成支付功能。Stripe的API以文档清晰、响应快速和高度可定制著称，支持多种编程语言，如Python、Ruby、JavaScript等，降低了在线支付的技术门槛。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"API\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 9,
+              "createdAt": "2026-06-29T12:21:05.268Z",
+              "updatedAt": "2026-06-29T12:21:05.268Z"
+            },
+            {
+              "id": "ef012f1b-a8cd-4a56-a094-65a0840ae216",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "在线支付",
+              "type": "Concept",
+              "description": "在线支付是指通过互联网进行的资金转移交易，包括信用卡、借记卡、数字钱包（如Apple Pay、Google Pay）和银行转账等方式。Stripe作为在线支付基础设施提供商，处理全球数百万商家的交易，支持多种货币和支付场景。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"在线支付\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 10,
+              "createdAt": "2026-06-29T12:21:05.269Z",
+              "updatedAt": "2026-06-29T12:21:05.269Z"
+            },
+            {
+              "id": "e98e7d72-9b30-488b-88f6-6f280e4e7b92",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "name": "金融科技",
+              "type": "Field",
+              "description": "金融科技（FinTech）是指运用技术改进金融服务的行业，涵盖支付、贷款、投资、保险等领域。Stripe是金融科技领域的领军企业，通过创新支付解决方案推动数字经济发展，与银行、支付网络和监管机构紧密合作。",
+              "metadata": {},
+              "provenance": {
+                "actor": "agent:geo.entity@deepseek",
+                "action": "created",
+                "reason": "Entity \"金融科技\" discovered via deepseek/deepseek-chat",
+                "source": "geo.entity.llm",
+                "timestamp": "2026-06-29T12:21:05.254Z"
+              },
+              "sortOrder": 11,
+              "createdAt": "2026-06-29T12:21:05.271Z",
+              "updatedAt": "2026-06-29T12:21:05.271Z"
+            }
+          ],
+          "relations": [
+            {
+              "id": "79e024c1-39b4-4e00-bb3d-00c35277491d",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "3d43fff9-5e77-4c62-a2dd-f7cdd65eb345",
+              "type": "produced_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "Stripe Payments"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "produced_by"
+              },
+              "metadata": {
+                "description": "Stripe Payments是Stripe公司开发的核心支付产品，作为其旗舰服务面向全球商家。"
+              },
+              "createdAt": "2026-06-29T12:21:05.272Z"
+            },
+            {
+              "id": "d047bd2d-cd9d-4de0-aa9c-3925ca223454",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "e2153e61-0065-436c-bb6f-64fb8dacf49f",
+              "type": "produced_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "Stripe Connect"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "produced_by"
+              },
+              "metadata": {
+                "description": "Stripe Connect是Stripe为平台经济设计的支付产品，由Stripe公司开发和维护。"
+              },
+              "createdAt": "2026-06-29T12:21:05.275Z"
+            },
+            {
+              "id": "88b47110-8256-4ba8-86bd-d7a76cdf8cf2",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "2f13d0ab-59af-4822-ab34-934678139348",
+              "type": "produced_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "Stripe Atlas"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "produced_by"
+              },
+              "metadata": {
+                "description": "Stripe Atlas是Stripe提供的创业服务，帮助全球创业者在美国注册公司并接入支付。"
+              },
+              "createdAt": "2026-06-29T12:21:05.276Z"
+            },
+            {
+              "id": "6af8be2a-5030-40d9-9535-65d3e1960992",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "8d7050b2-2ea9-47de-bd5f-557497f4c094",
+              "type": "produced_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "Stripe Radar"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "produced_by"
+              },
+              "metadata": {
+                "description": "Stripe Radar是Stripe内置的欺诈检测系统，由Stripe的机器学习团队开发。"
+              },
+              "createdAt": "2026-06-29T12:21:05.278Z"
+            },
+            {
+              "id": "29bf5b71-ec9e-4334-92d5-129ad94d9016",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "8f16de00-a3e0-42f2-ae36-a550c13dec65",
+              "type": "produced_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "Stripe Billing"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "produced_by"
+              },
+              "metadata": {
+                "description": "Stripe Billing是Stripe的订阅管理产品，由Stripe公司提供。"
+              },
+              "createdAt": "2026-06-29T12:21:05.279Z"
+            },
+            {
+              "id": "9a686f91-1474-41fb-a9e9-ff8d18fab12c",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "7e1078e5-9d85-4c6f-be0a-c823f06ed9df",
+              "type": "produced_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "Stripe Terminal"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "produced_by"
+              },
+              "metadata": {
+                "description": "Stripe Terminal是Stripe的线下支付解决方案，由Stripe公司推出。"
+              },
+              "createdAt": "2026-06-29T12:21:05.280Z"
+            },
+            {
+              "id": "697357e8-b053-4b50-8b6f-d95d7821fb96",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "999ba201-0e9f-46de-a16e-dffe5369020d",
+              "type": "produced_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "Patrick Collison"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "produced_by"
+              },
+              "metadata": {
+                "description": "Patrick Collison是Stripe的联合创始人兼CEO，共同创立了Stripe公司。"
+              },
+              "createdAt": "2026-06-29T12:21:05.281Z"
+            },
+            {
+              "id": "0259721f-323b-46f2-adaa-ee35aa2de7db",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "dddc2969-bb2c-4821-831c-ba1daab79e92",
+              "type": "produced_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "John Collison"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "produced_by"
+              },
+              "metadata": {
+                "description": "John Collison是Stripe的联合创始人兼总裁，与Patrick Collison共同创立了Stripe。"
+              },
+              "createdAt": "2026-06-29T12:21:05.282Z"
+            },
+            {
+              "id": "cc2035b3-9ef0-42fd-85e7-7b1a3459d767",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "3d43fff9-5e77-4c62-a2dd-f7cdd65eb345",
+              "targetId": "d8141c2c-3d55-4f6d-9fdb-62f221d9b8d6",
+              "type": "used_by",
+              "lineage": {
+                "tracePath": [
+                  "Stripe Payments",
+                  "→",
+                  "API"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "used_by"
+              },
+              "metadata": {
+                "description": "Stripe Payments通过其API与开发者集成，API是使用Stripe支付功能的核心接口。"
+              },
+              "createdAt": "2026-06-29T12:21:05.284Z"
+            },
+            {
+              "id": "7ebcd559-1adb-4a24-8000-12643fd9ac19",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "ef012f1b-a8cd-4a56-a094-65a0840ae216",
+              "type": "related_to",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "在线支付"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "related_to"
+              },
+              "metadata": {
+                "description": "Stripe是提供在线支付基础设施的公司，其业务核心围绕在线支付处理。"
+              },
+              "createdAt": "2026-06-29T12:21:05.285Z"
+            },
+            {
+              "id": "926a5f85-2b92-48c1-8530-f1305d68b4d4",
+              "projectId": "dfe806b0-6a1f-4dd8-9492-12077390b16b",
+              "sourceId": "d83badd4-7d8a-4b35-99de-1da49d31ada7",
+              "targetId": "e98e7d72-9b30-488b-88f6-6f280e4e7b92",
+              "type": "subfield_of",
+              "lineage": {
+                "tracePath": [
+                  "Stripe",
+                  "→",
+                  "金融科技"
+                ],
+                "outputType": "entity_relation",
+                "outputSegment": "subfield_of"
+              },
+              "metadata": {
+                "description": "Stripe是金融科技领域的代表性企业，其支付创新属于金融科技的子领域。"
+              },
+              "createdAt": "2026-06-29T12:21:05.286Z"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
