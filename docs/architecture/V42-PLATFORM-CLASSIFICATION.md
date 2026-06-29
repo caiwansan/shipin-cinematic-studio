@@ -167,15 +167,32 @@ REMOVE
 
 ---
 
-## Phase B（Platform Foundation）
+## Phase B-0（Foundation Preparation — 摸底阶段）
 
-Phase A 全部关闭后启动。排序：
+Phase A 全部关闭后启动。**只摸底，不建设。**
+
+| 项目 | 目标 | 输出 |
+|------|------|------|
+| **Admin Architecture Audit** | 摸清后台全貌（页面/路由/API/DB/权限） | 6 份审计文档 + Health Score |
+| **AI Capability Audit** | 摸清现有 Provider/Credential/Runtime/Model 分布 | AI Capability Inventory |
+| **Workspace Audit** | 摸清 5 个工作台的 Prompt/Agent/Workflow 重复能力 | Workspace Capability Map |
+| **Unified Admin Blueprint** | 根据 Audit 产出后台设计方案 | `UNIFIED-ADMIN-DESIGN.md` |
+
+> **AI Center 定位**: 是 Unified Admin 的 Pilot Project。  
+> AI Center 先验证平台控制面的完整基建（Layout / Permission / API / CRUD / Sidebar / Status / Audit），  
+> Unified Admin 在此基础上直接复制扩展，风险极低。
+
+---
+
+## Phase B（Platform Foundation — 建设阶段）
+
+Phase B-0 全部完成后启动。排序：
 
 | 优先级 | 能力 | 类型 | 说明 |
 |--------|------|------|------|
 | **1** | **AI Center** | Platform AI Control Plane | Provider / Credential / 默认模型 / 连接 / 路由 |
 | **2** | kmki-ui | 统一组件库 | UserCard / MembershipCard / ModelCard / SidebarFooter |
-| **3** | Unified Admin | 后台统一 | Director OS 补齐 |
+| **3** | Unified Admin | 后台统一 | 基于 Audit 数据 + AI Center 验证的基建 |
 | **4** | Asset Center | 资产中心 | Asset Economy UI |
 | **5** | Knowledge Infra | 知识智能 | Citation → Evidence → Claim → Trust |
 
