@@ -26,9 +26,10 @@
         <NuxtLink to="/community" class="nav-link">
           🌐 社区
         </NuxtLink>
-        <NuxtLink to="/p0/life-assistant" class="nav-link nav-link-p0">
+        <!-- @deprecated 生活助手 — V4.2 业务废弃，入口已隐藏，保留代码可恢复 -->
+        <!-- <NuxtLink to="/p0/life-assistant" class="nav-link nav-link-p0">
           🪞 生活助手
-        </NuxtLink>
+        </NuxtLink> -->
       </div>
 
       <!-- 操作区 -->

@@ -71,7 +71,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getToken } from '~/utils/token-cache'
-definePageMeta({ layout: 'admin-aigc' })
+definePageMeta({
+  layout: 'admin-aigc',
+  middleware: ['deprecated-module'],
+  moduleName: 'customer-service',
+})
 
 function authHeaders(): Record<string, string> {
   const token = getToken()

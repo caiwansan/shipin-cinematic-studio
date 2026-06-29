@@ -101,4 +101,8 @@ export interface BrandGEORuntime {
   selectedBrandId: string | null
   selectedProjectId: string | null
   selectedV2ProjectId: string | null
+  // P1.5 — Extensions
+  currentBrand: GeoProjectV2 | null
+  providerStatus: { configured: boolean; providers: any[] }
+  _uiState: Record<string, any>
 }

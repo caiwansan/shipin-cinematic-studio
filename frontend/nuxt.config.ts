@@ -15,7 +15,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       buildVersion: BUILD_VERSION,
-      buildTime:"1779780208"
+      buildTime:"1779780208",
+      // @deprecated V4.2 — Customer Service 业务废弃
+      customerServiceEnabled: false
     },
   },
   nitro: {

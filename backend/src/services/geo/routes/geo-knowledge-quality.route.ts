@@ -18,7 +18,7 @@ import { resolvePrompt } from '../registry/geo-prompt-registry'
 import type { AgentOutput } from '../types'
 import { geoClaimService } from '../services/geo-claim.service'
 import { geoEvidenceService } from '../services/geo-evidence.service'
-import { geoCitationService } from '../services/geo-citation.service'
+import { geoCitationAdapter } from '../adapters/citation/GeoCitationAdapter'
 import { geoFAQService } from '../services/geo-faq.service'
 import { geoSchemaService } from '../services/geo-schema.service'
 import { prisma } from '../../../utils/index'
@@ -176,7 +176,7 @@ async function persistKnowledgeQuality(
     for (const citation of citationData) {
       const eid = citation.evidenceId || evidenceData[0]?._dbId
       if (!eid) continue
-      await geoCitationService.create({
+      await geoCitationAdapter.create({
         evidenceId: eid,
         citationText: citation.citationText!,
         format: citation.format,

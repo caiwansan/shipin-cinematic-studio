@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import CustomerService from '~/components/customer/CustomerService.vue'
+// @deprecated CustomerService — V4.2 业务废弃
+// import CustomerService from '~/components/customer/CustomerService.vue'
 import { useAuthStore } from '~/stores/auth'
 
 const auth = useAuthStore()
@@ -94,6 +95,6 @@ function isActive(path: string) {
       </main>
     </div>
   </div>
-  <!-- 智能客服 -->
-  <CustomerService />
+  <!-- @deprecated 智能客服 — V4.2 业务废弃，浮窗已隐藏，保留代码可恢复 -->
+  <!-- <CustomerService /> -->
 </template>

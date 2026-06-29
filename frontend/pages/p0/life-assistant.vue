@@ -124,6 +124,8 @@
 <script setup lang="ts">
 definePageMeta({
   title: '生活助手',
+  middleware: ['deprecated-module'],
+  moduleName: 'customer-service',
 })
 
 // ===== 状态 =====

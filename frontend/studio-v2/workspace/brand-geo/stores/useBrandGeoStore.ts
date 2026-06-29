@@ -1,5 +1,5 @@
 // ============================================================
-// BrandGEO Store — 品牌GEO 工作台状态管理 (Phase 1 + 2)
+// BrandGEO Store — 品牌GEO 工作台状态管理 (Phase 1 + 2 + P1.5)
 // 遵循 Studio v2 Store → Runtime → UI 单向数据流
 // Repository 模式：Service 不直接访问 Store
 // ============================================================
@@ -97,6 +97,10 @@ const state = reactive<BrandGEORuntime>({
   selectedBrandId: null,
   selectedProjectId: null,
   selectedV2ProjectId: null,
+  // P1.5 — brand geo store extensions
+  currentBrand: null as GeoProjectV2 | null,
+  providerStatus: { configured: false, providers: [] } as { configured: boolean; providers: any[] },
+  _uiState: {} as Record<string, any>,
 })
 
 function apiUrl(path: string): string {
@@ -507,6 +511,29 @@ export function useBrandGeoStore() {
   // Phase 1 API Methods (Keep)
   // ==================================================================
 
+  // ==================================================================
+  // P1.5 — Brand Geo Store Extensions
+  // ==================================================================
+
+  function setCurrentBrand(brand: GeoProjectV2 | null) { state.currentBrand = brand }
+  function setProviderStatus(status: { configured: boolean; providers: any[] }) { state.providerStatus = status }
+  function resetToProviderSetup() { state.providerStatus = { configured: false, providers: [] } }
+
+  async function fetchProviderStatus(): Promise<{ configured: boolean; providers: any[] } | null> {
+    try {
+      const res = await fetch('/api/geo/dashboard/provider-status', { headers: authHeaders() })
+      const json = await res.json()
+      if (json.success) {
+        const ps = { configured: json.data.configured, providers: json.data.providers || [] }
+        setProviderStatus(ps)
+        return ps
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
   // ─── Return ───
   return {
     // 只读 state
@@ -545,5 +572,12 @@ export function useBrandGeoStore() {
     // V2 — Workspace Flow
     workspaceFlow: computed(() => state.workspaceFlow),
     setCurrentStage, setStageStatus, advanceFlow,
+
+    // P1.5 — Extensions
+    currentBrand: computed(() => state.currentBrand),
+    providerStatus: computed(() => state.providerStatus),
+    _uiState: computed(() => state._uiState),
+    setCurrentBrand, setProviderStatus, resetToProviderSetup,
+    fetchProviderStatus,
   }
 }

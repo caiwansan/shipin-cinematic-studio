@@ -67,6 +67,8 @@ declare module 'nuxt/schema' {
    buildVersion: string,
 
    buildTime: string,
+
+   customerServiceEnabled: boolean,
   }
 }
 declare module 'vue' {

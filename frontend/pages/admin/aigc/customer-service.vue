@@ -226,7 +226,11 @@
 
 <script setup lang="ts">
 import { getToken } from '~/utils/token-cache'
-definePageMeta({ layout: 'admin-aigc' })
+definePageMeta({
+  layout: 'admin-aigc',
+  middleware: ['deprecated-module'],
+  moduleName: 'customer-service',
+})
 import { ref, reactive, onMounted } from 'vue'
 
 const loading = ref(true)

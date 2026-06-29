@@ -101,6 +101,17 @@ export const PLATFORM_FEATURE_FLAGS: Record<string, FeatureFlag> = {
     owner: 'platform-team',
     phase: 'phase-1a',
   },
+
+  /* ═══════════════════════════════════════════════
+     Deprecated — Business Exit (V4.2)
+     ═══════════════════════════════════════════════ */
+  CUSTOMER_SERVICE_ENABLED: {
+    key: 'CUSTOMER_SERVICE_ENABLED',
+    enabled: process.env.CUSTOMER_SERVICE_ENABLED === 'true',
+    description: '生活助手（Customer Service）— 业务已废弃，DEPRECATED since V4.2。默认关闭，仅在需要恢复时设置为 true。',
+    owner: 'platform-team',
+    phase: 'deprecated',
+  },
 }
 
 /**

@@ -15,7 +15,8 @@
         <div class="sp-nav-right">
           <NuxtLink to="/p0/coverage" class="sp-link">覆盖率</NuxtLink>
           <NuxtLink to="/p0/fallbacks" class="sp-link">Fallback 池</NuxtLink>
-          <NuxtLink to="/p0/life-assistant" class="sp-link">对话</NuxtLink>
+          <!-- @deprecated 生活助手 — V4.2 业务废弃 -->
+          <!-- <NuxtLink to="/p0/life-assistant" class="sp-link">对话</NuxtLink> -->
           <NuxtLink to="/" class="sp-link">首页</NuxtLink>
           <button class="sp-refresh" @click="fetchData" :disabled="loading">🔄 刷新</button>
         </div>
@@ -88,8 +89,10 @@
     <main class="sp-main sp-empty" v-else-if="!loading">
       <div class="sp-empty-icon">🌱</div>
       <h2>暂无种子数据</h2>
-      <p>还没有查询记录，先去生活助手发几条消息吧</p>
-      <NuxtLink to="/p0/life-assistant" class="sp-empty-link">→ 去对话</NuxtLink>
+      <!-- @deprecated 生活助手 — V4.2 业务废弃 -->
+      <p>生活助手功能已下线</p>
+      <!-- <p>还没有查询记录，先去生活助手发几条消息吧</p>
+      <NuxtLink to="/p0/life-assistant" class="sp-empty-link">→ 去对话</NuxtLink> -->
     </main>
 
     <!-- 加载中 -->
@@ -100,6 +103,12 @@
 </template>
 
 <script setup>
+definePageMeta({
+  middleware: ['deprecated-module'],
+  moduleName: 'customer-service',
+})
+
+
 const seeds = ref([])
 const loading = ref(true)
 const totalQueries = ref(0)

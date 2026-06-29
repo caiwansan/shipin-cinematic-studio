@@ -128,6 +128,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { resourceService } from '~/modules/platform/resource/services/resource.service'
 
 const loadingProvider = ref(false)
 const saving = ref(false)
@@ -174,18 +175,38 @@ async function fetchProviderStatus() {
 
 async function testConnection() {
   connectionResult.value = null
-  // Test is done via a simple API call - the backend will validate
-  // For now, simulate a basic test
   try {
+    // Use the saved credential to test — the provider-status endpoint reads
+    // from credential table, so after saveConfig stores it, this will pass
     const res = await fetch('/api/geo/dashboard/provider-status', { headers: authHeaders() })
     const json = await res.json()
     if (json.success) {
-      connectionResult.value = {
-        success: json.data.configured,
-        message: json.data.configured
-          ? 'Provider 连接正常'
-          : '未检测到有效的 Provider 配置，请先配置 API Key',
+      if (json.data.configured && json.data.providers?.length > 0) {
+        // Attempt a real LLM chat completion call to verify the key works
+        const provider = json.data.providers[0]
+        const testRes = await fetch('/api/platform/resource/resolver/resolve', {
+          method: 'POST',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            capability: 'llm',
+            provider: provider.id,
+            messages: [{ role: 'user', content: 'ping' }],
+            maxTokens: 1,
+          }),
+        })
+        const testJson = await testRes.json()
+        connectionResult.value = {
+          success: testJson.success,
+          message: testJson.success ? 'Provider 连接正常 ✅' : `连接失败: ${testJson.error || '返回数据异常'}`,
+        }
+      } else {
+        connectionResult.value = {
+          success: false,
+          message: '未检测到有效的 Provider 配置，请先配置 API Key',
+        }
       }
+    } else {
+      connectionResult.value = { success: false, message: json.error || '获取 Provider 状态失败' }
     }
   } catch (err: any) {
     connectionResult.value = {
@@ -199,14 +220,24 @@ async function saveConfig() {
   saving.value = true
   connectionResult.value = null
   try {
-    // For now, just show a success message since full Provider registration
-    // would be done through the Resource Runtime API
-    connectionResult.value = {
-      success: true,
-      message: '配置已保存。请通过 API 资源管理进行完整的 Provider 注册。',
+    // Store credential via platform Resource Service (PLAT-008).
+    // tenantId is resolved server-side from JWT (the client value is a placeholder).
+    const credential = await resourceService.storeCredential({
+      resourceId: configForm.value.provider,
+      tenantId: '__resolve_from_jwt__',
+      workspaceId: 'geo',
+      name: `GEO-${configForm.value.provider}`,
+      apiKey: configForm.value.apiKey,
+      endpoint: configForm.value.endpoint || undefined,
+    })
+    if (credential) {
+      connectionResult.value = {
+        success: true,
+        message: `✅ ${configForm.value.provider} 配置已保存`,
+      }
+      showConfigForm.value = false
+      await fetchProviderStatus()
     }
-    showConfigForm.value = false
-    await fetchProviderStatus()
   } catch (err: any) {
     connectionResult.value = {
       success: false,

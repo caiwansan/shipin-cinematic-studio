@@ -14,7 +14,6 @@ export * from './agents/knowledge-graph.agent'
 // Sprint 1B — Knowledge Quality Repositories
 export * from './repositories/geo-claim.repository'
 export * from './repositories/geo-evidence.repository'
-export * from './repositories/geo-citation.repository'
 export * from './repositories/geo-faq.repository'
 export * from './repositories/geo-schema.repository'
 export * from './repositories/geo-review.repository'
@@ -24,12 +23,14 @@ export * from './repositories/geo-freshness.repository'
 // Sprint 1B — Knowledge Quality Services
 export * from './services/geo-claim.service'
 export * from './services/geo-evidence.service'
-export * from './services/geo-citation.service'
 export * from './services/geo-faq.service'
 export * from './services/geo-schema.service'
 export * from './services/geo-review.service'
 export * from './services/geo-quality.service'
 export * from './services/geo-freshness.service'
+
+// Sprint P2 — Citation migrated to core/citation; GEO Adapter proxies
+export * from './adapters/citation'
 
 // Sprint 1B — Knowledge Quality Agents
 export * from './agents/claim.agent'

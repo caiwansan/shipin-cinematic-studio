@@ -4,21 +4,43 @@
 // ============================================================
 
 import { resourceService } from '../../../services/platform/resource/resource.service.js'
+import { prisma } from '../../../utils/index.js'
 
 export default async function credentialRoutes(fastify: any) {
+  // ─── Helper: resolve tenantId from request ───
+  // Priority: query/body > JWT user's personal tenant
+  async function resolveTenantId(request: any): Promise<string | null> {
+    const queryOrBody = request.body?.tenantId || request.query?.tenantId
+    if (queryOrBody) return queryOrBody
+    if (request.user?.tenantId) return request.user?.tenantId
+    // Fallback: resolve personal tenant from user id
+    if (request.user?.id) {
+      try {
+        const tenant = await prisma.tenant.findFirst({
+          where: { name: `Personal: ${request.user.id}`, type: 'personal', status: 'active' },
+          select: { id: true },
+        })
+        return tenant?.id || null
+      } catch (e) {
+        console.warn('[credential] Failed to resolve tenantId from user:', (e as Error)?.message)
+      }
+    }
+    return null
+  }
+
   // List credentials for tenant
-  fastify.get('/api/resource/credential', async (request: any, reply: any) => {
+  fastify.get('/api/resource/credential', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
     const query = request.query as any
-    const tenantId = query.tenantId || request.user?.tenantId
+    const tenantId = await resolveTenantId(request)
     if (!tenantId) return reply.status(400).send({ success: false, error: 'tenantId is required' })
     const credentials = await resourceService.listCredentials(tenantId, query.resourceId)
     return { success: true, data: credentials }
   })
 
   // Store credential
-  fastify.post('/api/resource/credential', async (request: any, reply: any) => {
+  fastify.post('/api/resource/credential', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
     const body = request.body as any
-    const tenantId = body.tenantId || request.user?.tenantId
+    const tenantId = await resolveTenantId(request)
     if (!tenantId) return reply.status(400).send({ success: false, error: 'tenantId is required' })
     if (!body.resourceId) return reply.status(400).send({ success: false, error: 'resourceId is required' })
     if (!body.apiKey) return reply.status(400).send({ success: false, error: 'apiKey is required' })

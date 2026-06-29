@@ -1,6 +1,11 @@
 /**
- * routes/admin-customer-service.ts — 后台客服管理路由
+ * @deprecated 生活助手（Customer Service）— V4.2 业务废弃
  *
+ * 此文件保留完整代码，不删除。功能逻辑保持不变，仅入口被隐藏。
+ * 恢复方式：将 feature flag CUSTOMER_SERVICE_ENABLED 设置为 true 并恢复前端入口即可。
+ *
+ * 原功能说明：
+ * routes/admin-customer-service.ts — 后台客服管理路由
  * GET    /api/admin/customer-service/settings         — 获取客服配置
  * PUT    /api/admin/customer-service/settings         — 保存客服配置
  * GET    /api/admin/customer-service/sessions         — 获取用户对话列表

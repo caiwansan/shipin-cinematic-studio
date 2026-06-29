@@ -1,8 +1,12 @@
 import type { ApiResponse } from '../contracts/api/base.js';
 /**
- * 智能客服 Agent 路由 — 小麒 v2.0
+ * @deprecated 生活助手（Customer Service）— V4.2 业务废弃
  *
- * 功能：
+ * 此文件保留完整代码，不删除。功能逻辑保持不变，仅入口被隐藏。
+ * 恢复方式：将 feature flag CUSTOMER_SERVICE_ENABLED 设置为 true 并恢复前端入口即可。
+ *
+ * 原功能说明：
+ * - 智能客服 Agent 路由 — 小麒 v2.0
  * - 拟人化 AI 客服，无限次问答
  * - 长期记忆系统（记住每个用户的咨询历史和偏好）
  * - 了解扣子、ComfyUI、ToonFlow 等同类产品优劣势

@@ -81,7 +81,8 @@ const menu = [
   // { id: 'coins', label: '积分充值', icon: '💰', to: '/admin/aigc/coins' },
   { id: 'community', label: '社区管理', icon: '💬', to: '/admin/aigc/community' },
   { id: 'messages', label: '发私信', icon: '✉️', to: '/admin/aigc/messages' },
-  { id: 'customer-service', label: '客服管理', icon: '🎧', to: '/admin/aigc/customer-service' },
+  // @deprecated 客服管理 — V4.2 业务废弃，入口已隐藏，保留代码可恢复
+  // { id: 'customer-service', label: '客服管理', icon: '🎧', to: '/admin/aigc/customer-service' },
   { id: 'sms', label: '短信配置', icon: '📱', to: '/admin/aigc/sms' },
   { id: 'wechat', label: '微信登录配置', icon: '💬', to: '/admin/aigc/wechat' },
   { id: 'qq', label: 'QQ登录配置', icon: '🐧', to: '/admin/aigc/qq' },

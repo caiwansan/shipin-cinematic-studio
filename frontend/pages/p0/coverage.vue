@@ -13,7 +13,8 @@
           </span>
         </div>
         <div class="c-nav-right">
-          <NuxtLink to="/p0/life-assistant" class="c-link">对话</NuxtLink>
+          <!-- @deprecated 生活助手 — V4.2 业务废弃 -->
+          <!-- <NuxtLink to="/p0/life-assistant" class="c-link">对话</NuxtLink> -->
           <NuxtLink to="/p0/fallbacks" class="c-link">Fallback 池</NuxtLink>
           <NuxtLink to="/p0/seeds" class="c-link">种子详情</NuxtLink>
           <NuxtLink to="/" class="c-link">首页</NuxtLink>
@@ -122,7 +123,9 @@
       <div class="c-empty-state">
         <div class="empty-icon">📊</div>
         <div class="empty-title">暂无数据</div>
-        <div class="empty-desc">去 <NuxtLink to="/p0/life-assistant" class="c-link-inline">对话页面</NuxtLink> 发几条消息后回来查看</div>
+        <!-- @deprecated 生活助手 — V4.2 业务废弃 -->
+        <div class="empty-desc">生活助手功能已下线</div>
+        <!-- <div class="empty-desc">去 <NuxtLink to="/p0/life-assistant" class="c-link-inline">对话页面</NuxtLink> 发几条消息后回来查看</div> -->
       </div>
     </main>
 
