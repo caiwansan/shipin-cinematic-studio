@@ -20,6 +20,8 @@
 | **Platform Governance** | ✅ Stable | Platform | 全工作台 | `backend/src/services/platform/governance/` | PLAT-012，已冻结 |
 | **Execution Engine (Kernel)** | ✅ Freeze | Platform | 全工作台 | `packages/studio-platform/src/execution/` | V4.1 Kernel |
 | **Capability Orchestrator** | ✅ Freeze | Platform | 全工作台 | `packages/studio-platform/src/capability/` | V4.1 Kernel |
+| **Deprecation Guard** | ✅ Active | Platform | 全平台 | `frontend/middleware/deprecated-module.guard.ts` | V4.2，可复用生命周期退出 |
+| **Credential Management** | ✅ Active | Platform | GEO | `backend/src/routes/platform/resource/credential.route.ts` + `frontend/modules/platform/resource/services/resource.service.ts` | V4.2A-HF1，GEO 已验证，后续所有工作台复用 |
 | **Citation** | ✅ Active | Core | GEO | `backend/src/core/citation/` | P2.1，GEO 已验证 |
 | **GEO Citation Adapter** | ✅ Active | Workspace | GEO | `backend/src/services/geo/adapters/citation/` | GEO 特有的引用处理 |
 | **GEO Knowledge Agents** | ✅ Active | Workspace | GEO | `backend/src/services/geo/agents/` | 5 个 Agent: citation, claim, entity, evidence, faq |
@@ -132,6 +134,7 @@
 | 执行异步任务 | 复用 Execution Runtime (PLAT-007) | 自建队列 |
 | 需要工作流编排 | 复用 Workflow Runtime (PLAT-011) | 自写 DAG 引擎 |
 | 需要 Agent 协作 | 复用 Agent Runtime (PLAT-010) | 自建 Agent 框架 |
+| 需要管理 API Key | 复用 Credential Management (V4.2A-HF1) | 各自实现 API Key 存储 |
 | 需要知识引用 | 复用 Citation Engine (P2.1) | 自建引用系统 |
 | 需要 UI 组件 | 复用 kmki-ui（建设中） | 自建组件库副本 |
 | 需要事件通知 | 待 Event Bus 完善后复用 | 直接消息队列调用 |
