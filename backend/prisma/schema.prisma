@@ -5693,6 +5693,10 @@ model KnowledgeAsset {
   recordId        String   @map("record_id")            // ↔ PublishingRecord (source of truth)
   assetType       String                                // 'article' | 'schema_entity' | 'entity_graph' | 'fact_sheet' | 'claim_graph' | 'brand_profile' | 'qa_pack' | 'ai_knowledge_feed' | 'ai_manifest'
   status          String   @default("draft")            // 'draft' | 'ready' | 'distributing' | 'distributed' | 'expired'
+  title           String   @default("")                 // Asset title (denormalized for convenience)
+  humanContent    String   @default("") @map("human_content")   // Human Layer content
+  searchContent   String   @default("") @map("search_content")  // Search Layer content
+  aiContent       String   @default("") @map("ai_content")      // AI Layer content
   version         String   @default("1.0.0")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")

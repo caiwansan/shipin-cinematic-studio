@@ -78,7 +78,11 @@ export class AssetBuilderService {
           recordId: input.recordId,
           assetType: input.assetType,
           status: AssetStatus.Ready,
+          title: input.title,
           version,
+          humanContent: variants.human,
+          searchContent: variants.search,
+          aiContent: variants.ai,
         },
       })
 
