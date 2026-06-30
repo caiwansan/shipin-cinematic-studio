@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════
 // Phase 3 — No Vue, no CMS, no UI
 
-import { PublishableClaim, Artifact, ValidationResult } from '../types'
+import { PublishableClaim, Artifact, ValidationResult, ClaimContentType } from '../types'
 import crypto from 'crypto'
 
 export interface ChannelAdapter {
@@ -144,6 +144,127 @@ class HtmlPreviewAdapter implements ChannelAdapter {
   }
 }
 
+// ── Schema.org (JSON-LD) Adapter ──
+class SchemaOrgAdapter implements ChannelAdapter {
+  readonly name = 'schema_jsonld'
+  readonly formats = ['jsonld']
+
+  render(claim: PublishableClaim): Artifact {
+    const schema = this.buildSchema(claim)
+    return {
+      format: 'jsonld',
+      content: JSON.stringify(schema, null, 2),
+      metadata: {
+        title: claim.title,
+        contentType: claim.contentType,
+        claimId: claim.id,
+        version: claim.version,
+        schemaType: schema['@type'],
+      },
+    }
+  }
+
+  validate(artifact: Artifact): ValidationResult {
+    const errors: string[] = []
+    const warnings: string[] = []
+
+    try {
+      const parsed = JSON.parse(artifact.content)
+      if (!parsed['@context']) errors.push('Missing @context')
+      if (!parsed['@type']) errors.push('Missing @type')
+      if (!parsed.name && !parsed.headline) warnings.push('No name or headline')
+    } catch {
+      errors.push('Invalid JSON')
+    }
+
+    return { valid: errors.length === 0, errors, warnings }
+  }
+
+  preview(artifact: Artifact): string {
+    return `<pre style="background:#f4f4f4;padding:1rem;border-radius:6px;overflow-x:auto;font-size:0.85em;">${this.escapeHtml(artifact.content)}</pre>`
+  }
+
+  export(artifact: Artifact): string {
+    return artifact.content  // Returns JSON-LD string ready for <script> tag
+  }
+
+  private buildSchema(claim: PublishableClaim): Record<string, unknown> {
+    const base: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@id': `urn:claim:${claim.id}`,
+      version: claim.version,
+      dateModified: claim.updatedAt,
+    }
+
+    // Infer schema type from contentType
+    switch (claim.contentType) {
+      case ClaimContentType.AboutPage:
+        return {
+          ...base,
+          '@type': 'Organization',
+          name: claim.title,
+          description: claim.content.substring(0, 500),
+        }
+
+      case ClaimContentType.FAQEntry:
+        return {
+          ...base,
+          '@type': 'FAQPage',
+          headline: claim.title,
+          mainEntity: [{
+            '@type': 'Question',
+            name: claim.title,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: claim.content.substring(0, 1000),
+            },
+          }],
+        }
+
+      case ClaimContentType.SchemaEntity:
+        // Try to detect type from content
+        return {
+          ...base,
+          '@type': 'Thing',
+          name: claim.title,
+          description: claim.content.substring(0, 500),
+        }
+
+      case ClaimContentType.PressRelease:
+        return {
+          ...base,
+          '@type': 'NewsArticle',
+          headline: claim.title,
+          articleBody: claim.content,
+          datePublished: new Date().toISOString().split('T')[0],
+        }
+
+      case ClaimContentType.KnowledgeArticle:
+        return {
+          ...base,
+          '@type': 'Article',
+          headline: claim.title,
+          articleBody: claim.content,
+        }
+
+      default:
+        return {
+          ...base,
+          '@type': 'WebPage',
+          name: claim.title,
+          description: claim.content.substring(0, 500),
+        }
+    }
+  }
+
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+  }
+}
+
 // ── Registry ──
 export class ChannelRegistry {
   private adapters: Map<string, ChannelAdapter> = new Map()
@@ -171,6 +292,7 @@ export class ChannelRegistry {
 export const channelRegistry = new ChannelRegistry()
 channelRegistry.register(new MarkdownAdapter())
 channelRegistry.register(new HtmlPreviewAdapter())
+channelRegistry.register(new SchemaOrgAdapter())
 
 // ── Artifact hashing helper ──
 export function computeArtifactHash(content: string): string {

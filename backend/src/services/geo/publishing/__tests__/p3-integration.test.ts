@@ -39,7 +39,7 @@ async function main() {
     })
     console.log('✅ Plan created:', plan.id, 'status:', plan.status, 'claims:', plan.claimIds.length)
 
-    // 3. RENDER: Claim → Artifact (Markdown + HTML)
+    // 3. RENDER: Claim → Artifact (Markdown + HTML + Schema.org)
     const mdAdapter = channelRegistry.resolve('markdown')
     const mdArtifact = mdAdapter.render(claim)
     console.log('✅ Markdown rendered:', mdArtifact.format, `(${mdArtifact.content.length} chars)`)
@@ -48,12 +48,22 @@ async function main() {
     const htmlArtifact = htmlAdapter.render(claim)
     console.log('✅ HTML preview rendered:', htmlArtifact.format, `(${htmlArtifact.content.length} chars)`)
 
+    const schemaAdapter = channelRegistry.resolve('schema_jsonld')
+    const schemaArtifact = schemaAdapter.render(claim)
+    console.log('✅ Schema.org rendered:', schemaArtifact.format, `(${schemaArtifact.content.length} chars)`)
+    // Validate Schema.org JSON-LD
+    const schemaParsed = JSON.parse(schemaArtifact.content)
+    console.log('  @context:', schemaParsed['@context'], '| @type:', schemaParsed['@type'], '| name:', schemaParsed.name)
+
     // 4. VALIDATE: Adapter validation
     const mdValid = mdAdapter.validate(mdArtifact)
     console.log('✅ Markdown valid:', mdValid.valid, mdValid.errors)
 
     const htmlValid = htmlAdapter.validate(htmlArtifact)
     console.log('✅ HTML valid:', htmlValid.valid, htmlValid.errors)
+
+    const schemaValid = schemaAdapter.validate(schemaArtifact)
+    console.log('✅ Schema.org valid:', schemaValid.valid, schemaValid.errors)
 
     // 5. RECORD: Publish → PublishingRecord
     const record = await recorderSvc.record(
