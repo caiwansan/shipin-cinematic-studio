@@ -11,24 +11,27 @@
  * BYOK：走 callLLM，不硬编码任何 Key
  */
 
-import { prisma } from '../../utils/index.js'
 import { callLLM, parseLLMJson, getAgentPrompt, getLockContext } from './llm.client.js'
 import type { LLMConfig, OrchestratorContext } from './llm.client.js'
+import { hdzProjectRepository } from './repositories/hdz-project.repository.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
+import { hdzCharacterRepository } from './repositories/hdz-character.repository.js'
+import { hdzAgentTaskRepository } from './repositories/hdz-agent-task.repository.js'
 
 class CharacterService {
   async execute(ctx: OrchestratorContext, llmCfg: LLMConfig): Promise<void> {
     console.log(`[HDZ/Character] execute start: task=${ctx.taskId}, project=${ctx.projectId}`)
-    const project = await prisma.hdzProject.findUnique({ where: { id: ctx.projectId } })
+    const project = await hdzProjectRepository.findUnique({ where: { id: ctx.projectId } })
     if (!project) throw new Error('项目不存在')
 
     // ★ 读取所有章节大纲（含正文片段），分析角色
-    const chapters = await prisma.hdzChapter.findMany({
+    const chapters = await hdzChapterRepository.findMany({
       where: { projectId: ctx.projectId },
       orderBy: { chapterNo: 'asc' },
     })
 
     // ★ 读取已有的角色设定
-    const existingCharacters = await prisma.hdzCharacter.findMany({
+    const existingCharacters = await hdzCharacterRepository.findMany({
       where: { projectId: ctx.projectId },
     })
 
@@ -147,7 +150,7 @@ ${existingCharStr}
         ? ch.role
         : 'supporting'
 
-      const record = await prisma.hdzCharacter.create({
+      const record = await hdzCharacterRepository.create({
         data: {
           projectId: ctx.projectId,
           name: normalizedName,
@@ -167,7 +170,7 @@ ${existingCharStr}
 
     console.log(`[HDZ/Character] ${message}`)
 
-    await prisma.hdzAgentTask.update({
+    await hdzAgentTaskRepository.update({
       where: { id: ctx.taskId },
       data: {
         output: {

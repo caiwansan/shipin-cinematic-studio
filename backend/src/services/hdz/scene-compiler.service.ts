@@ -14,7 +14,9 @@
  * 3. SceneGraph.forbidden_changes 阻止 Writer 破坏已经固化的事实
  */
 
-import { prisma } from '../../utils/index.js'
+import { hdzCharacterRepository } from './repositories/hdz-character.repository.js'
+import { sceneDagRepository } from './repositories/scene-dag.repository.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
 import { getWorldState, applyStateDelta, type StateDelta } from './world-state.service.js'
 import { getEntityById, getAllEntities } from './entity-registry.service.js'
 
@@ -74,7 +76,7 @@ class SceneCompiler {
     const entityNames = this.extractEntityNames(input.outline)
     if (entityNames.length === 0) {
       // 无实体时，从已有角色中猜测出场
-      const chars = await prisma.hdzCharacter.findMany({ where: { projectId }, select: { id: true, name: true } })
+      const chars = await hdzCharacterRepository.findMany({ where: { projectId } }) as any[]
       for (const ch of chars.slice(0, 3)) {
         entityNames.push(ch.name)
       }
@@ -130,9 +132,9 @@ class SceneCompiler {
 
     // 7. 持久化 SceneDag 记录
     const sceneId = `ch${chapterNo}_s${sceneNo}`
-    await prisma.sceneDag.upsert({
-      where: { projectId_sceneId: { projectId, sceneId } },
-      create: {
+    await sceneDagRepository.upsert(
+      { projectId_sceneId: { projectId, sceneId } },
+      {
         projectId,
         chapterNo,
         sceneNo,
@@ -143,14 +145,16 @@ class SceneCompiler {
           entityCount: entityIds.length,
         },
       },
-      update: {
-        dagJson: {
-          involvedEntities: entityIds,
-          constraints: constraints.map(c => ({ type: c.type, desc: c.description })),
-          entityCount: entityIds.length,
+      {
+        update: {
+          dagJson: {
+            involvedEntities: entityIds,
+            constraints: constraints.map(c => ({ type: c.type, desc: c.description })),
+            entityCount: entityIds.length,
+          },
         },
       },
-    })
+    )
 
     console.log(`[SceneCompiler] ch${chapterNo}_s${sceneNo}: ${entityIds.length} entities, ${constraints.length} constraints`)
 

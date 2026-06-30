@@ -24,8 +24,16 @@ import type {
   NarrativeEmotionPoint,
 } from '../../../../shared/runtime/narrative-schema'
 
-// ⭐ 直接从 shared 模块 import（无运行时 require 依赖）
-import { generateNarrativeId, toNull, toNullStrict, toNullArray, safeArray } from '../../../../shared/runtime/narrative-schema.js'
+let _narrativeSchema: any
+async function getNarrativeSchema() {
+  if (!_narrativeSchema) {
+    _narrativeSchema = await import('../../../../shared/runtime/narrative-schema.mjs')
+  }
+  return _narrativeSchema
+}
+
+// ⭐ Dinamik import from shared module (CommonJS wrapper via .mjs)
+//
 
 export interface NormalizeResult {
   normalized: NarrativeProjectSnapshot
@@ -56,7 +64,8 @@ export function extractCharacterNamesHeuristic(script: string): string[] {
  * @param raw AI 原始输出（可能嵌套 data 结构）
  * @param scriptText 原始剧本文本（用于启发式 fallback）
  */
-export function normalizeNarrativeSpec(raw: any, scriptText?: string): NormalizeResult {
+export async function normalizeNarrativeSpec(raw: any, scriptText?: string): Promise<NormalizeResult> {
+  const { generateNarrativeId, toNull, toNullStrict, toNullArray, safeArray } = await getNarrativeSchema()
   let repaired = false
   let heuristicFallbackUsed = false
 
