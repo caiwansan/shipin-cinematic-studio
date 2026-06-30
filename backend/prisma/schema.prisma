@@ -5676,3 +5676,127 @@ model PublishingRecord {
   @@map("publishing_records")
 }
 
+// ============================================================
+// KDP (Knowledge Distribution Plane) — Sprint K1
+// Frozen 2026-06-30
+// Core domain: KnowledgeAsset (not DistributionTask)
+// FR-K6: KnowledgeAsset references claimId, NOT projectId directly
+// FR-K7: Every asset must have all three variants (human/search/ai)
+// ============================================================
+
+// KnowledgeAsset: The core domain object of KDP.
+// Does NOT reference projectId directly — goes through claimId only.
+// This enables cross-project knowledge sharing (group brand, sub-brands).
+model KnowledgeAsset {
+  id              String   @id @default(uuid())
+  claimId         String   @map("claim_id")             // ↔ PublishableClaim (indirect → Project)
+  recordId        String   @map("record_id")            // ↔ PublishingRecord (source of truth)
+  assetType       String                                // 'article' | 'schema_entity' | 'entity_graph' | 'fact_sheet' | 'claim_graph' | 'brand_profile' | 'qa_pack' | 'ai_knowledge_feed' | 'ai_manifest'
+  status          String   @default("draft")            // 'draft' | 'ready' | 'distributing' | 'distributed' | 'expired'
+  version         String   @default("1.0.0")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([recordId])
+  @@index([claimId])
+  @@map("knowledge_assets")
+}
+
+// AssetVariant: Human / Search / AI — three independent content layers.
+// Each variant has its own version and hash, allowing independent updates.
+//   Human  → HTML, Markdown (for website readers)
+//   Search → JSON-LD, Schema.org (for search engines)
+//   AI     → Entity Graph, Fact Sheet, Claim Graph, AI Manifest (for AI models)
+model AssetVariant {
+  id              String   @id @default(uuid())
+  assetId         String   @map("asset_id")             // ↔ KnowledgeAsset
+  variantType     String                                // 'human' | 'search' | 'ai'
+  contentType     String   @default("text/markdown")    // MIME type
+  content         String                                // The actual content
+  version         String   @default("1.0.0")            // Independent version per variant
+  artifactHash    String   @map("artifact_hash")        // Content fingerprint
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([assetId, variantType])
+  @@index([assetId])
+  @@map("asset_variants")
+}
+
+// DistributionTarget: Registry of all available distribution targets.
+// Not a string list on Plan — a modeled entity for extensibility.
+model DistributionTarget {
+  id              String   @id @default(uuid())
+  targetType      String   @unique                      // 'website' | 'rss' | 'sitemap' | 'robots_txt' | 'knowledge_feed' | 'ai_manifest'
+  displayName     String                                // "Website", "RSS Feed", "Sitemap", etc.
+  description     String?
+  enabled         Boolean  @default(true)
+  configSchema    Json?                                 // JSON Schema for this target's configuration
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("distribution_targets")
+}
+
+// DistributionPlan: A plan to distribute KnowledgeAssets to targets.
+// Auto-created when assets are ready, user approves before execution.
+model DistributionPlan {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+  title           String
+  status          String   @default("draft")            // 'draft' | 'pending_review' | 'approved' | 'distributing' | 'completed' | 'cancelled'
+  strategy        Json     @default("{}")               // { incrementalOnly, forceFull, scheduleAt }
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  approvedAt      DateTime? @map("approved_at")
+  completedAt     DateTime? @map("completed_at")
+
+  @@map("distribution_plans")
+}
+
+// Junction table: DistributionPlan ↔ KnowledgeAsset
+model DistributionPlanToAsset {
+  planId          String   @map("plan_id")
+  assetId         String   @map("asset_id")
+
+  @@id([planId, assetId])
+  @@index([assetId])
+  @@map("distribution_plan_to_assets")
+}
+
+// DistributionAttempt: Every distribution is a series of attempts.
+// FR-K2: Never overwrite — append new attempt for retry.
+model DistributionAttempt {
+  id              String   @id @default(uuid())
+  planId          String   @map("plan_id")
+  adapterId       String   @map("adapter_id")           // Which adapter ran this attempt
+  assetIds        Json     @default("[]")               // Which assets were included
+  attemptNo       Int      @default(1)
+  status          String   @default("pending")          // 'pending' | 'preparing' | 'validating' | 'packaging' | 'delivering' | 'success' | 'failed'
+  outputUrl       String?  @map("output_url")
+  artifactHash    String?  @map("artifact_hash")
+  durationMs      Int?     @map("duration_ms")
+  errorLog        String?  @map("error_log")
+  startedAt       DateTime? @map("started_at")
+  finishedAt      DateTime? @map("finished_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([planId])
+  @@index([adapterId])
+  @@map("distribution_attempts")
+}
+
+// DistributionAdapter: Registry of available adapters.
+model DistributionAdapter {
+  id              String   @id @default(uuid())
+  adapterType     String   @unique                      // 'sitemap' | 'rss' | 'knowledge_feed' | 'robots_txt' | 'ai_manifest'
+  name            String
+  adapterClass    String   @default("local")            // 'local' | 'external'
+  enabled         Boolean  @default(true)
+  config          Json?                                 // Per-adapter configuration (e.g. { baseUrl, outputDir })
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("distribution_adapters")
+}
+
