@@ -280,6 +280,14 @@ KDP RC1 不调用任何第三方 API。所有 Adapter 本地生成、本地可�
 ### FR-K5：Credential Registry 分离
 KDP 不存储任何凭据，只拿 credentialId。凭据由 Platform 统一管理。
 
+### FR-K8：KDP 输入永远是 PublishingRecord
+KDP 永远消费 PublishingRecord（已发布、已版本化的内容），而非 PublishableClaim（草稿态）。
+这条保证了 KDP 和 Publishing 的职责分离。
+
+### FR-K9：KnowledgeAsset 永远不可编辑（Immutable）
+修改永远产生新版本，不 UPDATE。这样 AI 系统的引用才能保持稳定。
+新版本通过 AssetBuilder.buildFromRecord() 的幂等逻辑自动处理。
+
 ---
 
 ## 开放问题（已解决）

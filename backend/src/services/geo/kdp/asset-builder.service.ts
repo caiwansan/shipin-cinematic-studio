@@ -43,12 +43,15 @@ export class AssetBuilderService {
     // ── Idempotency: check existing ──
     const existing = await this.prisma.knowledgeAsset.findUnique({
       where: { recordId: input.recordId },
-      include: { variants: true },
     })
     if (existing) {
+      // Fetch variants separately (no relation declared in schema)
+      const variants = await this.prisma.assetVariant.findMany({
+        where: { assetId: existing.id },
+      })
       return {
         assetId: existing.id,
-        variants: existing.variants.map(v => ({
+        variants: variants.map(v => ({
           variantType: v.variantType as 'human' | 'search' | 'ai',
           contentType: v.contentType,
           content: v.content,

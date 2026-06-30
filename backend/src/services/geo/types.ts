@@ -771,3 +771,10 @@ export interface AdapterRuntime {
 // humanContent handles the human layer, aiContent handles the AI layer.
 // searchContent handles the search engine layer.
 // No asset is "complete" until all three are populated.
+
+// FR-K8: KDP input is always PublishingRecord, never Claim.
+// KDP processes already-published, already-versioned content only.
+
+// FR-K9: KnowledgeAsset is immutable. Modification always produces a new version.
+// No UPDATE on KnowledgeAsset. New asset = new version.
+// This guarantees stable references for AI systems and knowledge graphs.
