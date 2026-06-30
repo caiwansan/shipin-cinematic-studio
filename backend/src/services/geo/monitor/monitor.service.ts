@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { MonitorEngine } from './monitor-engine'
 import type { DriftCheckResult } from './monitor.types'
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 
 export class MonitorService {
   private engine: MonitorEngine

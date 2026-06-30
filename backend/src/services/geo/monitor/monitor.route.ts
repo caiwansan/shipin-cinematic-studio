@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { MonitorService } from './monitor.service'
 import { probeRegistry } from './probes/probe-registry'
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 
 const monitorService = new MonitorService(prisma)
 

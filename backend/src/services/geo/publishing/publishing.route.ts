@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { PublishingPipelineService } from './publishing-pipeline.service'
 import { publishingAdapterRegistry } from './adapters/adapter-registry'
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 const pipeline = new PublishingPipelineService(prisma)
 
 export async function geoPublishingRoutes(app: FastifyInstance) {

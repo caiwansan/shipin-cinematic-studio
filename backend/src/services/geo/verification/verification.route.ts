@@ -4,7 +4,7 @@ import { VerificationEngine } from './verification-engine'
 import { InMemoryJobRunner } from './verification-job-runner'
 import { VerificationPolicyService } from './verification-policy.service'
 import { TimelineService } from './timeline.service'
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 const jobRunner = new InMemoryJobRunner()
 const policyService = new VerificationPolicyService(prisma)
 const engine = new VerificationEngine(prisma, jobRunner, undefined, policyService)

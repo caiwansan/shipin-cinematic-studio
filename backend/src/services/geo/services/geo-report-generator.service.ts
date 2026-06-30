@@ -5,7 +5,7 @@
 // 不单独建 Report 表。报告是实时计算的视图。
 // ============================================================
 
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 
 interface ReportSection {
   title: string

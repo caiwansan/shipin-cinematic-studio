@@ -3,7 +3,7 @@
 // Returns timeline points from GeoScoreSnapshot table
 // ============================================================
 
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 
 export interface TimelinePoint {
   date: string   // ISO date string (YYYY-MM-DD)

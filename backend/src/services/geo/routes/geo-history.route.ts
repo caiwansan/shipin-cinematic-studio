@@ -10,7 +10,7 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 
 interface HistoryEvent {
   id: string

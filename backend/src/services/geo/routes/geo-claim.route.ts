@@ -7,7 +7,7 @@
 import { FastifyInstance } from 'fastify'
 import { geoClaimRepository } from '../repositories/geo-claim.repository'
 import { geoEvidenceRepository } from '../repositories/geo-evidence.repository'
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 
 export default async function geoClaimRoutes(fastify: FastifyInstance) {
   // GET /api/geo/claims?projectId=xxx&entityId=yyy&status=zzz&limit=50&offset=0

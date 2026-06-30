@@ -4,7 +4,7 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 
 export default async function geoWatcherRoutes(fastify: FastifyInstance) {
   // GET /api/geo/watcher/recent — 最近的 watcher 事件

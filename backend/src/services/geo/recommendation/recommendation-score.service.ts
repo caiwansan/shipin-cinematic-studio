@@ -3,7 +3,7 @@
 // Returns per-dimension breakdown with reasons for each point
 // ============================================================
 
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 
 // ── Types ──
 

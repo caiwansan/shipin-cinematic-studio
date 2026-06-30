@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { LearningService } from './learning.service'
 import { signalRegistry } from './normalizers/signal-registry'
-import { prisma } from '../../utils/index.js'
+import { prisma } from '../../../utils/index.js'
 const learningService = new LearningService(prisma)
 
 export async function geoLearningRoutes(app: FastifyInstance) {
