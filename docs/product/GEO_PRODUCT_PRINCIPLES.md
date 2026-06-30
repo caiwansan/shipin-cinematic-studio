@@ -10,25 +10,43 @@
 ## 核心信念（Core Belief）
 
 ```
-Every interaction should improve Brand Health.
+Every interaction should help users improve Brand Health.
 ```
 
 Brand Knowledge OS 的一切设计，都源于这一句话。
+
+**Brand Health** 的定义（所有文档统一引用，不得变更）：
+
+> **Brand Health is a measure of how understandable, trustworthy, and recommendable a brand is to AI systems.**
+
 无论开发哪个 Workspace，用它判断功能的价值：
 - 帮助用户提升核心成果 → 保留
-- 暴露系统内部能力或增加操作复杂度 → 重新设计或放到 Studio
+- 暴露系统内部能力或增加操作复杂度 → 重新设计或放到 Brand Studio
 
 ---
 
 # 第一部分：宪法（Constitution）
 
-五条原则，不可违反。
+六条原则，不可违反。
 
 ---
 
 ## Principle 1 — Brand First
 
 **Workspace 服务的是品牌，不是系统，不是 Runtime，不是 AI。**
+**Workspace over Console — 这是 Brand Knowledge OS 最重要的判断准则。**
+
+Workspace 不是：
+- ❌ Admin Panel
+- ❌ Engineering Console
+- ❌ Debug Tool
+- ❌ 功能清单
+
+Workspace 是：
+- ✅ 普通用户的欢迎页
+- ✅ 品牌语言优先
+- ✅ 每个页面都有价值
+- ✅ 视觉统一、体验一致
 
 任何页面都必须围绕一个核心问题：
 
@@ -90,7 +108,29 @@ Brand Knowledge OS 的一切设计，都源于这一句话。
 
 ---
 
-## Principle 4 — Simplicity Wins
+## Principle 4 — Technology Stays Invisible
+
+**Runtime、Adapter、Repository、Pipeline、Engine 默认全部不可见。**
+
+可见范围规则：
+
+| 概念 | Workspace | Brand Studio |
+|------|-----------|--------------|
+| Brand Health | ✅ 核心 | ✅ 配置 |
+| Recommendations | ✅ 核心 | ✅ 配置 |
+| Verification | ✅ 结果展示 | ✅ 引擎配置 |
+| Publishing | ✅ 渠道管理 | ✅ Adapter 配置 |
+| Knowledge | ✅ 资产管理 | ✅ Pipeline 配置 |
+| Runtime | ❌ 隐藏 | ✅ 可见 |
+| Adapter | ❌ 隐藏 | ✅ 可见 |
+| Repository | ❌ 隐藏 | ✅ 可见 |
+| Engine | ❌ 隐藏 | ✅ 可见 |
+
+> **"Technology Stays Invisible" 意味着用户永远不需要知道"这是怎么工作的"，只需要知道"这能帮我做什么"。**
+
+---
+
+## Principle 5 — Simplicity Wins
 
 **普通市场人员第一次使用，30 秒内完成第一次优化。**
 
@@ -116,56 +156,37 @@ Brand Knowledge OS 的一切设计，都源于这一句话。
 
 ---
 
-## Principle 5 — Technology Stays Invisible
+## Principle 6 — One North Star
 
-**Runtime、Adapter、Repository、Pipeline、Engine 默认全部不可见。**
+**Workspace 永远只有一个北极星：Brand Health。**
 
-可见范围规则：
+统一刻度：**所有指标使用 0-100 范围**。不允许出现 A+/B/C 等非数值评分。
 
-| 概念 | Workspace | Brand Studio |
-|------|-----------|--------------|
-| Brand Health | ✅ 核心 | ✅ 配置 |
-| Recommendations | ✅ 核心 | ✅ 配置 |
-| Verification | ✅ 结果展示 | ✅ 引擎配置 |
-| Publishing | ✅ 渠道管理 | ✅ Adapter 配置 |
-| Knowledge | ✅ 资产管理 | ✅ Pipeline 配置 |
-| Runtime | ❌ 隐藏 | ✅ 可见 |
-| Adapter | ❌ 隐藏 | ✅ 可见 |
-| Repository | ❌ 隐藏 | ✅ 可见 |
-| Engine | ❌ 隐藏 | ✅ 可见 |
+```
+Brand Health 82
+├── Knowledge Coverage    76  — 品牌知识被 AI 理解的广度
+├── AI Visibility         69  — 品牌在 AI 推荐中的可见性
+├── Trust                 88  — 品牌知识的真实性验证
+├── Freshness             73  — 内容发布的新鲜度
+├── Authority             85  — 品牌来源的权威性
+└── Risk                  95  （越高越安全）
+```
 
-> **"Technology Stays Invisible" 意味着用户永远不需要知道"这是怎么工作的"，只需要知道"这能帮我做什么"。**
+**No page may introduce its own primary score.**
+- ❌ 不允许出现 "Verification Score"
+- ❌ 不允许出现 "Publishing Score"
+- ❌ 不允许出现 "Optimization Score"
+- ❌ 不允许出现 "Recommendation Score"
+
+唯一的主分是 Brand Health。其他所有数字都是辅助指标。
+
+> **"One North Star" 意味着所有页面、所有功能、所有推荐，最终都指向提升一个数字。**
 
 ---
 
 # 第二部分：设计准则（Design Guidelines）
 
 七条准则，允许随产品演进优化。
-
----
-
-## Principle 6 — One North Star
-
-**Workspace 永远只有一个北极星：Brand Health。**
-
-其他所有指标都是组成维度：
-
-```
-Brand Health 82
-├── Knowledge Coverage    71%
-├── AI Visibility         64%
-├── Verification          ✅ (85%)
-├── Publishing Freshness  3 days
-├── Authority             B+
-└── Risk                  2 open
-```
-
-用户永远只需要关心一个数字：
-- 今天 Brand Health 是多少？
-- 比昨天好还是差？
-- 怎样才能更高？
-
-> **"One North Star" 意味着所有页面、所有功能、所有推荐，最终都指向提升一个数字。**
 
 ---
 
@@ -185,13 +206,13 @@ L2（点击展开）：
 L3（高级模式）：
   Custom Dashboard | Batch Operations | Export
 
-L4（Studio）：
+L4（Brand Studio）：
   Pipeline Config | Runtime Config | Adapter Debug
 ```
 
 - 新用户只看到 L1
 - 进阶用户自然发现 L2-L3
-- 开发者知道 L4 在 Studio
+- L4 仅在 Brand Studio 中可见
 
 > **"Progressive Disclosure" 意味着从不在一开始展示全部能力，而是让用户按需探索。**
 
@@ -208,7 +229,7 @@ L4（Studio）：
 | 请设置验证参数 | 开始验证 |
 | 请选择关键词 | 推荐 3 个高价值关键词 |
 
-**用户不需要选择参数。用户只需要说 Yes。**
+用户不需要选择参数。用户只需要说 **Yes**。
 
 > **"Recommendation, Not Configuration" 意味着产品替用户做决策，用户只需要确认或拒绝。**
 
@@ -267,7 +288,26 @@ Unknown               ❌ 没有 Why + How 的数字不能显示
 
 ---
 
-## Principle 12 — Workspace over Console
+## Principle 12 — Human Language First
+
+**用户看到的每一个字，都应该是自然的人类语言，而不是系统状态描述。**
+
+| ❌ 系统语言 | ✅ 人类语言 |
+|------------|------------|
+| Verification Passed | AI 已验证品牌信息可信 |
+| Publish Failed | 官网暂时无法更新，请稍后重试 |
+| Repository Missing | 尚未连接官网 |
+| Execution Completed | 优化已完成 |
+| Token Expired | 登录已过期，请重新连接 |
+
+**这条原则直接影响所有 UI Copy、Toast、Error Message、Empty State。**
+所有文案写完后，检查：用户妈妈看得懂吗？
+
+> **"Human Language First" 意味着文案 Review 是第一道质量门。**
+
+---
+
+## Principle 13 — Workspace over Console
 
 **Workspace 不是 Admin Panel，不是 Engineering Console，不是 Debug Tool。**
 
@@ -280,13 +320,19 @@ Workspace 的特质：
 - ❌ 不是菜单堆叠
 - ❌ 不是后台管理
 
-> **"Workspace over Console" 意味着每次添加一个功能，先问：这应该属于 Workspace 还是 Studio？**
+> **"Workspace over Console" 意味着每次添加一个功能，先问：这应该属于 Workspace 还是 Brand Studio？**
 
 ---
 
 # 第三部分：Brand Health Constitution
 
-## 什么是 Brand Health
+## 定义
+
+> **Brand Health is a measure of how understandable, trustworthy, and recommendable a brand is to AI systems.**
+
+此定义永久有效，所有文档统一引用，不得变更。
+
+## Brand Health 的生命体征属性
 
 Brand Health **不是一个算法分数**，而是**品牌的生命体征（Vital Sign）**。
 
@@ -298,7 +344,7 @@ Brand Health **不是一个算法分数**，而是**品牌的生命体征（Vita
   Actions:    保持运动
 
 品牌健康：
-  Vital Signs: Knowledge Coverage | AI Visibility | Freshness | Authority
+  Vital Signs: Knowledge Coverage | AI Visibility | Trust | Freshness
   Diagnosis:  82/100 — 良好，有提升空间
   Actions:    建议优化 3 项
 ```
@@ -306,16 +352,16 @@ Brand Health **不是一个算法分数**，而是**品牌的生命体征（Vita
 ## Brand Health 的组成
 
 ```
-Brand Health
-├── Knowledge Coverage     — 品牌知识被 AI 理解的广度
-├── AI Visibility          — 品牌在 AI 推荐中的可见性
-├── Verification           — 品牌知识的真实性验证
-├── Publishing Freshness   — 内容发布的新鲜度
-├── Authority              — 品牌来源的权威性
-└── Risk                   — 潜在风险检测
+Brand Health  (0-100)
+├── Knowledge Coverage  (0-100)  品牌知识被 AI 理解的广度
+├── AI Visibility       (0-100)  品牌在 AI 推荐中的可见性
+├── Trust               (0-100)  品牌知识的真实性验证
+├── Freshness           (0-100)  内容发布的新鲜度
+├── Authority           (0-100)  品牌来源的权威性
+└── Risk                (0-100)  越高越安全（100 = 无风险）
 ```
 
-每个维度都是可解释、可提升的。
+所有维度统一 0-100。不允许出现非数值评分（如 A+、B、C）。
 
 ## Brand Health 的约束
 
@@ -324,6 +370,7 @@ Brand Health
 3. **Brand Health 必须有趋势** — 用户知道好还是差
 4. **Brand Health 必须有建议** — 用户知道怎么提升
 5. **Brand Health 从不显示为负数** — 最低也是 0
+6. **Brand Health 不包含非核心指标** — 它不是网站性能、SEO 排名、广告 ROI
 
 ## Brand Health ≠ Performance
 
@@ -340,9 +387,60 @@ Brand Health 是：
 
 ---
 
-> **这 12 条原则 + Brand Health Constitution 是 Brand Knowledge OS 所有产品决策的最终依据。**
+# 附录 A：Brand Studio 定位
+
+**Brand Studio** ≠ Developer Mode。
+
+Brand Studio 是 **Platform Workspace**，定位为：
+- 运营人员配置优化规则
+- Prompt 管理与调优
+- 审核与审批流程配置
+- 渠道（Adapter）管理
+- Pipeline 与 Runtime 调试（开发者使用）
+
+命名原则：
+- ❌ 不叫 "Developer Mode"
+- ❌ 不叫 "Admin Panel"
+- ✅ 叫 "Brand Studio"
+
+Workspace 和 Brand Studio 共享后端，但拥有独立的入口、导航和权限体系。
+
+---
+
+# 附录 B：Forbidden Vocabulary（禁止词汇）
+
+以下词汇**禁止出现在 Workspace 用户界面**（包括 UI 文案、Toast、Error Message、Empty State 等）。
+Brand Studio 中可保留技术术语。
+
+| 禁止在 UI 出现 | Workspace 中替换为 |
+|----------------|-------------------|
+| Runtime | —（不出现） |
+| Pipeline | 工作流 |
+| Repository | 网站连接 / 连接 |
+| Adapter | 渠道 / 通道 |
+| Engine | AI 服务 |
+| Package | 品牌更新 / 更新包 |
+| Claim | 品牌声明 |
+| Evidence | 验证证据 |
+| Execution | 执行中 / 优化中 |
+| Deployment | —（不出现） |
+| Registry | —（不出现） |
+| Provider | 服务商 / 平台 |
+| Config / Configuration | 设置 |
+| Endpoint | —（不出现） |
+| Schema | 数据格式 |
+| Token | 密钥 |
+| Certification | —（不出现） |
+| Namespace | —（不出现） |
+
+**Review 门禁：** 任何 PR / UI 文案 / 交互原型，必须通过 Forbidden Vocabulary 检查。
+发现违规词汇，不允许合并。
+
+---
+
+> **这 13 条原则 + Brand Health Constitution + Forbidden Vocabulary 是 Brand Knowledge OS 所有产品决策的最终依据。**
 >
-> 任何新功能、新页面、新交互在开发前，必须对照这 12 条原则逐条评审。
-> 违反任何一条宪法原则，必须重新设计。
+> 任何新功能、新页面、新交互在开发前，必须对照逐条评审。
+> 违反任何宪法原则，必须重新设计。
 >
-> *"Every interaction should improve Brand Health."*
+> *"Every interaction should help users improve Brand Health."*
