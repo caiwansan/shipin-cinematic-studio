@@ -111,3 +111,8 @@ export { geoMonitorRoutes as geoMonitorRoute } from './monitor/monitor.route'
 
 // Sprint P3 — Publishing Routes
 export { default as geoPublishingRoute } from './publishing/publishing.route'
+
+// Sprint K1 — KDP Services
+export { AssetBuilderService } from './kdp/asset-builder.service'
+export { DistributionPlannerService } from './kdp/distribution-planner.service'
+export { AttemptSchedulerService } from './kdp/attempt-scheduler.service'
