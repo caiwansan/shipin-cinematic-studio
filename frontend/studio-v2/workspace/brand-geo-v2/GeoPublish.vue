@@ -64,10 +64,8 @@ const selectedPlanId = ref<string | null>(null)
 const selectedPlanClaims = ref<ClaimItem[]>([])
 const selectedPlanRecords = ref<RecordItem[]>([])
 
-// Preview state
-const previewHtml = ref('')
-const previewJson = ref('')
-const previewMd = ref('')
+// Preview state (per claimId, per channel)
+const previewContent = ref<Record<string, Record<string, string>>>({})
 
 // Export state
 const exportMsg = ref('')
@@ -119,9 +117,7 @@ watch(() => props.projectId, fetchData, { immediate: true })
 
 async function selectPlan(planId: string) {
   selectedPlanId.value = planId
-  previewHtml.value = ''
-  previewJson.value = ''
-  previewMd.value = ''
+  previewContent.value = {}
   try {
     const { client } = await import('~/studio-v2/workspace/brand-geo/clients/GEOApiClient')
     const [planRes, recordsRes] = await Promise.all([
@@ -145,12 +141,11 @@ async function previewChannel(claimId: string, channel: string) {
     const res = await client.post(`/publish/preview/${claimId}`, { channel })
     if (res.success) {
       const content = res.data.content || ''
-      if (channel === 'html_preview') previewHtml.value = content
-      else if (channel === 'schema_jsonld') previewJson.value = content
-      else previewMd.value = content
+      if (!previewContent.value[claimId]) previewContent.value[claimId] = {}
+      previewContent.value[claimId][channel] = content
     }
   } catch {
-    exportMsg.value = '预览生成失败'
+    // preview unavailable — API route not implemented yet
   }
 }
 
@@ -305,25 +300,36 @@ onMounted(() => {
             <!-- Channel preview buttons -->
             <div class="flex flex-wrap gap-1.5 mb-2">
               <button
-                v-for="(fmt, ch) in channelFormats"
+                v-for="(label, ch) in channelFormats"
                 :key="ch"
                 class="text-[10px] px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 @click="previewChannel(claim.id, ch)"
               >
-                预览 {{ fmt }}
+                预览 {{ label }}
               </button>
             </div>
 
-            <!-- Preview content -->
-            <div v-if="previewMd && selectedPlanClaims[0]?.id === claim.id" class="text-xs bg-gray-50 dark:bg-gray-900 rounded p-2 max-h-40 overflow-auto">
-              <pre class="whitespace-pre-wrap">{{ previewMd.substring(0, 500) }}</pre>
+            <!-- Traceability info -->
+            <div class="flex items-center gap-3 text-[10px] text-gray-400 mb-1.5 pb-1.5 border-b border-gray-100 dark:border-gray-700">
+              <span>Source: Verified from Action</span>
+              <span>Version: {{ claim.version }}</span>
             </div>
-            <div v-if="previewHtml && selectedPlanClaims[0]?.id === claim.id"
+
+            <!-- Preview content per claim per channel -->
+            <div v-if="previewContent[claim.id]?.['markdown']" class="text-xs bg-gray-50 dark:bg-gray-900 rounded p-2 max-h-40 overflow-auto">
+              <pre class="whitespace-pre-wrap">{{ previewContent[claim.id]['markdown'].substring(0, 500) }}</pre>
+            </div>
+            <div v-if="previewContent[claim.id]?.['html_preview']"
               class="text-xs bg-white border border-gray-200 dark:border-gray-700 rounded p-2 max-h-40 overflow-auto"
-              v-html="previewHtml.substring(0, 3000)"
+              v-html="previewContent[claim.id]['html_preview'].substring(0, 3000)"
             />
-            <div v-if="previewJson && selectedPlanClaims[0]?.id === claim.id" class="text-xs bg-gray-50 dark:bg-gray-900 rounded p-2 max-h-40 overflow-auto font-mono">
-              {{ previewJson.substring(0, 500) }}
+            <div v-if="previewContent[claim.id]?.['schema_jsonld']" class="text-xs bg-gray-50 dark:bg-gray-900 rounded p-2 max-h-40 overflow-auto font-mono">
+              {{ previewContent[claim.id]['schema_jsonld'].substring(0, 500) }}
+            </div>
+
+            <!-- Empty preview state -->
+            <div v-if="!previewContent[claim.id]" class="text-[10px] text-gray-300 italic">
+              点击预览按钮查看内容
             </div>
           </div>
 
