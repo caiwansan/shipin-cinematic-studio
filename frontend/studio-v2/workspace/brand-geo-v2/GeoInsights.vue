@@ -169,7 +169,7 @@ function statusIcon(status: string): string {
               <span class="text-xs text-yellow-500 animate-pulse">验证中...</span>
             </div>
 
-            <!-- Verified: show result + re-run -->
+            <!-- Verified: show result + re-run + publish -->
             <div v-else-if="action.status === 'verified'" class="flex items-center gap-2">
               <button
                 class="text-xs px-3 py-1.5 rounded bg-green-500 hover:bg-green-600 text-white transition-colors"
@@ -177,6 +177,12 @@ function statusIcon(status: string): string {
               @click="emit('navigate', 'evidence', action.id)"
               >
                 查看结果 →
+              </button>
+              <button
+                class="text-xs px-3 py-1.5 rounded bg-purple-500 hover:bg-purple-600 text-white transition-colors"
+                @click="emit('navigate', 'publish')"
+              >
+                发布 ↗
               </button>
               <button
                 class="text-xs px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 transition-colors"
