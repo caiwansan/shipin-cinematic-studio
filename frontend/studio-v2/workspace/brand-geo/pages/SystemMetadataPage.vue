@@ -1,7 +1,7 @@
 <template>
   <div class="sysmeta">
     <div class="sysmeta__header">
-      <h3>🌐 System Metadata</h3>
+      <h3>🌐 配置信息</h3>
       <button class="sysmeta__refresh-btn" :disabled="loading" @click="refresh">
         {{ loading ? '加载中...' : '🔄 刷新' }}
       </button>

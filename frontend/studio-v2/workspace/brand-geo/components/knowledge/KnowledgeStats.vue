@@ -4,28 +4,28 @@
       <span class="geo-stat-icon">📚</span>
       <div class="geo-stat-body">
         <span class="geo-stat-number">{{ totalKos }}</span>
-        <span class="geo-stat-label">知识对象</span>
+        <span class="geo-stat-label">知识内容</span>
       </div>
     </div>
     <div class="geo-stat-card" style="border-left-color: #34d399">
       <span class="geo-stat-icon">💡</span>
       <div class="geo-stat-body">
         <span class="geo-stat-number">{{ totalClaims }}</span>
-        <span class="geo-stat-label">Claim</span>
+        <span class="geo-stat-label">事实</span>
       </div>
     </div>
     <div class="geo-stat-card" style="border-left-color: #f59e0b">
       <span class="geo-stat-icon">📄</span>
       <div class="geo-stat-body">
         <span class="geo-stat-number">{{ totalEvidence }}</span>
-        <span class="geo-stat-label">Evidence</span>
+        <span class="geo-stat-label">来源</span>
       </div>
     </div>
     <div class="geo-stat-card" style="border-left-color: #ec4899">
       <span class="geo-stat-icon">📝</span>
       <div class="geo-stat-body">
         <span class="geo-stat-number">{{ totalCitations }}</span>
-        <span class="geo-stat-label">Citation</span>
+        <span class="geo-stat-label">引用</span>
       </div>
     </div>
   </div>

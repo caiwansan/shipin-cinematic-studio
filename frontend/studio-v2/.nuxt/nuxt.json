@@ -1,0 +1,9 @@
+{
+  "_hash": "UYuI9SxsjweAHXzGmSB1B45Hkk6OF3UDhLpUAQkQfAg",
+  "project": {
+    "rootDir": "/root/shipin-cinematic-studio/frontend/studio-v2"
+  },
+  "versions": {
+    "nuxt": "3.16.2"
+  }
+}

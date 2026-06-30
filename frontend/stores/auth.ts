@@ -48,6 +48,9 @@ export const useAuthStore = defineStore('auth', {
 
       // Persist to cookie + token-cache（内存 + localStorage）
       document.cookie = `auth_token=${token}; path=/; max-age=86400; samesite=lax`
+      if (import.meta.client) {
+        window.localStorage?.setItem('auth_token', token)
+      }
       setToken(token)
       if (this.user) {
         setCachedUser(this.user as Record<string, any>)
@@ -72,6 +75,9 @@ export const useAuthStore = defineStore('auth', {
       this.user = data.user || null
 
       document.cookie = `auth_token=${token}; path=/; max-age=86400; samesite=lax`
+      if (import.meta.client) {
+        window.localStorage?.setItem('auth_token', token)
+      }
       setToken(token)
       if (this.user) {
         setCachedUser(this.user as Record<string, any>)

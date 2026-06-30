@@ -3902,6 +3902,7 @@ model GEOScoreSnapshot {
   snapshot    Json     @default("{}")            // Full dual score snapshot
   scores      Json?    @default("{}")            // Per-dimension scores
   metadata    Json?    @default("{}")
+  optimizationExecutionId String?  @map("optimization_execution_id")
   createdAt   DateTime @default(now())
 
   @@index([projectId])
@@ -5403,4 +5404,220 @@ model GeoScanHistory {
   @@index([projectId])
   @@index([projectId, status])
   @@map("geo_scan_history")
+}
+
+// ============================================================
+// GEO v4 — Sprint 1: Execution, Verification & Learning
+// ============================================================
+
+model OptimizationExecution {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+
+  optimizationType String   @map("optimization_type")
+  executionStatus  String   @map("execution_status")
+  triggerSource    String   @default("manual") @map("trigger_source")
+
+  beforeSnapshotId String?  @map("before_snapshot_id")
+  afterSnapshotId  String?  @map("after_snapshot_id")
+  verificationVersion String? @map("verification_version")
+  geoScoreVersion  String?  @map("geo_score_version")
+
+  verificationStatus String? @map("verification_status")
+
+  beforeScore     Float?    @map("before_score")
+  afterScore      Float?    @map("after_score")
+  scoreDelta      Float?    @map("score_delta")
+
+  changedDimensions Json?    @map("changed_dimensions")
+
+  beforeDimensions Json?    @map("before_dimensions")
+  afterDimensions  Json?    @map("after_dimensions")
+
+  industry        String?
+  brandType       String?   @map("brand_type")
+
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  verifiedAt      DateTime? @map("verified_at")
+
+  @@map("optimization_executions")
+}
+
+model VerificationJob {
+  id              String   @id @default(uuid())
+  executionId     String   @map("execution_id")
+
+  status          String   @default("pending")
+  retryCount      Int      @default(0) @map("retry_count")
+  maxRetries      Int      @default(3) @map("max_retries")
+
+  lockedBy        String?  @map("locked_by")
+  lockedAt        DateTime? @map("locked_at")
+
+  lastError       String?  @map("last_error")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  @@unique([executionId])
+  @@map("verification_jobs")
+}
+
+model VerificationResult {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+
+  executionId     String   @map("execution_id")
+
+  isImprovement   Boolean  @map("is_improvement")
+  deltaWhenVerified Float  @map("delta_when_verified")
+
+  verifiedAt      DateTime @default(now()) @map("verified_at")
+
+  rawEvidence     Json?    @map("raw_evidence")
+  details         Json?
+
+  @@unique([executionId])
+  @@map("verification_results")
+}
+
+model VerificationPolicy {
+  id              String   @id @default(uuid())
+
+  industry        String?
+  optimizationType String?
+
+  minimumDelta      Float  @default(1.0) @map("minimum_delta")
+  noiseThreshold    Float  @default(0.5) @map("noise_threshold")
+  minimumConfidence String @default("LOW") @map("minimum_confidence")
+
+  requireRevalidation Boolean @default(true) @map("require_revalidation")
+  maxRetries          Int     @default(3) @map("max_retries")
+
+  priority        Int      @default(0)
+
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("verification_policies")
+}
+
+model GrowthMemory {
+  id              String   @id @default(uuid())
+
+  industry        String
+  brandType       String?  @map("brand_type")
+  optimizationType String  @map("optimization_type")
+
+  totalExecutions Int      @default(0) @map("total_executions")
+  successfulCount Int      @default(0) @map("successful_count")
+  failedCount     Int      @default(0) @map("failed_count")
+  noChangeCount   Int      @default(0) @map("no_change_count")
+
+  totalDelta      Float    @default(0) @map("total_delta")
+  averageDelta    Float    @default(0) @map("average_delta")
+  successRate     Float    @default(0) @map("success_rate")
+
+  sampleSize      Int      @default(0) @map("sample_size")
+  confidence      String   @default("LOW") @map("confidence")
+
+  aggregationVersion String @default("v1") @map("aggregation_version")
+
+  lastUpdated     DateTime @updatedAt @map("last_updated")
+
+  @@unique([industry, brandType, optimizationType])
+  @@map("growth_memories")
+}
+
+model LearningSignal {
+  id              String   @id @default(uuid())
+
+  source          String
+  signalType      String   @map("signal_type")
+  originalValue   Float    @map("original_value")
+  normalizedValue Float    @map("normalized_value")
+
+  weight          Float    @default(1.0)
+  weightedValue   Float    @map("weighted_value")
+
+  industry        String?
+  optimizationType String?
+
+  reason          String?
+
+  executionId     String?  @map("execution_id")
+
+  generatedAt     DateTime @default(now()) @map("generated_at")
+
+  @@map("learning_signals")
+}
+
+model GeoScoreVersion {
+  id              String   @id @default(uuid())
+
+  version         String
+  releaseNote     String?  @map("release_note")
+  isActive        Boolean  @default(false) @map("is_active")
+
+  dimensionWeights Json?   @map("dimension_weights")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  activatedAt     DateTime? @map("activated_at")
+
+  @@map("geo_score_versions")
+}
+
+model GrowthKnowledge {
+  id              String   @id @default(uuid())
+
+  industry        String
+  brandType       String?
+  optimizationType String
+
+  insight         String
+  bestPractice    String?
+  commonFailure   String?
+
+  source          String?
+  sampleSize      Int
+  averageDelta    Float
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("growth_knowledge")
+}
+
+model PublishingRecord {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+  executionId     String?  @map("execution_id")
+
+  platform        String
+  adapterType     String   @map("adapter_type")
+
+  contentType     String   @map("content_type")
+  content         Json
+
+  status          String   @default("draft")
+  publishVersion  Int      @default(1) @map("publish_version")
+
+  beforeContent   Json?    @map("before_content")
+  afterContent    Json?    @map("after_content")
+  diffSummary     String?  @map("diff_summary")
+
+  reviewedBy      String?  @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+  approvalNote    String?  @map("approval_note")
+
+  rollbackVersion Int?     @map("rollback_version")
+  rollbackReason  String?  @map("rollback_reason")
+  rolledBackAt    DateTime? @map("rolled_back_at")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  publishedAt     DateTime? @map("published_at")
+
+  @@map("publishing_records")
 }

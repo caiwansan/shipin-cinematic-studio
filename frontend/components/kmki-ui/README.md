@@ -84,3 +84,18 @@ import KmkiEmptyState from '~/components/kmki-ui/EmptyState/index.vue'
 - 页面级组件
 - 调用特定 API 的组件
 - 超过 80 行的组件
+
+## ✅ Sprint 7 — GEO Workspace v1 新增
+
+| 组件 | 路径 | 说明 |
+|------|------|------|
+| Badge | kmki-ui/Badge | 状态标签（5 color, 2 size） |
+| Metric | kmki-ui/Metric | KPI 指标卡片（trend/subtitle） |
+| Timeline | kmki-ui/Timeline | 时间线容器 + TimelineItem |
+| ExplainPanel | kmki-ui/ExplainPanel | 可折叠解释面板（Why/Evidence/Confidence） |
+| DiffViewer | kmki-ui/DiffViewer | 差异对比（before/after） |
+| HealthIndicator | kmki-ui/HealthIndicator | 健康指示器（progress bar） |
+| ActivityFeed | kmki-ui/ActivityFeed | 活动流列表 |
+| Card | kmki-ui/Card | 通用卡片 |
+| EmptyState | kmki-ui/EmptyState | 空状态 |
+| Skeleton | kmki-ui/Skeleton | 加载骨架屏 |

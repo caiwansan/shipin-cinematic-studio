@@ -8,7 +8,7 @@ import { executionTraceService } from '../runtime/trace/ExecutionTraceService'
 
 export default async function geoTraceRoutes(fastify: FastifyInstance) {
   // GET /api/geo/traces?projectId=xxx&agent=xxx&limit=20&offset=0
-  fastify.get('/api/geo/traces', async (request, reply) => {
+  fastify.get('/api/geo/traces', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const { projectId, agent, limit, offset } = request.query as any
       const result = await executionTraceService.listTraces({
@@ -24,7 +24,7 @@ export default async function geoTraceRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/traces/:traceId
-  fastify.get('/api/geo/traces/:traceId', async (request, reply) => {
+  fastify.get('/api/geo/traces/:traceId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const { traceId } = request.params as any
       const trace = await executionTraceService.getTrace(traceId)
@@ -38,7 +38,7 @@ export default async function geoTraceRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/traces/project/:projectId/summary
-  fastify.get('/api/geo/traces/project/:projectId/summary', async (request, reply) => {
+  fastify.get('/api/geo/traces/project/:projectId/summary', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const { projectId } = request.params as any
       const summary = await executionTraceService.getProjectSummary(projectId)

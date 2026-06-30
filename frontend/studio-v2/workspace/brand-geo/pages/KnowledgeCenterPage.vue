@@ -2,8 +2,8 @@
   <div class="geo-page">
     <div class="geo-page-header">
       <div class="geo-page-header-left">
-        <h2 class="geo-page-title">📚 Knowledge 中心</h2>
-        <p class="geo-page-subtitle">管理知识对象，查看 Evidence、Claim、Citation 详情</p>
+        <h2 class="geo-page-title">📚 知识内容</h2>
+        <p class="geo-page-subtitle">查看和管理品牌相关知识内容</p>
       </div>
     </div>
 
@@ -17,8 +17,11 @@
       </div>
     </div>
 
-    <div v-if="!selectedProjectId" class="geo-empty-state">
-      <p>请先选择一个品牌项目</p>
+    <div v-if="!selectedProjectId" class="geo-page-empty">
+      <div class="geo-empty-state-icon">📚</div>
+      <div class="geo-empty-state-title">请先选择一个品牌</div>
+      <div class="geo-empty-state-desc">选择品牌后查看相关知识内容</div>
+      <button class="geo-btn geo-btn-primary" @click="$emit('navigate', 'brands')">查看品牌列表</button>
     </div>
 
     <template v-else-if="!loading">
@@ -36,8 +39,11 @@
         @select="selectKO"
       />
 
-      <div v-else class="geo-empty-state">
-        <p>暂无知识对象，请先运行 Entity Discovery 工作流</p>
+      <div v-else class="geo-page-empty">
+        <div class="geo-empty-state-icon">📚</div>
+        <div class="geo-empty-state-title">暂无知识内容</div>
+        <div class="geo-empty-state-desc">品牌分析中会自动生成知识内容，请先创建并分析一个品牌</div>
+        <button class="geo-btn geo-btn-primary" @click="handleCreateBrand">开始分析品牌</button>
       </div>
     </template>
 
@@ -59,6 +65,8 @@ import { ref, onMounted, computed } from 'vue'
 import KnowledgeStats from '../components/knowledge/KnowledgeStats.vue'
 import KnowledgeObjectList from '../components/knowledge/KnowledgeObjectList.vue'
 import KnowledgeObjectDetail from '../components/knowledge/KnowledgeObjectDetail.vue'
+import { brandService } from '../services/brandService'
+import { client } from '../clients/GEOApiClient'
 
 const loading = ref(false)
 const projects = ref<any[]>([])
@@ -73,21 +81,10 @@ const totalEvidence = computed(() =>
 const totalCitations = computed(() =>
   knowledgeObjects.value.reduce((s, ko) => s + (ko.citations?.length || 0), 0))
 
-function authHeaders(): Record<string, string> {
-  try {
-    for (const key of ['auth_token', 'accessToken', 'token']) {
-      const val = window.localStorage.getItem(key)
-      if (val) return { 'Content-Type': 'application/json', Authorization: `Bearer ${val}` }
-    }
-  } catch { /* ignore */ }
-  return { 'Content-Type': 'application/json' }
-}
-
 async function fetchProjects() {
   try {
-    const res = await fetch('/api/geo/brands', { headers: authHeaders() })
-    const json = await res.json()
-    if (json.success) projects.value = json.data
+    const brands = await brandService.list()
+    projects.value = brands as any[]
   } catch (err) { console.error('Failed to fetch projects:', err) }
 }
 
@@ -95,10 +92,10 @@ async function fetchKnowledgeObjects() {
   if (!selectedProjectId.value) return
   loading.value = true
   try {
-    const res = await fetch(`/api/geo/knowledge?projectId=${selectedProjectId.value}`, { headers: authHeaders() })
-    const json = await res.json()
-    if (json.success) {
-      knowledgeObjects.value = Array.isArray(json.data) ? json.data : (json.data?.items || [])
+    const res = await client.get<any[]>(`/knowledge?projectId=${selectedProjectId.value}`)
+    if (res.success) {
+      const data = res.data
+      knowledgeObjects.value = Array.isArray(data) ? data : (res as any).data?.items || []
     }
   } catch (err) { console.error('Failed to fetch knowledge objects:', err) }
   finally { loading.value = false }
@@ -106,10 +103,16 @@ async function fetchKnowledgeObjects() {
 
 async function selectKO(ko: any) {
   try {
-    const res = await fetch(`/api/geo/knowledge/${ko.id}`, { headers: authHeaders() })
-    const json = await res.json()
-    selectedKO.value = json.success ? json.data : ko
+    const res = await client.get<any>(`/knowledge/${ko.id}`)
+    selectedKO.value = res.success ? res.data : ko
   } catch { selectedKO.value = ko }
+}
+
+function handleCreateBrand() {
+  const url = new URL(window.location.href)
+  url.searchParams.set('panel', 'wizard')
+  window.history.replaceState({}, '', url.toString())
+  window.location.reload()
 }
 
 onMounted(fetchProjects)
@@ -130,4 +133,13 @@ onMounted(fetchProjects)
 .geo-loading-state { padding: 40px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; color: #6b7280; }
 .geo-loading-spinner { width: 16px; height: 16px; border: 2px solid rgba(129,140,248,0.2); border-top-color: #818cf8; border-radius: 50%; animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.geo-btn { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+.geo-btn-primary { background: linear-gradient(135deg, #818cf8, #6366f1); color: white; }
+.geo-btn-primary:hover { opacity: 0.9; }
+
+/* ── Empty State ── */
+.geo-page-empty { padding: 60px 20px; text-align: center; }
+.geo-empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+.geo-empty-state-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #e0e0e0; }
+.geo-empty-state-desc { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
 </style>

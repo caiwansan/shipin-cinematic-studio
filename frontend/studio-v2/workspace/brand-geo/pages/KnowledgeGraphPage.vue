@@ -1,9 +1,9 @@
 <template>
   <div class="geo-knowledge-graph">
     <div class="geo-panel-header">
-      <h3 class="geo-panel-title">🔗 知识图谱</h3>
+      <h3 class="geo-panel-title">🔗 知识关系图</h3>
       <p class="geo-panel-subtitle">
-        管理品牌的知识图谱节点和关系。节点表示品牌相关实体，边表示实体间关系。
+        查看品牌相关知识关联关系
       </p>
     </div>
 
@@ -116,6 +116,7 @@ import { ref, reactive, watch } from 'vue'
 import { useBrandGeoStore } from '~/studio-v2/workspace/brand-geo/stores/useBrandGeoStore'
 import { useGeoHydrate } from '~/studio-v2/workspace/brand-geo/composables/useGeoHydrate'
 import type { GeoGraphNode, GeoGraphEdge } from '~/studio-v2/types/geo'
+import { client } from '~/studio-v2/workspace/brand-geo/clients/GEOApiClient'
 
 const props = defineProps<{
   projectId: string
@@ -128,25 +129,13 @@ const error = ref('')
 // Hydrate as primary data source (for execution results context)
 const { loading } = useGeoHydrate(() => props.projectId)
 
-// Graph data fetched directly via existing backend routes (bypasses old store)
+// Graph data fetched directly via existing backend routes
 const nodes = ref<GeoGraphNode[]>([])
 const edges = ref<GeoGraphEdge[]>([])
 
-// Inline authFetch — same pattern as useGeoHydrate  
-function getAuthHeaders(): Record<string, string> {
-  try {
-    const token = localStorage.getItem('token') || ''
-    return token ? { Authorization: `Bearer ${token}` } : {}
-  } catch { return {} }
-}
-
 async function authFetch(url: string) {
-  const res = await fetch(url, { headers: getAuthHeaders() })
-  if (!res.ok) {
-    if (res.status === 404) return null
-    throw new Error(`HTTP ${res.status} ${res.statusText}`)
-  }
-  return res.json()
+  const res = await client.get<any>(url)
+  return res
 }
 
 async function loadGraph() {
@@ -154,18 +143,18 @@ async function loadGraph() {
   error.value = ''
   try {
     const [graphRes, edgesRes] = await Promise.all([
-      authFetch(`/api/geo/projects/${props.projectId}/graph`),
-      authFetch(`/api/geo/projects/${props.projectId}/graph/edges`),
+      authFetch(`/projects/${props.projectId}/graph`),
+      authFetch(`/projects/${props.projectId}/graph/edges`),
     ])
-    if (graphRes?.data) {
+    if (graphRes?.success && graphRes.data) {
       nodes.value = Array.isArray(graphRes.data) ? graphRes.data
-        : graphRes.data.nodes || []
+        : (graphRes.data as any).nodes || []
     } else {
       nodes.value = []
     }
-    if (edgesRes?.data) {
+    if (edgesRes?.success && edgesRes.data) {
       edges.value = Array.isArray(edgesRes.data) ? edgesRes.data
-        : edgesRes.data.edges || []
+        : (edgesRes.data as any).edges || []
     } else {
       edges.value = []
     }

@@ -1,0 +1,98 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "GEO v4 Verification Engine API",
+    "version": "1.0.0",
+    "description": "Verification Engine — Truth Layer for GEO optimization"
+  },
+  "paths": {
+    "/api/geo/verification/run": {
+      "post": {
+        "summary": "Execute verification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projectId": { "type": "string" },
+                  "optimizationType": { "type": "string" },
+                  "executionId": { "type": "string" },
+                  "triggerSource": { "type": "string" }
+                },
+                "required": ["projectId", "optimizationType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "executionId": { "type": "string" },
+                        "jobStatus": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/geo/verification/job/{executionId}": {
+      "get": {
+        "summary": "Get verification job status",
+        "parameters": [{ "name": "executionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Job status" } }
+      }
+    },
+    "/api/geo/verification/history/{projectId}": {
+      "get": {
+        "summary": "Get verification history",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "History list" } }
+      }
+    },
+    "/api/geo/verification/compare/{beforeExecutionId}/{afterExecutionId}": {
+      "get": {
+        "summary": "Compare two verifications",
+        "parameters": [
+          { "name": "beforeExecutionId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "afterExecutionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Compare result" } }
+      }
+    },
+    "/api/geo/verification/evidence/{projectId}": {
+      "get": {
+        "summary": "Get evidence list",
+        "parameters": [{ "name": "projectId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Evidence list" } }
+      }
+    },
+    "/api/geo/verification/timeline/{projectId}": {
+      "get": {
+        "summary": "Get verification timeline",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Timeline events" } }
+      }
+    }
+  }
+}

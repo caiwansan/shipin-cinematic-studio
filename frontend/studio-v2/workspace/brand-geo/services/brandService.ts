@@ -1,56 +1,79 @@
-// ============================================================
-// BrandGEO — 品牌管理 Service
-// ============================================================
-
-import type { Brand } from '~/studio-v2/types/geo'
-import { getAuthHeaders, handleResponse } from './utils'
-
-const BASE = '/api/geo/brands'
+/**
+ * brandService — Brand/Project operations via GEOApiClient.
+ */
+import { client } from '../clients/GEOApiClient'
+import type { Brand } from '../components/brand/types'
 
 export const brandService = {
-  /** 获取品牌列表 */
   async list(): Promise<Brand[]> {
-    const res = await fetch(BASE, { headers: getAuthHeaders() })
-    const json = await handleResponse(res)
-    return json.data?.brands || []
+    const res = await client.get<Brand[]>('/brands')
+    return Array.isArray(res.data) ? res.data : []
   },
 
-  /** 获取单个品牌 */
   async get(id: string): Promise<Brand | null> {
-    const res = await fetch(`${BASE}/${id}`, { headers: getAuthHeaders() })
-    const json = await handleResponse(res)
-    return json.data?.brand || null
+    const res = await client.get<{ brand: Brand }>(`/brands/${id}`)
+    return res.data?.brand || null
   },
 
-  /** 创建品牌 */
   async create(data: Partial<Brand>): Promise<Brand | null> {
-    const res = await fetch(BASE, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    })
-    const json = await handleResponse(res)
-    return json.data?.brand || null
+    const res = await client.post<{ brand: Brand }>('/brands', data)
+    return res.data?.brand || null
   },
 
-  /** 更新品牌 */
-  async update(id: string, data: Partial<Brand>): Promise<boolean> {
-    const res = await fetch(`${BASE}/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    })
-    await handleResponse(res)
-    return true
+  async update(id: string, data: Partial<Brand>): Promise<void> {
+    await client.put(`/brands/${id}`, data)
   },
 
-  /** 删除品牌 */
-  async remove(id: string): Promise<boolean> {
-    const res = await fetch(`${BASE}/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    })
-    await handleResponse(res)
-    return true
+  async remove(id: string): Promise<void> {
+    await client.delete(`/brands/${id}`)
+  },
+
+  async getSettings(id: string): Promise<Record<string, unknown>> {
+    const res = await client.get<Record<string, unknown>>(`/brands/${id}/settings`)
+    return res.data || {}
+  },
+
+  async updateSettings(id: string, data: Record<string, unknown>): Promise<void> {
+    await client.put(`/brands/${id}/settings`, data)
+  },
+
+  async getStatus(id: string): Promise<Record<string, unknown>> {
+    const res = await client.get<Record<string, unknown>>(`/brands/${id}/status`)
+    return res.data || {}
+  },
+
+  /**
+   * One-click: create brand → start scan → auto-create keywords
+   * Returns {brand, scan, keywords} result
+   */
+  async createAndAnalyze(name: string): Promise<{ brand: Brand | null; scan: any; keywords: any }> {
+    // 1. Create brand
+    const brand = await this.create({ name } as Partial<Brand>)
+    if (!brand || !brand.id) throw new Error('创建品牌失败')
+
+    let scanResult: any = null
+    let keywordResult: any = null
+
+    // 2. Auto-start scan
+    try {
+      scanResult = await client.post('/scans', { projectId: brand.id, scanType: 'website' })
+    } catch {
+      // non-blocking
+    }
+
+    // 3. Auto-create keywords
+    try {
+      keywordResult = await client.post('/keywords', {
+        projectId: brand.id,
+        keywords: [
+          { keyword: name, type: 'brand', source: 'auto' },
+          { keyword: `${name} 品牌`, type: 'brand', source: 'auto' },
+        ].filter(k => k.keyword),
+      })
+    } catch {
+      // non-blocking
+    }
+
+    return { brand, scan: scanResult, keywords: keywordResult }
   },
 }

@@ -67,6 +67,15 @@ export type GeoPanelId =
   // Phase 4: Goal Runtime (Growth Execution Layer)
   | 'growth-dashboard'
   | 'goal-timeline'
+  // Sprint 3: Workflow Completion
+  | 'evidence'
+  | 'evidence-detail'
+  | 'claim'
+  | 'claim-detail'
+  | 'history'
+  | 'report'
+  // Sprint 7: GEO Workspace v1
+  | 'workspace-v1'
 
 /** GEO Runtime */
 export interface BrandGEORuntime {
@@ -83,6 +92,9 @@ export interface BrandGEORuntime {
   competitors: Competitor[]
   projects: GeoProject[]
   tasks: GeoTask[]
+
+  // P1.5 — Knowledge Objects
+  knowledgeObjects: any[]
 
   // V2 data
   v2Projects: GeoProjectV2[]

@@ -572,6 +572,31 @@ await app.register(projectV2Routes)
   await app.register(await import('./services/geo/routes/geo-keyword.route.js').then(m => m.default))
   await app.register(await import('./services/geo/routes/geo-scan.route.js').then(m => m.default))
   await app.register(await import('./services/geo/routes/geo-dashboard.route.js').then(m => m.default))
+  // Sprint 3 — GEO Recommendation Engine (GEO v2 MVP)
+  await app.register(await import('./services/geo/recommendation/recommendation.route.js').then(m => m.geoRecommendationRoutes))
+  // GEO v3 — Growth Engine Routes
+  await app.register(await import('./services/geo/growth/growth.route.js').then(m => m.geoGrowthRoutes))
+  // Sprint 4 — Data Integration Routes
+  await app.register(await import('./services/geo/routes/geo-evidence.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-claim.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-history.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-report.route.js').then(m => m.default))
+  // GEO v4 Verification routes — Truth Layer MVP
+  await app.register(await import('./services/geo/verification/verification.route.js').then(m => m.geoVerificationRoutes))
+  // GEO v4 Publishing routes — Publishing Pipeline
+  await app.register(await import('./services/geo/publishing/publishing.route.js').then(m => m.geoPublishingRoutes))
+  // GEO v4 Monitor routes — Observation Runtime
+  try {
+    await app.register(await import('./services/geo/monitor/monitor.route.js').then(m => m.geoMonitorRoutes))
+  } catch (err) {
+    console.warn('[startup] ⚠️ Monitor route skipped:', (err as Error).message)
+  }
+  // GEO v4 Learning routes — Learning Engine
+  try {
+    await app.register(await import('./services/geo/growth/learning.route.js').then(m => m.geoLearningRoutes))
+  } catch (err) {
+    console.warn('[startup] ⚠️ Learning route skipped:', (err as Error).message)
+  }
   // Unified Asset Runtime routes — wrapped to avoid tsx @platform alias issue
   try { await app.register(await import('./routes/asset/asset.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset route skipped:', (err as Error).message) }
   try { await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset version route skipped:', (err as Error).message) }

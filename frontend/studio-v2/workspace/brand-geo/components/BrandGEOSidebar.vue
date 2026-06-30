@@ -6,10 +6,9 @@
     </a>
 
     <nav class="geo-sidebar-nav">
-      <!-- 产品导航 -->
-      <div class="geo-nav-section-label" v-if="showDeveloper">产品功能</div>
+      <!-- Consumer navigation (always visible) -->
       <div
-        v-for="item in productMenuItems"
+        v-for="item in consumerMenuItems"
         :key="item.id"
         class="geo-sidebar-item"
         :class="{ active: item.id === activePanelId }"
@@ -17,28 +16,33 @@
       >
         <span class="geo-sidebar-icon">{{ item.icon }}</span>
         <span class="geo-sidebar-label">{{ item.label }}</span>
-        <span v-if="item.badge" class="geo-sidebar-badge">{{ item.badge }}</span>
       </div>
 
-      <!-- 开发者导航 -->
-      <template v-if="showDeveloper">
+      <!-- Advanced section (collapsible) -->
+      <template v-if="showAdvanced">
         <div class="geo-nav-section-divider"></div>
-        <div class="geo-nav-section-label">开发者工具</div>
+        <div class="geo-nav-section-label">高级功能</div>
         <div
-          v-for="item in developerMenuItems"
+          v-for="item in advancedMenuItems"
           :key="item.id"
-          class="geo-sidebar-item"
+          class="geo-sidebar-item geo-sidebar-item--advanced"
           :class="{ active: item.id === activePanelId }"
           @click="navigate(item.id)"
         >
           <span class="geo-sidebar-icon">{{ item.icon }}</span>
           <span class="geo-sidebar-label">{{ item.label }}</span>
-          <span v-if="item.badge" class="geo-sidebar-badge">{{ item.badge }}</span>
         </div>
       </template>
     </nav>
 
     <div class="geo-sidebar-footer">
+      <!-- Beginner/Expert toggle -->
+      <div class="geo-sidebar-mode-toggle" @click="toggleMode">
+        <span class="geo-mode-icon">{{ isExpert ? '🔬' : '🌟' }}</span>
+        <span class="geo-mode-label">{{ isExpert ? '专家模式' : '简易模式' }}</span>
+        <span class="geo-mode-arrow">{{ isExpert ? '◁' : '▷' }}</span>
+      </div>
+
       <div class="geo-sidebar-footer-card" @click="goHome">
         <span class="geo-footer-icon">🏠</span>
         <span class="geo-footer-label">返回首页</span>
@@ -48,10 +52,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { GEO_SIDEBAR_MENU, GEO_DEVELOPER_MENU } from '~/studio-v2/workspace/brand-geo/config/sidebar'
+import { ref, computed, onMounted } from 'vue'
+import { GEO_CONSUMER_MENU, GEO_ADVANCED_MENU } from '~/studio-v2/workspace/brand-geo/config/sidebar'
 import type { SidebarMenuItem } from '~/studio-v2/types/geo'
-import type { GeoPanelId } from '~/studio-v2/types/geo'
 
 const props = defineProps<{
   activePanelId: GeoPanelId
@@ -61,11 +64,28 @@ const emit = defineEmits<{
   navigate: [panelId: GeoPanelId]
 }>()
 
-// 开发者菜单默认可见，生产环境可改为 user store 判断
-const showDeveloper = computed(() => true)
+const MODE_KEY = 'geo-mode'
 
-const productMenuItems: SidebarMenuItem[] = GEO_SIDEBAR_MENU
-const developerMenuItems: SidebarMenuItem[] = GEO_DEVELOPER_MENU
+const isExpert = ref(false)
+
+onMounted(() => {
+  try {
+    const stored = localStorage.getItem(MODE_KEY)
+    isExpert.value = stored === 'expert'
+  } catch { /* ignore */ }
+})
+
+const consumerMenuItems: SidebarMenuItem[] = GEO_CONSUMER_MENU
+const advancedMenuItems: SidebarMenuItem[] = GEO_ADVANCED_MENU
+
+const showAdvanced = computed(() => isExpert.value)
+
+function toggleMode() {
+  isExpert.value = !isExpert.value
+  try {
+    localStorage.setItem(MODE_KEY, isExpert.value ? 'expert' : 'beginner')
+  } catch { /* ignore */ }
+}
 
 function navigate(panelId: string) {
   emit('navigate', panelId as GeoPanelId)
@@ -152,6 +172,10 @@ function goHome() {
   border-color: rgba(99, 102, 241, 0.2);
   color: #a5b4fc;
 }
+.geo-sidebar-item--advanced {
+  font-size: 12px;
+  color: #6b7280;
+}
 .geo-sidebar-icon {
   font-size: 16px;
   width: 20px;
@@ -161,19 +185,37 @@ function goHome() {
   flex: 1;
   font-weight: 500;
 }
-.geo-sidebar-badge {
-  background: #ef4444;
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 8px;
-}
 
+/* ── Mode Toggle ── */
+.geo-sidebar-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 4px;
+}
+.geo-sidebar-mode-toggle:hover {
+  background: rgba(99,102,241,0.08);
+  border-color: rgba(99,102,241,0.2);
+}
+.geo-mode-icon { font-size: 14px; }
+.geo-mode-label { flex: 1; font-size: 12px; font-weight: 600; color: #9ca3af; }
+.geo-mode-arrow { font-size: 12px; color: #6b7280; }
+
+/* ── Footer ── */
 .geo-sidebar-footer {
   padding: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
+
 .geo-sidebar-footer-card {
   display: flex;
   align-items: center;

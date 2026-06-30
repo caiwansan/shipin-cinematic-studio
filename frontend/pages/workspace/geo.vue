@@ -10,7 +10,19 @@ definePageMeta({
 })
 
 console.log('[BrandGEO] geo.vue page mounted')
-import BrandGEOWorkspace from '~/studio-v2/workspace/brand-geo/BrandGEOWorkspace.vue'
+
+// Debug token status
+if (import.meta.client) {
+  const lsToken = window.localStorage?.getItem('auth_token')
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)auth_token=([^;]+)/)
+  console.log('[BrandGEO] 🔑 Token debug:', {
+    localStorage: lsToken ? lsToken.slice(0, 20) + '...' : null,
+    cookie: cookieMatch ? cookieMatch[1].slice(0, 20) + '...' : null,
+    allCookies: document.cookie
+  })
+}
+
+import BrandGEOWorkspace from '~/studio-v2/workspace/brand-geo-v2/GeoWorkspaceV1.vue'
 </script>
 
 <style>

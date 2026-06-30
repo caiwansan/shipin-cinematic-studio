@@ -7,10 +7,11 @@
 //   2. watcher 事件是 hydrate 的伴生数据流，不属于独立状态
 //   3. 执行动作后自动触发 refresh
 //
-// Freeze Manifest: docs/freeze/GEO-FRONTEND-FREEZE-MANIFEST.md
+// Uses GEOApiClient for GEO endpoints, bare fetch for legacy hydrate API
 // ============================================================
 
-import { ref, computed, readonly, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, readonly, watch } from 'vue'
+import { client } from '../clients/GEOApiClient'
 
 // ---- Types ----
 export interface HydrateProject {
@@ -110,7 +111,7 @@ export function useGeoHydrate(projectId: string | null | undefined | (() => stri
   // ---- Core: Load Hydrate ----
   async function loadHydrate() {
     if (!projectId) return
-    
+
     // GEO 项目的 id 是 UUID v4 格式（xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx）
     // 且 GEO 项目不存在于旧 Project 表中，hydrate API 必然返回 404。
     // 直接注入空数据结构，跳过 API 调用。
@@ -136,8 +137,6 @@ export function useGeoHydrate(projectId: string | null | undefined | (() => stri
       } else if (res.status === 401 || res.status === 403) {
         state.value.error = '认证失败，请重新登录'
       } else if (res.status === 404) {
-        // 404: GEO 项目没有独立的 hydrate API（项目已创建，在 /api/geo/projects 中管理）
-        // 静默降级，不影响页面渲染
         state.value.hydrate = {
           project: { id: projectId, name: '', executionResults: null, status: 'draft' },
           designSpec: null, production: null, characters: [],
@@ -160,10 +159,9 @@ export function useGeoHydrate(projectId: string | null | undefined | (() => stri
   async function loadWatcherEvents() {
     if (!projectId) return
     try {
-      const res = await authFetch(`/api/geo/watcher/recent?entityId=${projectId}`)
-      if (res.ok) {
-        const data = await res.json()
-        state.value.watcherEvents = data.data || data.events || []
+      const res = await client.get<{ data: WatcherEvent[] }>(`/watcher/recent?entityId=${projectId}`)
+      if (res.success && res.data) {
+        state.value.watcherEvents = Array.isArray(res.data) ? res.data : (res.data as any).data || []
       }
     } catch {}
   }
@@ -187,7 +185,6 @@ export function useGeoHydrate(projectId: string | null | undefined | (() => stri
         success: res.ok,
         message: data.error || data.message || (data.success ? '执行成功' : '执行返回异常'),
       }
-      // 动作后自动刷新
       setTimeout(() => { loadHydrate(); loadWatcherEvents() }, 500)
       return res.ok
     } catch (e: any) {
@@ -200,7 +197,6 @@ export function useGeoHydrate(projectId: string | null | undefined | (() => stri
 
   // ---- Actions ----
   function discoverEntities() {
-    // Read topic from hydrate data (fallback: projectId)
     const topic = state.value.hydrate?.project?.name || projectId
     return executeAction('discovery', `/api/geo/projects/${projectId}/discover`, { topic })
   }
@@ -210,9 +206,7 @@ export function useGeoHydrate(projectId: string | null | undefined | (() => stri
   }
 
   function evaluateQuality() {
-    // 自动从 graphNodes 获取 entityIds（discover 的结果）
-    const entityIds: string[] = state.value.graphNodes?.map(n => n.id).filter(Boolean) || []
-    // 如果没有 entityIds，跳过 API 直接返回（无需评估）
+    const entityIds: string[] = (state.value as any).graphNodes?.map((n: any) => n.id).filter(Boolean) || []
     if (entityIds.length === 0) {
       state.value.actionResult = { success: true, message: '没有可评估的实体，请先执行实体发现' }
       return true

@@ -3,5 +3,5 @@
 </template>
 
 <script setup lang="ts">
-import StudioWorkspaceLayout from '~/studio-v2/layout/StudioWorkspaceLayout.vue'
+import StudioWorkspaceLayout from '../layout/StudioWorkspaceLayout.vue'
 </script>

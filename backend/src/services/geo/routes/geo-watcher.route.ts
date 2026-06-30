@@ -4,13 +4,11 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '../../utils/index.js'
 
 export default async function geoWatcherRoutes(fastify: FastifyInstance) {
   // GET /api/geo/watcher/recent — 最近的 watcher 事件
-  fastify.get('/api/geo/watcher/recent', async (request, reply) => {
+  fastify.get('/api/geo/watcher/recent', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const query = request.query as any
     const entityId = query?.entityId as string | undefined
 
@@ -40,7 +38,7 @@ export default async function geoWatcherRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/watcher/summary — 摘要统计
-  fastify.get('/api/geo/watcher/summary', async (request, reply) => {
+  fastify.get('/api/geo/watcher/summary', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const counts = await prisma.$queryRawUnsafe<Array<{ status: string; count: bigint }>>(
         `SELECT status, COUNT(*) as count FROM dual_write_watcher_events GROUP BY status`
@@ -56,7 +54,7 @@ export default async function geoWatcherRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/watcher/drift — 漂移检测结果
-  fastify.get('/api/geo/watcher/drift', async (request, reply) => {
+  fastify.get('/api/geo/watcher/drift', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const driftRows = await prisma.$queryRawUnsafe<Array<{ entity: string; entity_id: string; diff: string; created_at: string }>>(
         `SELECT entity, entity_id::text, diff, created_at::text

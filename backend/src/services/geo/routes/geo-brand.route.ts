@@ -32,11 +32,19 @@ interface BrandSettingUpdateBody {
 
 async function getUserMembership(userId: string): Promise<string> {
   try {
+    // First try User.memberTier
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { membership: true },
+      select: { memberTier: true },
     })
-    if (user?.membership?.type) return user.membership.type
+    if (user?.memberTier && user.memberTier !== 'free') return user.memberTier
+
+    // Fallback to Membership.tier
+    const membership = await prisma.membership.findUnique({
+      where: { userId },
+      select: { tier: true },
+    })
+    if (membership?.tier && membership.tier !== 'free') return membership.tier
   } catch { /* ignore */ }
   return 'free'
 }
@@ -50,8 +58,14 @@ function getBrandQuotaLimit(membershipType: string): number {
     case 'premium':
     case 'advanced':
       return 10
+    case 'enterprise':
+    case 'Pro':
+    case 'director':
+    case 'vip_year':
+    case 'vip_platinum':
+      return 999999
     default:
-      return 0
+      return 1
   }
 }
 

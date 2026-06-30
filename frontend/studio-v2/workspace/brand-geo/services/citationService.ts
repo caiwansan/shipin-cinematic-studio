@@ -1,38 +1,27 @@
 // ============================================================
 // BrandGEO — 引用追踪 Service
+// 统一使用 GEOApiClient singleton
 // ============================================================
 
+import { client } from '../clients/GEOApiClient'
 import type { Citation } from '~/studio-v2/types/geo'
-import { getAuthHeaders, handleResponse } from './utils'
-
-const BASE = '/api/geo/brands'
 
 export const citationService = {
   /** 获取引用列表 */
   async list(brandId: string): Promise<Citation[]> {
-    const res = await fetch(`${BASE}/${brandId}/citations`, { headers: getAuthHeaders() })
-    const json = await handleResponse(res)
-    return json.data?.citations || []
+    const res = await client.get<{ citations: Citation[] }>(`/brands/${brandId}/citations`)
+    return res.data?.citations || []
   },
 
   /** 添加引用 */
   async create(brandId: string, data: Partial<Citation>): Promise<Citation | null> {
-    const res = await fetch(`${BASE}/${brandId}/citations`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    })
-    const json = await handleResponse(res)
-    return json.data?.citation || null
+    const res = await client.post<{ citation: Citation }>(`/brands/${brandId}/citations`, data)
+    return res.data?.citation || null
   },
 
   /** 删除引用 */
   async remove(brandId: string, citationId: string): Promise<boolean> {
-    const res = await fetch(`${BASE}/${brandId}/citations/${citationId}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    })
-    await handleResponse(res)
+    await client.delete(`/brands/${brandId}/citations/${citationId}`)
     return true
   },
 }

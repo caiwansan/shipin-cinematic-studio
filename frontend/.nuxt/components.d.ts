@@ -22,6 +22,16 @@ interface _GlobalComponents {
     'DirectorModelSettingsModal': typeof import("../components/director/ModelSettingsModal.vue")['default']
     'DirectorOllamaSetupModal': typeof import("../components/director/OllamaSetupModal.vue")['default']
     'HdzLibraryReaderPanel': typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
+    'KmkiUiActivityFeed': typeof import("../components/kmki-ui/ActivityFeed/index.vue")['default']
+    'KmkiUiBadge': typeof import("../components/kmki-ui/Badge/index.vue")['default']
+    'KmkiUiCard': typeof import("../components/kmki-ui/Card/index.vue")['default']
+    'KmkiUiDiffViewer': typeof import("../components/kmki-ui/DiffViewer/index.vue")['default']
+    'KmkiUiEmptyState': typeof import("../components/kmki-ui/EmptyState/index.vue")['default']
+    'KmkiUiExplainPanel': typeof import("../components/kmki-ui/ExplainPanel/index.vue")['default']
+    'KmkiUiHealthIndicator': typeof import("../components/kmki-ui/HealthIndicator/index.vue")['default']
+    'KmkiUiMetric': typeof import("../components/kmki-ui/Metric/index.vue")['default']
+    'KmkiUiSkeleton': typeof import("../components/kmki-ui/Skeleton/index.vue")['default']
+    'KmkiUiTimeline': typeof import("../components/kmki-ui/Timeline/index.vue")['default']
     'KunlunBaseGlassPanel': typeof import("../components/kunlun/base/GlassPanel.vue")['default']
     'KunlunBaseMirrorPanel': typeof import("../components/kunlun/base/MirrorPanel.vue")['default']
     'KunlunBusinessKunlunFooter': typeof import("../components/kunlun/business/KunlunFooter.vue")['default']
@@ -84,6 +94,16 @@ interface _GlobalComponents {
     'LazyDirectorModelSettingsModal': LazyComponent<typeof import("../components/director/ModelSettingsModal.vue")['default']>
     'LazyDirectorOllamaSetupModal': LazyComponent<typeof import("../components/director/OllamaSetupModal.vue")['default']>
     'LazyHdzLibraryReaderPanel': LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
+    'LazyKmkiUiActivityFeed': LazyComponent<typeof import("../components/kmki-ui/ActivityFeed/index.vue")['default']>
+    'LazyKmkiUiBadge': LazyComponent<typeof import("../components/kmki-ui/Badge/index.vue")['default']>
+    'LazyKmkiUiCard': LazyComponent<typeof import("../components/kmki-ui/Card/index.vue")['default']>
+    'LazyKmkiUiDiffViewer': LazyComponent<typeof import("../components/kmki-ui/DiffViewer/index.vue")['default']>
+    'LazyKmkiUiEmptyState': LazyComponent<typeof import("../components/kmki-ui/EmptyState/index.vue")['default']>
+    'LazyKmkiUiExplainPanel': LazyComponent<typeof import("../components/kmki-ui/ExplainPanel/index.vue")['default']>
+    'LazyKmkiUiHealthIndicator': LazyComponent<typeof import("../components/kmki-ui/HealthIndicator/index.vue")['default']>
+    'LazyKmkiUiMetric': LazyComponent<typeof import("../components/kmki-ui/Metric/index.vue")['default']>
+    'LazyKmkiUiSkeleton': LazyComponent<typeof import("../components/kmki-ui/Skeleton/index.vue")['default']>
+    'LazyKmkiUiTimeline': LazyComponent<typeof import("../components/kmki-ui/Timeline/index.vue")['default']>
     'LazyKunlunBaseGlassPanel': LazyComponent<typeof import("../components/kunlun/base/GlassPanel.vue")['default']>
     'LazyKunlunBaseMirrorPanel': LazyComponent<typeof import("../components/kunlun/base/MirrorPanel.vue")['default']>
     'LazyKunlunBusinessKunlunFooter': LazyComponent<typeof import("../components/kunlun/business/KunlunFooter.vue")['default']>
@@ -152,6 +172,16 @@ export const DirectorLocalEngineInstaller: typeof import("../components/director
 export const DirectorModelSettingsModal: typeof import("../components/director/ModelSettingsModal.vue")['default']
 export const DirectorOllamaSetupModal: typeof import("../components/director/OllamaSetupModal.vue")['default']
 export const HdzLibraryReaderPanel: typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
+export const KmkiUiActivityFeed: typeof import("../components/kmki-ui/ActivityFeed/index.vue")['default']
+export const KmkiUiBadge: typeof import("../components/kmki-ui/Badge/index.vue")['default']
+export const KmkiUiCard: typeof import("../components/kmki-ui/Card/index.vue")['default']
+export const KmkiUiDiffViewer: typeof import("../components/kmki-ui/DiffViewer/index.vue")['default']
+export const KmkiUiEmptyState: typeof import("../components/kmki-ui/EmptyState/index.vue")['default']
+export const KmkiUiExplainPanel: typeof import("../components/kmki-ui/ExplainPanel/index.vue")['default']
+export const KmkiUiHealthIndicator: typeof import("../components/kmki-ui/HealthIndicator/index.vue")['default']
+export const KmkiUiMetric: typeof import("../components/kmki-ui/Metric/index.vue")['default']
+export const KmkiUiSkeleton: typeof import("../components/kmki-ui/Skeleton/index.vue")['default']
+export const KmkiUiTimeline: typeof import("../components/kmki-ui/Timeline/index.vue")['default']
 export const KunlunBaseGlassPanel: typeof import("../components/kunlun/base/GlassPanel.vue")['default']
 export const KunlunBaseMirrorPanel: typeof import("../components/kunlun/base/MirrorPanel.vue")['default']
 export const KunlunBusinessKunlunFooter: typeof import("../components/kunlun/business/KunlunFooter.vue")['default']
@@ -214,6 +244,16 @@ export const LazyDirectorLocalEngineInstaller: LazyComponent<typeof import("../c
 export const LazyDirectorModelSettingsModal: LazyComponent<typeof import("../components/director/ModelSettingsModal.vue")['default']>
 export const LazyDirectorOllamaSetupModal: LazyComponent<typeof import("../components/director/OllamaSetupModal.vue")['default']>
 export const LazyHdzLibraryReaderPanel: LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
+export const LazyKmkiUiActivityFeed: LazyComponent<typeof import("../components/kmki-ui/ActivityFeed/index.vue")['default']>
+export const LazyKmkiUiBadge: LazyComponent<typeof import("../components/kmki-ui/Badge/index.vue")['default']>
+export const LazyKmkiUiCard: LazyComponent<typeof import("../components/kmki-ui/Card/index.vue")['default']>
+export const LazyKmkiUiDiffViewer: LazyComponent<typeof import("../components/kmki-ui/DiffViewer/index.vue")['default']>
+export const LazyKmkiUiEmptyState: LazyComponent<typeof import("../components/kmki-ui/EmptyState/index.vue")['default']>
+export const LazyKmkiUiExplainPanel: LazyComponent<typeof import("../components/kmki-ui/ExplainPanel/index.vue")['default']>
+export const LazyKmkiUiHealthIndicator: LazyComponent<typeof import("../components/kmki-ui/HealthIndicator/index.vue")['default']>
+export const LazyKmkiUiMetric: LazyComponent<typeof import("../components/kmki-ui/Metric/index.vue")['default']>
+export const LazyKmkiUiSkeleton: LazyComponent<typeof import("../components/kmki-ui/Skeleton/index.vue")['default']>
+export const LazyKmkiUiTimeline: LazyComponent<typeof import("../components/kmki-ui/Timeline/index.vue")['default']>
 export const LazyKunlunBaseGlassPanel: LazyComponent<typeof import("../components/kunlun/base/GlassPanel.vue")['default']>
 export const LazyKunlunBaseMirrorPanel: LazyComponent<typeof import("../components/kunlun/base/MirrorPanel.vue")['default']>
 export const LazyKunlunBusinessKunlunFooter: LazyComponent<typeof import("../components/kunlun/business/KunlunFooter.vue")['default']>

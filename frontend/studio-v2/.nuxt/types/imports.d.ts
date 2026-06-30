@@ -112,6 +112,7 @@ declare global {
   const useModel: typeof import('vue')['useModel']
   const useNuxtApp: typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/nuxt')['useNuxtApp']
   const useNuxtData: typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']
+  const useNuxtDevTools: typeof import('../../../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools')['useNuxtDevTools']
   const usePreviewMode: typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']
   const useRequestEvent: typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/ssr')['useRequestEvent']
   const useRequestFetch: typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/ssr')['useRequestFetch']
@@ -157,6 +158,8 @@ declare global {
   const useShadowRoot: typeof import('vue')['useShadowRoot']
   const useSlots: typeof import('vue')['useSlots']
   const useState: typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/state')['useState']
+  const useStyleLock: typeof import('../../composables/useStyleLock')['useStyleLock']
+  const useTaskPolling: typeof import('../../composables/useTaskPolling')['useTaskPolling']
   const useTemplateRef: typeof import('vue')['useTemplateRef']
   const useTransitionState: typeof import('vue')['useTransitionState']
   const watch: typeof import('vue')['watch']
@@ -175,6 +178,9 @@ declare global {
   // @ts-ignore
   export type { Component, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
+  // @ts-ignore
+  export type { StyleProfileData } from '../../composables/useStyleLock'
+  import('../../composables/useStyleLock')
 }
 // for vue template auto import
 import { UnwrapRef } from 'vue'
@@ -291,6 +297,7 @@ declare module 'vue' {
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNuxtApp: UnwrapRef<typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/nuxt')['useNuxtApp']>
     readonly useNuxtData: UnwrapRef<typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']>
+    readonly useNuxtDevTools: UnwrapRef<typeof import('../../../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools')['useNuxtDevTools']>
     readonly usePreviewMode: UnwrapRef<typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']>
     readonly useRequestEvent: UnwrapRef<typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/ssr')['useRequestEvent']>
     readonly useRequestFetch: UnwrapRef<typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/ssr')['useRequestFetch']>
@@ -336,6 +343,8 @@ declare module 'vue' {
     readonly useShadowRoot: UnwrapRef<typeof import('vue')['useShadowRoot']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useState: UnwrapRef<typeof import('../../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/state')['useState']>
+    readonly useStyleLock: UnwrapRef<typeof import('../../composables/useStyleLock')['useStyleLock']>
+    readonly useTaskPolling: UnwrapRef<typeof import('../../composables/useTaskPolling')['useTaskPolling']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useTransitionState: UnwrapRef<typeof import('vue')['useTransitionState']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>

@@ -48,7 +48,7 @@ function addToast(type: ToastItem['type'], message: string, options?: { retry?: 
     message,
     retry: options?.retry || false,
     onRetry: options?.onRetry,
-    duration: options?.duration || 4000,
+    duration: options?.duration || 3000, // Default 3s
   }
   toasts.value.push(toast)
 
@@ -80,7 +80,7 @@ onUnmounted(() => { toasts.value = [] })
 <style scoped>
 .geo-toast-container {
   position: fixed;
-  top: 16px;
+  bottom: 16px;
   right: 16px;
   z-index: 10000;
   display: flex;
@@ -135,6 +135,6 @@ onUnmounted(() => { toasts.value = [] })
 /* Transitions */
 .geo-toast-enter-active { transition: all 0.3s ease; }
 .geo-toast-leave-active { transition: all 0.2s ease; }
-.geo-toast-enter-from { opacity: 0; transform: translateX(40px); }
-.geo-toast-leave-to { opacity: 0; transform: translateX(40px); }
+.geo-toast-enter-from { opacity: 0; transform: translateY(20px); }
+.geo-toast-leave-to { opacity: 0; transform: translateY(20px); }
 </style>

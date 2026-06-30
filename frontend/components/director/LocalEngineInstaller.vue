@@ -227,13 +227,10 @@ const emit = defineEmits<{ close: [] }>()
 
 // ===== 平台检测 =====
 const api = (window as any).electronAPI
-// ⭐ 桌面版判断：检查 electronAPI 或排除移动端
+// ⭐ 桌面版判断：仅当 Electron API 存在时才视为桌面版
+// 浏览器访问 web 版时即使非移动端也应走后端代理，不直连本地 Ollama
 const isDesktop = computed(() => {
-  if (api?.isDesktop) return true
-  // 非 Electron 桌面浏览器则通过 UA 判断
-  const ua = navigator.userAgent
-  const isMobile = /Mobile|Android|iPhone|iPad|iPod|Tablet/.test(ua)
-  return !isMobile
+  return Boolean(api?.isDesktop || api?.ollamaInstallCheck)
 })
 const platformName = computed(() => {
   if (api?.platformName) return api.platformName
@@ -329,8 +326,8 @@ function osDownloadLabel(engine: string): string {
 
 // ===== 检测引擎状态 =====
 async function checkEngine(engine: string): Promise<any> {
-  // 桌面版 Ollama：直接请求本地 127.0.0.1:11434，不走后端代理
-  if (engine === 'ollama') {
+  // 桌面版 Ollama：直接请求本地 127.0.0.1:11434
+  if (engine === 'ollama' && isDesktop.value) {
     try {
       const localRes = await fetch('http://127.0.0.1:11434/api/tags')
       if (localRes.ok) {
