@@ -5800,3 +5800,90 @@ model DistributionAdapter {
   @@map("distribution_adapters")
 }
 
+// ============================================================
+// KDP — Sprint K2 (Knowledge Packaging)
+// Frozen 2026-06-30
+// Core domain: KnowledgePackage (not Adapter)
+// Packaging is a business capability, not a tool.
+// FR-K10: KnowledgePackage is the distribution unit.
+// ============================================================
+
+// KnowledgePackage: The unit of distribution.
+// Every KnowledgeAsset can produce one or more Packages.
+// Package is immutable once created (FR-K9 by extension).
+model KnowledgePackage {
+  id              String   @id @default(uuid())
+  assetId         String   @map("asset_id")             // ↔ KnowledgeAsset
+  projectId       String   @map("project_id")
+  packageType     String                                // 'website' | 'sitemap' | 'rss' | 'ai_feed' | 'knowledge_bundle'
+  status          String   @default("draft")            // 'draft' | 'packaged' | 'validated' | 'delivered' | 'failed'
+  version         String   @default("1.0.0")
+  artifactHash    String   @map("artifact_hash")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  manifestId      String?  @map("manifest_id")          // ↔ PackageManifest
+  artifacts       PackageArtifact[]
+
+  @@index([assetId])
+  @@index([projectId])
+  @@index([packageType])
+  @@map("knowledge_packages")
+}
+
+// PackageManifest: Independent model for package metadata.
+// Not embedded JSON — enables versioning, diffing, and signing.
+model PackageManifest {
+  id              String   @id @default(uuid())
+  schemaVersion   String   @default("2.0")
+  
+  // Source provenance
+  sourceAssetId   String   @map("source_asset_id")
+  sourceClaimId   String   @map("source_claim_id")
+  sourceRecordId  String   @map("source_record_id")
+  sourceProjectId String?  @map("source_project_id")
+
+  // Content metadata
+  title           String
+  summary         String
+  estimatedSize   Int      @map("estimated_size")
+  mimeType        String   @map("mime_type")
+  language        String   @default("zh-CN")
+
+  // Delivery hints
+  preferredTargets Json    @default("[]")               // Array of DistributionTarget
+  cacheTTL        Int      @default(3600)               // Seconds
+  requiresIndexing Boolean @default(true) @map("requires_indexing")
+  priority        String   @default("normal")
+
+  // Validation
+  contentHash     String   @map("content_hash")
+  signed          Boolean  @default(false)
+  timestamp       DateTime @default(now())
+
+  @@index([sourceAssetId])
+  @@map("package_manifests")
+}
+
+// PackageArtifact: Individual files within a Package.
+// A Package can have multiple Artifacts (e.g. index.html + about.html for Website).
+// This decouples Package metadata from actual file content.
+model PackageArtifact {
+  id              String   @id @default(uuid())
+  packageId       String   @map("package_id")           // ↔ KnowledgePackage
+  fileName        String   @map("file_name")            // 'index.html', 'entities.json', 'feed.xml'
+  filePath        String   @map("file_path")            // Relative path within package
+  mimeType        String   @map("mime_type")
+  content         String                                // The actual artifact content
+  contentHash     String   @map("content_hash")
+  size            Int                                   // Byte size
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  package         KnowledgePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId])
+  @@index([fileName])
+  @@map("package_artifacts")
+}
+
