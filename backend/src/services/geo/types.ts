@@ -1003,6 +1003,16 @@ export enum AdapterCapability {
   DryRun = 'dry_run',
   HealthCheck = 'health_check',
   Preview = 'preview',
+  // ── Negotiation capabilities (Sprint 4) ──
+  BatchPublish = 'batch_publish',
+  Multipart = 'multipart',
+  Streaming = 'streaming',
+  Versioning = 'versioning',
+  ResourceManagement = 'resource_management',   // CMS: pages, posts, media
+  ContentModel = 'content_model',               // CMS: has page/post/asset model
+  SearchEngineSubmission = 'search_engine',     // Can submit to search engines
+  CredentialRotation = 'credential_rotation',    // Supports credential refresh
+  ScheduledPublish = 'scheduled_publish',        // Supports future-dated publish
 }
 
 export enum AdapterHealthStatus {
