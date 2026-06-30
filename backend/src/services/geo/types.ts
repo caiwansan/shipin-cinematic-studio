@@ -990,36 +990,131 @@ export interface DeliveryRecord {
   errorLog?: string
 }
 
-// ─── Contract K3-04: DeliveryAdapter ───
-// Adapter for each target type.
-// This is where deliver() finally appears — K1 through K2 were all prepare.
+// ─── Adapter SDK — K4 RC2 ───
+// Frozen as part of Adapter Framework (Sprint 1 of K4 RC2).
+// All external Adapters must implement this interface.
+// No Adapter may bypass the SDK.
 
-export interface DeliveryAdapter {
-  id: string
-  targetType: string
-  name: string
-
-  /** Prepare the target directory/connection */
-  prepare(config: Record<string, any>): Promise<void>
-  /** Deliver (write/copy/deploy) the package artifacts */
-  deliver(jobId: string, pkg: KnowledgePackage, target: DeliveryTargetType, artifacts: PackageArtifact[]): Promise<DeliveryRecord>
-  /** Verify the delivery was successful */
-  verify(record: DeliveryRecord): Promise<{ valid: boolean; errors: string[] }>
-  /** Rollback to previous state */
-  rollback(record: DeliveryRecord): Promise<void>
+export enum AdapterCapability {
+  Prepare = 'prepare',
+  Deliver = 'deliver',
+  Verify = 'verify',
+  Rollback = 'rollback',
+  DryRun = 'dry_run',
+  HealthCheck = 'health_check',
+  Preview = 'preview',
 }
 
-// ─── Freeze Rules (K3) ───
+export enum AdapterHealthStatus {
+  Ok = 'ok',
+  Degraded = 'degraded',
+  Down = 'down',
+  Unconfigured = 'unconfigured',
+  Unauthorized = 'unauthorized',
+}
 
-// FR-K11: Delivery is a Runtime, not a Script.
-// DeliveryRuntime handles Queue → Dispatch → Retry → Rollback → Verify.
-// No manual delivery steps. All delivery goes through the Runtime.
+export interface AdapterMeta {
+  id: string
+  name: string
+  version: string
+  targetType: string           // 'git' | 's3' | 'oss' | 'cms' | 'http' | 'webhook' | 'local'
+  capabilities: AdapterCapability[]
+  description: string
+  provider: string             // 'github' | 'gitlab' | 'gitea' | 'aws' | 'aliyun' | 'tencent' | 'generic'
+  providerType: string         // 'git' | 'object_storage' | 'cms' | 'http'
+  configSchema: Record<string, any>   // JSON Schema for config validation
+}
 
-// FR-K12: Delivery Runtime does not care about target platform type.
-// It only cares about DeliveryTarget. Platform differences are handled by Adapters.
-// New platforms = new Adapter, not new Runtime.
+export interface PrepareContext {
+  config: Record<string, any>   // Adapter-specific configuration
+  credentials: Record<string, string>  // Resolved credentials (never raw tokens)
+  target: DeliveryTargetType
+}
 
-// FR-K13: K3 only supports Local Delivery (sandbox/output/).
+export interface PrepareResult {
+  success: boolean
+  message: string
+  metadata?: Record<string, any>   // e.g., resolved endpoint, bucket name, repo info
+}
+
+export interface DeliveryResult {
+  success: boolean
+  status: DeliveryJobStatus
+  outputPath: string
+  bytes: number
+  artifactCount: number
+  checksum: string
+  previousState?: string
+  metadata?: Record<string, any>
+  errorLog?: string
+}
+
+export interface VerifyResult {
+  success: boolean
+  verified: boolean
+  errors: string[]
+  details?: Record<string, any>
+}
+
+export interface RollbackResult {
+  success: boolean
+  message: string
+  previousState?: Record<string, any>
+}
+
+export interface HealthCheckResult {
+  status: AdapterHealthStatus
+  latencyMs?: number
+  message?: string
+  details?: Record<string, any>
+}
+
+export interface DeliveryAdapter {
+  meta: AdapterMeta
+
+  prepare(ctx: PrepareContext): Promise<PrepareResult>
+  deliver(jobId: string, pkg: KnowledgePackage, target: DeliveryTargetType, artifacts: PackageArtifact[]): Promise<DeliveryResult>
+  verify(record: DeliveryRecord): Promise<VerifyResult>
+  rollback(record: DeliveryRecord): Promise<RollbackResult>
+  healthCheck?(): Promise<HealthCheckResult>
+  dryRun?(pkg: KnowledgePackage, target: DeliveryTargetType): Promise<DeliveryResult>
+  preview?(pkg: KnowledgePackage): Promise<string>
+}
+
+// ─── Adapter Config ───
+
+export interface AdapterConfig {
+  adapterId: string
+  targetType: string
+  provider: string
+  config: Record<string, any>
+  credentials: Record<string, string>   // Credential IDs, not values
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProviderCapability {
+  provider: string           // 'github' | 'gitlab' | 'aws' | etc.
+  adapterType: string        // 'git' | 'object_storage' | 'cms' | 'http'
+  supports: string[]         // List of supported operations
+  configTemplate: Record<string, any>
+}
+
+// ─── Freeze Rules (K4 RC2) ───
+
+// FR-K15: All external Adapters must implement the DeliveryAdapter interface.
+// No Adapter may bypass the SDK. No Adapter may require Runtime modifications.
+// New platform = new Adapter in the Registry, nothing else changes.
+
+// FR-K16: Adapters never store or handle raw credentials.
+// All credentials go through CredentialCenter → SecretManager → Adapter.
+// Adapters receive resolved credentials at prepare() time.
+
+// FR-K17: Adapter type is not the same as provider.
+// Git is an adapter type. GitHub is a provider of Git.
+// Object Storage is an adapter type. AWS S3 is a provider of Object Storage.
+// This enables the Provider pattern: one adapter interface, many providers.
 // Real external platforms (Website, CMS, Knowledge Base, AI Endpoint) are K4+.
 // K3 must freeze before any external Delivery Adapter is built.
 
@@ -1028,3 +1123,18 @@ export interface DeliveryAdapter {
 //   Queue → Dispatch → Deliver → Verify → Rollback
 // This boundary is fixed. AI Platform Adapters consume AI Feed packages,
 // they do not transform content. Transform once, deliver everywhere.
+
+// ─── Freeze Rules (K4 RC2 — Adapter Framework) ───
+
+// FR-K15: All external Adapters must implement the DeliveryAdapter interface.
+// No Adapter may bypass the SDK. No Adapter may require Runtime modifications.
+// New platform = new Adapter in the Registry, nothing else changes.
+
+// FR-K16: Adapters never store or handle raw credentials.
+// All credentials go through CredentialCenter → SecretManager → Adapter.
+// Adapters receive resolved credentials at prepare() time.
+
+// FR-K17: Adapter type is not the same as provider.
+// Git is an adapter type. GitHub is a provider of Git.
+// Object Storage is an adapter type. AWS S3 is a provider of Object Storage.
+// This enables the Provider pattern: one adapter interface, many providers.

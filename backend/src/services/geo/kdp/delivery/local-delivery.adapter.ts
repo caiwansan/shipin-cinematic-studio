@@ -1,32 +1,52 @@
 // ════════════════════════════════════════════════════════════
-// KDP K3 — Local Delivery Adapter
+// KDP K3/K4 — Local Delivery Adapter (Adapter SDK compliant)
 // ════════════════════════════════════════════════════════════
 // Delivers KnowledgePackage artifacts to local file system.
 // Full lifecycle: prepare → deliver → verify → rollback
-// Writes to sandbox/output/ organized by project and target.
+// Implements the K4 RC2 DeliveryAdapter interface.
 // ════════════════════════════════════════════════════════════
 
 import * as fs from 'fs'
 import * as path from 'path'
-import { DeliveryAdapter, DeliveryTargetType, DeliveryJobStatus } from '../../types'
-import { PackageArtifact, KnowledgePackage } from '../../types'
-import { DeliveryRecordRepository } from './repos/record.repository'
-import { PrismaClient } from '@prisma/client'
 import { createHash } from 'crypto'
+import { PrismaClient } from '@prisma/client'
+import {
+  DeliveryAdapter, AdapterMeta, AdapterCapability, AdapterHealthStatus,
+  PrepareContext, PrepareResult,
+  DeliveryResult, DeliveryJobStatus,
+  VerifyResult, RollbackResult, HealthCheckResult,
+  DeliveryTargetType, KnowledgePackage, PackageArtifact,
+} from '../../types'
 
 export class LocalDeliveryAdapter implements DeliveryAdapter {
-  readonly id = 'local'
-  readonly targetType = 'local'
-  readonly name = 'Local Sandbox'
-
-  private recordRepo: DeliveryRecordRepository
-
-  constructor(private prisma: PrismaClient) {
-    this.recordRepo = new DeliveryRecordRepository(prisma)
+  readonly meta: AdapterMeta = {
+    id: 'local',
+    name: 'Local Sandbox',
+    version: '1.0.0',
+    targetType: 'local',
+    capabilities: [
+      AdapterCapability.Prepare,
+      AdapterCapability.Deliver,
+      AdapterCapability.Verify,
+      AdapterCapability.Rollback,
+      AdapterCapability.HealthCheck,
+      AdapterCapability.DryRun,
+    ],
+    description: 'Delivers KnowledgePackages to the local filesystem for testing and validation.',
+    provider: 'local',
+    providerType: 'local',
+    configSchema: {
+      type: 'object',
+      properties: {
+        outputPath: { type: 'string', default: './sandbox/output' },
+      },
+    },
   }
 
-  async prepare(config: Record<string, any>): Promise<void> {
-    const outputPath = config.outputPath || './sandbox/output'
+  constructor(private prisma: PrismaClient) {}
+
+  async prepare(ctx: PrepareContext): Promise<PrepareResult> {
+    const outputPath = ctx.config.outputPath || './sandbox/output'
     const dirs = ['website', 'sitemap', 'rss', 'ai-feed', 'bundles', 'manifests']
 
     for (const dir of dirs) {
@@ -36,32 +56,30 @@ export class LocalDeliveryAdapter implements DeliveryAdapter {
       }
     }
 
-    console.log(`[LocalDelivery] Prepared at ${outputPath}`)
+    return { success: true, message: `Prepared at ${outputPath}` }
   }
 
   async deliver(
     jobId: string,
     pkg: KnowledgePackage,
     target: DeliveryTargetType,
-    artifacts: PackageArtifact[]
-  ): Promise<DeliveryRecord> {
+    artifacts: PackageArtifact[],
+  ): Promise<DeliveryResult> {
     const outputPath = target.config.outputPath || './sandbox/output'
     const pkgDir = path.join(outputPath, this.mapTypeToDir(pkg.packageType), pkg.id)
 
-    // Get previous state for rollback
-    const prevDelivery = await this.recordRepo.getLastDelivery(pkg.id)
+    // Track previous state for rollback
     let previousState: string | undefined
-
-    if (prevDelivery && fs.existsSync(prevDelivery.outputPath)) {
-      previousState = prevDelivery.outputPath
+    if (fs.existsSync(pkgDir)) {
+      previousState = pkgDir + '.prev'
+      if (fs.existsSync(previousState)) {
+        fs.rmSync(previousState, { recursive: true, force: true })
+      }
+      fs.renameSync(pkgDir, previousState)
     }
 
     // Create package directory
-    if (!fs.existsSync(pkgDir)) {
-      fs.mkdirSync(pkgDir, { recursive: true })
-    }
-
-    const startedAt = new Date()
+    fs.mkdirSync(pkgDir, { recursive: true })
 
     // Write all artifacts
     for (const artifact of artifacts) {
@@ -73,89 +91,89 @@ export class LocalDeliveryAdapter implements DeliveryAdapter {
       fs.writeFileSync(filePath, artifact.content, 'utf8')
     }
 
-    // Also write manifest at package level
-    if (pkg.manifestId) {
-      const manifestDir = path.join(outputPath, 'manifests')
-      if (!fs.existsSync(manifestDir)) fs.mkdirSync(manifestDir, { recursive: true })
-    }
-
-    const finishedAt = new Date()
-    const durationMs = finishedAt.getTime() - startedAt.getTime()
     const totalBytes = artifacts.reduce((s, a) => s + Buffer.byteLength(a.content, 'utf8'), 0)
+    const allHashes = artifacts.map(a => a.contentHash || createHash('sha256').update(a.content).digest('hex')).sort().join('')
+    const checksum = createHash('sha256').update(allHashes).digest('hex')
 
-    // Calculate checksum of all artifacts
-    const checksum = artifacts
-      .map(a => a.contentHash)
-      .sort()
-      .join('')
+    console.log(`[LocalDelivery] Delivered ${pkg.packageType} (${totalBytes}B, ${artifacts.length} artifacts) → ${pkgDir}`)
 
-    // Create record
-    const record = await this.recordRepo.create({
-      jobId,
-      packageId: pkg.id,
-      packageId: pkg.id,
-      targetId: target.id,
+    return {
+      success: true,
       status: DeliveryJobStatus.Completed,
       outputPath: pkgDir,
       bytes: totalBytes,
       artifactCount: artifacts.length,
-      checksum: createHash('sha256').update(checksum).digest('hex'),
+      checksum,
       previousState,
-      durationMs,
-    })
-
-    console.log(`[LocalDelivery] Delivered ${pkg.packageType} (${totalBytes} bytes, ${artifacts.length} artifacts) → ${pkgDir}`)
-
-    return record
+    }
   }
 
-  async verify(record: DeliveryRecord): Promise<{ valid: boolean; errors: string[] }> {
+  async verify(record: DeliveryResult): Promise<VerifyResult> {
     const errors: string[] = []
 
-    // Check output directory exists
     if (!fs.existsSync(record.outputPath)) {
       errors.push(`Output path does not exist: ${record.outputPath}`)
-      return { valid: false, errors }
+      return { success: false, verified: false, errors }
     }
 
-    // Check at least some files exist
-    const dirContents = fs.readdirSync(record.outputPath)
-    if (dirContents.length === 0) {
+    const files = fs.readdirSync(record.outputPath)
+    if (files.length === 0) {
       errors.push('Output directory is empty')
-      return { valid: false, errors }
+      return { success: true, verified: false, errors }
     }
 
-    console.log(`[LocalDelivery] Verified ${record.outputPath} (${dirContents.length} files)`)
-    return { valid: errors.length === 0, errors }
+    return { success: true, verified: true, errors, details: { files } }
   }
 
-  async rollback(record: DeliveryRecord): Promise<void> {
-    if (!record.previousState) {
+  async rollback(record: DeliveryResult): Promise<RollbackResult> {
+    if (!record.previousState || !fs.existsSync(record.previousState)) {
       // No previous state — delete the delivered directory
       if (fs.existsSync(record.outputPath)) {
         fs.rmSync(record.outputPath, { recursive: true, force: true })
-        console.log(`[LocalDelivery] Rolled back: deleted ${record.outputPath}`)
+        return { success: true, message: `Deleted ${record.outputPath} (no previous state)` }
       }
-      return
+      return { success: true, message: 'Nothing to roll back' }
     }
 
-    // If previous state exists, restore it
-    if (!fs.existsSync(record.previousState)) {
-      console.log(`[LocalDelivery] Previous state no longer exists at ${record.previousState}, deleting delivery`)
-      if (fs.existsSync(record.outputPath)) {
-        fs.rmSync(record.outputPath, { recursive: true, force: true })
-      }
-      return
-    }
-
-    // Remove current delivery and link back to previous
+    // Remove current delivery
     if (fs.existsSync(record.outputPath)) {
       fs.rmSync(record.outputPath, { recursive: true, force: true })
     }
 
-    // Copy previous state back
-    this.copyRecursive(record.previousState, record.outputPath)
-    console.log(`[LocalDelivery] Rolled back: restored ${record.previousState} → ${record.outputPath}`)
+    // Restore previous state
+    fs.renameSync(record.previousState, record.outputPath)
+    return { success: true, message: `Restored ${record.previousState} → ${record.outputPath}` }
+  }
+
+  async healthCheck(): Promise<HealthCheckResult> {
+    const start = Date.now()
+    try {
+      const testDir = '/tmp/local-adapter-health'
+      fs.mkdirSync(testDir, { recursive: true })
+      fs.writeFileSync(path.join(testDir, 'health.txt'), 'ok', 'utf8')
+      fs.rmSync(testDir, { recursive: true, force: true })
+      return {
+        status: AdapterHealthStatus.Ok,
+        latencyMs: Date.now() - start,
+        message: 'Filesystem is writable',
+      }
+    } catch (err: any) {
+      return {
+        status: AdapterHealthStatus.Down,
+        message: err.message,
+      }
+    }
+  }
+
+  async dryRun(pkg: KnowledgePackage, target: DeliveryTargetType): Promise<DeliveryResult> {
+    return {
+      success: true,
+      status: DeliveryJobStatus.Completed,
+      outputPath: '(dry run)',
+      bytes: 0,
+      artifactCount: 0,
+      checksum: '',
+    }
   }
 
   private mapTypeToDir(packageType: string): string {
@@ -167,19 +185,5 @@ export class LocalDeliveryAdapter implements DeliveryAdapter {
       knowledge_bundle: 'bundles',
     }
     return map[packageType] || 'other'
-  }
-
-  private copyRecursive(src: string, dest: string): void {
-    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true })
-    const entries = fs.readdirSync(src, { withFileTypes: true })
-    for (const entry of entries) {
-      const srcPath = path.join(src, entry.name)
-      const destPath = path.join(dest, entry.name)
-      if (entry.isDirectory()) {
-        this.copyRecursive(srcPath, destPath)
-      } else {
-        fs.copyFileSync(srcPath, destPath)
-      }
-    }
   }
 }
