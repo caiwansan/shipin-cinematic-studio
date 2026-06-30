@@ -1,72 +1,104 @@
+/**
+ * HealthPage.vue — GEO Workspace Health (Product Polish — Phase 8)
+ *
+ * All states: loading, error, empty, data
+ * Features: page transition, loading skeleton, error/retry, success banner auto-dismiss,
+ *   responsive layout, keyboard navigation, aria attributes
+ */
 <template>
   <div class="health-page">
-    <!-- Loading State -->
-    <div v-if="store.isLoading && !store.hasData" class="health-page__loading">
-      <div class="health-page__skeleton-score" />
-      <div class="health-page__skeleton-text" />
-      <div class="health-page__skeleton-text" style="width: 60%" />
-      <div class="health-page__skeleton-bars">
-        <div v-for="n in 4" :key="n" class="health-page__skeleton-bar" />
-      </div>
-    </div>
+    <!-- ===== STATE: Loading ===== -->
+    <LoadingState
+      v-if="store.isLoading && !store.hasData"
+      title="Loading Brand Health"
+      :steps="[
+        { label: 'Checking AI visibility...', active: true },
+        { label: 'Analyzing knowledge coverage...' },
+        { label: 'Generating recommendations...' },
+      ]"
+    />
 
-    <!-- Error State -->
-    <div v-else-if="store.error && !store.hasData" class="health-page__error">
-      <div class="health-page__error-banner">
-        <div class="health-page__error-icon">!</div>
-        <div class="health-page__error-content">
-          <p class="health-page__error-title">Unable to load Brand Health</p>
-          <p class="health-page__error-message">Please check your connection and retry.</p>
-          <button class="health-page__retry-btn" @click="handleRetry">Retry</button>
-        </div>
-      </div>
-    </div>
+    <!-- ===== STATE: Error (no data yet) ===== -->
+    <ErrorBanner
+      v-else-if="store.error && !store.hasData"
+      title="Unable to load Brand Health"
+      message="Please check your connection and retry."
+    >
+      <DSButton
+        variant="primary"
+        @click="handleRetry"
+        :disabled="store.isLoading"
+        aria-label="Retry loading Brand Health"
+      >Retry</DSButton>
+    </ErrorBanner>
 
-    <!-- Empty State -->
-    <div v-else-if="!store.hasData" class="health-page__empty">
-      <div class="health-page__empty-icon">✦</div>
-      <h3 class="health-page__empty-title">Welcome to Brand Health</h3>
-      <p class="health-page__empty-description">
-        Connect your website to see how your brand is understood by AI systems.
-      </p>
-      <button class="health-page__connect-btn" @click="handleConnect">
-        Connect Website
-      </button>
-    </div>
+    <!-- ===== STATE: Empty (no data yet) ===== -->
+    <EmptyState
+      v-else-if="!store.hasData"
+      icon="&#10024;"
+      title="Welcome to Brand Health"
+      description="Connect your website to see how your brand is understood by AI systems."
+    >
+      <DSButton
+        variant="primary"
+        @click="handleConnect"
+        aria-label="Connect your website to Brand Health"
+      >Connect Website</DSButton>
+    </EmptyState>
 
-    <!-- Success / Data State -->
+    <!-- ===== STATE: Data ===== -->
     <template v-else-if="store.brandHealth">
-      <!-- Success Banner (transient) -->
-      <div v-if="showSuccessBanner" class="health-page__success-banner">
-        <span class="health-page__success-icon">✓</span>
-        <span>Brand Health updated</span>
-      </div>
+      <!-- Success Banner (auto-dismisses) -->
+      <Transition name="geo-banner">
+        <SuccessBanner
+          v-if="showSuccessBanner"
+          title="Brand Health updated"
+          description="Latest data loaded successfully"
+          @dismiss="showSuccessBanner = false"
+        />
+      </Transition>
 
-      <!-- Hero -->
-      <HeroBlock
+      <!-- Error Banner (recoverable) -->
+      <Transition name="geo-banner">
+        <ErrorBanner
+          v-if="store.error"
+          title="Update failed"
+          :message="store.error"
+          dismissible
+          @dismiss="store.error = null"
+        >
+          <DSButton variant="primary" @click="handleRetry">Retry</DSButton>
+        </ErrorBanner>
+      </Transition>
+
+      <!-- Hero Section -->
+      <Hero
         title="Brand Health"
         subtitle="Your brand's overall standing in AI systems"
+        :meta="`${store.dailyChange >= 0 ? '+' : ''}${store.dailyChange} this ${getPeriodLabel()}`"
       />
 
-      <!-- Health Summary -->
-      <HealthSummaryBlock
+      <!-- Health Score Summary -->
+      <HealthSummary
         :score="store.brandHealth.score"
         :trend="store.brandHealth.trend"
         :label="store.brandHealth.label"
         :definition="store.brandHealth.definition"
       />
 
-      <!-- Split: ExplanationPanel + RecommendationList -->
+      <!-- Split: Explanation + Actions -->
       <div class="health-page__split">
         <div class="health-page__split-left">
-          <ExplanationPanelBlock
+          <ExplanationPanel
             title="Why this score?"
             :items="explanationItems"
           />
         </div>
         <div class="health-page__split-right">
-          <RecommendationListBlock
+          <RecommendationList
+            title="Today's Actions"
             :items="store.recommendations"
+            :total-count="store.totalRecommendations"
             @view-all="handleViewAll"
           />
         </div>
@@ -74,27 +106,43 @@
 
       <!-- Dimensional Breakdown -->
       <div class="health-page__breakdown">
-        <h3 class="health-page__breakdown-title">Dimensional Breakdown</h3>
-        <div class="health-page__breakdown-list">
+        <h3 class="health-page__section-title">Dimensional Breakdown</h3>
+        <div class="health-page__breakdown-list" role="list">
           <div
             v-for="dim in store.dimensions"
             :key="dim.name"
             class="health-page__breakdown-item"
+            role="listitem"
           >
             <div class="health-page__breakdown-header">
               <span class="health-page__breakdown-name">
                 {{ dim.name }}
-                <span v-if="dim.isWarning" class="health-page__breakdown-warning" title="Needs attention">⚠</span>
+                <span
+                  v-if="dim.isWarning"
+                  class="health-page__breakdown-warning"
+                  :title="`${dim.name} needs attention`"
+                  role="img"
+                  aria-label="Warning"
+                >&#9888;</span>
               </span>
-              <span class="health-page__breakdown-score" :class="{ 'health-page__breakdown-score--warning': dim.isWarning }">
+              <span
+                :class="['health-page__breakdown-score', { 'health-page__breakdown-score--warning': dim.isWarning }]"
+              >
                 {{ dim.score }}/100
               </span>
             </div>
-            <div v-if="dim.score === 0" class="health-page__breakdown-unavailable">
+            <div v-if="dim.score === 0 && !dim.explanation" class="health-page__breakdown-unavailable">
               --- unavailable ---
             </div>
             <template v-else>
-              <div class="health-page__breakdown-bar">
+              <div
+                class="health-page__breakdown-bar"
+                role="progressbar"
+                :aria-valuenow="dim.score"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                :aria-label="`${dim.name}: ${dim.score}%`"
+              >
                 <div
                   class="health-page__breakdown-bar-fill"
                   :style="{
@@ -110,7 +158,7 @@
       </div>
 
       <!-- Next Step CTA -->
-      <NextStepPanelBlock
+      <NextStepPanel
         :action-count="store.totalRecommendations"
         :is-up-to-date="!store.hasActionsPending"
         @action="handleAction"
@@ -120,20 +168,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { useHealthStore } from '../stores/useHealthStore'
-import HeroBlock from '~/design-system/product-blocks/Hero/index.vue'
-import HealthSummaryBlock from '~/design-system/product-blocks/HealthSummary/index.vue'
-import ExplanationPanelBlock from '~/design-system/product-blocks/ExplanationPanel/index.vue'
-import RecommendationListBlock from '~/design-system/product-blocks/RecommendationList/index.vue'
-import NextStepPanelBlock from '~/design-system/product-blocks/NextStepPanel/index.vue'
+import Hero from '~/design-system/product-blocks/Hero/index.vue'
+import HealthSummary from '~/design-system/product-blocks/HealthSummary/index.vue'
+import ExplanationPanel from '~/design-system/product-blocks/ExplanationPanel/index.vue'
+import RecommendationList from '~/design-system/product-blocks/RecommendationList/index.vue'
+import NextStepPanel from '~/design-system/product-blocks/NextStepPanel/index.vue'
+import LoadingState from '~/design-system/components/LoadingState/index.vue'
+import ErrorBanner from '~/design-system/components/ErrorBanner/index.vue'
+import EmptyState from '~/design-system/components/EmptyState/index.vue'
+import SuccessBanner from '~/design-system/components/SuccessBanner/index.vue'
+import DSButton from '~/design-system/primitives/Button/index.vue'
 
+const router = useRouter()
 const store = useHealthStore()
-
 const showSuccessBanner = ref(false)
 let bannerTimer: ReturnType<typeof setTimeout> | null = null
 
-// Build explanation items from dimensions
 const explanationItems = computed(() => {
   return store.dimensions.map((dim) => ({
     text: dim.explanation,
@@ -144,6 +197,10 @@ const explanationItems = computed(() => {
   }))
 })
 
+function getPeriodLabel(): string {
+  return 'week'
+}
+
 onMounted(async () => {
   await store.fetchHealth()
   showSuccessBanner.value = true
@@ -153,20 +210,33 @@ onMounted(async () => {
   }, 3000)
 })
 
-function handleRetry() {
-  store.refresh()
+onBeforeUnmount(() => {
+  if (bannerTimer) clearTimeout(bannerTimer)
+})
+
+async function handleRetry() {
+  store.error = null
+  await store.refresh()
+  if (store.hasData) {
+    showSuccessBanner.value = true
+    if (bannerTimer) clearTimeout(bannerTimer)
+    bannerTimer = setTimeout(() => {
+      showSuccessBanner.value = false
+    }, 3000)
+  }
 }
 
 function handleConnect() {
+  // Integration point: connect website flow
   console.warn('[HealthPage] Connect Website: not yet implemented')
 }
 
 function handleViewAll() {
-  console.warn('[HealthPage] View all: routing to Recommendations not yet configured')
+  router.push('/workspace/geo/recommendations')
 }
 
 function handleAction() {
-  console.warn('[HealthPage] Improve Brand Health: routing to Recommendations not yet configured')
+  router.push('/workspace/geo/recommendations')
 }
 </script>
 
@@ -174,225 +244,11 @@ function handleAction() {
 .health-page {
   max-width: 960px;
   margin: 0 auto;
-  padding: var(--space-6, 32px) var(--space-4, 16px);
   display: flex;
   flex-direction: column;
   gap: var(--space-5, 24px);
 }
 
-/* --- Loading State --- */
-.health-page__loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4, 16px);
-  padding: var(--space-8, 64px) 0;
-}
-
-.health-page__skeleton-score {
-  width: 96px;
-  height: 96px;
-  border-radius: var(--radius-md, 8px);
-  background: linear-gradient(90deg, var(--color-surface-dim, #f9fafb) 25%, var(--color-border, #e5e7eb) 50%, var(--color-surface-dim, #f9fafb) 75%);
-  background-size: 200% 100%;
-  animation: health-shimmer 1.5s ease-in-out infinite;
-}
-
-.health-page__skeleton-text {
-  width: 280px;
-  height: 16px;
-  border-radius: var(--radius-sm, 4px);
-  background: linear-gradient(90deg, var(--color-surface-dim, #f9fafb) 25%, var(--color-border, #e5e7eb) 50%, var(--color-surface-dim, #f9fafb) 75%);
-  background-size: 200% 100%;
-  animation: health-shimmer 1.5s ease-in-out infinite;
-}
-
-.health-page__skeleton-bars {
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3, 12px);
-  margin-top: var(--space-4, 16px);
-}
-
-.health-page__skeleton-bar {
-  height: 24px;
-  border-radius: var(--radius-sm, 4px);
-  background: linear-gradient(90deg, var(--color-surface-dim, #f9fafb) 25%, var(--color-border, #e5e7eb) 50%, var(--color-surface-dim, #f9fafb) 75%);
-  background-size: 200% 100%;
-  animation: health-shimmer 1.5s ease-in-out infinite;
-}
-
-@keyframes health-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* --- Error State --- */
-.health-page__error {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-8, 64px) 0;
-}
-
-.health-page__error-banner {
-  display: flex;
-  gap: var(--space-3, 12px);
-  padding: var(--space-4, 16px);
-  border-radius: var(--radius-md, 8px);
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  max-width: 480px;
-  width: 100%;
-}
-
-.health-page__error-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-full, 9999px);
-  background-color: var(--color-error, #ef4444);
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.health-page__error-content {
-  flex: 1;
-}
-
-.health-page__error-title {
-  margin: 0 0 var(--space-1, 4px);
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-size, 16px);
-  font-weight: 600;
-  color: #991b1b;
-}
-
-.health-page__error-message {
-  margin: 0 0 var(--space-3, 12px);
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-sm-size, 14px);
-  color: #b91c1c;
-}
-
-.health-page__retry-btn {
-  padding: var(--space-2, 8px) var(--space-4, 16px);
-  border: 1px solid var(--color-error, #ef4444);
-  border-radius: var(--radius-sm, 4px);
-  background-color: transparent;
-  color: var(--color-error, #ef4444);
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-sm-size, 14px);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--motion-fast-duration, 100ms) var(--motion-fast-easing, ease-out);
-}
-
-.health-page__retry-btn:hover {
-  background-color: var(--color-error, #ef4444);
-  color: #ffffff;
-}
-
-/* --- Empty State --- */
-.health-page__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-8, 64px) var(--space-4, 16px);
-  text-align: center;
-}
-
-.health-page__empty-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--space-4, 16px);
-  border-radius: var(--radius-full, 9999px);
-  background-color: var(--color-surface-dim, #f9fafb);
-  color: var(--color-text-tertiary, #9ca3af);
-  font-size: 28px;
-}
-
-.health-page__empty-title {
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-heading-3-size, 20px);
-  font-weight: var(--text-heading-3-weight, 500);
-  color: var(--color-text-primary, #111111);
-  margin: 0 0 var(--space-2, 8px);
-}
-
-.health-page__empty-description {
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-size, 16px);
-  color: var(--color-text-secondary, #6b7280);
-  margin: 0 0 var(--space-4, 16px);
-  max-width: 360px;
-  line-height: 1.5;
-}
-
-.health-page__connect-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-3, 12px) var(--space-5, 24px);
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-info, #3b82f6);
-  color: #ffffff;
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-size, 16px);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--motion-fast-duration, 100ms) var(--motion-fast-easing, ease-out);
-}
-
-.health-page__connect-btn:hover {
-  background-color: #2563eb;
-}
-
-/* --- Success Banner --- */
-.health-page__success-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2, 8px);
-  padding: var(--space-3, 12px) var(--space-4, 16px);
-  border-radius: var(--radius-md, 8px);
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-sm-size, 14px);
-  font-weight: 500;
-  color: #15803d;
-  animation: health-fade-in 0.3s ease-out;
-}
-
-.health-page__success-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-full, 9999px);
-  background-color: var(--color-success, #22c55e);
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-@keyframes health-fade-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- Split Layout --- */
 .health-page__split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -410,14 +266,13 @@ function handleAction() {
   min-width: 0;
 }
 
-/* --- Dimensional Breakdown --- */
 .health-page__breakdown {
   display: flex;
   flex-direction: column;
   gap: var(--space-4, 16px);
 }
 
-.health-page__breakdown-title {
+.health-page__section-title {
   font-family: var(--font-family, Inter, -apple-system, sans-serif);
   font-size: var(--text-heading-3-size, 20px);
   font-weight: var(--text-heading-3-weight, 500);
@@ -439,6 +294,11 @@ function handleAction() {
   border-radius: var(--radius-md, 8px);
   background-color: var(--color-surface, #ffffff);
   border: 1px solid var(--color-border, #e5e7eb);
+  transition: border-color var(--motion-fast-duration, 100ms) ease-out;
+}
+
+.health-page__breakdown-item:hover {
+  border-color: var(--color-text-tertiary, #9ca3af);
 }
 
 .health-page__breakdown-header {
@@ -489,7 +349,7 @@ function handleAction() {
 .health-page__breakdown-bar-fill {
   height: 100%;
   border-radius: var(--radius-full, 9999px);
-  transition: width var(--motion-slow-duration, 400ms) var(--motion-slow-easing, ease-in-out);
+  transition: width var(--motion-slow-duration, 400ms) ease-in-out;
 }
 
 .health-page__breakdown-explanation {
@@ -497,6 +357,18 @@ function handleAction() {
   font-size: var(--text-body-sm-size, 14px);
   color: var(--color-text-secondary, #6b7280);
   margin: 0;
-  line-height: var(--text-body-sm-line, 1.5);
+  line-height: 1.5;
+}
+
+/* ===== Banner Transitions ===== */
+.geo-banner-enter-active,
+.geo-banner-leave-active {
+  transition: all var(--motion-normal-duration, 200ms) ease-out;
+}
+
+.geo-banner-enter-from,
+.geo-banner-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>

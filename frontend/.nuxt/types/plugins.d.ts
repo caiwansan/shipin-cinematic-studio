@@ -21,6 +21,7 @@ type NuxtAppInjections =
   InjectionType<typeof import("../../plugins/auth-init.client")> &
   InjectionType<typeof import("../../plugins/build-meta-fallback.client")> &
   InjectionType<typeof import("../../plugins/build-version.client")> &
+  InjectionType<typeof import("../../plugins/geo-router")> &
   InjectionType<typeof import("../../plugins/router-error")> &
   InjectionType<typeof import("../../plugins/runtime-error-trace.client")> &
   InjectionType<typeof import("../../plugins/store-safety.client")> &
