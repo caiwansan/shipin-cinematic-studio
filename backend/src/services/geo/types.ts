@@ -470,3 +470,139 @@ export interface GraphBuildInput {
 export interface GraphBuildOutput {
   graph: KnowledgeGraph
 }
+
+// ════════════════════════════════════════════════════════════
+// P3: Publishing Plane — Contracts (Frozen 2026-07-19)
+// ════════════════════════════════════════════════════════════
+// Freeze Rules:
+//   FR-1: Core object is PublishableClaim, not Action
+//   FR-2: PublishingRecord records Version + Source Claims, not files
+//   FR-3: ChannelAdapter has uniform interface (render/validate/preview/export)
+
+// ─── PublishableClaim ───
+
+export enum ClaimContentType {
+  AboutPage = 'about_page',
+  FAQEntry = 'faq_entry',
+  SchemaEntity = 'schema_entity',
+  PressRelease = 'press_release',
+  KnowledgeArticle = 'knowledge_article',
+}
+
+export enum ClaimStatus {
+  Draft = 'draft',
+  Ready = 'ready',
+  Published = 'published',
+}
+
+export interface PublishableClaim {
+  id: string
+  projectId: string
+  verificationId: string
+  sourceActionId: string
+
+  title: string
+  contentType: ClaimContentType
+  content: string           // Markdown body
+  status: ClaimStatus
+  version: string           // semantic version
+
+  createdAt: string
+  updatedAt: string
+}
+
+// ─── PublishPlan ───
+
+export enum PlanStatus {
+  Draft = 'draft',
+  InReview = 'in_review',
+  Approved = 'approved',
+  Published = 'published',
+  RolledBack = 'rolled_back',
+}
+
+export interface PublishPlan {
+  id: string
+  projectId: string
+  title: string
+  claimIds: string[]
+  targetChannels: string[]
+  executionOrder?: string   // JSON: dependency graph of claimIds
+  status: PlanStatus
+
+  createdAt: string
+  updatedAt: string
+  publishedAt?: string
+}
+
+// ─── PublishingRecord ───
+
+export interface PublishingRecord {
+  id: string
+  planId: string
+  claimId: string
+  channel: string
+  version: string            // semantic version
+  artifactHash: string       // content fingerprint
+  artifactUrl?: string       // optional: URL to published result
+  status: 'pending' | 'published' | 'failed' | 'rolled_back'
+  publishedAt?: string
+
+  createdAt: string
+}
+
+// ─── Channel & Adapter ───
+
+export interface Artifact {
+  format: string              // 'markdown' | 'html' | 'jsonld' | etc.
+  content: string             // rendered content
+  metadata: Record<string, unknown>
+}
+
+export interface ValidationResult {
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+}
+
+export interface ChannelAdapter {
+  readonly name: string
+  readonly formats: string[]
+
+  render(claim: PublishableClaim): Artifact
+  validate(artifact: Artifact): ValidationResult
+  preview(artifact: Artifact): string
+  export(artifact: Artifact): Buffer | string
+}
+
+// ─── API DTOs ───
+
+export interface CreateClaimDTO {
+  projectId: string
+  verificationId: string
+  sourceActionId: string
+  title: string
+  contentType: ClaimContentType
+  content: string
+}
+
+export interface CreatePlanDTO {
+  projectId: string
+  title: string
+  claimIds: string[]
+  targetChannels: string[]
+  executionOrder?: string
+}
+
+export interface UpdatePlanStatusDTO {
+  status: PlanStatus
+}
+
+export interface PublishingSummary {
+  totalPlans: number
+  draftCount: number
+  inReviewCount: number
+  approvedCount: number
+  publishedCount: number
+  channelBreakdown: Array<{ channel: string; count: number }>
+}

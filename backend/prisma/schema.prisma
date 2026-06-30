@@ -5590,34 +5590,89 @@ model GrowthKnowledge {
   @@map("growth_knowledge")
 }
 
+// ═══════════════════════════════════════════════════════════════
+// P3: Publishing Plane (P3.1)
+// Freeze Rules:
+//   FR-A: Relations use stable IDs, not snapshots
+//   FR-B: Version is append-only, never modified
+//   FR-C: Channel uses Registry-defined channel ID, not free text
+// ═══════════════════════════════════════════════════════════════
+
+// PublishableClaim: Fine-grained publishable unit, derived from a verified Action.
+//   One Action → multiple Claims (e.g. About Page + FAQ + Schema)
+//   FR-A: References verificationId + sourceActionId, does not copy their content.
+model PublishableClaim {
+  id               String   @id @default(uuid())
+  projectId        String   @map("project_id")
+  verificationId   String   @map("verification_id")
+  sourceActionId   String   @map("source_action_id")
+
+  title            String
+  contentType      String   @map("content_type")    // 'about_page' | 'faq_entry' | 'schema_entity' | 'press_release' | 'knowledge_article'
+  content          String                            // Markdown body
+  status           String   @default("draft")        // 'draft' | 'ready' | 'published'
+  version          String   @default("1.0.0")        // semantic version
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  plans            PublishPlanToClaim[]
+  records          PublishingRecord[]
+
+  @@map("publishable_claims")
+}
+
+// PublishPlan: Aggregates one or more Claims into a publishable plan.
+//   Execution order is expressed as a JSON array of claim IDs (dependency graph).
+model PublishPlan {
+  id               String   @id @default(uuid())
+  projectId        String   @map("project_id")
+  title            String
+  status           String   @default("draft")        // 'draft' | 'in_review' | 'approved' | 'published' | 'rolled_back'
+  targetChannels   Json     @default("[]")           // Array of channel IDs
+  executionOrder   Json?    @map("execution_order")  // Optional: JSON array of claim IDs (dependency graph)
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  publishedAt      DateTime? @map("published_at")
+
+  claims           PublishPlanToClaim[]
+  records          PublishingRecord[]
+
+  @@map("publish_plans")
+}
+
+// Join table: Plan ↔ Claim (many-to-many)
+model PublishPlanToClaim {
+  planId   String        @map("plan_id")
+  claimId  String        @map("claim_id")
+  plan     PublishPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  claim    PublishableClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@id([planId, claimId])
+  @@map("publish_plan_to_claims")
+}
+
+// PublishingRecord: Append-only audit log.
+//   FR-B: Version is never modified — rollback creates a new record.
+//   FR-C: channel uses Registry-defined channel ID.
+//   Records version + artifactHash instead of files.
 model PublishingRecord {
-  id              String   @id @default(uuid())
-  projectId       String   @map("project_id")
-  executionId     String?  @map("execution_id")
+  id               String   @id @default(uuid())
+  planId           String   @map("plan_id")
+  claimId          String   @map("claim_id")
+  channel          String                              // Registry-defined channel ID (e.g. 'markdown', 'html_preview', 'schema_jsonld')
+  version          String                              // Semantic version at time of publish
+  artifactHash     String   @map("artifact_hash")      // Content fingerprint
+  artifactUrl      String?  @map("artifact_url")       // Optional URL to published result
+  status           String   @default("pending")        // 'pending' | 'published' | 'failed' | 'rolled_back'
 
-  platform        String
-  adapterType     String   @map("adapter_type")
+  publishedAt      DateTime? @map("published_at")
+  createdAt        DateTime @default(now()) @map("created_at")
 
-  contentType     String   @map("content_type")
-  content         Json
-
-  status          String   @default("draft")
-  publishVersion  Int      @default(1) @map("publish_version")
-
-  beforeContent   Json?    @map("before_content")
-  afterContent    Json?    @map("after_content")
-  diffSummary     String?  @map("diff_summary")
-
-  reviewedBy      String?  @map("reviewed_by")
-  reviewedAt      DateTime? @map("reviewed_at")
-  approvalNote    String?  @map("approval_note")
-
-  rollbackVersion Int?     @map("rollback_version")
-  rollbackReason  String?  @map("rollback_reason")
-  rolledBackAt    DateTime? @map("rolled_back_at")
-
-  createdAt       DateTime @default(now()) @map("created_at")
-  publishedAt     DateTime? @map("published_at")
+  plan             PublishPlan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  claim            PublishableClaim   @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
   @@map("publishing_records")
 }
+
