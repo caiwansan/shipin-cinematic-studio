@@ -1022,3 +1022,9 @@ export interface DeliveryAdapter {
 // FR-K13: K3 only supports Local Delivery (sandbox/output/).
 // Real external platforms (Website, CMS, Knowledge Base, AI Endpoint) are K4+.
 // K3 must freeze before any external Delivery Adapter is built.
+
+// FR-K14: Delivery Runtime never performs content transformation.
+// Content transformation belongs to Packaging (K2). Delivery only handles:
+//   Queue → Dispatch → Deliver → Verify → Rollback
+// This boundary is fixed. AI Platform Adapters consume AI Feed packages,
+// they do not transform content. Transform once, deliver everywhere.
