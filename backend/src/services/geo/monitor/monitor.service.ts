@@ -32,11 +32,12 @@ export class MonitorService {
    * Get health dashboard for a project
    */
   async getHealthDashboard(projectId: string) {
-    // Get latest publishing records
+    // Get latest publishing records (via plan → project relation)
     const publishes = await this.prisma.publishingRecord.findMany({
-      where: { projectId },
+      where: { plan: { projectId } },
       orderBy: { createdAt: 'desc' },
       take: 10,
+      include: { plan: { select: { projectId: true } } },
     })
 
     const total = publishes.length

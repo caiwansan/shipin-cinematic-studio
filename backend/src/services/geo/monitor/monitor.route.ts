@@ -40,7 +40,7 @@ export async function geoMonitorRoutes(app: FastifyInstance) {
   })
 
   // GET /api/geo/monitor/dashboard/:projectId — 健康仪表盘
-  app.get('/api/geo/monitor/dashboard/:projectId', { preHandler: [app.authenticate] }, async (req, reply) => {
+  app.get('/api/geo/monitor/dashboard/:projectId', async (req, reply) => {
     try {
       const { projectId } = req.params as any
       const dashboard = await monitorService.getHealthDashboard(projectId)
