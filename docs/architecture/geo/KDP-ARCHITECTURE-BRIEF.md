@@ -288,6 +288,10 @@ KDP 永远消费 PublishingRecord（已发布、已版本化的内容），而�
 修改永远产生新版本，不 UPDATE。这样 AI 系统的引用才能保持稳定。
 新版本通过 AssetBuilder.buildFromRecord() 的幂等逻辑自动处理。
 
+### FR-K10：Package 是分发单位
+Delivery（K3+）只消费 KnowledgePackage，不消费原始 KnowledgeAsset。
+确保每次分发都有签名、已验证、有版本号的 Manifest。
+
 ---
 
 ## 开放问题（已解决）
@@ -302,12 +306,61 @@ KDP 永远消费 PublishingRecord（已发布、已版本化的内容），而�
 
 ---
 
-## 时间线
+## Sprint K2：Knowledge Packaging（冻结中）
+
+### 定位
+K2 不是 Adapter 层，是 **Packaging Plane**。
+
+```text
+KnowledgeAsset
+  ├── Website Packager
+  ├── Sitemap Packager
+  ├── RSS Packager
+  ├── AI Feed Packager
+  └── Knowledge Bundle Packager
+          ↓
+    KnowledgePackage (with Manifest)
+          ↓
+    Delivery (K3+, 未来)
+```
+
+### 核心模型
+- **KnowledgePackage** — 分发的基本单位，每个 Package 有 Manifest、Payload、Hash
+- **PackageManifest** — 描述 Package 内容的元数据（来源、内容、分发提示、验证）
+- **PackagingAdapter** — 每个 PackageType 对应一个 Adapter
+
+### 五个 Package Type
+
+| Package | 用途 | 消费方 |
+|---------|------|--------|
+| Website Package | 网站部署 HTML/MD | 网站 |
+| Sitemap Package | 搜索发现 sitemap.xml | 搜索引擎 |
+| RSS Package | 订阅更新 feed.xml | RSS 阅读器 / 搜索平台 |
+| AI Feed Package | AI 知识消费（Entities/Claims/FAQs/Facts/Relationships） | AI 模型 / Agent |
+| Knowledge Bundle | 多资产聚合（品牌级 Bundle） | 知识图谱 / AI 系统 |
+
+### AI Feed 的差异化能力
+AI Feed Package 不是简单 JSON，而是结构化的知识表达：
+- Entities（实体清单）
+- Claims（经过验证的声明）
+- FAQs（常见问题对）
+- Facts（事实语句）
+- Relationships（实体关系图）
+- Metadata（版本、来源、可信度）
+
+### Freeze Rules
+- K2 零第三方依赖（只 Package，不 Deliver）
+- 每个 Package 必须通过 validate() 才能进入队列
+- Manifest 必须完整包含来源追溯信息
+
+---
+
+## 时间线（更新 2026-06-30）
 
 | Sprint | 内容 | 前置 | 备注 |
 |--------|------|------|------|
-| K1 | Distribution Planning 核心 | Publishing RC1 ✅ | Contract + Prisma + API |
-| K2 | Local Adapters（5种） | K1 ✅ | 无外部依赖 |
-| K3 | UI: Distribution Plan 列表 / 审批 / 预览 | K2 ✅ | 与 GEO Workspace 集成 |
-| RC1 Freeze | E2E 验收 + Tag | K3 ✅ | |
-| K4+ | Submission Adapter（外部平台） | RC1 ✅ | KDP RC2，需 Credential Registry |
+| K1 | Distribution Planning 核心 | Publishing RC1 ✅ | **已冻结** |
+| **K2** | **Knowledge Packaging** | K1 ✅ | **Contract ✅** |
+| K3 | UI: Package 预览 / 审批 / 历史 | K2 | 与 GEO Workspace 集成 |
+| RC1 Freeze | E2E 验收 + Tag | K3 | |
+| K4+ | Delivery Adapter（外部平台） | RC1 ✅ | KDP RC2，需 Credential Registry |

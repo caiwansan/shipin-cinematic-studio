@@ -778,3 +778,128 @@ export interface AdapterRuntime {
 // FR-K9: KnowledgeAsset is immutable. Modification always produces a new version.
 // No UPDATE on KnowledgeAsset. New asset = new version.
 // This guarantees stable references for AI systems and knowledge graphs.
+
+// ============================================================
+// KDP — Sprint K2 (Knowledge Packaging) Contracts
+// ============================================================
+// Frozen 2026-06-30 — K2 Packaging Plane
+// Core domain: KnowledgePackage (not Adapter)
+// Packaging is a business capability, not a tool.
+// ============================================================
+
+// ─── Contract K2-01: KnowledgePackage ───
+// The unit of distribution. Every KnowledgeAsset can be packaged
+// into one or more KnowledgePackages for different targets.
+// Package is immutable once created (FR-K9 applies by extension).
+
+export enum PackageType {
+  Website = 'website',           // Full HTML/MD for website deployment
+  Sitemap = 'sitemap',           // sitemap.xml entry
+  RSS = 'rss',                   // RSS/Atom feed entry
+  AIFeed = 'ai_feed',            // AI-consumable knowledge feed
+  KnowledgeBundle = 'knowledge_bundle', // Multi-asset aggregation
+}
+
+export enum PackageStatus {
+  Draft = 'draft',
+  Packaged = 'packaged',
+  Validated = 'validated',
+  Delivered = 'delivered',
+  Failed = 'failed',
+}
+
+export interface KnowledgePackage {
+  id: string
+  assetId: string
+  projectId: string
+  packageType: PackageType
+  status: PackageStatus
+
+  /** Package manifest — describes what's inside */
+  manifest: PackageManifest
+  /** The actual payload (content body) */
+  payload: string
+  /** Content fingerprint for integrity verification */
+  artifactHash: string
+  /** Semantic version — aligned with source KnowledgeAsset */
+  version: string
+
+  createdAt: string
+  updatedAt: string
+}
+
+// ─── Contract K2-02: PackageManifest ───
+// Every Package has a manifest that describes its contents.
+// This is what Delivery (K3+) consumes to decide where to send.
+
+export interface PackageManifest {
+  schemaVersion: string         // '2.0'
+
+  // Source provenance
+  source: {
+    packageType: PackageType
+    assetId: string
+    claimId: string
+    recordId: string
+    projectId?: string
+  }
+
+  // Content metadata
+  content: {
+    title: string
+    summary: string
+    /** Estimated byte size */
+    estimatedSize: number
+    /** MIME type of the payload */
+    mimeType: string
+    /** Locale / language */
+    language: string
+  }
+
+  // Delivery hints
+  delivery: {
+    /** Preferred delivery target(s) */
+    preferredTargets: DistributionTarget[]
+    /** Cache TTL in seconds */
+    cacheTTL: number
+    /** Whether this should trigger re-index notification */
+    requiresIndexing: boolean
+    /** Priority: high | normal | low */
+    priority: 'high' | 'normal' | 'low'
+  }
+
+  // Validation
+  validation: {
+    contentHash: string
+    signed: boolean
+    timestamp: string
+  }
+}
+
+// ─── Contract K2-03: PackagingAdapter ───
+// Each PackageType has a PackagingAdapter that builds it.
+// This replaces the old DistributionAdapter interface.
+// Adapter = implementation detail, Package = business model.
+
+export interface PackagingAdapter {
+  /** Adapter identity */
+  id: string
+  type: string        // 'local' | 'external'
+  name: string
+  packageType: PackageType
+
+  /** Build a KnowledgePackage from assets */
+  build(assets: KnowledgeAsset[], bundleName?: string): Promise<KnowledgePackage[]>
+  /** Validate the built package */
+  validate(pkg: KnowledgePackage): Promise<{ valid: boolean; errors: string[] }>
+  /** Generate a manifest for the package */
+  manifest(pkg: KnowledgePackage): PackageManifest
+  /** Preview the package (human-readable) */
+  preview(pkg: KnowledgePackage): string
+}
+
+// ─── Freeze Rules (K2) ───
+
+// FR-K10: KnowledgePackage is the unit of distribution.
+// Delivery (K3+) consumes KnowledgePackage. Never feed raw Assets to Delivery.
+// This ensures every delivery has a signed, validated, versioned manifest.
