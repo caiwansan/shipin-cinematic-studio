@@ -5891,3 +5891,71 @@ model PackageArtifact {
   @@map("package_artifacts")
 }
 
+// ============================================================
+// KDP — Sprint K3 (Knowledge Delivery Runtime)
+// Frozen 2026-07-01
+// Core principle: Delivery is a Runtime, not a Script.
+// FR-K11: Runtime handles Queue → Dispatch → Retry → Rollback → Verify
+// FR-K12: Runtime only cares about DeliveryTarget, not platform
+// FR-K13: K3 only supports Local Delivery
+// ============================================================
+
+// DeliveryJob: A job packages one or more KnowledgePackages for delivery.
+model DeliveryJob {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+  packageIds      String   @map("package_ids")                     // JSON array
+  targetId        String   @map("target_id")                       // ↔ DeliveryTarget
+  status          String   @default("queued")                      // 'queued' | 'dispatching' | 'delivering' | 'verifying' | 'completed' | 'failed' | 'rolled_back'
+  priority        String   @default("normal")                      // 'high' | 'normal' | 'low'
+  retryCount      Int      @default(0) @map("retry_count")
+  maxRetries      Int      @default(3) @map("max_retries")
+  createdAt       DateTime @default(now()) @map("created_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  errorLog        String?  @map("error_log")
+
+  @@index([status])
+  @@index([projectId])
+  @@index([targetId])
+  @@map("delivery_jobs")
+}
+
+// DeliveryTarget: Where packages are delivered.
+// First version: 'local' (sandbox/output/)
+model DeliveryTarget {
+  id              String   @id @default(uuid())
+  type            String                                      // 'local' | 'website' | 'cms' | 'knowledge_base' | 'search_endpoint' | 'ai_endpoint'
+  name            String
+  config          Json    @default("{}")                      // Per-target configuration (outputPath, baseUrl, etc.)
+  enabled         Boolean @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@map("delivery_targets")
+}
+
+// DeliveryRecord: Append-only audit trail for every delivery.
+model DeliveryRecord {
+  id              String   @id @default(uuid())
+  jobId           String   @map("job_id")                     // ↔ DeliveryJob
+  packageId       String   @map("package_id")                 // ↔ KnowledgePackage
+  targetId        String   @map("target_id")                  // ↔ DeliveryTarget
+  status          String                                      // 'completed' | 'failed' | 'rolled_back'
+  outputPath      String   @map("output_path")                // File system path
+  bytes           Int                                         // Total bytes delivered
+  artifactCount   Int      @map("artifact_count")             // Number of artifacts
+  checksum        String                                      // SHA256 of delivered content
+  previousState   String?  @map("previous_state")             // For rollback
+  durationMs      Int?     @map("duration_ms")
+  errorLog        String?  @map("error_log")
+  startedAt       DateTime @default(now()) @map("started_at")
+  finishedAt      DateTime? @map("finished_at")
+
+  @@index([jobId])
+  @@index([packageId])
+  @@index([targetId])
+  @@map("delivery_records")
+}
+

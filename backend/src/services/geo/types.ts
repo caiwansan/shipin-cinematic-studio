@@ -903,3 +903,122 @@ export interface PackagingAdapter {
 // FR-K10: KnowledgePackage is the unit of distribution.
 // Delivery (K3+) consumes KnowledgePackage. Never feed raw Assets to Delivery.
 // This ensures every delivery has a signed, validated, versioned manifest.
+
+// ════════════════════════════════════════════════════════════
+// KDP — Sprint K3 (Knowledge Delivery Runtime) Contracts
+// ════════════════════════════════════════════════════════════
+// Frozen 2026-07-01 — K3 Delivery Runtime
+// Core principle: Delivery is a Runtime, not a Script.
+// Runtime handles: Queue → Dispatch → Retry → Rollback → Verify
+// K3 only: Local Delivery to sandbox/output/
+// ════════════════════════════════════════════════════════════
+
+// ─── Contract K3-01: DeliveryJob ───
+// A job packages one or more KnowledgePackages for delivery.
+// Jobs are created by the Runtime and tracked for retry/recovery.
+
+export enum DeliveryJobStatus {
+  Queued = 'queued',
+  Dispatching = 'dispatching',
+  Delivering = 'delivering',
+  Verifying = 'verifying',
+  Completed = 'completed',
+  Failed = 'failed',
+  RolledBack = 'rolled_back',
+}
+
+export enum DeliveryJobPriority {
+  High = 'high',
+  Normal = 'normal',
+  Low = 'low',
+}
+
+export interface DeliveryJob {
+  id: string
+  projectId: string
+  packageIds: string[]
+  targetId: string                  // ↔ DeliveryTarget
+  status: DeliveryJobStatus
+  priority: DeliveryJobPriority
+  retryCount: number
+  maxRetries: number
+  createdAt: string
+  startedAt?: string
+  completedAt?: string
+  errorLog?: string
+}
+
+// ─── Contract K3-02: DeliveryTarget ───
+// A target is where packages are delivered.
+// First version: 'local' (sandbox/output/)
+// Future: 'website' | 'cms' | 'knowledge_base' | 'search_endpoint' | 'ai_endpoint'
+
+export interface DeliveryTargetType {
+  id: string
+  type: string                      // 'local' | 'website' | 'cms' | 'knowledge_base' | 'search_endpoint' | 'ai_endpoint'
+  name: string
+  config: Record<string, any>       // Per-target configuration (outputPath, baseUrl, etc.)
+  enabled: boolean
+  createdAt: string
+}
+
+// ─── Contract K3-03: DeliveryRecord ───
+// Every delivery produces a record. Append-only, never mutated.
+// This is the audit trail for what was delivered, when, and its state.
+
+export interface DeliveryRecord {
+  id: string
+  jobId: string
+  packageId: string
+  targetId: string
+  status: DeliveryJobStatus
+
+  /** File system path where the package was landed */
+  outputPath: string
+  /** Total bytes delivered */
+  bytes: number
+  /** Number of artifacts delivered */
+  artifactCount: number
+  /** Checksum of delivered content (for verification) */
+  checksum: string
+  /** Previous delivery state (for rollback) */
+  previousState?: string
+
+  startedAt: string
+  finishedAt?: string
+  durationMs?: number
+  errorLog?: string
+}
+
+// ─── Contract K3-04: DeliveryAdapter ───
+// Adapter for each target type.
+// This is where deliver() finally appears — K1 through K2 were all prepare.
+
+export interface DeliveryAdapter {
+  id: string
+  targetType: string
+  name: string
+
+  /** Prepare the target directory/connection */
+  prepare(config: Record<string, any>): Promise<void>
+  /** Deliver (write/copy/deploy) the package artifacts */
+  deliver(jobId: string, pkg: KnowledgePackage, target: DeliveryTargetType, artifacts: PackageArtifact[]): Promise<DeliveryRecord>
+  /** Verify the delivery was successful */
+  verify(record: DeliveryRecord): Promise<{ valid: boolean; errors: string[] }>
+  /** Rollback to previous state */
+  rollback(record: DeliveryRecord): Promise<void>
+}
+
+// ─── Freeze Rules (K3) ───
+
+// FR-K11: Delivery is a Runtime, not a Script.
+// DeliveryRuntime handles Queue → Dispatch → Retry → Rollback → Verify.
+// No manual delivery steps. All delivery goes through the Runtime.
+
+// FR-K12: Delivery Runtime does not care about target platform type.
+// It only cares about DeliveryTarget. Platform differences are handled by Adapters.
+// New platforms = new Adapter, not new Runtime.
+
+// FR-K13: K3 only supports Local Delivery (sandbox/output/).
+// Real external platforms (Website, CMS, Knowledge Base, AI Endpoint) are K4+.
+// K3 must freeze before any external Delivery Adapter is built.
