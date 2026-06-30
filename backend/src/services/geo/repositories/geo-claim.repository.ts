@@ -22,6 +22,11 @@ function mapPrismaClaim(c: any): Claim {
 }
 
 export const geoClaimRepository = {
+  async findMany(where: any, options?: { orderBy?: any; include?: any; select?: any }): Promise<any[]> {
+    const claims = await prisma.gEOClaim.findMany({ where, ...options })
+    return claims
+  },
+
   async create(data: {
     entityId: string
     text: string
@@ -106,6 +111,11 @@ export const geoClaimRepository = {
     } catch {
       return false
     }
+  },
+
+  async count(where: any): Promise<number> {
+    const effectiveWhere = where.where || where
+    return prisma.gEOClaim.count({ where: effectiveWhere })
   },
 
   async countByEntityId(entityId: string): Promise<number> {

@@ -98,3 +98,16 @@ export { default as geoBrandRoute } from './routes/geo-brand.route'
 export { default as geoKeywordRoute } from './routes/geo-keyword.route'
 export { default as geoScanRoute } from './routes/geo-scan.route'
 export { default as geoDashboardRoute } from './routes/geo-dashboard.route'
+
+// Sprint P2 — Execution Loop Routes
+export { geoRecommendationRoutes as geoRecommendationRoute } from './recommendation/recommendation.route'
+export { geoVerificationRoutes as geoVerificationRoute } from './verification/verification.route'
+
+// Sprint P2 — Learning Engine Routes
+export { geoLearningRoutes as geoLearningRoute } from './growth/learning.route'
+
+// Sprint P2 — Monitor Routes
+export { geoMonitorRoutes as geoMonitorRoute } from './monitor/monitor.route'
+
+// Sprint P3 — Publishing Routes
+export { default as geoPublishingRoute } from './publishing/publishing.route'

@@ -584,7 +584,7 @@ await app.register(projectV2Routes)
   // GEO v4 Verification routes — Truth Layer MVP
   await app.register(await import('./services/geo/verification/verification.route.js').then(m => m.geoVerificationRoutes))
   // GEO v4 Publishing routes — Publishing Pipeline
-  await app.register(await import('./services/geo/publishing/publishing.route.js').then(m => m.geoPublishingRoutes))
+  await app.register(await import('./services/geo/publishing/publishing.route.js').then(m => m.default))
   // GEO v4 Monitor routes — Observation Runtime
   try {
     await app.register(await import('./services/geo/monitor/monitor.route.js').then(m => m.geoMonitorRoutes))

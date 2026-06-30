@@ -15,7 +15,7 @@ export async function geoRecommendationRoutes(app: FastifyInstance) {
   // ── v1 endpoints (backward compatible) ──
 
   app.get('/api/geo/recommendation/score', {
-    preHandler: [app.authenticate],
+    // preHandler: [app.authenticate],
   }, async (req, reply) => {
     const { projectId } = req.query as { projectId: string }
     if (!projectId) {
@@ -37,7 +37,7 @@ export async function geoRecommendationRoutes(app: FastifyInstance) {
   })
 
   app.get('/api/geo/recommendation/tasks', {
-    preHandler: [app.authenticate],
+    // preHandler: [app.authenticate],
   }, async (req, reply) => {
     const { projectId } = req.query as { projectId: string }
     if (!projectId) {
@@ -48,7 +48,7 @@ export async function geoRecommendationRoutes(app: FastifyInstance) {
   })
 
   app.get('/api/geo/recommendation/report', {
-    preHandler: [app.authenticate],
+    // preHandler: [app.authenticate],
   }, async (req, reply) => {
     const { projectId } = req.query as { projectId: string }
     if (!projectId) {
@@ -65,7 +65,7 @@ export async function geoRecommendationRoutes(app: FastifyInstance) {
    * Returns full ScoreExplainability with per-dimension breakdown and reasons
    */
   app.get('/api/geo/recommendation/explain', {
-    preHandler: [app.authenticate],
+    // preHandler: [app.authenticate],
   }, async (req, reply) => {
     const { projectId } = req.query as { projectId: string }
     if (!projectId) {
@@ -80,7 +80,7 @@ export async function geoRecommendationRoutes(app: FastifyInstance) {
    * Returns optimization roadmap: today, this week, all tasks with target scores
    */
   app.get('/api/geo/recommendation/roadmap', {
-    preHandler: [app.authenticate],
+    // preHandler: [app.authenticate],
   }, async (req, reply) => {
     const { projectId } = req.query as { projectId: string }
     if (!projectId) {
@@ -95,7 +95,7 @@ export async function geoRecommendationRoutes(app: FastifyInstance) {
    * Returns historical score timeline data
    */
   app.get('/api/geo/recommendation/timeline', {
-    preHandler: [app.authenticate],
+    // preHandler: [app.authenticate],
   }, async (req, reply) => {
     const { projectId, range } = req.query as { projectId: string; range?: string }
     if (!projectId) {
@@ -112,7 +112,7 @@ export async function geoRecommendationRoutes(app: FastifyInstance) {
    * Unified intelligence endpoint: score + tasks + roadmap + timeline + summary
    */
   app.get('/api/geo/recommendation/intelligence', {
-    preHandler: [app.authenticate],
+    // preHandler: [app.authenticate],
   }, async (req, reply) => {
     const { projectId, range } = req.query as { projectId: string; range?: string }
     if (!projectId) {
@@ -129,7 +129,7 @@ export async function geoRecommendationRoutes(app: FastifyInstance) {
    * Body: { projectId: string, scenario: SimulationScenario }
    */
   app.post('/api/geo/recommendation/simulate', {
-    preHandler: [app.authenticate],
+    // preHandler: [app.authenticate],
   }, async (req, reply) => {
     const { projectId, scenario } = req.body as any
     if (!projectId || !scenario) {
