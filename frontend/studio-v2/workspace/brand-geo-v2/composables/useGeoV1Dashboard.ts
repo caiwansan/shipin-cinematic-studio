@@ -16,7 +16,8 @@ export function useGeoV1Dashboard(projectId: Ref<string | null>) {
     loading.value = true
     error.value = null
     try {
-      const res: any = await $fetch(`/api/geo/monitor/dashboard/${projectId.value}`)
+      const { client } = await import('~/studio-v2/workspace/brand-geo/clients/GEOApiClient')
+      const res = await client.get(`/monitor/dashboard/${projectId.value}`)
       if (res.success) {
         geoScore.value = res.data.currentScore || 0
         publishHealth.value = res.data.publishingHealth?.verified || 0

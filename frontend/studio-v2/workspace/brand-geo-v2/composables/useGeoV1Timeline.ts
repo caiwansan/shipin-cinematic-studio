@@ -38,7 +38,8 @@ export function useGeoV1Timeline(projectId: Ref<string | null>) {
     if (!projectId.value) return
     loading.value = true
     try {
-      const res: any = await $fetch(`/api/geo/verification/timeline/${projectId.value}`)
+      const { client } = await import('~/studio-v2/workspace/brand-geo/clients/GEOApiClient')
+      const res = await client.get(`/verification/timeline/${projectId.value}`)
       if (res.success) {
         events.value = (res.data || []).map((e: any) => ({
           id: e.id,

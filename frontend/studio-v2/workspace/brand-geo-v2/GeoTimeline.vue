@@ -6,6 +6,8 @@ import type { TimelineEvent } from '~/components/kmki-ui/Timeline/index.vue'
 const props = defineProps<{ projectId: string | null }>()
 
 const events = ref<TimelineEvent[]>([])
+const replaying = ref(false)
+const replayResult = ref<string | null>(null)
 
 function getPhaseIcon(phase: string): string {
   const map: Record<string, string> = {
@@ -30,10 +32,10 @@ function formatTime(timestamp: string | number): string {
   return d.toLocaleDateString('zh-CN')
 }
 
-watch(() => props.projectId, async (id) => {
-  if (!id) return
+async function fetchTimeline(id: string) {
   try {
-    const res: any = await $fetch(`/api/geo/verification/timeline/${id}`)
+    const { client } = await import('~/studio-v2/workspace/brand-geo/clients/GEOApiClient')
+    const res = await client.get(`/verification/timeline/${id}`)
     if (res.success) {
       events.value = (res.data || []).map((e: any) => ({
         id: e.id,
@@ -49,12 +51,55 @@ watch(() => props.projectId, async (id) => {
   } catch {
     // ignore API errors
   }
+}
+
+watch(() => props.projectId, async (id) => {
+  if (!id) return
+  await fetchTimeline(id)
 }, { immediate: true })
+
+async function replayVerification() {
+  if (!props.projectId) return
+  replaying.value = true
+  replayResult.value = null
+  try {
+    const { client } = await import('~/studio-v2/workspace/brand-geo/clients/GEOApiClient')
+    const res = await client.post('/verification/run', {
+      projectId: props.projectId,
+      optimizationType: 'replay',
+      triggerSource: 'manual',
+    })
+    replayResult.value = res.success ? '✅ 验证已重跑' : '❌ 重跑失败'
+    if (res.success) await fetchTimeline(props.projectId)
+  } catch {
+    replayResult.value = '❌ 重跑失败'
+  } finally {
+    replaying.value = false
+  }
+}
 </script>
 
 <template>
   <div>
-    <div v-if="events.length === 0" class="text-center text-gray-400 py-12">暂无数据</div>
-    <Timeline v-else :events="events" />
+    <div v-if="!projectId" class="text-center text-gray-400 py-12">选择一个项目开始</div>
+    <template v-else>
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm text-gray-500 dark:text-gray-400">验证时间线</span>
+        <button
+          class="text-xs px-3 py-1.5 rounded bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          :disabled="replaying"
+          @click="replayVerification"
+        >
+          {{ replaying ? '运行中...' : '重新执行' }}
+        </button>
+      </div>
+
+      <div v-if="replayResult" class="text-xs text-center py-1 mb-2" :class="replayResult.startsWith('✅') ? 'text-green-500' : 'text-red-400'">
+        {{ replayResult }}
+      </div>
+
+      <div v-if="events.length === 0" class="text-center text-gray-400 py-12">暂无数据</div>
+      <Timeline v-else :events="events" />
+    </template>
   </div>
 </template>

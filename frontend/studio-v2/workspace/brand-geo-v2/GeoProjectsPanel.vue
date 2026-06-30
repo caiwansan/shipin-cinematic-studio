@@ -8,7 +8,9 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const res: any = await $fetch('/api/geo/list')
+    // Use GEOApiClient instead of bare $fetch — handles auth token injection
+    const { client } = await import('~/studio-v2/workspace/brand-geo/clients/GEOApiClient')
+    const res = await client.get('/projects')
     if (res.success) {
       projects.value = res.data || []
       if (projects.value.length > 0 && !selected.value) {
@@ -31,6 +33,18 @@ onMounted(async () => {
     <div class="flex-1 overflow-auto">
       <div v-if="loading" class="p-4 space-y-3">
         <div v-for="i in 3" :key="i" class="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+      </div>
+      <!-- Empty state: no projects yet -->
+      <div v-else-if="projects.length === 0" class="p-6 text-center">
+        <div class="text-3xl mb-3">🌐</div>
+        <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">还没有品牌项目</div>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">创建你的第一个品牌，开始 AI 认知优化</p>
+        <button
+          class="text-xs px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+          @click="$emit('create')"
+        >
+          创建品牌
+        </button>
       </div>
       <button
         v-for="p in projects"

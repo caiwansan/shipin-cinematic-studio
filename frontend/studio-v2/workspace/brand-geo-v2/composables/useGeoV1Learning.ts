@@ -9,7 +9,8 @@ export function useGeoV1Learning(projectId: Ref<string | null>) {
     if (!projectId.value) return
     loading.value = true
     try {
-      const res: any = await $fetch(`/api/geo/learning/signals?projectId=${projectId.value}`)
+      const { client } = await import('~/studio-v2/workspace/brand-geo/clients/GEOApiClient')
+      const res = await client.get(`/learning/signals?projectId=${projectId.value}`)
       if (res.success) {
         signals.value = res.data || []
       }

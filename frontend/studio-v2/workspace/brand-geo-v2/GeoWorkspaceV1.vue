@@ -12,6 +12,9 @@ import GeoInsightsPanel from '~/studio-v2/workspace/brand-geo-v2/GeoInsightsPane
 const activeProjectId = ref<string | null>(null)
 const activeTab = ref<'overview' | 'timeline' | 'evidence' | 'publish' | 'insights'>('overview')
 
+// Evidence tab: which action to focus on
+const evidenceActionId = ref<string | null>(null)
+
 const tabs = [
   { key: 'overview', label: '概览' },
   { key: 'timeline', label: '时间线' },
@@ -19,6 +22,13 @@ const tabs = [
   { key: 'publish', label: '发布' },
   { key: 'insights', label: '洞察' },
 ] as const
+
+function handleNavigate(tab: string, actionId?: string) {
+  if (tab === 'evidence' && actionId) {
+    evidenceActionId.value = actionId
+  }
+  activeTab.value = tab as any
+}
 </script>
 
 <template>
@@ -42,11 +52,24 @@ const tabs = [
         </nav>
       </div>
       <div class="flex-1 overflow-auto p-4">
-        <GeoOverview v-if="activeTab === 'overview'" :project-id="activeProjectId" />
+        <GeoOverview
+          v-if="activeTab === 'overview'"
+          :project-id="activeProjectId"
+          @navigate="handleNavigate"
+        />
         <GeoTimeline v-else-if="activeTab === 'timeline'" :project-id="activeProjectId" />
-        <GeoEvidence v-else-if="activeTab === 'evidence'" :project-id="activeProjectId" />
+        <GeoEvidence
+          v-else-if="activeTab === 'evidence'"
+          :project-id="activeProjectId"
+          :action-id="evidenceActionId"
+          @navigate="handleNavigate"
+        />
         <GeoPublish v-else-if="activeTab === 'publish'" :project-id="activeProjectId" />
-        <GeoInsights v-else-if="activeTab === 'insights'" :project-id="activeProjectId" />
+        <GeoInsights
+          v-else-if="activeTab === 'insights'"
+          :project-id="activeProjectId"
+          @navigate="handleNavigate"
+        />
       </div>
     </div>
 
