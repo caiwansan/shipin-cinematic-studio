@@ -116,15 +116,43 @@ Adapter Registry（接口+实现）
 
 ---
 
-## 数据模型（概念设计）
+## 数据模型（概念设计 — KnowledgeAsset-first）
 
 ```prisma
 // KDP Domain — Knowledge Distribution Plane
+
+model KnowledgeAsset {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  claimId   String   @map("claim_id")         // ↔ PublishableClaim
+  recordId  String   @map("record_id")        // ↔ PublishingRecord
+
+  assetType String   // 'article' | 'schema_entity' | 'entity_graph'
+                     // | 'fact_sheet' | 'claim_graph' | 'brand_profile'
+                     // | 'qa_pack' | 'ai_knowledge_feed' | 'ai_manifest'
+
+  status    String   @default("draft")
+
+  // Three layers — all required
+  humanContent  String  // Human Layer (HTML / MD)
+  searchContent String  // Search Layer (JSON-LD / Schema)
+  aiContent     String  // AI Layer (Knowledge JSON)
+
+  version       String
+  artifactHash  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 model DistributionPlan {
   id        String   @id @default(uuid())
   projectId String   @map("project_id")
   title     String
+
+  assetIds  String[] // KnowledgeAsset IDs
+  targets   String[] // DistributionTarget[]
+  strategy  Json     // { incrementalOnly, forceFull, scheduleAt }
 
   status    String   @default("draft")
   // 'draft' | 'pending_review' | 'approved' | 'distributing' | 'completed' | 'cancelled'
@@ -133,51 +161,38 @@ model DistributionPlan {
   updatedAt DateTime @updatedAt
   approvedAt DateTime?
   completedAt DateTime?
-
-  tasks DistributionTask[]
-}
-
-model DistributionTask {
-  id        String   @id @default(uuid())
-  planId    String   @map("plan_id")
-  recordId  String   @map("record_id")        // ↔ PublishingRecord
-  
-  adapter   String  // 'sitemap' | 'rss' | 'knowledge_feed' | 'robots_txt' | 'ai_crawl_manifest'
-  status    String  @default("pending")
-  // 'pending' | 'running' | 'success' | 'failed' | 'skipped'
-
-  retryCount Int     @default(0)
-  maxRetries  Int    @default(3)
-  createdAt DateTime @default(now())
-  completedAt DateTime?
-
-  attempts   DistributionAttempt[]
 }
 
 model DistributionAttempt {
   id        String   @id @default(uuid())
-  taskId    String   @map("task_id")
+  planId    String   @map("plan_id")
 
-  attemptNumber Int  @default(1)
-  status        String // 'running' | 'success' | 'failed'
+  taskKey   String   // `${planId}:${adapter}:${attemptNo}`
+  adapterId String
 
-  outputUrl     String?   // 生成的 artifact URL
-  artifactHash  String?   // 内容指纹
-  durationMs    Int?      // 执行耗时
-  errorLog      String?   // 如果失败
+  attemptNo Int      @default(1)
+  assetIds  String[]
+
+  status    String   // 'pending' | 'preparing' | 'validating'
+                     // | 'packaging' | 'delivering' | 'success' | 'failed'
+
+  outputUrl     String?
+  artifactHash  String?
+  durationMs    Int?
+  errorLog      String?
 
   createdAt DateTime @default(now())
-  completedAt DateTime?
+  startedAt  DateTime?
+  finishedAt DateTime?
 }
 
-// Adapter Registry（存档已注册的 Adapter 元数据）
+// Adapter Registry
 model DistributionAdapter {
-  id        String   @id @default(uuid())
-  type      String   // 'local' | 'external'
-  name      String   // 'Sitemap Adapter', 'RSS Feed Adapter', ...
-
-  enabled   Boolean  @default(true)
-  config    Json?    // 每个 adapter 的配置（如 sitemap 的 baseUrl）
+  id      String   @id @default(uuid())
+  type    String   // 'local' | 'external'
+  name    String
+  enabled Boolean  @default(true)
+  config  Json?
 }
 ```
 
@@ -233,7 +248,22 @@ Website content     ===→    AI Crawl Manifest
 
 ---
 
-## Freeze Rules
+## 永久原则（Permanent Rules）
+
+### PR-K1：KnowledgeAsset 是核心对象
+Distribution Task / Attempt 是实现细节。
+每一层 API、接口、数据模型必须 KnowledgeAsset-first，不可 Task-first。
+
+### PR-K2：三层可消费性
+**Every KnowledgeAsset must be consumable by both humans and AI systems.**
+- `humanContent` → Human Layer（HTML / Markdown）
+- `searchContent` → Search Layer（JSON-LD / Schema.org）
+- `aiContent` → AI Layer（Entity Graph / Fact Sheet / Claim Graph / QA Pack）
+- 三个字段全填满才算一个完整的 KnowledgeAsset，缺一不可。
+
+---
+
+## Freeze Rules（Sprint 级，可随版本升级调整）
 
 ### FR-K1：消费 PublishingRecord
 Distribution 永远消费 PublishingRecord，而不是 PublishableClaim。

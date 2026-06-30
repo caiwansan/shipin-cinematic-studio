@@ -606,3 +606,168 @@ export interface PublishingSummary {
   publishedCount: number
   channelBreakdown: Array<{ channel: string; count: number }>
 }
+
+// ============================================================
+// KDP (Knowledge Distribution Plane) — Sprint K1 Contracts
+// ============================================================
+// Frozen 2026-06-30 — Core object is KnowledgeAsset, not DistributionTask
+// Distribution is transport, KnowledgeAsset is the substance.
+// ============================================================
+
+// ─── Contract K1-01: KnowledgeAsset ───
+// The core domain object of KDP. Every piece of knowledge produced
+// from PublishingRecord is a KnowledgeAsset.
+// Must be consumable by both humans and AI systems.
+
+export enum AssetType {
+  Article = 'article',           // Human-readable content (HTML, MD)
+  SchemaEntity = 'schema_entity', // Structured data (JSON-LD)
+  EntityGraph = 'entity_graph',  // Entity relationship graph
+  FactSheet = 'fact_sheet',      // Verified claims → fact statement
+  ClaimGraph = 'claim_graph',    // Claim dependency graph
+  BrandProfile = 'brand_profile', // Aggregated brand knowledge
+  QAPack = 'qa_pack',            // FAQ → structured Q&A
+  AIKnowledgeFeed = 'ai_knowledge_feed',  // AI-consumable summary
+  AIManifest = 'ai_manifest',    // AI Crawl Manifest
+}
+
+export enum AssetStatus {
+  Draft = 'draft',
+  Ready = 'ready',
+  Distributing = 'distributing',
+  Distributed = 'distributed',
+  Expired = 'expired',
+}
+
+export interface KnowledgeAsset {
+  id: string
+  projectId: string
+  claimId: string           // ↔ PublishableClaim
+  recordId: string          // ↔ PublishingRecord
+  assetType: AssetType
+  status: AssetStatus
+
+  // Human Layer: rendered content for website / human readers
+  humanContent: string      // HTML or Markdown
+  // Search Layer: structured data for search engines
+  searchContent: string     // JSON-LD or schema.org
+  // AI Layer: knowledge representation for AI models
+  aiContent: string         // JSON (EntityGraph, FactSheet, etc.)
+
+  version: string           // Semantic version
+  artifactHash: string      // Content fingerprint
+
+  createdAt: string
+  updatedAt: string
+}
+
+// ─── Contract K1-02: DistributionPlan ───
+// A plan to distribute KnowledgeAssets to targets.
+// Auto-created when KnowledgeAssets are ready, user approves.
+
+export enum DistributionTarget {
+  Website = 'website',
+  RSS = 'rss',
+  Sitemap = 'sitemap',
+  RobotsTxt = 'robots_txt',
+  KnowledgeFeed = 'knowledge_feed',
+  AIManifest = 'ai_manifest',
+}
+
+export enum DistributionPlanStatus {
+  Draft = 'draft',
+  PendingReview = 'pending_review',
+  Approved = 'approved',
+  Distributing = 'distributing',
+  Completed = 'completed',
+  Cancelled = 'cancelled',
+}
+
+export interface DistributionPlan {
+  id: string
+  projectId: string
+  title: string
+  assetIds: string[]          // KnowledgeAsset IDs
+  targets: DistributionTarget[]
+  status: DistributionPlanStatus
+  strategy: {
+    incrementalOnly: boolean   // Only distribute changed/new assets
+    forceFull: boolean         // Redistribute everything
+    scheduleAt?: string        // ISO datetime for scheduled distribution
+  }
+
+  createdAt: string
+  updatedAt: string
+  approvedAt?: string
+  completedAt?: string
+}
+
+// ─── Contract K1-03: DistributionAttempt ───
+// Every distribution is a series of attempts, not a single event.
+// This enables retry, rate-limit tracking, and full observability.
+
+export enum AttemptStatus {
+  Pending = 'pending',
+  Preparing = 'preparing',
+  Validating = 'validating',
+  Packaging = 'packaging',
+  Delivering = 'delivering',
+  Success = 'success',
+  Failed = 'failed',
+}
+
+export interface DistributionAttempt {
+  id: string
+  planId: string
+  taskKey: string             // `${planId}:${adapterType}:${attemptNo}`
+  adapterId: string
+  attemptNo: number
+
+  assetIds: string[]
+  target: DistributionTarget
+
+  status: AttemptStatus
+  outputUrl?: string          // Where the artifact was placed
+  artifactHash?: string       // Content fingerprint at delivery time
+  durationMs?: number
+  errorLog?: string
+
+  startedAt: string
+  finishedAt?: string
+}
+
+// ─── Contract K1-04: DistributionAdapter ───
+// Adapter interface — each adapter implements:
+//   prepare() → validate() → package() → deliver()
+
+export enum AdapterType {
+  Local = 'local',           // Generates artifact locally (sitemap, rss, etc.)
+  External = 'external',     // Submits to external platform
+}
+
+export interface DistributionAdapter {
+  id: string
+  type: AdapterType
+  name: string               // 'Sitemap Adapter', 'RSS Feed Adapter', etc.
+  enabled: boolean
+  config?: Record<string, unknown>  // e.g. { baseUrl, outputDir }
+}
+
+// Adapter Runtime Interface (implemented by each adapter)
+export interface AdapterRuntime {
+  prepare(assets: KnowledgeAsset[]): Promise<{ artifact: string; hash: string }>
+  validate(artifact: string): Promise<{ valid: boolean; errors: string[] }>
+  package(artifact: string, target: DistributionTarget): Promise<Blob>
+  deliver(packaged: Blob, target: DistributionTarget): Promise<{ url: string; deliveredAt: string }>
+}
+
+// ─── Freeze Rules (permanent) ───
+
+// FR-K6: KnowledgeAsset is the core domain object.
+// DistributionTask is an implementation detail.
+// Every API, every interface, every database model must be KnowledgeAsset-first.
+
+// FR-K7: Every KnowledgeAsset must be consumable by both humans and AI systems.
+// humanContent handles the human layer, aiContent handles the AI layer.
+// searchContent handles the search engine layer.
+// No asset is "complete" until all three are populated.
