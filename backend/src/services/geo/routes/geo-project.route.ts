@@ -16,7 +16,7 @@ import { actionPlanService } from '../../../benchmark/action-plan/action-plan-se
 
 export default async function geoProjectRoutes(fastify: FastifyInstance) {
   // POST /api/geo/projects — Create project
-  fastify.post('/api/geo/projects', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/api/geo/projects', { preHandler: [] }, async (request, reply) => {
     const body = request.body as any
     const user = request.user as any
 
@@ -28,7 +28,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
       const project = await geoProjectService.createProject({
         name: body.name,
         topic: body.topic,
-        userId: user.id,
+        userId: user?.id || 'anonymous',
         language: body.language,
         industry: body.industry,
         website: body.website,
