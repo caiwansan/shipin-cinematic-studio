@@ -76,8 +76,8 @@ function getBrandQuotaLimit(membershipType: string): number {
 }
 
 export default async function geoBrandRoutes(fastify: FastifyInstance) {
-  // GET /api/geo/brands — List user brands
-  fastify.get('/api/geo/brands', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // GET /api/geo/projects — List user brands (legacy: /api/geo/brands)
+  fastify.get('/api/geo/projects', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const user = request.user as any
     const userId = user.id
 
@@ -125,8 +125,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // POST /api/geo/brands — Create brand
-  fastify.post('/api/geo/brands', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // POST /api/geo/projects — Create brand (legacy: /api/geo/brands)
+  fastify.post('/api/geo/projects', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const user = request.user as any
     const userId = user.id
     const body = request.body as BrandCreateBody
@@ -192,8 +192,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // PUT /api/geo/brands/:id — Update brand
-  fastify.put('/api/geo/brands/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // PUT /api/geo/projects/:id — Update brand (legacy: /api/geo/brands/:id)
+  fastify.put('/api/geo/projects/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
     const body = request.body as BrandUpdateBody
 
@@ -227,8 +227,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // DELETE /api/geo/brands/:id — Soft delete brand
-  fastify.delete('/api/geo/brands/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // DELETE /api/geo/projects/:id — Soft delete brand (legacy: /api/geo/brands/:id)
+  fastify.delete('/api/geo/projects/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -248,8 +248,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // GET /api/geo/brands/:id/settings — Get brand settings
-  fastify.get('/api/geo/brands/:id/settings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // GET /api/geo/projects/:id/settings — Get brand settings (legacy: /api/geo/brands/:id/settings)
+  fastify.get('/api/geo/projects/:id/settings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -282,8 +282,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // PUT /api/geo/brands/:id/settings — Update brand settings
-  fastify.put('/api/geo/brands/:id/settings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // PUT /api/geo/projects/:id/settings — Update brand settings (legacy: /api/geo/brands/:id/settings)
+  fastify.put('/api/geo/projects/:id/settings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
     const body = request.body as BrandSettingUpdateBody
 
@@ -313,8 +313,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // GET /api/geo/brands/:id/status — Brand status (Provider, Scan, KO)
-  fastify.get('/api/geo/brands/:id/status', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // GET /api/geo/projects/:id/status — Brand status (Provider, Scan, KO) (legacy: /api/geo/brands/:id/status)
+  fastify.get('/api/geo/projects/:id/status', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {

@@ -75,6 +75,7 @@ const route = useRoute()
 const navOpen = ref(false)
 
 const navTabs = [
+  { label: 'Dashboard', path: '/workspace/geo/dashboard', icon: '&#128202;' },
   { label: 'Discovery Lab', path: '/workspace/geo/discovery', icon: '&#128300;' },
   { label: 'Assessment', path: '/workspace/geo/health', icon: '&#9829;' },
   { label: 'Recommendations', path: '/workspace/geo/recommendations', icon: '&#9733;' },

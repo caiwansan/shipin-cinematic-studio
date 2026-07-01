@@ -1,0 +1,20 @@
+{
+  "version": "5.22.0",
+  "tables": [
+    {
+      "table": "kmki_geo_discovery_reports",
+      "columns": ["id", "projectId", "entityName", "adi", "coverageScore", "shareScore", "positionScore", "reportData", "createdAt", "updatedAt"],
+      "indexes": ["kmki_geo_discovery_reports_projectId_idx"]
+    },
+    {
+      "table": "kmki_geo_action_plans",
+      "columns": ["id", "projectId", "discoveryReportId", "planData", "status", "createdAt", "updatedAt"],
+      "indexes": ["kmki_geo_action_plans_projectId_idx"]
+    },
+    {
+      "table": "kmki_geo_verification_reports",
+      "columns": ["id", "projectId", "entityName", "beforeAdi", "afterAdi", "deltaAdi", "reportData", "createdAt"],
+      "indexes": ["kmki_geo_verification_reports_projectId_idx"]
+    }
+  ]
+}

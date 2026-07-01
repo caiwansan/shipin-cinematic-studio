@@ -6,6 +6,7 @@ import { geoProjectRepository } from '../repositories/geo-project.repository.js'
 import { geoProjectVersionRepository } from '../repositories/geo-project-version.repository.js'
 import { workspaceRuntimeRepository } from '../repositories/workspace-runtime.repository.js'
 import { workspaceSnapshotRepository } from '../repositories/workspace-snapshot.repository.js'
+import { geoPersistenceService } from './geo-persistence.service.js'
 import type { GEOProject } from '../types'
 import { getDefaultGEOWorkspaceSettings } from '../registry/geo-registry'
 
@@ -241,5 +242,43 @@ export const geoProjectService = {
       graphSnapshot,
       snapshotId,
     }
+  },
+
+  // ──────────────────────────────────────────────
+  // P1-A: New methods — Project with reports
+  // ──────────────────────────────────────────────
+
+  /**
+   * Get project with latest discovery report, action plan, and verification report.
+   */
+  async getProjectWithReport(projectId: string): Promise<{
+    project: GEOProject | null
+    discoveryReport: any
+    actionPlan: any
+    verificationReport: any
+  }> {
+    const project = await this.getProject(projectId)
+
+    const [discoveryReport, actionPlan, verificationReport] = await Promise.all([
+      geoPersistenceService.getDiscoveryReport(projectId),
+      geoPersistenceService.getActionPlan(projectId),
+      geoPersistenceService.getVerificationReport(projectId),
+    ])
+
+    return { project, discoveryReport, actionPlan, verificationReport }
+  },
+
+  /**
+   * Create a project with default configuration initialized.
+   * Falls back to createProject but with industry defaults.
+   */
+  async createProjectWithDefaults(input: CreateProjectInput): Promise<GEOProject> {
+    const defaults = {
+      config: {
+        ...(input.config || {}),
+        defaultScenarios: true,
+      },
+    }
+    return this.createProject({ ...input, ...defaults })
   },
 }

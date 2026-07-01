@@ -22,16 +22,35 @@ interface _GlobalComponents {
     'DirectorModelSettingsModal': typeof import("../components/director/ModelSettingsModal.vue")['default']
     'DirectorOllamaSetupModal': typeof import("../components/director/OllamaSetupModal.vue")['default']
     'HdzLibraryReaderPanel': typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
+    'KmkiUiActionCard': typeof import("../components/kmki-ui/ActionCard/index.vue")['default']
+    'KmkiUiActionsSection': typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']
     'KmkiUiActivityFeed': typeof import("../components/kmki-ui/ActivityFeed/index.vue")['default']
     'KmkiUiBadge': typeof import("../components/kmki-ui/Badge/index.vue")['default']
     'KmkiUiCard': typeof import("../components/kmki-ui/Card/index.vue")['default']
+    'KmkiUiConfidenceMeter': typeof import("../components/kmki-ui/ConfidenceMeter/index.vue")['default']
     'KmkiUiDiffViewer': typeof import("../components/kmki-ui/DiffViewer/index.vue")['default']
+    'KmkiUiEffortBadge': typeof import("../components/kmki-ui/EffortBadge/index.vue")['default']
     'KmkiUiEmptyState': typeof import("../components/kmki-ui/EmptyState/index.vue")['default']
+    'KmkiUiExecutiveSummaryCard': typeof import("../components/kmki-ui/ExecutiveSummaryCard/index.vue")['default']
     'KmkiUiExplainPanel': typeof import("../components/kmki-ui/ExplainPanel/index.vue")['default']
+    'KmkiUiExportMenu': typeof import("../components/kmki-ui/ExportMenu/index.vue")['default']
+    'KmkiUiFindingsSection': typeof import("../components/kmki-ui/FindingsSection/index.vue")['default']
     'KmkiUiHealthIndicator': typeof import("../components/kmki-ui/HealthIndicator/index.vue")['default']
+    'KmkiUiImpactBadge': typeof import("../components/kmki-ui/ImpactBadge/index.vue")['default']
+    'KmkiUiImprovementBadge': typeof import("../components/kmki-ui/ImprovementBadge/index.vue")['default']
     'KmkiUiMetric': typeof import("../components/kmki-ui/Metric/index.vue")['default']
+    'KmkiUiNextRecommendations': typeof import("../components/kmki-ui/NextRecommendations/index.vue")['default']
+    'KmkiUiOpportunitiesSection': typeof import("../components/kmki-ui/OpportunitiesSection/index.vue")['default']
+    'KmkiUiReportCard': typeof import("../components/kmki-ui/ReportCard/index.vue")['default']
+    'KmkiUiScoreComparison': typeof import("../components/kmki-ui/ScoreComparison/index.vue")['default']
     'KmkiUiSkeleton': typeof import("../components/kmki-ui/Skeleton/index.vue")['default']
+    'KmkiUiStatusChip': typeof import("../components/kmki-ui/StatusChip/index.vue")['default']
+    'KmkiUiStepList': typeof import("../components/kmki-ui/StepList/index.vue")['default']
     'KmkiUiTimeline': typeof import("../components/kmki-ui/Timeline/index.vue")['default']
+    'KmkiUiVerificationCard': typeof import("../components/kmki-ui/VerificationCard/index.vue")['default']
+    'KmkiUiVerificationSection': typeof import("../components/kmki-ui/VerificationSection/index.vue")['default']
+    'KmkiUiVerificationTimeline': typeof import("../components/kmki-ui/VerificationTimeline/index.vue")['default']
+    'KmkiUiWorkflowStepper': typeof import("../components/kmki-ui/WorkflowStepper/index.vue")['default']
     'KunlunBaseGlassPanel': typeof import("../components/kunlun/base/GlassPanel.vue")['default']
     'KunlunBaseMirrorPanel': typeof import("../components/kunlun/base/MirrorPanel.vue")['default']
     'KunlunBusinessKunlunFooter': typeof import("../components/kunlun/business/KunlunFooter.vue")['default']
@@ -94,16 +113,35 @@ interface _GlobalComponents {
     'LazyDirectorModelSettingsModal': LazyComponent<typeof import("../components/director/ModelSettingsModal.vue")['default']>
     'LazyDirectorOllamaSetupModal': LazyComponent<typeof import("../components/director/OllamaSetupModal.vue")['default']>
     'LazyHdzLibraryReaderPanel': LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
+    'LazyKmkiUiActionCard': LazyComponent<typeof import("../components/kmki-ui/ActionCard/index.vue")['default']>
+    'LazyKmkiUiActionsSection': LazyComponent<typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']>
     'LazyKmkiUiActivityFeed': LazyComponent<typeof import("../components/kmki-ui/ActivityFeed/index.vue")['default']>
     'LazyKmkiUiBadge': LazyComponent<typeof import("../components/kmki-ui/Badge/index.vue")['default']>
     'LazyKmkiUiCard': LazyComponent<typeof import("../components/kmki-ui/Card/index.vue")['default']>
+    'LazyKmkiUiConfidenceMeter': LazyComponent<typeof import("../components/kmki-ui/ConfidenceMeter/index.vue")['default']>
     'LazyKmkiUiDiffViewer': LazyComponent<typeof import("../components/kmki-ui/DiffViewer/index.vue")['default']>
+    'LazyKmkiUiEffortBadge': LazyComponent<typeof import("../components/kmki-ui/EffortBadge/index.vue")['default']>
     'LazyKmkiUiEmptyState': LazyComponent<typeof import("../components/kmki-ui/EmptyState/index.vue")['default']>
+    'LazyKmkiUiExecutiveSummaryCard': LazyComponent<typeof import("../components/kmki-ui/ExecutiveSummaryCard/index.vue")['default']>
     'LazyKmkiUiExplainPanel': LazyComponent<typeof import("../components/kmki-ui/ExplainPanel/index.vue")['default']>
+    'LazyKmkiUiExportMenu': LazyComponent<typeof import("../components/kmki-ui/ExportMenu/index.vue")['default']>
+    'LazyKmkiUiFindingsSection': LazyComponent<typeof import("../components/kmki-ui/FindingsSection/index.vue")['default']>
     'LazyKmkiUiHealthIndicator': LazyComponent<typeof import("../components/kmki-ui/HealthIndicator/index.vue")['default']>
+    'LazyKmkiUiImpactBadge': LazyComponent<typeof import("../components/kmki-ui/ImpactBadge/index.vue")['default']>
+    'LazyKmkiUiImprovementBadge': LazyComponent<typeof import("../components/kmki-ui/ImprovementBadge/index.vue")['default']>
     'LazyKmkiUiMetric': LazyComponent<typeof import("../components/kmki-ui/Metric/index.vue")['default']>
+    'LazyKmkiUiNextRecommendations': LazyComponent<typeof import("../components/kmki-ui/NextRecommendations/index.vue")['default']>
+    'LazyKmkiUiOpportunitiesSection': LazyComponent<typeof import("../components/kmki-ui/OpportunitiesSection/index.vue")['default']>
+    'LazyKmkiUiReportCard': LazyComponent<typeof import("../components/kmki-ui/ReportCard/index.vue")['default']>
+    'LazyKmkiUiScoreComparison': LazyComponent<typeof import("../components/kmki-ui/ScoreComparison/index.vue")['default']>
     'LazyKmkiUiSkeleton': LazyComponent<typeof import("../components/kmki-ui/Skeleton/index.vue")['default']>
+    'LazyKmkiUiStatusChip': LazyComponent<typeof import("../components/kmki-ui/StatusChip/index.vue")['default']>
+    'LazyKmkiUiStepList': LazyComponent<typeof import("../components/kmki-ui/StepList/index.vue")['default']>
     'LazyKmkiUiTimeline': LazyComponent<typeof import("../components/kmki-ui/Timeline/index.vue")['default']>
+    'LazyKmkiUiVerificationCard': LazyComponent<typeof import("../components/kmki-ui/VerificationCard/index.vue")['default']>
+    'LazyKmkiUiVerificationSection': LazyComponent<typeof import("../components/kmki-ui/VerificationSection/index.vue")['default']>
+    'LazyKmkiUiVerificationTimeline': LazyComponent<typeof import("../components/kmki-ui/VerificationTimeline/index.vue")['default']>
+    'LazyKmkiUiWorkflowStepper': LazyComponent<typeof import("../components/kmki-ui/WorkflowStepper/index.vue")['default']>
     'LazyKunlunBaseGlassPanel': LazyComponent<typeof import("../components/kunlun/base/GlassPanel.vue")['default']>
     'LazyKunlunBaseMirrorPanel': LazyComponent<typeof import("../components/kunlun/base/MirrorPanel.vue")['default']>
     'LazyKunlunBusinessKunlunFooter': LazyComponent<typeof import("../components/kunlun/business/KunlunFooter.vue")['default']>
@@ -172,16 +210,35 @@ export const DirectorLocalEngineInstaller: typeof import("../components/director
 export const DirectorModelSettingsModal: typeof import("../components/director/ModelSettingsModal.vue")['default']
 export const DirectorOllamaSetupModal: typeof import("../components/director/OllamaSetupModal.vue")['default']
 export const HdzLibraryReaderPanel: typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
+export const KmkiUiActionCard: typeof import("../components/kmki-ui/ActionCard/index.vue")['default']
+export const KmkiUiActionsSection: typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']
 export const KmkiUiActivityFeed: typeof import("../components/kmki-ui/ActivityFeed/index.vue")['default']
 export const KmkiUiBadge: typeof import("../components/kmki-ui/Badge/index.vue")['default']
 export const KmkiUiCard: typeof import("../components/kmki-ui/Card/index.vue")['default']
+export const KmkiUiConfidenceMeter: typeof import("../components/kmki-ui/ConfidenceMeter/index.vue")['default']
 export const KmkiUiDiffViewer: typeof import("../components/kmki-ui/DiffViewer/index.vue")['default']
+export const KmkiUiEffortBadge: typeof import("../components/kmki-ui/EffortBadge/index.vue")['default']
 export const KmkiUiEmptyState: typeof import("../components/kmki-ui/EmptyState/index.vue")['default']
+export const KmkiUiExecutiveSummaryCard: typeof import("../components/kmki-ui/ExecutiveSummaryCard/index.vue")['default']
 export const KmkiUiExplainPanel: typeof import("../components/kmki-ui/ExplainPanel/index.vue")['default']
+export const KmkiUiExportMenu: typeof import("../components/kmki-ui/ExportMenu/index.vue")['default']
+export const KmkiUiFindingsSection: typeof import("../components/kmki-ui/FindingsSection/index.vue")['default']
 export const KmkiUiHealthIndicator: typeof import("../components/kmki-ui/HealthIndicator/index.vue")['default']
+export const KmkiUiImpactBadge: typeof import("../components/kmki-ui/ImpactBadge/index.vue")['default']
+export const KmkiUiImprovementBadge: typeof import("../components/kmki-ui/ImprovementBadge/index.vue")['default']
 export const KmkiUiMetric: typeof import("../components/kmki-ui/Metric/index.vue")['default']
+export const KmkiUiNextRecommendations: typeof import("../components/kmki-ui/NextRecommendations/index.vue")['default']
+export const KmkiUiOpportunitiesSection: typeof import("../components/kmki-ui/OpportunitiesSection/index.vue")['default']
+export const KmkiUiReportCard: typeof import("../components/kmki-ui/ReportCard/index.vue")['default']
+export const KmkiUiScoreComparison: typeof import("../components/kmki-ui/ScoreComparison/index.vue")['default']
 export const KmkiUiSkeleton: typeof import("../components/kmki-ui/Skeleton/index.vue")['default']
+export const KmkiUiStatusChip: typeof import("../components/kmki-ui/StatusChip/index.vue")['default']
+export const KmkiUiStepList: typeof import("../components/kmki-ui/StepList/index.vue")['default']
 export const KmkiUiTimeline: typeof import("../components/kmki-ui/Timeline/index.vue")['default']
+export const KmkiUiVerificationCard: typeof import("../components/kmki-ui/VerificationCard/index.vue")['default']
+export const KmkiUiVerificationSection: typeof import("../components/kmki-ui/VerificationSection/index.vue")['default']
+export const KmkiUiVerificationTimeline: typeof import("../components/kmki-ui/VerificationTimeline/index.vue")['default']
+export const KmkiUiWorkflowStepper: typeof import("../components/kmki-ui/WorkflowStepper/index.vue")['default']
 export const KunlunBaseGlassPanel: typeof import("../components/kunlun/base/GlassPanel.vue")['default']
 export const KunlunBaseMirrorPanel: typeof import("../components/kunlun/base/MirrorPanel.vue")['default']
 export const KunlunBusinessKunlunFooter: typeof import("../components/kunlun/business/KunlunFooter.vue")['default']
@@ -244,16 +301,35 @@ export const LazyDirectorLocalEngineInstaller: LazyComponent<typeof import("../c
 export const LazyDirectorModelSettingsModal: LazyComponent<typeof import("../components/director/ModelSettingsModal.vue")['default']>
 export const LazyDirectorOllamaSetupModal: LazyComponent<typeof import("../components/director/OllamaSetupModal.vue")['default']>
 export const LazyHdzLibraryReaderPanel: LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
+export const LazyKmkiUiActionCard: LazyComponent<typeof import("../components/kmki-ui/ActionCard/index.vue")['default']>
+export const LazyKmkiUiActionsSection: LazyComponent<typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']>
 export const LazyKmkiUiActivityFeed: LazyComponent<typeof import("../components/kmki-ui/ActivityFeed/index.vue")['default']>
 export const LazyKmkiUiBadge: LazyComponent<typeof import("../components/kmki-ui/Badge/index.vue")['default']>
 export const LazyKmkiUiCard: LazyComponent<typeof import("../components/kmki-ui/Card/index.vue")['default']>
+export const LazyKmkiUiConfidenceMeter: LazyComponent<typeof import("../components/kmki-ui/ConfidenceMeter/index.vue")['default']>
 export const LazyKmkiUiDiffViewer: LazyComponent<typeof import("../components/kmki-ui/DiffViewer/index.vue")['default']>
+export const LazyKmkiUiEffortBadge: LazyComponent<typeof import("../components/kmki-ui/EffortBadge/index.vue")['default']>
 export const LazyKmkiUiEmptyState: LazyComponent<typeof import("../components/kmki-ui/EmptyState/index.vue")['default']>
+export const LazyKmkiUiExecutiveSummaryCard: LazyComponent<typeof import("../components/kmki-ui/ExecutiveSummaryCard/index.vue")['default']>
 export const LazyKmkiUiExplainPanel: LazyComponent<typeof import("../components/kmki-ui/ExplainPanel/index.vue")['default']>
+export const LazyKmkiUiExportMenu: LazyComponent<typeof import("../components/kmki-ui/ExportMenu/index.vue")['default']>
+export const LazyKmkiUiFindingsSection: LazyComponent<typeof import("../components/kmki-ui/FindingsSection/index.vue")['default']>
 export const LazyKmkiUiHealthIndicator: LazyComponent<typeof import("../components/kmki-ui/HealthIndicator/index.vue")['default']>
+export const LazyKmkiUiImpactBadge: LazyComponent<typeof import("../components/kmki-ui/ImpactBadge/index.vue")['default']>
+export const LazyKmkiUiImprovementBadge: LazyComponent<typeof import("../components/kmki-ui/ImprovementBadge/index.vue")['default']>
 export const LazyKmkiUiMetric: LazyComponent<typeof import("../components/kmki-ui/Metric/index.vue")['default']>
+export const LazyKmkiUiNextRecommendations: LazyComponent<typeof import("../components/kmki-ui/NextRecommendations/index.vue")['default']>
+export const LazyKmkiUiOpportunitiesSection: LazyComponent<typeof import("../components/kmki-ui/OpportunitiesSection/index.vue")['default']>
+export const LazyKmkiUiReportCard: LazyComponent<typeof import("../components/kmki-ui/ReportCard/index.vue")['default']>
+export const LazyKmkiUiScoreComparison: LazyComponent<typeof import("../components/kmki-ui/ScoreComparison/index.vue")['default']>
 export const LazyKmkiUiSkeleton: LazyComponent<typeof import("../components/kmki-ui/Skeleton/index.vue")['default']>
+export const LazyKmkiUiStatusChip: LazyComponent<typeof import("../components/kmki-ui/StatusChip/index.vue")['default']>
+export const LazyKmkiUiStepList: LazyComponent<typeof import("../components/kmki-ui/StepList/index.vue")['default']>
 export const LazyKmkiUiTimeline: LazyComponent<typeof import("../components/kmki-ui/Timeline/index.vue")['default']>
+export const LazyKmkiUiVerificationCard: LazyComponent<typeof import("../components/kmki-ui/VerificationCard/index.vue")['default']>
+export const LazyKmkiUiVerificationSection: LazyComponent<typeof import("../components/kmki-ui/VerificationSection/index.vue")['default']>
+export const LazyKmkiUiVerificationTimeline: LazyComponent<typeof import("../components/kmki-ui/VerificationTimeline/index.vue")['default']>
+export const LazyKmkiUiWorkflowStepper: LazyComponent<typeof import("../components/kmki-ui/WorkflowStepper/index.vue")['default']>
 export const LazyKunlunBaseGlassPanel: LazyComponent<typeof import("../components/kunlun/base/GlassPanel.vue")['default']>
 export const LazyKunlunBaseMirrorPanel: LazyComponent<typeof import("../components/kunlun/base/MirrorPanel.vue")['default']>
 export const LazyKunlunBusinessKunlunFooter: LazyComponent<typeof import("../components/kunlun/business/KunlunFooter.vue")['default']>

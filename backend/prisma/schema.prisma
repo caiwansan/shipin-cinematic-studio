@@ -3629,10 +3629,65 @@ model GEOProject {
   relations GEOEntityRelation[]
   versions  GEOProjectVersion[]
   scans     GEOScanRecord[]   // MVP 新增
+  discoveryReports  GEODiscoveryReport[]    // P1-A 持久化
+  actionPlans       GEOActionPlan[]         // P1-A 持久化
+  verificationReports GEOVerificationReport[] // P1-A 持久化
 
   @@index([userId])
   @@index([status])
   @@map("kmki_geo_projects")
+}
+
+// P1-A 新增：GEO Discovery Report — 保存实体发现报告
+model GEODiscoveryReport {
+  id            String   @id @default(uuid())
+  projectId     String          // 关联 GEOProject.id
+  entityName    String
+  adi           Float
+  coverageScore Float
+  shareScore    Float
+  positionScore Float
+  reportData    Json            // 完整报告数据（包括 scenarios, opportunities 等）
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project GEOProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("kmki_geo_discovery_reports")
+}
+
+// P1-A 新增：GEO Action Plan — 保存建议的行动计划
+model GEOActionPlan {
+  id                String   @id @default(uuid())
+  projectId         String
+  discoveryReportId String?
+  planData          Json     // 完整计划数据（包括 steps, templates 等）
+  status            String   @default("draft") // draft, active, completed
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  project GEOProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("kmki_geo_action_plans")
+}
+
+// P1-A 新增：GEO Verification Report — 保存验证结果
+model GEOVerificationReport {
+  id            String   @id @default(uuid())
+  projectId     String
+  entityName    String
+  beforeAdi     Float
+  afterAdi      Float
+  deltaAdi      Float
+  reportData    Json     // 完整验证数据
+  createdAt     DateTime @default(now())
+
+  project GEOProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("kmki_geo_verification_reports")
 }
 
 // MVP 新增：扫描记录
