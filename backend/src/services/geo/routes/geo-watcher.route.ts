@@ -8,7 +8,7 @@ import { geoWatcherRepository } from '../repositories/geo-watcher.repository.js'
 
 export default async function geoWatcherRoutes(fastify: FastifyInstance) {
   // GET /api/geo/watcher/recent — 最近的 watcher 事件
-  fastify.get('/api/geo/watcher/recent', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/watcher/recent', { preHandler: [] }, async (request, reply) => {
     const query = request.query as any
     const entityId = query?.entityId as string | undefined
 
@@ -21,7 +21,7 @@ export default async function geoWatcherRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/watcher/summary — 摘要统计
-  fastify.get('/api/geo/watcher/summary', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/watcher/summary', { preHandler: [] }, async (request, reply) => {
     try {
       const summary = await geoWatcherRepository.getSummary()
       return { success: true, data: summary }
@@ -31,7 +31,7 @@ export default async function geoWatcherRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/watcher/drift — 漂移检测结果
-  fastify.get('/api/geo/watcher/drift', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/watcher/drift', { preHandler: [] }, async (request, reply) => {
     try {
       const driftRows = await geoWatcherRepository.getDrift()
       return { success: true, data: driftRows, mismatches: driftRows }

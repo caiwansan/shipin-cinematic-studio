@@ -14,7 +14,7 @@ export default async function geoActionPlanRoutes(fastify: FastifyInstance) {
   // GET /api/geo/brands/:id/action-plans — 获取 Action Plans
   fastify.get(
     '/api/geo/brands/:id/action-plans',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [] },
     async (request, reply) => {
       const { id } = request.params as { id: string }
       try {

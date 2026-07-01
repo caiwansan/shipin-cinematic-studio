@@ -13,7 +13,7 @@ import { membershipRepository } from '../../repositories/membership.repository.j
 
 export default async function geoBrandRoutes(fastify: FastifyInstance) {
   // GET /api/geo/brands/:id — 获取品牌详情（合并 project + brand setting）
-  fastify.get('/api/geo/brands/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/brands/:id', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -56,7 +56,7 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/settings — 获取品牌设定
-  fastify.get('/api/geo/projects/:id/settings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/settings', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -105,7 +105,7 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/status — 品牌状态（Provider, Scan, KO）
-  fastify.get('/api/geo/projects/:id/status', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/status', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {

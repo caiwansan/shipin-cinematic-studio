@@ -318,7 +318,7 @@ export default async function geoKnowledgeQualityRoutes(fastify: FastifyInstance
   })
 
   // GET /api/geo/knowledge-quality/health — Check workflow registration
-  fastify.get('/api/geo/knowledge-quality/health', { preHandler: [fastify.authenticate] }, async () => {
+  fastify.get('/api/geo/knowledge-quality/health', { preHandler: [] }, async () => {
     const wf = workflowDispatcher.get('geo.knowledge-quality')
     return {
       registered: !!wf,

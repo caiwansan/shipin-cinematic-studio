@@ -304,7 +304,7 @@ function projectHasWebsite(evidence: ExplainEvidence[]): boolean {
 
 export default async function geoExplainRoutes(fastify: FastifyInstance) {
   // GET /api/geo/brands/:id/explain — 获取品牌 Explain 数据
-  fastify.get('/api/geo/brands/:id/explain', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/brands/:id/explain', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as { id: string }
 
     try {

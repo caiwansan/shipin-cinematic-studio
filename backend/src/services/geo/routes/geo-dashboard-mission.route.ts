@@ -18,10 +18,10 @@ export default async function geoDashboardMissionRoutes(fastify: FastifyInstance
   // GET /api/geo/dashboard/mission — 获取 Dashboard Mission 数据
   fastify.get(
     '/api/geo/dashboard/mission',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [] },
     async (request, reply) => {
       const user = request.user as any;
-      const userId = user.id;
+      const userId = user?.id || 'anonymous';
 
       try {
         const mission = await missionService.getDashboardMission(userId);

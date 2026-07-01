@@ -15,7 +15,7 @@ export default async function geoPresenceRoutes(fastify: FastifyInstance) {
   // GET /api/geo/brands/:id/presence — 获取品牌 AI 可见度分析
   fastify.get(
     '/api/geo/brands/:id/presence',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [] },
     async (request, reply) => {
       const { id } = request.params as { id: string }
 

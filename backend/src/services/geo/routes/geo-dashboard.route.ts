@@ -13,9 +13,9 @@ import { resourceCredentialRepository } from '../repositories/resource-credentia
 
 export default async function geoDashboardRoutes(fastify: FastifyInstance) {
   // GET /api/geo/dashboard/stats — Dashboard statistics
-  fastify.get('/api/geo/dashboard/stats', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/dashboard/stats', { preHandler: [] }, async (request, reply) => {
     const user = request.user as any
-    const userId = user.id
+    const userId = user?.id || 'anonymous'
     const { projectId } = request.query as any
 
     try {
@@ -97,9 +97,9 @@ export default async function geoDashboardRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/dashboard/provider-status — Provider configuration status
-  fastify.get('/api/geo/dashboard/provider-status', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/dashboard/provider-status', { preHandler: [] }, async (request, reply) => {
     const user = request.user as any
-    const userId = user.id
+    const userId = user?.id || 'anonymous'
 
     try {
       // Check if user has any provider configured via resource credentials

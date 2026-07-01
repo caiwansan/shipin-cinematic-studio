@@ -19,7 +19,7 @@ interface KeywordBulkCreateBody {
 
 export default async function geoKeywordRoutes(fastify: FastifyInstance) {
   // GET /api/geo/keywords — List keywords
-  fastify.get('/api/geo/keywords', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/keywords', { preHandler: [] }, async (request, reply) => {
     const { projectId, type } = request.query as any
 
     if (!projectId) {
@@ -139,7 +139,7 @@ export default async function geoKeywordRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/keywords/export — Export keywords
-  fastify.get('/api/geo/keywords/export', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/keywords/export', { preHandler: [] }, async (request, reply) => {
     const { projectId, type } = request.query as any
 
     if (!projectId) {

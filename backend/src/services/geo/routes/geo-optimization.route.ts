@@ -200,7 +200,7 @@ function calculatePotentialGain(
 
 export default async function geoOptimizationRoutes(fastify: FastifyInstance) {
   // GET /api/geo/brands/:id/optimizations — 获取品牌优化建议
-  fastify.get('/api/geo/brands/:id/optimizations', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/brands/:id/optimizations', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as { id: string }
 
     try {

@@ -21,7 +21,7 @@ import { verificationService } from '../../../benchmark/verification/verificatio
 
 export default async function geoDiscoveryRoutes(fastify: FastifyInstance) {
   // GET /api/v1/geo/discovery/report — 实体发现评估报告
-  fastify.get('/api/v1/geo/discovery/report', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/v1/geo/discovery/report', { preHandler: [] }, async (request, reply) => {
     const { entity } = request.query as { entity?: string };
 
     if (!entity || entity.trim().length === 0) {
@@ -46,7 +46,7 @@ export default async function geoDiscoveryRoutes(fastify: FastifyInstance) {
   });
 
   // GET /api/v1/geo/discovery/action-plan — 实体行动方案列表
-  fastify.get('/api/v1/geo/discovery/action-plan', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/v1/geo/discovery/action-plan', { preHandler: [] }, async (request, reply) => {
     const { entity } = request.query as { entity?: string };
 
     if (!entity || entity.trim().length === 0) {
@@ -117,7 +117,7 @@ export default async function geoDiscoveryRoutes(fastify: FastifyInstance) {
   });
 
   // GET /api/v1/geo/discovery/verify — 实体验证报告
-  fastify.get('/api/v1/geo/discovery/verify', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/v1/geo/discovery/verify', { preHandler: [] }, async (request, reply) => {
     const { entity } = request.query as { entity?: string };
 
     if (!entity || entity.trim().length === 0) {
@@ -142,7 +142,7 @@ export default async function geoDiscoveryRoutes(fastify: FastifyInstance) {
   });
 
   // GET /api/geo/discovery/verify — 无 v1 前缀副本
-  fastify.get('/api/geo/discovery/verify', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/discovery/verify', { preHandler: [] }, async (request, reply) => {
     const { entity } = request.query as { entity?: string };
 
     if (!entity || entity.trim().length === 0) {

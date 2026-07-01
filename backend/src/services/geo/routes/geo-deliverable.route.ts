@@ -11,7 +11,7 @@ import { geoReportV2Generator } from '../services/geo-report-v2.service'
 
 export default async function geoDeliverableRoutes(fastify: FastifyInstance) {
   // GET /api/geo/report/:projectId — 获取完整报告
-  fastify.get('/api/geo/report/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/report/:projectId', { preHandler: [] }, async (request, reply) => {
     try {
       const { projectId } = request.params as any
 
@@ -30,7 +30,7 @@ export default async function geoDeliverableRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/report/:projectId/export — 导出报告
-  fastify.get('/api/geo/report/:projectId/export', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/report/:projectId/export', { preHandler: [] }, async (request, reply) => {
     try {
       const { projectId } = request.params as any
       const { format } = request.query as any

@@ -10,7 +10,7 @@ import { geoEvidenceRepository } from '../repositories/geo-evidence.repository'
 
 export default async function geoClaimRoutes(fastify: FastifyInstance) {
   // GET /api/geo/claims?projectId=xxx&entityId=yyy&status=zzz&limit=50&offset=0
-  fastify.get('/api/geo/claims', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/claims', { preHandler: [] }, async (request, reply) => {
     try {
       const { projectId, entityId, status, limit, offset } = request.query as any
 
@@ -51,7 +51,7 @@ export default async function geoClaimRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/claims/:id — 单条 Claim 详情（含 evidences + 证据的 citations）
-  fastify.get('/api/geo/claims/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/claims/:id', { preHandler: [] }, async (request, reply) => {
     try {
       const { id } = request.params as any
       const item = await geoClaimRepository.findById(id)

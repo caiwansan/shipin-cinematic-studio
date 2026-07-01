@@ -45,9 +45,9 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects — List projects
-  fastify.get('/api/geo/projects', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects', { preHandler: [] }, async (request, reply) => {
     const user = request.user as any
-    const tenantId = user.id
+    const tenantId = user?.id || 'anonymous'
 
     try {
       const projects = await geoProjectService.listProjects(tenantId)
@@ -58,7 +58,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id — Get project
-  fastify.get('/api/geo/projects/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -116,7 +116,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/versions/:version — Get project version
-  fastify.get('/api/geo/projects/:id/versions/:version', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/versions/:version', { preHandler: [] }, async (request, reply) => {
     const { id, version } = request.params as any
 
     try {
@@ -162,7 +162,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/discovery — Get latest discovery report
-  fastify.get('/api/geo/projects/:id/discovery', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/discovery', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -195,7 +195,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/action-plan — Get latest action plan
-  fastify.get('/api/geo/projects/:id/action-plan', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/action-plan', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -233,7 +233,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/verification — Get latest verification report
-  fastify.get('/api/geo/projects/:id/verification', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/verification', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -245,7 +245,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/history — Get project history
-  fastify.get('/api/geo/projects/:id/history', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/history', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -257,7 +257,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/projects/:id/dashboard — Get project dashboard (with all latest reports)
-  fastify.get('/api/geo/projects/:id/dashboard', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/projects/:id/dashboard', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
     request.log.info({ id }, 'Dashboard request start')
 
@@ -275,7 +275,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/health/:id — Project health overview (used by KnowledgePage)
-  fastify.get('/api/geo/health/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/health/:id', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {
@@ -324,7 +324,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/discovery/report — 实体发现评估报告（前端 geoApi baseURL = /api/geo）
-  fastify.get('/api/geo/discovery/report', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/discovery/report', { preHandler: [] }, async (request, reply) => {
     const { entity } = request.query as { entity?: string }
 
     if (!entity || entity.trim().length === 0) {
@@ -341,7 +341,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/discovery/action-plan — 实体行动方案列表（前端 geoApi baseURL = /api/geo）
-  fastify.get('/api/geo/discovery/action-plan', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/discovery/action-plan', { preHandler: [] }, async (request, reply) => {
     const { entity } = request.query as { entity?: string }
 
     if (!entity || entity.trim().length === 0) {

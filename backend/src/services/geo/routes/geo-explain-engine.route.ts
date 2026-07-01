@@ -13,7 +13,7 @@ export async function geoExplainEngineRoutes(fastify: FastifyInstance) {
   // GET /api/geo/explain/:type/:id — 获取统一 Explain 数据
   fastify.get(
     '/api/geo/explain/:type/:id',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [] },
     async (request, reply) => {
       const { type, id } = request.params as { type: string; id: string };
 

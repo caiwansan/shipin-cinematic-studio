@@ -10,7 +10,7 @@ import { knowledgeObjectService } from '../runtime/knowledge/KnowledgeObjectServ
 
 export default async function (fastify: FastifyInstance) {
   // GET /api/geo/knowledge?projectId=xxx — Knowledge Dashboard view
-  fastify.get('/api/geo/knowledge', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/knowledge', { preHandler: [] }, async (request, reply) => {
     const { projectId } = request.query as any
     if (!projectId) return reply.status(400).send({ success: false, error: 'projectId required' })
 
@@ -79,7 +79,7 @@ export default async function (fastify: FastifyInstance) {
   })
 
   // GET /api/geo/knowledge/:id
-  fastify.get('/api/geo/knowledge/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/knowledge/:id', { preHandler: [] }, async (request, reply) => {
     const ko = await knowledgeObjectService.getById((request.params as any).id)
     if (!ko) return reply.status(404).send({ success: false, error: 'Not found' })
     return { success: true, data: ko }

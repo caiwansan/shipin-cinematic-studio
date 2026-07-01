@@ -17,9 +17,13 @@ export default async function geoWalkthroughRoutes(fastify: FastifyInstance) {
   // GET /api/geo/walkthrough/state — 获取当前 Walkthrough 状态
   fastify.get(
     '/api/geo/walkthrough/state',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [] },
     async (request, reply) => {
       const user = request.user as any;
+      // 未登录用户直接返回空状态
+      if (!user?.id) {
+        return { success: true, data: null };
+      }
       const userId = user.id;
 
       try {

@@ -59,7 +59,7 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/scans — List scan history
-  fastify.get('/api/geo/scans', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/scans', { preHandler: [] }, async (request, reply) => {
     const { projectId, status } = request.query as any
 
     if (!projectId) {
@@ -79,7 +79,7 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/scans/:id — Get scan detail
-  fastify.get('/api/geo/scans/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/scans/:id', { preHandler: [] }, async (request, reply) => {
     const { id } = request.params as any
 
     try {

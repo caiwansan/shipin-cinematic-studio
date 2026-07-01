@@ -27,7 +27,7 @@ interface HistoryEvent {
 
 export default async function geoHistoryRoutes(fastify: FastifyInstance) {
   // GET /api/geo/history?projectId=xxx&limit=50&offset=0&type=scan|claim|evidence|knowledge|all
-  fastify.get('/api/geo/history', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/history', { preHandler: [] }, async (request, reply) => {
     try {
       const { projectId, limit, offset, type } = request.query as any
 
@@ -136,7 +136,7 @@ export default async function geoHistoryRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/history/stats?projectId=xxx — event type counts
-  fastify.get('/api/geo/history/stats', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/history/stats', { preHandler: [] }, async (request, reply) => {
     try {
       const { projectId } = request.query as any
       if (!projectId) {

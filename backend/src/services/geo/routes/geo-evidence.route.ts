@@ -10,7 +10,7 @@ import { geoCitationRepository } from '../repositories/geo-citation.repository.j
 
 export default async function geoEvidenceRoutes(fastify: FastifyInstance) {
   // GET /api/geo/evidence?projectId=xxx&claimId=yyy&limit=50&offset=0
-  fastify.get('/api/geo/evidence', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/evidence', { preHandler: [] }, async (request, reply) => {
     try {
       const { projectId, claimId, limit, offset } = request.query as any
 
@@ -45,7 +45,7 @@ export default async function geoEvidenceRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/geo/evidence/:id — 单条证据详情（含 citations）
-  fastify.get('/api/geo/evidence/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/geo/evidence/:id', { preHandler: [] }, async (request, reply) => {
     try {
       const { id } = request.params as any
       const item = await geoEvidenceRepository.findById(id)
