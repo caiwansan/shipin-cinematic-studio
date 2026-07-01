@@ -699,7 +699,32 @@ await app.register(projectV2Routes)
 
     registerKnowledgeHubRoutes(app, { versionEngine, providerRuntime })
 
+    // KH2 — Publishing Engine
+    const { PublishingEngine } = await import('./platform/knowledge-hub/publishing/publishing-engine.js')
+    const { PublisherRegistry } = await import('./platform/knowledge-hub/publishing/publisher-registry.js')
+    const { PublishingQueue } = await import('./platform/knowledge-hub/publishing/publishing-queue.js')
+    const { registerPublishingRoutes } = await import('./platform/knowledge-hub/publishing/api.js')
+    const { WebsitePublisher } = await import('./platform/knowledge-hub/publishing/adapters/website.publisher.js')
+    const { CMSPublisher } = await import('./platform/knowledge-hub/publishing/adapters/cms.publisher.js')
+    const { WebhookPublisher } = await import('./platform/knowledge-hub/publishing/adapters/webhook.publisher.js')
+    const { ExportPublisher } = await import('./platform/knowledge-hub/publishing/adapters/export.publisher.js')
+
+    const publisherRegistry = new PublisherRegistry()
+    publisherRegistry.register(new WebsitePublisher())
+    publisherRegistry.register(new CMSPublisher())
+    publisherRegistry.register(new WebhookPublisher())
+    publisherRegistry.register(new ExportPublisher())
+
+    const publishingQueue = new PublishingQueue()
+    const prisma = new (await import('@prisma/client')).PrismaClient()
+    const { KnowledgePackageRepository } = await import('./platform/knowledge-hub/repository/package-repository.js')
+    const pkgRepo = new KnowledgePackageRepository(prisma as any)
+    const publishingEngine = new PublishingEngine(publisherRegistry, publishingQueue, pkgRepo)
+
+    registerPublishingRoutes(app, { registry: publisherRegistry, engine: publishingEngine })
+
     console.log('[startup] ✅ Knowledge Hub v1 routes registered at /api/knowledge/*')
+    console.log('[startup] ✅ Knowledge Hub KH2 (Publishing Engine) registered at /api/knowledge/publish/*')
   } catch (err) {
     console.warn('[startup] ⚠️ Knowledge Hub routes skipped:', (err as Error).message)
   }
