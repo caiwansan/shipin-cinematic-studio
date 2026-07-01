@@ -57,6 +57,15 @@ export type {
   DistributionTargetCapability,
 } from "./distribution/types"
 
+
+// Monitoring / Observability (KH5)
+export { ObservabilityEngine, ObservabilitySnapshot } from "./monitoring/observability-engine"
+export { HealthEngine } from "./monitoring/health-engine"
+export { MetricsRegistry } from "./monitoring/metrics-registry"
+export { AuditExplorer } from "./monitoring/audit-explorer"
+export { AlertManager } from "./monitoring/alert-manager"
+export { registerMonitoringRoutes } from "./monitoring/api"
+
 // Distribution Targets
 export { WebsiteDistributionTarget } from "./distribution/adapters/website.target"
 export { CMSDistributionTarget } from "./distribution/adapters/cms.target"

@@ -772,6 +772,32 @@ await app.register(projectV2Routes)
     registerDistributionRoutes(app, { engine: distEngine, registry: distRegistry })
 
     console.log('[startup] ✅ Knowledge Hub KH4 (Distribution) registered at /api/knowledge/distribution/*')
+
+    // KH5 — Monitoring & Observability
+    const { ObservabilityEngine } = await import('./platform/knowledge-hub/monitoring/observability-engine.js')
+    const { HealthEngine } = await import('./platform/knowledge-hub/monitoring/health-engine.js')
+    const { MetricsRegistry } = await import('./platform/knowledge-hub/monitoring/metrics-registry.js')
+    const { AuditExplorer } = await import('./platform/knowledge-hub/monitoring/audit-explorer.js')
+    const { AlertManager } = await import('./platform/knowledge-hub/monitoring/alert-manager.js')
+    const { registerMonitoringRoutes } = await import('./platform/knowledge-hub/monitoring/api.js')
+
+    const healthEngine = new HealthEngine()
+    const metricsRegistry = new MetricsRegistry()
+    const observabilityEngine = new ObservabilityEngine(healthEngine, metricsRegistry)
+    const auditExplorer = new AuditExplorer(auditTimeline)
+    const alertManager = new AlertManager()
+
+    registerMonitoringRoutes(app, {
+      obs: observabilityEngine,
+      health: healthEngine,
+      metrics: metricsRegistry,
+      audit: auditExplorer,
+      alerts: alertManager,
+      timeline: auditTimeline,
+      distribution: distEngine,
+    })
+
+    console.log('[startup] ✅ Knowledge Hub KH5 (Observability) registered at /api/knowledge/monitoring/*')
   } catch (err) {
     console.warn('[startup] ⚠️ Knowledge Hub routes skipped:', (err as Error).message)
   }
