@@ -8,7 +8,7 @@
  * 4. Prisma middleware 只做 debug trace，不做事件写入
  */
 import { PrismaClient } from '@prisma/client'
-import { prisma } from '../../utils/index.js'
+import { eventLogRepository } from './repositories/event-log.repository.js'
 
 export interface EmitEventParams {
   entityType: string
@@ -58,7 +58,7 @@ export async function queryEvents(params: {
   if (params.entityId) where.entityId = params.entityId
   if (params.eventType) where.eventType = params.eventType
 
-  return prisma.eventLog.findMany({
+  return eventLogRepository.findMany({
     where,
     orderBy: { createdAt: 'desc' },
     take: params.limit || 50,

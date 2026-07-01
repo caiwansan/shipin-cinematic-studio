@@ -12,7 +12,7 @@
  * 5. 聚合指标
  */
 
-import { prisma } from '../../utils/index.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
 import { alignmentMetricService } from './alignment-metric.service.js'
 import { getWorldState } from './world-state.service.js'
 import { getAllEntities } from './entity-registry.service.js'
@@ -142,15 +142,14 @@ class AlignmentBacktestService {
     }
 
     // 2. 获取章节列表
-    const chapters = await prisma.hdzChapter.findMany({
+    const chapters = await hdzChapterRepository.findMany({
       where: {
         projectId,
         chapterNo: { gte: startChapter, lte: endChapter },
         content: { not: null },
       },
       orderBy: { chapterNo: 'asc' },
-      select: { id: true, chapterNo: true, title: true, content: true, status: true },
-    })
+    }) as any[]
 
     console.log(`[Backtest] 读取 ${chapters.length} 章数据，${allEntities.length} 个实体`)
 

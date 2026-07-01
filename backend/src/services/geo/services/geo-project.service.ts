@@ -2,7 +2,10 @@
 // GEO Project Service — Project CRUD + Workspace Runtime Integration
 // ============================================================
 
-import { prisma } from '../../../utils/index'
+import { geoProjectRepository } from '../repositories/geo-project.repository.js'
+import { geoProjectVersionRepository } from '../repositories/geo-project-version.repository.js'
+import { workspaceRuntimeRepository } from '../repositories/workspace-runtime.repository.js'
+import { workspaceSnapshotRepository } from '../repositories/workspace-snapshot.repository.js'
 import type { GEOProject } from '../types'
 import { getDefaultGEOWorkspaceSettings } from '../registry/geo-registry'
 
@@ -41,21 +44,19 @@ export const geoProjectService = {
     const { name, topic, userId, language, industry, config } = input
 
     // First create the GEO project record
-    const project = await prisma.gEOProject.create({
-      data: {
-        userId,
-        name,
-        topic: topic || '',
-        language: language || 'zh',
-        industry: industry || '',
-        config: JSON.parse(JSON.stringify(config || {})),
-        status: 'draft',
-      },
+    const project = await geoProjectRepository.create({
+      userId,
+      name,
+      topic: topic || '',
+      language: language || 'zh',
+      industry: industry || '',
+      config: JSON.parse(JSON.stringify(config || {})),
+      status: 'draft',
     })
 
     // Create workspace via Workspace Runtime
     try {
-      const ws = await prisma.workspaceRuntime.create({
+      const ws = await workspaceRuntimeRepository.create({
         data: {
           type: 'geo',
           tenantId: userId,
@@ -72,10 +73,10 @@ export const geoProjectService = {
       })
 
       // Link workspace to project
-      const updated = await prisma.gEOProject.update({
-        where: { id: project.id },
-        data: { workspaceId: ws.id },
-      })
+      const updated = await geoProjectRepository.update(
+        { id: project.id },
+        { workspaceId: ws.id }
+      )
 
       return mapPrismaProject(updated)
     } catch (err) {
@@ -89,9 +90,7 @@ export const geoProjectService = {
    * Get project by ID.
    */
   async getProject(id: string): Promise<GEOProject | null> {
-    const project = await prisma.gEOProject.findUnique({
-      where: { id },
-    })
+    const project = await geoProjectRepository.findUnique({ where: { id } })
     if (!project || project.deletedAt) return null
     return mapPrismaProject(project)
   },
@@ -100,22 +99,7 @@ export const geoProjectService = {
    * List projects by userId (tenant).
    */
   async listProjects(tenantId: string): Promise<GEOProject[]> {
-    const projects = await prisma.gEOProject.findMany({
-      where: {
-        userId: tenantId,
-        deletedAt: null,
-      },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        _count: {
-          select: {
-            entities: true,
-            relations: true,
-            versions: true,
-          },
-        },
-      },
-    })
+    const projects = await geoProjectRepository.findManyWithCounts(tenantId)
 
     return projects.map((p: any) => ({
       ...mapPrismaProject(p),
@@ -129,12 +113,12 @@ export const geoProjectService = {
    * Update project.
    */
   async updateProject(id: string, data: Partial<GEOProject>): Promise<GEOProject | null> {
-    const existing = await prisma.gEOProject.findUnique({ where: { id } })
+    const existing = await geoProjectRepository.findUnique({ where: { id } })
     if (!existing || existing.deletedAt) return null
 
-    const updated = await prisma.gEOProject.update({
-      where: { id },
-      data: {
+    const updated = await geoProjectRepository.update(
+      { id },
+      {
         name: data.name,
         topic: data.topic,
         industry: data.industry,
@@ -142,8 +126,8 @@ export const geoProjectService = {
         country: data.country,
         status: data.status,
         config: data.config ? JSON.parse(JSON.stringify(data.config)) : undefined,
-      },
-    })
+      }
+    )
     return mapPrismaProject(updated)
   },
 
@@ -151,13 +135,13 @@ export const geoProjectService = {
    * Soft-delete a project.
    */
   async deleteProject(id: string): Promise<boolean> {
-    const existing = await prisma.gEOProject.findUnique({ where: { id } })
+    const existing = await geoProjectRepository.findUnique({ where: { id } })
     if (!existing || existing.deletedAt) return false
 
-    await prisma.gEOProject.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    })
+    await geoProjectRepository.update(
+      { id },
+      { deletedAt: new Date() }
+    )
     return true
   },
 
@@ -165,7 +149,7 @@ export const geoProjectService = {
    * Get a specific version of a project.
    */
   async getProjectVersion(id: string, version: number): Promise<any | null> {
-    const projectVersion = await prisma.gEOProjectVersion.findUnique({
+    const projectVersion = await geoProjectVersionRepository.findUnique({
       where: {
         projectId_version: { projectId: id, version },
       },
@@ -187,25 +171,25 @@ export const geoProjectService = {
    * Create a snapshot of the project via Workspace Runtime.
    */
   async snapshotProject(id: string): Promise<any> {
-    const project = await prisma.gEOProject.findUnique({
-      where: { id },
-      include: {
-        entities: true,
-        relations: true,
-      },
-    })
+    const { geoEntityRepository } = await import('../repositories/geo-entity.repository.js')
+    const { geoEntityRelationRepository } = await import('../repositories/geo-entity-relation.repository.js')
+
+    const project = await geoProjectRepository.findUniqueWithInclude(id)
     if (!project || project.deletedAt) throw new Error('Project not found')
+
+    const entities = await geoEntityRepository.findMany({ where: { projectId: id } })
+    const relations = await geoEntityRelationRepository.findMany({ where: { projectId: id } })
 
     // Build graph data snapshot
     const graphSnapshot = {
-      entities: project.entities.map((e: any) => ({
+      entities: entities.map((e: any) => ({
         id: e.id,
         name: e.name,
         type: e.type,
         description: e.description,
         provenance: e.provenance,
       })),
-      relations: project.relations.map((r: any) => ({
+      relations: relations.map((r: any) => ({
         id: r.id,
         sourceId: r.sourceId,
         targetId: r.targetId,
@@ -215,9 +199,8 @@ export const geoProjectService = {
     }
 
     // Get next version number
-    const lastVersion = await prisma.gEOProjectVersion.findFirst({
+    const lastVersion = await geoProjectVersionRepository.findFirst({
       where: { projectId: id },
-      orderBy: { version: 'desc' },
     })
     const nextVersion = (lastVersion?.version || 0) + 1
 
@@ -225,7 +208,7 @@ export const geoProjectService = {
     let snapshotId: string | null = null
     if (project.workspaceId) {
       try {
-        const snapshot = await prisma.workspaceSnapshot.create({
+        const snapshot = await workspaceSnapshotRepository.create({
           data: {
             workspaceId: project.workspaceId,
             version: nextVersion,
@@ -242,7 +225,7 @@ export const geoProjectService = {
     }
 
     // Save project version
-    const projectVersion = await prisma.gEOProjectVersion.create({
+    const projectVersion = await geoProjectVersionRepository.create({
       data: {
         projectId: id,
         version: nextVersion,

@@ -1,14 +1,14 @@
-import { PrismaClient } from '@prisma/client'
+import { optimizationExecutionRepository } from '../repositories/optimization-execution.repository.js'
+import { verificationResultRepository } from '../repositories/verification-result.repository.js'
+import { publishingRecordRepository } from '../repositories/publishing-record.repository.js'
 import type { LifecycleEvent, LifecycleTimeline } from './lifecycle.types'
 
 export class LifecycleAggregator {
-  constructor(private prisma: PrismaClient) {}
-
   async getTimeline(projectId: string, limit = 50): Promise<LifecycleTimeline> {
     const events: LifecycleEvent[] = []
 
     // 1. Optimization executions (optimize phase)
-    const executions = await this.prisma.optimizationExecution.findMany({
+    const executions = await optimizationExecutionRepository.findMany({
       where: { projectId },
       orderBy: { startedAt: 'desc' },
       take: 20,
@@ -25,7 +25,7 @@ export class LifecycleAggregator {
     }
 
     // 2. Verification results (verify phase)
-    const results = await this.prisma.verificationResult.findMany({
+    const results = await verificationResultRepository.findMany({
       where: { projectId },
       orderBy: { verifiedAt: 'desc' },
       take: 20,
@@ -42,7 +42,7 @@ export class LifecycleAggregator {
     }
 
     // 3. Publishing records (publish / observe / indexed phases)
-    const publishes = await this.prisma.publishingRecord.findMany({
+    const publishes = await publishingRecordRepository.findMany({
       where: { projectId },
       orderBy: { createdAt: 'desc' },
       take: 20,

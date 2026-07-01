@@ -3,7 +3,13 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { prisma } from '../../../utils/index'
+import { geoProjectRepository } from '../repositories/geo-project.repository.js'
+import { geoBrandSettingRepository } from '../repositories/geo-brand-setting.repository.js'
+import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
+import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
+import { geoKeywordRepository } from '../repositories/geo-keyword.repository.js'
+import { userRepository } from '../../repositories/user.repository.js'
+import { membershipRepository } from '../../repositories/membership.repository.js'
 
 interface BrandCreateBody {
   name: string
@@ -33,17 +39,17 @@ interface BrandSettingUpdateBody {
 async function getUserMembership(userId: string): Promise<string> {
   try {
     // First try User.memberTier
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { memberTier: true },
-    })
+    const user = await userRepository.findUnique(
+      { where: { id: userId } },
+      { select: { memberTier: true } }
+    )
     if (user?.memberTier && user.memberTier !== 'free') return user.memberTier
 
     // Fallback to Membership.tier
-    const membership = await prisma.membership.findUnique({
-      where: { userId },
-      select: { tier: true },
-    })
+    const membership = await membershipRepository.findUnique(
+      { where: { userId } },
+      { select: { tier: true } }
+    )
     if (membership?.tier && membership.tier !== 'free') return membership.tier
   } catch { /* ignore */ }
   return 'free'
@@ -76,23 +82,23 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     const userId = user.id
 
     try {
-      const projects = await prisma.gEOProject.findMany({
-        where: { userId, deletedAt: null },
-        orderBy: { updatedAt: 'desc' },
-      })
+      const projects = await geoProjectRepository.findMany(
+        { userId, deletedAt: null },
+        { updatedAt: 'desc' }
+      )
 
       // Get brand settings for each project
-      const projectIds = projects.map(p => p.id)
-      const brandSettings = await prisma.geoBrandSetting.findMany({
-        where: { projectId: { in: projectIds } },
+      const projectIds = projects.map((p: any) => p.id)
+      const brandSettings = await geoBrandSettingRepository.findMany({
+        projectId: { in: projectIds },
       })
 
-      const settingsMap = new Map(brandSettings.map(s => [s.projectId, s]))
+      const settingsMap = new Map(brandSettings.map((s: any) => [s.projectId, s]))
 
       const membershipType = await getUserMembership(userId)
       const quotaLimit = getBrandQuotaLimit(membershipType)
 
-      const brands = projects.map(p => ({
+      const brands = projects.map((p: any) => ({
         id: p.id,
         userId: p.userId,
         name: p.name,
@@ -100,8 +106,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
         industry: p.industry,
         language: p.language,
         status: p.status,
-        createdAt: p.createdAt.toISOString(),
-        updatedAt: p.updatedAt.toISOString(),
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
         brandSetting: settingsMap.get(p.id) || null,
       }))
 
@@ -131,7 +137,7 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
 
     try {
       // Check quota
-      const existingCount = await prisma.gEOProject.count({
+      const existingCount = await geoProjectRepository.count({
         where: { userId, deletedAt: null },
       })
       const membershipType = await getUserMembership(userId)
@@ -146,28 +152,24 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
       }
 
       // Create project first
-      const project = await prisma.gEOProject.create({
-        data: {
-          userId,
-          name: body.name,
-          industry: body.industry || '',
-          language: body.language || 'zh',
-          status: 'active',
-          config: {},
-        },
+      const project = await geoProjectRepository.create({
+        userId,
+        name: body.name,
+        industry: body.industry || '',
+        language: body.language || 'zh',
+        status: 'active',
+        config: {},
       })
 
       // Create brand setting
-      const brandSetting = await prisma.geoBrandSetting.create({
-        data: {
-          projectId: project.id,
-          brandName: body.name,
-          website: body.website || '',
-          industry: body.industry || '',
-          region: body.region || '',
-          language: body.language || 'zh',
-          description: body.description || '',
-        },
+      const brandSetting = await geoBrandSettingRepository.create({
+        projectId: project.id,
+        brandName: body.name,
+        website: body.website || '',
+        industry: body.industry || '',
+        region: body.region || '',
+        language: body.language || 'zh',
+        description: body.description || '',
       })
 
       return reply.status(201).send({
@@ -180,8 +182,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
           industry: project.industry,
           language: project.language,
           status: project.status,
-          createdAt: project.createdAt.toISOString(),
-          updatedAt: project.updatedAt.toISOString(),
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt,
           brandSetting,
         },
       })
@@ -196,18 +198,15 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     const body = request.body as BrandUpdateBody
 
     try {
-      const existing = await prisma.gEOProject.findUnique({ where: { id } })
+      const existing = await geoProjectRepository.findUnique({ where: { id } })
       if (!existing || existing.deletedAt) {
         return reply.status(404).send({ success: false, error: '品牌未找到' })
       }
 
-      const updated = await prisma.gEOProject.update({
-        where: { id },
-        data: {
-          name: body.name,
-          status: body.status,
-        },
-      })
+      const updated = await geoProjectRepository.update(
+        { id },
+        { name: body.name, status: body.status }
+      )
 
       return {
         success: true,
@@ -219,8 +218,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
           industry: updated.industry,
           language: updated.language,
           status: updated.status,
-          createdAt: updated.createdAt.toISOString(),
-          updatedAt: updated.updatedAt.toISOString(),
+          createdAt: updated.createdAt,
+          updatedAt: updated.updatedAt,
         },
       }
     } catch (err: any) {
@@ -233,15 +232,15 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any
 
     try {
-      const existing = await prisma.gEOProject.findUnique({ where: { id } })
+      const existing = await geoProjectRepository.findUnique({ where: { id } })
       if (!existing || existing.deletedAt) {
         return reply.status(404).send({ success: false, error: '品牌未找到' })
       }
 
-      await prisma.gEOProject.update({
-        where: { id },
-        data: { deletedAt: new Date() },
-      })
+      await geoProjectRepository.update(
+        { id },
+        { deletedAt: new Date() }
+      )
 
       return { success: true, data: { deleted: true } }
     } catch (err: any) {
@@ -254,28 +253,26 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any
 
     try {
-      let setting = await prisma.geoBrandSetting.findUnique({
+      let setting = await geoBrandSettingRepository.findUnique({
         where: { projectId: id },
       })
 
       // Lazy init: if settings don't exist, auto-create defaults from project
       if (!setting) {
-        const project = await prisma.gEOProject.findUnique({ where: { id } })
+        const project = await geoProjectRepository.findUnique({ where: { id } })
         if (!project || project.deletedAt) {
           return reply.status(404).send({ success: false, error: '品牌未找到' })
         }
 
-        setting = await prisma.geoBrandSetting.create({
-          data: {
-            projectId: id,
-            brandName: project.name,
-            website: '',
-            industry: project.industry || '',
-            region: '',
-            language: project.language || 'zh',
-            description: '',
-            status: 'active',
-          },
+        setting = await geoBrandSettingRepository.create({
+          projectId: id,
+          brandName: project.name,
+          website: '',
+          industry: project.industry || '',
+          region: '',
+          language: project.language || 'zh',
+          description: '',
+          status: 'active',
         })
       }
 
@@ -291,14 +288,14 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     const body = request.body as BrandSettingUpdateBody
 
     try {
-      const existing = await prisma.geoBrandSetting.findUnique({ where: { projectId: id } })
+      const existing = await geoBrandSettingRepository.findUnique({ where: { projectId: id } })
       if (!existing) {
         return reply.status(404).send({ success: false, error: '品牌设置未找到' })
       }
 
-      const updated = await prisma.geoBrandSetting.update({
-        where: { projectId: id },
-        data: {
+      const updated = await geoBrandSettingRepository.update(
+        { projectId: id },
+        {
           brandName: body.brandName,
           website: body.website,
           industry: body.industry,
@@ -307,8 +304,8 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
           description: body.description,
           logo: body.logo,
           status: body.status,
-        },
-      })
+        }
+      )
 
       return { success: true, data: updated }
     } catch (err: any) {
@@ -321,29 +318,29 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any
 
     try {
-      const project = await prisma.gEOProject.findUnique({ where: { id } })
+      const project = await geoProjectRepository.findUnique({ where: { id } })
       if (!project || project.deletedAt) {
         return reply.status(404).send({ success: false, error: '品牌未找到' })
       }
 
       // Check scan history
-      const recentScan = await prisma.geoScanHistory.findFirst({
-        where: { projectId: id },
-        orderBy: { createdAt: 'desc' },
-      })
+      const recentScan = await geoScanHistoryRepository.findFirst(
+        { where: { projectId: id } },
+        { createdAt: 'desc' }
+      )
 
       // Check KO count
-      const koCount = await prisma.knowledgeObject.count({
+      const koCount = await knowledgeObjectRepository.count({
         where: { projectId: id },
       })
 
       // Check keyword count
-      const keywordCount = await prisma.geoKeyword.count({
+      const keywordCount = await geoKeywordRepository.count({
         where: { projectId: id },
       })
 
       // Check brand setting
-      const brandSetting = await prisma.geoBrandSetting.findUnique({
+      const brandSetting = await geoBrandSettingRepository.findUnique({
         where: { projectId: id },
       })
 
@@ -370,7 +367,7 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
             hasScanned: true,
             status: recentScan.status,
             scanType: recentScan.scanType,
-            lastScanAt: recentScan.createdAt.toISOString(),
+            lastScanAt: recentScan.createdAt,
           } : { hasScanned: false },
           knowledge: {
             koCount,

@@ -257,7 +257,7 @@ ${script.slice(0, 8000)}
         console.error('[Narrative-analyze-v2] ⚠️ Gateway execute failed:', executeErr?.message || executeErr)
         // ⭐ Phase A: 已停止 Gateway fallback 写入 executionResults
         const fallback = heuristicAnalyzeV2(script, title || projectName, targetDuration || 60)
-        const { normalized: fbNormalized, repaired: fbRepaired, heuristicFallbackUsed: fbHeuristic } = normalizeNarrativeSpec(fallback, script)
+        const { normalized: fbNormalized, repaired: fbRepaired, heuristicFallbackUsed: fbHeuristic } = await normalizeNarrativeSpec(fallback, script)
         return {
           success: true,
           data: {
@@ -291,7 +291,7 @@ ${script.slice(0, 8000)}
         console.error('[Narrative-analyze-v2] JSON parse failed, falling back to heuristic')
         // ⭐ Phase A: 已停止 Parse fallback 写入 executionResults
         const fallback = heuristicAnalyzeV2(script, title || projectName, targetDuration || 60)
-        const { normalized: fbNormalized, repaired: fbRepaired, heuristicFallbackUsed: fbHeuristic } = normalizeNarrativeSpec(fallback, script)
+        const { normalized: fbNormalized, repaired: fbRepaired, heuristicFallbackUsed: fbHeuristic } = await normalizeNarrativeSpec(fallback, script)
         return {
           success: true,
           data: {
@@ -314,7 +314,7 @@ ${script.slice(0, 8000)}
       // ========================================================
 
       // 1. Normalize the raw AI response into a canonical NarrativeSpec
-      const { normalized: normalizedSpec, repaired, heuristicFallbackUsed } = normalizeNarrativeSpec(analysis, script)
+      const { normalized: normalizedSpec, repaired, heuristicFallbackUsed } = await normalizeNarrativeSpec(analysis, script)
 
       // 2. Build the immutable AnalyzeV2Snapshot
       const snapshot: AnalyzeV2Snapshot = {

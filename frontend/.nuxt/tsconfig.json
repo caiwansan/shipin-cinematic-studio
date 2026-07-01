@@ -86,6 +86,12 @@
       "shared/*": [
         "../../shared/*"
       ],
+      "workspaces": [
+        "../workspaces"
+      ],
+      "workspaces/*": [
+        "../workspaces/*"
+      ],
       "#app": [
         "../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app"
       ],
@@ -105,7 +111,7 @@
         "./imports"
       ],
       "#app-manifest": [
-        "./manifest/meta/c1861149-f1e0-4d94-91d9-c32b2504492c.json"
+        "./manifest/meta/19247ed1-bd12-467a-8e82-b81724173f9e.json"
       ],
       "#components": [
         "./components"

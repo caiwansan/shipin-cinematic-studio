@@ -58,9 +58,9 @@ export const geoQualityService = {
     const allClaims = await geoClaimRepository.listByProjectId(projectId)
     const entitiesWithClaims = new Set(allClaims.map((c) => c.entityId)).size
 
-    // Get total entity count from project
-    const { prisma } = await import('../../../utils/index')
-    const totalEntities = await prisma.gEOEntity.count({ where: { projectId } })
+    // Get total entity count from project via repository
+    const { geoEntityRepository } = await import('../repositories/geo-entity.repository.js')
+    const totalEntities = await geoEntityRepository.count({ where: { projectId } })
 
     if (totalEntities === 0) return 0
     return entitiesWithClaims / totalEntities

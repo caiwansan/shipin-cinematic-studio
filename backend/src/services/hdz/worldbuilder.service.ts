@@ -13,10 +13,14 @@
  * BYOK：走 callLLM
  */
 
-import { prisma } from '../../utils/index.js'
 import { callLLM } from './llm.client.js'
 import { fetchUrlContent } from './fetch-url-content.js'
 import type { LLMConfig, OrchestratorContext } from './llm.client.js'
+import { hdzProjectRepository } from './repositories/hdz-project.repository.js'
+import { hdzCharacterRepository } from './repositories/hdz-character.repository.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
+import { hdzStyleDnaRepository } from './repositories/hdz-style-dna.repository.js'
+import { hdzMemoryRepository } from './repositories/hdz-memory.repository.js'
 
 const MAX_HISTORY_TURNS = 10
 const MAX_FETCH_ROUNDS = 1
@@ -122,18 +126,17 @@ const STATIC_SYSTEM_PROMPT = `你是文曲星，一位温润如玉的文学创�
 
 class WorldbuilderService {
   async execute(ctx: OrchestratorContext, llmCfg: LLMConfig): Promise<string> {
-    const project = await prisma.hdzProject.findUnique({ where: { id: ctx.projectId } })
+    const project = await hdzProjectRepository.findUnique({ where: { id: ctx.projectId } })
     if (!project) throw new Error('项目不存在')
 
-    const characters = await prisma.hdzCharacter.findMany({ where: { projectId: ctx.projectId } })
-    const existingChapters = await prisma.hdzChapter.findMany({
+    const characters = await hdzCharacterRepository.findMany({ where: { projectId: ctx.projectId } })
+    const existingChapters = await hdzChapterRepository.findMany({
       where: { projectId: ctx.projectId },
       orderBy: { chapterNo: 'asc' },
-      select: { chapterNo: true, title: true, outline: true, content: true },
-    })
+    }) as any[]
 
-    const styleDna = await prisma.hdzStyleDna.findFirst({ where: { projectId: ctx.projectId } })
-    const memories = await prisma.hdzMemory.findMany({
+    const styleDna = await hdzStyleDnaRepository.findFirst({ where: { projectId: ctx.projectId } })
+    const memories = await hdzMemoryRepository.findMany({
       where: { projectId: ctx.projectId, type: 'chat_dialogue_summary' },
       orderBy: { createdAt: 'asc' },
       select: { content: true, version: true },

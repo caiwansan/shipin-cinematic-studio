@@ -10,7 +10,11 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { prisma } from '../../../utils/index.js'
+import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
+import { geoClaimRepository } from '../repositories/geo-claim.repository.js'
+import { geoEvidenceRepository } from '../repositories/geo-evidence.repository.js'
+import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
+import { executionTraceRepository } from '../../repositories/execution-trace.repository.js'
 
 interface HistoryEvent {
   id: string
@@ -36,19 +40,18 @@ export default async function geoHistoryRoutes(fastify: FastifyInstance) {
 
       // Source 1: Scan History
       if (!filterType || filterType === 'scan') {
-        const scans = await prisma.geoScanHistory.findMany({
-          where: { projectId },
-          orderBy: { startedAt: 'desc' },
-          take: 50,
-        })
-        for (const scan of scans) {
+        const scans = await geoScanHistoryRepository.findMany(
+          { where: { projectId } },
+          { startedAt: 'desc' }
+        )
+        for (const scan of scans as any[]) {
           events.push({
             id: `scan-${scan.id}`,
             type: 'website_scanned',
             description: scan.scanType === 'website'
               ? `网站扫描完成（${scan.topic || projectId}）`
               : `${scan.scanType} 扫描完成`,
-            timestamp: (scan.completedAt || scan.startedAt || scan.createdAt).toISOString(),
+            timestamp: scan.completedAt || scan.startedAt || scan.createdAt,
             projectId,
             metadata: { scanId: scan.id, scanType: scan.scanType, status: scan.status },
           })
@@ -57,10 +60,9 @@ export default async function geoHistoryRoutes(fastify: FastifyInstance) {
 
       // Source 2: Claims (as proxy for evidence/claim generation events)
       if (!filterType || filterType === 'claim') {
-        const claims = await prisma.gEOClaim.findMany({
+        const claims = await geoClaimRepository.findMany({
           where: { entity: { projectId } },
           orderBy: { createdAt: 'desc' },
-          take: 50,
           include: { entity: { select: { name: true } } },
         })
         for (const claim of claims) {
@@ -77,19 +79,18 @@ export default async function geoHistoryRoutes(fastify: FastifyInstance) {
 
       // Source 3: Knowledge Objects
       if (!filterType || filterType === 'knowledge') {
-        const kos = await prisma.knowledgeObject.findMany({
-          where: { projectId },
-          orderBy: { createdAt: 'desc' },
-          take: 50,
-        })
-        for (const ko of kos) {
+        const kos = await knowledgeObjectRepository.findMany(
+          { where: { projectId } },
+          { createdAt: 'desc' }
+        )
+        for (const ko of kos as any[]) {
           events.push({
             id: `ko-${ko.id}`,
             type: 'knowledge_updated',
             description: `Knowledge 更新: ${ko.title || ko.topic || '无标题'} (${ko.status})`,
-            timestamp: ko.updatedAt.toISOString(),
+            timestamp: ko.updatedAt,
             projectId,
-            metadata: { koId: ko.id, status: ko.status, entityCount: (ko as any).entities?.length || 0 },
+            metadata: { koId: ko.id, status: ko.status, entityCount: ko.entities?.length || 0 },
           })
         }
       }
@@ -97,16 +98,15 @@ export default async function geoHistoryRoutes(fastify: FastifyInstance) {
       // Source 4: Execution Traces
       if (!filterType || filterType === 'execution') {
         try {
-          const traces = await prisma.executionTrace.findMany({
-            where: { projectId },
-            orderBy: { createdAt: 'desc' },
-            take: 50,
-          })
-          for (const trace of traces) {
+          const traces = await executionTraceRepository.findMany(
+            { where: { projectId } },
+            { createdAt: 'desc' }
+          )
+          for (const trace of traces as any[]) {
             events.push({
               id: `trace-${trace.id}`,
               type: trace.status === 'completed' ? 'execution_completed' : 'execution_started',
-              description: `${trace.agent || 'Agent'} 执行${trace.status === 'completed' ? '完成' : '开始'}: ${(trace.input as any)?.topic || trace.id?.substring(0, 8)}`,
+              description: `${trace.agent || 'Agent'} 执行${trace.status === 'completed' ? '完成' : '开始'}: ${trace.input?.topic || trace.id?.substring(0, 8)}`,
               timestamp: (trace.completedAt || trace.createdAt).toISOString(),
               projectId,
               metadata: { traceId: trace.id, agent: trace.agent, status: trace.status },
@@ -144,18 +144,18 @@ export default async function geoHistoryRoutes(fastify: FastifyInstance) {
       }
 
       const [scanCount, claimCount, koCount] = await Promise.all([
-        prisma.geoScanHistory.count({ where: { projectId } }),
-        prisma.gEOClaim.count({ where: { entity: { projectId } } }),
-        prisma.knowledgeObject.count({ where: { projectId } }),
+        geoScanHistoryRepository.count({ where: { projectId } }),
+        geoClaimRepository.count({ entity: { projectId } }),
+        knowledgeObjectRepository.count({ where: { projectId } }),
       ])
 
       // Evidence count via claims
-      const claimIds = (await prisma.gEOClaim.findMany({
+      const claimIds = (await geoClaimRepository.findMany({
         where: { entity: { projectId } },
         select: { id: true },
-      })).map(c => c.id)
+      })).map((c: any) => c.id)
       const evidenceCount = claimIds.length > 0
-        ? await prisma.gEOEvidence.count({ where: { claimId: { in: claimIds } } })
+        ? await geoEvidenceRepository.count({ claimId: { in: claimIds } })
         : 0
 
       return {

@@ -625,7 +625,7 @@ ${script.slice(0, 8000)}
     }
   }
 
-  const { normalized: normalizedSpec, repaired, heuristicFallbackUsed } = normalizeNarrativeSpec(analysis, script)
+  const { normalized: normalizedSpec, repaired, heuristicFallbackUsed } = await normalizeNarrativeSpec(analysis, script)
 
   console.log(`[ScriptRegen] ✅ 六维 snapshot 就绪: ${normalizedSpec.characters?.length || 0} chars, ${normalizedSpec.scenes?.length || 0} scenes, ${normalizedSpec.props?.length || 0} props`)
 

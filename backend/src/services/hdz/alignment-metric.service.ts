@@ -12,7 +12,7 @@
  * 综合：overall_score = 0.4 * existence_coverage + 0.4 * transition_correctness + 0.2 * entity_recall
  */
 
-import { prisma } from '../../utils/index.js'
+import { writerAlignmentMetricRepository } from './repositories/writer-alignment-metric.repository.js'
 import type { StateDelta, EntityState } from './world-state.service.js'
 import { getEntityState } from './world-state.service.js'
 import type { SceneGraph } from './scene-compiler.service.js'
@@ -219,7 +219,7 @@ class AlignmentMetricService {
     score: AlignmentScore,
     delta: StateDelta[],
   ): Promise<void> {
-    await prisma.writerAlignmentMetric.create({
+    await writerAlignmentMetricRepository.create({
       data: {
         projectId,
         chapterId,
@@ -239,7 +239,7 @@ class AlignmentMetricService {
     avgScore: number
     scores: Array<{ chapterNo: number; overall: number; time: string }>
   }> {
-    const records = await prisma.writerAlignmentMetric.findMany({
+    const records = await writerAlignmentMetricRepository.findMany({
       where: { projectId },
       orderBy: { createdAt: 'desc' },
       take: 500,

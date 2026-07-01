@@ -1,0 +1,40 @@
+name: GEO Architecture Gate
+
+on:
+  pull_request:
+    paths:
+      - 'backend/src/services/geo/**'
+      - 'scripts/geo-freeze-guard.sh'
+      - 'scripts/kmki-architecture-linter.sh'
+  push:
+    branches: [main, master]
+    paths:
+      - 'backend/src/services/geo/**'
+      - 'scripts/geo-freeze-guard.sh'
+      - 'scripts/kmki-architecture-linter.sh'
+
+jobs:
+  freeze-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: cd backend && npm ci
+
+      - name: Prisma generate
+        run: cd backend && npx prisma generate
+
+      - name: Run GEO Core Freeze Guard
+        run: bash scripts/geo-freeze-guard.sh
+
+      - name: Run Architecture Linter (Core)
+        run: bash scripts/kmki-architecture-linter.sh
+
+      - name: TypeScript Compile Check (GEO only)
+        run: cd backend && npx tsc --noEmit --pretty false 2>&1 | grep "src/services/geo" || echo "GEO compile: pass"

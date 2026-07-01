@@ -79,13 +79,17 @@ export default defineNitroPlugin((nitroApp) => {
       '/user/agent', '/user/center', '/user/credits', '/user/download',
       '/user/gallery', '/user/library', '/user/membership', '/user/messages',
       '/user/profile', '/user/projects', '/user/promo', '/user/referral', '/user/storage',
+      '/workspace/geo/dashboard', '/workspace/geo/create', '/workspace/geo/health',
+      '/workspace/geo/recommendations', '/workspace/geo/verification',
+      '/workspace/geo/publishing', '/workspace/geo/growth', '/workspace/geo/knowledge',
     ]
 
     const isKnown = knownPaths.includes(cleanPath) ||
       cleanPath.startsWith('/community/') ||
       cleanPath.startsWith('/studio/') ||
       cleanPath.startsWith('/user/') ||
-      cleanPath.startsWith('/admin/')
+      cleanPath.startsWith('/admin/') ||
+      cleanPath.startsWith('/workspace/geo/detail/')
 
     if (!isKnown) {
       response.statusCode = 404

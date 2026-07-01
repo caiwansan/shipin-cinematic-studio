@@ -2,7 +2,9 @@
 // GEO Entity Service — Entity CRUD + Provenance
 // ============================================================
 
-import { prisma } from '../../../utils/index'
+import { geoProjectRepository } from '../repositories/geo-project.repository.js'
+import { geoEntityRepository } from '../repositories/geo-entity.repository.js'
+import { geoEntityRelationRepository } from '../repositories/geo-entity-relation.repository.js'
 import { EntityType, createProvenanceRecord, createLineageRecord } from '../types'
 import type { Entity, EntityRelation, ResearchOutput } from '../types'
 import type { KOProvenance } from '../runtime/knowledge/KnowledgeObjectSchema'
@@ -44,7 +46,7 @@ export const geoEntityService = {
    * Calls Entity Agent → Knowledge Pipeline → Legacy Graph Sync
    */
   async discoverEntities(projectId: string, topic: ResearchOutput | string, userId?: string): Promise<KnowledgeObjectData> {
-    const project = await prisma.gEOProject.findUnique({ where: { id: projectId } })
+    const project = await geoProjectRepository.findUnique({ where: { id: projectId } })
     if (!project) throw new Error('Project not found')
 
     // Normalize input to ResearchOutput
@@ -109,7 +111,7 @@ export const geoEntityService = {
    * Get a single entity by ID with provenance.
    */
   async getEntity(id: string): Promise<Entity | null> {
-    const entity = await prisma.gEOEntity.findUnique({ where: { id } })
+    const entity = await geoEntityRepository.findUnique({ where: { id } })
     if (!entity) return null
     return mapPrismaEntity(entity)
   },
@@ -118,7 +120,7 @@ export const geoEntityService = {
    * List all entities for a project.
    */
   async listEntities(projectId: string): Promise<Entity[]> {
-    const entities = await prisma.gEOEntity.findMany({
+    const entities = await geoEntityRepository.findMany({
       where: { projectId },
       orderBy: { sortOrder: 'asc' },
     })
@@ -129,7 +131,7 @@ export const geoEntityService = {
    * Update an entity.
    */
   async updateEntity(id: string, data: Partial<Entity>): Promise<Entity | null> {
-    const existing = await prisma.gEOEntity.findUnique({ where: { id } })
+    const existing = await geoEntityRepository.findUnique({ where: { id } })
     if (!existing) return null
 
     // Generate provenance for update
@@ -146,16 +148,16 @@ export const geoEntityService = {
       previousVersionId: id,
     })
 
-    const entity = await prisma.gEOEntity.update({
-      where: { id },
-      data: {
+    const entity = await geoEntityRepository.update(
+      { id },
+      {
         name: data.name,
         type: data.type,
         description: data.description,
         metadata: data.metadata ? JSON.parse(JSON.stringify(data.metadata)) : undefined,
-        provenance: updatedProvenance as any,
-      },
-    })
+        provenance: updatedProvenance,
+      }
+    )
     return mapPrismaEntity(entity)
   },
 
@@ -170,8 +172,8 @@ export const geoEntityService = {
   ): Promise<EntityRelation> {
     // Get entities to build lineage
     const [source, target] = await Promise.all([
-      prisma.gEOEntity.findUnique({ where: { id: sourceId } }),
-      prisma.gEOEntity.findUnique({ where: { id: targetId } }),
+      geoEntityRepository.findUnique({ where: { id: sourceId } }),
+      geoEntityRepository.findUnique({ where: { id: targetId } }),
     ])
 
     if (!source || !target) {
@@ -180,15 +182,13 @@ export const geoEntityService = {
 
     const lineage = createLineageRecord(source.name, target.name, type)
 
-    const relation = await prisma.gEOEntityRelation.create({
-      data: {
-        projectId: source.projectId,
-        sourceId,
-        targetId,
-        type,
-        lineage: lineage as any,
-        metadata: (metadata || {}) as any,
-      },
+    const relation = await geoEntityRelationRepository.create({
+      projectId: source.projectId,
+      sourceId,
+      targetId,
+      type,
+      lineage: lineage,
+      metadata: metadata || {},
     })
 
     return mapPrismaRelation(relation)
@@ -198,7 +198,7 @@ export const geoEntityService = {
    * Get all relations for an entity.
    */
   async getEntityRelations(entityId: string): Promise<EntityRelation[]> {
-    const relations = await prisma.gEOEntityRelation.findMany({
+    const relations = await geoEntityRelationRepository.findMany({
       where: {
         OR: [{ sourceId: entityId }, { targetId: entityId }],
       },
@@ -210,7 +210,7 @@ export const geoEntityService = {
    * Get the full provenance chain for an entity.
    */
   async getEntityProvenance(entityId: string): Promise<{ current: Entity; provenanceChain: any[] } | null> {
-    const entity = await prisma.gEOEntity.findUnique({ where: { id: entityId } })
+    const entity = await geoEntityRepository.findUnique({ where: { id: entityId } })
     if (!entity) return null
 
     const provenance = typeof entity.provenance === 'string'

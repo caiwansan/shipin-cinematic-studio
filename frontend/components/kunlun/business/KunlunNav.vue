@@ -20,7 +20,7 @@
         <a href="/ppt/" class="nav-link nav-link-ppt">
           🍌 潇湘子 PPT
         </a>
-        <NuxtLink to="/workspace/geo" class="nav-link nav-link-geo">
+        <NuxtLink to="/workspace/geo/dashboard" class="nav-link nav-link-geo">
           🌏 品牌GEO
         </NuxtLink>
         <NuxtLink to="/community" class="nav-link">

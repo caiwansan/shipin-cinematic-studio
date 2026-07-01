@@ -13,7 +13,7 @@
  * 输出：PASS | FAIL + diff_report
  */
 
-import { prisma } from '../../utils/index.js'
+import { eventLogRepository } from './repositories/event-log.repository.js'
 import { getWorldState, getEntityState, type StateDelta, type EntityState } from './world-state.service.js'
 import { getEntityById } from './entity-registry.service.js'
 import { emitEvent } from './event-log.service.js'
@@ -99,7 +99,7 @@ class ConsistencyVerifier {
 
     // 记录校验事件
     try {
-      await prisma.eventLog.create({
+      await eventLogRepository.create({
         data: {
           entityType: 'chapter',
           entityId: `${projectId}:${chapterNo}`,
@@ -328,7 +328,7 @@ class ConsistencyVerifier {
     }
 
     try {
-      await prisma.eventLog.create({
+      await eventLogRepository.create({
         data: {
           entityType: 'chapter',
           entityId: `${projectId}:${chapterNo}`,

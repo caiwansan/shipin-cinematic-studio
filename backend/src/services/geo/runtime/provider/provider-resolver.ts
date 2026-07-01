@@ -5,7 +5,8 @@
 // Agent 不再直接读 DB，统一通过此模块获取 LLM Runtime 配置
 // ============================================================
 
-import { prisma } from '../../../../utils/index'
+import { userModelConfigRepository } from '../../repositories/user-model-config.repository.js'
+import { apiKeyRepository } from '../../repositories/api-key.repository.js'
 import { capabilityRegistry, type Capability } from './capability-registry'
 
 export interface LLMRuntimeConfig {
@@ -33,7 +34,7 @@ export async function resolveLLMConfig(
   requiredCapabilities?: Capability[],
 ): Promise<LLMRuntimeConfig> {
   // 1. 读用户自己的配置
-  const userConfig = await prisma.userModelConfigV2.findUnique({ where: { userId } })
+  const userConfig = await userModelConfigRepository.findUnique({ where: { userId } })
 
   if (userConfig?.llmEnabled && userConfig.llmApiKey) {
     const provider = userConfig.llmProvider || 'volcengine'
@@ -52,7 +53,7 @@ export async function resolveLLMConfig(
           console.log(
             `[ProviderResolver] ${provider}/${model} lacks some capabilities, falling back to ${best.provider}/${best.model}`,
           )
-          const keyRecord = await prisma.apiKey.findUnique({ where: { provider: best.provider } })
+          const keyRecord = await apiKeyRepository.findUnique({ where: { provider: best.provider } })
           if (keyRecord?.keyValue) {
             return {
               provider: best.provider,
@@ -79,7 +80,7 @@ export async function resolveLLMConfig(
   // 2. 没有用户配置，尝试全局 ApiKey
   const globalProviders = ['deepseek', 'openai', 'volcengine', 'siliconflow']
   for (const provider of globalProviders) {
-    const keyRecord = await prisma.apiKey.findUnique({ where: { provider } })
+    const keyRecord = await apiKeyRepository.findUnique({ where: { provider } })
     if (keyRecord?.keyValue) {
       const model = provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o'
       // 验证能力

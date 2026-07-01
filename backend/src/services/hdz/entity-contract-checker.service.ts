@@ -13,7 +13,8 @@
  * 仅供验证和监控。
  */
 
-import { prisma } from '../../utils/index.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
+import { sceneDagRepository } from './repositories/scene-dag.repository.js'
 import type { EntityContract } from './scene-compiler.service.js'
 
 // ─── 类型定义 ───
@@ -152,25 +153,23 @@ class EntityContractChecker {
     avgScore: number
     results: ContractCheckResult[]
   }> {
-    const chapters = await prisma.hdzChapter.findMany({
+    const chapters = await hdzChapterRepository.findMany({
       where: {
         projectId,
         chapterNo: { gte: chapterRange[0], lte: chapterRange[1] },
         content: { not: null },
       },
       orderBy: { chapterNo: 'asc' },
-      select: { chapterNo: true, content: true, title: true },
-    })
+    }) as any[]
 
     const results: ContractCheckResult[] = []
     for (const ch of chapters) {
       if (!ch.content) continue
 
       // 尝试从 SceneDag 获取 EntityContract
-      const sceneDags = await prisma.sceneDag.findMany({
+      const sceneDags = await sceneDagRepository.findMany({
         where: { projectId, chapterNo: ch.chapterNo },
-        select: { dagJson: true },
-      })
+      }) as any[]
 
       if (sceneDags.length === 0) {
         // 无 SceneDag 记录 —— 该章节没有经过 SceneCompilerV2

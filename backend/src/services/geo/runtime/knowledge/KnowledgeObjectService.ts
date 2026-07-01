@@ -1,7 +1,6 @@
 // KMKI-RUNTIME-014 — Knowledge Object Service
 // 封装 Repository + Merge Logic
 
-import { prisma } from '../../../../utils/index'
 import { knowledgeObjectRepository } from './KnowledgeObjectRepository'
 import type { KnowledgeObjectData, KOProvenance, EntitySnapshot, RelationSnapshot, ClaimSnapshot, EvidenceSnapshot, CitationSnapshot } from './KnowledgeObjectSchema'
 
@@ -78,22 +77,19 @@ export class KnowledgeObjectService {
     }
 
     // Update the base KO with merged data
-    await prisma.knowledgeObject.update({
-      where: { id: base.id },
-      data: {
-        entities: Array.from(entityMap.values()) as any,
-        relations: Array.from(relationMap.values()) as any,
-        claims: Array.from(claimMap.values()) as any,
-        evidence: Array.from(evidenceMap.values()) as any,
-        citations: Array.from(citationMap.values()) as any,
-        status: 'VERIFIED',
-      },
+    await knowledgeObjectRepository.updateData(base.id, {
+      entities: Array.from(entityMap.values()) as any,
+      relations: Array.from(relationMap.values()) as any,
+      claims: Array.from(claimMap.values()) as any,
+      evidence: Array.from(evidenceMap.values()) as any,
+      citations: Array.from(citationMap.values()) as any,
+      status: 'VERIFIED',
     })
 
     // Delete merged KOs (keep base)
     const toDelete = kos.slice(1).map(k => k.id)
     if (toDelete.length) {
-      await prisma.knowledgeObject.deleteMany({ where: { id: { in: toDelete } } })
+      await knowledgeObjectRepository.deleteMany({ where: { id: { in: toDelete } } })
     }
 
     return knowledgeObjectRepository.findById(base.id)

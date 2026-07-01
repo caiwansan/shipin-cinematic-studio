@@ -99,6 +99,11 @@ export const geoEvidenceRepository = {
     return prisma.gEOEvidence.count({ where: { claimId } })
   },
 
+  async count(claimIds: string[]): Promise<number> {
+    if (!claimIds.length) return 0
+    return prisma.gEOEvidence.count({ where: { claimId: { in: claimIds } } })
+  },
+
   async averageCredibilityByProjectId(projectId: string): Promise<number> {
     const result = await prisma.gEOEvidence.aggregate({
       where: { claim: { entity: { projectId } } },

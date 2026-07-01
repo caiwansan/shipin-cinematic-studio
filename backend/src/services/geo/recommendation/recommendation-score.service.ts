@@ -3,7 +3,15 @@
 // Returns per-dimension breakdown with reasons for each point
 // ============================================================
 
-import { prisma } from '../../../utils/index.js'
+import { geoBrandProfileRepository } from '../repositories/geo-brand-profile.repository.js'
+import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
+import { geoEntityRepository } from '../repositories/geo-entity.repository.js'
+import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
+import { geoBrandSettingRepository } from '../repositories/geo-brand-setting.repository.js'
+import { geoClaimRepository } from '../repositories/geo-claim.repository.js'
+import { geoEvidenceRepository } from '../repositories/geo-evidence.repository.js'
+import { geoEntityRelationRepository } from '../repositories/geo-entity-relation.repository.js'
+import { geoScoreSnapshotRepository } from '../repositories/geo-score-snapshot.repository.js'
 
 // ── Types ──
 
@@ -66,40 +74,36 @@ export async function calculateScore(
 ): Promise<ScoreExplainability> {
   // ── Fetch raw data ──
   const [brandProfiles, knowledgeCount, entities, scans, settings] = await Promise.all([
-    prisma.geoBrandProfile.count({ where: { projectId } }),
-    prisma.knowledgeObject.count({ where: { projectId } }),
-    prisma.gEOEntity.count({ where: { projectId } }),
-    prisma.geoScanHistory.findMany({
-      where: { projectId },
-      orderBy: { createdAt: 'desc' },
-      take: 1,
-      select: { id: true, status: true, scanType: true, createdAt: true },
-    }),
-    prisma.geoBrandSetting.findFirst({ where: { projectId } }),
+    geoBrandProfileRepository.count({ where: { projectId } }),
+    knowledgeObjectRepository.count({ where: { projectId } }),
+    geoEntityRepository.count({ where: { projectId } }),
+    geoScanHistoryRepository.findMany(
+      { where: { projectId } },
+      { createdAt: 'desc' }
+    ),
+    geoBrandSettingRepository.findFirst({ where: { projectId } }),
   ])
+
+  const scanArray: any[] = Array.isArray(scans) ? scans : []
+  const lastScan = scanArray.length > 0 ? scanArray[0] : null
+  const lastScanOk = lastScan?.status === 'completed'
 
   // Claims & evidence via entity chain
   const entityIds = entities > 0
-    ? (await prisma.gEOEntity.findMany({ where: { projectId }, select: { id: true } })).map(e => e.id)
+    ? (await geoEntityRepository.findMany({ projectId }, { id: true })).map((e: any) => e.id)
     : []
 
   const claims = entityIds.length > 0
-    ? await prisma.gEOClaim.count({ where: { entityId: { in: entityIds } } })
+    ? await geoClaimRepository.count({ where: { entityId: { in: entityIds } } })
     : 0
 
   let evidenceCount = 0
   if (claims > 0) {
-    const claimIds = (await prisma.gEOClaim.findMany({
-      where: { entityId: { in: entityIds } },
-      select: { id: true },
-    })).map(c => c.id)
+    const claimIds = (await geoClaimRepository.findMany({ entityId: { in: entityIds } }, { select: { id: true } })).map((c: any) => c.id)
     evidenceCount = claimIds.length > 0
-      ? await prisma.gEOEvidence.count({ where: { claimId: { in: claimIds } } })
+      ? await geoEvidenceRepository.count(claimIds)
       : 0
   }
-
-  const lastScan = scans.length > 0 ? scans[0] : null
-  const lastScanOk = lastScan?.status === 'completed'
 
   // ── Apply virtual overrides for simulation ──
   const effectiveKnowledgeCount = knowledgeCount + (virtual?.virtualKnowledge || 0)
@@ -196,7 +200,7 @@ export async function calculateScore(
 
   // Entity relations (2pts each, max 10)
   const relationCount = entityIds.length > 0
-    ? await prisma.gEOEntityRelation.count({ where: { projectId } })
+    ? await geoEntityRelationRepository.count({ where: { projectId } })
     : 0
   const relationScore = Math.min(10, relationCount * 2)
   if (relationCount >= 5) {
@@ -273,9 +277,8 @@ export async function calculateScore(
 
   // Website content pages / meta
   const webData = settings?.website
-    ? await prisma.geoScanHistory.findFirst({
+    ? await geoScanHistoryRepository.findFirst({
         where: { projectId, scanType: 'website', status: 'completed' },
-        select: { result: true },
       })
     : null
   const hasPages = webData?.result && typeof webData.result === 'object' && 'pages' in (webData.result as any) && (webData.result as any).pages > 1
@@ -319,11 +322,7 @@ export async function calculateScore(
 
   // Knowledge topics diversity
   const distinctTopics = knowledgeCount > 0
-    ? await prisma.knowledgeObject.findMany({
-        where: { projectId },
-        select: { topic: true },
-        distinct: ['topic'],
-      })
+    ? await knowledgeObjectRepository.findMany({ projectId }, { select: { topic: true }, distinct: ['topic'] })
     : []
   const topicCount = distinctTopics.length
   const effectiveTopicCount = topicCount + (virtual?.virtualKnowledge && virtual.virtualKnowledge > 0 ? Math.min(virtual.virtualKnowledge, 4) : 0)
@@ -338,10 +337,7 @@ export async function calculateScore(
 
   // Knowledge quality (if confidence scores exist)
   const highConfidence = knowledgeCount > 0
-    ? await prisma.knowledgeObject.findMany({
-        where: { projectId, qualityScore: { gte: 0.7 } },
-        select: { id: true },
-      })
+    ? await knowledgeObjectRepository.findMany({ projectId, qualityScore: { gte: 0.7 } }, { select: { id: true } })
     : []
   const highConfCount = highConfidence.length
   const effectiveHighConfCount = highConfCount + (virtual?.virtualKnowledge ? Math.round(virtual.virtualKnowledge * 0.8) : 0)
@@ -385,12 +381,10 @@ export async function calculateScore(
  */
 async function saveSnapshot(projectId: string, scores: Record<string, number>): Promise<void> {
   try {
-    await prisma.gEOScoreSnapshot.create({
-      data: {
-        projectId,
-        snapshot: scores,
-        scores: scores,
-      },
+    await geoScoreSnapshotRepository.create({
+      projectId,
+      snapshot: scores,
+      scores: scores,
     })
   } catch {
     // Silently fail — snapshots are non-critical

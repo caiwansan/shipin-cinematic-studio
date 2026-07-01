@@ -7,7 +7,6 @@
 import { FastifyInstance } from 'fastify'
 import { geoClaimRepository } from '../repositories/geo-claim.repository'
 import { geoEvidenceRepository } from '../repositories/geo-evidence.repository'
-import { prisma } from '../../../utils/index.js'
 
 export default async function geoClaimRoutes(fastify: FastifyInstance) {
   // GET /api/geo/claims?projectId=xxx&entityId=yyy&status=zzz&limit=50&offset=0
@@ -61,10 +60,7 @@ export default async function geoClaimRoutes(fastify: FastifyInstance) {
       }
 
       // Fetch evidences with citations
-      const evidences = await prisma.gEOEvidence.findMany({
-        where: { claimId: id },
-        include: { citations: true },
-      })
+      const evidences = await geoEvidenceRepository.findByClaimId(id)
 
       return {
         success: true,

@@ -3,7 +3,13 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { prisma } from '../../../utils/index'
+import { geoProjectRepository } from '../repositories/geo-project.repository.js'
+import { geoKeywordRepository } from '../repositories/geo-keyword.repository.js'
+import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
+import { geoClaimRepository } from '../repositories/geo-claim.repository.js'
+import { geoEntityRepository, geoEntityRelationRepository } from '../repositories/geo-entity.repository.js'
+import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
+import { resourceCredentialRepository } from '../repositories/resource-credential.repository.js'
 
 export default async function geoDashboardRoutes(fastify: FastifyInstance) {
   // GET /api/geo/dashboard/stats — Dashboard statistics
@@ -17,55 +23,52 @@ export default async function geoDashboardRoutes(fastify: FastifyInstance) {
       const projectFilter: any = { userId, deletedAt: null }
       if (projectId) projectFilter.id = projectId
 
-      const projects = await prisma.gEOProject.findMany({
-        where: projectFilter,
-      })
-      const projectIds = projects.map(p => p.id)
+      const projects = await geoProjectRepository.findMany(projectFilter)
+      const projectIds = projects.map((p: any) => p.id)
 
       // Brand count = project count
       const brandCount = projects.length
 
       // Keyword count
       const keywordCount = projectIds.length > 0
-        ? await prisma.geoKeyword.count({
-            where: { projectId: { in: projectIds } },
+        ? await geoKeywordRepository.count({
+            projectId: { in: projectIds },
           })
         : 0
 
       // KO count
       const koCount = projectIds.length > 0
-        ? await prisma.knowledgeObject.count({
-            where: { projectId: { in: projectIds } },
+        ? await knowledgeObjectRepository.count({
+            projectId: { in: projectIds },
           })
         : 0
 
       // Entity count (from GEOEntity)
       const entityCount = projectIds.length > 0
-        ? await prisma.gEOEntity.count({
-            where: { projectId: { in: projectIds } },
+        ? await geoEntityRepository.count({
+            projectId: { in: projectIds },
           })
         : 0
 
       // Relationship count
       const relationCount = projectIds.length > 0
-        ? await prisma.gEOEntityRelation.count({
-            where: { projectId: { in: projectIds } },
+        ? await geoEntityRelationRepository.count({
+            projectId: { in: projectIds },
           })
         : 0
 
       // Recent scans
       const recentScans = projectIds.length > 0
-        ? await prisma.geoScanHistory.findMany({
-            where: { projectId: { in: projectIds } },
-            orderBy: { createdAt: 'desc' },
-            take: 5,
-          })
+        ? await geoScanHistoryRepository.findMany(
+            { where: { projectId: { in: projectIds } } },
+            { createdAt: 'desc' }
+          )
         : []
 
       // Claims count
       const claimsCount = projectIds.length > 0
-        ? await prisma.gEOClaim.count({
-            where: { entity: { projectId: { in: projectIds } } },
+        ? await geoClaimRepository.count({
+            entity: { projectId: { in: projectIds } },
           })
         : 0
 
@@ -78,13 +81,13 @@ export default async function geoDashboardRoutes(fastify: FastifyInstance) {
           entityCount,
           relationCount,
           claimsCount,
-          recentScans: recentScans.map(s => ({
+          recentScans: (recentScans as any[]).slice(0, 5).map((s: any) => ({
             id: s.id,
             projectId: s.projectId,
             scanType: s.scanType,
             status: s.status,
             topic: s.topic,
-            createdAt: s.createdAt.toISOString(),
+            createdAt: s.createdAt,
           })),
         },
       }
@@ -100,12 +103,12 @@ export default async function geoDashboardRoutes(fastify: FastifyInstance) {
 
     try {
       // Check if user has any provider configured via resource credentials
-      const credentials = await prisma.resourceCredential.findMany({
-        where: { tenantId: userId },
-        include: { resource: true },
-      })
+      const credentials = await resourceCredentialRepository.findMany(
+        { tenantId: userId },
+        { include: { resource: true } }
+      )
 
-      const providers = credentials.map(c => ({
+      const providers = credentials.map((c: any) => ({
         id: c.id,
         name: c.name,
         resourceName: c.resource?.name || 'Unknown',
@@ -113,7 +116,7 @@ export default async function geoDashboardRoutes(fastify: FastifyInstance) {
         endpoint: c.endpoint || '',
         models: c.models || '',
         status: c.status,
-        lastRotated: c.lastRotated?.toISOString() || null,
+        lastRotated: c.lastRotated || null,
       }))
 
       const hasConfigured = providers.length > 0

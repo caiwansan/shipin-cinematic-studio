@@ -1,7 +1,7 @@
 // KMKI-RUNTIME-010 — Execution Trace Service
 // 提供对 AI Runtime 执行记录的查询和聚合
 
-import { prisma } from '../../../../utils/index'
+import { llmUsageRecordRepository } from '../../repositories/llm-usage-record.repository.js'
 
 export interface ExecutionTrace {
   traceId: string
@@ -50,13 +50,13 @@ export class ExecutionTraceService {
     if (options.agent) where.agent = options.agent
 
     const [traces, total] = await Promise.all([
-      prisma.lLMUsageRecord.findMany({
+      llmUsageRecordRepository.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         take: options.limit || 50,
         skip: options.offset || 0,
       }),
-      prisma.lLMUsageRecord.count({ where }),
+      llmUsageRecordRepository.count({ where }),
     ])
 
     return {
@@ -67,13 +67,13 @@ export class ExecutionTraceService {
 
   // 获取单条 trace
   async getTrace(traceId: string): Promise<ExecutionTrace | null> {
-    const record = await prisma.lLMUsageRecord.findUnique({ where: { id: traceId } })
+    const record = await llmUsageRecordRepository.findUnique({ where: { id: traceId } })
     return record ? this.mapTrace(record) : null
   }
 
   // 获取 project 的 trace 摘要
   async getProjectSummary(projectId: string): Promise<TraceSummary | null> {
-    const records = await prisma.lLMUsageRecord.findMany({ where: { projectId } })
+    const records = await llmUsageRecordRepository.findMany({ where: { projectId } })
     if (!records.length) return null
 
     // 计算各项汇总

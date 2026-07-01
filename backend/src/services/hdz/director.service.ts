@@ -12,34 +12,39 @@
  * BYOK：走 callLLM，不硬编码任何 Key
  */
 
-import { prisma } from '../../utils/index.js'
 import { callLLM, parseLLMJson, getAgentPrompt, getLockContext } from './llm.client.js'
 import type { LLMConfig, OrchestratorContext } from './llm.client.js'
+import { hdzProjectRepository } from './repositories/hdz-project.repository.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
+import { hdzCharacterRepository } from './repositories/hdz-character.repository.js'
+import { hdzStyleDnaRepository } from './repositories/hdz-style-dna.repository.js'
+import { hdzMemoryRepository } from './repositories/hdz-memory.repository.js'
+import { hdzAgentTaskRepository } from './repositories/hdz-agent-task.repository.js'
 
 class DirectorService {
   async execute(ctx: OrchestratorContext, llmCfg: LLMConfig): Promise<void> {
     console.log(`[HDZ/Director] execute start: task=${ctx.taskId}, project=${ctx.projectId}`)
-    const project = await prisma.hdzProject.findUnique({ where: { id: ctx.projectId } })
+    const project = await hdzProjectRepository.findUnique({ where: { id: ctx.projectId } })
     if (!project) throw new Error('项目不存在')
 
     // ★ 读取所有章节大纲
-    const chapters = await prisma.hdzChapter.findMany({
+    const chapters = await hdzChapterRepository.findMany({
       where: { projectId: ctx.projectId },
       orderBy: { chapterNo: 'asc' },
     })
 
     // ★ 读取所有角色设定
-    const characters = await prisma.hdzCharacter.findMany({
+    const characters = await hdzCharacterRepository.findMany({
       where: { projectId: ctx.projectId },
     })
 
     // ★ 读取风格 DNA
-    const styleDna = await prisma.hdzStyleDna.findFirst({
+    const styleDna = await hdzStyleDnaRepository.findFirst({
       where: { projectId: ctx.projectId },
     })
 
     // ★ 读取已有的记忆（避免重复指导）
-    const existingMemories = await prisma.hdzMemory.findMany({
+    const existingMemories = await hdzMemoryRepository.findMany({
       where: { projectId: ctx.projectId },
       orderBy: { updatedAt: 'desc' },
     })
@@ -164,7 +169,7 @@ ${memoryContext}
     // ★ 将写作指导写入 memory（type: 'pending_hooks'）
     if (hookSuggestions.length > 0) {
       // 合并到已有的 pending_hooks 记忆
-      const existingHooks = await prisma.hdzMemory.findFirst({
+      const existingHooks = await hdzMemoryRepository.findFirst({
         where: { projectId: ctx.projectId, type: 'pending_hooks' },
       })
 
@@ -189,36 +194,22 @@ ${memoryContext}
           )
           if (!exists) mergedHooks.push(newHook)
         }
-        await prisma.hdzMemory.update({
-          where: { id: existingHooks.id },
-          data: { content: { ...hooksContent, hooks: mergedHooks } },
-        })
+        await hdzMemoryRepository.update({ id: existingHooks.id }, { content: { ...hooksContent, hooks: mergedHooks } })
       } else {
-        await prisma.hdzMemory.create({
-          data: { projectId: ctx.projectId, type: 'pending_hooks', content: hooksContent },
-        })
+        await hdzMemoryRepository.create({ projectId: ctx.projectId, type: 'pending_hooks', content: hooksContent })
       }
     }
 
     // ★ 写入 director_notes 类型的记忆（供后续 writer 参考）
     if (directorNotes.length > 0) {
-      const existingNotes = await prisma.hdzMemory.findFirst({
+      const existingNotes = await hdzMemoryRepository.findFirst({
         where: { projectId: ctx.projectId, type: 'director_notes' },
       })
 
       if (existingNotes) {
-        await prisma.hdzMemory.update({
-          where: { id: existingNotes.id },
-          data: { content: { notes: directorNotes, overallAdvice: parsed?.overallAdvice || '', generatedAt: new Date().toISOString() } },
-        })
+        await hdzMemoryRepository.update({ id: existingNotes.id }, { content: { notes: directorNotes, overallAdvice: parsed?.overallAdvice || '', generatedAt: new Date().toISOString() } })
       } else {
-        await prisma.hdzMemory.create({
-          data: {
-            projectId: ctx.projectId,
-            type: 'director_notes',
-            content: { notes: directorNotes, overallAdvice: parsed?.overallAdvice || '', generatedAt: new Date().toISOString() },
-          },
-        })
+        await hdzMemoryRepository.create({ projectId: ctx.projectId, type: 'director_notes', content: { notes: directorNotes, overallAdvice: parsed?.overallAdvice || '', generatedAt: new Date().toISOString() } })
       }
     }
 
@@ -228,18 +219,15 @@ ${memoryContext}
 
     console.log(`[HDZ/Director] ${message}`)
 
-    await prisma.hdzAgentTask.update({
-      where: { id: ctx.taskId },
-      data: {
-        output: {
-          directorNotes: directorNotes.slice(0, 50), // 限制输出大小
-          hookSuggestions: hookSuggestions.slice(0, 50),
-          overallAdvice: parsed?.overallAdvice || '',
-          message,
-        },
-        status: 'completed',
-        completedAt: new Date(),
+    await hdzAgentTaskRepository.update({ id: ctx.taskId }, {
+      output: {
+        directorNotes: directorNotes.slice(0, 50), // 限制输出大小
+        hookSuggestions: hookSuggestions.slice(0, 50),
+        overallAdvice: parsed?.overallAdvice || '',
+        message,
       },
+      status: 'completed',
+      completedAt: new Date(),
     })
 
     console.log(`[HDZ/Director] Task ${ctx.taskId}: completed`)

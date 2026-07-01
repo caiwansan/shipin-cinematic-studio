@@ -82,9 +82,9 @@
           :actions="store.recommendations.map(r => ({
             id: r.id,
             title: r.title,
-            expectedImpact: r.expectedImpact,
-            effort: r.effort,
-            reason: r.reason,
+            expectedImpact: r.impact.value,
+            effort: r.difficulty,
+            reason: r.description,
             status: r.status || 'pending',
           }))"
           @execute="handleExecute"
@@ -147,9 +147,9 @@ import DSButton from '~/design-system/primitives/Button/index.vue'
 const store = useRecommendationsStore()
 
 const explanationItems = computed(() => {
-  const reasons = store.recommendations.filter(r => r.reason && (!r.status || r.status === 'pending'))
+  const reasons = store.recommendations.filter(r => r.description && (!r.status || r.status === 'pending'))
   return reasons.slice(0, 5).map(r => ({
-    text: r.reason!,
+    text: r.description!,
     type: 'negative' as const,
   }))
 })

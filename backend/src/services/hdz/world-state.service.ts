@@ -10,7 +10,8 @@
  * 3. mergeStrict() 执行"安全覆盖"策略：不允许回退版本
  */
 
-import { prisma } from '../../utils/index.js'
+import { worldStateRepository } from './repositories/world-state.repository.js'
+import { entityRegistryRepository } from './repositories/entity-registry.repository.js'
 
 // ─── 类型定义 ───
 
@@ -61,7 +62,7 @@ export async function getWorldState(projectId: string, entityIds?: string[]): Pr
     where.entityId = { in: entityIds }
   }
 
-  const rows = await prisma.worldState.findMany({ where }) as InternalStateRow[]
+  const rows = await worldStateRepository.findMany({ where }) as any as InternalStateRow[]
   const map = new Map<string, EntityState>()
 
   for (const row of rows) {
@@ -80,9 +81,9 @@ export async function getWorldState(projectId: string, entityIds?: string[]): Pr
  * 获取单个实体的世界状态
  */
 export async function getEntityState(projectId: string, entityId: string): Promise<EntityState | null> {
-  const row = await prisma.worldState.findUnique({
+  const row = await worldStateRepository.findUnique({
     where: { projectId_entityId: { projectId, entityId } },
-  }) as InternalStateRow | null
+  }) as any as InternalStateRow | null
   if (!row) return null
   return {
     entityId: row.entityId,
@@ -108,9 +109,9 @@ export async function applyStateDelta(
   const result = new Map<string, EntityState>()
 
   for (const delta of deltas) {
-    const existing = await prisma.worldState.findUnique({
+    const existing = await worldStateRepository.findUnique({
       where: { projectId_entityId: { projectId, entityId: delta.entityId } },
-    }) as InternalStateRow | null
+    }) as any as InternalStateRow | null
 
     // 构建新状态
     const currentState: any = existing ? { ...(typeof existing.stateJson === 'object' ? existing.stateJson : {}) } : {}
@@ -155,19 +156,19 @@ export async function applyStateDelta(
     }
 
     // 写入（upsert）
-    const updated = await prisma.worldState.upsert({
-      where: { projectId_entityId: { projectId, entityId: delta.entityId } },
-      create: {
+    const updated = await worldStateRepository.upsert(
+      { projectId_entityId: { projectId, entityId: delta.entityId } },
+      { 
         projectId,
         entityId: delta.entityId,
         stateJson: currentState,
         version: newVersion,
       },
-      update: {
+      {
         stateJson: currentState,
         version: newVersion,
       },
-    }) as InternalStateRow
+    ) as InternalStateRow
 
     result.set(delta.entityId, {
       entityId: delta.entityId,
@@ -195,7 +196,7 @@ export async function mergeStrict(
   for (const delta of deltas) {
     const expected = expectedVersions[delta.entityId]
     if (expected !== undefined) {
-      const existing = await prisma.worldState.findUnique({
+      const existing = await worldStateRepository.findUnique({
         where: { projectId_entityId: { projectId, entityId: delta.entityId } },
       })
       if (existing && (existing as InternalStateRow).version !== expected) {
@@ -216,9 +217,9 @@ export async function initEntityState(
   entityId: string,
   initialState?: Partial<EntityState>,
 ): Promise<void> {
-  await prisma.worldState.upsert({
-    where: { projectId_entityId: { projectId, entityId } },
-    create: {
+  await worldStateRepository.upsert(
+    { projectId_entityId: { projectId, entityId } },
+    {
       projectId,
       entityId,
       stateJson: {
@@ -230,18 +231,18 @@ export async function initEntityState(
       },
       version: 1,
     },
-    update: {},  // 已存在时不覆盖
-  })
+    {},  // 已存在时不覆盖
+  )
 }
 
 /**
  * 批量初始化——从已有角色数据迁移到 WorldState
  */
 export async function migrateCharactersToWorldState(projectId: string): Promise<number> {
-  const entityRows = await prisma.entityRegistry.findMany({ where: { projectId, entityType: 'character' } })
+  const entityRows = await entityRegistryRepository.findMany({ where: { projectId, entityType: 'character' } })
   let count = 0
   for (const entity of entityRows) {
-    const existing = await prisma.worldState.findUnique({
+    const existing = await worldStateRepository.findUnique({
       where: { projectId_entityId: { projectId, entityId: entity.id } },
     })
     if (!existing) {

@@ -5,6 +5,13 @@
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build && node scripts/patch-manifest.mjs",
+    "validate": "node scripts/build-validator.mjs",
+    "sync": "node scripts/asset-sync.mjs",
+    "meta": "node scripts/release-meta.mjs",
+    "smoke": "node scripts/deployment-check.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "deploy": "node scripts/build-validator.mjs && node scripts/patch-manifest.mjs && node scripts/asset-sync.mjs && node scripts/release-meta.mjs",
+    "release": "nuxt build && node scripts/build-validator.mjs && node scripts/patch-manifest.mjs && node scripts/asset-sync.mjs && node scripts/release-meta.mjs && pm2 restart nuxt-frontend --update-env && sleep 3 && node scripts/deployment-check.mjs",
     "generate": "nuxt generate",
     "start": "node .output/server/index.mjs"
   },

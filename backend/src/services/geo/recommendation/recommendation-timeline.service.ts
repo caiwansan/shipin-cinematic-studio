@@ -3,7 +3,12 @@
 // Returns timeline points from GeoScoreSnapshot table
 // ============================================================
 
-import { prisma } from '../../../utils/index.js'
+import { geoScoreSnapshotRepository } from '../repositories/geo-score-snapshot.repository.js'
+import { geoBrandProfileRepository } from '../repositories/geo-brand-profile.repository.js'
+import { geoEntityRepository } from '../repositories/geo-entity.repository.js'
+import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
+import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
+import { geoProjectRepository } from '../repositories/geo-project.repository.js'
 
 export interface TimelinePoint {
   date: string   // ISO date string (YYYY-MM-DD)
@@ -21,23 +26,22 @@ export async function getTimeline(
   const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
 
   // Try fetching from GeoScoreSnapshot table first
-  const snapshots = await prisma.gEOScoreSnapshot.findMany({
-    where: {
-      projectId,
-      createdAt: { gte: since },
-    },
-    orderBy: { createdAt: 'asc' },
-    select: {
-      createdAt: true,
-      snapshot: true,
-    },
-  })
+  const snapshots = await geoScoreSnapshotRepository.findMany(
+    { projectId, createdAt: { gte: since } },
+    {
+      orderBy: { createdAt: 'asc' },
+      select: {
+        createdAt: true,
+        snapshot: true,
+      },
+    }
+  )
 
   if (snapshots.length > 0) {
     // Group by day and average
     const byDay = new Map<string, number[]>()
     for (const snap of snapshots) {
-      const dayStr = snap.createdAt.toISOString().slice(0, 10) // YYYY-MM-DD
+      const dayStr = snap.createdAt.toISOString ? new Date(snap.createdAt).toISOString().slice(0, 10) : String(snap.createdAt).slice(0, 10)
       if (!byDay.has(dayStr)) byDay.set(dayStr, [])
       const snapshotData = snap.snapshot as Record<string, any>
       const overall = typeof snapshotData === 'object' && snapshotData !== null
@@ -107,36 +111,25 @@ async function generateEstimatedTimeline(
 ): Promise<TimelinePoint[]> {
   // Get the earliest available data creation dates
   const [earliestBrand, earliestEntities, earliestKO, project] = await Promise.all([
-    prisma.geoBrandProfile.findFirst({
-      where: { projectId },
-      orderBy: { createdAt: 'asc' },
-      select: { createdAt: true },
-    }),
-    prisma.gEOEntity.findFirst({
-      where: { projectId },
-      orderBy: { createdAt: 'asc' },
-      select: { createdAt: true },
-    }),
-    prisma.knowledgeObject.findFirst({
-      where: { projectId },
-      orderBy: { createdAt: 'asc' },
-      select: { createdAt: true },
-    }),
-    prisma.gEOProject.findFirst({
-      where: { id: projectId },
-      select: { createdAt: true },
-    }),
+    geoBrandProfileRepository.findFirst({ projectId }, { orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
+    geoEntityRepository.findFirst({ projectId }, { orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
+    knowledgeObjectRepository.findFirst({ projectId }, { orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
+    geoProjectRepository.findFirst({ id: projectId }, { select: { createdAt: true } }),
   ])
 
-  const projectStart = project?.createdAt || earliestBrand?.createdAt || earliestEntities?.createdAt || earliestKO?.createdAt || now
+  const projectStart = (project?.createdAt ? new Date(project.createdAt) : null)
+    || (earliestBrand?.createdAt ? new Date(earliestBrand.createdAt) : null)
+    || (earliestEntities?.createdAt ? new Date(earliestEntities.createdAt) : null)
+    || (earliestKO?.createdAt ? new Date(earliestKO.createdAt) : null)
+    || now
   const startDate = new Date(Math.max(since.getTime(), projectStart.getTime()))
 
   // Count total data
   const [totalBrands, totalEntities, totalKO, totalScans] = await Promise.all([
-    prisma.geoBrandProfile.count({ where: { projectId } }),
-    prisma.gEOEntity.count({ where: { projectId } }),
-    prisma.knowledgeObject.count({ where: { projectId } }),
-    prisma.geoScanHistory.count({ where: { projectId } }),
+    geoBrandProfileRepository.count({ where: { projectId } }),
+    geoEntityRepository.count({ where: { projectId } }),
+    knowledgeObjectRepository.count({ where: { projectId } }),
+    geoScanHistoryRepository.count({ where: { projectId } }),
   ])
 
   const totalDays = Math.max(1, Math.round((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))

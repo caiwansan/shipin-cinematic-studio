@@ -9,7 +9,9 @@
  * 纯只读分析，不修改任何数据。
  */
 
-import { prisma } from '../../utils/index.js'
+import { writerAlignmentMetricRepository } from './repositories/writer-alignment-metric.repository.js'
+import { hdzCharacterRepository } from './repositories/hdz-character.repository.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
 import { getAllEntities } from './entity-registry.service.js'
 
 // ─── 类型定义 ───
@@ -74,25 +76,23 @@ class DriftAnalyzerService {
     const entityMap = new Map(allEntities.map(e => [e.id, e]))
 
     // 获取历史对齐评分记录
-    const metrics = await prisma.writerAlignmentMetric.findMany({
+    const metrics = await writerAlignmentMetricRepository.findMany({
       where: { projectId },
       orderBy: { createdAt: 'asc' },
       take: 500,
     }) as any[]
 
     // 获取所有角色
-    const characters = await prisma.hdzCharacter.findMany({
+    const characters = await hdzCharacterRepository.findMany({
       where: { projectId },
       orderBy: { createdAt: 'asc' },
-      select: { id: true, name: true, properties: true },
-    })
+    }) as any[]
 
     // 获取所有章节
-    const chapters = await prisma.hdzChapter.findMany({
+    const chapters = await hdzChapterRepository.findMany({
       where: { projectId },
       orderBy: { chapterNo: 'asc' },
-      select: { id: true, chapterNo: true, title: true, content: true },
-    })
+    }) as any[]
 
     // ── 1. 实体漂移检测 ──
     const entityDrifts = await this.detectEntityDrifts(

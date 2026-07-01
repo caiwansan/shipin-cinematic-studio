@@ -1,30 +1,56 @@
 /**
  * GEO Knowledge Store — Pinia Store
  *
- * Manages knowledge data: brand description, coverage, sources, statements.
+ * Manages knowledge data: assets, coverage, categories, freshness, relationships.
  * Fetches from real API endpoint.
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchKnowledge } from '../services/knowledgeService'
-import type { KnowledgeData } from '../services/knowledgeService'
+import type {
+  KnowledgeData,
+  KnowledgeAssets,
+  KnowledgeCoverage,
+  KnowledgeCategory,
+  KnowledgeFreshness,
+  KnowledgeRelationship,
+} from '../services/knowledgeService'
 
 export const useKnowledgeStore = defineStore('geo-knowledge', () => {
-  const brandDescription = ref<string>('')
-  const coverage = ref<number>(0)
-  const categories = ref<string[]>([])
-  const sources = ref<KnowledgeData['sources']>([])
-  const missingKnowledge = ref<string[]>([])
-  const freshness = ref<KnowledgeData['freshness'] | null>(null)
-  const relationships = ref<KnowledgeData['relationships']>([])
-  const statements = ref<KnowledgeData['statements']>([])
+  const assets = ref<KnowledgeAssets>({ total: 0, entities: 0, claims: 0, evidences: 0, relations: 0, schemas: 0, faqs: 0, keywords: 0, knowledgeObjects: 0 })
+  const coverage = ref<KnowledgeCoverage>({ percentage: 0, coveredDimensions: 0, totalDimensions: 7, dimensions: [] })
+  const categories = ref<KnowledgeCategory[]>([])
+  const freshness = ref<KnowledgeFreshness | null>(null)
+  const missingKnowledge = ref<Array<{ category: string; suggestion: string }>>([])
+  const relationships = ref<KnowledgeRelationship[]>([])
+
+  // Backward compatible derived fields
+  const brandDescription = computed(() => `Brand knowledge base with ${assets.value.total} total assets across ${coverage.value.coveredDimensions} of ${coverage.value.totalDimensions} dimensions.`)
+  const sources = computed(() =>
+    categories.value.map(cat => ({
+      name: cat.name ?? 'Unknown Category',
+      type: 'category',
+      freshness: freshness.value?.lastUpdated ? `Updated ${freshness.value.lastUpdated.split('T')[0]}` : 'Not updated',
+    }))
+  )
+  const statements = computed(() =>
+    categories.value.flatMap(cat =>
+      (cat.items ?? []).map(item => ({
+        id: `${cat.name}-${item}`,
+        content: item,
+        category: cat.name,
+        status: 'verified' as const,
+      }))
+    )
+  )
+
   const isLoading = ref<boolean>(false)
   const error = ref<string | null>(null)
   const isEditing = ref<boolean>(false)
   const projectId = ref<string>('default')
   const searchQuery = ref<string>('')
 
-  const hasData = computed(() => brandDescription.value.length > 0)
+  const hasData = computed(() => assets.value.total > 0)
   const hasMissingKnowledge = computed(() => missingKnowledge.value.length > 0)
   const verifiedStatements = computed(() => statements.value.filter(s => s.status === 'verified'))
 
@@ -39,14 +65,12 @@ export const useKnowledgeStore = defineStore('geo-knowledge', () => {
     error.value = null
     try {
       const data = await fetchKnowledge(projectId.value)
-      brandDescription.value = data.brandDescription
+      assets.value = data.assets
       coverage.value = data.coverage
       categories.value = data.categories
-      sources.value = data.sources
-      missingKnowledge.value = data.missingKnowledge
       freshness.value = data.freshness
+      missingKnowledge.value = data.missingKnowledge
       relationships.value = data.relationships
-      statements.value = data.statements
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load knowledge data'
     } finally {
@@ -67,9 +91,9 @@ export const useKnowledgeStore = defineStore('geo-knowledge', () => {
   }
 
   return {
-    brandDescription, coverage, categories, sources, missingKnowledge,
-    freshness, relationships, statements, isLoading, error, isEditing,
-    projectId, searchQuery,
+    assets, coverage, categories, freshness, missingKnowledge, relationships,
+    brandDescription, sources, statements,
+    isLoading, error, isEditing, projectId, searchQuery,
     hasData, hasMissingKnowledge, verifiedStatements, filteredStatements,
     fetchKnowledge: fetchKnowledgeData, toggleEditing, setProject, setSearchQuery,
   }

@@ -3612,8 +3612,10 @@ model GEOProject {
   id        String   @id @default(uuid())
   userId    String
   name      String
+  website   String?     // 官网 URL（MVP 新增）
   topic     String?
   industry  String?
+  keywords  Json?       // 关键词 string[]（MVP 新增，从 GeoBrandSetting 移入）
   language  String   @default("zh")
   country   String?
   status    String   @default("draft")
@@ -3626,10 +3628,45 @@ model GEOProject {
   entities  GEOEntity[]
   relations GEOEntityRelation[]
   versions  GEOProjectVersion[]
+  scans     GEOScanRecord[]   // MVP 新增
 
   @@index([userId])
   @@index([status])
   @@map("kmki_geo_projects")
+}
+
+// MVP 新增：扫描记录
+model GEOScanRecord {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+
+  scanStatus     String   @default("pending")  // pending | running | completed | failed | partial
+  scanStartedAt  DateTime?
+  scanFinishedAt DateTime?
+
+  // 4 维分数
+  visibilityScore      Int?
+  accuracyScore        Int?
+  consistencyScore     Int?
+  recommendationScore  Int?
+  overallScore         Int?
+
+  aiResponses       Json?    // 各 AI 模型的原始响应
+  optimizationItems Json?    // 优化建议列表
+
+  errorMessage  String?
+  durationMs    Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project GEOProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([scanStatus])
+  @@map("kmki_geo_scan_records")
 }
 
 model GEOEntity {

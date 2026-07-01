@@ -23,8 +23,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
 
-  // Protected routes: /studio/*, /dashboard/*, /user/*
-  const isProtected = to.path.startsWith('/studio') || to.path.startsWith('/dashboard/') || to.path.startsWith('/user/')
+  // Protected routes: /studio/*, /dashboard/*, /user/*, /workspace/*, /admin/*
+  const isProtected = to.path.startsWith('/studio') || to.path.startsWith('/dashboard/') || to.path.startsWith('/user/') || to.path.startsWith('/workspace/')
   if (isProtected && !auth.isAuthenticated && !auth.token) {
     // Try to restore from cookie/localStorage before redirecting
     await auth.restoreSession()

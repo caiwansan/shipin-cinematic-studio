@@ -2,35 +2,43 @@
  * GEO Health Service — Real API Implementation
  *
  * GET /api/v1/geo/health/{projectId}
+ *
+ * API Returns: { success, data: { brand, healthScore, dimensions, explanation, coverage, recentChanges, quickActions } }
+ * Mapped to: BrandHealthData (Product Language)
  */
-import { ofetch } from 'ofetch'
+import { geoApi } from './api'
 
 export interface BrandHealthData {
-  brandHealth: {
-    score: number
-    trend: number
-    label: string
-    definition: string
-  } | null
+  score: number
+  scoreChange: number
+  trend: 'improving' | 'stable' | 'declining'
+  brand: { name: string; website: string; industry: string; status: string }
   dimensions: Array<{
-    name: string
-    score: number
-    previousScore: number
-    isWarning: boolean
-    explanation: string
-  }>
-  dailyChange: number
-  recommendations: Array<{
     id: string
-    title: string
-    expectedImpact: number
-    effort: 'low' | 'medium' | 'high'
-    reason: string
+    label: string
+    score: number
+    maxScore: number
   }>
+  explanation: { summary: string; nextFocus: string }
+  coverage: { evidenceCount: number; entityCount: number; claimCount: number }
+  recentChanges: Array<{ date: string; score: number; change: number }>
+  quickActions: Array<{ id: string; label: string; impact: string }>
 }
 
-const API_BASE = '/api/v1/geo'
-
 export async function fetchHealth(projectId: string): Promise<BrandHealthData> {
-  return ofetch(`${API_BASE}/health/${projectId}`)
+  const raw = await geoApi<{ success: boolean; data: any }>(`health/${projectId}`)
+  const d = raw.data
+
+  // Map API response to Product Language
+  return {
+    score: d.healthScore.overall,
+    scoreChange: d.healthScore.change,
+    trend: d.healthScore.trend,
+    brand: d.brand,
+    dimensions: d.dimensions,
+    explanation: d.explanation,
+    coverage: d.coverage,
+    recentChanges: d.recentChanges,
+    quickActions: d.quickActions,
+  }
 }

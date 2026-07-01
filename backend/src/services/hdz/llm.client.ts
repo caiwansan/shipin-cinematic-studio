@@ -9,7 +9,10 @@
  * 包含：analyzeStyleDna — 上传参考文本后自动调用 LLM 分析文风指纹
  */
 
-import { prisma } from '../../utils/index.js'
+import { userModelConfigV2Repository } from './repositories/user-model-config-v2.repository.js'
+import { hdzProjectRepository } from './repositories/hdz-project.repository.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
+import { hdzStyleDnaRepository } from './repositories/hdz-style-dna.repository.js'
 import { decryptKey } from '../crypto.service.js'
 import { incrementDailyUsage } from '../usage-quota.service.js'
 
@@ -41,7 +44,7 @@ export interface LLMConfig {
  * 从 UserModelConfigV2 读取 LLM 配置（BYOK）
  */
 export async function getUserLLMConfig(userId: string): Promise<LLMConfig | null> {
-  const v2 = await prisma.userModelConfigV2.findUnique({ where: { userId } })
+  const v2 = await userModelConfigV2Repository.findUnique({ where: { userId } })
   if (!v2 || !v2.llmEnabled || !v2.llmApiKey || !v2.llmApiKey.trim()) return null
 
   // 兼容加密 key 和明文 key（历史遗留数据）
@@ -193,7 +196,7 @@ export async function getAgentPrompt(name: string, variables?: Record<string, st
  * 注入到 Planner/Writer/Reviewer 的 system prompt 中
  */
 export async function getLockContext(projectId: string, chapterNo?: number): Promise<string> {
-  const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
+  const project = await hdzProjectRepository.findUnique({ where: { id: projectId } })
   if (!project) return ''
 
   const locks = (project.locks as any) || {}
@@ -201,11 +204,10 @@ export async function getLockContext(projectId: string, chapterNo?: number): Pro
 
   // 1️⃣ 大纲锁定（精简版 — 只保留当前章前后各2章）
   if (locks.outlineLocked !== false) {
-    const chapters = await prisma.hdzChapter.findMany({
+    const chapters = await hdzChapterRepository.findMany({
       where: { projectId },
       orderBy: { chapterNo: 'asc' },
-      select: { chapterNo: true, title: true, outline: true },
-    })
+    }) as any[]
     if (chapters.length > 0) {
       const ctxChapterNo = chapterNo || 1
       const nearby = chapters.filter(ch => Math.abs(ch.chapterNo - ctxChapterNo) <= 2)
@@ -357,20 +359,20 @@ export async function analyzeStyleDna(projectId: string, userId: string, sourceT
   if (!llmCfg) {
     console.warn(`[analyzeStyleDna] 用户 ${userId} 未配置 LLM，跳过分析`)
     // 写入一个标记，避免前端无限等待
-    await prisma.hdzStyleDna.upsert({
-      where: { projectId },
-      create: { projectId, sourceText, fingerprint: { status: 'skipped', reason: 'LLM not configured' } },
-      update: { fingerprint: { status: 'skipped', reason: 'LLM not configured' } },
-    })
+    await hdzStyleDnaRepository.upsert(
+      { projectId },
+      { projectId, sourceText, fingerprint: { status: 'skipped', reason: 'LLM not configured' } },
+      { fingerprint: { status: 'skipped', reason: 'LLM not configured' } },
+    )
     return
   }
 
   // 2. 标记正在分析
-  await prisma.hdzStyleDna.upsert({
-    where: { projectId },
-    create: { projectId, sourceText, fingerprint: { status: 'analyzing' } },
-    update: { fingerprint: { status: 'analyzing' } },
-  })
+  await hdzStyleDnaRepository.upsert(
+    { projectId },
+    { projectId, sourceText, fingerprint: { status: 'analyzing' } },
+    { fingerprint: { status: 'analyzing' } },
+  )
 
   // 3. 调用 LLM 分析
   try {
@@ -384,20 +386,20 @@ export async function analyzeStyleDna(projectId: string, userId: string, sourceT
     const fingerprint = parseLLMJson(raw)
 
     // 5. 写入数据库
-    await prisma.hdzStyleDna.upsert({
-      where: { projectId },
-      create: { projectId, sourceText, fingerprint: { ...fingerprint, status: 'completed', analyzedAt: new Date().toISOString() } },
-      update: { fingerprint: { ...fingerprint, status: 'completed', analyzedAt: new Date().toISOString() } },
-    })
+    await hdzStyleDnaRepository.upsert(
+      { projectId },
+      { projectId, sourceText, fingerprint: { ...fingerprint, status: 'completed', analyzedAt: new Date().toISOString() } },
+      { fingerprint: { ...fingerprint, status: 'completed', analyzedAt: new Date().toISOString() } },
+    )
 
     console.log(`[analyzeStyleDna] 项目 ${projectId} 文风指纹分析完成`)
   } catch (err: any) {
     console.error(`[analyzeStyleDna] 项目 ${projectId} 分析失败:`, err.message)
     // 失败时写入错误状态，不阻塞后续操作
-    await prisma.hdzStyleDna.upsert({
-      where: { projectId },
-      create: { projectId, sourceText, fingerprint: { status: 'failed', error: err.message } },
-      update: { fingerprint: { status: 'failed', error: err.message } },
-    }).catch(e => console.error('[analyzeStyleDna] 写入失败状态出错:', e))
+    await hdzStyleDnaRepository.upsert(
+      { projectId },
+      { projectId, sourceText, fingerprint: { status: 'failed', error: err.message } },
+      { fingerprint: { status: 'failed', error: err.message } },
+    ).catch(e => console.error('[analyzeStyleDna] 写入失败状态出错:', e))
   }
 }

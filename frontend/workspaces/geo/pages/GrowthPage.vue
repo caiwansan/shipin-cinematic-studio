@@ -94,15 +94,15 @@
       <!-- Layer 4: Opportunity — Next opportunity -->
       <OpportunityBlock
         v-if="store.opportunity"
-        :opportunity-title="store.opportunity.title"
-        :expected-impact="store.opportunity.expectedImpact"
+        :opportunity-title="store.opportunity.actions[0] || 'Brand Optimization Opportunity'"
+        :expected-impact="store.opportunity.potentialGain"
         @take-action="handleTakeAction"
       />
 
       <!-- Layer 5: Milestones -->
       <MilestoneBanner
         v-if="store.hasMilestones"
-        :milestones="store.milestones"
+        :milestones="store.milestones.map(m => `${m.label} (${m.score} pts)`)"
       />
 
       <!-- Time Period Selector -->

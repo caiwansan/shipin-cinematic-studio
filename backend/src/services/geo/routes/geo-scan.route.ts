@@ -3,7 +3,9 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { prisma } from '../../../utils/index'
+import { geoProjectRepository } from '../repositories/geo-project.repository.js'
+import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
+import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
 
 interface ScanCreateBody {
   projectId: string
@@ -23,13 +25,13 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
 
     try {
       // Verify project exists
-      const project = await prisma.gEOProject.findUnique({ where: { id: body.projectId } })
+      const project = await geoProjectRepository.findUnique({ where: { id: body.projectId } })
       if (!project || project.deletedAt) {
         return reply.status(404).send({ success: false, error: '项目未找到' })
       }
 
       // Check if there's already a running scan
-      const runningScan = await prisma.geoScanHistory.findFirst({
+      const runningScan = await geoScanHistoryRepository.findFirst({
         where: { projectId: body.projectId, status: 'running' },
       })
       if (runningScan) {
@@ -40,19 +42,12 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
       const topic = body.topic || project.topic || project.name
 
       // Create scan record
-      const scan = await prisma.geoScanHistory.create({
-        data: {
-          projectId: body.projectId,
-          scanType,
-          status: 'running',
-          topic,
-          startedAt: new Date(),
-        },
+      const scan = await geoScanHistoryRepository.create({
+        projectId: body.projectId,
+        scanType,
+        status: 'running',
+        config: { topic },
       })
-
-      // TODO: In production, trigger async entity discovery workflow here
-      // For now, mark as completed after creating the record
-      // The actual AI workflow will be integrated in Phase 2
 
       return reply.status(201).send({
         success: true,
@@ -75,11 +70,7 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
       const where: any = { projectId }
       if (status) where.status = status
 
-      const scans = await prisma.geoScanHistory.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      })
+      const scans = await geoScanHistoryRepository.findMany(where, { createdAt: 'desc' })
 
       return { success: true, data: scans, total: scans.length }
     } catch (err: any) {
@@ -92,7 +83,7 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any
 
     try {
-      const scan = await prisma.geoScanHistory.findUnique({ where: { id } })
+      const scan = await geoScanHistoryRepository.findUnique({ where: { id } })
       if (!scan) {
         return reply.status(404).send({ success: false, error: '扫描记录未找到' })
       }
@@ -100,7 +91,7 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
       // If there's a knowledge object, fetch it
       let knowledgeObject = null
       if (scan.knowledgeObjectId) {
-        knowledgeObject = await prisma.knowledgeObject.findUnique({
+        knowledgeObject = await knowledgeObjectRepository.findUnique({
           where: { id: scan.knowledgeObjectId },
         })
       }
@@ -122,12 +113,12 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any
 
     try {
-      const existing = await prisma.geoScanHistory.findUnique({ where: { id } })
+      const existing = await geoScanHistoryRepository.findUnique({ where: { id } })
       if (!existing) {
         return reply.status(404).send({ success: false, error: '扫描记录未找到' })
       }
 
-      await prisma.geoScanHistory.delete({ where: { id } })
+      await geoScanHistoryRepository.delete({ where: { id } })
       return { success: true, data: { deleted: true } }
     } catch (err: any) {
       return reply.status(500).send({ success: false, error: err.message })

@@ -7,7 +7,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchPublishing, publishUpdate } from '../services/publishingService'
-import type { PublishingData } from '../services/publishingService'
+import type {
+  PublishingData,
+  PublishingChannel,
+  ContentOverview,
+  PublishingHistoryItem,
+} from '../services/publishingService'
 
 export interface PublishingStatus {
   status: 'idle' | 'running' | 'success' | 'error'
@@ -15,20 +20,28 @@ export interface PublishingStatus {
 }
 
 export const usePublishingStore = defineStore('geo-publishing', () => {
-  const distributionHealth = ref<PublishingData['distributionHealth'] | null>(null)
-  const channels = ref<PublishingData['channels']>([])
-  const pendingUpdates = ref<PublishingData['pendingUpdates']>([])
-  const latestDistribution = ref<PublishingData['latestDistribution']>(null)
-  const history = ref<PublishingData['history']>([])
+  const channels = ref<PublishingChannel[]>([])
+  const publishingStatus = ref<'published' | 'draft'>('draft')
   const currentVersion = ref<string>('')
+  const contentOverview = ref<ContentOverview>({ total: 0, claims: 0, evidences: 0, schemas: 0, faqs: 0, knowledgeObjects: 0 })
+  const history = ref<PublishingHistoryItem[]>([])
+
+  // Backward compatible derived fields
+  const distributionHealth = computed(() => {
+    const activeCount = channels.value.filter(c => c.status === 'connected' || c.status === 'ready').length
+    return { activeCount, totalCount: channels.value.length }
+  })
+  const pendingUpdates = ref<Array<{ description: string; date: string }>>([])
+  const latestDistribution = ref<{ date: string; impact: number } | null>(null)
+
   const isLoading = ref<boolean>(false)
   const error = ref<string | null>(null)
   const publishStatus = ref<PublishingStatus>({ status: 'idle', errorMessage: null })
   const projectId = ref<string>('default')
 
-  const hasData = computed(() => distributionHealth.value !== null)
+  const hasData = computed(() => channels.value.length > 0)
   const pendingCount = computed(() => pendingUpdates.value.length)
-  const activeChannelCount = computed(() => channels.value.filter(c => c.status === 'connected').length)
+  const activeChannelCount = computed(() => channels.value.filter(c => c.status === 'connected' || c.status === 'ready').length)
   const hasPendingUpdates = computed(() => pendingCount.value > 0)
 
   async function fetchPubData(): Promise<void> {
@@ -36,12 +49,13 @@ export const usePublishingStore = defineStore('geo-publishing', () => {
     error.value = null
     try {
       const data = await fetchPublishing(projectId.value)
-      distributionHealth.value = data.distributionHealth
       channels.value = data.channels
+      publishingStatus.value = data.publishingStatus
+      currentVersion.value = data.currentVersion
+      contentOverview.value = data.contentOverview
+      history.value = data.history
       pendingUpdates.value = data.pendingUpdates
       latestDistribution.value = data.latestDistribution
-      history.value = data.history
-      currentVersion.value = data.currentVersion
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load publishing data'
     } finally {
@@ -68,8 +82,9 @@ export const usePublishingStore = defineStore('geo-publishing', () => {
   }
 
   return {
-    distributionHealth, channels, pendingUpdates, latestDistribution,
-    history, currentVersion, isLoading, error, publishStatus, projectId,
+    channels, publishingStatus, currentVersion, contentOverview, history,
+    distributionHealth, pendingUpdates, latestDistribution,
+    isLoading, error, publishStatus, projectId,
     hasData, pendingCount, activeChannelCount, hasPendingUpdates,
     fetchPublishing: fetchPubData, publish, setProject,
   }

@@ -4,7 +4,7 @@
 // 独立表 LLMUsageRecord，不污染 UserModelConfig
 // ============================================================
 
-import { prisma } from '../../../../utils/index'
+import { llmUsageRecordRepository } from '../../repositories/llm-usage-record.repository.js'
 
 export interface UsageRecord {
   userId?: string
@@ -54,7 +54,7 @@ class UsageRecorder {
     try {
       // UUID 列需要有效的 UUID 或 null，不能是空字符串
       const safeUserId = rec.userId || '00000000-0000-0000-0000-000000000000'
-      await prisma.lLMUsageRecord.create({
+      await llmUsageRecordRepository.create({
         data: {
           userId: safeUserId,
           projectId: rec.projectId || null,
@@ -99,7 +99,7 @@ class UsageRecorder {
     callCount: number
     byAgent: Record<string, { tokens: number; calls: number }>
   }> {
-    const records = await prisma.lLMUsageRecord.findMany({
+    const records = await llmUsageRecordRepository.findMany({
       where: { projectId, status: 'success' },
     })
 

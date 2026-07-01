@@ -157,6 +157,18 @@ export class KnowledgeObjectRepository {
       updatedAt: ko.updatedAt.toISOString(),
     }
   }
+
+  async updateData(id: string, data: any): Promise<KnowledgeObjectData | null> {
+    const ko = await prisma.knowledgeObject.update({
+      where: { id },
+      data,
+    })
+    return ko ? this.mapKO(ko) : null
+  }
+
+  async deleteMany(where: any): Promise<void> {
+    await prisma.knowledgeObject.deleteMany({ where })
+  }
 }
 
 export const knowledgeObjectRepository = new KnowledgeObjectRepository()

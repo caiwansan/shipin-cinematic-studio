@@ -2,7 +2,10 @@
 // GEO Graph Service — Knowledge Graph CRUD + Lineage
 // ============================================================
 
-import { prisma } from '../../../utils/index'
+import { geoProjectRepository } from '../repositories/geo-project.repository.js'
+import { geoEntityRepository } from '../repositories/geo-entity.repository.js'
+import { geoEntityRelationRepository } from '../repositories/geo-entity-relation.repository.js'
+import { geoProjectVersionRepository } from '../repositories/geo-project-version.repository.js'
 import type { KnowledgeGraph, EntityRelation, GraphVisualizationData, Entity, EntityType } from '../types'
 import { executeGraphBuild } from '../agents/knowledge-graph.agent'
 
@@ -40,13 +43,13 @@ export const geoGraphService = {
    * Fetches all entities and relations, then runs the Knowledge Graph Agent.
    */
   async buildGraph(projectId: string): Promise<KnowledgeGraph> {
-    const project = await prisma.gEOProject.findUnique({ where: { id: projectId } })
+    const project = await geoProjectRepository.findUnique({ where: { id: projectId } })
     if (!project) throw new Error('Project not found')
 
     // Fetch all entities and relations
     const [entities, relations] = await Promise.all([
-      prisma.gEOEntity.findMany({ where: { projectId } }),
-      prisma.gEOEntityRelation.findMany({ where: { projectId } }),
+      geoEntityRepository.findMany({ where: { projectId } }),
+      geoEntityRelationRepository.findMany({ where: { projectId } }),
     ])
 
     // Build via Knowledge Graph Agent
@@ -58,13 +61,12 @@ export const geoGraphService = {
     const result = await executeGraphBuild(graphInput)
 
     // Auto-snapshot the graph
-    const lastVersion = await prisma.gEOProjectVersion.findFirst({
+    const lastVersion = await geoProjectVersionRepository.findFirst({
       where: { projectId },
-      orderBy: { version: 'desc' },
     })
     const nextVersion = (lastVersion?.version || 0) + 1
 
-    await prisma.gEOProjectVersion.create({
+    await geoProjectVersionRepository.create({
       data: {
         projectId,
         version: nextVersion,
@@ -75,10 +77,10 @@ export const geoGraphService = {
     })
 
     // Update project status
-    await prisma.gEOProject.update({
-      where: { id: projectId },
-      data: { status: 'active' },
-    })
+    await geoProjectRepository.update(
+      { id: projectId },
+      { status: 'active' }
+    )
 
     return result.graph
   },
@@ -88,11 +90,11 @@ export const geoGraphService = {
    */
   async getGraph(projectId: string): Promise<KnowledgeGraph | null> {
     const [entities, relations] = await Promise.all([
-      prisma.gEOEntity.findMany({
+      geoEntityRepository.findMany({
         where: { projectId },
         orderBy: { sortOrder: 'asc' },
       }),
-      prisma.gEOEntityRelation.findMany({ where: { projectId } }),
+      geoEntityRelationRepository.findMany({ where: { projectId } }),
     ])
 
     if (entities.length === 0) return null
@@ -115,8 +117,8 @@ export const geoGraphService = {
    */
   async getGraphNode(projectId: string, entityId: string): Promise<{ node: Entity; edges: EntityRelation[] } | null> {
     const [entity, edges] = await Promise.all([
-      prisma.gEOEntity.findUnique({ where: { id: entityId } }),
-      prisma.gEOEntityRelation.findMany({
+      geoEntityRepository.findUnique({ where: { id: entityId } }),
+      geoEntityRelationRepository.findMany({
         where: {
           projectId,
           OR: [{ sourceId: entityId }, { targetId: entityId }],
@@ -136,7 +138,7 @@ export const geoGraphService = {
    * Get all edges (relations) in a project's graph.
    */
   async getGraphEdges(projectId: string): Promise<EntityRelation[]> {
-    const relations = await prisma.gEOEntityRelation.findMany({ where: { projectId } })
+    const relations = await geoEntityRelationRepository.findMany({ where: { projectId } })
     return relations.map(mapPrismaRelation)
   },
 
@@ -144,7 +146,7 @@ export const geoGraphService = {
    * Get a specific version of the graph.
    */
   async getGraphVersion(projectId: string, version: number): Promise<KnowledgeGraph | null> {
-    const projectVersion = await prisma.gEOProjectVersion.findUnique({
+    const projectVersion = await geoProjectVersionRepository.findUnique({
       where: {
         projectId_version: { projectId, version },
       },
@@ -162,11 +164,11 @@ export const geoGraphService = {
    */
   async visualize(projectId: string): Promise<GraphVisualizationData | null> {
     const [entities, relations] = await Promise.all([
-      prisma.gEOEntity.findMany({
+      geoEntityRepository.findMany({
         where: { projectId },
         orderBy: { sortOrder: 'asc' },
       }),
-      prisma.gEOEntityRelation.findMany({ where: { projectId } }),
+      geoEntityRelationRepository.findMany({ where: { projectId } }),
     ])
 
     if (entities.length === 0) return null

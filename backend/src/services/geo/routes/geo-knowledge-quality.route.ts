@@ -21,7 +21,7 @@ import { geoEvidenceService } from '../services/geo-evidence.service'
 import { geoCitationAdapter } from '../adapters/citation/GeoCitationAdapter'
 import { geoFAQService } from '../services/geo-faq.service'
 import { geoSchemaService } from '../services/geo-schema.service'
-import { prisma } from '../../../utils/index'
+import { geoEntityRepository } from '../repositories/geo-entity.repository'
 
 // Extend type for internal FK mapping during persist
 interface EvidenceWithDbId {
@@ -244,7 +244,7 @@ export default async function geoKnowledgeQualityRoutes(fastify: FastifyInstance
       console.log('[KQ] INCOMING:', JSON.stringify({ projectId, entityIds, tenantId }))
 
       // Load entity details for agent input (Route queries service layer)
-      const entities = await prisma.gEOEntity.findMany({
+      const entities = await geoEntityRepository.findMany({
         where: { id: { in: entityIds }, projectId },
         select: { id: true, name: true, type: true, description: true },
       })

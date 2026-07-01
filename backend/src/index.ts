@@ -597,6 +597,22 @@ await app.register(projectV2Routes)
   } catch (err) {
     console.warn('[startup] ⚠️ Learning route skipped:', (err as Error).message)
   }
+
+  // GEO MVP Routes — 10 endpoints for 4-step workflow (register first to claim /ping)
+  try {
+    await app.register(await import('./services/geo/v1/geo-mvp.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO MVP route registered at /api/v1/geo/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO MVP route skipped:', (err as Error).message)
+  }
+
+  // GEO V1 Product Routes — RC1 Product Freeze (deprecated, kept for backward compat)
+  try {
+    await app.register(await import('./services/geo/v1/geo-v1-product.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO V1 Product API registered at /api/v1/geo/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO V1 Product route skipped:', (err as Error).message)
+  }
   // Unified Asset Runtime routes — wrapped to avoid tsx @platform alias issue
   try { await app.register(await import('./routes/asset/asset.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset route skipped:', (err as Error).message) }
   try { await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset version route skipped:', (err as Error).message) }

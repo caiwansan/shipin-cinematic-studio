@@ -11,6 +11,7 @@ export default defineNuxtConfig({
   telemetry: false,
   alias: {
     'shared': resolve(fileURLToPath(import.meta.url), '..', '..', 'shared'),
+    'workspaces': resolve(fileURLToPath(import.meta.url), '..', 'workspaces'),
   },
   runtimeConfig: {
     public: {
@@ -116,12 +117,19 @@ export default defineNuxtConfig({
           console.error('[nitro:compiled] ⚠️ latest.json:', err)
         }
 
-        // 4) Sync _nuxt static assets to nginx webroot (fix HTTP2 content-length mismatch)
+        // 4) Validate build + sync _nuxt static assets to nginx webroot
         try {
           const { execSync } = require('child_process')
-          execSync('bash ' + resolve(publicDir, '..', '..', 'sync-nuxt.sh'), { stdio: 'inherit' })
+          const scriptsDir = resolve(publicDir, '..', '..', 'scripts')
+          // Validate build integrity first
+          execSync('node ' + resolve(scriptsDir, 'build-validator.mjs'), { stdio: 'inherit' })
+          // Then sync
+          execSync('node ' + resolve(scriptsDir, 'asset-sync.mjs'), { stdio: 'inherit' })
+          // Generate release metadata
+          execSync('node ' + resolve(scriptsDir, 'release-meta.mjs'), { stdio: 'inherit' })
         } catch (err) {
-          console.error('[nitro:compiled] ⚠️ _nuxt sync:', err.message)
+          console.error('[nitro:compiled] ❌ Build validation or asset sync failed:', err.message)
+          process.exit(1)
         }
       }
     },

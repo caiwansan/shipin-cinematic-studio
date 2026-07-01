@@ -46,4 +46,19 @@ export const geoRoutes = [
     name: 'geo-knowledge',
     component: () => import('./pages/KnowledgePage.vue'),
   },
+  {
+    path: '/workspace/geo/dashboard',
+    name: 'geo-dashboard',
+    component: () => import('./pages/GEODashboard.vue'),
+  },
+  {
+    path: '/workspace/geo/detail/:id',
+    name: 'geo-detail',
+    component: () => import('./pages/GEODetail.vue'),
+  },
+  {
+    path: '/workspace/geo/create',
+    name: 'geo-create',
+    component: () => import('./pages/GEOCreate.vue'),
+  },
 ]

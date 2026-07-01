@@ -3,7 +3,7 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify'
-import { prisma } from '../../../utils/index'
+import { geoKeywordRepository } from '../repositories/geo-keyword.repository.js'
 
 interface KeywordCreateBody {
   projectId: string
@@ -30,10 +30,7 @@ export default async function geoKeywordRoutes(fastify: FastifyInstance) {
       const where: any = { projectId }
       if (type) where.type = type
 
-      const keywords = await prisma.geoKeyword.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-      })
+      const keywords = await geoKeywordRepository.findMany(where, { createdAt: 'desc' })
 
       return { success: true, data: keywords, total: keywords.length }
     } catch (err: any) {
@@ -48,16 +45,14 @@ export default async function geoKeywordRoutes(fastify: FastifyInstance) {
     try {
       // Check if it's a bulk creation
       if ('keywords' in body && Array.isArray(body.keywords)) {
-        const created = await prisma.geoKeyword.createMany({
-          data: body.keywords.map(k => ({
+        const count = await geoKeywordRepository.createMany(
+          body.keywords.map(k => ({
             projectId: body.projectId,
             keyword: k.keyword,
-            type: k.type || 'brand',
             source: k.source || 'manual',
-          })),
-          skipDuplicates: true,
-        })
-        return reply.status(201).send({ success: true, data: { count: created.count } })
+          }))
+        )
+        return reply.status(201).send({ success: true, data: { count } })
       }
 
       // Single keyword creation
@@ -66,20 +61,17 @@ export default async function geoKeywordRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ success: false, error: '关键词不能为空' })
       }
 
-      const existing = await prisma.geoKeyword.findFirst({
+      const existing = await geoKeywordRepository.findFirst({
         where: { projectId: singleBody.projectId, keyword: singleBody.keyword },
       })
       if (existing) {
         return reply.status(409).send({ success: false, error: '关键词已存在' })
       }
 
-      const keyword = await prisma.geoKeyword.create({
-        data: {
-          projectId: singleBody.projectId,
-          keyword: singleBody.keyword,
-          type: singleBody.type || 'brand',
-          source: singleBody.source || 'manual',
-        },
+      const keyword = await geoKeywordRepository.create({
+        projectId: singleBody.projectId,
+        keyword: singleBody.keyword,
+        source: singleBody.source || 'manual',
       })
 
       return reply.status(201).send({ success: true, data: keyword })
@@ -93,12 +85,12 @@ export default async function geoKeywordRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any
 
     try {
-      const existing = await prisma.geoKeyword.findUnique({ where: { id } })
+      const existing = await geoKeywordRepository.findUnique({ where: { id } })
       if (!existing) {
         return reply.status(404).send({ success: false, error: '关键词未找到' })
       }
 
-      await prisma.geoKeyword.delete({ where: { id } })
+      await geoKeywordRepository.delete({ where: { id } })
       return { success: true, data: { deleted: true } }
     } catch (err: any) {
       return reply.status(500).send({ success: false, error: err.message })
@@ -117,33 +109,29 @@ export default async function geoKeywordRoutes(fastify: FastifyInstance) {
     try {
       // Parse content: one keyword per line, or comma-separated
       const lines = content.split('\n').map((l: string) => l.trim()).filter(Boolean)
-      const keywords: Array<{ projectId: string; keyword: string; type: string; source: string }> = []
+      const keywordItems: Array<{ projectId: string; keyword: string; source: string }> = []
 
       for (const line of lines) {
         // Support comma-separated keywords on a single line
         const parts = line.split(',').map((p: string) => p.trim()).filter(Boolean)
         for (const kw of parts) {
-          keywords.push({
+          keywordItems.push({
             projectId,
             keyword: kw,
-            type: importType || 'brand',
             source: 'import',
           })
         }
       }
 
-      if (keywords.length === 0) {
+      if (keywordItems.length === 0) {
         return reply.status(400).send({ success: false, error: '未解析到有效关键词' })
       }
 
-      const result = await prisma.geoKeyword.createMany({
-        data: keywords,
-        skipDuplicates: true,
-      })
+      const count = await geoKeywordRepository.createMany(keywordItems)
 
       return reply.status(201).send({
         success: true,
-        data: { imported: result.count, total: keywords.length },
+        data: { imported: count, total: keywordItems.length },
       })
     } catch (err: any) {
       return reply.status(500).send({ success: false, error: err.message })
@@ -162,15 +150,12 @@ export default async function geoKeywordRoutes(fastify: FastifyInstance) {
       const where: any = { projectId }
       if (type) where.type = type
 
-      const keywords = await prisma.geoKeyword.findMany({
-        where,
-        orderBy: { createdAt: 'asc' },
-      })
+      const keywords = await geoKeywordRepository.findMany(where, { createdAt: 'asc' })
 
       // Generate CSV text
       const header = 'keyword,type,source,createdAt'
-      const rows = keywords.map(k =>
-        `"${k.keyword}","${k.type}","${k.source || ''}","${k.createdAt.toISOString()}"`
+      const rows = keywords.map((k: any) =>
+        `"${k.keyword}","${k.type || 'brand'}","${k.source || ''}","${k.createdAt}"`
       )
       const csv = [header, ...rows].join('\n')
 

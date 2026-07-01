@@ -8,7 +8,9 @@
  * BYOK 铁律：走用户自配的 LLM API Key
  */
 
-import { prisma } from '../../utils/index.js'
+import { hdzProjectRepository } from './repositories/hdz-project.repository.js'
+import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
+import { hdzAgentTaskRepository } from './repositories/hdz-agent-task.repository.js'
 import { getUserLLMConfig, callLLM } from './llm.client.js'
 import { checkDailyQuota, incrementDailyUsage } from '../usage-quota.service.js'
 
@@ -107,13 +109,13 @@ export async function convertToScreenplay(
   cinematicStyle?: string,  // 用户指定的运镜偏好
 ): Promise<ChapterScreenplay[]> {
   // 1. 获取项目 + 章节内容
-  const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
+  const project = await hdzProjectRepository.findUnique({ where: { id: projectId } })
   if (!project) throw new Error('项目不存在')
 
-  const chapters = await prisma.hdzChapter.findMany({
+  const chapters = await hdzChapterRepository.findMany({
     where: { projectId, chapterNo: { in: chapterNos } },
     orderBy: { chapterNo: 'asc' },
-  })
+  }) as any[]
 
   if (chapters.length === 0) throw new Error('未找到指定章节')
 
@@ -235,7 +237,7 @@ export async function saveScreenplayTask(
   userId: string,
   result: ChapterScreenplay,
 ): Promise<string> {
-  const task = await prisma.hdzAgentTask.create({
+  const task = await hdzAgentTaskRepository.create({
     data: {
       projectId,
       agentType: 'screenwriter',
@@ -259,15 +261,9 @@ export async function saveScreenplayTask(
  * 获取项目的所有剧本
  */
 export async function getProjectScreenplays(projectId: string): Promise<any[]> {
-  const tasks = await prisma.hdzAgentTask.findMany({
+  const tasks = await hdzAgentTaskRepository.findMany({
     where: { projectId, agentType: 'screenwriter', status: 'completed' },
     orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      input: true,
-      output: true,
-      createdAt: true,
-    },
-  })
+  }) as any[]
   return tasks
 }
