@@ -95,7 +95,7 @@ export function registerReviewRoutes(
   // ── POST /knowledge/reviews/:id/approve — Approve ──
   fastify.post('/api/knowledge/reviews/:id/approve', async (request, reply) => {
     const { id } = request.params as any
-    const body = request.body as any
+    const body = (request.body as any) || {}
 
     const result = await opts.approvalEngine.approve(
       id,
