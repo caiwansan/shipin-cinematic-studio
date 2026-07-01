@@ -111,22 +111,3 @@ export { geoMonitorRoutes as geoMonitorRoute } from './monitor/monitor.route'
 
 // Sprint P3 — Publishing Routes
 export { default as geoPublishingRoute } from './publishing/publishing.route'
-
-// Sprint K1 — KDP Services
-export { AssetBuilderService } from './kdp/asset-builder.service'
-export { DistributionPlannerService } from './kdp/distribution-planner.service'
-export { AttemptSchedulerService } from './kdp/attempt-scheduler.service'
-
-// Sprint K2 — Knowledge Packaging
-export { PackagingOrchestrator } from './kdp/packaging-orchestrator'
-export { PackagingPipeline, type PackagerAdapter, type AssetBuildContext, type PipelineArtifact } from './kdp/packaging-pipeline'
-export { PackagingAdapterRegistry } from './kdp/packaging-adapter-registry'
-export { setupDefaultPackagers } from './kdp/packagers/setup'
-export { WebsitePackager } from './kdp/packagers/website.packager'
-export { SitemapPackager } from './kdp/packagers/sitemap.packager'
-export { RSSPackager } from './kdp/packagers/rss.packager'
-export { AIFeedPackager } from './kdp/packagers/ai-feed.packager'
-export { KnowledgeBundlePackager } from './kdp/packagers/knowledge-bundle.packager'
-export { KnowledgePackageRepository } from './kdp/repos/package.repository'
-export { ManifestRepository } from './kdp/repos/manifest.repository'
-export { ArtifactRepository } from './kdp/repos/artifact.repository'
