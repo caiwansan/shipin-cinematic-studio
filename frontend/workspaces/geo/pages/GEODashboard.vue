@@ -265,7 +265,13 @@ async function loadMission() {
 // ── Walkthrough ──
 async function loadWalkthrough() {
   try {
-    walkthroughState.value = await walkthroughService.getState()
+    const state = await walkthroughService.getState()
+    walkthroughState.value = state || {
+      showWelcomeCard: false,
+      activeGuide: null,
+      dismissed: true,
+      completed: false,
+    }
   } catch {
     // Silent fail — walkthrough is non-critical
   }

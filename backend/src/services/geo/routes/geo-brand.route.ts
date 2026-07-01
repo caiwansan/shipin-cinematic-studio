@@ -34,8 +34,15 @@ export default async function geoBrandRoutes(fastify: FastifyInstance) {
       })
       const keywordsCount = await geoKeywordRepository.count({ where: { projectId: id } })
 
-      // Verify user
-      const user = await userRepository.findUnique({ where: { id: project.userId } })
+      // Verify user (skip for anonymous/unauthenticated)
+      let user = null
+      if (project.userId && project.userId !== 'anonymous') {
+        try {
+          user = await userRepository.findUnique({ where: { id: project.userId } })
+        } catch {
+          // User lookup fail is non-critical
+        }
+      }
 
       return reply.send({
         success: true,
