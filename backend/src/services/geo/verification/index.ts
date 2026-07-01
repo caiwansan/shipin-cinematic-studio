@@ -1,9 +1,33 @@
-export { VerificationEngine } from './verification-engine';
-export { VerificationService } from './verification.service';
-export { PrismaVerificationRepository } from './verification.repository';
-export { InMemoryJobRunner } from './verification-job-runner';
-export { VerificationPolicyService } from './verification-policy.service';
-export { SnapshotService } from './snapshot.service';
-export { TimelineService } from './timeline.service';
-export { scoreProject } from './geo-scorer-integration';
-export * from './verification.types';
+// ============================================================
+// P0-T006: Verification Module — Entry Point
+// ============================================================
+
+export { VerificationEngine } from './engine';
+export { generateClaims } from './claim-generator';
+export { buildEvidenceTimeline } from './evidence-timeline';
+export type {
+  VerificationResult,
+  VerificationClaim,
+  VerificationEvidence,
+  VerificationHistoryEntry,
+  VerificationRunRequest,
+} from './types';
+export {
+  evidenceGradeToNumber,
+  numberToEvidenceGrade,
+  generateVerificationId,
+} from './types';
+
+// Singleton
+import { PrismaClient } from '@prisma/client';
+import { VerificationEngine } from './engine';
+
+let _instance: VerificationEngine | null = null;
+
+export function getVerificationEngine(prisma?: PrismaClient): VerificationEngine {
+  if (!_instance) {
+    const client = prisma || new PrismaClient();
+    _instance = new VerificationEngine(client);
+  }
+  return _instance;
+}

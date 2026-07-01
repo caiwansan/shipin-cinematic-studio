@@ -29,10 +29,24 @@
         variant="primary"
         @click="store.fetchKnowledge()"
         :disabled="store.isLoading"
-      >Retry</DSButton>
+      >重试</DSButton>
     </ErrorBanner>
 
-    <!-- ===== STATE: Data ===== -->
+    <!-- ===== STATE: Empty (no data) ===== -->
+    <div v-else-if="!store.isLoading" class="knowledge-page__empty">
+      <div class="knowledge-page__empty-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round">
+          <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+          <path d="M8 7h8M8 11h6" />
+        </svg>
+      </div>
+      <h3 class="knowledge-page__empty-title">暂无知识数据</h3>
+      <p class="knowledge-page__empty-desc">该品牌尚未建立知识库，点击下方按钮扫描发现内容</p>
+      <DSButton variant="primary" @click="store.fetchKnowledge()">重新加载</DSButton>
+    </div>
+
+    <!-- ===== STATE: Data (with content) ===== -->
     <template v-else-if="store.hasData">
       <div class="knowledge-page__header">
         <Hero
@@ -57,7 +71,7 @@
           dismissible
           @dismiss="store.error = null"
         >
-          <DSButton variant="primary" @click="store.fetchKnowledge()">Retry</DSButton>
+          <DSButton variant="primary" @click="store.fetchKnowledge()">重试</DSButton>
         </ErrorBanner>
       </Transition>
 
@@ -80,7 +94,7 @@
 
         <div v-if="healthLoading" class="flex items-center justify-center py-4">
           <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span class="ml-2 text-sm text-gray-400">Loading brand health data...</span>
+          <span class="ml-2 text-sm text-gray-400">正在加载品牌健康数据...</span>
         </div>
 
         <div v-else-if="healthError" class="text-sm text-red-500 py-2">
@@ -92,7 +106,7 @@
           <div class="bg-white rounded-lg border border-gray-200 p-4 mb-3">
             <div class="flex items-center justify-between">
               <div>
-                <span class="text-sm font-medium text-gray-700">Brand Health Score</span>
+                <span class="text-sm font-medium text-gray-700">品牌健康评分</span>
                 <div class="flex items-center gap-2 mt-1">
                   <span class="text-3xl font-bold" :class="overallScoreTextColor">{{ brandHealth.brandHealth }}</span>
                   <span
@@ -142,9 +156,9 @@
           <!-- Coverage details -->
           <div v-if="brandHealth.coverage" class="mt-3 pt-3 border-t border-gray-100">
             <div class="flex items-center gap-4 text-xs text-gray-500">
-              <span>Evidence: {{ brandHealth.coverage.evidenceCount }}</span>
-              <span>Entities: {{ brandHealth.coverage.entityCount }}</span>
-              <span>Claims: {{ brandHealth.coverage.claimCount }}</span>
+              <span>证据：{{ brandHealth.coverage.evidenceCount }}</span>
+              <span>实体：{{ brandHealth.coverage.entityCount }}</span>
+              <span>声明：{{ brandHealth.coverage.claimCount }}</span>
             </div>
           </div>
         </div>
@@ -163,7 +177,7 @@
 
       <!-- Knowledge Sources -->
       <div class="knowledge-page__section">
-        <h3 class="knowledge-page__section-title">Knowledge Sources</h3>
+        <h3 class="knowledge-page__section-title">知识源</h3>
         <div class="knowledge-page__sources" role="list">
           <div
             v-for="source in store.sources"
@@ -183,7 +197,7 @@
       <!-- Freshness Score -->
       <div v-if="store.freshness" class="knowledge-page__freshness">
         <div class="knowledge-page__freshness-header">
-          <h3 class="knowledge-page__section-title">Freshness</h3>
+          <h3 class="knowledge-page__section-title">新鲜度</h3>
           <span class="knowledge-page__freshness-score">{{ store.freshness.overall }}/100</span>
         </div>
         <div
@@ -199,12 +213,12 @@
             :style="{ width: store.freshness.overall + '%' }"
           />
         </div>
-        <p class="knowledge-page__freshness-date">Last updated: {{ store.freshness.lastUpdated }}</p>
+        <p class="knowledge-page__freshness-date">最后更新：{{ store.freshness.lastUpdated }}</p>
       </div>
 
       <!-- Missing Knowledge -->
       <div v-if="store.hasMissingKnowledge" class="knowledge-page__missing">
-        <h3 class="knowledge-page__section-title">Missing Knowledge</h3>
+        <h3 class="knowledge-page__section-title">缺少的知识</h3>
         <div class="knowledge-page__missing-list" role="list">
           <div
             v-for="(missing, index) in store.missingKnowledge"
@@ -254,7 +268,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useKnowledgeStore } from '../stores/useKnowledgeStore'
 import { useHealthStore } from '../stores/useHealthStore'
 import Hero from '~/design-system/product-blocks/Hero/index.vue'
@@ -266,6 +280,7 @@ import StatusIndicator from '~/design-system/components/StatusIndicator/index.vu
 import DSButton from '~/design-system/primitives/Button/index.vue'
 
 const router = useRouter()
+const route = useRoute()
 const store = useKnowledgeStore()
 const brandHealth = useHealthStore()
 
@@ -306,6 +321,12 @@ async function loadBrandHealth() {
 }
 
 onMounted(async () => {
+  // Set project ID from route query if available
+  const projectId = route.query.projectId as string
+  if (projectId) {
+    store.setProject(projectId)
+    brandHealth.setProject(projectId)
+  }
   await store.fetchKnowledge()
   await loadBrandHealth()
 })
@@ -512,6 +533,35 @@ function handleStatementClick(id: string) {
 
 .knowledge-page__statement-item:hover {
   border-color: var(--color-text-tertiary, #9ca3af);
+}
+
+/* Empty state */
+.knowledge-page__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.knowledge-page__empty-icon {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.knowledge-page__empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px;
+}
+
+.knowledge-page__empty-desc {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 24px;
+  max-width: 360px;
 }
 
 .knowledge-page__statement-item:focus-visible {

@@ -9,6 +9,7 @@ function mapPrismaProject(p: any) {
     id: p.id,
     userId: p.userId,
     name: p.name,
+    website: p.website || '',
     topic: p.topic || null,
     industry: p.industry || '',
     language: p.language || 'zh',
@@ -56,6 +57,7 @@ export const geoProjectRepository = {
       data: {
         userId: data.userId,
         name: data.name,
+        website: data.website || '',
         topic: data.topic || '',
         industry: data.industry || '',
         language: data.language || 'zh',

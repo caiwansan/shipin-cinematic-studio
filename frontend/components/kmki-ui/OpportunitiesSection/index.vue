@@ -2,7 +2,7 @@
   <div class="opportunities-section">
     <div class="flex items-center gap-2 mb-4">
       <span class="text-lg">💡</span>
-      <h3 class="text-base font-semibold text-gray-900">Opportunities — 机会汇总</h3>
+      <h3 class="text-base font-semibold text-gray-900">机会 — 机会汇总</h3>
     </div>
 
     <!-- Summary Counts -->
@@ -30,11 +30,11 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 text-left">
-            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">Scenario</th>
-            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">Gap</th>
-            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">Priority</th>
-            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">Expected Gain</th>
-            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">Suggestion</th>
+            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">场景</th>
+            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">差距</th>
+            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">优先级</th>
+            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">预计增益</th>
+            <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase">建议</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

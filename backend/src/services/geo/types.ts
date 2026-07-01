@@ -173,6 +173,7 @@ export interface GEOProject {
   id: string
   userId: string
   name: string
+  website?: string
   topic?: string
   industry?: string
   language: string

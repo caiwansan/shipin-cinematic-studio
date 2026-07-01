@@ -1,7 +1,7 @@
 <template>
   <div class="score-comparison">
     <div class="score-comparison__before">
-      <div class="score-comparison__label">Before</div>
+      <div class="score-comparison__label">优化前</div>
       <div class="score-comparison__value score-comparison__value--before">{{ before }}</div>
     </div>
     <div class="score-comparison__arrow" v-if="delta !== 0">
@@ -16,7 +16,7 @@
       </span>
     </div>
     <div class="score-comparison__after">
-      <div class="score-comparison__label">After</div>
+      <div class="score-comparison__label">优化后</div>
       <div class="score-comparison__value score-comparison__value--after">{{ after }}</div>
     </div>
   </div>

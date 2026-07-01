@@ -2,7 +2,7 @@
   <div class="next-recommendations">
     <div class="flex items-center gap-2 mb-4">
       <span class="text-lg">🎯</span>
-      <h3 class="text-base font-semibold text-gray-900">Next Recommendations — 下一步建议</h3>
+      <h3 class="text-base font-semibold text-gray-900">下一步建议 — 下一步建议</h3>
     </div>
 
     <div v-if="report.nextRecommendations.length === 0" class="text-sm text-gray-400 py-4 text-center">
@@ -20,7 +20,7 @@
           :class="dotClass(rec.priority)"
         />
         <span class="flex-1 text-sm font-medium text-gray-800">{{ rec.scenarioName }}</span>
-        <span class="text-sm text-gray-500">Gap: {{ rec.gap }}</span>
+        <span class="text-sm text-gray-500">差距：{{ rec.gap }}</span>
         <span
           class="text-xs font-medium px-2 py-0.5 rounded-full"
           :class="priorityClass(rec.priority)"

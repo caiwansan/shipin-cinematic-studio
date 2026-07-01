@@ -29,7 +29,7 @@
         variant="primary"
         @click="store.fetchPublishing()"
         :disabled="store.isLoading"
-      >Retry</DSButton>
+      >重试</DSButton>
     </ErrorBanner>
 
     <!-- ===== STATE: Empty ===== -->
@@ -39,7 +39,7 @@
       title="No distribution channels set up yet"
       description="Connect your first channel to make your brand visible to AI systems."
     >
-      <DSButton variant="primary" @click="handleSetup">Set Up First Channel</DSButton>
+      <DSButton variant="primary" @click="handleSetup">设置首个渠道</DSButton>
     </EmptyState>
 
     <!-- ===== STATE: Data ===== -->
@@ -75,7 +75,7 @@
           dismissible
           @dismiss="dismissStatus"
         >
-          <DSButton variant="primary" @click="store.publish()">Retry</DSButton>
+          <DSButton variant="primary" @click="store.publish()">重试</DSButton>
         </ErrorBanner>
       </Transition>
 
@@ -89,7 +89,7 @@
 
       <!-- Pending Updates -->
       <div v-if="store.hasPendingUpdates" class="pub-page__section">
-        <h3 class="pub-page__section-title">Pending Updates</h3>
+        <h3 class="pub-page__section-title">待更新</h3>
         <p class="pub-page__section-count">{{ store.pendingCount }} brand changes not yet distributed</p>
         <div class="pub-page__updates" role="list">
           <div
@@ -106,10 +106,10 @@
 
       <!-- Latest Distribution -->
       <div v-if="store.latestDistribution" class="pub-page__section">
-        <h3 class="pub-page__section-title">Latest Distribution</h3>
+        <h3 class="pub-page__section-title">最近分发</h3>
         <div class="pub-page__latest">
           <div class="pub-page__latest-info">
-            <span class="pub-page__latest-date">Last distributed: {{ store.latestDistribution.date }}</span>
+            <span class="pub-page__latest-date">最近分发：{{ store.latestDistribution.date }}</span>
             <span class="pub-page__latest-impact">
               Brand Health impact: +{{ store.latestDistribution.impact }}
             </span>
@@ -122,13 +122,13 @@
 
       <!-- Current Version Badge -->
       <div v-if="store.currentVersion" class="pub-page__version">
-        <span class="pub-page__version-label">Current Version</span>
+        <span class="pub-page__version-label">当前版本</span>
         <span class="pub-page__version-value">{{ store.currentVersion }}</span>
       </div>
 
       <!-- Publishing History -->
       <div v-if="store.history.length > 0" class="pub-page__section">
-        <h3 class="pub-page__section-title">Publishing History</h3>
+        <h3 class="pub-page__section-title">发布历史</h3>
         <div class="pub-page__history" role="list">
           <div
             v-for="item in store.history.slice(0, 5)"
@@ -152,7 +152,7 @@
       />
       <div v-else class="pub-page__uptodate">
         <span class="pub-page__uptodate-icon">&#10003;</span>
-        <span>All channels up to date</span>
+        <span>所有渠道已是最新</span>
       </div>
     </template>
   </div>

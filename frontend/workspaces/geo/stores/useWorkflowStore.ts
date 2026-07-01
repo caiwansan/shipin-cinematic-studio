@@ -31,13 +31,13 @@ export type StepStatus = 'not-started' | 'in-progress' | 'completed'
 // ── WORKFLOW STEPS (ordered list) ──
 
 export const WORKFLOW_STEPS: readonly WorkflowStep[] = [
-  { id: 'assessment', label: 'Assessment', icon: '📊' },
-  { id: 'discovery', label: 'Discovery', icon: '🔍' },
-  { id: 'opportunity', label: 'Opportunity Review', icon: '💡' },
-  { id: 'action-plan', label: 'Action Plan', icon: '📋' },
-  { id: 'execution', label: 'Execution', icon: '⚡' },
-  { id: 'verification', label: 'Verification', icon: '✅' },
-  { id: 'report', label: 'Report', icon: '📄' },
+  { id: 'assessment', label: '评估', icon: '📊' },
+  { id: 'discovery', label: '发现', icon: '🔍' },
+  { id: 'opportunity', label: '机会评估', icon: '💡' },
+  { id: 'action-plan', label: '行动计划', icon: '📋' },
+  { id: 'execution', label: '执行', icon: '⚡' },
+  { id: 'verification', label: '验证', icon: '✅' },
+  { id: 'report', label: '报告', icon: '📄' },
 ] as const
 
 // ── Step Guard Definitions ──
@@ -85,9 +85,9 @@ function createGuardRules(projectStore: ReturnType<typeof useGeoProjectStore>): 
     },
     {
       stepId: 'verification',
-      prerequisiteStepIds: ['action-plan'],
-      dataCheck: () => !!projectStore.actionPlan?.planData,
-      message: '请先生成 Action Plan 并执行优化措施',
+      prerequisiteStepIds: ['execution'],
+      dataCheck: () => !!projectStore.verificationReport?.reportData,
+      message: '请先完成执行步骤，并在验证页面中输入关键词进行验证',
     },
     {
       stepId: 'report',

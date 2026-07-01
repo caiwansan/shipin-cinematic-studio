@@ -18,6 +18,7 @@ export interface GEOProject {
   id: string
   userId: string
   name: string
+  website?: string
   topic?: string
   industry?: string
   language: string
@@ -122,20 +123,71 @@ export const useGeoProjectStore = defineStore('geo-project', () => {
     }
   }
 
-  async function createProject(name: string, industry?: string): Promise<GEOProject | null> {
+  async function createProject(name: string, industry?: string, extraFields?: {
+    website?: string
+    description?: string
+    region?: string
+    companyType?: string
+    primaryLanguage?: string
+  }): Promise<GEOProject | null> {
     isLoading.value = true
     error.value = null
 
     try {
       const raw = await apiCall<{ success: boolean; data: GEOProject }>('projects', {
         method: 'POST',
-        body: { name, industry },
+        body: {
+          name,
+          industry,
+          website: extraFields?.website || '',
+          description: extraFields?.description || '',
+          region: extraFields?.region || '',
+          companyType: extraFields?.companyType || '',
+          primaryLanguage: extraFields?.primaryLanguage || '',
+        },
       })
       currentProject.value = raw.data
       projects.value.unshift(raw.data)
       return raw.data
     } catch (err: any) {
       error.value = err?.message || 'Failed to create project'
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function updateProject(projectId: string, name?: string, industry?: string, extraFields?: {
+    website?: string
+    description?: string
+    region?: string
+    companyType?: string
+    primaryLanguage?: string
+  }): Promise<GEOProject | null> {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const body: any = {}
+      if (name) body.name = name
+      if (industry) body.industry = industry
+      if (extraFields?.website) body.website = extraFields.website
+      if (extraFields?.description) body.description = extraFields.description
+      if (extraFields?.region) body.region = extraFields.region
+      if (extraFields?.companyType) body.companyType = extraFields.companyType
+      if (extraFields?.primaryLanguage) body.primaryLanguage = extraFields.primaryLanguage
+
+      const raw = await apiCall<{ success: boolean; data: GEOProject }>(`projects/${projectId}`, {
+        method: 'PUT',
+        body,
+      })
+      currentProject.value = raw.data
+      // Update in list too
+      const idx = projects.value.findIndex((p: any) => p.id === projectId)
+      if (idx !== -1) projects.value[idx] = raw.data
+      return raw.data
+    } catch (err: any) {
+      error.value = err?.message || '更新失败'
       return null
     } finally {
       isLoading.value = false
@@ -156,6 +208,22 @@ export const useGeoProjectStore = defineStore('geo-project', () => {
       verificationReport.value = d.verificationReport
     } catch (err: any) {
       error.value = err?.message || 'Failed to load project'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function loadBrand(brandId: string): Promise<GEOProject | null> {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const raw = await apiCall<{ success: boolean; data: GEOProject }>(`brands/${brandId}`)
+      currentProject.value = raw.data
+      return raw.data
+    } catch (err: any) {
+      error.value = err?.message || 'Failed to load brand'
+      return null
     } finally {
       isLoading.value = false
     }
@@ -250,6 +318,50 @@ export const useGeoProjectStore = defineStore('geo-project', () => {
     }
   }
 
+  async function deleteBrand(brandId: string): Promise<boolean> {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      await apiCall<{ success: boolean; data: { deleted: boolean } }>(`brands/${brandId}`, {
+        method: 'DELETE',
+      })
+      // Remove from local list
+      projects.value = projects.value.filter((p: any) => p.id !== brandId)
+      currentProject.value = null
+      return true
+    } catch (err: any) {
+      error.value = err?.message || '删除失败'
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function quickDiscovery(projectId: string): Promise<{
+    adi: number
+    dimensions: { coverage: number; share: number; position: number }
+    summary: string
+  } | null> {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const raw = await apiCall<{
+        success: boolean
+        data: { adi: number; dimensions: { coverage: number; share: number; position: number }; summary: string }
+      }>(`projects/${projectId}/quick-discovery`, {
+        method: 'POST',
+      })
+      return raw.data
+    } catch (err: any) {
+      error.value = err?.message || '快速分析失败'
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   function reset() {
     currentProject.value = null
     projects.value = []
@@ -275,11 +387,15 @@ export const useGeoProjectStore = defineStore('geo-project', () => {
     // Actions
     listProjects,
     createProject,
+    updateProject,
     loadProject,
+    loadBrand,
     saveDiscoveryReport,
     saveActionPlan,
     saveVerificationReport,
     loadHistory,
+    deleteBrand,
+    quickDiscovery,
     reset,
   }
 })

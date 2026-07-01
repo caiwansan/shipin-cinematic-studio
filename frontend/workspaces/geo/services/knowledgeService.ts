@@ -80,7 +80,9 @@ export interface KnowledgeData {
 }
 
 export async function fetchKnowledge(projectId: string): Promise<KnowledgeData> {
-  const raw = await geoApi<{ success: boolean; data: any }>(`knowledge/${projectId}`)
+  const raw = await geoApi<{ success: boolean; data: any }>('knowledge', {
+    params: { projectId },
+  })
   const d = raw.data
 
   const assets = d.assets ?? { total: 0, entities: 0, claims: 0, evidences: 0, relations: 0, schemas: 0, faqs: 0, keywords: 0, knowledgeObjects: 0 }

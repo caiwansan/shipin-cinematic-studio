@@ -15,6 +15,9 @@
   <div class="discovery-lab">
     <!-- Page Header -->
     <header class="discovery-lab__header">
+      <div class="discovery-lab__header-top">
+        <NuxtLink to="/workspace/geo/dashboard" class="discovery-lab__back-btn">← 返回工作台</NuxtLink>
+      </div>
       <h1 class="discovery-lab__title">AI Discovery Lab</h1>
       <p class="discovery-lab__subtitle">
         Evaluate how your entity performs across demand scenarios
@@ -94,11 +97,11 @@
             <div class="discovery-lab__adi-info">
               <h2 class="discovery-lab__adi-entity">{{ store.report.entityName }}</h2>
               <p class="discovery-lab__adi-desc">
-                {{ adiLabel }} — {{ store.report.adi >= 80 ? 'Excellent brand discovery readiness' : store.report.adi >= 60 ? 'Good discovery foundation' : store.report.adi >= 40 ? 'Needs significant improvement' : 'Critical gaps detected' }}
+                {{ adiLabel }} — {{ store.report.adi >= 80 ? '品牌发现就绪度优秀' : store.report.adi >= 60 ? '发现基础良好' : store.report.adi >= 40 ? '需大幅改善' : '检测到关键差距' }}
               </p>
               <div class="discovery-lab__adi-meta">
-                <span>Report ID: {{ store.report.id.slice(0, 20) }}...</span>
-                <span>Generated: {{ formatDate(store.report.generatedAt) }}</span>
+                <span>报告 ID：{{ store.report.id.slice(0, 20) }}...</span>
+                <span>生成时间：{{ formatDate(store.report.generatedAt) }}</span>
               </div>
             </div>
           </div>
@@ -124,23 +127,23 @@
       <!-- Coverage Summary -->
       <section class="discovery-lab__section">
         <div class="discovery-lab__card">
-          <h3 class="discovery-lab__card-title">Coverage Overview</h3>
+          <h3 class="discovery-lab__card-title">覆盖概览</h3>
           <div class="discovery-lab__coverage-grid">
             <div class="discovery-lab__coverage-stat">
               <span class="discovery-lab__stat-value">{{ store.coveredScenarios.length }}</span>
-              <span class="discovery-lab__stat-label">Covered Scenarios</span>
+              <span class="discovery-lab__stat-label">已覆盖场景</span>
             </div>
             <div class="discovery-lab__coverage-stat">
               <span class="discovery-lab__stat-value">{{ store.uncoveredScenarios.length }}</span>
-              <span class="discovery-lab__stat-label">Uncovered Scenarios</span>
+              <span class="discovery-lab__stat-label">未覆盖场景</span>
             </div>
             <div class="discovery-lab__coverage-stat">
               <span class="discovery-lab__stat-value">{{ store.report.scenarios.length }}</span>
-              <span class="discovery-lab__stat-label">Total Scenarios</span>
+              <span class="discovery-lab__stat-label">场景总数</span>
             </div>
             <div class="discovery-lab__coverage-stat">
               <span class="discovery-lab__stat-value">{{ coveragePercent }}%</span>
-              <span class="discovery-lab__stat-label">Coverage Rate</span>
+              <span class="discovery-lab__stat-label">覆盖率</span>
             </div>
           </div>
         </div>
@@ -149,17 +152,17 @@
       <!-- Scenario Coverage Table -->
       <section class="discovery-lab__section">
         <div class="discovery-lab__card">
-          <h3 class="discovery-lab__card-title">Scenario Coverage Details</h3>
+          <h3 class="discovery-lab__card-title">场景覆盖详情</h3>
           <div class="discovery-lab__table-wrap">
             <table class="discovery-lab__table">
               <thead>
                 <tr>
-                  <th>Scenario</th>
-                  <th>Industry</th>
-                  <th>Coverage</th>
-                  <th>Confidence</th>
-                  <th>Trend</th>
-                  <th>Status</th>
+                  <th>场景</th>
+                  <th>行业</th>
+                  <th>覆盖度</th>
+                  <th>置信度</th>
+                  <th>趋势</th>
+                  <th>状态</th>
                 </tr>
               </thead>
               <tbody>
@@ -218,7 +221,7 @@
                 <div class="discovery-lab__opp-badges">
                   <span class="discovery-lab__opp-badge discovery-lab__opp-badge--gain">+{{ opp.expectedAdiGain }} ADI</span>
                   <span class="discovery-lab__opp-badge" :class="effortClass(opp.effort)">{{ effortLabel(opp.effort) }}</span>
-                  <span class="discovery-lab__opp-gap">Gap: {{ opp.gap }}/100</span>
+                  <span class="discovery-lab__opp-gap">差距：{{ opp.gap }}/100</span>
                 </div>
               </div>
               <p class="discovery-lab__opp-reason">📋 {{ opp.reason }}</p>
@@ -242,7 +245,7 @@
                 <div class="discovery-lab__opp-badges">
                   <span class="discovery-lab__opp-badge discovery-lab__opp-badge--gain">+{{ opp.expectedAdiGain }} ADI</span>
                   <span class="discovery-lab__opp-badge" :class="effortClass(opp.effort)">{{ effortLabel(opp.effort) }}</span>
-                  <span class="discovery-lab__opp-gap">Gap: {{ opp.gap }}/100</span>
+                  <span class="discovery-lab__opp-gap">差距：{{ opp.gap }}/100</span>
                 </div>
               </div>
               <p class="discovery-lab__opp-reason">📋 {{ opp.reason }}</p>
@@ -263,7 +266,7 @@
             >
               <div class="discovery-lab__opp-header">
                 <span class="discovery-lab__opp-name">{{ opp.scenarioName }}</span>
-                <span class="discovery-lab__opp-gap">Gap: {{ opp.gap }}/100</span>
+                <span class="discovery-lab__opp-gap">差距：{{ opp.gap }}/100</span>
               </div>
               <p class="discovery-lab__opp-suggestion">💡 {{ opp.suggestion }}</p>
             </div>
@@ -402,6 +405,27 @@ function effortClass(effort: string): string {
 /* ===== Header ===== */
 .discovery-lab__header {
   margin-bottom: 32px;
+}
+
+.discovery-lab__header-top {
+  margin-bottom: 16px;
+}
+
+.discovery-lab__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #6b7280;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.discovery-lab__back-btn:hover {
+  color: #374151;
+  background: #f3f4f6;
 }
 
 .discovery-lab__title {

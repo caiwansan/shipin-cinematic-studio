@@ -16,7 +16,7 @@
       title="Unable to load assessment data"
       message="Please check your connection and try again"
     >
-      <DSButton variant="primary" @click="loadData" :disabled="loading">Retry</DSButton>
+      <DSButton variant="primary" @click="loadData" :disabled="loading">重试</DSButton>
     </ErrorBanner>
 
     <!-- ===== STATE: Empty (no projects) ===== -->
@@ -26,7 +26,7 @@
       title="No brand projects yet"
       description="Create a project in Brand Scan to begin assessment"
     >
-      <DSButton variant="primary" @click="goToDashboard">Create Brand</DSButton>
+      <DSButton variant="primary" @click="goToDashboard">创建品牌</DSButton>
     </EmptyState>
 
     <!-- ===== STATE: Data ===== -->
@@ -43,14 +43,14 @@
 
       <!-- Brand Selector -->
       <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Select Brand</label>
+        <label class="block text-sm font-medium text-gray-700 mb-2">选择品牌</label>
         <div class="flex items-center gap-3">
           <select
             v-model="selectedProjectId"
             class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1 max-w-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             @change="onBrandChange"
           >
-            <option value="" disabled>Select a brand</option>
+            <option value="" disabled>选择一个品牌</option>
             <option v-for="p in projects" :key="p.id" :value="p.id">
               {{ p.name }} ({{ p.website }})
             </option>
@@ -64,7 +64,7 @@
       <!-- Error Banner (recoverable) -->
       <div v-if="error" class="mb-4">
         <ErrorBanner :title="error" message="" dismissible @dismiss="error = null">
-          <DSButton variant="primary" @click="refreshAll">Retry</DSButton>
+          <DSButton variant="primary" @click="refreshAll">重试</DSButton>
         </ErrorBanner>
       </div>
 
@@ -75,7 +75,7 @@
         title="No assessment data yet"
         description="This brand has not been scanned yet"
       >
-        <DSButton variant="primary" @click="goToDetail">Start Scan</DSButton>
+        <DSButton variant="primary" @click="goToDetail">开始扫描</DSButton>
       </EmptyState>
 
       <!-- ====== MAIN REPORT ====== -->
@@ -85,7 +85,7 @@
           <div class="flex items-start justify-between flex-wrap gap-4">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <h1 class="text-2xl font-bold text-gray-900">Assessment</h1>
+                <h1 class="text-2xl font-bold text-gray-900">评估</h1>
                 <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">ADI</span>
               </div>
               <p class="text-sm text-gray-500 mt-1">
@@ -310,7 +310,7 @@
           </div>
           <div v-else-if="timelineLoading" class="flex items-center justify-center py-12">
             <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span class="ml-3 text-sm text-gray-400">Loading trend data...</span>
+            <span class="ml-3 text-sm text-gray-400">正在加载趋势数据...</span>
           </div>
           <div v-else class="text-center py-8 text-sm text-gray-400">
             {{ timelineData.length === 0 ? 'No trend data yet' : 'At least 2 points needed for chart' }}

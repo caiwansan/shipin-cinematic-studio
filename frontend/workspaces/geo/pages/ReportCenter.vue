@@ -3,8 +3,9 @@
     <!-- ===== Header ===== -->
     <header class="report-center__header">
       <div>
-        <h1 class="report-center__title">Deliverable Center</h1>
-        <p class="report-center__subtitle">Comprehensive brand health report — all sections in one place</p>
+        <NuxtLink to="/workspace/geo/dashboard" class="report-center__back-btn">← 返回工作台</NuxtLink>
+        <h1 class="report-center__title">交付中心</h1>
+        <p class="report-center__subtitle">全面的品牌健康报告 — 所有章节汇总一处</p>
       </div>
       <div class="report-center__header-actions">
         <ExportMenu
@@ -17,7 +18,7 @@
           @click="loadReport"
           :disabled="loading"
         >
-          🔄 {{ loading ? 'Loading...' : 'Refresh' }}
+          🔄 {{ loading ? '加载中...' : '刷新' }}
         </button>
       </div>
     </header>
@@ -25,16 +26,16 @@
     <!-- ===== Error State ===== -->
     <div v-if="error" class="report-center__error">
       <p>{{ error }}</p>
-      <button class="report-center__btn report-center__btn--primary" @click="loadReport">Retry</button>
-      <NuxtLink :to="`/workspace/geo/project/${projectId}`" class="report-center__link">
-        ← Back to Workflow
+      <button class="report-center__btn report-center__btn--primary" @click="loadReport">重试</button>
+      <NuxtLink :to="`/workspace/geo/dashboard`" class="report-center__link">
+        ← 返回工作台
       </NuxtLink>
     </div>
 
     <!-- ===== Loading State ===== -->
     <div v-if="loading && !report" class="report-center__loading">
       <div class="report-center__spinner" />
-      <span>Generating report...</span>
+      <span>正在生成报告...</span>
     </div>
 
     <!-- ===== Report Content ===== -->
@@ -76,7 +77,7 @@
       <!-- Footer -->
       <div class="report-center__footer">
         <p class="report-center__footer-text">
-          Report ID: {{ report.id }} · Generated: {{ formattedDate }}
+          报告 ID：{{ report.id }} · 生成时间：{{ formattedDate }}
         </p>
       </div>
     </div>
@@ -173,7 +174,7 @@ function generateMarkdown(): string {
   const lines: string[] = []
 
   lines.push(`# Brand Health Report — ${r.projectName}`)
-  lines.push(`**Generated:** ${formattedDate.value}`)
+  lines.push(`**生成时间：**${formattedDate.value}`)
   lines.push('')
 
   // 1. Executive Summary
@@ -288,7 +289,7 @@ function generateMarkdown(): string {
   }
 
   lines.push('---')
-  lines.push(`*Report ID: ${r.id}*`)
+  lines.push(`*报告 ID：${r.id}*`)
 
   return lines.join('\n')
 }
@@ -355,6 +356,24 @@ async function handleCopyToClipboard() {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
+}
+
+.report-center__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #6b7280;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+  margin-bottom: 12px;
+}
+
+.report-center__back-btn:hover {
+  color: #374151;
+  background: #f3f4f6;
 }
 
 .report-center__title {

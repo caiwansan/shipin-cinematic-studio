@@ -2,13 +2,13 @@
   <div class="actions-section">
     <div class="flex items-center gap-2 mb-4">
       <span class="text-lg">📋</span>
-      <h3 class="text-base font-semibold text-gray-900">Actions — 行动汇总</h3>
+      <h3 class="text-base font-semibold text-gray-900">行动汇总</h3>
     </div>
 
     <!-- Progress Bar -->
     <div class="mb-5">
       <div class="flex items-center gap-3 mb-1.5">
-        <span class="text-xs font-medium text-gray-500">Completion Rate</span>
+        <span class="text-xs font-medium text-gray-500">完成率</span>
         <span class="text-sm font-bold text-gray-800">{{ completionRate }}%</span>
       </div>
       <div class="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -24,34 +24,34 @@
     <div class="grid grid-cols-5 gap-3 mb-5">
       <div class="text-center p-3 bg-gray-50 rounded-lg">
         <div class="text-lg font-bold text-gray-900">{{ report.actions.total }}</div>
-        <div class="text-xs text-gray-500">Total</div>
+        <div class="text-xs text-gray-500">总计</div>
       </div>
       <div class="text-center p-3 bg-emerald-50 rounded-lg">
         <div class="text-lg font-bold text-emerald-600">{{ report.actions.completed }}</div>
-        <div class="text-xs text-emerald-600">Completed</div>
+        <div class="text-xs text-emerald-600">已完成</div>
       </div>
       <div class="text-center p-3 bg-blue-50 rounded-lg">
         <div class="text-lg font-bold text-blue-600">{{ report.actions.inProgress }}</div>
-        <div class="text-xs text-blue-600">In Progress</div>
+        <div class="text-xs text-blue-600">进行中</div>
       </div>
       <div class="text-center p-3 bg-gray-50 rounded-lg">
         <div class="text-lg font-bold text-gray-500">{{ report.actions.skipped }}</div>
-        <div class="text-xs text-gray-500">Skipped</div>
+        <div class="text-xs text-gray-500">已跳过</div>
       </div>
       <div class="text-center p-3 bg-amber-50 rounded-lg">
         <div class="text-lg font-bold text-amber-600">{{ report.actions.pending }}</div>
-        <div class="text-xs text-amber-600">Pending</div>
+        <div class="text-xs text-amber-600">待处理</div>
       </div>
     </div>
 
     <!-- Estimated vs Actual Gain -->
     <div class="flex gap-6 mb-5 px-4 py-3 bg-gray-50 rounded-lg">
       <div>
-        <span class="text-xs text-gray-500">Estimated Gain:</span>
+        <span class="text-xs text-gray-500">预计增益：</span>
         <span class="ml-2 text-sm font-bold text-gray-800">{{ report.actions.estimatedGain.toFixed(1) }}</span>
       </div>
       <div>
-        <span class="text-xs text-gray-500">Actual Gain:</span>
+        <span class="text-xs text-gray-500">实际增益：</span>
         <span
           class="ml-2 text-sm font-bold"
           :class="report.actions.actualGain >= report.actions.estimatedGain ? 'text-emerald-600' : 'text-amber-600'"
@@ -118,8 +118,8 @@ const props = defineProps<{
 }>()
 
 const completionRate = computed(() => {
-  if (report.value.actions.total === 0) return 0
-  return Math.round((report.value.actions.completed / report.value.actions.total) * 100)
+  if (props.report.actions.total === 0) return 0
+  return Math.round((props.report.actions.completed / props.report.actions.total) * 100)
 })
 
 const progressColorClass = computed(() => {

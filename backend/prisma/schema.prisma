@@ -3608,33 +3608,90 @@ model GeoProjectProfile {
   @@map("kmki_geo_project_profiles")
 }
 
+// P2 Brand Domain — Brand（品牌数字身份）
+// 注意：这是工作台共享模型，GEO 是第一个消费者。未来短剧/小说/PPT 工作台可直接复用。
+model GEOBrand {
+  id        String   @id @default(uuid())
+  slug      String   @unique // 永久稳定标识符，自动从 name 生成，可手动覆盖
+  name      String
+  primaryDomain String             // 主域名（原 website 重构）
+  additionalDomains Json   @default("[]") // string[]，额外域名
+  description String?
+  industry  String?
+  region    String?        // 所在国家/地区
+  companyType String?      // brand | saas | ecommerce | local | other
+  primaryLanguage String   @default("zh")
+  targetMarkets Json?      // string[]
+  competitors Json?        // BrandCompetitor[]（预留：name/website/industry/notes）
+  goals      Json?         // BrandGoal[]（预留：id(GoalEnum)/priority, 未来加 target/current）
+  aiTargets  Json?         // AITarget[]（预留：id/label/version/priority）
+  status     String        @default("draft") // draft | active | monitoring | archived
+  version    Int           @default(1)       // 关键信息变更时 +1
+  // TODO: ownerId + organizationId for enterprise
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  knowledgeSources GEOKnowledgeSource[]
+  projects         GEOProject[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("kmki_geo_brands")
+}
+
+// P2 Brand Domain — Knowledge Source（知识源，扫描器直接消费）
+model GEOKnowledgeSource {
+  id            String   @id @default(uuid())
+  brandId       String
+  type          String   // official_site | blog | docs | github | wikipedia | news | social | forum | video | custom
+  url           String
+  label         String?
+  crawlStrategy String   @default("manual") // manual | rss | sitemap | api | github | youtube | crawler
+  status        String   @default("pending") // pending | verified | error | disabled
+  lastScanned   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  brand GEOBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+  @@index([status])
+  @@map("kmki_geo_knowledge_sources")
+}
+
 model GEOProject {
   id        String   @id @default(uuid())
   userId    String
+  brandId   String?       // P2 Brand Domain：关联 Brand（兼容期可空）
   name      String
-  website   String?     // 官网 URL（MVP 新增）
+  website   String?       // 官网 URL（MVP 新增，兼容期保留）
   topic     String?
   industry  String?
-  keywords  Json?       // 关键词 string[]（MVP 新增，从 GeoBrandSetting 移入）
+  keywords  Json?         // 关键词 string[]（MVP 新增，从 GeoBrandSetting 移入）
   language  String   @default("zh")
   country   String?
   status    String   @default("draft")
   config    Json     @default("{}")
+  brandVersion Int?       // P2 Brand Domain：创建时的品牌版本号
+  brandSnapshot Json?     // P2 Brand Domain：创建时的完整品牌数据快照
+  trigger   String   @default("manual") // manual | scheduled | monitoring_alert | api_import
   workspaceId String? @map("workspace_id")
   deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  brand   GEOBrand?     @relation(fields: [brandId], references: [id])
   entities  GEOEntity[]
   relations GEOEntityRelation[]
   versions  GEOProjectVersion[]
-  scans     GEOScanRecord[]   // MVP 新增
+  scans     GEOScanRecord[]       // MVP 新增
   discoveryReports  GEODiscoveryReport[]    // P1-A 持久化
   actionPlans       GEOActionPlan[]         // P1-A 持久化
   verificationReports GEOVerificationReport[] // P1-A 持久化
 
   @@index([userId])
   @@index([status])
+  @@index([brandId])
   @@map("kmki_geo_projects")
 }
 

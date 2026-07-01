@@ -6,7 +6,7 @@
         class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
         @click="open = !open"
       >
-        <span>📤 Export</span>
+        <span>📤 导出</span>
         <svg class="w-3.5 h-3.5" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>

@@ -51,7 +51,7 @@
           :style="{ width: progress + '%' }"
         />
       </div>
-      <span class="workflow-stepper__progress-text">{{ progress }}% Complete</span>
+      <span class="workflow-stepper__progress-text">{{ progress }}% 已完成</span>
     </div>
 
     <!-- Navigation -->
@@ -62,7 +62,7 @@
         @click="goPrev"
         aria-label="Go to previous step"
       >
-        ← Back
+        ← 后退
       </button>
 
       <div v-if="guardMessage" class="workflow-stepper__guard">
@@ -74,9 +74,9 @@
         class="workflow-stepper__nav-btn workflow-stepper__nav-btn--next"
         :disabled="!canNext"
         @click="handleNext"
-        aria-label="Go to next step"
+        aria-label="下一步"
       >
-        Next →
+        下一步 →
       </button>
     </div>
   </div>

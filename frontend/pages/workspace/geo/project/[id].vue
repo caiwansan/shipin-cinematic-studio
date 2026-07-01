@@ -1,0 +1,7 @@
+<template>
+  <WorkspaceFlowPage />
+</template>
+
+<script setup lang="ts">
+import WorkspaceFlowPage from 'workspaces/geo/pages/WorkspaceFlowPage.vue'
+</script>

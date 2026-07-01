@@ -62,7 +62,7 @@
             </div>
             <div class="dimension-card__bars">
               <div class="dimension-card__bar-row">
-                <span class="dimension-card__bar-label">Before</span>
+                <span class="dimension-card__bar-label">优化前</span>
                 <div class="dimension-card__bar-track">
                   <div
                     class="dimension-card__bar-fill dimension-card__bar-fill--before"
@@ -72,7 +72,7 @@
                 <span class="dimension-card__bar-value">{{ dim.before }}</span>
               </div>
               <div class="dimension-card__bar-row">
-                <span class="dimension-card__bar-label">After</span>
+                <span class="dimension-card__bar-label">优化后</span>
                 <div class="dimension-card__bar-track">
                   <div
                     class="dimension-card__bar-fill dimension-card__bar-fill--after"
@@ -133,7 +133,7 @@
         <h2 class="verification-page__section-title">改进瀑布图</h2>
         <div class="breakdown-waterfall">
           <div class="breakdown-waterfall__row breakdown-waterfall__row--baseline">
-            <span class="breakdown-waterfall__label">Baseline</span>
+            <span class="breakdown-waterfall__label">基线</span>
             <span class="breakdown-waterfall__value">{{ report.beforeAdi }}</span>
           </div>
           <div
@@ -231,7 +231,7 @@
       <!-- 8. Generate Report Button -->
       <section class="verification-page__section">
         <div class="verification-page__report-action">
-          <p class="verification-page__report-desc">Generate a comprehensive brand health report based on this verification data.</p>
+          <p class="verification-page__report-desc">根据验证数据生成全面的品牌健康报告。</p>
           <NuxtLink
             :to="`/workspace/geo/report/${currentProjectId}`"
             class="verification-page__report-btn"

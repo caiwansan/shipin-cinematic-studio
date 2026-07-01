@@ -12,7 +12,7 @@
         </div>
         <div class="verification-timeline__content">
           <div class="verification-timeline__header">
-            <span v-if="idx === 0" class="verification-timeline__start-label">Baseline</span>
+            <span v-if="idx === 0" class="verification-timeline__start-label">基线</span>
             <span class="verification-timeline__label">{{ item.label }}</span>
             <ImprovementBadge :contribution="item.contribution" />
           </div>

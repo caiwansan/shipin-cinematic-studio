@@ -15,6 +15,7 @@ function mapPrismaProject(p: any): GEOProject {
     id: p.id,
     userId: p.userId,
     name: p.name,
+    website: p.website || undefined,
     topic: p.topic || undefined,
     industry: p.industry || undefined,
     language: p.language || 'zh',
@@ -34,6 +35,11 @@ export interface CreateProjectInput {
   userId: string
   language?: string
   industry?: string
+  website?: string
+  description?: string
+  region?: string
+  companyType?: string
+  primaryLanguage?: string
   config?: Record<string, unknown>
 }
 
@@ -42,12 +48,13 @@ export const geoProjectService = {
    * Create a GEO project, automatically creating a Workspace Runtime workspace.
    */
   async createProject(input: CreateProjectInput): Promise<GEOProject> {
-    const { name, topic, userId, language, industry, config } = input
+    const { name, topic, userId, language, industry, config, website, description, region, companyType, primaryLanguage } = input
 
     // First create the GEO project record
     const project = await geoProjectRepository.create({
       userId,
       name,
+      website: website || '',
       topic: topic || '',
       language: language || 'zh',
       industry: industry || '',
@@ -55,23 +62,43 @@ export const geoProjectService = {
       status: 'draft',
     })
 
+    // Also create/update the brand setting (GeoBrandSetting) to persist full brand data
+    try {
+      const { geoBrandSettingRepository } = await import('../repositories/geo-brand-setting.repository.js')
+      const existingSetting = await geoBrandSettingRepository.findUnique({ where: { projectId: project.id } })
+      if (!existingSetting) {
+        await geoBrandSettingRepository.create({
+          projectId: project.id,
+          brandName: name,
+          website: website || '',
+          industry: industry || '',
+          region: region || '',
+          language: primaryLanguage || language || 'zh',
+          description: description || '',
+        })
+      }
+    } catch (err) {
+      console.error('[GEOProjectService] Failed to create brand setting:', err)
+      // Non-fatal: project created, brand setting is supplementary
+    }
+
     // Create workspace via Workspace Runtime
     try {
-      const ws = await workspaceRuntimeRepository.create({
-        data: {
-          type: 'geo',
-          tenantId: userId,
-          name: `GEO: ${name}`,
-          description: `GEO project workspace for "${name}"`,
-          status: 'active',
-          settings: JSON.stringify(getDefaultGEOWorkspaceSettings()),
-          metadata: JSON.stringify({
-            projectId: project.id,
-            moduleId: 'kmki.geo',
-            topic: topic || '',
-          }),
-        },
-      })
+      const wsData = {
+        type: 'geo',
+        tenantId: userId,
+        name: `GEO: ${name}`,
+        description: `GEO project workspace for "${name}"`,
+        status: 'active',
+        settings: JSON.stringify(getDefaultGEOWorkspaceSettings()),
+        metadata: JSON.stringify({
+          projectId: project.id,
+          moduleId: 'kmki.geo',
+          topic: topic || '',
+        }),
+      }
+      console.log('[GEOProjectService] Creating workspace with data:', JSON.stringify(wsData, null, 2))
+      const ws = await workspaceRuntimeRepository.create(wsData)
 
       // Link workspace to project
       const updated = await geoProjectRepository.update(
@@ -79,11 +106,11 @@ export const geoProjectService = {
         { workspaceId: ws.id }
       )
 
-      return mapPrismaProject(updated)
+      return updated
     } catch (err) {
       console.error('[GEOProjectService] Failed to create workspace:', err)
       // Still return the project even if workspace creation fails
-      return mapPrismaProject(project)
+      return project
     }
   },
 
@@ -93,7 +120,7 @@ export const geoProjectService = {
   async getProject(id: string): Promise<GEOProject | null> {
     const project = await geoProjectRepository.findUnique({ where: { id } })
     if (!project || project.deletedAt) return null
-    return mapPrismaProject(project)
+    return project
   },
 
   /**
@@ -113,23 +140,31 @@ export const geoProjectService = {
   /**
    * Update project.
    */
-  async updateProject(id: string, data: Partial<GEOProject>): Promise<GEOProject | null> {
+  async updateProject(id: string, data: Partial<GEOProject> & { description?: string }): Promise<GEOProject | null> {
     const existing = await geoProjectRepository.findUnique({ where: { id } })
     if (!existing || existing.deletedAt) return null
+
+    // Merge description into config (GEOProject has no description column)
+    let config = data.config ? JSON.parse(JSON.stringify(data.config)) : undefined
+    if (data.description !== undefined) {
+      config = config || {}
+      config.description = data.description
+    }
 
     const updated = await geoProjectRepository.update(
       { id },
       {
         name: data.name,
+        website: data.website,
         topic: data.topic,
         industry: data.industry,
         language: data.language,
         country: data.country,
         status: data.status,
-        config: data.config ? JSON.parse(JSON.stringify(data.config)) : undefined,
+        config,
       }
     )
-    return mapPrismaProject(updated)
+    return updated
   },
 
   /**

@@ -5,7 +5,9 @@
 import { prisma } from '../../utils/index.js'
 
 export const userRepository = {
-  async findUnique(where: any, select?: any) {
+  async findUnique(whereOrOptions: any, select?: any) {
+    // Support both (where, select) and ({ where: {...}, ... }) signatures
+    const where = whereOrOptions.where || whereOrOptions
     return prisma.user.findUnique({ where, ...(select ? { select } : {}) })
   },
 

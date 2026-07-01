@@ -1,5 +1,8 @@
 <template>
   <div class="flow-page" v-if="projectLoaded">
+    <!-- ===== Top: Back to Dashboard ===== -->
+    <NuxtLink to="/workspace/geo/dashboard" class="flow-page__back-btn">← 返回工作台</NuxtLink>
+
     <!-- ===== Top: Workflow Stepper ===== -->
     <WorkflowStepper
       @step-change="onStepChange"
@@ -11,8 +14,8 @@
     <div class="flow-page__content">
       <!-- Assessment Step -->
       <div v-if="workflow.currentStep === 'assessment'" class="flow-page__step-panel">
-        <h2 class="flow-page__step-title">📊 Assessment</h2>
-        <p class="flow-page__step-desc">Assess your project's current brand health and ADI score.</p>
+        <h2 class="flow-page__step-title">📊 评估</h2>
+        <p class="flow-page__step-desc">评估项目当前品牌健康和 ADI 得分。</p>
         <div class="flow-page__embedded">
           <HealthPageEmbedded
             :project-id="projectId"
@@ -23,8 +26,8 @@
 
       <!-- Discovery Step -->
       <div v-else-if="workflow.currentStep === 'discovery'" class="flow-page__step-panel">
-        <h2 class="flow-page__step-title">🔍 Discovery</h2>
-        <p class="flow-page__step-desc">Discover how your entity performs across demand scenarios.</p>
+        <h2 class="flow-page__step-title">🔍 发现</h2>
+        <p class="flow-page__step-desc">分析实体在各需求场景中的表现。</p>
         <div class="flow-page__embedded">
           <DiscoveryLabPageEmbedded
             :project-id="projectId"
@@ -35,8 +38,8 @@
 
       <!-- Opportunity Review Step -->
       <div v-else-if="workflow.currentStep === 'opportunity'" class="flow-page__step-panel">
-        <h2 class="flow-page__step-title">💡 Opportunity Review</h2>
-        <p class="flow-page__step-desc">Review high-priority optimization opportunities.</p>
+        <h2 class="flow-page__step-title">💡 机会评估</h2>
+        <p class="flow-page__step-desc">查看高优先级的优化机会。</p>
         <div class="flow-page__embedded">
           <OpportunityPanelEmbedded
             :project-id="projectId"
@@ -47,8 +50,8 @@
 
       <!-- Action Plan Step -->
       <div v-else-if="workflow.currentStep === 'action-plan'" class="flow-page__step-panel">
-        <h2 class="flow-page__step-title">📋 Action Plan</h2>
-        <p class="flow-page__step-desc">Create and review action plans based on identified opportunities.</p>
+        <h2 class="flow-page__step-title">📋 行动计划</h2>
+        <p class="flow-page__step-desc">基于识别出的机会制定和审查行动计划。</p>
         <div class="flow-page__embedded">
           <ActionPlanPanelEmbedded
             :project-id="projectId"
@@ -59,19 +62,19 @@
 
       <!-- Execution Step (Placeholder) -->
       <div v-else-if="workflow.currentStep === 'execution'" class="flow-page__step-panel">
-        <h2 class="flow-page__step-title">⚡ Execution</h2>
-        <p class="flow-page__step-desc">Execute the planned actions. This step is reserved for future implementation.</p>
+        <h2 class="flow-page__step-title">⚡ 执行</h2>
+        <p class="flow-page__step-desc">执行已规划的操作。此步骤预留用于后续实现。</p>
         <div class="flow-page__embedded">
           <div class="flow-page__placeholder">
             <div class="flow-page__placeholder-icon">🚧</div>
-            <h3>Execution Engine — Coming Soon</h3>
-            <p>This step will allow you to execute optimization actions directly from the platform.</p>
-            <p class="flow-page__placeholder-hint">For now, you can mark this step as complete to proceed.</p>
+            <h3>执行引擎 — 即将上线</h3>
+            <p>后续将支持直接从平台执行优化操作。</p>
+            <p class="flow-page__placeholder-hint">目前可以标记此步骤为完成以继续。</p>
             <button
               class="flow-page__placeholder-btn"
               @click="workflow.completeStep('execution')"
             >
-              Mark as Complete
+              标记为完成
             </button>
           </div>
         </div>
@@ -79,8 +82,8 @@
 
       <!-- Verification Step -->
       <div v-else-if="workflow.currentStep === 'verification'" class="flow-page__step-panel">
-        <h2 class="flow-page__step-title">✅ Verification</h2>
-        <p class="flow-page__step-desc">Verify the impact of your optimization efforts with Before/After ADI comparison.</p>
+        <h2 class="flow-page__step-title">✅ 验证</h2>
+        <p class="flow-page__step-desc">通过优化前后 ADI 对比验证优化效果。</p>
         <div class="flow-page__embedded">
           <VerificationPageEmbedded
             :project-id="projectId"
@@ -91,8 +94,8 @@
 
       <!-- Report Step -->
       <div v-else-if="workflow.currentStep === 'report'" class="flow-page__step-panel">
-        <h2 class="flow-page__step-title">📄 Report</h2>
-        <p class="flow-page__step-desc">View the complete GEO optimization report.</p>
+        <h2 class="flow-page__step-title">📄 报告</h2>
+        <p class="flow-page__step-desc">查看完整的 GEO 优化报告。</p>
         <div class="flow-page__embedded">
           <ReportPanelEmbedded
             :project-id="projectId"
@@ -106,19 +109,19 @@
   <!-- ===== Loading State ===== -->
   <div v-else-if="loading" class="flow-page__loading">
     <div class="flow-page__spinner" />
-    <span>Loading project...</span>
+    <span>正在加载项目...</span>
   </div>
 
   <!-- ===== Error State ===== -->
   <div v-else-if="loadError" class="flow-page__error">
     <p>{{ loadError }}</p>
-    <button class="flow-page__btn" @click="initProject">Retry</button>
+    <button class="flow-page__btn" @click="initProject">重试</button>
   </div>
 
   <!-- ===== Not Found ===== -->
   <div v-else class="flow-page__not-found">
-    <p>Project not found.</p>
-    <NuxtLink to="/workspace/geo/dashboard" class="flow-page__btn">← Back to Dashboard</NuxtLink>
+    <p>项目未找到。</p>
+    <NuxtLink to="/workspace/geo/dashboard" class="flow-page__btn">← 返回工作台</NuxtLink>
   </div>
 </template>
 
@@ -304,6 +307,24 @@ function onReportComplete(data?: any) {
   font-size: 14px;
   color: #6b7280;
   margin: 0 0 20px;
+}
+
+.flow-page__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #6b7280;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+  margin-bottom: 12px;
+}
+
+.flow-page__back-btn:hover {
+  color: #374151;
+  background: #f3f4f6;
 }
 
 .flow-page__embedded {

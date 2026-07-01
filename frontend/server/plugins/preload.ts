@@ -89,7 +89,9 @@ export default defineNitroPlugin((nitroApp) => {
       cleanPath.startsWith('/studio/') ||
       cleanPath.startsWith('/user/') ||
       cleanPath.startsWith('/admin/') ||
-      cleanPath.startsWith('/workspace/geo/detail/')
+      cleanPath.startsWith('/workspace/geo/detail/') ||
+      cleanPath.startsWith('/workspace/geo/brand/') ||
+      cleanPath.startsWith('/workspace/geo/project/')
 
     if (!isKnown) {
       response.statusCode = 404

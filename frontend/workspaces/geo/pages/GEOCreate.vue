@@ -181,7 +181,7 @@ async function handleSubmit() {
           })
         }
       }
-      router.push(`/workspace/geo/detail/${project.id}`)
+      router.push(`/workspace/geo/brand/${project.id}`)
     }
   } finally {
     isSubmitting.value = false

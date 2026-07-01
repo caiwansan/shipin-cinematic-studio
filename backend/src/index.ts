@@ -583,6 +583,8 @@ await app.register(projectV2Routes)
   await app.register(await import('./services/geo/routes/geo-report.route.js').then(m => m.default))
   // GEO v4 Verification routes — Truth Layer MVP
   await app.register(await import('./services/geo/verification/verification.route.js').then(m => m.geoVerificationRoutes))
+  // P0-T006: Verification MVP — Brand Verify API
+  await app.register(await import('./services/geo/routes/geo-verification.route.js').then(m => m.geoVerificationRoutes))
   // GEO v4 Publishing routes — Publishing Pipeline
   await app.register(await import('./services/geo/publishing/publishing.route.js').then(m => m.default))
   // GEO v4 Monitor routes — Observation Runtime
@@ -628,6 +630,28 @@ await app.register(projectV2Routes)
     console.log('[startup] ✅ GEO V1 Product API registered at /api/v1/geo/*')
   } catch (err) {
     console.warn('[startup] ⚠️ GEO V1 Product route skipped:', (err as Error).message)
+  }
+
+  // P0-T003 — Explain Everywhere MVP
+  try {
+    await app.register(await import('./services/geo/routes/geo-explain.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Explain route registered at /api/geo/brands/:id/explain')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Explain route skipped:', (err as Error).message)
+  }
+  // P0-T004 — Optimization Center MVP
+  try {
+    await app.register(await import('./services/geo/routes/geo-optimization.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Optimization route registered at /api/geo/brands/:id/optimizations')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Optimization route skipped:', (err as Error).message)
+  }
+  // P0-T005 — AI Presence Engine Route
+  try {
+    await app.register(await import('./services/geo/routes/geo-presence.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Presence route registered at /api/geo/brands/:id/presence')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Presence route skipped:', (err as Error).message)
   }
   // Unified Asset Runtime routes — wrapped to avoid tsx @platform alias issue
   try { await app.register(await import('./routes/asset/asset.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset route skipped:', (err as Error).message) }

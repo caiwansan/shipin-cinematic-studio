@@ -28,7 +28,7 @@
         variant="primary"
         @click="store.fetchRecs()"
         :disabled="store.isLoading"
-      >Retry</DSButton>
+      >重试</DSButton>
     </ErrorBanner>
 
     <!-- ===== STATE: Empty ===== -->
@@ -77,7 +77,7 @@
 
       <!-- Action Cards -->
       <div class="recs-page__section">
-        <h3 class="recs-page__section-title">Priority Actions</h3>
+        <h3 class="recs-page__section-title">优先行动</h3>
         <ActionPanel
           :actions="store.recommendations.map(r => ({
             id: r.id,
@@ -100,7 +100,7 @@
 
       <!-- History (if available) -->
       <div v-if="store.history.length > 0" class="recs-page__section">
-        <h3 class="recs-page__section-title">Recommendation History</h3>
+        <h3 class="recs-page__section-title">推荐历史</h3>
         <div class="recs-page__history" role="list">
           <div
             v-for="item in store.history.slice(0, 5)"
@@ -124,7 +124,7 @@
       />
       <div v-else class="recs-page__uptodate">
         <span class="recs-page__uptodate-icon">&#10003;</span>
-        <span>Brand Health up to date</span>
+        <span>品牌健康已是最新</span>
       </div>
     </template>
   </div>

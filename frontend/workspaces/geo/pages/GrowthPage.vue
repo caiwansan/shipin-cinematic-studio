@@ -29,7 +29,7 @@
         variant="primary"
         @click="store.fetchGrowth()"
         :disabled="store.isLoading"
-      >Retry</DSButton>
+      >重试</DSButton>
     </ErrorBanner>
 
     <!-- ===== STATE: Empty ===== -->
@@ -56,7 +56,7 @@
           dismissible
           @dismiss="store.error = null"
         >
-          <DSButton variant="primary" @click="store.fetchGrowth()">Retry</DSButton>
+          <DSButton variant="primary" @click="store.fetchGrowth()">重试</DSButton>
         </ErrorBanner>
       </Transition>
 
@@ -69,7 +69,7 @@
 
       <!-- Trend Chart -->
       <div v-if="store.trendPoints.length > 1" class="growth-page__chart">
-        <h3 class="growth-page__section-title">Brand Health Trend</h3>
+        <h3 class="growth-page__section-title">品牌健康趋势</h3>
         <TrendChart
           :points="store.trendPoints"
           title="Brand Health Trend"
@@ -107,7 +107,7 @@
 
       <!-- Time Period Selector -->
       <div class="growth-page__period" role="group" aria-label="Time period selector">
-        <span class="growth-page__period-label">Time period:</span>
+        <span class="growth-page__period-label">时间段：</span>
         <div class="growth-page__period-options">
           <button
             v-for="p in periods"

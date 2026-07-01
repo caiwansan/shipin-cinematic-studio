@@ -2,8 +2,8 @@
   <div class="executive-summary-card rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-emerald-50 overflow-hidden">
     <!-- Header -->
     <div class="px-6 py-5">
-      <h2 class="text-lg font-bold text-gray-900 mb-1">Brand Health Report — {{ projectName }}</h2>
-      <p class="text-sm text-gray-500">Generated: {{ formattedDate }}</p>
+      <h2 class="text-lg font-bold text-gray-900 mb-1">品牌健康报告 — {{ projectName }}</h2>
+      <p class="text-sm text-gray-500">生成时间：{{ formattedDate }}</p>
     </div>
 
     <!-- Metrics Grid -->
@@ -11,7 +11,7 @@
       <div class="grid grid-cols-5 gap-4">
         <div class="text-center">
           <div class="text-2xl font-extrabold text-gray-900">{{ report.executiveSummary.currentAdi }}</div>
-          <div class="text-xs text-gray-500 mt-0.5">Current ADI</div>
+          <div class="text-xs text-gray-500 mt-0.5">当前 ADI</div>
         </div>
         <div class="text-center">
           <div
@@ -32,7 +32,7 @@
         </div>
         <div class="text-center">
           <div class="text-2xl font-extrabold text-gray-900">{{ (report.executiveSummary.confidence * 100).toFixed(0) }}%</div>
-          <div class="text-xs text-gray-500 mt-0.5">Confidence</div>
+          <div class="text-xs text-gray-500 mt-0.5">置信度</div>
         </div>
       </div>
     </div>

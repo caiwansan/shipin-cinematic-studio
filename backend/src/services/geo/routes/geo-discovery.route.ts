@@ -140,4 +140,29 @@ export default async function geoDiscoveryRoutes(fastify: FastifyInstance) {
       });
     }
   });
+
+  // GET /api/geo/discovery/verify — 无 v1 前缀副本
+  fastify.get('/api/geo/discovery/verify', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { entity } = request.query as { entity?: string };
+
+    if (!entity || entity.trim().length === 0) {
+      return reply.status(400).send({
+        success: false,
+        error: '缺少 entity 参数',
+      });
+    }
+
+    try {
+      const report = await verificationService.verify(entity.trim());
+      return {
+        success: true,
+        data: report,
+      };
+    } catch (err: any) {
+      return reply.status(500).send({
+        success: false,
+        error: err.message || '验证执行失败',
+      });
+    }
+  });
 }

@@ -3,7 +3,7 @@
  */
 import { ofetch } from 'ofetch'
 
-const API_BASE = '/api/v1/geo'
+const API_BASE = '/api/geo'
 
 function getAuthHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {}

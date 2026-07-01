@@ -2,25 +2,25 @@
   <div class="findings-section">
     <div class="flex items-center gap-2 mb-4">
       <span class="text-lg">🔍</span>
-      <h3 class="text-base font-semibold text-gray-900">Findings — 发现汇总</h3>
+      <h3 class="text-base font-semibold text-gray-900">发现汇总</h3>
     </div>
 
     <!-- Entity & Coverage Stats -->
     <div class="flex gap-6 mb-5 text-sm text-gray-600">
       <div>
-        <span class="font-medium text-gray-900">Industry:</span>
+        <span class="font-medium text-gray-900">行业：</span>
         {{ report.findings.industry || 'N/A' }}
       </div>
       <div>
-        <span class="font-medium text-gray-900">Entity:</span>
+        <span class="font-medium text-gray-900">实体：</span>
         {{ report.findings.entityName }}
       </div>
       <div>
-        <span class="font-medium text-gray-900">Coverage:</span>
+        <span class="font-medium text-gray-900">覆盖度：</span>
         {{ report.findings.coverageCount }}
       </div>
       <div>
-        <span class="font-medium text-gray-900">Scenarios:</span>
+        <span class="font-medium text-gray-900">场景数：</span>
         {{ report.findings.totalScenarios }}
       </div>
     </div>
