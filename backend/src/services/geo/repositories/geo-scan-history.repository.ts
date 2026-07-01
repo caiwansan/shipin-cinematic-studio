@@ -15,10 +15,10 @@ function mapPrismaScan(s: any) {
     config: s.config || undefined,
     result: s.result || undefined,
     error: s.error || undefined,
-    startedAt: s.startedAt?.toISOString() || null,
-    completedAt: s.completedAt?.toISOString() || null,
-    createdAt: s.createdAt.toISOString(),
-    updatedAt: s.updatedAt.toISOString(),
+    startedAt: s.startedAt?.toISOString?.() || null,
+    completedAt: s.completedAt?.toISOString?.() || null,
+    createdAt: s.createdAt?.toISOString?.() || s.createdAt,
+    updatedAt: s.updatedAt?.toISOString?.() || s.createdAt?.toISOString?.() || new Date().toISOString(),
   }
 }
 
