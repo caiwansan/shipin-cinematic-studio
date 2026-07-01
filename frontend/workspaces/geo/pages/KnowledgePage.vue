@@ -68,11 +68,97 @@
         @update:model-value="store.setSearchQuery($event)"
       />
 
+      <!-- ===== Knowledge Evaluation (BII) ===== -->
+      <div class="knowledge-page__section knowledge-evaluation">
+        <h3 class="knowledge-page__section-title flex items-center gap-2">
+          <span>📊</span> Knowledge Evaluation
+          <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-mono">BII</span>
+        </h3>
+        <p class="text-xs text-gray-400 -mt-3 mb-2">
+          Brand Health Index — Evaluation of brand knowledge quality
+        </p>
+
+        <div v-if="healthLoading" class="flex items-center justify-center py-4">
+          <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span class="ml-2 text-sm text-gray-400">Loading brand health data...</span>
+        </div>
+
+        <div v-else-if="healthError" class="text-sm text-red-500 py-2">
+          {{ healthError }}
+        </div>
+
+        <div v-else-if="brandHealth.hasData" class="knowledge-evaluation__content">
+          <!-- Overall Score -->
+          <div class="bg-white rounded-lg border border-gray-200 p-4 mb-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-sm font-medium text-gray-700">Brand Health Score</span>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-3xl font-bold" :class="overallScoreTextColor">{{ brandHealth.brandHealth }}</span>
+                  <span
+                    class="text-xs font-medium px-2 py-0.5 rounded-full"
+                    :class="overallScoreBadgeColor"
+                  >
+                    {{ brandHealth.healthLabel }}
+                  </span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span
+                  v-if="brandHealth.scoreChange !== 0"
+                  class="text-sm font-medium"
+                  :class="brandHealth.scoreChange > 0 ? 'text-green-600' : 'text-red-600'"
+                >
+                  {{ brandHealth.scoreChange > 0 ? '↑' : '↓' }} {{ Math.abs(brandHealth.scoreChange) }}
+                </span>
+                <p class="text-xs text-gray-400 mt-0.5">vs. previous period</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dimension Scores -->
+          <div class="grid gap-2">
+            <div
+              v-for="dim in brandHealth.dimensions"
+              :key="dim.id"
+              class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-xs w-2 h-2 rounded-full" :style="{ backgroundColor: dimScoreBarColor(dim.score) }" />
+                <span class="text-sm text-gray-700">{{ dim.label }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden hidden sm:block">
+                  <div
+                    class="h-full rounded-full"
+                    :style="{ width: (dim.score / dim.maxScore * 100) + '%', backgroundColor: dimScoreBarColor(dim.score) }"
+                  />
+                </div>
+                <span class="text-sm font-medium text-gray-600 w-10 text-right">{{ dim.score }}/{{ dim.maxScore }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Coverage details -->
+          <div v-if="brandHealth.coverage" class="mt-3 pt-3 border-t border-gray-100">
+            <div class="flex items-center gap-4 text-xs text-gray-500">
+              <span>Evidence: {{ brandHealth.coverage.evidenceCount }}</span>
+              <span>Entities: {{ brandHealth.coverage.entityCount }}</span>
+              <span>Claims: {{ brandHealth.coverage.claimCount }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="text-sm text-gray-400 py-3 text-center">
+          No BII data available for this project.
+        </div>
+      </div>
+
       <!-- Knowledge Overview -->
       <KnowledgeOverview
         :brand-description="store.brandDescription"
-        :coverage="store.coverage"
-        :categories="store.categories"
+        :coverage="store.coverage.percentage"
+        :categories="store.categories.map(c => c.name)"
       />
 
       <!-- Knowledge Sources -->
@@ -98,19 +184,19 @@
       <div v-if="store.freshness" class="knowledge-page__freshness">
         <div class="knowledge-page__freshness-header">
           <h3 class="knowledge-page__section-title">Freshness</h3>
-          <span class="knowledge-page__freshness-score">{{ store.freshness.score }}/100</span>
+          <span class="knowledge-page__freshness-score">{{ store.freshness.overall }}/100</span>
         </div>
         <div
           class="knowledge-page__freshness-bar"
           role="progressbar"
-          :aria-valuenow="store.freshness.score"
+          :aria-valuenow="store.freshness.overall"
           aria-valuemin="0"
           aria-valuemax="100"
           aria-label="Knowledge freshness score"
         >
           <div
             class="knowledge-page__freshness-fill"
-            :style="{ width: store.freshness.score + '%' }"
+            :style="{ width: store.freshness.overall + '%' }"
           />
         </div>
         <p class="knowledge-page__freshness-date">Last updated: {{ store.freshness.lastUpdated }}</p>
@@ -127,7 +213,7 @@
             role="listitem"
           >
             <span class="knowledge-page__missing-icon" role="img" aria-label="Warning">&#9888;</span>
-            <span class="knowledge-page__missing-text">{{ missing }}</span>
+            <span class="knowledge-page__missing-text">{{ missing.suggestion }}</span>
           </div>
         </div>
       </div>
@@ -167,9 +253,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKnowledgeStore } from '../stores/useKnowledgeStore'
+import { useHealthStore } from '../stores/useHealthStore'
 import Hero from '~/design-system/product-blocks/Hero/index.vue'
 import KnowledgeOverview from '~/design-system/product-blocks/KnowledgeOverview/index.vue'
 import LoadingState from '~/design-system/components/LoadingState/index.vue'
@@ -180,9 +267,47 @@ import DSButton from '~/design-system/primitives/Button/index.vue'
 
 const router = useRouter()
 const store = useKnowledgeStore()
+const brandHealth = useHealthStore()
+
+const healthLoading = ref(false)
+const healthError = ref<string | null>(null)
+
+const overallScoreTextColor = computed(() => {
+  const s = brandHealth.brandHealth
+  if (s >= 80) return 'text-green-600'
+  if (s >= 60) return 'text-yellow-600'
+  if (s >= 40) return 'text-orange-600'
+  return 'text-red-600'
+})
+const overallScoreBadgeColor = computed(() => {
+  const s = brandHealth.brandHealth
+  if (s >= 80) return 'bg-green-100 text-green-700'
+  if (s >= 60) return 'bg-yellow-100 text-yellow-700'
+  if (s >= 40) return 'bg-orange-100 text-orange-700'
+  return 'bg-red-100 text-red-700'
+})
+
+function dimScoreBarColor(score: number): string {
+  if (score >= 80) return '#22c55e'
+  if (score >= 60) return '#eab308'
+  return '#ef4444'
+}
+
+async function loadBrandHealth() {
+  healthLoading.value = true
+  healthError.value = null
+  try {
+    await brandHealth.fetchHealth()
+  } catch (err: any) {
+    healthError.value = err?.message || 'Failed to load brand health data'
+  } finally {
+    healthLoading.value = false
+  }
+}
 
 onMounted(async () => {
   await store.fetchKnowledge()
+  await loadBrandHealth()
 })
 
 function handleStatementClick(id: string) {
@@ -406,6 +531,34 @@ function handleStatementClick(id: string) {
   display: flex;
   align-items: center;
   gap: var(--space-2, 8px);
+}
+
+.knowledge-evaluation__content {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-4, 16px);
+}
+
+.knowledge-page__section.knowledge-evaluation {
+  background-color: #fafbfc;
+  padding: var(--space-4, 16px);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+
+.knowledge-page__section.knowledge-evaluation .knowledge-page__section-title {
+  font-size: var(--text-heading-4-size, 18px);
+}
+
+.knowledge-evaluation .grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.knowledge-evaluation .knowledge-page__section-title span:last-child {
+  font-family: monospace;
+  font-size: 11px;
 }
 
 .knowledge-page__statement-category {
