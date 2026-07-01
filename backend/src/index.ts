@@ -687,18 +687,19 @@ await app.register(projectV2Routes)
     const { ProviderRuntime } = await import('./platform/knowledge-hub/core/provider-runtime.js')
     const { GeoKnowledgeProvider } = await import('./platform/knowledge-hub/providers/geo/geo-knowledge.provider.js')
     const { NovelKnowledgeProvider } = await import('./platform/knowledge-hub/providers/stubs/novel.provider.js')
-    const { StoryKnowledgeProvider } = await import('./platform/knowledge-hub/providers/stubs/story.provider.js')
+    const { StoryKnowledgeProvider } = await import('./platform/knowledge-hub/providers/story.provider.js')
     const { PresentationKnowledgeProvider } = await import('./platform/knowledge-hub/providers/stubs/presentation.provider.js')
 
     const versionEngine = new VersionEngine()
     const providerRuntime = new ProviderRuntime()
     providerRuntime.register(new GeoKnowledgeProvider())
     providerRuntime.register(new NovelKnowledgeProvider())
-    providerRuntime.register(new StoryKnowledgeProvider())
+    const { PrismaClient } = await import('@prisma/client')
+    const khPrisma = new PrismaClient()
+    providerRuntime.register(new StoryKnowledgeProvider(khPrisma))
     providerRuntime.register(new PresentationKnowledgeProvider())
 
     registerKnowledgeHubRoutes(app, { versionEngine, providerRuntime })
-
     // KH2 — Publishing Engine
     const { PublishingEngine } = await import('./platform/knowledge-hub/publishing/publishing-engine.js')
     const { PublisherRegistry } = await import('./platform/knowledge-hub/publishing/publisher-registry.js')

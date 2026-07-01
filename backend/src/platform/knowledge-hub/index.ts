@@ -88,5 +88,5 @@ export {
 // Providers
 export { GeoKnowledgeProvider } from './providers/geo/geo-knowledge.provider'
 export { NovelKnowledgeProvider } from './providers/stubs/novel.provider'
-export { StoryKnowledgeProvider } from './providers/stubs/story.provider'
+export { StoryKnowledgeProvider } from './providers/story.provider'
 export { PresentationKnowledgeProvider } from './providers/stubs/presentation.provider'
