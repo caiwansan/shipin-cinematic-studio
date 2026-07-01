@@ -1,0 +1,159 @@
+{
+  "category": "trust",
+  "description": "品牌可信度 — 争议应对、风险披露、客观评价",
+  "questions": [
+    {
+      "id": "Q-TRU-001",
+      "category": "trust",
+      "difficulty": 2,
+      "intent": "验证品牌争议处理能力",
+      "prompt": {
+        "user": "{entity} 有没有过什么争议或负面新闻？你怎么看？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的争议", "type": "fact", "required": true, "weight": 1.0 },
+        { "claim": "客观评价", "type": "opinion", "required": true, "weight": 0.8 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["controversy"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-002",
+      "category": "trust",
+      "difficulty": 3,
+      "intent": "验证品牌风险信息披露",
+      "prompt": {
+        "user": "使用或购买{entity}产品有什么潜在风险需要注意？"
+      },
+      "expectedClaims": [
+        { "claim": "潜在风险", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["risk"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-003",
+      "category": "trust",
+      "difficulty": 2,
+      "intent": "验证品牌客观评价",
+      "prompt": {
+        "user": "客观评价一下{entity}的优点和不足。"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的优点", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的不足", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["balanced"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-004",
+      "category": "trust",
+      "difficulty": 3,
+      "intent": "验证品牌信息安全/隐私认知",
+      "prompt": {
+        "user": "{entity} 在用户数据安全和隐私保护方面做得怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的数据安全", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["privacy", "security"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-005",
+      "category": "trust",
+      "difficulty": 2,
+      "intent": "验证品牌合规认知",
+      "prompt": {
+        "user": "{entity} 在合规经营方面表现如何？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的合规", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["compliance"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-006",
+      "category": "trust",
+      "difficulty": 3,
+      "intent": "验证品牌的诚信度认知",
+      "prompt": {
+        "user": "{entity} 的诚信度和透明度如何？有过虚假宣传或质量问题吗？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的诚信", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["integrity"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-007",
+      "category": "trust",
+      "difficulty": 3,
+      "intent": "验证品牌社会责任认知",
+      "prompt": {
+        "user": "{entity} 在企业社会责任方面有什么表现？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的社会责任", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 0.6 },
+      "tags": ["csr"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-008",
+      "category": "trust",
+      "difficulty": 2,
+      "intent": "验证品牌客户信任度",
+      "prompt": {
+        "user": "用户对{entity}的信任度怎么样？有什么指标或数据？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的信任度", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["trust_index"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-009",
+      "category": "trust",
+      "difficulty": 2,
+      "intent": "验证品牌危机应对认知",
+      "prompt": {
+        "user": "{entity} 在遇到危机时通常会怎么处理？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的危机应对", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["crisis"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-TRU-010",
+      "category": "trust",
+      "difficulty": 3,
+      "intent": "验证品牌行业监管认知",
+      "prompt": {
+        "user": "{entity} 所属行业有哪些监管要求？{entity} 做得怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "行业监管", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的合规表现", "type": "opinion", "required": false, "weight": 0.6 }
+      ],
+      "evaluation": { "dimension": "trust", "scoringRule": "semantic", "weight": 0.6 },
+      "tags": ["regulation"],
+      "lastUpdated": "2026-06-30"
+    }
+  ]
+}

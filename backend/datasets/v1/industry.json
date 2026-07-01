@@ -1,0 +1,192 @@
+{
+  "category": "industry",
+  "description": "行业深度认知 — 行业地位、竞争格局、优劣势分析",
+  "questions": [
+    {
+      "id": "Q-IND-001",
+      "category": "industry",
+      "difficulty": 2,
+      "intent": "验证品牌行业地位认知",
+      "prompt": {
+        "user": "{entity} 在行业中处于什么地位？排名如何？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 在行业中", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["industry", "position"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-002",
+      "category": "industry",
+      "difficulty": 2,
+      "intent": "验证品牌竞争对手认知",
+      "prompt": {
+        "user": "{entity} 的主要竞争对手有哪些？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的竞争对手包括", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["competition"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-003",
+      "category": "industry",
+      "difficulty": 2,
+      "intent": "验证品牌优势认知",
+      "prompt": {
+        "user": "{entity} 的核心竞争优势是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的优势是", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["strengths"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-004",
+      "category": "industry",
+      "difficulty": 2,
+      "intent": "验证品牌劣势/挑战认知",
+      "prompt": {
+        "user": "{entity} 面临的主要挑战或不足是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 面临的挑战", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.9 },
+      "tags": ["weaknesses"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-005",
+      "category": "industry",
+      "difficulty": 3,
+      "intent": "验证品牌市场份额认知",
+      "prompt": {
+        "user": "{entity} 的市场份额是多少？近几年有什么变化？"
+      },
+      "expectedClaims": [
+        { "claim": "市场份额", "type": "fact", "required": false, "weight": 0.7 },
+        { "claim": "市场变化", "type": "opinion", "required": false, "weight": 0.5 }
+      ],
+      "evaluation": { "dimension": "accuracy", "scoringRule": "evidence_required", "weight": 0.7 },
+      "tags": ["market_share"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-006",
+      "category": "industry",
+      "difficulty": 3,
+      "intent": "验证品牌供应链/生态认知",
+      "prompt": {
+        "user": "{entity} 的产业链布局和生态系统是怎样的？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的产业链", "type": "opinion", "required": false, "weight": 0.7 },
+        { "claim": "{entity} 的生态系统", "type": "opinion", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["ecosystem", "supply_chain"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-007",
+      "category": "industry",
+      "difficulty": 2,
+      "intent": "验证品牌行业影响力认知",
+      "prompt": {
+        "user": "{entity} 对行业有什么影响或贡献？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 对行业的影响", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["influence"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-008",
+      "category": "industry",
+      "difficulty": 3,
+      "intent": "验证品牌行业评级/分析",
+      "prompt": {
+        "user": "分析一下{entity}在行业中的SWOT（优势、劣势、机会、威胁）。"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的优势", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的劣势", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的机会", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的威胁", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["swot", "analysis"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-009",
+      "category": "industry",
+      "difficulty": 2,
+      "intent": "验证品牌技术壁垒认知",
+      "prompt": {
+        "user": "{entity} 在技术方面有什么核心竞争力？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的技术", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["technology"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-010",
+      "category": "industry",
+      "difficulty": 2,
+      "intent": "验证品牌行业趋势认知",
+      "prompt": {
+        "user": "{entity} 所处的行业有哪些发展趋势？{entity} 如何应对？"
+      },
+      "expectedClaims": [
+        { "claim": "行业趋势", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的应对策略", "type": "opinion", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["trends"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-011",
+      "category": "industry",
+      "difficulty": 3,
+      "intent": "验证品牌国际化认知",
+      "prompt": {
+        "user": "{entity} 在国际市场的表现如何？全球化战略是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 在国际市场", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["global", "international"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-IND-012",
+      "category": "industry",
+      "difficulty": 2,
+      "intent": "验证品牌客户/用户规模认知",
+      "prompt": {
+        "user": "{entity} 有多少用户或客户？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的用户规模", "type": "fact", "required": false, "weight": 0.6 }
+      ],
+      "evaluation": { "dimension": "accuracy", "scoringRule": "exact", "weight": 0.5 },
+      "tags": ["users"],
+      "lastUpdated": "2026-06-30"
+    }
+  ]
+}

@@ -1,0 +1,236 @@
+{
+  "category": "comparison",
+  "description": "对比评估 — 多品牌对比、场景匹配、倾向性",
+  "questions": [
+    {
+      "id": "Q-CMP-001",
+      "category": "comparison",
+      "difficulty": 2,
+      "intent": "验证直接对比中的品牌倾向",
+      "prompt": {
+        "user": "{entity} 和它的主要竞争对手相比，你会推荐哪个？为什么？"
+      },
+      "expectedClaims": [
+        { "claim": "推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 },
+        { "claim": "{entity} 的优势在于", "type": "opinion", "required": true, "weight": 0.8 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 1.0 },
+      "tags": ["direct_comparison"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-002",
+      "category": "comparison",
+      "difficulty": 2,
+      "intent": "验证产品层面的对比倾向",
+      "prompt": {
+        "user": "如果要在{entity}和主要竞争对手的产品之间选择，哪个更适合普通消费者？"
+      },
+      "expectedClaims": [
+        { "claim": "推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 1.0 },
+      "tags": ["consumer_choice"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-003",
+      "category": "comparison",
+      "difficulty": 3,
+      "intent": "验证不同场景下的品牌偏好",
+      "prompt": {
+        "user": "对于企业客户来说，{entity}和竞争对手哪个更适合？对于个人用户呢？"
+      },
+      "expectedClaims": [
+        { "claim": "对企业客户", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "对个人用户", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 1.0 },
+      "tags": ["segment", "b2b_b2c"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-004",
+      "category": "comparison",
+      "difficulty": 2,
+      "intent": "验证品牌性价比对比认知",
+      "prompt": {
+        "user": "{entity} 的性价比如何？和同行相比怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的性价比", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.8 },
+      "tags": ["value"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-005",
+      "category": "comparison",
+      "difficulty": 3,
+      "intent": "验证品牌差异化对比分析",
+      "prompt": {
+        "user": "分析一下{entity}和主要竞争对手的核心差异点在哪些方面？"
+      },
+      "expectedClaims": [
+        { "claim": "核心差异", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 1.0 },
+      "tags": ["differentiation"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-006",
+      "category": "comparison",
+      "difficulty": 2,
+      "intent": "验证品牌信任度对比",
+      "prompt": {
+        "user": "从品牌信任度的角度，{entity}和竞争对手相比怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的信任度", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.8 },
+      "tags": ["trust"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-007",
+      "category": "comparison",
+      "difficulty": 3,
+      "intent": "验证品牌技术创新对比",
+      "prompt": {
+        "user": "在技术创新方面，{entity}和主要竞争对手相比处于什么水平？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的技术创新水平", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.8 },
+      "tags": ["innovation"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-008",
+      "category": "comparison",
+      "difficulty": 2,
+      "intent": "验证品牌性价比倾向（多维度）",
+      "prompt": {
+        "user": "请从价格、品质、服务三个方面，比较{entity}和其主要竞争对手。"
+      },
+      "expectedClaims": [
+        { "claim": "价格方面", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "品质方面", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "服务方面", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 1.0 },
+      "tags": ["multi_dimension"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-009",
+      "category": "comparison",
+      "difficulty": 3,
+      "intent": "验证品牌综合竞争力对比",
+      "prompt": {
+        "user": "在未来5年，你认为{entity}和主要竞争对手谁更有发展潜力？为什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的发展潜力", "type": "opinion", "required": false, "weight": 0.8 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.8 },
+      "tags": ["future", "potential"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-010",
+      "category": "comparison",
+      "difficulty": 3,
+      "intent": "验证品牌全球化对比",
+      "prompt": {
+        "user": "在全球市场上，{entity}和国际知名品牌相比处于什么位置？"
+      },
+      "expectedClaims": [
+        { "claim": "全球市场地位", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.7 },
+      "tags": ["global"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-011",
+      "category": "comparison",
+      "difficulty": 2,
+      "intent": "验证品牌品牌形象对比",
+      "prompt": {
+        "user": "{entity} 的品牌形象和竞争对手相比有什么不同？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的品牌形象", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.7 },
+      "tags": ["brand_image"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-012",
+      "category": "comparison",
+      "difficulty": 2,
+      "intent": "验证品牌渠道对比认知",
+      "prompt": {
+        "user": "{entity} 的销售渠道和覆盖面与主要竞争对手相比如何？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的渠道", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.6 },
+      "tags": ["channel"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-013",
+      "category": "comparison",
+      "difficulty": 3,
+      "intent": "验证品牌投资价值对比",
+      "prompt": {
+        "user": "从投资角度看，{entity}和主要竞争对手相比有什么优势和风险？"
+      },
+      "expectedClaims": [
+        { "claim": "投资优势", "type": "opinion", "required": false, "weight": 0.5 },
+        { "claim": "投资风险", "type": "opinion", "required": false, "weight": 0.5 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.6 },
+      "tags": ["investment"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-014",
+      "category": "comparison",
+      "difficulty": 3,
+      "intent": "验证品牌客户满意度对比",
+      "prompt": {
+        "user": "{entity} 的客户满意度和主要竞品相比怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "客户满意度", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.7 },
+      "tags": ["satisfaction"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-CMP-015",
+      "category": "comparison",
+      "difficulty": 2,
+      "intent": "验证品牌取舍分析",
+      "prompt": {
+        "user": "选择{entity}而不是竞争对手，消费者需要做什么取舍？"
+      },
+      "expectedClaims": [
+        { "claim": "选择 {entity} 的取舍", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 0.9 },
+      "tags": ["tradeoff"],
+      "lastUpdated": "2026-06-30"
+    }
+  ]
+}

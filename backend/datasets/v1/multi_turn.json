@@ -1,0 +1,166 @@
+{
+  "category": "multi_turn",
+  "description": "多轮对话 — 追问一致性、纠正反应、上下文保持",
+  "questions": [
+    {
+      "id": "Q-MT-001",
+      "category": "multi_turn",
+      "difficulty": 2,
+      "intent": "验证品牌信息多轮一致性",
+      "prompt": {
+        "user": "请介绍一下{entity}。\n追问：那{entity}的主要竞争对手呢？\n追问：那么{entity}相比竞争对手的优势在哪里？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的介绍", "type": "fact", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的竞争对手", "type": "fact", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的优势", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["multi_turn", "brand_info"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-002",
+      "category": "multi_turn",
+      "difficulty": 3,
+      "intent": "验证纠正后的反应",
+      "prompt": {
+        "user": "我想了解一下{entity}。\n纠正：其实我刚才说的不准确，你再重新介绍一下？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的介绍", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["correction"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-003",
+      "category": "multi_turn",
+      "difficulty": 2,
+      "intent": "验证品牌推荐后续追问",
+      "prompt": {
+        "user": "推荐几个{brand所属行业}品牌给我。\n追问：为什么推荐这个品牌而不是另一个？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 被推荐", "type": "recommendation", "required": false, "weight": 1.0 },
+        { "claim": "推荐理由", "type": "opinion", "required": true, "weight": 0.8 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["recommendation_followup"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-004",
+      "category": "multi_turn",
+      "difficulty": 3,
+      "intent": "验证品牌对比中的一致性",
+      "prompt": {
+        "user": "{entity} 和它的主要竞争对手相比怎么样？\n追问：那如果只考虑价格因素呢？\n追问：如果只考虑品质呢？"
+      },
+      "expectedClaims": [
+        { "claim": "价格角度", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "品质角度", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "comparative", "weight": 1.0 },
+      "tags": ["comparison_consistency"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-005",
+      "category": "multi_turn",
+      "difficulty": 3,
+      "intent": "验证多轮对话中的上下文保持",
+      "prompt": {
+        "user": "我想买{brand所属产品}。\n追问：有什么推荐的品牌？\n追问：我预算有限，还有什么选择？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 被推荐", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["context_maintain"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-006",
+      "category": "multi_turn",
+      "difficulty": 2,
+      "intent": "验证品牌多次提问的答案一致",
+      "prompt": {
+        "user": "问：{entity} 是什么品牌？\n再问：{entity} 主要做什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity}", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["repetition"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-007",
+      "category": "multi_turn",
+      "difficulty": 2,
+      "intent": "验证品牌多角度提问的回答差异",
+      "prompt": {
+        "user": "问：{entity} 怎么样？\n从另一个角度问：{entity} 值得购买吗？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的评价", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 值得购买", "type": "recommendation", "required": false, "weight": 0.8 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["different_perspective"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-008",
+      "category": "multi_turn",
+      "difficulty": 3,
+      "intent": "验证品牌多轮后信息覆盖保持",
+      "prompt": {
+        "user": "问：{entity} 有什么产品？\n问：{entity} 的竞争对手有哪些？\n问：回到产品，{entity} 的价格怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的产品", "type": "fact", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的竞争对手", "type": "fact", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的价格", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["info_coverage"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-009",
+      "category": "multi_turn",
+      "difficulty": 2,
+      "intent": "验证品牌正反面提问的一致性",
+      "prompt": {
+        "user": "问：{entity} 有什么优点？\n问：{entity} 有什么缺点？\n问：总体来看你觉得{entity}怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的优点", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的缺点", "type": "opinion", "required": true, "weight": 1.0 },
+        { "claim": "总体评价", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["pros_cons"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-MT-010",
+      "category": "multi_turn",
+      "difficulty": 3,
+      "intent": "验证品牌知识边界认知",
+      "prompt": {
+        "user": "问：{entity} 在{A国}的市场怎么样？\n问：那在{B国}呢？\n问：这些信息来源是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 在{A国}", "type": "opinion", "required": false, "weight": 0.7 },
+        { "claim": "{entity} 在{B国}", "type": "opinion", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "consistency", "scoringRule": "evidence_required", "weight": 0.8 },
+      "tags": ["knowledge_boundary"],
+      "lastUpdated": "2026-06-30"
+    }
+  ]
+}

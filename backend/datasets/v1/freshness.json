@@ -1,0 +1,157 @@
+{
+  "category": "freshness",
+  "description": "信息时效性 — 最新动态、产品更新、市场变化",
+  "questions": [
+    {
+      "id": "Q-FRS-001",
+      "category": "freshness",
+      "difficulty": 2,
+      "intent": "验证品牌最新动态认知",
+      "prompt": {
+        "user": "{entity} 最近有什么重要新闻或动态？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 最近", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["news"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-002",
+      "category": "freshness",
+      "difficulty": 2,
+      "intent": "验证品牌最新产品认知",
+      "prompt": {
+        "user": "{entity} 最近有什么新产品或服务发布？"
+      },
+      "expectedClaims": [
+        { "claim": "新产品", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["new_product"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-003",
+      "category": "freshness",
+      "difficulty": 3,
+      "intent": "验证品牌市场变化认知",
+      "prompt": {
+        "user": "{entity} 的市场地位近两年有什么变化？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 市场地位变化", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["market_change"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-004",
+      "category": "freshness",
+      "difficulty": 3,
+      "intent": "验证品牌财报/业绩认知",
+      "prompt": {
+        "user": "{entity} 最近的财务表现或营收情况怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "财务表现", "type": "fact", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "evidence_required", "weight": 0.7 },
+      "tags": ["financial"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-005",
+      "category": "freshness",
+      "difficulty": 3,
+      "intent": "验证品牌战略变化认知",
+      "prompt": {
+        "user": "{entity} 最近有什么战略调整或新的发展方向？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的战略调整", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "semantic", "weight": 0.9 },
+      "tags": ["strategy"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-006",
+      "category": "freshness",
+      "difficulty": 2,
+      "intent": "验证品牌技术升级认知",
+      "prompt": {
+        "user": "{entity} 最近在技术方面有什么新的突破或升级？"
+      },
+      "expectedClaims": [
+        { "claim": "技术突破", "type": "fact", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["technology"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-007",
+      "category": "freshness",
+      "difficulty": 2,
+      "intent": "验证品牌渠道变化认知",
+      "prompt": {
+        "user": "{entity} 最近在渠道或合作方面有什么新动作？"
+      },
+      "expectedClaims": [
+        { "claim": "新动作", "type": "fact", "required": false, "weight": 0.6 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "semantic", "weight": 0.6 },
+      "tags": ["channel", "partnership"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-008",
+      "category": "freshness",
+      "difficulty": 3,
+      "intent": "验证品牌行业动态关联",
+      "prompt": {
+        "user": "{entity} 所在的行业最近有什么重大变化？{entity} 受到什么影响？"
+      },
+      "expectedClaims": [
+        { "claim": "行业变化", "type": "fact", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 受影响", "type": "opinion", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["industry_trend"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-009",
+      "category": "freshness",
+      "difficulty": 1,
+      "intent": "验证品牌知识更新时间",
+      "prompt": {
+        "user": "你关于{entity}的知识截止到什么时间？"
+      },
+      "expectedClaims": [
+        { "claim": "知识截止时间", "type": "fact", "required": false, "weight": 0.5 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "exact", "weight": 0.5 },
+      "tags": ["knowledge_cutoff"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-FRS-010",
+      "category": "freshness",
+      "difficulty": 2,
+      "intent": "验证品牌认知持续更新",
+      "prompt": {
+        "user": "关于{entity}，有什么信息是过去一年内新增或变化的？"
+      },
+      "expectedClaims": [
+        { "claim": "新增信息", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["recent_update"],
+      "lastUpdated": "2026-06-30"
+    }
+  ]
+}

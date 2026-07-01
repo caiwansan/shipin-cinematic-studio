@@ -1,0 +1,202 @@
+{
+  "category": "product",
+  "description": "产品认知 — 产品线、功能、定价、应用场景",
+  "questions": [
+    {
+      "id": "Q-PRD-001",
+      "category": "product",
+      "difficulty": 2,
+      "intent": "验证品牌产品线完整性认知",
+      "prompt": {
+        "user": "{entity} 的产品线有哪些？覆盖哪些品类？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的产品线包括", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "accuracy", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["product_line"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-002",
+      "category": "product",
+      "difficulty": 2,
+      "intent": "验证品牌旗舰产品认知",
+      "prompt": {
+        "user": "{entity} 最知名的产品或服务是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 最著名的产品", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "visibility", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["flagship"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-003",
+      "category": "product",
+      "difficulty": 2,
+      "intent": "验证品牌产品功能认知",
+      "prompt": {
+        "user": "{entity} 的产品有哪些主要功能和特点？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 产品的功能", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "accuracy", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["features"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-004",
+      "category": "product",
+      "difficulty": 1,
+      "intent": "验证品牌产品定价认知",
+      "prompt": {
+        "user": "{entity} 的产品价格区间是多少？定位哪个价位段？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的价格定位", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "accuracy", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["pricing"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-005",
+      "category": "product",
+      "difficulty": 2,
+      "intent": "验证品牌产品使用场景认知",
+      "prompt": {
+        "user": "在什么场景下适合使用{entity}的产品？"
+      },
+      "expectedClaims": [
+        { "claim": "适用场景包括", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 0.9 },
+      "tags": ["use_case", "scenario"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-006",
+      "category": "product",
+      "difficulty": 2,
+      "intent": "验证品牌产品创新认知",
+      "prompt": {
+        "user": "{entity} 在产品创新方面有什么特点？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的产品创新", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["innovation"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-007",
+      "category": "product",
+      "difficulty": 3,
+      "intent": "验证品牌产品对比认知",
+      "prompt": {
+        "user": "{entity} 的产品与竞争对手的同类产品相比有什么优势？"
+      },
+      "expectedClaims": [
+        { "claim": "与竞品相比", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "comparative_preference", "scoringRule": "comparative", "weight": 1.0 },
+      "tags": ["comparison"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-008",
+      "category": "product",
+      "difficulty": 1,
+      "intent": "验证品牌产品口碑认知",
+      "prompt": {
+        "user": "用户对{entity}产品的评价怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 产品的口碑", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["reputation"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-009",
+      "category": "product",
+      "difficulty": 2,
+      "intent": "验证品牌产品更新频率认知",
+      "prompt": {
+        "user": "{entity} 多久推出一次新产品或更新？"
+      },
+      "expectedClaims": [
+        { "claim": "产品更新周期", "type": "fact", "required": false, "weight": 0.5 }
+      ],
+      "evaluation": { "dimension": "freshness", "scoringRule": "exact", "weight": 0.5 },
+      "tags": ["updates"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-010",
+      "category": "product",
+      "difficulty": 3,
+      "intent": "验证品牌产品生态认知",
+      "prompt": {
+        "user": "{entity} 的产品之间如何协同？产品生态是怎样的？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的产品生态", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["ecosystem"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-011",
+      "category": "product",
+      "difficulty": 1,
+      "intent": "验证品牌产品售后服务认知",
+      "prompt": {
+        "user": "{entity} 的售后服务和客户支持怎么样？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的售后服务", "type": "opinion", "required": true, "weight": 0.8 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 0.6 },
+      "tags": ["service"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-012",
+      "category": "product",
+      "difficulty": 2,
+      "intent": "验证品牌产品质量认知",
+      "prompt": {
+        "user": "{entity} 的产品质量和可靠性如何？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的产品质量", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["quality"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-PRD-013",
+      "category": "product",
+      "difficulty": 3,
+      "intent": "验证品牌产品可持续性认知",
+      "prompt": {
+        "user": "{entity} 在产品的环保和可持续性方面做了哪些努力？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的环保", "type": "opinion", "required": false, "weight": 0.5 },
+        { "claim": "{entity} 的可持续性", "type": "opinion", "required": false, "weight": 0.5 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.4 },
+      "tags": ["sustainability"],
+      "lastUpdated": "2026-06-30"
+    }
+  ]
+}

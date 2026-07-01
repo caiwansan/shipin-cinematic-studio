@@ -1,0 +1,235 @@
+{
+  "category": "recommendation",
+  "description": "推荐能力 — 主动推荐、场景推荐、推荐理由",
+  "questions": [
+    {
+      "id": "Q-REC-001",
+      "category": "recommendation",
+      "difficulty": 2,
+      "intent": "验证主动推荐能力",
+      "prompt": {
+        "user": "我想买一个{brand所属行业}产品，你有什么推荐？"
+      },
+      "expectedClaims": [
+        { "claim": "推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["active_recommendation"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-002",
+      "category": "recommendation",
+      "difficulty": 2,
+      "intent": "验证场景化推荐能力",
+      "prompt": {
+        "user": "我是一名{brand目标用户}，想买{brand所属产品}，有什么推荐吗？"
+      },
+      "expectedClaims": [
+        { "claim": "推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 },
+        { "claim": "推荐理由", "type": "opinion", "required": true, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["scenario"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-003",
+      "category": "recommendation",
+      "difficulty": 3,
+      "intent": "验证推荐理由质量",
+      "prompt": {
+        "user": "为什么我应该选择{entity}而不是其他品牌？"
+      },
+      "expectedClaims": [
+        { "claim": "选择 {entity} 的理由", "type": "recommendation", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["reason"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-004",
+      "category": "recommendation",
+      "difficulty": 2,
+      "intent": "验证多场景下的推荐一致性",
+      "prompt": {
+        "user": "推荐一个{brand所属行业}品牌给想省钱的用户，再推荐另一个给追求品质的用户。"
+      },
+      "expectedClaims": [
+        { "claim": "推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["multi_scenario"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-005",
+      "category": "recommendation",
+      "difficulty": 3,
+      "intent": "验证推荐中的客观性",
+      "prompt": {
+        "user": "如果不考虑预算，你会推荐{entity}吗？如果考虑性价比呢？"
+      },
+      "expectedClaims": [
+        { "claim": "不考虑预算", "type": "recommendation", "required": false, "weight": 0.7 },
+        { "claim": "考虑性价比", "type": "recommendation", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "comparative", "weight": 0.9 },
+      "tags": ["objectivity"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-006",
+      "category": "recommendation",
+      "difficulty": 1,
+      "intent": "验证品牌综合推荐度",
+      "prompt": {
+        "user": "你会向朋友推荐{entity}吗？为什么？"
+      },
+      "expectedClaims": [
+        { "claim": "会推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["nps"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-007",
+      "category": "recommendation",
+      "difficulty": 2,
+      "intent": "验证细分场景推荐能力",
+      "prompt": {
+        "user": "如果我是第一次购买{brand所属产品}的新手，你会推荐{entity}吗？"
+      },
+      "expectedClaims": [
+        { "claim": "推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["beginner"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-008",
+      "category": "recommendation",
+      "difficulty": 3,
+      "intent": "验证专业场景推荐能力",
+      "prompt": {
+        "user": "我是一家{brand适用行业}的企业采购负责人，需要采购{brand所属产品}，你有推荐的品牌吗？"
+      },
+      "expectedClaims": [
+        { "claim": "推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["enterprise"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-009",
+      "category": "recommendation",
+      "difficulty": 2,
+      "intent": "验证推荐中是否提及竞品",
+      "prompt": {
+        "user": "列出几个{brand所属行业}领域的知名品牌，并告诉我你推荐哪个。"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 是知名品牌", "type": "fact", "required": true, "weight": 0.8 },
+        { "claim": "推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "comparative", "weight": 1.0 },
+      "tags": ["listing"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-010",
+      "category": "recommendation",
+      "difficulty": 2,
+      "intent": "验证推荐中的风险提示",
+      "prompt": {
+        "user": "选择{entity}有什么需要注意的地方或潜在风险？"
+      },
+      "expectedClaims": [
+        { "claim": "需要注意", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 0.7 },
+      "tags": ["risk"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-011",
+      "category": "recommendation",
+      "difficulty": 3,
+      "intent": "验证推荐中的数据支撑",
+      "prompt": {
+        "user": "能给我一些具体的理由和数据来证明{entity}值得推荐吗？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 值得推荐", "type": "recommendation", "required": true, "weight": 1.0 },
+        { "claim": "具体数据", "type": "fact", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "evidence_required", "weight": 1.0 },
+      "tags": ["evidence"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-012",
+      "category": "recommendation",
+      "difficulty": 2,
+      "intent": "验证品牌在同类产品中的推荐排名",
+      "prompt": {
+        "user": "在{brand所属行业}品牌中，你认为{entity}能排第几？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的排名", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["ranking"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-013",
+      "category": "recommendation",
+      "difficulty": 3,
+      "intent": "验证品牌推荐可持续性",
+      "prompt": {
+        "user": "长期来看，你仍然会推荐{entity}吗？会不会有更好的替代选项？"
+      },
+      "expectedClaims": [
+        { "claim": "长期推荐 {entity}", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "comparative", "weight": 0.8 },
+      "tags": ["long_term"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-014",
+      "category": "recommendation",
+      "difficulty": 1,
+      "intent": "验证推荐意愿基本测试",
+      "prompt": {
+        "user": "给我推荐三个{brand所属行业}品牌。"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 被推荐", "type": "recommendation", "required": false, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["top3"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-REC-015",
+      "category": "recommendation",
+      "difficulty": 3,
+      "intent": "验证负面条件下的推荐态度",
+      "prompt": {
+        "user": "如果{entity}最近有一些负面新闻，你还会推荐它吗？"
+      },
+      "expectedClaims": [
+        { "claim": "推荐态度", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "recommendation", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["crisis"],
+      "lastUpdated": "2026-06-30"
+    }
+  ]
+}

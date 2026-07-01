@@ -1,0 +1,236 @@
+{
+  "category": "general",
+  "description": "通用品牌认知 — 品牌识别、业务描述、核心产品",
+  "questions": [
+    {
+      "id": "Q-GEN-001",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌基本识别能力",
+      "prompt": {
+        "user": "你知道{entity}吗？请介绍一下。"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 是一家科技公司", "type": "fact", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的主要业务包括", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "visibility", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["basic", "recognition"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-002",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌所在国家/地区的识别",
+      "prompt": {
+        "user": "{entity} 是哪个国家的品牌？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 是中国品牌", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "visibility", "scoringRule": "exact", "weight": 0.8 },
+      "tags": ["basic", "origin"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-003",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌核心业务描述",
+      "prompt": {
+        "user": "{entity} 是做什么的？主要业务是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的核心业务包括", "type": "fact", "required": true, "weight": 1.0 },
+        { "claim": "{entity} 的产品线涵盖", "type": "opinion", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["basic", "business"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-004",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌目标用户认知",
+      "prompt": {
+        "user": "{entity} 的目标用户是谁？主要服务哪些人群？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 主要面向", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["basic", "audience"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-005",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌主要产品/服务识别",
+      "prompt": {
+        "user": "{entity} 有哪些主要产品或服务？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的主要产品包括", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "visibility", "scoringRule": "semantic", "weight": 0.9 },
+      "tags": ["basic", "products"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-006",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌规模认知",
+      "prompt": {
+        "user": "{entity} 的规模有多大？大概有多少员工？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 是一家大型企业", "type": "fact", "required": false, "weight": 0.5 },
+        { "claim": "员工数量", "type": "fact", "required": false, "weight": 0.3 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.5 },
+      "tags": ["basic", "scale"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-007",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌成立时间认知",
+      "prompt": {
+        "user": "{entity} 是什么时候成立的？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 成立于", "type": "fact", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "accuracy", "scoringRule": "exact", "weight": 1.0 },
+      "tags": ["basic", "history"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-008",
+      "category": "general",
+      "difficulty": 2,
+      "intent": "验证品牌定位描述",
+      "prompt": {
+        "user": "你怎么理解{entity}的品牌定位？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的定位是", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["positioning"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-009",
+      "category": "general",
+      "difficulty": 2,
+      "intent": "验证品牌知名度认知",
+      "prompt": {
+        "user": "{entity} 在全球范围内的知名度和影响力如何？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 在全球范围内", "type": "opinion", "required": true, "weight": 0.8 },
+        { "claim": "{entity} 的市场覆盖", "type": "fact", "required": false, "weight": 0.6 }
+      ],
+      "evaluation": { "dimension": "visibility", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["global", "influence"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-010",
+      "category": "general",
+      "difficulty": 2,
+      "intent": "验证品牌荣誉/市场地位认知",
+      "prompt": {
+        "user": "{entity} 在行业内有什么突出的成就或地位？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 在行业中", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.8 },
+      "tags": ["achievement", "status"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-011",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌 slogan/tagline 认知",
+      "prompt": {
+        "user": "{entity} 的品牌口号或使命宣言是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的口号", "type": "fact", "required": false, "weight": 0.5 },
+        { "claim": "{entity} 的使命", "type": "fact", "required": false, "weight": 0.5 }
+      ],
+      "evaluation": { "dimension": "visibility", "scoringRule": "semantic", "weight": 0.5 },
+      "tags": ["branding"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-012",
+      "category": "general",
+      "difficulty": 2,
+      "intent": "验证品牌差异化优势认知",
+      "prompt": {
+        "user": "{entity} 相比竞争对手有什么独特的优势？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的优势在于", "type": "opinion", "required": true, "weight": 1.0 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 1.0 },
+      "tags": ["differentiation"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-013",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌官网/社交媒体认知",
+      "prompt": {
+        "user": "{entity} 的官方网站是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的官网", "type": "fact", "required": false, "weight": 0.5 }
+      ],
+      "evaluation": { "dimension": "citation", "scoringRule": "evidence_required", "weight": 0.5 },
+      "tags": ["digital"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-014",
+      "category": "general",
+      "difficulty": 2,
+      "intent": "验证品牌核心价值观认知",
+      "prompt": {
+        "user": "{entity} 的品牌核心价值观是什么？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 的核心价值观", "type": "opinion", "required": false, "weight": 0.7 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.6 },
+      "tags": ["values"],
+      "lastUpdated": "2026-06-30"
+    },
+    {
+      "id": "Q-GEN-015",
+      "category": "general",
+      "difficulty": 1,
+      "intent": "验证品牌知识产权/专利认知",
+      "prompt": {
+        "user": "{entity} 在技术研发方面有什么特点？"
+      },
+      "expectedClaims": [
+        { "claim": "{entity} 在研发方面", "type": "opinion", "required": false, "weight": 0.5 }
+      ],
+      "evaluation": { "dimension": "understanding", "scoringRule": "semantic", "weight": 0.5 },
+      "tags": ["innovation", "rd"],
+      "lastUpdated": "2026-06-30"
+    }
+  ]
+}
