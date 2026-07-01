@@ -680,6 +680,30 @@ await app.register(projectV2Routes)
   try { await app.register(await import('./routes/asset/asset.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset route skipped:', (err as Error).message) }
   try { await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset version route skipped:', (err as Error).message) }
   try { await app.register(await import('./routes/asset/asset-scanner.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset scanner route skipped:', (err as Error).message) }
+  // Knowledge Hub — Platform Runtime (KH1)
+  try {
+    const { registerKnowledgeHubRoutes } = await import('./platform/knowledge-hub/api/routes.js')
+    const { VersionEngine } = await import('./platform/knowledge-hub/core/version-engine.js')
+    const { ProviderRuntime } = await import('./platform/knowledge-hub/core/provider-runtime.js')
+    const { GeoKnowledgeProvider } = await import('./platform/knowledge-hub/providers/geo/geo-knowledge.provider.js')
+    const { NovelKnowledgeProvider } = await import('./platform/knowledge-hub/providers/stubs/novel.provider.js')
+    const { StoryKnowledgeProvider } = await import('./platform/knowledge-hub/providers/stubs/story.provider.js')
+    const { PresentationKnowledgeProvider } = await import('./platform/knowledge-hub/providers/stubs/presentation.provider.js')
+
+    const versionEngine = new VersionEngine()
+    const providerRuntime = new ProviderRuntime()
+    providerRuntime.register(new GeoKnowledgeProvider())
+    providerRuntime.register(new NovelKnowledgeProvider())
+    providerRuntime.register(new StoryKnowledgeProvider())
+    providerRuntime.register(new PresentationKnowledgeProvider())
+
+    registerKnowledgeHubRoutes(app, { versionEngine, providerRuntime })
+
+    console.log('[startup] ✅ Knowledge Hub v1 routes registered at /api/knowledge/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ Knowledge Hub routes skipped:', (err as Error).message)
+  }
+
   // Production health / monitoring routes
   await app.register(healthRoutes)
   // REMOVED: observabilityRoutes
