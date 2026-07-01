@@ -1,18 +1,18 @@
 <template>
   <div class="brand-overview">
-    <!-- ===== Loading State ===== -->
-    <div v-if="loading" class="brand-overview__loading">
-      <div class="brand-overview__spinner" />
-      <span>正在加载品牌详情...</span>
-    </div>
+    <!-- ===== Loading State (GeoLoading) ===== -->
+    <GeoLoading v-if="loading" :steps="brandLoadingSteps" :current-step="0" />
 
-    <!-- ===== Error State ===== -->
-    <div v-else-if="error" class="brand-overview__error">
-      <p>{{ error }}</p>
-      <button class="brand-overview__btn brand-overview__btn--primary" @click="loadData">重试</button>
-    </div>
+    <!-- ===== Error State (GeoErrorState) ===== -->
+    <GeoErrorState v-else-if="error" :message="error" :on-retry="loadData" />
 
     <template v-else-if="project">
+      <!-- ===== Walkthrough GuideBar ===== -->
+      <GeoWalkthroughBar
+        :guide="walkthroughGuide"
+        @dismissed="walkthroughGuide = null"
+      />
+
       <!-- ===== Top Bar: Back to Dashboard ===== -->
       <div class="brand-overview__top-bar">
         <NuxtLink to="/workspace/geo/dashboard" class="brand-overview__back-link">
@@ -50,9 +50,9 @@
             </a>
           </div>
         </div>
-        <span class="brand-overview__status-badge" :class="`brand-overview__status-badge--${project.status || 'draft'}`">
+        <GeoBadge :variant="project.status === 'active' ? 'info' : project.status === 'monitoring' ? 'success' : project.status === 'completed' ? 'success' : 'neutral'">
           {{ statusLabel(project.status) }}
-        </span>
+        </GeoBadge>
       </header>
 
       <!-- ===== Brand Profile Completeness (P2-T002-P0 1.b) ===== -->
@@ -219,6 +219,7 @@
       <section class="brand-overview__section">
         <h2 class="brand-overview__section-title">
           品牌 Explain
+          <GeoExplainButton @click="openExplainDrawer('discovery')" />
           <button
             v-if="hasAnalysis && !explainLoading && !explainData"
             class="brand-overview__explain-trigger"
@@ -241,43 +242,40 @@
         </h2>
 
         <!-- Explain Loading State -->
-        <div v-if="explainLoading" class="brand-overview__explain-loading">
-          <div class="brand-overview__explain-loading-step" v-for="step in explainSteps" :key="step.key">
-            <span class="brand-overview__explain-loading-icon" :class="explainLoadingStepClass(step.key)">
-              {{ step.icon }}
-            </span>
-            <span>{{ step.label }}</span>
-          </div>
-        </div>
+        <GeoLoading
+          v-if="explainLoading"
+          :steps="explainSteps"
+          :current-step="explainStepIndex"
+        />
 
         <!-- Explain Error -->
-        <div v-else-if="explainError" class="brand-overview__explain-error">
-          <p>{{ explainError }}</p>
-          <button class="brand-overview__btn" @click="loadExplain">重试</button>
-        </div>
+        <GeoErrorState v-else-if="explainError" :message="explainError" :on-retry="loadExplain" />
 
         <!-- Explain Empty State -->
-        <div v-else-if="!hasAnalysis && !explainData" class="brand-overview__explain-empty">
-          <p>运行 Quick Discovery 以生成品牌 Explain。</p>
-          <button
-            class="brand-overview__btn brand-overview__btn--primary"
-            @click="handleQuickDiscovery"
-            :disabled="qdRunning"
-          >
-            {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
-          </button>
-        </div>
+        <GeoEmptyState
+          v-else-if="!hasAnalysis && !explainData"
+          icon="📖"
+          title="品牌 Explain"
+          description="运行 Quick Discovery 以生成品牌 Explain。"
+        >
+          <template #actions>
+            <button
+              class="geo-btn geo-btn--primary"
+              @click="handleQuickDiscovery"
+              :disabled="qdRunning"
+            >
+              {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
+            </button>
+          </template>
+        </GeoEmptyState>
 
         <!-- Explain Data -->
         <div v-else-if="explainData" class="brand-overview__explain-card">
-          <!-- Confidence Badge -->
+          <!-- Confidence Badge (Use GeoBadge) -->
           <div class="brand-overview__explain-confidence">
-            <span
-              class="brand-overview__explain-confidence-badge"
-              :class="confidenceClass(explainData.explain.confidence)"
-            >
+            <GeoBadge :variant="explainData.explain.confidence >= 70 ? 'success' : explainData.explain.confidence >= 40 ? 'warning' : 'neutral'">
               {{ explainData.explain.confidence > 0 ? `Confidence ${explainData.explain.confidence}%` : 'Confidence Unknown' }}
-            </span>
+            </GeoBadge>
             <span
               v-if="explainData.score > 0"
               class="brand-overview__explain-adi-badge"
@@ -364,6 +362,7 @@
       <section class="brand-overview__section">
         <h2 class="brand-overview__section-title">
           Optimization Center
+          <GeoExplainButton @click="openExplainDrawer('recommendation')" />
           <button
             v-if="hasAnalysis && !optimizationLoading && !optimizationData"
             class="brand-overview__optimization-trigger"
@@ -384,32 +383,32 @@
         </h2>
 
         <!-- Optimization Loading State (三步骤) -->
-        <div v-if="optimizationLoading" class="brand-overview__optimization-loading">
-          <div class="brand-overview__optimization-loading-step" v-for="step in optSteps" :key="step.key">
-            <span class="brand-overview__optimization-loading-icon" :class="optLoadingStepClass(step.key)">
-              {{ step.icon }}
-            </span>
-            <span>{{ step.label }}</span>
-          </div>
-        </div>
+        <GeoLoading
+          v-if="optimizationLoading"
+          :steps="optSteps"
+          :current-step="optStepIndex"
+        />
 
         <!-- Optimization Error -->
-        <div v-else-if="optimizationError" class="brand-overview__optimization-error">
-          <p>{{ optimizationError }}</p>
-          <button class="brand-overview__btn" @click="loadOptimizations">重试</button>
-        </div>
+        <GeoErrorState v-else-if="optimizationError" :message="optimizationError" :on-retry="loadOptimizations" />
 
         <!-- Optimization Empty State -->
-        <div v-else-if="!hasAnalysis && !optimizationData" class="brand-overview__optimization-empty">
-          <p>Run Quick Discovery to generate optimization suggestions.</p>
-          <button
-            class="brand-overview__btn brand-overview__btn--primary"
-            @click="handleQuickDiscovery"
-            :disabled="qdRunning"
-          >
-            {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
-          </button>
-        </div>
+        <GeoEmptyState
+          v-else-if="!hasAnalysis && !optimizationData"
+          icon="💡"
+          title="优化建议"
+          description="Run Quick Discovery to generate optimization suggestions."
+        >
+          <template #actions>
+            <button
+              class="geo-btn geo-btn--primary"
+              @click="handleQuickDiscovery"
+              :disabled="qdRunning"
+            >
+              {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
+            </button>
+          </template>
+        </GeoEmptyState>
 
         <!-- Optimization Data -->
         <div v-else-if="optimizationData" class="brand-overview__optimization-card">
@@ -475,10 +474,181 @@
         </div>
       </section>
 
+      <!-- ===== Action Plan Section (P0-T007) ===== -->
+      <section class="brand-overview__section">
+        <h2 class="brand-overview__section-title">
+          Action Plan
+          <span v-if="actionPlanData" class="brand-overview__ap-count">
+            {{ actionPlanData.summary.todo }} Todo ·
+            {{ actionPlanData.summary.running }} Running ·
+            {{ actionPlanData.summary.completed }} Completed
+          </span>
+          <button
+            v-if="hasAnalysis && !actionPlanLoading && !actionPlanData"
+            class="brand-overview__ap-trigger"
+            @click="loadActionPlans"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="12" y1="18" x2="12" y2="12" />
+              <line x1="9" y1="15" x2="15" y2="15" />
+            </svg>
+            生成执行计划
+          </button>
+          <button
+            v-if="actionPlanData"
+            class="brand-overview__ap-refresh-btn"
+            @click="refreshActionPlans"
+            :disabled="actionPlanRefreshing"
+          >
+            {{ actionPlanRefreshing ? '刷新中...' : '🔄 刷新计划' }}
+          </button>
+          <button
+            v-if="actionPlanData && !actionPlanLoading"
+            class="brand-overview__ap-trigger"
+            @click="actionPlanData = null; actionPlanError = null"
+          >
+            收起
+          </button>
+        </h2>
+
+        <!-- Action Plan Loading State -->
+        <GeoLoading
+          v-if="actionPlanLoading"
+          :steps="apSteps"
+          :current-step="apStepIndex"
+        />
+
+        <!-- Action Plan Error -->
+        <GeoErrorState v-else-if="actionPlanError" :message="actionPlanError" :on-retry="loadActionPlans" />
+
+        <!-- Action Plan Empty State -->
+        <GeoEmptyState
+          v-else-if="!hasAnalysis && !actionPlanData"
+          icon="📋"
+          title="执行计划"
+          description="Run Optimization Center to generate actions."
+        >
+          <template #actions>
+            <button
+              class="geo-btn geo-btn--primary"
+              @click="handleQuickDiscovery"
+              :disabled="qdRunning"
+            >
+              {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
+            </button>
+          </template>
+        </GeoEmptyState>
+
+        <!-- Action Plan Data -->
+        <div v-else-if="actionPlanData" class="brand-overview__ap-card">
+          <!-- Summary Bar -->
+          <div class="brand-overview__ap-summary">
+            <div class="brand-overview__ap-summary-item">
+              <span class="brand-overview__ap-summary-label">Total Gain</span>
+              <span class="brand-overview__ap-summary-value brand-overview__ap-summary-value--gain">
+                +{{ actionPlanData.summary.totalEstimatedGain }} <small>ADI</small>
+              </span>
+            </div>
+            <div class="brand-overview__ap-summary-item">
+              <span class="brand-overview__ap-summary-label">Todo</span>
+              <span class="brand-overview__ap-summary-value">{{ actionPlanData.summary.todo }}</span>
+            </div>
+            <div class="brand-overview__ap-summary-item">
+              <span class="brand-overview__ap-summary-label">Running</span>
+              <span class="brand-overview__ap-summary-value">{{ actionPlanData.summary.running }}</span>
+            </div>
+            <div class="brand-overview__ap-summary-item">
+              <span class="brand-overview__ap-summary-label">Completed</span>
+              <span class="brand-overview__ap-summary-value">{{ actionPlanData.summary.completed }}</span>
+            </div>
+          </div>
+
+          <!-- Action Plan List -->
+          <div class="brand-overview__ap-list">
+            <div
+              v-for="plan in actionPlanData.plans"
+              :key="plan.id"
+              class="brand-overview__ap-plan-card"
+              :class="`brand-overview__ap-plan-card--${plan.priority}`"
+            >
+              <div class="brand-overview__ap-plan-left-bar" :class="`brand-overview__ap-plan-left-bar--${plan.priority}`" />
+              <div class="brand-overview__ap-plan-content">
+                <div class="brand-overview__ap-plan-header">
+                  <span class="brand-overview__ap-plan-priority" :class="`brand-overview__ap-plan-priority--${plan.priority}`">
+                    {{ priorityLabel(plan.priority) }}
+                  </span>
+                  <h4 class="brand-overview__ap-plan-title">{{ plan.title }}</h4>
+                </div>
+                <div class="brand-overview__ap-plan-meta">
+                  <span class="brand-overview__ap-plan-impact">{{ plan.expectedImpact }}</span>
+                  <span class="brand-overview__ap-plan-difficulty" :class="`brand-overview__ap-plan-difficulty--${plan.difficulty}`">
+                    {{ difficultyLabel(plan.difficulty) }}
+                  </span>
+                  <span class="brand-overview__ap-plan-duration">约 {{ plan.estimatedMinutes }} 分钟</span>
+                </div>
+
+                <!-- Explain (可展开) -->
+                <div class="brand-overview__ap-plan-explain">
+                  <button
+                    class="brand-overview__ap-plan-explain-toggle"
+                    @click="toggleApExplain(plan.id)"
+                  >
+                    <span>{{ expandedApExplain[plan.id] ? '📖' : '📋' }}</span>
+                    <span>{{ expandedApExplain[plan.id] ? '收起详情' : '查看详情' }}</span>
+                  </button>
+                  <div v-if="expandedApExplain[plan.id]" class="brand-overview__ap-plan-explain-body">
+                    <p><strong>Why:</strong> {{ plan.explain }}</p>
+                    <p><strong>Expected Impact:</strong> {{ plan.expectedImpact }}</p>
+                    <p><strong>Estimated Duration:</strong> {{ plan.estimatedMinutes }} 分钟</p>
+                  </div>
+                </div>
+
+                <!-- Status + Action Buttons -->
+                <div class="brand-overview__ap-plan-actions">
+                  <!-- Status: todo -->
+                  <template v-if="plan.status === 'todo'">
+                    <span class="brand-overview__ap-plan-status brand-overview__ap-plan-status--todo">○ Todo</span>
+                    <button
+                      class="brand-overview__ap-plan-btn brand-overview__ap-plan-btn--start"
+                      @click="handleStartPlan(plan.id)"
+                    >
+                      ▶ Start
+                    </button>
+                  </template>
+                  <!-- Status: running -->
+                  <template v-else-if="plan.status === 'running'">
+                    <span class="brand-overview__ap-plan-status brand-overview__ap-plan-status--running">● Running</span>
+                    <button
+                      class="brand-overview__ap-plan-btn brand-overview__ap-plan-btn--pause"
+                      @click="handlePausePlan(plan.id)"
+                    >
+                      ⏸ Pause
+                    </button>
+                    <button
+                      class="brand-overview__ap-plan-btn brand-overview__ap-plan-btn--complete"
+                      @click="handleCompletePlan(plan.id)"
+                    >
+                      ✓ Complete
+                    </button>
+                  </template>
+                  <!-- Status: completed -->
+                  <template v-else>
+                    <span class="brand-overview__ap-plan-status brand-overview__ap-plan-status--completed">✅ 已完成</span>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== AI Presence Section (P0-T005) ===== -->
       <section class="brand-overview__section">
         <h2 class="brand-overview__section-title">
           AI Presence
+          <GeoExplainButton @click="openExplainDrawer('presence')" />
           <button
             v-if="hasAnalysis && !presenceLoading && !presenceData"
             class="brand-overview__presence-trigger"
@@ -500,32 +670,32 @@
         </h2>
 
         <!-- Loading -->
-        <div v-if="presenceLoading" class="brand-overview__presence-loading">
-          <div class="brand-overview__presence-loading-step" v-for="step in presenceSteps" :key="step.key">
-            <span class="brand-overview__presence-loading-icon" :class="presenceLoadingStepClass(step.key)">
-              {{ step.icon }}
-            </span>
-            <span>{{ step.label }}</span>
-          </div>
-        </div>
+        <GeoLoading
+          v-if="presenceLoading"
+          :steps="presenceSteps"
+          :current-step="presenceStepIndex"
+        />
 
         <!-- Error -->
-        <div v-else-if="presenceError" class="brand-overview__presence-error">
-          <p>{{ presenceError }}</p>
-          <button class="brand-overview__btn" @click="loadPresence">重试</button>
-        </div>
+        <GeoErrorState v-else-if="presenceError" :message="presenceError" :on-retry="loadPresence" />
 
         <!-- Empty State -->
-        <div v-else-if="!hasAnalysis && !presenceData" class="brand-overview__presence-empty">
-          <p>Run Quick Discovery to check AI presence.</p>
-          <button
-            class="brand-overview__btn brand-overview__btn--primary"
-            @click="handleQuickDiscovery"
-            :disabled="qdRunning"
-          >
-            {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
-          </button>
-        </div>
+        <GeoEmptyState
+          v-else-if="!hasAnalysis && !presenceData"
+          icon="🌐"
+          title="AI 可见度"
+          description="Run Quick Discovery to check AI presence."
+        >
+          <template #actions>
+            <button
+              class="geo-btn geo-btn--primary"
+              @click="handleQuickDiscovery"
+              :disabled="qdRunning"
+            >
+              {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
+            </button>
+          </template>
+        </GeoEmptyState>
 
         <!-- Presence Data -->
         <div v-else-if="presenceData" class="brand-overview__presence-card">
@@ -733,6 +903,7 @@
       <section class="brand-overview__section">
         <h2 class="brand-overview__section-title">
           Verification
+          <GeoExplainButton @click="openExplainDrawer('verification')" />
           <button
             v-if="hasAnalysis && !verificationLoading && !verificationData"
             class="brand-overview__verification-trigger"
@@ -754,32 +925,32 @@
         </h2>
 
         <!-- Verification Loading -->
-        <div v-if="verificationLoading" class="brand-overview__verification-loading">
-          <div class="brand-overview__verification-loading-step" v-for="step in veriSteps" :key="step.key">
-            <span class="brand-overview__verification-loading-icon" :class="veriLoadingStepClass(step.key)">
-              {{ step.icon }}
-            </span>
-            <span>{{ step.label }}</span>
-          </div>
-        </div>
+        <GeoLoading
+          v-if="verificationLoading"
+          :steps="veriSteps"
+          :current-step="veriStepIndex"
+        />
 
         <!-- Verification Error -->
-        <div v-else-if="verificationError" class="brand-overview__verification-error">
-          <p>{{ verificationError }}</p>
-          <button class="brand-overview__btn" @click="runVerification">重试</button>
-        </div>
+        <GeoErrorState v-else-if="verificationError" :message="verificationError" :on-retry="runVerification" />
 
         <!-- Verification Empty State -->
-        <div v-else-if="!hasAnalysis && !verificationData" class="brand-overview__verification-empty">
-          <p>Run Quick Discovery first, then verify.</p>
-          <button
-            class="brand-overview__btn brand-overview__btn--primary"
-            @click="handleQuickDiscovery"
-            :disabled="qdRunning"
-          >
-            {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
-          </button>
-        </div>
+        <GeoEmptyState
+          v-else-if="!hasAnalysis && !verificationData"
+          icon="✅"
+          title="验证引擎"
+          description="Run Quick Discovery first, then verify."
+        >
+          <template #actions>
+            <button
+              class="geo-btn geo-btn--primary"
+              @click="handleQuickDiscovery"
+              :disabled="qdRunning"
+            >
+              {{ qdRunning ? '分析中...' : '运行 Quick Discovery' }}
+            </button>
+          </template>
+        </GeoEmptyState>
 
         <!-- Verification Data -->
         <div v-else-if="verificationData" class="brand-overview__verification-card">
@@ -1030,15 +1201,34 @@
       @created="onBrandUpdated"
       @cancelled="onEditCancelled"
     />
+
+    <!-- ===== Explain Drawer (RC1-T004) ===== -->
+    <GeoExplainDrawer
+      :visible="explainDrawerVisible"
+      :explain="explainDrawerData"
+      :loading="explainDrawerLoading"
+      :error="explainDrawerError"
+      @close="closeExplainDrawer"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useGeoProjectStore } from '../stores/useGeoProjectStore'
 import { useWorkflowStore } from '../stores/useWorkflowStore'
 import BrandCreateModal from '../components/BrandCreateModal.vue'
+import GeoLoading from '../components/GeoLoading/index.vue'
+import GeoErrorState from '../components/GeoErrorState/index.vue'
+import GeoEmptyState from '../components/GeoEmptyState/index.vue'
+import GeoBadge from '../components/GeoBadge/index.vue'
+import GeoWalkthroughBar from '../components/GeoWalkthroughBar.vue'
+import GeoExplainButton from '../components/GeoExplainButton.vue'
+import GeoExplainDrawer from '../components/GeoExplainDrawer/index.vue'
+import { explainService } from '../services/explainService'
+import type { ExplainResult } from '../types/explain'
+import { walkthroughService, type GuideInfo } from '../services/walkthroughService'
 
 definePageMeta({
   title: 'Brand Overview',
@@ -1063,6 +1253,9 @@ const editingProject = ref<{
   industry?: string
   description?: string
 } | null>(null)
+
+// ── Walkthrough State ──
+const walkthroughGuide = ref<GuideInfo | null>(null)
 
 // ── Explain State (P0-T003) ──
 const explainData = ref<any>(null)
@@ -1120,6 +1313,26 @@ const veriSteps = [
   { key: 'building_evidence', label: 'Building evidence...', icon: '🔍', done: false },
 ]
 const veriStepIndex = ref(0)
+
+// ── Action Plan State (P0-T007) ──
+const actionPlanData = ref<any>(null)
+const actionPlanLoading = ref(false)
+const actionPlanError = ref<string | null>(null)
+const actionPlanRefreshing = ref(false)
+const expandedApExplain = ref<Record<string, boolean>>({})
+const apSteps = [
+  { key: 'building', label: 'Building action plans...', icon: '🏗️', done: false },
+  { key: 'generating', label: 'Generating execution steps...', icon: '📝', done: false },
+]
+const apStepIndex = ref(0)
+
+// ── Brand Loading Steps ──
+
+const brandLoadingSteps = [
+  { label: '正在加载品牌详情...', icon: '📂' },
+  { label: '解析品牌资料...', icon: '🔍' },
+  { label: '准备品牌概览...', icon: '📊' },
+]
 
 // ── Computed ──
 
@@ -1542,9 +1755,173 @@ async function viewVerificationDetail(id: string) {
   } catch { /* non-critical */ }
 }
 
+// ── Action Plan Functions (P0-T007) ──
+
+function apLoadingStepClass(stepKey: string): string {
+  const idx = apSteps.findIndex(s => s.key === stepKey)
+  if (idx < apStepIndex.value) return 'brand-overview__ap-step--done'
+  if (idx === apStepIndex.value) return 'brand-overview__ap-step--active'
+  return 'brand-overview__ap-step--pending'
+}
+
+function toggleApExplain(id: string) {
+  expandedApExplain.value[id] = !expandedApExplain.value[id]
+}
+
+async function loadActionPlans() {
+  if (!project.value) return
+  actionPlanLoading.value = true
+  actionPlanError.value = null
+  actionPlanData.value = null
+  apStepIndex.value = 0
+  expandedApExplain.value = {}
+
+  try {
+    // Simulate multi-step loading
+    apStepIndex.value = 0
+    await new Promise(r => setTimeout(r, 500))
+    apStepIndex.value = 1
+    await new Promise(r => setTimeout(r, 500))
+
+    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
+    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const json = await res.json()
+    if (json.success && json.data) {
+      // Verify we got real data
+      if (json.data.plans && json.data.plans.length > 0) {
+        actionPlanData.value = json.data
+      } else {
+        // No stored plans — try refreshing from recommendations
+        await refreshActionPlans()
+      }
+    } else {
+      actionPlanError.value = json.error || '获取执行计划失败'
+    }
+  } catch (err: any) {
+    actionPlanError.value = err?.message || '请求失败'
+  } finally {
+    actionPlanLoading.value = false
+    apStepIndex.value = 2
+  }
+}
+
+async function refreshActionPlans() {
+  if (!project.value) return
+  actionPlanRefreshing.value = true
+  actionPlanError.value = null
+
+  try {
+    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
+    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    })
+    const json = await res.json()
+    if (json.success && json.data) {
+      actionPlanData.value = json.data
+    } else {
+      actionPlanError.value = json.error || '刷新执行计划失败'
+    }
+  } catch (err: any) {
+    actionPlanError.value = err?.message || '请求失败'
+  } finally {
+    actionPlanRefreshing.value = false
+  }
+}
+
+async function handleStartPlan(planId: string) {
+  if (!project.value) return
+  try {
+    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
+    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans/${planId}/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    })
+    const json = await res.json()
+    if (json.success && json.data) {
+      // Update local state
+      const plans = actionPlanData.value?.plans || []
+      const idx = plans.findIndex((p: any) => p.id === planId)
+      if (idx >= 0) {
+        plans[idx] = json.data
+      }
+      actionPlanData.value = { ...actionPlanData.value }
+    }
+  } catch { /* non-critical */ }
+}
+
+async function handlePausePlan(planId: string) {
+  if (!project.value) return
+  try {
+    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
+    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans/${planId}/pause`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    })
+    const json = await res.json()
+    if (json.success && json.data) {
+      const plans = actionPlanData.value?.plans || []
+      const idx = plans.findIndex((p: any) => p.id === planId)
+      if (idx >= 0) {
+        plans[idx] = json.data
+      }
+      actionPlanData.value = { ...actionPlanData.value }
+    }
+  } catch { /* non-critical */ }
+}
+
+async function handleCompletePlan(planId: string) {
+  if (!project.value) return
+  try {
+    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
+    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans/${planId}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    })
+    const json = await res.json()
+    if (json.success && json.data) {
+      const plans = actionPlanData.value?.plans || []
+      const idx = plans.findIndex((p: any) => p.id === planId)
+      if (idx >= 0) {
+        plans[idx] = json.data
+      }
+      actionPlanData.value = { ...actionPlanData.value }
+    }
+  } catch { /* non-critical */ }
+}
+
 // ── Lifecycle ──
 onMounted(async () => {
-  await loadData()
+  await Promise.all([loadData(), loadWalkthrough()])
+  // Handle ?tab=presence auto-trigger after data loads
+  if (route.query.tab === 'presence' && hasAnalysis.value && !loading.value) {
+    await loadPresence()
+  }
+})
+
+// Watch for tab query param changes (from continue journey navigation)
+watch(() => route.query.tab, async (tab) => {
+  if (tab === 'presence' && hasAnalysis.value && !loading.value) {
+    await loadPresence()
+  }
 })
 
 // ── Data Loading ──
@@ -1645,6 +2022,18 @@ async function handleQuickDiscovery() {
   }
 }
 
+// ── Walkthrough ──
+async function loadWalkthrough() {
+  try {
+    const state = await walkthroughService.getState()
+    if (state.activeGuide) {
+      walkthroughGuide.value = state.activeGuide
+    }
+  } catch {
+    // Silent fail
+  }
+}
+
 async function onBrandUpdated(projectId: string) {
   showEditModal.value = false
   editingProject.value = null
@@ -1661,9 +2050,40 @@ function onEditCancelled() {
   showEditModal.value = false
   editingProject.value = null
 }
+
+// ── Explain Drawer State (RC1-T004) ──
+const explainDrawerVisible = ref(false)
+const explainDrawerLoading = ref(false)
+const explainDrawerError = ref<string | null>(null)
+const explainDrawerData = ref<ExplainResult | null>(null)
+const explainDrawerType = ref<string>('discovery')
+
+async function openExplainDrawer(type: string) {
+  if (!project.value?.id) return
+  explainDrawerType.value = type
+  explainDrawerVisible.value = true
+  explainDrawerLoading.value = true
+  explainDrawerError.value = null
+  explainDrawerData.value = null
+  try {
+    explainDrawerData.value = await explainService.getExplain(type, project.value.id)
+  } catch (err: any) {
+    explainDrawerError.value = err?.message || '获取 Explain 数据失败'
+  } finally {
+    explainDrawerLoading.value = false
+  }
+}
+
+function closeExplainDrawer() {
+  explainDrawerVisible.value = false
+  explainDrawerData.value = null
+  explainDrawerError.value = null
+}
 </script>
 
 <style scoped>
+@import url('../assets/geo-design-system.css');
+
 .brand-overview {
   max-width: 900px;
   margin: 0 auto;
@@ -1672,38 +2092,6 @@ function onEditCancelled() {
 }
 
 /* ===== Loading / Error ===== */
-.brand-overview__loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 64px;
-  color: #6b7280;
-}
-
-.brand-overview__spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: brandSpin 0.6s linear infinite;
-}
-
-@keyframes brandSpin {
-  to { transform: rotate(360deg); }
-}
-
-.brand-overview__error {
-  text-align: center;
-  padding: 32px;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  margin-bottom: 24px;
-}
-
 /* ===== Top Bar ===== */
 .brand-overview__top-bar {
   margin-bottom: 20px;
@@ -1805,37 +2193,6 @@ function onEditCancelled() {
 .brand-overview__brand-url:hover {
   color: #2563eb;
   text-decoration: underline;
-}
-
-.brand-overview__status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.brand-overview__status-badge--draft {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.brand-overview__status-badge--active {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.brand-overview__status-badge--monitoring {
-  background: #dbeafe;
-  color: #2563eb;
-}
-
-.brand-overview__status-badge--completed {
-  background: #f0fdf4;
-  color: #15803d;
 }
 
 /* ===== Completeness Card ===== */
@@ -2203,75 +2560,6 @@ function onEditCancelled() {
   background: #dbeafe;
 }
 
-/* Loading */
-.brand-overview__explain-loading {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 24px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-}
-
-.brand-overview__explain-loading-step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-.brand-overview__explain-loading-icon {
-  width: 24px;
-  text-align: center;
-  transition: opacity 0.3s;
-}
-
-.brand-overview__explain-step--pending {
-  opacity: 0.4;
-}
-
-.brand-overview__explain-step--active {
-  opacity: 1;
-  font-weight: 600;
-  color: #3b82f6;
-}
-
-.brand-overview__explain-step--done {
-  opacity: 0.7;
-  color: #059669;
-}
-
-/* Error */
-.brand-overview__explain-error {
-  text-align: center;
-  padding: 24px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  color: #dc2626;
-}
-
-.brand-overview__explain-error p {
-  margin: 0 0 12px;
-}
-
-/* Empty */
-.brand-overview__explain-empty {
-  text-align: center;
-  padding: 32px;
-  background: #f9fafb;
-  border: 1px dashed #d1d5db;
-  border-radius: 10px;
-  color: #6b7280;
-}
-
-.brand-overview__explain-empty p {
-  margin: 0 0 16px;
-  font-size: 14px;
-}
-
 /* Card */
 .brand-overview__explain-card {
   background: #fff;
@@ -2285,41 +2573,6 @@ function onEditCancelled() {
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
-}
-
-.brand-overview__explain-confidence-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.brand-overview__confidence--high {
-  background: #f0fdf4;
-  color: #059669;
-}
-
-.brand-overview__confidence--medium {
-  background: #fffbeb;
-  color: #d97706;
-}
-
-.brand-overview__confidence--low {
-  background: #fef2f2;
-  color: #dc2626;
-}
-
-.brand-overview__explain-adi-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  background: #eff6ff;
-  color: #3b82f6;
 }
 
 .brand-overview__explain-summary {
@@ -2573,75 +2826,6 @@ function onEditCancelled() {
   background: #d1fae5;
 }
 
-/* Loading (三步骤) */
-.brand-overview__optimization-loading {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 24px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-}
-
-.brand-overview__optimization-loading-step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-.brand-overview__optimization-loading-icon {
-  width: 24px;
-  text-align: center;
-  transition: opacity 0.3s;
-}
-
-.brand-overview__opt-step--pending {
-  opacity: 0.4;
-}
-
-.brand-overview__opt-step--active {
-  opacity: 1;
-  font-weight: 600;
-  color: #059669;
-}
-
-.brand-overview__opt-step--done {
-  opacity: 0.7;
-  color: #059669;
-}
-
-/* Error */
-.brand-overview__optimization-error {
-  text-align: center;
-  padding: 24px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  color: #dc2626;
-}
-
-.brand-overview__optimization-error p {
-  margin: 0 0 12px;
-}
-
-/* Empty */
-.brand-overview__optimization-empty {
-  text-align: center;
-  padding: 32px;
-  background: #f9fafb;
-  border: 1px dashed #d1d5db;
-  border-radius: 10px;
-  color: #6b7280;
-}
-
-.brand-overview__optimization-empty p {
-  margin: 0 0 16px;
-  font-size: 14px;
-}
-
 /* Card */
 .brand-overview__optimization-card {
   background: #fff;
@@ -2819,6 +3003,324 @@ function onEditCancelled() {
   margin: 0 0 4px;
 }
 
+/* ============================================================
+   Action Plan Styles (P0-T007)
+   ============================================================ */
+
+/* Section title count badge */
+.brand-overview__ap-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-left: 8px;
+}
+
+/* Trigger & Refresh buttons */
+.brand-overview__ap-trigger,
+.brand-overview__ap-refresh-btn {
+  font-size: 12px;
+  color: #059669;
+  background: none;
+  border: 1px solid #059669;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  transition: all 0.15s;
+}
+
+.brand-overview__ap-trigger:hover,
+.brand-overview__ap-refresh-btn:hover {
+  background: #f0fdf4;
+}
+
+.brand-overview__ap-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Card */
+.brand-overview__ap-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+/* Summary Bar */
+.brand-overview__ap-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+}
+
+.brand-overview__ap-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.brand-overview__ap-summary-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.brand-overview__ap-summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.brand-overview__ap-summary-value small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.brand-overview__ap-summary-value--gain {
+  color: #059669;
+}
+
+/* Plan Card */
+.brand-overview__ap-plan-card {
+  display: flex;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.15s;
+}
+
+.brand-overview__ap-plan-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.brand-overview__ap-plan-left-bar {
+  width: 4px;
+  flex-shrink: 0;
+}
+
+.brand-overview__ap-plan-left-bar--high {
+  background: #ef4444;
+}
+
+.brand-overview__ap-plan-left-bar--medium {
+  background: #f59e0b;
+}
+
+.brand-overview__ap-plan-left-bar--low {
+  background: #3b82f6;
+}
+
+.brand-overview__ap-plan-content {
+  flex: 1;
+  padding: 14px 16px;
+}
+
+.brand-overview__ap-plan-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.brand-overview__ap-plan-priority {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.brand-overview__ap-plan-priority--high {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.brand-overview__ap-plan-priority--medium {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.brand-overview__ap-plan-priority--low {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.brand-overview__ap-plan-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.brand-overview__ap-plan-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.brand-overview__ap-plan-impact {
+  font-weight: 500;
+  color: #059669;
+  background: #f0fdf4;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.brand-overview__ap-plan-difficulty {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.brand-overview__ap-plan-difficulty--easy {
+  background: #f0fdf4;
+  color: #059669;
+}
+
+.brand-overview__ap-plan-difficulty--medium {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.brand-overview__ap-plan-difficulty--hard {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.brand-overview__ap-plan-duration {
+  color: #9ca3af;
+}
+
+/* Explain */
+.brand-overview__ap-plan-explain {
+  margin-bottom: 10px;
+}
+
+.brand-overview__ap-plan-explain-toggle {
+  font-size: 12px;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.brand-overview__ap-plan-explain-toggle:hover {
+  color: #059669;
+}
+
+.brand-overview__ap-plan-explain-body {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.brand-overview__ap-plan-explain-body p {
+  margin: 0 0 4px;
+}
+
+.brand-overview__ap-plan-explain-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Status + Actions */
+.brand-overview__ap-plan-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.brand-overview__ap-plan-status {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.brand-overview__ap-plan-status--todo {
+  color: #6b7280;
+}
+
+.brand-overview__ap-plan-status--running {
+  color: #059669;
+}
+
+.brand-overview__ap-plan-status--completed {
+  color: #16a34a;
+}
+
+.brand-overview__ap-plan-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.brand-overview__ap-plan-btn--start {
+  color: #059669;
+  border-color: #059669;
+  background: #f0fdf4;
+}
+
+.brand-overview__ap-plan-btn--start:hover {
+  background: #059669;
+  color: #fff;
+}
+
+.brand-overview__ap-plan-btn--pause {
+  color: #d97706;
+  border-color: #d97706;
+  background: #fffbeb;
+}
+
+.brand-overview__ap-plan-btn--pause:hover {
+  background: #d97706;
+  color: #fff;
+}
+
+.brand-overview__ap-plan-btn--complete {
+  color: #16a34a;
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.brand-overview__ap-plan-btn--complete:hover {
+  background: #16a34a;
+  color: #fff;
+}
+
 .brand-overview__opt-rec-reason {
   font-size: 12px;
   color: #6b7280;
@@ -2866,75 +3368,6 @@ function onEditCancelled() {
 
 .brand-overview__presence-trigger:hover {
   background: #ede9fe;
-}
-
-/* Loading */
-.brand-overview__presence-loading {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 24px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-}
-
-.brand-overview__presence-loading-step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-.brand-overview__presence-loading-icon {
-  width: 24px;
-  text-align: center;
-  transition: opacity 0.3s;
-}
-
-.brand-overview__presence-step--pending {
-  opacity: 0.4;
-}
-
-.brand-overview__presence-step--active {
-  opacity: 1;
-  font-weight: 600;
-  color: #7c3aed;
-}
-
-.brand-overview__presence-step--done {
-  opacity: 0.7;
-  color: #059669;
-}
-
-/* Error */
-.brand-overview__presence-error {
-  text-align: center;
-  padding: 24px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  color: #dc2626;
-}
-
-.brand-overview__presence-error p {
-  margin: 0 0 12px;
-}
-
-/* Empty */
-.brand-overview__presence-empty {
-  text-align: center;
-  padding: 32px;
-  background: #f9fafb;
-  border: 1px dashed #d1d5db;
-  border-radius: 10px;
-  color: #6b7280;
-}
-
-.brand-overview__presence-empty p {
-  margin: 0 0 16px;
-  font-size: 14px;
 }
 
 /* Main Card */
@@ -3392,60 +3825,6 @@ function onEditCancelled() {
 
 .brand-overview__verification-trigger:hover {
   background: #dcfce7;
-}
-
-.brand-overview__verification-loading {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: #f9fafb;
-  border: 1px dashed #e5e7eb;
-  border-radius: 10px;
-}
-
-.brand-overview__verification-loading-step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.brand-overview__verification-loading-icon {
-  width: 20px;
-  text-align: center;
-}
-
-.brand-overview__veri-step--done {
-  color: #059669;
-}
-
-.brand-overview__veri-step--active {
-  color: #3b82f6;
-  font-weight: 600;
-}
-
-.brand-overview__veri-step--pending {
-  color: #d1d5db;
-}
-
-.brand-overview__verification-error {
-  text-align: center;
-  padding: 16px;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-}
-
-.brand-overview__verification-empty {
-  text-align: center;
-  padding: 24px;
-  color: #6b7280;
-  background: #f9fafb;
-  border: 1px dashed #e5e7eb;
-  border-radius: 10px;
 }
 
 .brand-overview__verification-card {

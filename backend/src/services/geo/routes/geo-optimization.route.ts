@@ -11,7 +11,6 @@ import { FastifyInstance } from 'fastify'
 import { geoProjectRepository } from '../repositories/geo-project.repository.js'
 import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
 import { geoClaimRepository } from '../repositories/geo-claim.repository.js'
-import { prisma } from '../../../utils/index.js'
 
 interface OptimizationRecommendation {
   action: string
@@ -220,20 +219,12 @@ export default async function geoOptimizationRoutes(fastify: FastifyInstance) {
         orderBy: { createdAt: 'desc' },
       })
 
-      // Load evidence from DB
-      const evidenceDb: any[] = await prisma.$queryRawUnsafe(
-        `SELECT * FROM "GEOEvidence" WHERE "claimId" IN (SELECT id FROM "GEOClaim" WHERE "projectId" = $1)`,
-        id
-      )
-
-      // Determine analysis state
+      // No evidence DB dependency — use project config data
       const hasWebsite = !!(project.config?.website || project.website)
-      const hasStructuredData = evidenceDb.some(
-        (e: any) => e.sourceType === 'structured_data' || e.type === 'structuredData'
-      )
+      const hasStructuredData = false  // Not verifiable without GEOEvidence table
       const hasSearch = scanRecords.length > 0
-      const evidenceCount = evidenceDb.length
-      const hasAnalysis = adi > 0 || evidenceCount > 0 || entityCount > 0 || scanRecords.length > 0
+      const evidenceCount = 0
+      const hasAnalysis = adi > 0 || entityCount > 0 || scanRecords.length > 0
 
       // Empty state: no analysis done yet
       if (!hasAnalysis) {

@@ -132,8 +132,8 @@ export class VerificationEngine {
    */
   async getVerification(verificationId: string): Promise<VerificationResult | null> {
     // 在所有项目中查找
-    const projects = await this.prisma.project.findMany({
-      where: { deletedAt: null },
+    const projects = await this.prisma.gEOProject.findMany({
+      where: { status: { not: 'deleted' } },
     });
 
     for (const project of projects) {
@@ -151,7 +151,7 @@ export class VerificationEngine {
   // ─── Private Helpers ───
 
   private async getProject(projectId: string): Promise<any> {
-    const project = await this.prisma.project.findUnique({
+    const project = await this.prisma.gEOProject.findUnique({
       where: { id: projectId },
     });
     return project;
@@ -480,7 +480,7 @@ export class VerificationEngine {
    * 保存到 project.config.verifications[]
    */
   private async saveVerification(projectId: string, result: VerificationResult): Promise<void> {
-    const project = await this.prisma.project.findUnique({
+    const project = await this.prisma.gEOProject.findUnique({
       where: { id: projectId },
     });
 
@@ -495,7 +495,7 @@ export class VerificationEngine {
       verifications.splice(0, verifications.length - 50);
     }
 
-    await this.prisma.project.update({
+    await this.prisma.gEOProject.update({
       where: { id: projectId },
       data: {
         config: {

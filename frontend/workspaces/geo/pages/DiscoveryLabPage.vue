@@ -15,6 +15,11 @@
   <div class="discovery-lab">
     <!-- Page Header -->
     <header class="discovery-lab__header">
+      <!-- Walkthrough GuideBar (Level 1: after brand creation, prompt discovery) -->
+      <GeoWalkthroughBar
+        :guide="activeGuide"
+        @dismissed="activeGuide = null"
+      />
       <div class="discovery-lab__header-top">
         <NuxtLink to="/workspace/geo/dashboard" class="discovery-lab__back-btn">← 返回工作台</NuxtLink>
       </div>
@@ -92,6 +97,7 @@
               <div class="discovery-lab__adi-value">
                 <span class="discovery-lab__adi-number">{{ store.report.adi }}</span>
                 <span class="discovery-lab__adi-label">ADI</span>
+                <GeoExplainButton @click="openExplainDrawer" />
               </div>
             </div>
             <div class="discovery-lab__adi-info">
@@ -304,15 +310,69 @@
         </div>
       </section>
     </template>
+
+    <!-- ===== Explain Drawer (RC1-T004) ===== -->
+    <GeoExplainDrawer
+      :visible="explainDrawerVisible"
+      :explain="explainDrawerData"
+      :loading="explainDrawerLoading"
+      :error="explainDrawerError"
+      @close="closeExplainDrawer"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useDiscoveryStore } from '../stores/useDiscoveryStore'
+import GeoWalkthroughBar from '../components/GeoWalkthroughBar.vue'
+import GeoExplainButton from '../components/GeoExplainButton.vue'
+import GeoExplainDrawer from '../components/GeoExplainDrawer/index.vue'
+import { explainService } from '../services/explainService'
+import type { ExplainResult } from '../types/explain'
+import { walkthroughService, type GuideInfo } from '../services/walkthroughService'
 
 const store = useDiscoveryStore()
 const entityInput = ref('')
+const activeGuide = ref<GuideInfo | null>(null)
+
+// ── Explain Drawer State (RC1-T004) ──
+const explainDrawerVisible = ref(false)
+const explainDrawerLoading = ref(false)
+const explainDrawerError = ref<string | null>(null)
+const explainDrawerData = ref<ExplainResult | null>(null)
+
+async function openExplainDrawer() {
+  if (!store.report?.entityName) return
+  explainDrawerVisible.value = true
+  explainDrawerLoading.value = true
+  explainDrawerError.value = null
+  explainDrawerData.value = null
+  try {
+    explainDrawerData.value = await explainService.getExplain('discovery', store.report.entityName)
+  } catch (err: any) {
+    explainDrawerError.value = err?.message || '获取 Explain 数据失败'
+  } finally {
+    explainDrawerLoading.value = false
+  }
+}
+
+function closeExplainDrawer() {
+  explainDrawerVisible.value = false
+  explainDrawerData.value = null
+  explainDrawerError.value = null
+}
+
+onMounted(async () => {
+  try {
+    const state = await walkthroughService.getState()
+    if (state.activeGuide && state.activeGuide.step === 'discovery') {
+      activeGuide.value = state.activeGuide
+    }
+  } catch {
+    // Silent fail
+  }
+})
 
 const sortedScenarios = computed(() => {
   if (!store.report) return []

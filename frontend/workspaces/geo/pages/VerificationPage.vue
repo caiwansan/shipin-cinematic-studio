@@ -39,6 +39,10 @@
     <template v-if="report && !isLoading">
       <!-- 1. 主数据卡片：Score Comparison -->
       <section class="verification-page__section">
+        <div class="verification-page__section-title-row">
+          <h2 class="verification-page__section-title">验证结果</h2>
+          <GeoExplainButton @click="openExplainDrawer" />
+        </div>
         <VerificationCard
           :title="`${report.entityName} — ADI 对比`"
           :before-adi="report.beforeAdi"
@@ -254,6 +258,15 @@
         计算 Before/After ADI 对比，并生成详细的改进分析报告。
       </p>
     </div>
+
+    <!-- ===== Explain Drawer (RC1-T004) ===== -->
+    <GeoExplainDrawer
+      :visible="explainDrawerVisible"
+      :explain="explainDrawerData"
+      :loading="explainDrawerLoading"
+      :error="explainDrawerError"
+      @close="closeExplainDrawer"
+    />
   </div>
 </template>
 
@@ -262,6 +275,10 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { fetchEntityVerification } from '../services/verificationService'
 import type { VerificationReport } from '../services/verificationService'
+import GeoExplainButton from '../components/GeoExplainButton.vue'
+import GeoExplainDrawer from '../components/GeoExplainDrawer/index.vue'
+import { explainService } from '../services/explainService'
+import type { ExplainResult } from '../types/explain'
 import VerificationCard from '../../../components/kmki-ui/VerificationCard/index.vue'
 import ImprovementBadge from '../../../components/kmki-ui/ImprovementBadge/index.vue'
 import ConfidenceMeter from '../../../components/kmki-ui/ConfidenceMeter/index.vue'
@@ -274,6 +291,33 @@ const entityName = ref('')
 const report = ref<VerificationReport | null>(null)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
+
+// ── Explain Drawer State (RC1-T004) ──
+const explainDrawerVisible = ref(false)
+const explainDrawerLoading = ref(false)
+const explainDrawerError = ref<string | null>(null)
+const explainDrawerData = ref<ExplainResult | null>(null)
+
+async function openExplainDrawer() {
+  if (!entityName.value.trim()) return
+  explainDrawerVisible.value = true
+  explainDrawerLoading.value = true
+  explainDrawerError.value = null
+  explainDrawerData.value = null
+  try {
+    explainDrawerData.value = await explainService.getExplain('verification', entityName.value.trim())
+  } catch (err: any) {
+    explainDrawerError.value = err?.message || '获取 Explain 数据失败'
+  } finally {
+    explainDrawerLoading.value = false
+  }
+}
+
+function closeExplainDrawer() {
+  explainDrawerVisible.value = false
+  explainDrawerData.value = null
+  explainDrawerError.value = null
+}
 
 // For Report generation link — try to get current projectId from route or store
 const route = useRoute()
@@ -468,10 +512,21 @@ function priorityLabel(priority: string): string {
   font-size: 18px;
   font-weight: 600;
   color: #111827;
-  margin: 0 0 16px;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.verification-page__section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.verification-page__section-title-row .verification-page__section-title {
+  margin-bottom: 0;
 }
 
 .verification-page__section-badge {

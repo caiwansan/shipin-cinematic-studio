@@ -1,435 +1,260 @@
 <template>
-  <div class="geo-dashboard">
+  <div class="geo-mission-control">
     <!-- ===== Page Header ===== -->
-    <header class="geo-dashboard__header">
+    <header class="geo-mission-control__header">
       <div>
-        <h1 class="geo-dashboard__title">GEO 工作台</h1>
-        <p class="geo-dashboard__subtitle">建立您的品牌数字身份，提升 AI 可见度</p>
+        <h1 class="geo-mission-control__title">使命控制中心</h1>
+        <p class="geo-mission-control__subtitle">管理品牌数字身份，提升 AI 可见度</p>
       </div>
-      <div class="geo-dashboard__header-actions">
-        <button class="geo-dashboard__create-btn" @click="handleEditBrand">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-          创建品牌
-        </button>
-        <NuxtLink to="/" class="geo-dashboard__back-link">🏠 返回首页</NuxtLink>
+      <div class="geo-mission-control__header-actions">
+        <NuxtLink to="/" class="geo-mission-control__back-link">🏠 返回首页</NuxtLink>
       </div>
     </header>
 
     <!-- ===== Loading State ===== -->
-    <div v-if="loading" class="geo-dashboard__loading">
-      <div class="geo-dashboard__spinner" />
-      <span>正在加载项目...</span>
-    </div>
+    <GeoLoading v-if="loading" :steps="loadingSteps" :current-step="1" />
 
     <!-- ===== Error State ===== -->
-    <div v-else-if="error" class="geo-dashboard__error">
-      <p>{{ error }}</p>
-      <button class="geo-dashboard__btn geo-dashboard__btn--primary" @click="loadData">重试</button>
-    </div>
+    <GeoErrorState v-else-if="error" :message="error" @retry="loadMission" />
 
-    <div v-else class="geo-dashboard__data-state">
-      <!-- ===== Empty State (P0-T001) ===== -->
-      <section v-if="projects.length === 0" class="geo-dashboard__empty-state">
-        <div class="geo-dashboard__empty-state-content">
-          <div class="geo-dashboard__empty-state-icon">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-              <rect x="8" y="16" width="48" height="36" rx="4" stroke="#3b82f6" stroke-width="2" fill="#eff6ff" />
-              <path d="M24 28h16M24 36h16M24 44h10" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" />
-              <circle cx="48" cy="16" r="8" fill="#3b82f6" opacity="0.15" />
-              <path d="M48 12v8M44 16h8" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </div>
-          <h2 class="geo-dashboard__empty-state-title">欢迎使用 GEO 工作台</h2>
-          <p class="geo-dashboard__empty-state-desc">三步提升品牌在 AI 平台的可见度</p>
+    <!-- ===== Empty State ===== -->
+    <GeoEmptyState
+      v-else-if="!mission || mission.prioritizedProjects.length === 0"
+      icon="🏢"
+      title="欢迎使用 GEO 工作台"
+      description="创建第一个品牌，开始您的 AI 可见度优化之旅"
+    >
+      <template #actions>
+        <button class="geo-mission-control__create-btn" @click="navigateCreate">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          创建品牌
+        </button>
+      </template>
+    </GeoEmptyState>
 
-          <!-- Three-step guide -->
-          <div class="geo-dashboard__empty-state-steps">
-            <div class="geo-dashboard__empty-state-step">
-              <span class="geo-dashboard__empty-state-step-num">1</span>
-              <div class="geo-dashboard__empty-state-step-content">
-                <strong>创建品牌</strong>
-                <span>输入品牌名称、官网和行业</span>
-              </div>
-            </div>
-            <div class="geo-dashboard__empty-state-step">
-              <span class="geo-dashboard__empty-state-step-num">2</span>
-              <div class="geo-dashboard__empty-state-step-content">
-                <strong>分析品牌</strong>
-                <span>运行 AI 发现扫描，了解品牌可见度</span>
-              </div>
-            </div>
-            <div class="geo-dashboard__empty-state-step">
-              <span class="geo-dashboard__empty-state-step-num">3</span>
-              <div class="geo-dashboard__empty-state-step-content">
-                <strong>优化提升</strong>
-                <span>根据建议优化，追踪效果</span>
-              </div>
-            </div>
-          </div>
-          <button class="geo-dashboard__empty-state-btn" @click="showCreateModal = true">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-            创建品牌
-          </button>
-        </div>
+    <!-- ===== Data State ===== -->
+    <div v-else class="geo-mission-control__data">
+      <!-- ===== Walkthrough Welcome Card (Level 0) ===== -->
+      <GeoWalkthroughWelcome
+        :show="walkthroughState.showWelcomeCard"
+        @create="navigateCreate"
+        @skip="dismissWalkthrough"
+      />
+
+      <!-- ===== KPI Bar (3 metrics) ===== -->
+      <section class="geo-mission-control__kpi-bar">
+        <GeoMetricCard label="品牌" :display-value="brandCount" />
+        <GeoMetricCard label="平均 ADI" :display-value="averageAdi">
+          <template #suffix>
+            <GeoExplainButton @click="openExplain('discovery')" />
+          </template>
+        </GeoMetricCard>
+        <GeoMetricCard
+          label="AI 可见度"
+          :display-value="`${mission.systemHealth.aiPresenceCount}/${mission.systemHealth.aiPresenceTotal}`"
+          subtext="可见平台/总数"
+        >
+          <template #suffix>
+            <GeoExplainButton @click="openExplain('presence')" />
+          </template>
+        </GeoMetricCard>
       </section>
-      <!-- ===== Data State ===== -->
-      <div v-else class="geo-dashboard__data-content">
-        <!-- ===== KPI Stats ===== -->
-        <section class="geo-dashboard__section">
-          <div class="geo-dashboard__kpi-bar">
-            <span class="geo-dashboard__kpi-item">
-              <strong>{{ projects.length }}</strong> 品牌
-            </span>
-            <span class="geo-dashboard__kpi-divider" />
-            <span class="geo-dashboard__kpi-item">
-              <strong>{{ analyzedCount }}</strong> 已分析
-            </span>
-            <span class="geo-dashboard__kpi-divider" />
-            <span class="geo-dashboard__kpi-item">
-              <strong>{{ analyzedCount > 0 ? avgAdi : '—' }}</strong> 平均 ADI
-            </span>
-            <span class="geo-dashboard__kpi-divider" />
-            <span class="geo-dashboard__kpi-item">
-              <strong>{{ pendingCount }}</strong> 待分析
-            </span>
-          </div>
-          <div v-if="analyzedCount === 0" class="geo-dashboard__kpi-hint">
-            等待首次分析
-            <button class="geo-dashboard__kpi-btn" @click="handleFirstAnalysis">立即开始 →</button>
-          </div>
-        </section>
 
-        <!-- ===== Quick Actions ===== -->
-        <section class="geo-dashboard__section">
-          <h2 class="geo-dashboard__section-title">快速操作</h2>
-          <div class="geo-dashboard__quick-actions">
-            <button class="geo-dashboard__action-card" @click="handleEditBrand">
-              <span class="geo-dashboard__action-icon geo-dashboard__action-icon--brand">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </span>
-              <span class="geo-dashboard__action-text">
-                <strong>完善品牌资料</strong>
-                <small>更新品牌信息与配置</small>
-              </span>
-            </button>
-            <button class="geo-dashboard__action-card" @click="handleGEOAssessment">
-              <span class="geo-dashboard__action-icon geo-dashboard__action-icon--geo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                  <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
-              </span>
-              <span class="geo-dashboard__action-text">
-                <strong>开始 GEO 评估</strong>
-                <small>运行品牌发现与分析</small>
-              </span>
-            </button>
-            <button class="geo-dashboard__action-card" @click="handleAddKnowledge">
-              <span class="geo-dashboard__action-icon geo-dashboard__action-icon--knowledge">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke="currentColor" stroke-width="2" />
-                  <path d="M8 7h8M8 11h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
-              </span>
-              <span class="geo-dashboard__action-text">
-                <strong>添加知识源</strong>
-                <small>导入品牌资料与文档</small>
-              </span>
-            </button>
-          </div>
-        </section>
-
-        <!-- ===== Brand Cards / Project List (P2-2.4) ===== -->
-        <section class="geo-dashboard__section">
-          <h2 class="geo-dashboard__section-title">
-            品牌项目
-            <span class="geo-dashboard__section-badge">{{ projects.length }}</span>
-          </h2>
-
-          <div class="geo-dashboard__brand-cards">
-            <div
-              v-for="project in projects"
-              :key="project.id"
-              class="geo-dashboard__brand-card"
-              @click="continueProject(project.id)"
-            >
-              <div class="geo-dashboard__brand-card-header">
-                <div class="geo-dashboard__brand-card-avatar">
-                  {{ project.name.charAt(0).toUpperCase() }}
-                </div>
-                <div class="geo-dashboard__brand-card-info">
-                  <h3 class="geo-dashboard__brand-card-name">{{ project.name }}</h3>
-                  <span v-if="project.industry" class="geo-dashboard__brand-card-industry">{{ project.industry }}</span>
-                  <a
-                    v-if="project.website || project.config?.website"
-                    :href="project.website || project.config?.website"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="geo-dashboard__brand-card-website"
-                    @click.stop
-                  >
-                    {{ (project.website || project.config?.website)?.replace(/^https?:\/\//, '').replace(/\/.*$/, '') }}
-                  </a>
-                </div>
-                <div class="geo-dashboard__brand-card-actions">
-                  <button
-                    class="geo-dashboard__brand-card-delete"
-                    title="删除品牌"
-                    @click.stop="confirmDeleteBrand(project)"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                    </svg>
-                  </button>
-                </div>
-                <span class="geo-dashboard__brand-card-status" :class="`geo-dashboard__brand-card-status--${project.status || 'draft'}`">
-                  {{ statusLabel(project.status) }}
-                </span>
-              </div>
-
-              <div class="geo-dashboard__brand-card-body">
-                <div class="geo-dashboard__brand-card-completeness">
-                  <div class="geo-dashboard__brand-card-ring">
-                    <svg width="40" height="40" viewBox="0 0 40 40">
-                      <circle cx="20" cy="20" r="16" fill="none" stroke="#e5e7eb" stroke-width="3" />
-                      <circle
-                        cx="20" cy="20" r="16"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="3"
-                        stroke-linecap="round"
-                        :stroke-dasharray="100.53"
-                        :stroke-dashoffset="100.53 - (100.53 * brandCompleteness(project)) / 100"
-                        :class="completenessRingColor(brandCompleteness(project))"
-                      />
-                      <text x="20" y="20" text-anchor="middle" dominant-baseline="central" class="geo-dashboard__brand-card-ring-text">
-                        {{ brandCompleteness(project) }}%
-                      </text>
-                    </svg>
-                  </div>
-                  <div class="geo-dashboard__brand-card-steps">
-                    <span class="geo-dashboard__brand-card-step" :class="brandCompletenessStep(project, 'identity')">
-                      {{ brandCompletenessStep(project, 'identity') === 'done' ? '✓' : '○' }} 资料
-                    </span>
-                    <span class="geo-dashboard__brand-card-step" :class="brandCompletenessStep(project, 'knowledge')">
-                      {{ brandCompletenessStep(project, 'knowledge') === 'done' ? '✓' : '○' }} 知识
-                    </span>
-                    <span class="geo-dashboard__brand-card-step" :class="brandCompletenessStep(project, 'analysis')">
-                      {{ brandCompletenessStep(project, 'analysis') === 'done' ? '✓' : '○' }} 分析
-                    </span>
-                    <span class="geo-dashboard__brand-card-step" :class="brandCompletenessStep(project, 'verification')">
-                      {{ brandCompletenessStep(project, 'verification') === 'done' ? '✓' : '○' }} 验真
-                    </span>
-                  </div>
-                </div>
-
-                <div class="geo-dashboard__brand-card-stats">
-                  <div class="geo-dashboard__brand-card-stat">
-                    <span class="geo-dashboard__brand-card-stat-value">{{ project.entityCount ?? 0 }}</span>
-                    <span class="geo-dashboard__brand-card-stat-label">实体</span>
-                  </div>
-                  <div class="geo-dashboard__brand-card-stat">
-                    <span class="geo-dashboard__brand-card-stat-value">{{ project.versionCount ?? 0 }}</span>
-                    <span class="geo-dashboard__brand-card-stat-label">版本</span>
-                  </div>
-                  <div class="geo-dashboard__brand-card-stat">
-                    <span class="geo-dashboard__brand-card-stat-value">{{ getLastAssessment(project) }}</span>
-                    <span class="geo-dashboard__brand-card-stat-label">最后评估</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-                  </div>
-        </section>
-      </div>
-    </div>
-
-    <!-- ===== Brand Create Modal (P2-2.1) ===== -->
-    <BrandCreateModal
-      v-if="showCreateModal"
-      :project="editingProject"
-      @created="onBrandCreated"
-      @cancelled="onModalCancelled"
-    />
-
-    <!-- ===== Delete Confirmation Modal (P0-T001) ===== -->
-    <div v-if="showDeleteModal" class="geo-dashboard__modal-overlay" @click.self="showDeleteModal = false">
-      <div class="geo-dashboard__delete-modal">
-        <h3 class="geo-dashboard__delete-modal-title">确认删除品牌</h3>
-        <p class="geo-dashboard__delete-modal-desc">
-          确定要删除 <strong>{{ deletingProject?.name }}</strong> 吗？此操作不可撤销。
-        </p>
-        <div class="geo-dashboard__delete-modal-actions">
-          <button class="geo-dashboard__btn" @click="showDeleteModal = false">取消</button>
-          <button
-            class="geo-dashboard__btn geo-dashboard__btn--danger"
-            :disabled="deleting"
-            @click="doDeleteBrand"
+      <!-- ===== Section 1: Today Progress ===== -->
+      <GeoCard title="今日旅程" class="geo-mission-control__section">
+        <div class="geo-mission-control__progress-bar">
+          <div class="geo-mission-control__progress-fill" :style="{ width: mission.todayProgress.progressPercent + '%' }" />
+          <span class="geo-mission-control__progress-label">{{ mission.todayProgress.progressPercent }}%</span>
+        </div>
+        <div class="geo-mission-control__steps">
+          <div
+            v-for="step in mission.todayProgress.steps"
+            :key="step.label"
+            class="geo-mission-control__step"
+            :class="{ 'geo-mission-control__step--done': step.done }"
           >
-            {{ deleting ? '删除中...' : '确认删除' }}
+            <span class="geo-mission-control__step-icon">{{ step.done ? '✓' : '○' }}</span>
+            <span class="geo-mission-control__step-label">{{ step.label }}</span>
+          </div>
+        </div>
+      </GeoCard>
+
+      <!-- ===== Section 2: Continue Journey ===== -->
+      <GeoCard v-if="mission.continueJourney" title="继续旅程" class="geo-mission-control__section">
+        <div class="geo-mission-control__continue">
+          <h3 class="geo-mission-control__continue-brand">{{ mission.continueJourney.projectName }}</h3>
+          <p class="geo-mission-control__continue-info">
+            上一步：{{ mission.continueJourney.currentStep }}
+            <span class="geo-mission-control__continue-check">✓</span>
+          </p>
+          <p class="geo-mission-control__continue-next">
+            下一步：<strong>{{ mission.continueJourney.nextStep }}</strong>
+          </p>
+          <button class="geo-mission-control__continue-btn" @click="navigateTo(mission.continueJourney.nextStepUrl)">
+            继续 →
           </button>
         </div>
-      </div>
+      </GeoCard>
+
+      <!-- ===== Section 3: Brand Priority ===== -->
+      <GeoCard title="品牌优先级" class="geo-mission-control__section">
+        <div class="geo-mission-control__brand-table">
+          <div class="geo-mission-control__brand-table-header">
+            <span class="geo-mission-control__brand-col-name">品牌</span>
+            <span class="geo-mission-control__brand-col-adi">ADI</span>
+            <span class="geo-mission-control__brand-col-status">状态</span>
+            <span class="geo-mission-control__brand-col-action">操作</span>
+          </div>
+          <div
+            v-for="project in mission.prioritizedProjects"
+            :key="project.id"
+            class="geo-mission-control__brand-row"
+          >
+            <span class="geo-mission-control__brand-col-name">{{ project.name }}</span>
+            <span class="geo-mission-control__brand-col-adi">{{ project.adi > 0 ? project.adi : '—' }}</span>
+            <span class="geo-mission-control__brand-col-status">
+              <GeoBadge :variant="badgeVariant(project.priorityLabel)">{{ project.priorityLabel }}</GeoBadge>
+            </span>
+            <span class="geo-mission-control__brand-col-action">
+              <button
+                v-if="project.priorityLabel !== '已完成'"
+                class="geo-mission-control__action-btn"
+                @click="navigateTo(project.continueUrl)"
+              >
+                {{ actionLabel(project.priorityLabel) }} →
+              </button>
+              <span v-else class="geo-mission-control__action-done">—</span>
+            </span>
+          </div>
+        </div>
+      </GeoCard>
+
+      <!-- ===== Section 4: Recent Activity ===== -->
+      <GeoCard title="最近活动" class="geo-mission-control__section">
+        <div class="geo-mission-control__activities">
+          <div
+            v-for="(activity, i) in mission.recentActivities.slice(0, 8)"
+            :key="i"
+            class="geo-mission-control__activity"
+          >
+            <span class="geo-mission-control__activity-time">{{ activity.relativeTime }}</span>
+            <span class="geo-mission-control__activity-label">{{ activity.label }}</span>
+          </div>
+          <p v-if="mission.recentActivities.length === 0" class="geo-mission-control__activity-empty">
+            暂无活动记录
+          </p>
+        </div>
+      </GeoCard>
+
+      <!-- ===== Section 5: System Health ===== -->
+      <GeoCard title="系统健康" class="geo-mission-control__section">
+        <div class="geo-mission-control__health">
+          <div class="geo-mission-control__health-item">
+            <span class="geo-mission-control__health-icon">📡</span>
+            <span class="geo-mission-control__health-label">AI 可见度</span>
+            <span class="geo-mission-control__health-value">
+              {{ mission.systemHealth.aiPresenceCount }}/{{ mission.systemHealth.aiPresenceTotal }}
+            </span>
+          </div>
+          <div class="geo-mission-control__health-item">
+            <span class="geo-mission-control__health-icon">🕐</span>
+            <span class="geo-mission-control__health-label">上次扫描</span>
+            <span class="geo-mission-control__health-value">{{ mission.systemHealth.lastScanRelative }}</span>
+          </div>
+          <div class="geo-mission-control__health-item">
+            <span class="geo-mission-control__health-icon">🔌</span>
+            <span class="geo-mission-control__health-label">API 状态</span>
+            <span class="geo-mission-control__health-value" :class="{ 'geo-mission-control__health--ok': mission.systemHealth.apiHealthy }">
+              {{ mission.systemHealth.apiHealthy ? '✓ 健康' : '✗ 异常' }}
+            </span>
+          </div>
+        </div>
+      </GeoCard>
     </div>
+
+    <!-- ===== Explain Drawer (RC1-T004) ===== -->
+    <GeoExplainDrawer
+      :visible="explainDrawerVisible"
+      :explain="explainData"
+      :loading="explainLoading"
+      :error="explainError"
+      @close="closeExplain"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useGeoProjectStore } from '../stores/useGeoProjectStore'
-import { useWorkflowStore } from '../stores/useWorkflowStore'
-import BrandCreateModal from '../components/BrandCreateModal.vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getDashboardMission, type DashboardMission } from '../services/dashboardMissionService'
+import { walkthroughService, type WalkthroughState } from '../services/walkthroughService'
+import GeoCard from '../components/GeoCard/index.vue'
+import GeoBadge from '../components/GeoBadge/index.vue'
+import GeoMetricCard from '../components/GeoMetricCard/index.vue'
+import GeoLoading from '../components/GeoLoading/index.vue'
+import GeoEmptyState from '../components/GeoEmptyState/index.vue'
+import GeoErrorState from '../components/GeoErrorState/index.vue'
+import GeoWalkthroughWelcome from '../components/GeoWalkthroughWelcome.vue'
+import GeoExplainButton from '../components/GeoExplainButton.vue'
+import GeoExplainDrawer from '../components/GeoExplainDrawer/index.vue'
+import { explainService } from '../services/explainService'
+import type { ExplainResult } from '../types/explain'
 
 definePageMeta({
-  title: 'GEO Dashboard',
+  title: 'Mission Control',
 })
 
 const router = useRouter()
-const route = useRoute()
-const projectStore = useGeoProjectStore()
-const workflowStore = useWorkflowStore()
 
 // ── State ──
-const loading = ref(false)
+const loading = ref(true)
 const error = ref<string | null>(null)
-const showCreateModal = ref(false)
-const showDeleteModal = ref(false)
-const deleting = ref(false)
-const deletingProject = ref<any>(null)
-const editingProject = ref<{
-  id: string
-  name: string
-  website?: string
-  industry?: string
-  description?: string
-} | null>(null)
+const mission = ref<DashboardMission | null>(null)
 
-// ── Dashboard Data ──
-const projects = ref<any[]>([])
+// ── Explain Drawer State (RC1-T004) ──
+const explainDrawerVisible = ref(false)
+const explainLoading = ref(false)
+const explainError = ref<string | null>(null)
+const explainData = ref<ExplainResult | null>(null)
+const explainType = ref<string>('discovery')
 
-// ── KPI Computed (P2-T002-P0) ──
-
-const analyzedCount = computed(() => {
-  return projects.value.filter((p: any) => p.config?.adi > 0 || p.discoveryReportId).length
+const walkthroughState = ref<WalkthroughState>({
+  showWelcomeCard: false,
+  activeGuide: null,
+  dismissed: false,
+  completed: false,
 })
 
-const pendingCount = computed(() => projects.value.length - analyzedCount.value)
+const loadingSteps = [
+  { label: '加载 Mission Control...', icon: '🎯' },
+  { label: '解析品牌数据...', icon: '🔍' },
+  { label: '准备显示...', icon: '📊' },
+]
 
-const avgAdi = computed(() => {
-  const analyzed = projects.value.filter((p: any) => p.config?.adi > 0)
-  if (analyzed.length === 0) return 0
-  const total = analyzed.reduce((sum: number, p: any) => sum + (p.config?.adi || 0), 0)
-  return Math.round(total / analyzed.length)
+// ── Computed ──
+const brandCount = computed(() => mission.value?.prioritizedProjects.length ?? 0)
+
+const averageAdi = computed(() => {
+  if (!mission.value || mission.value.prioritizedProjects.length === 0) return '—'
+  const withAdi = mission.value.prioritizedProjects.filter((p) => p.adi > 0)
+  if (withAdi.length === 0) return '—'
+  const total = withAdi.reduce((sum, p) => sum + p.adi, 0)
+  return Math.round(total / withAdi.length)
 })
-
-// ── Brand Card Helpers (P2-T002-P1) ──
-
-function brandCompleteness(project: any): number {
-  // Identity: 只计算弹窗可填的字段 + 已分析状态
-  // name(25) + website(25) + industry(25) + description(25) = 100
-  let identityScore = 0
-  if (project.name) identityScore += 25
-  if (project.website || project.config?.website) identityScore += 25
-  if (project.industry) identityScore += 25
-  if (project.config?.description || project.brandSetting?.description) identityScore += 25
-  const identityMax = 100
-
-  // Knowledge: entity count(50) + version count(50) = 100（预留，后续知识导入后生效）
-  let knowledgeScore = 0
-  if ((project.entityCount ?? 0) > 0) knowledgeScore += Math.min(50, (project.entityCount ?? 0) * 5)
-  if ((project.versionCount ?? 0) > 0) knowledgeScore += Math.min(50, (project.versionCount ?? 0) * 15)
-  const knowledgeMax = 100
-
-  // Analysis: adi分数已生成(80) + 已验真(20) = 100
-  let analysisScore = 0
-  const configAdi = project.config?.adi
-  if (project.discoveryReport || project.hasDiscovery || configAdi != null) analysisScore += 80
-  if (project.verificationReport || project.hasVerification) analysisScore += 20
-  const analysisMax = 100
-
-  const totalMax = identityMax + knowledgeMax + analysisMax
-  const totalScore = identityScore + knowledgeScore + analysisScore
-  return totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0
-}
-
-function completenessRingColor(score: number): string {
-  if (score >= 80) return 'geo-dashboard__ring--high'
-  if (score >= 50) return 'geo-dashboard__ring--medium'
-  return 'geo-dashboard__ring--low'
-}
-
-function brandCompletenessStep(project: any, step: string): string {
-  switch (step) {
-    case 'identity':
-      return (project.name && (project.website || project.config?.website) && project.industry) ? 'done' : 'todo';
-    case 'knowledge':
-      return (project.entityCount ?? 0) > 0 ? 'done' : 'todo';
-    case 'analysis':
-      return (project.config?.adi != null) ? 'done' : 'todo';
-    case 'verification':
-      return (project.verificationReport || project.hasVerification) ? 'done' : 'todo';
-    default:
-      return 'todo';
-  }
-}
-
-function getLastAssessment(project: any): string {
-  if (!project.updatedAt) return '—'
-  const d = new Date(project.updatedAt)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  if (days === 0) return '今天'
-  if (days === 1) return '昨天'
-  if (days < 7) return `${days}天前`
-  return formatDate(project.updatedAt)
-}
-
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'active': return '进行中'
-    case 'monitoring': return '监测中'
-    case 'completed': return '已完成'
-    default: return '草稿'
-  }
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '—'
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 // ── Lifecycle ──
 onMounted(async () => {
-  await loadData()
-})
-
-// ── Auto-refresh on route enter (P0-T002) ──
-watch(() => route.path, async (newPath, oldPath) => {
-  // Refresh data whenever user navigates back to dashboard
-  if (newPath === '/workspace/geo/dashboard' && oldPath !== newPath) {
-    await loadData()
-  }
+  await Promise.all([loadMission(), loadWalkthrough()])
 })
 
 // ── Data Loading ──
-async function loadData() {
+async function loadMission() {
   loading.value = true
   error.value = null
-
   try {
-    await projectStore.listProjects()
-    projects.value = [...projectStore.projects]
+    mission.value = await getDashboardMission()
   } catch (err: any) {
     error.value = err?.message || '加载数据失败'
   } finally {
@@ -437,89 +262,88 @@ async function loadData() {
   }
 }
 
-// ── Actions ──
-
-function handleEditBrand() {
-  if (projects.value.length > 0) {
-    // Edit mode — pass the first project
-    const p = projects.value[0]
-    editingProject.value = {
-      id: p.id,
-      name: p.name,
-      website: p.config?.website || '',
-      industry: p.industry || '',
-      description: p.config?.description || '',
-    }
-  }
-  showCreateModal.value = true
-}
-
-function handleGEOAssessment() {
-  if (projects.value.length === 0) {
-    showCreateModal.value = true
-    return
-  }
-  const targetProject = projects.value[0]
-  router.push(`/workspace/geo/brand/${targetProject.id}`)
-}
-
-function handleAddKnowledge() {
-  // 留待后续 Phase — 跳转到工作台
-  router.push('/workspace/geo/knowledge')
-}
-
-function handleFirstAnalysis() {
-  if (projects.value.length === 0) {
-    showCreateModal.value = true
-    return
-  }
-  const targetProject = projects.value[0]
-  router.push(`/workspace/geo/brand/${targetProject.id}`)
-}
-
-async function onBrandCreated(projectId: string) {
-  showCreateModal.value = false
-  editingProject.value = null
-  await loadData()
-  // Navigate to Brand Overview page
-  router.push(`/workspace/geo/brand/${projectId}`)
-}
-
-function onModalCancelled() {
-  showCreateModal.value = false
-  editingProject.value = null
-}
-
-// ── Delete Brand (P0-T001) ──
-
-function confirmDeleteBrand(project: any) {
-  deletingProject.value = project
-  showDeleteModal.value = true
-}
-
-async function doDeleteBrand() {
-  if (!deletingProject.value) return
-  deleting.value = true
+// ── Walkthrough ──
+async function loadWalkthrough() {
   try {
-    await projectStore.deleteBrand(deletingProject.value.id)
-    showDeleteModal.value = false
-    deletingProject.value = null
-    await loadData()
-  } catch (err: any) {
-    console.error('Delete failed:', err)
-  } finally {
-    deleting.value = false
+    walkthroughState.value = await walkthroughService.getState()
+  } catch {
+    // Silent fail — walkthrough is non-critical
   }
 }
 
-function continueProject(projectId: string) {
-  // Navigate to Brand Overview page
-  router.push(`/workspace/geo/brand/${projectId}`)
+async function dismissWalkthrough() {
+  try {
+    await walkthroughService.dismiss()
+    walkthroughState.value = { showWelcomeCard: false, activeGuide: null, dismissed: true, completed: false }
+  } catch {
+    // Silent fail
+  }
+}
+
+// ── Helpers ──
+
+// ── Explain Drawer (RC1-T004) ──
+async function openExplain(type: string) {
+  explainType.value = type
+  explainDrawerVisible.value = true
+  explainLoading.value = true
+  explainError.value = null
+  explainData.value = null
+
+  try {
+    // Use the first project ID for explain, or a placeholder
+    const projectId = mission.value?.prioritizedProjects?.[0]?.id || ''
+    if (!projectId) {
+      explainError.value = '暂无品牌数据'
+      return
+    }
+    explainData.value = await explainService.getExplain(type, projectId)
+  } catch (err: any) {
+    explainError.value = err?.message || '获取 Explain 数据失败'
+  } finally {
+    explainLoading.value = false
+  }
+}
+
+function closeExplain() {
+  explainDrawerVisible.value = false
+  explainData.value = null
+  explainError.value = null
+}
+
+function badgeVariant(priorityLabel: string): 'error' | 'warning' | 'info' | 'success' | 'neutral' {
+  switch (priorityLabel) {
+    case '需验证': return 'error'
+    case '需优化': return 'warning'
+    case '需行动': return 'info'
+    case '需分析': return 'info'
+    default: return 'success'
+  }
+}
+
+function actionLabel(priorityLabel: string): string {
+  switch (priorityLabel) {
+    case '需验证': return '验证'
+    case '需优化': return '优化'
+    case '需行动': return '继续'
+    case '需分析': return '分析'
+    default: return '查看'
+  }
+}
+
+function navigateTo(url: string) {
+  router.push(url)
+}
+
+function navigateCreate() {
+  router.push('/workspace/geo/create')
 }
 </script>
 
 <style scoped>
-.geo-dashboard {
+@import url('../assets/geo-design-system.css');
+
+.geo-mission-control {
   max-width: 1100px;
   margin: 0 auto;
   font-family: var(--font-family, Inter, -apple-system, sans-serif);
@@ -527,21 +351,21 @@ function continueProject(projectId: string) {
 }
 
 /* ===== Header ===== */
-.geo-dashboard__header {
+.geo-mission-control__header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 32px;
 }
 
-.geo-dashboard__header-actions {
+.geo-mission-control__header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
 }
 
-.geo-dashboard__title {
+.geo-mission-control__title {
   font-size: 28px;
   font-weight: 700;
   color: #111827;
@@ -549,13 +373,13 @@ function continueProject(projectId: string) {
   letter-spacing: -0.03em;
 }
 
-.geo-dashboard__subtitle {
+.geo-mission-control__subtitle {
   font-size: 15px;
   color: #6b7280;
   margin: 0;
 }
 
-.geo-dashboard__back-link {
+.geo-mission-control__back-link {
   font-size: 14px;
   color: #3b82f6;
   text-decoration: none;
@@ -565,216 +389,301 @@ function continueProject(projectId: string) {
   transition: background-color 0.15s;
 }
 
-.geo-dashboard__back-link:hover {
+.geo-mission-control__back-link:hover {
   background-color: #eff6ff;
 }
 
-/* ===== Section ===== */
-.geo-dashboard__section {
-  margin-bottom: 32px;
+/* ===== KPI Bar ===== */
+.geo-mission-control__kpi-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-.geo-dashboard__kpi-bar {
+/* ===== Section ===== */
+.geo-mission-control__section {
+  margin-bottom: 24px;
+}
+
+/* ===== Today Progress ===== */
+.geo-mission-control__progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.geo-mission-control__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #22c55e);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.geo-mission-control__progress-label {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.geo-mission-control__steps {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.geo-mission-control__step {
   display: flex;
   align-items: center;
-  gap: 0;
-  background: #fff;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f9fafb;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 12px 0;
-}
-
-.geo-dashboard__kpi-item {
-  flex: 1;
-  text-align: center;
   font-size: 13px;
-  color: #6b7280;
-  line-height: 1.5;
+  color: #9ca3af;
+  flex: 1;
+  justify-content: center;
+  transition: all 0.15s;
 }
 
-.geo-dashboard__kpi-item strong {
-  display: block;
-  font-size: 22px;
+.geo-mission-control__step--done {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #16a34a;
+}
+
+.geo-mission-control__step-icon {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.geo-mission-control__step-label {
+  font-weight: 500;
+}
+
+/* ===== Continue Journey ===== */
+.geo-mission-control__continue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.geo-mission-control__continue-brand {
+  font-size: 18px;
   font-weight: 700;
   color: #111827;
-  line-height: 1.3;
+  margin: 0;
 }
 
-.geo-dashboard__kpi-divider {
-  width: 1px;
-  height: 36px;
-  background: #e5e7eb;
-  flex-shrink: 0;
+.geo-mission-control__continue-info {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.geo-dashboard__create-btn {
+.geo-mission-control__continue-check {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.geo-mission-control__continue-next {
+  font-size: 14px;
+  color: #374151;
+  margin: 0;
+}
+
+.geo-mission-control__continue-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 12px 20px;
+  padding: 10px 24px;
   background: #3b82f6;
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+  align-self: flex-start;
   transition: all 0.15s;
   font-family: inherit;
 }
 
-.geo-dashboard__create-btn:hover {
+.geo-mission-control__continue-btn:hover {
   background: #2563eb;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
 }
 
-.geo-dashboard__section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.geo-dashboard__section-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: #e5e7eb;
-  color: #6b7280;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-/* ===== Loading / Error ===== */
-.geo-dashboard__loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 48px;
-  color: #6b7280;
-}
-
-.geo-dashboard__spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.geo-dashboard__error {
-  text-align: center;
-  padding: 32px;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  margin-bottom: 24px;
-}
-
-/* ===== Empty State (P0-T001) ===== */
-.geo-dashboard__empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 420px;
-  padding: 48px 24px;
-}
-
-.geo-dashboard__empty-state-content {
-  text-align: center;
-  max-width: 440px;
-}
-
-.geo-dashboard__empty-state-icon {
-  margin-bottom: 24px;
-  display: inline-flex;
-}
-
-.geo-dashboard__empty-state-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 4px;
-}
-
-.geo-dashboard__empty-state-desc {
-  font-size: 15px;
-  color: #6b7280;
-  margin: 0 0 28px;
-  line-height: 1.5;
-}
-
-.geo-dashboard__empty-state-steps {
+/* ===== Brand Priority Table ===== */
+.geo-mission-control__brand-table {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 32px;
-  text-align: left;
 }
 
-.geo-dashboard__empty-state-step {
+.geo-mission-control__brand-table-header {
+  display: flex;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.geo-mission-control__brand-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.1s;
+}
+
+.geo-mission-control__brand-row:hover {
   background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  transition: border-color 0.15s;
 }
 
-.geo-dashboard__empty-state-step:hover {
-  border-color: #bfdbfe;
+.geo-mission-control__brand-row:last-child {
+  border-bottom: none;
 }
 
-.geo-dashboard__empty-state-step-num {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #3b82f6;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.geo-dashboard__empty-state-step-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.geo-dashboard__empty-state-step-content strong {
+.geo-mission-control__brand-col-name {
+  flex: 1;
   font-size: 14px;
   font-weight: 600;
   color: #111827;
 }
 
-.geo-dashboard__empty-state-step-content span {
+.geo-mission-control__brand-col-adi {
+  width: 60px;
+  font-size: 14px;
+  color: #374151;
+  text-align: center;
+}
+
+.geo-mission-control__brand-col-status {
+  width: 80px;
+  text-align: center;
+}
+
+.geo-mission-control__brand-col-action {
+  width: 100px;
+  text-align: right;
+}
+
+.geo-mission-control__action-btn {
+  padding: 6px 14px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
   font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.geo-mission-control__action-btn:hover {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.geo-mission-control__action-done {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* ===== Recent Activities ===== */
+.geo-mission-control__activities {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.geo-mission-control__activity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: background-color 0.1s;
+}
+
+.geo-mission-control__activity:hover {
+  background: #f9fafb;
+}
+
+.geo-mission-control__activity-time {
+  color: #9ca3af;
+  font-size: 12px;
+  white-space: nowrap;
+  min-width: 70px;
+}
+
+.geo-mission-control__activity-label {
+  color: #374151;
+}
+
+.geo-mission-control__activity-empty {
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+  margin: 0;
+}
+
+/* ===== System Health ===== */
+.geo-mission-control__health {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.geo-mission-control__health-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #f9fafb;
+}
+
+.geo-mission-control__health-icon {
+  font-size: 16px;
+}
+
+.geo-mission-control__health-label {
+  flex: 1;
+  font-size: 14px;
   color: #6b7280;
 }
 
-.geo-dashboard__empty-state-btn {
+.geo-mission-control__health-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.geo-mission-control__health--ok {
+  color: #16a34a;
+}
+
+/* ===== Create Button ===== */
+.geo-mission-control__create-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -790,536 +699,25 @@ function continueProject(projectId: string) {
   font-family: inherit;
 }
 
-.geo-dashboard__empty-state-btn:hover {
+.geo-mission-control__create-btn:hover {
   background: #2563eb;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
 }
 
-/* ===== Brand Profile (P2-2.2) ===== */
-.geo-dashboard__brand-profile {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
-}
-
-.geo-dashboard__brand-profile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.geo-dashboard__brand-completeness {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.geo-dashboard__completeness-ring {
-  color: #3b82f6;
-  flex-shrink: 0;
-}
-
-.geo-dashboard__completeness-ring-fill {
-  transition: stroke-dashoffset 0.6s ease;
-}
-
-.geo-dashboard__completeness-text {
-  font-size: 11px;
-  font-weight: 700;
-  fill: #111827;
-}
-
-.geo-dashboard__completeness-meta {
-  display: flex;
-  flex-direction: column;
-}
-
-.geo-dashboard__completeness-label {
-  font-size: 11px;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.geo-dashboard__completeness-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.geo-dashboard__profile-dimensions {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.geo-dashboard__profile-dimension {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.geo-dashboard__dimension-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.geo-dashboard__dimension-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.geo-dashboard__dimension-score {
-  font-size: 13px;
-  font-weight: 600;
-  color: #6b7280;
-}
-
-.geo-dashboard__dimension-bar {
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.geo-dashboard__dimension-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.5s ease;
-}
-
-.geo-dashboard__dimension-fill--high {
-  background: #22c55e;
-}
-
-.geo-dashboard__dimension-fill--medium {
-  background: #f59e0b;
-}
-
-.geo-dashboard__dimension-fill--low {
-  background: #ef4444;
-}
-
-/* ===== Quick Actions (P2-2.3) ===== */
-.geo-dashboard__quick-actions {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-.geo-dashboard__action-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.15s ease-out;
-  text-align: left;
-  font-family: inherit;
-}
-
-.geo-dashboard__action-card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
-  transform: translateY(-1px);
-}
-
-.geo-dashboard__action-icon {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-
-.geo-dashboard__action-icon--brand {
-  background: #eff6ff;
-  color: #3b82f6;
-}
-
-.geo-dashboard__action-icon--geo {
-  background: #f0fdf4;
-  color: #22c55e;
-}
-
-.geo-dashboard__action-icon--knowledge {
-  background: #fffbeb;
-  color: #f59e0b;
-}
-
-.geo-dashboard__action-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.geo-dashboard__action-text strong {
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.geo-dashboard__action-text small {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-/* ===== Brand Cards (P2-2.4) ===== */
-.geo-dashboard__brand-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-}
-
-.geo-dashboard__brand-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.15s ease-out;
-}
-
-.geo-dashboard__brand-card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
-  transform: translateY(-1px);
-}
-
-.geo-dashboard__brand-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.geo-dashboard__brand-card-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.geo-dashboard__brand-card-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.geo-dashboard__brand-card-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.geo-dashboard__brand-card-industry {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.geo-dashboard__brand-card-website {
-  font-size: 11px;
-  color: #3b82f6;
-  text-decoration: none;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
-  transition: color 0.15s;
-}
-
-.geo-dashboard__brand-card-website:hover {
-  color: #2563eb;
-  text-decoration: underline;
-}
-
-.geo-dashboard__brand-card-status {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.geo-dashboard__brand-card-status--draft {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.geo-dashboard__brand-card-status--active {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.geo-dashboard__brand-card-status--monitoring {
-  background: #dbeafe;
-  color: #2563eb;
-}
-
-.geo-dashboard__brand-card-status--completed {
-  background: #f0fdf4;
-  color: #15803d;
-}
-
-.geo-dashboard__brand-card-body {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.geo-dashboard__brand-card-completeness {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.geo-dashboard__brand-card-ring {
-  flex-shrink: 0;
-}
-
-.geo-dashboard__brand-card-ring-text {
-  font-size: 8px;
-  font-weight: 700;
-  fill: #111827;
-}
-
-.geo-dashboard__ring--high {
-  color: #22c55e;
-}
-
-.geo-dashboard__ring--medium {
-  color: #f59e0b;
-}
-
-.geo-dashboard__ring--low {
-  color: #ef4444;
-}
-
-.geo-dashboard__brand-card-meta {
-  display: flex;
-  flex-direction: column;
-}
-
-.geo-dashboard__brand-card-meta-label {
-  font-size: 10px;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.geo-dashboard__brand-card-meta-value {
-  font-size: 14px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.geo-dashboard__brand-card-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-top: 2px;
-}
-
-.geo-dashboard__brand-card-step {
-  font-size: 11px;
-  color: #9ca3af;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.geo-dashboard__brand-card-step--done {
-  color: #059669;
-}
-
-.geo-dashboard__brand-card-stats {
-  display: flex;
-  gap: 16px;
-  flex: 1;
-}
-
-.geo-dashboard__brand-card-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-}
-
-.geo-dashboard__brand-card-stat-value {
-  font-size: 14px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.geo-dashboard__brand-card-stat-label {
-  font-size: 10px;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-/* ===== Common Button ===== */
-.geo-dashboard__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  cursor: pointer;
-  transition: all 0.15s;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-}
-
-.geo-dashboard__btn:hover:not(:disabled) {
-  border-color: #3b82f6;
-  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.1);
-}
-
-.geo-dashboard__btn--primary {
-  background: #3b82f6;
-  color: #fff;
-  border-color: #3b82f6;
-}
-
-.geo-dashboard__btn--primary:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-/* ===== Danger Button (P0-T001) ===== */
-.geo-dashboard__btn--danger {
-  background: #ef4444;
-  color: #fff;
-  border-color: #ef4444;
-}
-
-.geo-dashboard__btn--danger:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.geo-dashboard__btn--danger:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ===== Brand Card Actions (P0-T001) ===== */
-.geo-dashboard__brand-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.geo-dashboard__brand-card-delete {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: #9ca3af;
-  cursor: pointer;
-  transition: all 0.15s;
-  opacity: 0;
-}
-
-.geo-dashboard__brand-card:hover .geo-dashboard__brand-card-delete {
-  opacity: 1;
-}
-
-.geo-dashboard__brand-card-delete:hover {
-  background: #fef2f2;
-  color: #ef4444;
-}
-
-/* ===== Delete Modal (P0-T001) ===== */
-.geo-dashboard__modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.geo-dashboard__delete-modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  width: 400px;
-  max-width: 90vw;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-}
-
-.geo-dashboard__delete-modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 8px;
-}
-
-.geo-dashboard__delete-modal-desc {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0 0 24px;
-  line-height: 1.5;
-}
-
-.geo-dashboard__delete-modal-desc strong {
-  color: #111827;
-}
-
-.geo-dashboard__delete-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
-  .geo-dashboard__header {
+  .geo-mission-control__header {
     flex-direction: column;
     gap: 12px;
   }
 
-  .geo-dashboard__quick-actions {
-    grid-template-columns: 1fr;
+  .geo-mission-control__steps {
+    flex-wrap: wrap;
   }
 
-  .geo-dashboard__brand-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .geo-dashboard__brand-profile-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+  .geo-mission-control__step {
+    flex: 1 1 40%;
   }
 }
 </style>

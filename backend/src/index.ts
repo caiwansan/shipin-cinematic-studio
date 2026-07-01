@@ -572,6 +572,15 @@ await app.register(projectV2Routes)
   await app.register(await import('./services/geo/routes/geo-keyword.route.js').then(m => m.default))
   await app.register(await import('./services/geo/routes/geo-scan.route.js').then(m => m.default))
   await app.register(await import('./services/geo/routes/geo-dashboard.route.js').then(m => m.default))
+  // RC1-T002 — Dashboard Mission Control
+  await app.register(await import('./services/geo/routes/geo-dashboard-mission.route.js').then(m => m.default))
+  // RC1-T003 — Progressive Walkthrough
+  try {
+    await app.register(await import('./services/geo/routes/geo-walkthrough.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Walkthrough route registered at /api/geo/walkthrough/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Walkthrough route skipped:', (err as Error).message)
+  }
   // Sprint 3 — GEO Recommendation Engine (GEO v2 MVP)
   await app.register(await import('./services/geo/recommendation/recommendation.route.js').then(m => m.geoRecommendationRoutes))
   // GEO v3 — Growth Engine Routes
@@ -639,6 +648,13 @@ await app.register(projectV2Routes)
   } catch (err) {
     console.warn('[startup] ⚠️ GEO Explain route skipped:', (err as Error).message)
   }
+  // RC1-T004 — Explain Engine Route (统一 /api/geo/explain/:type/:id)
+  try {
+    await app.register(await import('./services/geo/routes/geo-explain-engine.route.js').then(m => m.geoExplainEngineRoutes))
+    console.log('[startup] ✅ GEO Explain Engine route registered at /api/geo/explain/:type/:id')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Explain Engine route skipped:', (err as Error).message)
+  }
   // P0-T004 — Optimization Center MVP
   try {
     await app.register(await import('./services/geo/routes/geo-optimization.route.js').then(m => m.default))
@@ -652,6 +668,13 @@ await app.register(projectV2Routes)
     console.log('[startup] ✅ GEO Presence route registered at /api/geo/brands/:id/presence')
   } catch (err) {
     console.warn('[startup] ⚠️ GEO Presence route skipped:', (err as Error).message)
+  }
+  // P0-T007 — Action Plan Engine Route
+  try {
+    await app.register(await import('./services/geo/routes/geo-action-plan.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Action Plan route registered at /api/geo/brands/:id/action-plans')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Action Plan route skipped:', (err as Error).message)
   }
   // Unified Asset Runtime routes — wrapped to avoid tsx @platform alias issue
   try { await app.register(await import('./routes/asset/asset.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset route skipped:', (err as Error).message) }

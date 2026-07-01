@@ -10,7 +10,6 @@ import { FastifyInstance } from 'fastify'
 import { geoProjectRepository } from '../repositories/geo-project.repository.js'
 import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
 import { geoClaimRepository } from '../repositories/geo-claim.repository.js'
-import { prisma } from '../../../utils/index.js'
 
 interface ExplainEvidence {
   id: string
@@ -324,11 +323,8 @@ export default async function geoExplainRoutes(fastify: FastifyInstance) {
         orderBy: { createdAt: 'desc' },
       })
 
-      // Load evidence from DB
-      const evidenceDb: any[] = await prisma.$queryRawUnsafe(
-        `SELECT * FROM "GEOEvidence" WHERE "claimId" IN (SELECT id FROM "GEOClaim" WHERE "projectId" = $1)`,
-        id
-      )
+      // Load evidence from DB — only from project config (no GEOEvidence table dependency)
+      const evidenceDb: any[] = []
 
       // Build Evidence list
       const evidence = await buildEvidence(project, scanRecords, evidenceDb, entityCount)

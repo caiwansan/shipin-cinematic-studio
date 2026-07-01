@@ -24,6 +24,9 @@
       </div>
       <div class="geo-layout__header-right">
         <span class="geo-layout__user-info">Acme Robotics</span>
+        <button class="geo-layout__restart-wt" @click="restartWalkthrough" title="Restart Walkthrough">
+          🔄 重新引导
+        </button>
       </div>
     </header>
 
@@ -69,10 +72,21 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { walkthroughService } from '../services/walkthroughService'
 
 const route = useRoute()
+const router = useRouter()
 const navOpen = ref(false)
+
+async function restartWalkthrough() {
+  try {
+    await walkthroughService.restart()
+    router.push('/workspace/geo/dashboard')
+  } catch {
+    // Silent fail
+  }
+}
 
 const navTabs = [
   { label: 'Dashboard', path: '/workspace/geo/dashboard', icon: '&#128202;' },
@@ -166,12 +180,32 @@ function toggleNav() {
 .geo-layout__header-right {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .geo-layout__user-info {
   font-size: var(--text-body-sm-size, 14px);
   font-weight: 500;
   color: var(--color-text-primary, #111111);
+}
+
+.geo-layout__restart-wt {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.geo-layout__restart-wt:hover {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #9ca3af;
 }
 
 /* ===== BODY ===== */
