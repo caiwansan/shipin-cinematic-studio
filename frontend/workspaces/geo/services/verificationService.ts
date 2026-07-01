@@ -101,6 +101,70 @@ export interface VerificationData {
   }
 }
 
+/**
+ * 验证报告 — 来自新 Verification Engine API
+ */
+export interface VerifiedItem {
+  id: string
+  actionPlanId: string
+  actionStepId: string
+  title: string
+  status: 'completed' | 'pending' | 'skipped'
+  adiContribution: number
+  details: string
+}
+
+export interface DimensionChange {
+  before: number
+  after: number
+  delta: number
+}
+
+export interface ImprovementBreakdownItem {
+  label: string
+  contribution: number
+  detail: string
+}
+
+export interface RemainingIssue {
+  scenarioId: string
+  scenarioName: string
+  gap: number
+  priority: 'high' | 'medium' | 'low'
+}
+
+export interface VerificationReport {
+  id: string
+  entityId: string
+  entityName: string
+  beforeAdi: number
+  afterAdi: number
+  deltaAdi: number
+  improvementRate: number
+  dimensionChanges: {
+    coverage: DimensionChange
+    share: DimensionChange
+    position: DimensionChange
+  }
+  totalActions: number
+  completedActions: number
+  skippedActions: number
+  pendingActions: number
+  completionRate: number
+  verifiedItems: VerifiedItem[]
+  improvementBreakdown: ImprovementBreakdownItem[]
+  remainingIssues: RemainingIssue[]
+  confidence: number
+  verifiedAt: string
+}
+
+export async function fetchEntityVerification(entity: string): Promise<VerificationReport> {
+  const raw = await geoApi<{ success: boolean; data: VerificationReport }>(
+    `discovery/verify?entity=${encodeURIComponent(entity)}`
+  )
+  return raw.data
+}
+
 export async function fetchVerification(projectId: string): Promise<VerificationData> {
   const raw = await geoApi<{ success: boolean; data: any }>(`verification/${projectId}`)
   const d = raw.data
