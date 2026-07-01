@@ -28,6 +28,21 @@ export { CMSPublisher } from './publishing/adapters/cms.publisher'
 export { WebhookPublisher } from './publishing/adapters/webhook.publisher'
 export { ExportPublisher } from './publishing/adapters/export.publisher'
 
+// Review / Approval (KH3)
+export { ReviewEngine, ReviewDecision } from './review/review-engine'
+export { ApprovalEngine } from './review/approval-engine'
+export { ReviewPolicyEngine } from './review/review-policy'
+export { AuditTimeline } from './review/audit-timeline'
+export { registerReviewRoutes } from './review/api'
+export type {
+  ReviewRecord,
+  ReviewComment,
+  ReviewStatus,
+  ApprovalPolicy,
+  ApprovalResult,
+} from './review/types'
+export type { AuditEvent, AuditEventType } from './review/audit-timeline'
+
 // Types
 export {
   KnowledgePackage,

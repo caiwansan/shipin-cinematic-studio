@@ -725,6 +725,28 @@ await app.register(projectV2Routes)
 
     console.log('[startup] ✅ Knowledge Hub v1 routes registered at /api/knowledge/*')
     console.log('[startup] ✅ Knowledge Hub KH2 (Publishing Engine) registered at /api/knowledge/publish/*')
+
+    // KH3 — Review / Approval
+    const { ReviewEngine } = await import('./platform/knowledge-hub/review/review-engine.js')
+    const { ApprovalEngine } = await import('./platform/knowledge-hub/review/approval-engine.js')
+    const { ReviewPolicyEngine } = await import('./platform/knowledge-hub/review/review-policy.js')
+    const { AuditTimeline } = await import('./platform/knowledge-hub/review/audit-timeline.js')
+    const { registerReviewRoutes } = await import('./platform/knowledge-hub/review/api.js')
+
+    const reviewEngine = new ReviewEngine()
+    const reviewPolicy = new ReviewPolicyEngine()
+    const auditTimeline = new AuditTimeline()
+    const approvalEngine = new ApprovalEngine(reviewEngine, reviewPolicy)
+
+    registerReviewRoutes(app, {
+      reviewEngine,
+      approvalEngine,
+      policyEngine: reviewPolicy,
+      audit: auditTimeline,
+    })
+
+    console.log('[startup] ✅ Knowledge Hub KH3 (Review/Approval) registered at /api/knowledge/reviews/*')
+    console.log('[startup] ✅ Knowledge Hub KH3 (Audit Timeline) registered at /api/knowledge/audit/*')
   } catch (err) {
     console.warn('[startup] ⚠️ Knowledge Hub routes skipped:', (err as Error).message)
   }
