@@ -598,6 +598,14 @@ await app.register(projectV2Routes)
     console.warn('[startup] ⚠️ Learning route skipped:', (err as Error).message)
   }
 
+  // P1-C — Deliverable Center Route (Report + Export)
+  try {
+    await app.register(await import('./services/geo/routes/geo-deliverable.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Deliverable route registered at /api/geo/report/:projectId')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Deliverable route skipped:', (err as Error).message)
+  }
+
   // P0-T005 — AI Discovery Lab Route
   try {
     await app.register(await import('./services/geo/routes/geo-discovery.route.js').then(m => m.default))

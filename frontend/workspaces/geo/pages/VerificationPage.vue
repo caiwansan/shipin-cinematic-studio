@@ -227,6 +227,19 @@
         <h2 class="verification-page__section-title">置信度</h2>
         <ConfidenceMeter :confidence="report.confidence" />
       </section>
+
+      <!-- 8. Generate Report Button -->
+      <section class="verification-page__section">
+        <div class="verification-page__report-action">
+          <p class="verification-page__report-desc">Generate a comprehensive brand health report based on this verification data.</p>
+          <NuxtLink
+            :to="`/workspace/geo/report/${currentProjectId}`"
+            class="verification-page__report-btn"
+          >
+            📄 生成报告
+          </NuxtLink>
+        </div>
+      </section>
     </template>
 
     <!-- ===== Empty State ===== -->
@@ -246,6 +259,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { fetchEntityVerification } from '../services/verificationService'
 import type { VerificationReport } from '../services/verificationService'
 import VerificationCard from '../../../components/kmki-ui/VerificationCard/index.vue'
@@ -260,6 +274,15 @@ const entityName = ref('')
 const report = ref<VerificationReport | null>(null)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
+
+// For Report generation link — try to get current projectId from route or store
+const route = useRoute()
+const currentProjectId = ref('')
+if (route.params?.projectId) {
+  currentProjectId.value = route.params.projectId as string
+} else if (route.query?.projectId) {
+  currentProjectId.value = route.query.projectId as string
+}
 
 const dimensionsList = computed(() => {
   if (!report.value) return []
@@ -842,5 +865,38 @@ function priorityLabel(priority: string): string {
   background-color: #f0fdf4;
   color: #16a34a;
   border: 1px solid #bbf7d0;
+}
+
+/* ===== Report Action ===== */
+.verification-page__report-action {
+  text-align: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+}
+
+.verification-page__report-desc {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 16px;
+}
+
+.verification-page__report-btn {
+  display: inline-block;
+  padding: 10px 32px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.verification-page__report-btn:hover {
+  background: #2563eb;
 }
 </style>

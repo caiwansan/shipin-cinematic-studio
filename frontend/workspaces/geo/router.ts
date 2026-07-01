@@ -66,4 +66,14 @@ export const geoRoutes = [
     name: 'geo-create',
     component: () => import('./pages/GEOCreate.vue'),
   },
+  {
+    path: '/workspace/geo/project/:id',
+    name: 'geo-project-workflow',
+    component: () => import('./pages/WorkspaceFlowPage.vue'),
+  },
+  {
+    path: '/workspace/geo/report/:projectId',
+    name: 'geo-report-center',
+    component: () => import('./pages/ReportCenter.vue'),
+  },
 ]
