@@ -43,6 +43,27 @@ export type {
 } from './review/types'
 export type { AuditEvent, AuditEventType } from './review/audit-timeline'
 
+// Distribution (KH4)
+export { DistributionEngine, DistributionRequest } from "./distribution/distribution-engine"
+export { DistributionPlanner } from "./distribution/distribution-planner"
+export { DistributionRegistry } from "./distribution/distribution-registry"
+export { ExecutionGraph } from "./distribution/execution-graph"
+export { registerDistributionRoutes } from "./distribution/api"
+export type {
+  DistributionPlan,
+  DistributionTask,
+  DistributionResult,
+  DistributionTarget,
+  DistributionTargetCapability,
+} from "./distribution/types"
+
+// Distribution Targets
+export { WebsiteDistributionTarget } from "./distribution/adapters/website.target"
+export { CMSDistributionTarget } from "./distribution/adapters/cms.target"
+export { WebhookDistributionTarget } from "./distribution/adapters/webhook.target"
+export { ExportDistributionTarget } from "./distribution/adapters/export.target"
+
+
 // Types
 export {
   KnowledgePackage,

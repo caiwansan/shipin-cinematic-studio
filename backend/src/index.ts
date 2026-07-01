@@ -747,6 +747,31 @@ await app.register(projectV2Routes)
 
     console.log('[startup] ✅ Knowledge Hub KH3 (Review/Approval) registered at /api/knowledge/reviews/*')
     console.log('[startup] ✅ Knowledge Hub KH3 (Audit Timeline) registered at /api/knowledge/audit/*')
+
+    // KH4 — Distribution
+    const { DistributionEngine } = await import('./platform/knowledge-hub/distribution/distribution-engine.js')
+    const { DistributionPlanner } = await import('./platform/knowledge-hub/distribution/distribution-planner.js')
+    const { DistributionRegistry } = await import('./platform/knowledge-hub/distribution/distribution-registry.js')
+    const { ExecutionGraph } = await import('./platform/knowledge-hub/distribution/execution-graph.js')
+    const { registerDistributionRoutes } = await import('./platform/knowledge-hub/distribution/api.js')
+    const { WebsiteDistributionTarget } = await import('./platform/knowledge-hub/distribution/adapters/website.target.js')
+    const { CMSDistributionTarget } = await import('./platform/knowledge-hub/distribution/adapters/cms.target.js')
+    const { WebhookDistributionTarget } = await import('./platform/knowledge-hub/distribution/adapters/webhook.target.js')
+    const { ExportDistributionTarget } = await import('./platform/knowledge-hub/distribution/adapters/export.target.js')
+
+    const distRegistry = new DistributionRegistry()
+    distRegistry.register(new WebsiteDistributionTarget())
+    distRegistry.register(new CMSDistributionTarget())
+    distRegistry.register(new WebhookDistributionTarget())
+    distRegistry.register(new ExportDistributionTarget())
+
+    const distPlanner = new DistributionPlanner()
+    const execGraph = new ExecutionGraph()
+    const distEngine = new DistributionEngine(distPlanner, distRegistry, execGraph)
+
+    registerDistributionRoutes(app, { engine: distEngine, registry: distRegistry })
+
+    console.log('[startup] ✅ Knowledge Hub KH4 (Distribution) registered at /api/knowledge/distribution/*')
   } catch (err) {
     console.warn('[startup] ⚠️ Knowledge Hub routes skipped:', (err as Error).message)
   }
