@@ -358,6 +358,19 @@
         </div>
       </section>
 
+      <!-- ===== Decision Intelligence Section (A1.1) ===== -->
+      <section class="brand-overview__section">
+        <h2 class="brand-overview__section-title">
+          Decision Graph
+          <GeoExplainButton @click="openExplainDrawer('recommendation')" />
+        </h2>
+        <DecisionIntelligencePanel
+          v-if="project?.id"
+          :brand-id="project.id"
+          @issue-selected="onIssueSelected"
+        />
+      </section>
+
       <!-- ===== Optimization Center Section (P0-T004) ===== -->
       <section class="brand-overview__section">
         <h2 class="brand-overview__section-title">
@@ -1226,6 +1239,7 @@ import GeoBadge from '../components/GeoBadge/index.vue'
 import GeoWalkthroughBar from '../components/GeoWalkthroughBar.vue'
 import GeoExplainButton from '../components/GeoExplainButton.vue'
 import GeoExplainDrawer from '../components/GeoExplainDrawer/index.vue'
+import DecisionIntelligencePanel from '../components/DecisionIntelligencePanel.vue'
 import { explainService } from '../services/explainService'
 import type { ExplainResult } from '../types/explain'
 import { walkthroughService, type GuideInfo } from '../services/walkthroughService'
@@ -2078,6 +2092,12 @@ function closeExplainDrawer() {
   explainDrawerVisible.value = false
   explainDrawerData.value = null
   explainDrawerError.value = null
+}
+
+// Decision Intelligence - issue selection handler
+const selectedIssue = ref<any>(null)
+function onIssueSelected(issue: any) {
+  selectedIssue.value = issue
 }
 </script>
 

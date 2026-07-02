@@ -583,6 +583,8 @@ await app.register(projectV2Routes)
   }
   // Sprint 3 — GEO Recommendation Engine (GEO v2 MVP)
   await app.register(await import('./services/geo/recommendation/recommendation.route.js').then(m => m.geoRecommendationRoutes))
+  // DI A1.1 — Decision Intelligence Issue Graph Routes
+  await app.register(await import('./services/geo/decision-intelligence/routes.js').then(m => m.registerDIIssueGraphRoutes))
   // GEO v3 — Growth Engine Routes
   await app.register(await import('./services/geo/growth/growth.route.js').then(m => m.geoGrowthRoutes))
   // Sprint 4 — Data Integration Routes
