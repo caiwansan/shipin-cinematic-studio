@@ -17,6 +17,12 @@
         <NuxtLink to="/hdz" class="nav-link">
           📖 小说工作台
         </NuxtLink>
+        <NuxtLink to="/mall" class="nav-link nav-link-mall">
+          🛍️ 商城
+        </NuxtLink>
+        <NuxtLink to="/workspace/legal" class="nav-link nav-link-legal">
+          ⚖️ 法律工作台
+        </NuxtLink>
         <a href="/ppt/" class="nav-link nav-link-ppt">
           🍌 潇湘子 PPT
         </a>
@@ -175,6 +181,14 @@ onMounted(() => {
 
 .nav-link-ppt {
   color: rgba(167, 139, 250, 0.7);
+}
+
+.nav-link-mall {
+  color: rgba(251, 191, 36, 0.8);
+}
+
+.nav-link-legal {
+  color: rgba(52, 211, 153, 0.8);
 }
 
 .nav-link-p0 {

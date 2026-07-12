@@ -133,6 +133,13 @@ declare global {
   const toRef: typeof import('vue')['toRef']
   const toRefs: typeof import('vue')['toRefs']
   const toValue: typeof import('vue')['toValue']
+  const toastEngineCompleted: typeof import('../../composables/useToast')['toastEngineCompleted']
+  const toastEngineFailed: typeof import('../../composables/useToast')['toastEngineFailed']
+  const toastEngineQueued: typeof import('../../composables/useToast')['toastEngineQueued']
+  const toastError: typeof import('../../composables/useToast')['toastError']
+  const toastInfo: typeof import('../../composables/useToast')['toastInfo']
+  const toastSuccess: typeof import('../../composables/useToast')['toastSuccess']
+  const toastWarning: typeof import('../../composables/useToast')['toastWarning']
   const tokenCache: typeof import('../../utils/token-cache')['default']
   const triggerRef: typeof import('vue')['triggerRef']
   const tryUseNuxtApp: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/nuxt')['tryUseNuxtApp']
@@ -213,6 +220,7 @@ declare global {
   const useSlots: typeof import('vue')['useSlots']
   const useState: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/state')['useState']
   const useTemplateRef: typeof import('vue')['useTemplateRef']
+  const useToastState: typeof import('../../composables/useToast')['useToastState']
   const useTransitionState: typeof import('vue')['useTransitionState']
   const useWorkbenchStore: typeof import('../../stores/workbench')['useWorkbenchStore']
   const verifyProvider: typeof import('../../utils/provider-api')['verifyProvider']
@@ -244,6 +252,9 @@ declare global {
   // @ts-ignore
   export type { GraphNode } from '../../composables/usePipeline'
   import('../../composables/usePipeline')
+  // @ts-ignore
+  export type { ToastMessage } from '../../composables/useToast'
+  import('../../composables/useToast')
   // @ts-ignore
   export type { ExecutionStepId, ExecutionMode, GoalType, OutputType, RecipeStep, ExecutionRecipe } from '../../utils/executionRecipe'
   import('../../utils/executionRecipe')
@@ -402,6 +413,13 @@ declare module 'vue' {
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
+    readonly toastEngineCompleted: UnwrapRef<typeof import('../../composables/useToast')['toastEngineCompleted']>
+    readonly toastEngineFailed: UnwrapRef<typeof import('../../composables/useToast')['toastEngineFailed']>
+    readonly toastEngineQueued: UnwrapRef<typeof import('../../composables/useToast')['toastEngineQueued']>
+    readonly toastError: UnwrapRef<typeof import('../../composables/useToast')['toastError']>
+    readonly toastInfo: UnwrapRef<typeof import('../../composables/useToast')['toastInfo']>
+    readonly toastSuccess: UnwrapRef<typeof import('../../composables/useToast')['toastSuccess']>
+    readonly toastWarning: UnwrapRef<typeof import('../../composables/useToast')['toastWarning']>
     readonly tokenCache: UnwrapRef<typeof import('../../utils/token-cache')['default']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly tryUseNuxtApp: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/nuxt')['tryUseNuxtApp']>
@@ -482,6 +500,7 @@ declare module 'vue' {
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useState: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/composables/state')['useState']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
+    readonly useToastState: UnwrapRef<typeof import('../../composables/useToast')['useToastState']>
     readonly useTransitionState: UnwrapRef<typeof import('vue')['useTransitionState']>
     readonly useWorkbenchStore: UnwrapRef<typeof import('../../stores/workbench')['useWorkbenchStore']>
     readonly verifyProvider: UnwrapRef<typeof import('../../utils/provider-api')['verifyProvider']>

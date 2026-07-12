@@ -19,8 +19,8 @@ function toDTO(record: any): HdzStyleDnaDTO {
     projectId: record.projectId,
     sourceText: record.sourceText || null,
     fingerprint: record.fingerprint || {},
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
+    createdAt: record.createdAt?.toISOString?.() || '',
+    updatedAt: record.updatedAt?.toISOString?.() || '',
   }
 }
 
@@ -31,7 +31,9 @@ export const hdzStyleDnaRepository = {
   },
 
   async findFirst(where: any, orderBy?: any): Promise<HdzStyleDnaDTO | null> {
-    const record = await prisma.hdzStyleDna.findFirst({ where, orderBy })
+    // Compat: support both { where, orderBy } and single-arg { where, orderBy, ... }
+    const args = (typeof where === 'object' && where !== null && ('where' in where || 'orderBy' in where)) ? where : { where, orderBy }
+    const record = await prisma.hdzStyleDna.findFirst(args)
     return record ? toDTO(record) : null
   },
 

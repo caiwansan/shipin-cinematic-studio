@@ -109,7 +109,7 @@ export async function convertToScreenplay(
   cinematicStyle?: string,  // 用户指定的运镜偏好
 ): Promise<ChapterScreenplay[]> {
   // 1. 获取项目 + 章节内容
-  const project = await hdzProjectRepository.findUnique({ where: { id: projectId } })
+  const project = await hdzProjectRepository.findUnique({ id: projectId })
   if (!project) throw new Error('项目不存在')
 
   const chapters = await hdzChapterRepository.findMany({
@@ -261,9 +261,9 @@ export async function saveScreenplayTask(
  * 获取项目的所有剧本
  */
 export async function getProjectScreenplays(projectId: string): Promise<any[]> {
-  const tasks = await hdzAgentTaskRepository.findMany({
-    where: { projectId, agentType: 'screenwriter', status: 'completed' },
-    orderBy: { createdAt: 'desc' },
-  }) as any[]
+  const tasks = await hdzAgentTaskRepository.findMany(
+    { projectId, agentType: 'screenwriter', status: 'completed' },
+    { createdAt: 'desc' },
+  ) as any[]
   return tasks
 }

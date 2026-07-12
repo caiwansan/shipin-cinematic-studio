@@ -1,11 +1,12 @@
 /**
  * GEO Recommendations Service — Real API Implementation
  *
- * GET /api/v1/geo/recommendations/{projectId}
- * POST /api/v1/geo/recommendations/{projectId}/execute
+ * Calls:
+ *   GET /api/geo/recommendation/tasks?projectId=xxx   — 优化任务列表
+ *   GET /api/geo/recommendation/score?projectId=xxx    — 当前评分
+ *   GET /api/geo/recommendation/report?projectId=xxx   — 优化报告
  *
- * API Returns: { success, data: { summary, recommendations, history } }
- * Mapped to: RecommendationsData (Product Language)
+ * Maps backend TaskWithROI → frontend RecommendationItem
  */
 import { geoApi } from './api'
 
@@ -51,49 +52,83 @@ export interface RecommendationsData {
   summary: RecommendationsSummary
   recommendations: RecommendationItem[]
   history: RecommendationHistoryItem[]
-  // Derived convenience properties
   currentScore: number
   expectedScore: number
 }
 
-export async function fetchRecommendations(projectId: string): Promise<RecommendationsData> {
-  const raw = await geoApi<{ success: boolean; data: any }>(`recommendations/${projectId}`)
-  const d = raw.data
+// ── Priority label mapping ──
+function mapPriority(p: string): 'high' | 'medium' | 'low' {
+  const m: Record<string, 'high' | 'medium' | 'low'> = {
+    HIGH: 'high', MEDIUM: 'medium', LOW: 'low',
+    high: 'high', medium: 'medium', low: 'low',
+  }
+  return m[p] || 'medium'
+}
 
-  // Calculate scores from the recommendations
-  const overall = 0 // will be estimated from expected score changes
-  const totalGain = d.summary?.totalExpectedGain ?? 0
-  const baseScore = 60 // baseline estimate
+// ── Difficulty label mapping ──
+function mapDifficulty(e: string): 'easy' | 'medium' | 'complex' {
+  const m: Record<string, 'easy' | 'medium' | 'complex'> = {
+    EASY: 'easy', MEDIUM: 'medium', HARD: 'complex',
+    easy: 'easy', medium: 'medium', complex: 'complex',
+  }
+  return m[e] || 'medium'
+}
+
+// ── Category mapping ──
+function mapCategory(c: string): 'knowledge' | 'visibility' | 'website' | 'comprehensive' {
+  const m: Record<string, any> = {
+    knowledge: 'knowledge', visibility: 'visibility', website: 'website',
+    SEO: 'visibility', content: 'knowledge', brand: 'comprehensive',
+  }
+  return m[c] || 'knowledge'
+}
+
+export async function fetchRecommendations(projectId: string): Promise<RecommendationsData> {
+  // Fetch tasks + score in parallel
+  const [tasksRes, scoreRes] = await Promise.allSettled([
+    geoApi<{ success: boolean; data: any[] }>(`recommendation/tasks?projectId=${projectId}`),
+    geoApi<{ success: boolean; data: any }>(`recommendation/score?projectId=${projectId}`),
+  ])
+
+  const tasks = tasksRes.status === 'fulfilled' ? tasksRes.value.data ?? [] : []
+  const scoreData = scoreRes.status === 'fulfilled' ? scoreRes.value.data : null
+
+  const overallScore = scoreData?.overall ?? 65
+
+  let high = 0; let med = 0; let low = 0
+  let totalGain = 0
+
+  const recommendations: RecommendationItem[] = tasks.map((t: any, i: number) => {
+    if (t.priority === 'HIGH') high++
+    else if (t.priority === 'MEDIUM') med++
+    else low++
+    totalGain += t.impact ?? 0
+
+    return {
+      id: `rec-${i}`,
+      title: t.title ?? '',
+      description: t.description ?? t.reason ?? '',
+      priority: mapPriority(t.priority),
+      impact: { label: t.impactPercentile ?? `+${t.impact}`, value: t.impact ?? 0 },
+      difficulty: mapDifficulty(t.effort),
+      expectedScoreChange: { from: overallScore, to: overallScore + (t.impact ?? 0) },
+      category: mapCategory(t.category),
+      status: 'ready',
+    }
+  })
 
   return {
     summary: {
-      total: d.summary?.total ?? 0,
-      highPriority: d.summary?.highPriority ?? 0,
-      mediumPriority: d.summary?.mediumPriority ?? 0,
-      lowPriority: d.summary?.lowPriority ?? 0,
+      total: recommendations.length,
+      highPriority: high,
+      mediumPriority: med,
+      lowPriority: low,
       totalExpectedGain: totalGain,
     },
-    recommendations: (d.recommendations ?? []).map((r: any) => ({
-      id: r.id,
-      title: r.title,
-      description: r.description ?? '',
-      priority: r.priority,
-      impact: r.impact ?? { label: '', value: 0 },
-      difficulty: r.difficulty ?? 'medium',
-      expectedScoreChange: r.expectedScoreChange ?? { from: baseScore, to: baseScore + (r.impact?.value ?? 0) },
-      category: r.category ?? 'knowledge',
-      status: r.status ?? 'ready',
-    })),
-    history: (d.history ?? []).map((h: any) => ({
-      id: h.id,
-      title: h.title ?? '',
-      impact: h.impact ?? 0,
-      executedAt: h.executedAt ?? h.date ?? '',
-      status: h.status ?? '',
-    })),
-    // Derived for backward compatibility
-    currentScore: baseScore,
-    expectedScore: baseScore + totalGain,
+    recommendations,
+    history: [],
+    currentScore: overallScore,
+    expectedScore: overallScore + totalGain,
   }
 }
 
@@ -101,12 +136,14 @@ export async function executeRecommendation(
   projectId: string,
   recommendationIds: string[],
 ): Promise<{ success: boolean; impact: number }> {
-  const raw = await geoApi<{ success: boolean; data: any }>(`recommendations/${projectId}/execute`, {
-    method: 'POST',
-    body: { recommendationIds },
-  })
-  return {
-    success: raw.success ?? false,
-    impact: raw.data?.status === 'started' ? 0 : 0,
+  // Use POST /api/geo/recommendation/simulate to estimate impact
+  try {
+    const res = await geoApi<{ success: boolean; data: any }>('recommendation/simulate', {
+      method: 'POST',
+      body: { projectId, recommendationIds },
+    })
+    return { success: res.success ?? true, impact: res.data?.impact ?? 0 }
+  } catch {
+    return { success: false, impact: 0 }
   }
 }

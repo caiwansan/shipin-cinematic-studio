@@ -1,0 +1,1 @@
+import{H as o}from"./D_tOadJ4.js";const r="/api/geo";function n(){var t;if(typeof window>"u")return{};const e=((t=window.localStorage)==null?void 0:t.getItem("auth_token"))||"";return e?{Authorization:`Bearer ${e}`}:{}}const i=o.create({baseURL:r,onRequest({options:e}){const t=n();t.Authorization&&(e.headers={...e.headers,...t})}});export{i as g};

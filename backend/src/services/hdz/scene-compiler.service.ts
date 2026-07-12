@@ -76,7 +76,7 @@ class SceneCompiler {
     const entityNames = this.extractEntityNames(input.outline)
     if (entityNames.length === 0) {
       // 无实体时，从已有角色中猜测出场
-      const chars = await hdzCharacterRepository.findMany({ where: { projectId } }) as any[]
+      const chars = await hdzCharacterRepository.findMany({ projectId }) as any[]
       for (const ch of chars.slice(0, 3)) {
         entityNames.push(ch.name)
       }

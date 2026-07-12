@@ -28,7 +28,7 @@ export interface EntityRecord {
  * 通过 entity_id 获取实体记录
  */
 export async function getEntityById(entityId: string): Promise<EntityRecord | null> {
-  const row = await entityRegistryRepository.findUnique({ where: { id: entityId } })
+  const row = await entityRegistryRepository.findUnique({ id: entityId })
   if (!row) return null
   return {
     id: row.id,
@@ -60,13 +60,13 @@ export async function resolveName(
 
   // 1. 精确匹配
   const exact = await entityRegistryRepository.findUnique({
-    where: { projectId_name: { projectId, name: trimmed } },
+    projectId_name: { projectId, name: trimmed },
   })
   if (exact) return exact.id
 
   // 2. 模糊匹配：检查是否有同名实体（通过别名）
   const all = await entityRegistryRepository.findMany({
-    where: { projectId, entityType },
+    projectId, entityType,
   })
   const matched = all.find(e => {
     const aliases: string[] = (e.aliases as string[]) || []
@@ -107,11 +107,11 @@ export async function resolveNames(
  * 迁移工具：用于将已有角色迁移到新系统。
  */
 export async function migrateCharacterToEntity(projectId: string, characterId: string): Promise<string | null> {
-  const char = await hdzCharacterRepository.findUnique({ where: { id: characterId } })
+  const char = await hdzCharacterRepository.findUnique({ id: characterId })
   if (!char) return null
 
   const existing = await entityRegistryRepository.findUnique({
-    where: { projectId_name: { projectId, name: char.name } },
+    projectId_name: { projectId, name: char.name },
   })
   if (existing) return existing.id
 
@@ -130,7 +130,7 @@ export async function migrateCharacterToEntity(projectId: string, characterId: s
  * 批量迁移项目所有角色到 EntityRegistry（幂等）
  */
 export async function migrateAllCharacters(projectId: string): Promise<number> {
-  const chars = await hdzCharacterRepository.findMany({ where: { projectId } })
+  const chars = await hdzCharacterRepository.findMany({ projectId })
   let count = 0
   for (const ch of chars) {
     const id = await migrateCharacterToEntity(projectId, ch.id)
@@ -144,7 +144,7 @@ export async function migrateAllCharacters(projectId: string): Promise<number> {
  * 获取项目所有实体（按类型分组）
  */
 export async function getAllEntities(projectId: string): Promise<Record<EntityType, EntityRecord[]>> {
-  const rows = await entityRegistryRepository.findMany({ where: { projectId }, orderBy: { createdAt: 'asc' } }) as any[]
+  const rows = await entityRegistryRepository.findMany({ projectId, orderBy: { createdAt: 'asc' } }) as any[]
   const grouped: Record<string, EntityRecord[]> = { character: [], item: [], location: [], event: [] }
   for (const row of rows) {
     const rec: EntityRecord = {
@@ -166,7 +166,7 @@ export async function getAllEntities(projectId: string): Promise<Record<EntityTy
  * 添加别名到已有实体
  */
 export async function addAlias(entityId: string, alias: string): Promise<void> {
-  const entity = await entityRegistryRepository.findUnique({ where: { id: entityId } })
+  const entity = await entityRegistryRepository.findUnique({ id: entityId })
   if (!entity) throw new Error(`实体 ${entityId} 不存在`)
   const aliases: string[] = (entity.aliases as string[]) || []
   if (!aliases.includes(alias)) {

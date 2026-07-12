@@ -44,7 +44,7 @@ export interface LLMConfig {
  * 从 UserModelConfigV2 读取 LLM 配置（BYOK）
  */
 export async function getUserLLMConfig(userId: string): Promise<LLMConfig | null> {
-  const v2 = await userModelConfigV2Repository.findUnique({ where: { userId } })
+  const v2 = await userModelConfigV2Repository.findUnique({ userId })
   if (!v2 || !v2.llmEnabled || !v2.llmApiKey || !v2.llmApiKey.trim()) return null
 
   // 兼容加密 key 和明文 key（历史遗留数据）
@@ -64,7 +64,7 @@ export async function getUserLLMConfig(userId: string): Promise<LLMConfig | null
     provider: v2.llmProvider || 'volcengine',
     modelName: v2.llmModel || 'doubao-seed-2-1-pro-260628',
     apiKey,
-    baseUrl: v2.llmBaseUrl || v2.baseUrl || undefined,
+    baseUrl: v2.llmBaseUrl || undefined,  // 只用 llmBaseUrl，忽略过时的 baseUrl 字段
   }
 }
 
@@ -91,22 +91,33 @@ export async function callLLM(
     temperature: options?.temperature ?? 0.7,
   }
 
-  const resp = await fetch(`${url}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${llmCfg.apiKey}`,
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(120000), // 2 分钟超时
-  })
+  const fetchUrl = `${url}/chat/completions`
+  const bodyStr = JSON.stringify(body)
+  console.log(`[callLLM] POST ${llmCfg.provider}/${llmCfg.modelName} url=${fetchUrl.substring(0, 80)}... bodyLen=${bodyStr.length}`)
+  
+  let resp: Response
+  try {
+    resp = await fetch(fetchUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${llmCfg.apiKey}`,
+      },
+      body: bodyStr,
+      signal: AbortSignal.timeout(120000), // 2 分钟超时
+    })
+  } catch (fetchErr: any) {
+    console.error(`[callLLM] ❌ fetch failed: ${fetchErr.cause ? JSON.stringify(fetchErr.cause) : fetchErr.message}`)
+    throw new Error(`LLM API 请求失败 (${fetchErr.message})${fetchErr.cause ? ': ' + fetchErr.cause.code : ''}`)
+  }
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => '')
-    throw new Error(`LLM ${resp.status}: ${errText.slice(0, 200)}`)
+    throw new Error(`LLM ${resp.status} ${resp.statusText}: ${errText.slice(0, 200)}`)
   }
 
   const data: any = await resp.json()
+  console.log(`[callLLM] ✅ ${llmCfg.provider}/${llmCfg.modelName} done, tokens=${data?.usage?.total_tokens || '?'}`)
   return data?.choices?.[0]?.message?.content || ''
 }
 
@@ -196,7 +207,7 @@ export async function getAgentPrompt(name: string, variables?: Record<string, st
  * 注入到 Planner/Writer/Reviewer 的 system prompt 中
  */
 export async function getLockContext(projectId: string, chapterNo?: number): Promise<string> {
-  const project = await hdzProjectRepository.findUnique({ where: { id: projectId } })
+  const project = await hdzProjectRepository.findUnique({ id: projectId })
   if (!project) return ''
 
   const locks = (project.locks as any) || {}
@@ -242,6 +253,7 @@ function getBaseUrl(provider: string, customUrl?: string): string {
     volcengine: 'https://ark.cn-beijing.volces.com/api/v3',
     deepseek: 'https://api.deepseek.com',
     aliyun: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    longcat: 'https://api.longcat.chat/openai',
   }
   return defaults[provider] || 'https://api.openai.com/v1'
 }

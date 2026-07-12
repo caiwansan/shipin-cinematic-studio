@@ -1,0 +1,1 @@
+import{d as n,b as o,c as s,e as a,_ as i}from"./wX_zMTef.js";const p=n({__name:"GeoExplainButton",emits:["click"],setup(c){return(t,e)=>(o(),s("button",{class:"geo-explain-btn",onClick:e[0]||(e[0]=l=>t.$emit("click")),title:"解释 AI 输出"},[...e[1]||(e[1]=[a("span",{class:"geo-explain-btn__icon"},"ⓘ",-1)])]))}}),_=i(p,[["__scopeId","data-v-c2029244"]]);export{_ as G};

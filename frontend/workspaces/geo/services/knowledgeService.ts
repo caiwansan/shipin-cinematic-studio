@@ -79,11 +79,29 @@ export interface KnowledgeData {
   }>
 }
 
+export const DEFAULT_KNOWLEDGE_DATA: KnowledgeData = {
+  assets: { total: 0, entities: 0, claims: 0, evidences: 0, relations: 0, schemas: 0, faqs: 0, keywords: 0, knowledgeObjects: 0 },
+  coverage: { percentage: 0, coveredDimensions: 0, totalDimensions: 7, dimensions: [] },
+  categories: [],
+  freshness: { overall: 0, lastUpdated: null, staleItems: 0, freshItems: 0 },
+  missingKnowledge: [{ category: 'brand-info', suggestion: '请先完成发现评估以获取知识数据' }],
+  relationships: [],
+  brandDescription: '暂无数据',
+  sources: [],
+  statements: [],
+}
+
 export async function fetchKnowledge(projectId: string): Promise<KnowledgeData> {
-  const raw = await geoApi<{ success: boolean; data: any }>('knowledge', {
-    params: { projectId },
-  })
+  let raw: { success: boolean; data: any }
+  try {
+    raw = await geoApi<{ success: boolean; data: any }>('knowledge', {
+      params: { projectId },
+    })
+  } catch {
+    return DEFAULT_KNOWLEDGE_DATA
+  }
   const d = raw.data
+  if (!d) return DEFAULT_KNOWLEDGE_DATA
 
   const assets = d.assets ?? { total: 0, entities: 0, claims: 0, evidences: 0, relations: 0, schemas: 0, faqs: 0, keywords: 0, knowledgeObjects: 0 }
   const coverage = d.coverage ?? { percentage: 0, coveredDimensions: 0, totalDimensions: 7, dimensions: [] }

@@ -1,0 +1,52 @@
+{
+  "version": "1.1",
+  "calibratedAt": "2026-07-02",
+  "baselineProvider": "deepseek-v4-flash",
+  "entries": [
+    {
+      "id": "g001",
+      "industry": "AI",
+      "scenario": "brand_recognition",
+      "expectedBand": "Excellent",
+      "intent": "general_qa",
+      "expectedFindings": 3,
+      "expectedConfidence": 0.80
+    },
+    {
+      "id": "g002",
+      "industry": "AI",
+      "scenario": "competitor_discovery",
+      "expectedBand": "Good",
+      "intent": "competitor_analysis",
+      "expectedFindings": 3,
+      "expectedConfidence": 0.75
+    },
+    {
+      "id": "g003",
+      "industry": "General",
+      "scenario": "factual",
+      "expectedBand": "Excellent",
+      "intent": "general_qa",
+      "expectedFindings": 4,
+      "expectedConfidence": 0.90
+    },
+    {
+      "id": "g004",
+      "industry": "Technology",
+      "scenario": "technical_analysis",
+      "expectedBand": "Excellent",
+      "intent": "technical_qa",
+      "expectedFindings": 3,
+      "expectedConfidence": 0.85
+    },
+    {
+      "id": "g005",
+      "industry": "General",
+      "scenario": "recommendation",
+      "expectedBand": "Good",
+      "intent": "advice",
+      "expectedFindings": 2,
+      "expectedConfidence": 0.65
+    }
+  ]
+}

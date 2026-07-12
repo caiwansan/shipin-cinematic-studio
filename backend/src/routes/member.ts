@@ -395,11 +395,30 @@ export default async function memberRoutes(fastify: FastifyInstance) {
     const userFromToken = request.user as any
     console.log('[upgrade-vip] request.user:', JSON.stringify(userFromToken))
     const userId = userFromToken.id || userFromToken.userId || userFromToken.sub || userFromToken._id
-    const { planLevel } = request.body as any
+    const { planLevel, couponId } = request.body as any
     if (!planLevel) return reply.status(400).send({ error: "planLevel 不能为空" })
 
     const plan = await prisma.memberPlan.findUnique({ where: { level: planLevel } })
     if (!plan) return reply.status(404).send({ error: "套餐不存在" })
+
+    // 检查 VIP 代金券
+    let vipCouponDiscount = 0
+    let appliedCoupon: any = null
+    if (couponId) {
+      const userCoupon = await prisma.mallUserCoupon.findFirst({
+        where: { userId, couponId, usedAt: null },
+        include: { coupon: true },
+      })
+      if (userCoupon && userCoupon.coupon.isActive && userCoupon.coupon.forVipPlan === planLevel) {
+        appliedCoupon = userCoupon
+        // cash 类型全额抵扣，或按 max_discount_amount 限制
+        if (userCoupon.coupon.type === 'cash') {
+          vipCouponDiscount = userCoupon.coupon.maxDiscountAmount > 0
+            ? Math.min(userCoupon.coupon.value, userCoupon.coupon.maxDiscountAmount)
+            : userCoupon.coupon.value
+        }
+      }
+    }
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) return reply.status(404).send({ error: "用户不存在" })
@@ -449,6 +468,37 @@ export default async function memberRoutes(fastify: FastifyInstance) {
     const hasAlipaySecret = secretAvailable.some(s => s.channel === 'alipay')
     const hasWechatSecret = secretAvailable.some(s => s.channel === 'wechat')
 
+    // 计算实付金额（代金券抵扣后）
+    const finalAmount = Math.max(0, plan.price - vipCouponDiscount)
+
+    // 如果代金券全额抵扣 → 直接激活，无需跳转支付
+    if (finalAmount === 0 && appliedCoupon) {
+      // 标记代金券已使用
+      await prisma.mallUserCoupon.updateMany({
+        where: { userId, couponId, usedAt: null },
+        data: { usedAt: new Date(), orderNo },
+      })
+      // 直接激活 VIP
+      const now = new Date()
+      const expiresAt = new Date(now.getTime() + plan.months * 24 * 60 * 60 * 1000)
+      await prisma.$transaction([
+        prisma.rechargeOrder.create({
+          data: { userId, planLevel: plan.level, coins: 0, amount: 0, status: 'paid', payMethod: 'coupon', orderNo, payTime: now },
+        }),
+        prisma.user.update({
+          where: { id: userId },
+          data: { memberTier: plan.level, memberExpiresAt: expiresAt },
+        }),
+        prisma.membership.upsert({
+          where: { userId },
+          update: { tier: plan.level, expiresAt, credits: { increment: plan.coins || 0 } },
+          create: { userId, tier: plan.level, expiresAt, credits: plan.coins || 0 },
+        }),
+      ])
+      console.log(`[upgrade-vip] ✅ 代金券全额抵扣: user=${userId.substring(0,8)} plan=${plan.level}`)
+      return { needPay: false, success: true, message: `已使用代金券全额抵扣，成功升级为「${plan.name}」！` }
+    }
+
     if (!hasAlipaySecret && !hasWechatSecret) {
       return reply.status(400).send({ error: "暂无可用支付方式，请先在后台配置支付密钥" })
     }
@@ -462,12 +512,21 @@ export default async function memberRoutes(fastify: FastifyInstance) {
         userId,
         planLevel: plan.level,
         coins: 0,
-        amount: plan.price,
+        amount: finalAmount,
         status: "pending",
         payMethod: "auto",
         orderNo,
+        remark: vipCouponDiscount > 0 ? `代金券抵扣 ¥${vipCouponDiscount}` : undefined,
       },
     })
+
+    // 如果有部分抵扣，先标记代金券已使用
+    if (appliedCoupon && vipCouponDiscount > 0) {
+      await prisma.mallUserCoupon.updateMany({
+        where: { userId, couponId, usedAt: null },
+        data: { usedAt: new Date(), orderNo },
+      })
+    }
 
     // 只保留支付通道（alipay 和 wechat），过滤掉 oauth/短信等非支付配置
     const payChannels = secretAvailable.filter(s => s.channel === 'wechat' || s.channel === 'alipay')
@@ -494,9 +553,10 @@ export default async function memberRoutes(fastify: FastifyInstance) {
       needPay: true,
       orderId: order.id,
       orderNo,
-      amount: plan.price,
+      amount: finalAmount,
       planName: plan.name,
-      paymentType: 'select',   // 前端根据此值展示支付方式选择
+      vipCouponDiscount,
+      paymentType: 'select',
       methods: uniqueMethods,
     }
   })

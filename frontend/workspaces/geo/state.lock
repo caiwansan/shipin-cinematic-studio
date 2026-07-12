@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "created": "2026-07-03T16:45:13.729Z",
+  "description": "GEO Workspace State Machines Lock — PA-004 S1.1B-01",
+  "hashes": {
+    "page-state-machine": "4d54212d652f2318",
+    "task-state-machine": "eabee98197fec379",
+    "card-state-machine": "5b5135abb77a7964",
+    "transition-matrices": "927beb285b579900"
+  },
+  "terminalStates": {
+    "page": [],
+    "task": [
+      "failed",
+      "cancelled",
+      "completed"
+    ],
+    "card": [
+      "dismissed"
+    ]
+  }
+}

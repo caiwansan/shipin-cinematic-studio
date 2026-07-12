@@ -1,0 +1,328 @@
+{
+  "passed": false,
+  "p0Count": 40,
+  "p1Count": 0,
+  "issues": [
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/pages/BrandOverview.vue",
+      "line": 1662,
+      "type": "math-random",
+      "content": "await new Promise(r => setTimeout(r, 300 + Math.random() * 200))",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/pages/DiscoveryLabPage.vue",
+      "line": 69,
+      "type": "stub",
+      "content": "<p class=\"discovery-lab__loading-hint\">SIE 场景匹配 → Mock 发现扫描 → ADI 评估 → Opportunity 分析</p>",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 30,
+      "type": "math-random",
+      "content": "summary: `扫描检测到品牌知识覆盖率为 ${Math.floor(Math.random() * 20) + 40}%，低于行业基准 75%`,",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 35,
+      "type": "math-random",
+      "content": "summary: `品牌在 ${['维基百科', '百度百科', '行业知识图谱'][Math.floor(Math.random() * 3)]} 中缺少 ${Math.floor(Math.random() * 5) + 2} 个关键知",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 43,
+      "type": "math-random",
+      "content": "summary: `过去 30 天品牌在 AI 搜索结果中的可见度为 ${Math.floor(Math.random() * 20) + 50}%，呈 ${['上升', '下降', '波动'][Math.floor(Math.random",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 48,
+      "type": "math-random",
+      "content": "summary: `在 ${['ChatGPT', 'Claude', 'Gemini', 'Kimi'][Math.floor(Math.random() * 4)]} 中的品牌引用频率为每 ${Math.floor(Math.rando",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 56,
+      "type": "math-random",
+      "content": "summary: `网站 Schema.org 标记覆盖率为 ${Math.floor(Math.random() * 30) + 30}%，缺少 ${['Organization', 'Product', 'FAQPage', 'Arti",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 64,
+      "type": "math-random",
+      "content": "summary: `内容更新频率为每 ${Math.floor(Math.random() * 7) + 7} 天一次，低于行业最佳实践的每 3 天一次`,",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 69,
+      "type": "math-random",
+      "content": "summary: `现有 ${Math.floor(Math.random() * 10) + 3} 篇内容中仅 ${Math.floor(Math.random() * 5) + 1} 篇被 AI 知识源收录，收录率 ${Math.flo",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 84,
+      "type": "math-random",
+      "content": "summary: `最近一次品牌信息更新在 ${Math.floor(Math.random() * 30) + 1} 天前，Freshness 评分为 ${Math.floor(Math.random() * 20) + 60}`,",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "frontend/workspaces/geo/services/optimizationFallback.ts",
+      "line": 230,
+      "type": "math-random",
+      "content": "createdAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/discovery/contracts/provider-benchmark.ts",
+      "line": 66,
+      "type": "math-random",
+      "content": "const latencyMs = 800 + Math.floor(Math.random() * 400)  // 模拟",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/discovery/contracts/provider-benchmark.ts",
+      "line": 67,
+      "type": "math-random",
+      "content": "const tokensIn = 40 + Math.floor(Math.random() * 20)",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/discovery/contracts/provider-benchmark.ts",
+      "line": 68,
+      "type": "math-random",
+      "content": "const tokensOut = 80 + Math.floor(Math.random() * 40)",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/discovery/services/provider-factory.ts",
+      "line": 29,
+      "type": "stub",
+      "content": "console.log('[Discovery] Legacy Mock engine active')",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/execution/retry/retry-policy.ts",
+      "line": 41,
+      "type": "math-random",
+      "content": "return delay * (0.5 + Math.random() * 0.5)  // ±25%",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/execution/retry/retry-policy.ts",
+      "line": 67,
+      "type": "math-random",
+      "content": "return delay * Math.random()",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/execution/retry/retry-policy.ts",
+      "line": 96,
+      "type": "math-random",
+      "content": "return delay * (0.5 + Math.random() * 0.5)",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/provider/types.ts",
+      "line": 6,
+      "type": "stub",
+      "content": "export type ProviderName = 'mock' | 'deepseek' | string",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/recommendation/optimization-task.service.ts",
+      "line": 203,
+      "type": "math-random",
+      "content": "const estimatedVisibilityGain = Math.round(impact * 0.4 + Math.random() * 3)",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/recommendation/optimization-task.service.ts",
+      "line": 204,
+      "type": "math-random",
+      "content": "const estimatedCitationGainPercent = Math.round(impact * 0.3 + Math.random() * 2)",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/recommendation/optimization-task.service.ts",
+      "line": 266,
+      "type": "math-random",
+      "content": "case 'EASY': return 1 + Math.round(Math.random() * 1)",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/recommendation/optimization-task.service.ts",
+      "line": 267,
+      "type": "math-random",
+      "content": "case 'MEDIUM': return 3 + Math.round(Math.random() * 4)",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/recommendation/optimization-task.service.ts",
+      "line": 268,
+      "type": "math-random",
+      "content": "case 'HARD': return 7 + Math.round(Math.random() * 7)",
+      "message": "Math.random() used — likely mock/stub data generation"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-execution.route.ts",
+      "line": 73,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/executions', { preHandler: [] }, async (request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-execution.route.ts",
+      "line": 97,
+      "type": "unauthenticated-route",
+      "content": "fastify.patch('/api/geo/executions/:executionId/status', { preHandler: [] }, async (request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-execution.route.ts",
+      "line": 124,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/executions/:executionId/retry', { preHandler: [] }, async (request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-execution.route.ts",
+      "line": 151,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/executions/:executionId/cancel', { preHandler: [] }, async (request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-knowledge-quality.route.ts",
+      "line": 44,
+      "type": "stub",
+      "content": "return {} // stub agents use entityId directly after Route mapping",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-knowledge-quality.route.ts",
+      "line": 63,
+      "type": "stub",
+      "content": "markup: { '@context': 'https://schema.org', '@type': 'Article', name: 'Stub Schema' },",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-knowledge-quality.route.ts",
+      "line": 89,
+      "type": "stub",
+      "content": "content: 'Stub evidence content for the claim',",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-knowledge-quality.route.ts",
+      "line": 97,
+      "type": "stub",
+      "content": "citationText: 'Stub citation for testing',",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-knowledge-quality.route.ts",
+      "line": 99,
+      "type": "stub",
+      "content": "sourceUrl: 'https://example.com/stub',",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-knowledge-quality.route.ts",
+      "line": 100,
+      "type": "stub",
+      "content": "publisher: 'Stub Publisher',",
+      "message": "Unmarked stub/mock/fake/hardcode — add // @beta-stub if intentional"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-project.route.ts",
+      "line": 19,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/projects', { preHandler: [] }, async (request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-roi.route.ts",
+      "line": 11,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/roi/calculate', { preHandler: [] }, async (request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-scan.route.ts",
+      "line": 18,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/scans', { preHandler: [] }, async (request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-scan.route.ts",
+      "line": 62,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/projects/:id/scan', { preHandler: [] }, async (request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-scan.route.ts",
+      "line": 184,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/projects/:projectId/scans/:scanId/optimize', { preHandler: [] }, async (_request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    },
+    {
+      "severity": "P0",
+      "file": "src/services/geo/routes/geo-scan.route.ts",
+      "line": 189,
+      "type": "unauthenticated-route",
+      "content": "fastify.post('/api/geo/projects/:projectId/scans/:scanId/apply', { preHandler: [] }, async (_request, reply) => {",
+      "message": "Mutating route (POST/PUT/DELETE/PATCH) without authentication"
+    }
+  ],
+  "summary": "✘ Reality Gate FAILED: 40 P0 issues found (0 P1 warnings) — blocking deployment"
+}

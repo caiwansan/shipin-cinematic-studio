@@ -1,0 +1,10 @@
+{
+  "version": "runtime-v1.0",
+  "buildTime": "2026-07-09T09:58:58.990Z",
+  "gitCommit": "8afda894405770a33d88484e3d9a83f32d0e8299",
+  "gitBranch": "audit/reality-v3",
+  "builder": "root",
+  "buildMode": "spa",
+  "assetHash": "7891173e43189742",
+  "assetCount": 255
+}

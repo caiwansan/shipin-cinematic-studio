@@ -246,6 +246,7 @@ export default async function hdzChatRoutes(app: FastifyInstance) {
         },
       }
     } catch (err: any) {
+      console.error(`[HDZ/Chat] ❌ chat/send error:`, err.stack || err.message)
       return reply.status(500).send({ success: false, error: err.message })
     }
   })

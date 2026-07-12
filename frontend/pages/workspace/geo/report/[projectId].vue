@@ -5,3 +5,9 @@
 <script setup lang="ts">
 import ReportCenter from 'workspaces/geo/pages/ReportCenter.vue'
 </script>
+
+<script lang="ts">
+definePageMeta({
+  title: 'GEO工作台',
+})
+</script>

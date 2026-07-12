@@ -21,8 +21,8 @@ function toDTO(record: any): HdzMemoryDTO {
     type: record.type,
     content: record.content,
     version: record.version,
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
+    createdAt: record.createdAt?.toISOString?.() || record.createdAt || '',
+    updatedAt: record.updatedAt?.toISOString?.() || record.updatedAt || '',
   }
 }
 
@@ -33,12 +33,15 @@ export const hdzMemoryRepository = {
   },
 
   async findFirst(where: any, orderBy?: any): Promise<HdzMemoryDTO | null> {
-    const record = await prisma.hdzMemory.findFirst({ where, orderBy })
+    // Compat: support both { where, orderBy } and single-arg { where, orderBy, ... }
+    const args = (typeof where === 'object' && where !== null && ('where' in where || 'orderBy' in where)) ? where : { where, orderBy }
+    const record = await prisma.hdzMemory.findFirst(args)
     return record ? toDTO(record) : null
   },
 
   async findMany(where?: any, orderBy?: any): Promise<HdzMemoryDTO[]> {
-    const records = await prisma.hdzMemory.findMany({ where, orderBy })
+    const args = (where && typeof where === 'object' && ('where' in where || 'orderBy' in where || 'skip' in where || 'take' in where || 'select' in where || 'include' in where)) ? where : { where, orderBy }
+    const records = await prisma.hdzMemory.findMany(args)
     return records.map(toDTO)
   },
 

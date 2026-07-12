@@ -1,0 +1,10 @@
+{
+  "name": "@platform/context",
+  "version": "0.0.0",
+  "main": "platform-context.js",
+  "types": "platform-context.d.ts",
+  "exports": {
+    ".": "./platform-context.js",
+    "./*": "./*"
+  }
+}

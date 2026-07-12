@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "created": "2026-07-03T16:39:58.291Z",
+  "description": "GEO Workspace Foundation Lock — PA-004 S1.1A",
+  "hashes": {
+    "token-manifest": "29c95a8359faaca9",
+    "event-contract": "1429046c2e249612",
+    "capability-registry": "e0172728d5a3339b",
+    "linter-rules": "2a83e9546a9ee109"
+  },
+  "baseline": {
+    "prisma-boundary": 0,
+    "layer-import": 87,
+    "agent-response": 12,
+    "token-usage": 2656
+  }
+}

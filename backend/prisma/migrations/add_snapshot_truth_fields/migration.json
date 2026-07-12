@@ -1,0 +1,56 @@
+{
+  "version": "5.0",
+  "steps": [
+    {
+      "tag": "alterTableAddColumn",
+      "table": "kmki_geo_score_snapshots",
+      "column": "scanId",
+      "type": "TEXT",
+      "nullable": true
+    },
+    {
+      "tag": "alterTableAddColumn",
+      "table": "kmki_geo_score_snapshots",
+      "column": "evidenceIds",
+      "type": "JSONB",
+      "nullable": true,
+      "default": "[]"
+    },
+    {
+      "tag": "alterTableAddColumn",
+      "table": "kmki_geo_score_snapshots",
+      "column": "providerVersion",
+      "type": "TEXT",
+      "nullable": true
+    },
+    {
+      "tag": "alterTableAddColumn",
+      "table": "kmki_geo_score_snapshots",
+      "column": "engineVersion",
+      "type": "TEXT",
+      "nullable": true
+    },
+    {
+      "tag": "alterTableAddColumn",
+      "table": "kmki_geo_score_snapshots",
+      "column": "responseHash",
+      "type": "TEXT",
+      "nullable": true
+    },
+    {
+      "tag": "alterTableAddColumn",
+      "table": "kmki_geo_score_snapshots",
+      "column": "sourceType",
+      "type": "TEXT",
+      "nullable": true,
+      "default": "'unknown'"
+    },
+    {
+      "tag": "alterTableAddColumn",
+      "table": "kmki_geo_score_snapshots",
+      "column": "scoreVersion",
+      "type": "TEXT",
+      "nullable": true
+    }
+  ]
+}

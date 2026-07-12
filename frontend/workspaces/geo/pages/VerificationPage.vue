@@ -1,5 +1,5 @@
 <template>
-  <div class="verification-page">
+  <div class="verification-page" style="width:100%">
     <!-- ===== Header: Entity Input ===== -->
     <div class="verification-page__header">
       <h1 class="verification-page__title">验证引擎</h1>
@@ -396,7 +396,7 @@ function priorityLabel(priority: string): string {
 
 <style scoped>
 .verification-page {
-  max-width: 900px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 0 48px;
 }

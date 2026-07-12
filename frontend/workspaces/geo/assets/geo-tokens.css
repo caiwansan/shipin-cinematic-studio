@@ -1,0 +1,39 @@
+/* ── GEO Workspace Design Tokens ── */
+/* These CSS variables are consumed by StatusRegistry, PriorityRegistry, etc. */
+/* Override these values to implement Dark Mode or Brand Theme. */
+
+:root {
+  /* Status tokens — consumed by StatusBanner */
+  --geo-status-bg-success: #f0fdf4;
+  --geo-status-border-success: #bbf7d0;
+  --geo-status-text-success: #16a34a;
+
+  --geo-status-bg-warning: #fffbeb;
+  --geo-status-border-warning: #fde68a;
+  --geo-status-text-warning: #d97706;
+
+  --geo-status-bg-error: #fef2f2;
+  --geo-status-border-error: #fecaca;
+  --geo-status-text-error: #dc2626;
+
+  --geo-status-bg-info: #eff6ff;
+  --geo-status-border-info: #bfdbfe;
+  --geo-status-text-info: #2563eb;
+
+  --geo-status-bg-neutral: #f9fafb;
+  --geo-status-border-neutral: #e5e7eb;
+  --geo-status-text-neutral: #6b7280;
+
+  /* Priority tokens */
+  --geo-priority-bg-high: #fef2f2;
+  --geo-priority-text-high: #dc2626;
+  --geo-priority-border-high: #fecaca;
+
+  --geo-priority-bg-medium: #fffbeb;
+  --geo-priority-text-medium: #d97706;
+  --geo-priority-border-medium: #fde68a;
+
+  --geo-priority-bg-low: #f0fdf4;
+  --geo-priority-text-low: #16a34a;
+  --geo-priority-border-low: #bbf7d0;
+}

@@ -47,7 +47,7 @@ export default defineNuxtConfig({
         },
       },
     },
-    plugins: ['~/server/plugins/preload.ts'],
+    plugins: ['~/server/plugins/preload.ts', '~/server/plugins/spa-fallback.ts'],
     hooks: {
       'compiled': () => {
         const publicDir = resolve(fileURLToPath(import.meta.url), '..', '.output/public')

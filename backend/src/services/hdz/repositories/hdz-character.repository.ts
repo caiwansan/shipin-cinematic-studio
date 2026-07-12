@@ -25,8 +25,8 @@ function toDTO(record: any): HdzCharacterDTO {
     properties: record.properties || {},
     relations: record.relations || [],
     arc: record.arc || null,
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
+    createdAt: record.createdAt?.toISOString?.() || '',
+    updatedAt: record.updatedAt?.toISOString?.() || '',
   }
 }
 
@@ -37,12 +37,15 @@ export const hdzCharacterRepository = {
   },
 
   async findFirst(where: any, orderBy?: any): Promise<HdzCharacterDTO | null> {
-    const record = await prisma.hdzCharacter.findFirst({ where, orderBy })
+    // Compat: support both { where, orderBy } and single-arg { where, orderBy, ... }
+    const args = (typeof where === 'object' && where !== null && ('where' in where || 'orderBy' in where)) ? where : { where, orderBy }
+    const record = await prisma.hdzCharacter.findFirst(args)
     return record ? toDTO(record) : null
   },
 
   async findMany(where?: any, orderBy?: any): Promise<HdzCharacterDTO[]> {
-    const records = await prisma.hdzCharacter.findMany({ where, orderBy })
+    const args = (where && typeof where === 'object' && ('where' in where || 'orderBy' in where || 'skip' in where || 'take' in where || 'select' in where || 'include' in where)) ? where : { where, orderBy }
+    const records = await prisma.hdzCharacter.findMany(args)
     return records.map(toDTO)
   },
 

@@ -13,7 +13,7 @@ const PUBLIC_HOST = 'https://aigc.fushtn.com'
 export default async function uploadRoutes(fastify: FastifyInstance) {
   // POST /api/v1/upload/asset — 用户上传外部资产（URL模式）
   fastify.post('/api/v1/upload/asset', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const { id: userId } = request.user as any
+    let { id: userId } = request.user as any
     const { title, type, url, thumbnail, prompt } = request.body as any
 
     if (!title || !type || !url) {
@@ -25,6 +25,14 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // 兼容 AdminUser（id 为 Int）→ 转为 User 表的 UUID
+      if (typeof userId === 'number') {
+        const adminUser = await prisma.adminUser.findUnique({ where: { id: userId } })
+        if (adminUser) {
+          const realUser = await prisma.user.findUnique({ where: { username: adminUser.username } })
+          if (realUser) userId = realUser.id
+        }
+      }
       const asset = await prisma.userAsset.create({
         data: {
           userId,
@@ -52,9 +60,21 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
 
   // POST /api/v1/upload/local — 上传本地图片文件（multipart）
   fastify.post('/api/v1/upload/local', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const { id: userId } = request.user as any
+    const user = request.user as any
+    let userId = user.id || user.userId
 
     try {
+      if (!userId) {
+        return reply.status(400).send({ error: '用户身份无效，请重新登录' })
+      }
+      // 兼容 AdminUser（id 为 Int）→ 转为 User 表的 UUID
+      if (typeof userId === 'number') {
+        const adminUser = await prisma.adminUser.findUnique({ where: { id: userId } })
+        if (adminUser) {
+          const realUser = await prisma.user.findUnique({ where: { username: adminUser.username } })
+          if (realUser) userId = realUser.id
+        }
+      }
       const data = await request.file()
       if (!data) {
         return reply.status(400).send({ error: '未上传文件' })
@@ -83,15 +103,20 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
       const title = data.filename?.replace(/\.[^/.]+$/, '') || '未命名'
       const type = ext === 'mp4' ? 'video' : 'image'
 
+      // 确保 Membership 存在
+      const existingMembership = await prisma.membership.findUnique({ where: { userId } })
+      if (!existingMembership) {
+        await prisma.membership.create({ data: { userId, tier: 'free' } })
+      }
       const asset = await prisma.userAsset.create({
         data: {
-          userId,
           title,
           type,
           url: publicUrl,
           thumbnail: publicUrl,
           prompt: `本地上传: ${data.filename}`,
           source: 'user_upload',
+          membership: { connect: { userId } },
         }
       })
 

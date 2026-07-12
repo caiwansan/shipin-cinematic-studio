@@ -35,6 +35,7 @@ import desktopTtsRoutes from './routes/desktop-tts.js'
 import desktopComfyRoutes from './routes/desktop-comfy.js'
 import desktopVideoRoutes from './routes/desktop-video.js'
 import healthRoutes from './routes/health.js'
+import siteConfigRoutes from './routes/site-config.js'
 import observabilityRoutes from './routes/observability.js'
 import providerRoutes from './routes/providers.js'
 import { OGESSafetyGuard } from './infra/oges/ogesSafetyGuard.js'
@@ -58,6 +59,21 @@ let agentScheduleRoutes: any = undefined
 let agentMemoryRoutes: any = undefined
 let agentToolRoutes: any = undefined
 import adminCustomerServiceRoutes from './routes/admin-customer-service.js'
+
+// Legal routes
+import legalConfigRoutes from './routes/legal/legal-config.route.js'
+import legalCaseRoutes from './routes/legal/legal-case.route.js'
+import legalCaseTemplateRoutes from './routes/legal/legal-case-template.route.js'
+import legalCaseWorkspaceRoutes from './routes/legal/legal-case-workspace.route.js'
+import legalContractTemplateRoutes from './routes/legal/legal-contract-template.route.js'
+import legalDocumentTemplateRoutes from './routes/legal/legal-document-template.route.js'
+import legalKnowledgeRoutes from './routes/legal/legal-knowledge.route.js'
+import legalRegulationRoutes from './routes/legal/legal-regulation.route.js'
+import legalRegulationFetchRoutes from './routes/legal/legal-regulation-fetch.route.js'
+import legalRagRoutes from './routes/legal/legal-rag.route.js'
+import legalAiPromptRoutes from './routes/legal/legal-ai-prompt.route.js'
+import legalAgentChatRoutes from './routes/legal/legal-agent-chat.route.js'
+import legalAgentUploadRoutes from './routes/legal/legal-agent-upload.route.js'
 import modelRoutes from './routes/models.js'
 import styleProfileRoutes from './routes/style-profiles.js'
 import adminModelRoutes from './routes/admin-models.js'
@@ -362,6 +378,27 @@ await app.register(projectV2Routes)
   // Admin Market Agents
   await app.register(adminMarketAgentRoutes)
 
+  // Mall (商城) routes
+  const { adminMallRoutes } = await import('./routes/mall-admin.js')
+  const { default: mallPublicRoutes } = await import('./routes/mall-public.js')
+  await app.register(adminMallRoutes)
+  await app.register(mallPublicRoutes)
+
+  // Legal routes
+  await app.register(legalConfigRoutes)
+  await app.register(legalCaseRoutes)
+  await app.register(legalCaseTemplateRoutes)
+  await app.register(legalCaseWorkspaceRoutes)
+  await app.register(legalContractTemplateRoutes)
+  await app.register(legalDocumentTemplateRoutes)
+  await app.register(legalKnowledgeRoutes)
+  await app.register(legalRegulationRoutes)
+  await app.register(legalRegulationFetchRoutes)
+  await app.register(legalRagRoutes)
+  await app.register(legalAiPromptRoutes)
+  await app.register(legalAgentChatRoutes)
+  await app.register(legalAgentUploadRoutes)
+
   // Agent Plans (前台+后台)
   await app.register(agentPlanRoutes)
   // Agent Runtime routes (KMKI-PLAT-010)
@@ -574,6 +611,13 @@ await app.register(projectV2Routes)
   await app.register(await import('./services/geo/routes/geo-dashboard.route.js').then(m => m.default))
   // RC1-T002 — Dashboard Mission Control
   await app.register(await import('./services/geo/routes/geo-dashboard-mission.route.js').then(m => m.default))
+  // RC-D1-004 — Workspace Mission Control (PageShell Dashboard)
+  try {
+    await app.register(await import('./services/geo/workspace/workspace.route.js').then(m => m.workspaceRoutes))
+    console.log('[startup] ✅ GEO Workspace route registered at /api/geo/workspace/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Workspace route skipped:', (err as Error).message)
+  }
   // RC1-T003 — Progressive Walkthrough
   try {
     await app.register(await import('./services/geo/routes/geo-walkthrough.route.js').then(m => m.default))
@@ -807,6 +851,7 @@ await app.register(projectV2Routes)
 
   // Production health / monitoring routes
   await app.register(healthRoutes)
+  await app.register(siteConfigRoutes)
   // REMOVED: observabilityRoutes
   // REMOVED: optimizationRoutes
   // 编排 Agent 路由（统筹分析 → 分发各专业 agent）

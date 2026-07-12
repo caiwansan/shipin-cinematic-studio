@@ -12,8 +12,15 @@ type HydrationStrategies = {
 }
 type LazyComponent<T> = (T & DefineComponent<HydrationStrategies, {}, {}, {}, {}, {}, {}, { hydrated: () => void }>)
 interface _GlobalComponents {
-      'LibraryReaderPanel': typeof import("../components/LibraryReaderPanel.vue")['default']
+      'AppFooter': typeof import("../components/AppFooter.vue")['default']
+    'LibraryReaderPanel': typeof import("../components/LibraryReaderPanel.vue")['default']
     'RegionPicker': typeof import("../components/RegionPicker.vue")['default']
+    'AdminMallBannersTab': typeof import("../components/admin/mall/BannersTab.vue")['default']
+    'AdminMallCategoriesTab': typeof import("../components/admin/mall/CategoriesTab.vue")['default']
+    'AdminMallCouponsTab': typeof import("../components/admin/mall/CouponsTab.vue")['default']
+    'AdminMallOrdersTab': typeof import("../components/admin/mall/OrdersTab.vue")['default']
+    'AdminMallProductsTab': typeof import("../components/admin/mall/ProductsTab.vue")['default']
+    'AdminMallRecommendTab': typeof import("../components/admin/mall/RecommendTab.vue")['default']
     'BusinessLoginModal': typeof import("../components/business/LoginModal.vue")['default']
     'CommunityHero': typeof import("../components/community/CommunityHero.vue")['default']
     'CommunityPostCard': typeof import("../components/community/CommunityPostCard.vue")['default']
@@ -51,6 +58,17 @@ interface _GlobalComponents {
     'KmkiUiVerificationSection': typeof import("../components/kmki-ui/VerificationSection/index.vue")['default']
     'KmkiUiVerificationTimeline': typeof import("../components/kmki-ui/VerificationTimeline/index.vue")['default']
     'KmkiUiWorkflowStepper': typeof import("../components/kmki-ui/WorkflowStepper/index.vue")['default']
+    'KnowledgeBodyRenderer': typeof import("../components/knowledge/KnowledgeBodyRenderer.vue")['default']
+    'KnowledgeFAQ': typeof import("../components/knowledge/KnowledgeFAQ.vue")['default']
+    'KnowledgeFooter': typeof import("../components/knowledge/KnowledgeFooter.vue")['default']
+    'KnowledgeHero': typeof import("../components/knowledge/KnowledgeHero.vue")['default']
+    'KnowledgeJSONLD': typeof import("../components/knowledge/KnowledgeJSONLD.vue")['default']
+    'KnowledgeMetadata': typeof import("../components/knowledge/KnowledgeMetadata.vue")['default']
+    'KnowledgeRelated': typeof import("../components/knowledge/KnowledgeRelated.vue")['default']
+    'KnowledgeRenderer': typeof import("../components/knowledge/KnowledgeRenderer.vue")['default']
+    'KnowledgeSummary': typeof import("../components/knowledge/KnowledgeSummary.vue")['default']
+    'KnowledgeRegistrySetup': typeof import("../components/knowledge/registry.setup")['default']
+    'KnowledgeRegistry': typeof import("../components/knowledge/registry")['default']
     'KunlunBaseGlassPanel': typeof import("../components/kunlun/base/GlassPanel.vue")['default']
     'KunlunBaseMirrorPanel': typeof import("../components/kunlun/base/MirrorPanel.vue")['default']
     'KunlunBusinessKunlunFooter': typeof import("../components/kunlun/business/KunlunFooter.vue")['default']
@@ -79,6 +97,10 @@ interface _GlobalComponents {
     'R11StabilityDashboard': typeof import("../components/r11/StabilityDashboard.vue")['default']
     'R11Api': typeof import("../components/r11/r11-api")['default']
     'RevenueUpgradeModal': typeof import("../components/revenue/UpgradeModal.vue")['default']
+    'UIEmptyState': typeof import("../components/ui/UIEmptyState.vue")['default']
+    'UIErrorCard': typeof import("../components/ui/UIErrorCard.vue")['default']
+    'UISkeleton': typeof import("../components/ui/UISkeleton.vue")['default']
+    'UIToastContainer': typeof import("../components/ui/UIToastContainer.vue")['default']
     'WizardFirstRunWizard': typeof import("../components/wizard/FirstRunWizard.vue")['default']
     'NuxtWelcome': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/welcome.vue")['default']
     'NuxtLayout': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/nuxt-layout")['default']
@@ -103,8 +125,15 @@ interface _GlobalComponents {
     'Body': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/head/runtime/components")['Body']
     'NuxtIsland': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/nuxt-island")['default']
     'NuxtRouteAnnouncer': IslandComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/server-placeholder")['default']>
-      'LazyLibraryReaderPanel': LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
+      'LazyAppFooter': LazyComponent<typeof import("../components/AppFooter.vue")['default']>
+    'LazyLibraryReaderPanel': LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
     'LazyRegionPicker': LazyComponent<typeof import("../components/RegionPicker.vue")['default']>
+    'LazyAdminMallBannersTab': LazyComponent<typeof import("../components/admin/mall/BannersTab.vue")['default']>
+    'LazyAdminMallCategoriesTab': LazyComponent<typeof import("../components/admin/mall/CategoriesTab.vue")['default']>
+    'LazyAdminMallCouponsTab': LazyComponent<typeof import("../components/admin/mall/CouponsTab.vue")['default']>
+    'LazyAdminMallOrdersTab': LazyComponent<typeof import("../components/admin/mall/OrdersTab.vue")['default']>
+    'LazyAdminMallProductsTab': LazyComponent<typeof import("../components/admin/mall/ProductsTab.vue")['default']>
+    'LazyAdminMallRecommendTab': LazyComponent<typeof import("../components/admin/mall/RecommendTab.vue")['default']>
     'LazyBusinessLoginModal': LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
     'LazyCommunityHero': LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
     'LazyCommunityPostCard': LazyComponent<typeof import("../components/community/CommunityPostCard.vue")['default']>
@@ -142,6 +171,17 @@ interface _GlobalComponents {
     'LazyKmkiUiVerificationSection': LazyComponent<typeof import("../components/kmki-ui/VerificationSection/index.vue")['default']>
     'LazyKmkiUiVerificationTimeline': LazyComponent<typeof import("../components/kmki-ui/VerificationTimeline/index.vue")['default']>
     'LazyKmkiUiWorkflowStepper': LazyComponent<typeof import("../components/kmki-ui/WorkflowStepper/index.vue")['default']>
+    'LazyKnowledgeBodyRenderer': LazyComponent<typeof import("../components/knowledge/KnowledgeBodyRenderer.vue")['default']>
+    'LazyKnowledgeFAQ': LazyComponent<typeof import("../components/knowledge/KnowledgeFAQ.vue")['default']>
+    'LazyKnowledgeFooter': LazyComponent<typeof import("../components/knowledge/KnowledgeFooter.vue")['default']>
+    'LazyKnowledgeHero': LazyComponent<typeof import("../components/knowledge/KnowledgeHero.vue")['default']>
+    'LazyKnowledgeJSONLD': LazyComponent<typeof import("../components/knowledge/KnowledgeJSONLD.vue")['default']>
+    'LazyKnowledgeMetadata': LazyComponent<typeof import("../components/knowledge/KnowledgeMetadata.vue")['default']>
+    'LazyKnowledgeRelated': LazyComponent<typeof import("../components/knowledge/KnowledgeRelated.vue")['default']>
+    'LazyKnowledgeRenderer': LazyComponent<typeof import("../components/knowledge/KnowledgeRenderer.vue")['default']>
+    'LazyKnowledgeSummary': LazyComponent<typeof import("../components/knowledge/KnowledgeSummary.vue")['default']>
+    'LazyKnowledgeRegistrySetup': LazyComponent<typeof import("../components/knowledge/registry.setup")['default']>
+    'LazyKnowledgeRegistry': LazyComponent<typeof import("../components/knowledge/registry")['default']>
     'LazyKunlunBaseGlassPanel': LazyComponent<typeof import("../components/kunlun/base/GlassPanel.vue")['default']>
     'LazyKunlunBaseMirrorPanel': LazyComponent<typeof import("../components/kunlun/base/MirrorPanel.vue")['default']>
     'LazyKunlunBusinessKunlunFooter': LazyComponent<typeof import("../components/kunlun/business/KunlunFooter.vue")['default']>
@@ -170,6 +210,10 @@ interface _GlobalComponents {
     'LazyR11StabilityDashboard': LazyComponent<typeof import("../components/r11/StabilityDashboard.vue")['default']>
     'LazyR11Api': LazyComponent<typeof import("../components/r11/r11-api")['default']>
     'LazyRevenueUpgradeModal': LazyComponent<typeof import("../components/revenue/UpgradeModal.vue")['default']>
+    'LazyUIEmptyState': LazyComponent<typeof import("../components/ui/UIEmptyState.vue")['default']>
+    'LazyUIErrorCard': LazyComponent<typeof import("../components/ui/UIErrorCard.vue")['default']>
+    'LazyUISkeleton': LazyComponent<typeof import("../components/ui/UISkeleton.vue")['default']>
+    'LazyUIToastContainer': LazyComponent<typeof import("../components/ui/UIToastContainer.vue")['default']>
     'LazyWizardFirstRunWizard': LazyComponent<typeof import("../components/wizard/FirstRunWizard.vue")['default']>
     'LazyNuxtWelcome': LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/welcome.vue")['default']>
     'LazyNuxtLayout': LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/nuxt-layout")['default']>
@@ -200,8 +244,15 @@ declare module 'vue' {
   export interface GlobalComponents extends _GlobalComponents { }
 }
 
+export const AppFooter: typeof import("../components/AppFooter.vue")['default']
 export const LibraryReaderPanel: typeof import("../components/LibraryReaderPanel.vue")['default']
 export const RegionPicker: typeof import("../components/RegionPicker.vue")['default']
+export const AdminMallBannersTab: typeof import("../components/admin/mall/BannersTab.vue")['default']
+export const AdminMallCategoriesTab: typeof import("../components/admin/mall/CategoriesTab.vue")['default']
+export const AdminMallCouponsTab: typeof import("../components/admin/mall/CouponsTab.vue")['default']
+export const AdminMallOrdersTab: typeof import("../components/admin/mall/OrdersTab.vue")['default']
+export const AdminMallProductsTab: typeof import("../components/admin/mall/ProductsTab.vue")['default']
+export const AdminMallRecommendTab: typeof import("../components/admin/mall/RecommendTab.vue")['default']
 export const BusinessLoginModal: typeof import("../components/business/LoginModal.vue")['default']
 export const CommunityHero: typeof import("../components/community/CommunityHero.vue")['default']
 export const CommunityPostCard: typeof import("../components/community/CommunityPostCard.vue")['default']
@@ -239,6 +290,17 @@ export const KmkiUiVerificationCard: typeof import("../components/kmki-ui/Verifi
 export const KmkiUiVerificationSection: typeof import("../components/kmki-ui/VerificationSection/index.vue")['default']
 export const KmkiUiVerificationTimeline: typeof import("../components/kmki-ui/VerificationTimeline/index.vue")['default']
 export const KmkiUiWorkflowStepper: typeof import("../components/kmki-ui/WorkflowStepper/index.vue")['default']
+export const KnowledgeBodyRenderer: typeof import("../components/knowledge/KnowledgeBodyRenderer.vue")['default']
+export const KnowledgeFAQ: typeof import("../components/knowledge/KnowledgeFAQ.vue")['default']
+export const KnowledgeFooter: typeof import("../components/knowledge/KnowledgeFooter.vue")['default']
+export const KnowledgeHero: typeof import("../components/knowledge/KnowledgeHero.vue")['default']
+export const KnowledgeJSONLD: typeof import("../components/knowledge/KnowledgeJSONLD.vue")['default']
+export const KnowledgeMetadata: typeof import("../components/knowledge/KnowledgeMetadata.vue")['default']
+export const KnowledgeRelated: typeof import("../components/knowledge/KnowledgeRelated.vue")['default']
+export const KnowledgeRenderer: typeof import("../components/knowledge/KnowledgeRenderer.vue")['default']
+export const KnowledgeSummary: typeof import("../components/knowledge/KnowledgeSummary.vue")['default']
+export const KnowledgeRegistrySetup: typeof import("../components/knowledge/registry.setup")['default']
+export const KnowledgeRegistry: typeof import("../components/knowledge/registry")['default']
 export const KunlunBaseGlassPanel: typeof import("../components/kunlun/base/GlassPanel.vue")['default']
 export const KunlunBaseMirrorPanel: typeof import("../components/kunlun/base/MirrorPanel.vue")['default']
 export const KunlunBusinessKunlunFooter: typeof import("../components/kunlun/business/KunlunFooter.vue")['default']
@@ -267,6 +329,10 @@ export const R11ReplayInspector: typeof import("../components/r11/ReplayInspecto
 export const R11StabilityDashboard: typeof import("../components/r11/StabilityDashboard.vue")['default']
 export const R11Api: typeof import("../components/r11/r11-api")['default']
 export const RevenueUpgradeModal: typeof import("../components/revenue/UpgradeModal.vue")['default']
+export const UIEmptyState: typeof import("../components/ui/UIEmptyState.vue")['default']
+export const UIErrorCard: typeof import("../components/ui/UIErrorCard.vue")['default']
+export const UISkeleton: typeof import("../components/ui/UISkeleton.vue")['default']
+export const UIToastContainer: typeof import("../components/ui/UIToastContainer.vue")['default']
 export const WizardFirstRunWizard: typeof import("../components/wizard/FirstRunWizard.vue")['default']
 export const NuxtWelcome: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/welcome.vue")['default']
 export const NuxtLayout: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/nuxt-layout")['default']
@@ -291,8 +357,15 @@ export const Html: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watc
 export const Body: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/head/runtime/components")['Body']
 export const NuxtIsland: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/nuxt-island")['default']
 export const NuxtRouteAnnouncer: IslandComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/server-placeholder")['default']>
+export const LazyAppFooter: LazyComponent<typeof import("../components/AppFooter.vue")['default']>
 export const LazyLibraryReaderPanel: LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
 export const LazyRegionPicker: LazyComponent<typeof import("../components/RegionPicker.vue")['default']>
+export const LazyAdminMallBannersTab: LazyComponent<typeof import("../components/admin/mall/BannersTab.vue")['default']>
+export const LazyAdminMallCategoriesTab: LazyComponent<typeof import("../components/admin/mall/CategoriesTab.vue")['default']>
+export const LazyAdminMallCouponsTab: LazyComponent<typeof import("../components/admin/mall/CouponsTab.vue")['default']>
+export const LazyAdminMallOrdersTab: LazyComponent<typeof import("../components/admin/mall/OrdersTab.vue")['default']>
+export const LazyAdminMallProductsTab: LazyComponent<typeof import("../components/admin/mall/ProductsTab.vue")['default']>
+export const LazyAdminMallRecommendTab: LazyComponent<typeof import("../components/admin/mall/RecommendTab.vue")['default']>
 export const LazyBusinessLoginModal: LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
 export const LazyCommunityHero: LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
 export const LazyCommunityPostCard: LazyComponent<typeof import("../components/community/CommunityPostCard.vue")['default']>
@@ -330,6 +403,17 @@ export const LazyKmkiUiVerificationCard: LazyComponent<typeof import("../compone
 export const LazyKmkiUiVerificationSection: LazyComponent<typeof import("../components/kmki-ui/VerificationSection/index.vue")['default']>
 export const LazyKmkiUiVerificationTimeline: LazyComponent<typeof import("../components/kmki-ui/VerificationTimeline/index.vue")['default']>
 export const LazyKmkiUiWorkflowStepper: LazyComponent<typeof import("../components/kmki-ui/WorkflowStepper/index.vue")['default']>
+export const LazyKnowledgeBodyRenderer: LazyComponent<typeof import("../components/knowledge/KnowledgeBodyRenderer.vue")['default']>
+export const LazyKnowledgeFAQ: LazyComponent<typeof import("../components/knowledge/KnowledgeFAQ.vue")['default']>
+export const LazyKnowledgeFooter: LazyComponent<typeof import("../components/knowledge/KnowledgeFooter.vue")['default']>
+export const LazyKnowledgeHero: LazyComponent<typeof import("../components/knowledge/KnowledgeHero.vue")['default']>
+export const LazyKnowledgeJSONLD: LazyComponent<typeof import("../components/knowledge/KnowledgeJSONLD.vue")['default']>
+export const LazyKnowledgeMetadata: LazyComponent<typeof import("../components/knowledge/KnowledgeMetadata.vue")['default']>
+export const LazyKnowledgeRelated: LazyComponent<typeof import("../components/knowledge/KnowledgeRelated.vue")['default']>
+export const LazyKnowledgeRenderer: LazyComponent<typeof import("../components/knowledge/KnowledgeRenderer.vue")['default']>
+export const LazyKnowledgeSummary: LazyComponent<typeof import("../components/knowledge/KnowledgeSummary.vue")['default']>
+export const LazyKnowledgeRegistrySetup: LazyComponent<typeof import("../components/knowledge/registry.setup")['default']>
+export const LazyKnowledgeRegistry: LazyComponent<typeof import("../components/knowledge/registry")['default']>
 export const LazyKunlunBaseGlassPanel: LazyComponent<typeof import("../components/kunlun/base/GlassPanel.vue")['default']>
 export const LazyKunlunBaseMirrorPanel: LazyComponent<typeof import("../components/kunlun/base/MirrorPanel.vue")['default']>
 export const LazyKunlunBusinessKunlunFooter: LazyComponent<typeof import("../components/kunlun/business/KunlunFooter.vue")['default']>
@@ -358,6 +442,10 @@ export const LazyR11ReplayInspector: LazyComponent<typeof import("../components/
 export const LazyR11StabilityDashboard: LazyComponent<typeof import("../components/r11/StabilityDashboard.vue")['default']>
 export const LazyR11Api: LazyComponent<typeof import("../components/r11/r11-api")['default']>
 export const LazyRevenueUpgradeModal: LazyComponent<typeof import("../components/revenue/UpgradeModal.vue")['default']>
+export const LazyUIEmptyState: LazyComponent<typeof import("../components/ui/UIEmptyState.vue")['default']>
+export const LazyUIErrorCard: LazyComponent<typeof import("../components/ui/UIErrorCard.vue")['default']>
+export const LazyUISkeleton: LazyComponent<typeof import("../components/ui/UISkeleton.vue")['default']>
+export const LazyUIToastContainer: LazyComponent<typeof import("../components/ui/UIToastContainer.vue")['default']>
 export const LazyWizardFirstRunWizard: LazyComponent<typeof import("../components/wizard/FirstRunWizard.vue")['default']>
 export const LazyNuxtWelcome: LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/welcome.vue")['default']>
 export const LazyNuxtLayout: LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/app/components/nuxt-layout")['default']>

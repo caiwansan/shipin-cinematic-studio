@@ -126,14 +126,14 @@ const STATIC_SYSTEM_PROMPT = `你是文曲星，一位温润如玉的文学创�
 
 class WorldbuilderService {
   async execute(ctx: OrchestratorContext, llmCfg: LLMConfig): Promise<string> {
-    const project = await hdzProjectRepository.findUnique({ where: { id: ctx.projectId } })
+    const project = await hdzProjectRepository.findUnique({ id: ctx.projectId })
     if (!project) throw new Error('项目不存在')
 
-    const characters = await hdzCharacterRepository.findMany({ where: { projectId: ctx.projectId } })
-    const existingChapters = await hdzChapterRepository.findMany({
-      where: { projectId: ctx.projectId },
-      orderBy: { chapterNo: 'asc' },
-    }) as any[]
+    const characters = await hdzCharacterRepository.findMany({ projectId: ctx.projectId })
+    const existingChapters = await hdzChapterRepository.findMany(
+      { projectId: ctx.projectId },
+      { chapterNo: 'asc' },
+    ) as any[]
 
     const styleDna = await hdzStyleDnaRepository.findFirst({ where: { projectId: ctx.projectId } })
     const memories = await hdzMemoryRepository.findMany({

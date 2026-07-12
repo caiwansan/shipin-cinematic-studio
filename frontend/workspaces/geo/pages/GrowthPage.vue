@@ -7,7 +7,7 @@
  *   responsive layout, keyboard navigation, aria attributes
  */
 <template>
-  <div class="growth-page">
+  <div class="growth-page" style="width:100%">
     <!-- ===== STATE: Loading ===== -->
     <LoadingState
       v-if="store.isLoading && !store.hasData"
@@ -41,7 +41,7 @@
     />
 
     <!-- ===== STATE: Data ===== -->
-    <template v-else-if="store.direction">
+    <div v-if="store.direction">
       <Hero
         title="Growth"
         :subtitle="`Brand Progress — ${store.direction.period}`"
@@ -120,7 +120,7 @@
           </button>
         </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
@@ -182,7 +182,7 @@ async function selectPeriod(period: string) {
 
 <style scoped>
 .growth-page {
-  max-width: 960px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

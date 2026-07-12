@@ -3,8 +3,7 @@
 // A1.1 — FROZEN
 // ─────────────────────────────────────────────────
 
-import uuid from 'uuid'
-const uuidv4 = () => (uuid as any).v4 ? (uuid as any).v4() : uuid.v4()
+import { v4 as uuidv4 } from 'uuid'
 import type { Issue, IssueEdge, IssueGraph, IssueKind, RootCauseStrategy } from './types'
 import { ISSUE_REGISTRY, getAllKindIds } from './issue-registry'
 import { GraphRootCauseStrategy } from './graph.strategy'

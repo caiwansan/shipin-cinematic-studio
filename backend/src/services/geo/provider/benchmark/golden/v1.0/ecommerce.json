@@ -1,0 +1,1249 @@
+{
+  "_metadata": {
+    "datasetVersion": "1.0.0",
+    "schemaVersion": "1.0",
+    "annotationGuideVersion": "1.0",
+    "frozenAt": "2026-07-02",
+    "owner": "GEO Team",
+    "reviewers": [
+      "熊大"
+    ],
+    "approved": false,
+    "approvalDate": null,
+    "source": "manual-annotation",
+    "description": "ecommerce 行业 Golden Dataset，20 条样本",
+    "schemaRef": "../GOLDEN-DATASET-SPEC-V1.md",
+    "annotationGuideRef": "../GOLDEN-DATASET-ANNOTATION-GUIDE-V1.md",
+    "scenarioSource": "Discovery Scenario Registry v1",
+    "changelog": [
+      {
+        "date": "2026-07-02",
+        "change": "Migrated from v1-part1 to v1.0 Schema",
+        "author": "OpenClaw"
+      }
+    ],
+    "count": 20,
+    "industries": [
+      "ecommerce"
+    ],
+    "entityTypes": [
+      "Platform"
+    ],
+    "coverageBands": [
+      "Excellent",
+      "Good"
+    ]
+  },
+  "golden-v1-21": {
+    "id": "golden-v1-21",
+    "entityName": "Amazon",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "US",
+    "language": "en",
+    "website": "https://amazon.com",
+    "description": "Amazon 是全球最大的电商平台和云计算服务商，覆盖零售、数字内容和智能硬件等多个领域。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "e-commerce giant",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "online retail",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "Amazon Prime",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "marketplace",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Amazon",
+      "Amazon.com",
+      "Amazon Prime",
+      "Amazon Web Services"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://amazon.com",
+        "accessedAt": "2026-07-02",
+        "description": "Amazon 是全球最大的电商平台和云计算服务商，覆盖零售、数字内容和智能硬件等多个领域。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "全球电商绝对霸主，平台覆盖几乎所有品类，品牌知名度极高"
+  },
+  "golden-v1-22": {
+    "id": "golden-v1-22",
+    "entityName": "Shein",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://shein.com",
+    "description": "Shein 是一家专注于快时尚跨境电商的平台，以极低的价格和快速的上新速度在全球年轻消费者中流行。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "fast fashion",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "ultra-fast fashion",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "cross-border e-commerce",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "DTC",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Shein",
+      "SHEIN",
+      "Shein Marketplace"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://shein.com",
+        "accessedAt": "2026-07-02",
+        "description": "Shein 是一家专注于快时尚跨境电商的平台，以极低的价格和快速的上新速度在全球年轻消费者中流行。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "中国跨境电商出海的代表，快时尚领域颠覆者，海外 Z 世代热捧"
+  },
+  "golden-v1-23": {
+    "id": "golden-v1-23",
+    "entityName": "Temu",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://temu.com",
+    "description": "Temu 是拼多多旗下面向海外市场的跨境电商平台，以极致低价和社交裂变策略迅速打开美国市场。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "check-pricing",
+      "assess-quality"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "cross-border e-commerce",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "budget shopping",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "social commerce",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Temu",
+      "Temu.com",
+      "拼多多海外版"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://temu.com",
+        "accessedAt": "2026-07-02",
+        "description": "Temu 是拼多多旗下面向海外市场的跨境电商平台，以极致低价和社交裂变策略迅速打开美国市场。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "拼多多海外版，上线后增速惊人，已进入全球多个国家市场"
+  },
+  "golden-v1-24": {
+    "id": "golden-v1-24",
+    "entityName": "Pinduoduo",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://pinduoduo.com",
+    "description": "拼多多是中国领先的社交电商平台，通过拼团模式和下沉市场策略迅速崛起，成为国内电商三强之一。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing",
+      "assess-quality"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "social commerce",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "group buying",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "low-price strategy",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "C2M",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "拼多多",
+      "Pinduoduo",
+      "拼多多商城",
+      "多多买菜"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://pinduoduo.com",
+        "accessedAt": "2026-07-02",
+        "description": "拼多多是中国领先的社交电商平台，通过拼团模式和下沉市场策略迅速崛起，成为国内电商三强之一。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "中国社交电商的开创者，下沉市场王者，市值一度超过阿里巴巴"
+  },
+  "golden-v1-25": {
+    "id": "golden-v1-25",
+    "entityName": "京东",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://jd.com",
+    "description": "京东是中国最大的自营式电商平台，以正品保障、自建物流和优质服务在消费者中树立了良好口碑。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "自营电商",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "自建物流",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "正品保障",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "3C数码",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "京东",
+      "京东商城",
+      "京东自营",
+      "京东物流",
+      "京东健康"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://jd.com",
+        "accessedAt": "2026-07-02",
+        "description": "京东是中国最大的自营式电商平台，以正品保障、自建物流和优质服务在消费者中树立了良好口碑。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "中国自营电商巨头，自建物流体系是核心竞争壁垒"
+  },
+  "golden-v1-26": {
+    "id": "golden-v1-26",
+    "entityName": "小红书",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://xiaohongshu.com",
+    "description": "小红书是中国领先的生活方式分享社区和电商平台，用户通过图文和视频分享购物心得和生活经验。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "社交电商",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "内容社区",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "种草",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "UGC",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "小红书",
+      "小红书商城",
+      "RED"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://xiaohongshu.com",
+        "accessedAt": "2026-07-02",
+        "description": "小红书是中国领先的生活方式分享社区和电商平台，用户通过图文和视频分享购物心得和生活经验。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "内容电商的代表，用户自发种草-拔草的闭环生态极具商业价值"
+  },
+  "golden-v1-27": {
+    "id": "golden-v1-27",
+    "entityName": "淘宝",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://taobao.com",
+    "description": "淘宝是中国最大的 C2C 电商平台，由阿里巴巴集团运营，涵盖海量商品和数百万卖家。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing",
+      "assess-quality"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "C2C",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "电商平台",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "阿里巴巴",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "中小卖家",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "淘宝",
+      "淘宝网",
+      "淘宝商城",
+      "淘宝直播"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://taobao.com",
+        "accessedAt": "2026-07-02",
+        "description": "淘宝是中国最大的 C2C 电商平台，由阿里巴巴集团运营，涵盖海量商品和数百万卖家。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "中国电商的奠基者之一，改变了中国人的购物方式"
+  },
+  "golden-v1-28": {
+    "id": "golden-v1-28",
+    "entityName": "天猫",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://tmall.com",
+    "description": "天猫是阿里巴巴集团旗下的 B2C 电商平台，专注于品牌官方旗舰店和中高端商品销售。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing",
+      "assess-quality"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "B2C",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "品牌旗舰店",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "正品保障",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "双十一",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "天猫",
+      "天猫商城",
+      "天猫国际",
+      "天猫超市"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://tmall.com",
+        "accessedAt": "2026-07-02",
+        "description": "天猫是阿里巴巴集团旗下的 B2C 电商平台，专注于品牌官方旗舰店和中高端商品销售。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "中国品牌电商主阵地，双十一购物节的发起者"
+  },
+  "golden-v1-29": {
+    "id": "golden-v1-29",
+    "entityName": "唯品会",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://vip.com",
+    "description": "唯品会是中国领先的品牌特卖电商平台，以限时折扣和品牌正品为特色。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "品牌特卖",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "折扣电商",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "限时抢购",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "唯品会",
+      "VIP.com",
+      "唯品会特卖"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://vip.com",
+        "accessedAt": "2026-07-02",
+        "description": "唯品会是中国领先的品牌特卖电商平台，以限时折扣和品牌正品为特色。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "品牌折扣电商的先行者，主营服装和美妆品类"
+  },
+  "golden-v1-30": {
+    "id": "golden-v1-30",
+    "entityName": "得物",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://dewu.com",
+    "description": "得物（原名毒）是中国领先的潮流单品鉴定与交易平台，专注于球鞋、潮牌和二奢等品类的正品保障。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "check-pricing",
+      "assess-quality"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "潮流电商",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "球鞋鉴定",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "正品鉴别",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "潮牌",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "得物",
+      "得物App",
+      "毒",
+      "得物鉴定"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://dewu.com",
+        "accessedAt": "2026-07-02",
+        "description": "得物（原名毒）是中国领先的潮流单品鉴定与交易平台，专注于球鞋、潮牌和二奢等品类的正品保障。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "开创了先鉴定后发货的电商模式，解决了潮流单品真假难辨的痛点"
+  },
+  "golden-v1-31": {
+    "id": "golden-v1-31",
+    "entityName": "Etsy",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "US",
+    "language": "en",
+    "website": "https://etsy.com",
+    "description": "Etsy 是全球最大的手工艺品和复古商品电商平台，连接独立创作者和手工爱好者。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "handmade marketplace",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "vintage",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "crafts",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "independent sellers",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Etsy",
+      "Etsy.com",
+      "Etsy Marketplace"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://etsy.com",
+        "accessedAt": "2026-07-02",
+        "description": "Etsy 是全球最大的手工艺品和复古商品电商平台，连接独立创作者和手工爱好者。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "手工艺电商独角兽，支持全球独立创作者的变现之路"
+  },
+  "golden-v1-32": {
+    "id": "golden-v1-32",
+    "entityName": "eBay",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "US",
+    "language": "en",
+    "website": "https://ebay.com",
+    "description": "eBay 是全球最早的 C2C 电商平台之一，以拍卖模式和二手商品交易而闻名。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing",
+      "assess-quality"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "online auction",
+        "importance": "High"
+      },
+      {
+        "type": "Product",
+        "text": "C2C marketplace",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "second-hand goods",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "eBay seller",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "eBay",
+      "eBay.com",
+      "eBay Marketplace",
+      "eBay Auction"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://ebay.com",
+        "accessedAt": "2026-07-02",
+        "description": "eBay 是全球最早的 C2C 电商平台之一，以拍卖模式和二手商品交易而闻名。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "电商元老级平台，拍卖模式的代名词，全球二手交易的重要渠道"
+  },
+  "golden-v1-33": {
+    "id": "golden-v1-33",
+    "entityName": "Walmart",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "US",
+    "language": "en",
+    "website": "https://walmart.com",
+    "description": "Walmart 是全球最大的零售商之一，其线上电商平台正在快速扩大规模，与亚马逊展开全方位竞争。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "retail giant",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "omnichannel",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "big-box retail",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "grocery",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Walmart",
+      "Walmart.com",
+      "Walmart Marketplace",
+      "Sam's Club"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://walmart.com",
+        "accessedAt": "2026-07-02",
+        "description": "Walmart 是全球最大的零售商之一，其线上电商平台正在快速扩大规模，与亚马逊展开全方位竞争。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "全球最大零售商，线上线下融合的领导者"
+  },
+  "golden-v1-34": {
+    "id": "golden-v1-34",
+    "entityName": "Zalando",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "DE",
+    "language": "de",
+    "website": "https://zalando.com",
+    "description": "Zalando 是欧洲最大的时尚电商平台，提供服装、鞋类和配饰等在线零售服务。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "fashion e-commerce",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "European retail",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "online fashion",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Zalando",
+      "Zalando Lounge",
+      "Zalando Fashion"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://zalando.com",
+        "accessedAt": "2026-07-02",
+        "description": "Zalando 是欧洲最大的时尚电商平台，提供服装、鞋类和配饰等在线零售服务。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "欧洲时尚电商龙头，覆盖 20 多个欧洲国家市场"
+  },
+  "golden-v1-35": {
+    "id": "golden-v1-35",
+    "entityName": "Mercado Libre",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "AR",
+    "language": "es",
+    "website": "https://mercadolibre.com",
+    "description": "Mercado Libre 是拉丁美洲最大的电商和数字支付平台，被誉为拉美的亚马逊。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "Latin America e-commerce",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "digital payments",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "fintech",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Mercado Libre",
+      "Mercado Pago",
+      "Mercado Envios"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://mercadolibre.com",
+        "accessedAt": "2026-07-02",
+        "description": "Mercado Libre 是拉丁美洲最大的电商和数字支付平台，被誉为拉美的亚马逊。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "拉美电商霸主，电商+支付+物流全覆盖的数字生态"
+  },
+  "golden-v1-36": {
+    "id": "golden-v1-36",
+    "entityName": "Shopify",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "US",
+    "language": "en",
+    "website": "https://shopify.com",
+    "description": "Shopify 是全球领先的电商独立站建站平台，提供从店铺搭建到支付物流的一站式解决方案。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "e-commerce platform",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "online store builder",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "DTC",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "shopify ecosystem",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Shopify",
+      "Shopify Plus",
+      "Shopify Store",
+      "Shopify Payments"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://shopify.com",
+        "accessedAt": "2026-07-02",
+        "description": "Shopify 是全球领先的电商独立站建站平台，提供从店铺搭建到支付物流的一站式解决方案。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "作为电商基础设施平台，Shopify 支撑了数百万独立站商家的运营"
+  },
+  "golden-v1-37": {
+    "id": "golden-v1-37",
+    "entityName": "Coupang",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "KR",
+    "language": "ko",
+    "website": "https://coupang.com",
+    "description": "Coupang 是韩国最大的电商平台，以火箭配送（当日达/次日达）和自有物流体系著称。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "Korean e-commerce",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "rocket delivery",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "logistics network",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Coupang",
+      "Coupang Rocket Delivery",
+      "Coupang Fresh"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://coupang.com",
+        "accessedAt": "2026-07-02",
+        "description": "Coupang 是韩国最大的电商平台，以火箭配送（当日达/次日达）和自有物流体系著称。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "韩国电商市场份额第一，自建物流体系媲美京东"
+  },
+  "golden-v1-38": {
+    "id": "golden-v1-38",
+    "entityName": "Rakuten",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "JP",
+    "language": "ja",
+    "website": "https://rakuten.co.jp",
+    "description": "Rakuten 是日本最大的电商平台之一，业务涵盖电商、金融、通信等多个领域。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "Japanese e-commerce",
+        "importance": "High"
+      },
+      {
+        "type": "Product",
+        "text": "online marketplace",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "loyalty program",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Rakuten",
+      "Rakuten Ichiba",
+      "Rakuten Points"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://rakuten.co.jp",
+        "accessedAt": "2026-07-02",
+        "description": "Rakuten 是日本最大的电商平台之一，业务涵盖电商、金融、通信等多个领域。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "日本电商生态的核心参与者，积分生态系统独具特色"
+  },
+  "golden-v1-39": {
+    "id": "golden-v1-39",
+    "entityName": "美团",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://meituan.com",
+    "description": "美团是中国领先的生活服务电商平台，涵盖外卖、到店餐饮、酒店旅游、出行等多个本地服务领域。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "O2O",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "life services",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "food delivery",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "local commerce",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "美团",
+      "美团外卖",
+      "美团点评",
+      "美团优选",
+      "美团酒店"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://meituan.com",
+        "accessedAt": "2026-07-02",
+        "description": "美团是中国领先的生活服务电商平台，涵盖外卖、到店餐饮、酒店旅游、出行等多个本地服务领域。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "中国本地生活服务电商之王，超级APP代表"
+  },
+  "golden-v1-40": {
+    "id": "golden-v1-40",
+    "entityName": "Alibaba.com",
+    "entityType": "Platform",
+    "industry": "ecommerce",
+    "country": "CN",
+    "language": "zh",
+    "website": "https://alibaba.com",
+    "description": "Alibaba.com 是阿里巴巴集团旗下的 B2B 跨境电商平台，连接全球买家和供应商。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing",
+      "assess-quality"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "assess-trust"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "B2B marketplace",
+        "importance": "High"
+      },
+      {
+        "type": "Geography",
+        "text": "global trade",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "wholesale",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "cross-border",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "阿里巴巴",
+      "Alibaba.com",
+      "阿里巴巴国际站",
+      "1688"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://alibaba.com",
+        "accessedAt": "2026-07-02",
+        "description": "Alibaba.com 是阿里巴巴集团旗下的 B2B 跨境电商平台，连接全球买家和供应商。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "全球最大的 B2B 跨境电商平台，中国制造出海的核心通道"
+  }
+}

@@ -1,0 +1,1 @@
+import{g as t}from"./B4lPdjPb.js";const s={async getState(){return(await t("/walkthrough/state")).data},async dismiss(){await t("/walkthrough/dismiss",{method:"POST"})},async complete(){await t("/walkthrough/complete",{method:"POST"})},async restart(){return(await t("/walkthrough/restart",{method:"POST"})).data}};export{s as w};

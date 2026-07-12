@@ -7,7 +7,7 @@
  *   keyboard navigation, aria attributes
  */
 <template>
-  <div class="pub-page">
+  <div class="pub-page" style="width:100%">
     <!-- ===== STATE: Loading ===== -->
     <LoadingState
       v-if="store.isLoading && !store.hasData"
@@ -43,7 +43,7 @@
     </EmptyState>
 
     <!-- ===== STATE: Data ===== -->
-    <template v-else-if="store.distributionHealth">
+    <div v-if="store.distributionHealth">
       <Hero
         title="Distribution"
         subtitle="Where your brand is seen by AI systems"
@@ -154,7 +154,7 @@
         <span class="pub-page__uptodate-icon">&#10003;</span>
         <span>所有渠道已是最新</span>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
@@ -219,7 +219,7 @@ function dismissStatus() {
 
 <style scoped>
 .pub-page {
-  max-width: 960px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

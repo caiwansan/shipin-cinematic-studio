@@ -23,6 +23,7 @@ type NuxtAppInjections =
   InjectionType<typeof import("../../plugins/build-version.client")> &
   InjectionType<typeof import("../../plugins/router-error")> &
   InjectionType<typeof import("../../plugins/runtime-error-trace.client")> &
+  InjectionType<typeof import("../../plugins/seo.client")> &
   InjectionType<typeof import("../../plugins/store-safety.client")> &
   InjectionType<typeof import("../../plugins/token-bridge.client")>
 

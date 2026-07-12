@@ -1,0 +1,345 @@
+# GEO Workspace — API Contract Manifest v1.0
+# Single Source of Truth for all frontend↔backend API endpoints.
+# canonical: true → primary endpoint. All consumers MUST use this.
+# deprecated: true → alias for backward compatibility. Will be removed.
+# All paths are relative to /api/geo unless prefixed with /api/v1.
+
+version: "1.0"
+updated: "2026-07-04"
+status: "active"
+
+endpoints:
+
+  # ── Mission Dashboard ──
+  # Owner: MissionRepository | MissionCenterShell, GEODashboard
+  mission:
+    getDashboardMission:
+      method: GET
+      path: /dashboard/mission
+      canonical: true
+      request: {}
+      response:
+        success: boolean
+        data:
+          todayProgress: { current: number, total: number }
+          continueJourney: array
+          prioritizedProjects: array
+      consumers: [MissionRepository, MissionCenterShell.vue]
+      aliases: []
+
+  # ── Project Dashboard (aggregate) ──
+  # Owner: DashboardRepository | BrandOverview, GEODashboard
+  # Replaces the deprecated 4-endpoint pattern (truth/presence/providers/timeline)
+  dashboard:
+    getProjectDashboard:
+      method: GET
+      path: /projects/:id/dashboard
+      canonical: true
+      request:
+        params: [projectId]
+      response:
+        success: boolean
+        data:
+          project: object
+          health: object
+          discovery: object
+          verification: object
+          recommendations: object
+      consumers: [DashboardRepository (after S1.2A.5)]
+      aliases: []
+
+  # ── Discovery ──
+  # Owner: DiscoveryRepository | DiscoveryLabPage
+  discovery:
+    report:
+      method: GET
+      path: /discovery/report
+      canonical: true
+      request:
+        query: { entity: string }
+      response:
+        success: boolean
+        data: DiscoveryReport
+      consumers: [DiscoveryRepository]
+      aliases: []
+
+    actionPlan:
+      method: GET
+      path: /discovery/action-plan
+      canonical: true
+      request:
+        query: { entity: string }
+      response:
+        success: boolean
+        data:
+          actionPlans: ActionPlanItem[]
+      consumers: [DiscoveryRepository]
+      aliases: []
+
+  # ── Recommendations ──
+  # Owner: RecommendationRepository | RecommendationsPage
+  recommendation:
+    list:
+      method: GET
+      path: /recommendations/:projectId
+      canonical: true
+      request:
+        params: [projectId]
+      response:
+        success: boolean
+        data: RecommendationsData
+      consumers: [RecommendationRepository]
+
+    execute:
+      method: POST
+      path: /recommendations/:projectId/execute
+      canonical: true
+      request:
+        params: [projectId]
+      response:
+        success: boolean
+      consumers: [RecommendationRepository]
+
+    score:
+      description: "V2 API — not yet active"
+      method: GET
+      path: /recommendation/score
+      canonical: false
+      status: removed
+      decision_note: "V2 contract declared before backend existed. Removed in S1.2A.5."
+
+    simulate:
+      description: "V2 API — not yet active"
+      method: POST
+      path: /recommendation/simulate
+      canonical: false
+      status: removed
+      decision_note: "V2 contract declared before backend existed. Removed in S1.2A.5."
+
+  # ── Explain ──
+  # Owner: explainService | BrandOverview, Verification
+  explain:
+    getBrandExplain:
+      method: GET
+      path: /brands/:id/explain
+      canonical: true
+      request:
+        params: [id]
+      response:
+        success: boolean
+        data: ExplainData
+      consumers: [explainService]
+      aliases:
+        - method: GET
+          path: /explain/:type/:projectId
+          deprecated: true
+          deprecation_note: "Use /brands/:id/explain instead"
+
+  # ── Walkthrough ──
+  # Owner: walkthroughService | GEODashboard
+  walkthrough:
+    getState:
+      method: GET
+      path: /walkthrough/state
+      canonical: true
+    dismiss:
+      method: POST
+      path: /walkthrough/dismiss
+      canonical: true
+    complete:
+      method: POST
+      path: /walkthrough/complete
+      canonical: true
+    restart:
+      method: POST
+      path: /walkthrough/restart
+      canonical: true
+
+  # ── Health ──
+  # Owner: healthService | HealthPage
+  health:
+    getHealth:
+      method: GET
+      path: /health/:id
+      canonical: true
+      request:
+        params: [id]
+      response:
+        success: boolean
+        data: BrandHealthData
+
+  # ── Knowledge ──
+  # Owner: knowledgeService | KnowledgePage
+  knowledge:
+    list:
+      method: GET
+      path: /knowledge
+      canonical: true
+      request:
+        query: { projectId: string }
+    getDetail:
+      method: GET
+      path: /knowledge/:id
+      canonical: true
+    merge:
+      method: POST
+      path: /knowledge/merge
+      canonical: true
+
+  # ── Scan ──
+  # Owner: scanService | GEOCreate
+  scan:
+    createProject:
+      method: POST
+      path: /scans
+      canonical: true
+    listProjects:
+      method: GET
+      path: /projects
+      canonical: true
+    getProject:
+      method: GET
+      path: /projects/:id
+      canonical: true
+    createScan:
+      method: POST
+      path: /projects/:id/scan
+      canonical: true
+    listScans:
+      method: GET
+      path: /scans
+      canonical: true
+    getScan:
+      method: GET
+      path: /scans/:id
+      canonical: true
+    getProjectScan:
+      method: GET
+      path: /projects/:projectId/scans/:scanId
+      canonical: true
+    optimize:
+      method: POST
+      path: /projects/:projectId/scans/:scanId/optimize
+      canonical: true
+    apply:
+      method: POST
+      path: /projects/:projectId/scans/:scanId/apply
+      canonical: true
+    deleteScan:
+      method: DELETE
+      path: /scans/:id
+      canonical: true
+
+  # ── Evidence ──
+  # Owner: historyDetailService
+  evidence:
+    list:
+      method: GET
+      path: /evidence
+      canonical: true
+    getDetail:
+      method: GET
+      path: /evidence/:id
+      canonical: true
+
+  # ── Verification ──
+  # Owner: verificationService | VerificationPage
+  verification:
+    getProjectVerification:
+      method: GET
+      path: /projects/:id/verification
+      canonical: true
+      request:
+        params: [id]
+    putProjectVerification:
+      method: PUT
+      path: /projects/:id/verification
+      canonical: true
+
+  # ── Showcase ──
+  # Owner: showcaseService | GEODashboard
+  # Backend: /api/v1/geo/showcase (registered at geo-showcase.route.ts, index.ts:691)
+  showcase:
+    getShowcase:
+      method: GET
+      path: /api/v1/geo/showcase  # NOTE: uses /api/v1 prefix, not /api/geo
+      canonical: true
+      consumers: [showcaseService, GEODashboard.vue]
+
+  # ── Executions ──
+  # Owner: ExecutionPanelEmbedded.vue
+  # All endpoints exist on backend (geo-execution.route.ts, registered at index.ts:569)
+  executions:
+    getSummary:
+      method: GET
+      path: /executions/project/:projectId/summary
+      canonical: true
+      consumers: [ExecutionPanelEmbedded.vue]
+    list:
+      method: GET
+      path: /executions
+      canonical: true
+    getDetail:
+      method: GET
+      path: /executions/:executionId
+      canonical: true
+    create:
+      method: POST
+      path: /executions
+      canonical: true
+    updateStatus:
+      method: PATCH
+      path: /executions/:executionId/status
+      canonical: true
+    retry:
+      method: POST
+      path: /executions/:executionId/retry
+      canonical: true
+    cancel:
+      method: POST
+      path: /executions/:executionId/cancel
+      canonical: true
+
+  # ── DI (Decision Intelligence) Issues ──
+  # Owner: diService | DecisionIntelligencePanel
+  di:
+    getIssues:
+      method: GET
+      path: /recommendation/issues/:brandId
+      canonical: true
+      request:
+        params: [brandId]
+    getIssueDependencies:
+      method: GET
+      path: /recommendation/issues/:brandId/:issueId/dependencies
+      canonical: true
+
+  # ── Knowledge ──
+  # Owner: knowledgeService
+  knowledge:
+    getKnowledge:
+      method: GET
+      path: /knowledge
+      canonical: true
+      request:
+        query: { projectId: string, type: string }
+
+  # ── Publishing ──
+  # Owner: publishingService
+  publishing:
+    getPlan:
+      method: GET
+      path: /publish/plan/:planId
+      canonical: true
+    createPlan:
+      method: POST
+      path: /publish/plan
+      canonical: true
+
+  # ── AI Knowledge (BrandOverview direct call) ──
+  # NOTE: uses /api/v1 prefix
+  aiKnowledge:
+    getPackage:
+      method: GET
+      path: /api/v1/ai-knowledge/package
+      canonical: true

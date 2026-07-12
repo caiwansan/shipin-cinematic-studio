@@ -35,6 +35,7 @@ export { useNodeControl, RetryNodeResult, PatchNodeResult } from '../composables
 export { usePipeline, GraphNode } from '../composables/usePipeline';
 export { useReplayFrame } from '../composables/useReplayFrame';
 export { useSSEStream } from '../composables/useSSEStream';
+export { useToastState, toastSuccess, toastWarning, toastError, toastInfo, toastEngineCompleted, toastEngineQueued, toastEngineFailed, ToastMessage } from '../composables/useToast';
 export { authFetch } from '../utils/auth-fetch';
 export { getStepDefs, getBuiltinRecipes, getRecipesByGoal, getAccessibleRecipes, getAvailableModes, serializeRecipeConfig, goalDisplayName, goalDescription, ExecutionStepId, ExecutionMode, GoalType, OutputType, RecipeStep, ExecutionRecipe } from '../utils/executionRecipe';
 export { ExecutionStateManager, ExecutionStateManager, ExecutionStateDisplay, ExecutionState, ExecutionContext } from '../utils/executionStateManager';

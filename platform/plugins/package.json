@@ -1,0 +1,10 @@
+{
+  "name": "@platform/plugins",
+  "version": "0.0.0",
+  "main": "plugin-registry.js",
+  "types": "plugin-registry.d.ts",
+  "exports": {
+    ".": "./plugin-registry.js",
+    "./*": "./*"
+  }
+}

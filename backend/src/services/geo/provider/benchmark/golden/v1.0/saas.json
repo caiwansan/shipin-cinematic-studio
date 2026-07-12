@@ -1,0 +1,1228 @@
+{
+  "_metadata": {
+    "datasetVersion": "1.0.0",
+    "schemaVersion": "1.0",
+    "annotationGuideVersion": "1.0",
+    "frozenAt": "2026-07-02",
+    "owner": "GEO Team",
+    "reviewers": [
+      "熊大"
+    ],
+    "approved": false,
+    "approvalDate": null,
+    "source": "manual-annotation",
+    "description": "saas 行业 Golden Dataset，20 条样本",
+    "schemaRef": "../GOLDEN-DATASET-SPEC-V1.md",
+    "annotationGuideRef": "../GOLDEN-DATASET-ANNOTATION-GUIDE-V1.md",
+    "scenarioSource": "Discovery Scenario Registry v1",
+    "changelog": [
+      {
+        "date": "2026-07-02",
+        "change": "Migrated from v1-part1 to v1.0 Schema",
+        "author": "OpenClaw"
+      }
+    ],
+    "count": 20,
+    "industries": [
+      "saas"
+    ],
+    "entityTypes": [
+      "Company"
+    ],
+    "coverageBands": [
+      "Excellent",
+      "Good",
+      "Fair"
+    ]
+  },
+  "golden-v1-1": {
+    "id": "golden-v1-1",
+    "entityName": "Salesforce",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://salesforce.com",
+    "description": "Salesforce 是全球领先的客户关系管理（CRM）平台提供商，提供基于云的企业销售、服务和营销自动化解决方案。",
+    "expectedScenarios": [
+      "discover-brand",
+      "compare-brands",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Market",
+        "text": "CRM leader",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "enterprise SaaS",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "cloud computing",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Salesforce",
+      "Sales Cloud",
+      "Service Cloud",
+      "Einstein AI"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://salesforce.com",
+        "accessedAt": "2026-07-02",
+        "description": "Salesforce 是全球领先的客户关系管理（CRM）平台提供商，提供基于云的企业销售、服务和营销自动化解决方案。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "SaaS 行业标杆企业，CRM 市场占有率第一，品牌知名度极高"
+  },
+  "golden-v1-2": {
+    "id": "golden-v1-2",
+    "entityName": "HubSpot",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://hubspot.com",
+    "description": "HubSpot 是一家集营销、销售和客户服务于一体的软件平台公司，以入站营销方法论闻名。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "inbound marketing",
+        "importance": "High"
+      },
+      {
+        "type": "Product",
+        "text": "CRM platform",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "growth platform",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "HubSpot",
+      "HubSpot CRM",
+      "Marketing Hub",
+      "CMS Hub"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://hubspot.com",
+        "accessedAt": "2026-07-02",
+        "description": "HubSpot 是一家集营销、销售和客户服务于一体的软件平台公司，以入站营销方法论闻名。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "SaaS 行业知名企业，入站营销概念的提出者，中小企业市场覆盖广泛"
+  },
+  "golden-v1-3": {
+    "id": "golden-v1-3",
+    "entityName": "Notion",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://notion.so",
+    "description": "Notion 是一款集笔记、文档、数据库和项目管理于一体的协作平台，深受个人和团队用户的喜爱。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "understand-features"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "all-in-one workspace",
+        "importance": "High"
+      },
+      {
+        "type": "Product",
+        "text": "productivity tool",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "knowledge management",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Notion",
+      "Notion AI",
+      "Notion Templates"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://notion.so",
+        "accessedAt": "2026-07-02",
+        "description": "Notion 是一款集笔记、文档、数据库和项目管理于一体的协作平台，深受个人和团队用户的喜爱。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "新一代生产力工具代表，用户口碑极佳，社区生态活跃"
+  },
+  "golden-v1-4": {
+    "id": "golden-v1-4",
+    "entityName": "Figma",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://figma.com",
+    "description": "Figma 是基于浏览器的界面设计协作工具，支持实时协作设计，已成为 UI/UX 设计行业的标准工具。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "find-alternative"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "design tool",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "UI/UX",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "collaborative design",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "vector design",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Figma",
+      "Figma Design",
+      "FigJam"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://figma.com",
+        "accessedAt": "2026-07-02",
+        "description": "Figma 是基于浏览器的界面设计协作工具，支持实时协作设计，已成为 UI/UX 设计行业的标准工具。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "设计师领域首选工具，被 Adobe 收购后仍独立运营，社区生态丰富"
+  },
+  "golden-v1-5": {
+    "id": "golden-v1-5",
+    "entityName": "Slack",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://slack.com",
+    "description": "Slack 是一款企业级团队沟通与协作平台，以频道化消息和丰富集成生态著称。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "team communication",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "enterprise messaging",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "workplace collaboration",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Slack",
+      "Slack Connect",
+      "Slack Channels"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://slack.com",
+        "accessedAt": "2026-07-02",
+        "description": "Slack 是一款企业级团队沟通与协作平台，以频道化消息和丰富集成生态著称。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "企业沟通工具前三名，微软 Teams 的主要竞争对手，品牌认知度极高"
+  },
+  "golden-v1-6": {
+    "id": "golden-v1-6",
+    "entityName": "Canva",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://canva.com",
+    "description": "Canva 是一款在线图形设计平台，提供海量模版和拖放式设计工具，让非设计师也能轻松创作。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "check-pricing",
+      "understand-features"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "graphic design",
+        "importance": "High"
+      },
+      {
+        "type": "Product",
+        "text": "online design tool",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "templates",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Canva",
+      "Canva Pro",
+      "Canva Templates"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://canva.com",
+        "accessedAt": "2026-07-02",
+        "description": "Canva 是一款在线图形设计平台，提供海量模版和拖放式设计工具，让非设计师也能轻松创作。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "全球最大的在线设计平台之一，用户量超过数亿，估值极高"
+  },
+  "golden-v1-7": {
+    "id": "golden-v1-7",
+    "entityName": "Atlassian",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://atlassian.com",
+    "description": "Atlassian 是一家澳大利亚软件公司，提供 Jira、Confluence、Trello 等团队协作和项目管理工具。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "project management",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "agile tools",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "developer tools",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "enterprise software",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Atlassian",
+      "Jira",
+      "Confluence",
+      "Trello",
+      "Bitbucket"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://atlassian.com",
+        "accessedAt": "2026-07-02",
+        "description": "Atlassian 是一家澳大利亚软件公司，提供 Jira、Confluence、Trello 等团队协作和项目管理工具。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "敏捷开发和 DevOps 工具领域的领导企业，产品线覆盖开发到运营全流程"
+  },
+  "golden-v1-8": {
+    "id": "golden-v1-8",
+    "entityName": "Zapier",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://zapier.com",
+    "description": "Zapier 是一款自动化工作流平台，连接超过 6000 个应用，让用户无需编程即可创建自动化流程。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "check-pricing",
+      "understand-features"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "workflow automation",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "no-code",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "app integration",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "RPA",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Zapier",
+      "Zaps",
+      "Zapier Automation"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://zapier.com",
+        "accessedAt": "2026-07-02",
+        "description": "Zapier 是一款自动化工作流平台，连接超过 6000 个应用，让用户无需编程即可创建自动化流程。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "无代码自动化工具的代表企业，在中小企业中有广泛用户基础"
+  },
+  "golden-v1-9": {
+    "id": "golden-v1-9",
+    "entityName": "Monday.com",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://monday.com",
+    "description": "Monday.com 是一款可视化项目管理与团队协作平台，通过看板、时间线和自动化功能帮助团队高效工作。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "project management",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "work OS",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "team collaboration",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Monday.com",
+      "Monday CRM",
+      "Monday Dev"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://monday.com",
+        "accessedAt": "2026-07-02",
+        "description": "Monday.com 是一款可视化项目管理与团队协作平台，通过看板、时间线和自动化功能帮助团队高效工作。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "项目管理 SaaS 新锐，以 Work OS 概念差异化竞争，上市后增长迅速"
+  },
+  "golden-v1-10": {
+    "id": "golden-v1-10",
+    "entityName": "Airtable",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://airtable.com",
+    "description": "Airtable 是一款将电子表格与数据库功能相结合的协作平台，支持灵活的数据组织和自定义应用构建。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "understand-features"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "spreadsheet database",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "no-code",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "low-code platform",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Airtable",
+      "Airtable Bases",
+      "Airtable Interface"
+    ],
+    "expectedCoverageBand": "Fair",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://airtable.com",
+        "accessedAt": "2026-07-02",
+        "description": "Airtable 是一款将电子表格与数据库功能相结合的协作平台，支持灵活的数据组织和自定义应用构建。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "低代码/无代码数据库工具的先驱，创意行业和非技术团队使用广泛"
+  },
+  "golden-v1-11": {
+    "id": "golden-v1-11",
+    "entityName": "Zoom",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://zoom.us",
+    "description": "Zoom 是一款全球流行的视频会议和远程协作平台，在疫情期间成为远程办公的标配工具。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "video conferencing",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "remote work",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "unified communications",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Zoom",
+      "Zoom Meetings",
+      "Zoom Video Webinar",
+      "Zoom Phone"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://zoom.us",
+        "accessedAt": "2026-07-02",
+        "description": "Zoom 是一款全球流行的视频会议和远程协作平台，在疫情期间成为远程办公的标配工具。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "视频会议市场领导品牌，疫情期间品牌知名度爆发式增长"
+  },
+  "golden-v1-12": {
+    "id": "golden-v1-12",
+    "entityName": "Stripe",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://stripe.com",
+    "description": "Stripe 是一家为互联网企业提供支付基础设施的金融科技平台，让在线支付变得简单和可靠。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "online payments",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "payment gateway",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "fintech",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "API-first",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Stripe",
+      "Stripe Payments",
+      "Stripe Connect",
+      "Stripe Atlas"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://stripe.com",
+        "accessedAt": "2026-07-02",
+        "description": "Stripe 是一家为互联网企业提供支付基础设施的金融科技平台，让在线支付变得简单和可靠。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "支付 SaaS 领域独角兽，产品驱动增长的代表企业，开发者体验极佳"
+  },
+  "golden-v1-13": {
+    "id": "golden-v1-13",
+    "entityName": "Shopify",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://shopify.com",
+    "description": "Shopify 是全球领先的电商独立站建站平台，提供从店铺搭建到支付物流的一站式解决方案。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "e-commerce platform",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "online store builder",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "DTC",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "shopify ecosystem",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Shopify",
+      "Shopify Plus",
+      "Shopify Store",
+      "Shopify Payments"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://shopify.com",
+        "accessedAt": "2026-07-02",
+        "description": "Shopify 是全球领先的电商独立站建站平台，提供从店铺搭建到支付物流的一站式解决方案。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "电商 SaaS 领袖，赋能数百万商家建立独立站，生态强大"
+  },
+  "golden-v1-14": {
+    "id": "golden-v1-14",
+    "entityName": "DocuSign",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://docusign.com",
+    "description": "DocuSign 是全球领先的电子签名和数字交易管理平台，帮助企业和个人以数字化方式签署协议。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "e-signature",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "digital transaction",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "contract management",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "DocuSign",
+      "DocuSign eSignature",
+      "DocuSign CLM"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://docusign.com",
+        "accessedAt": "2026-07-02",
+        "description": "DocuSign 是全球领先的电子签名和数字交易管理平台，帮助企业和个人以数字化方式签署协议。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "电子签名行业的代名词，标准化了数字签名流程，行业领导者"
+  },
+  "golden-v1-15": {
+    "id": "golden-v1-15",
+    "entityName": "Okta",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://okta.com",
+    "description": "Okta 是一家企业级身份认证和访问管理平台，提供单点登录、多因素认证等身份安全服务。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "check-pricing",
+      "check-certifications"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Brand",
+        "text": "identity management",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "SSO",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "zero trust",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "IAM",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Okta",
+      "Okta SSO",
+      "Okta MFA",
+      "Auth0"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://okta.com",
+        "accessedAt": "2026-07-02",
+        "description": "Okta 是一家企业级身份认证和访问管理平台，提供单点登录、多因素认证等身份安全服务。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "身份即服务（IDaaS）领域的领导者，企业安全基础设施的关键供应商"
+  },
+  "golden-v1-16": {
+    "id": "golden-v1-16",
+    "entityName": "GitLab",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://gitlab.com",
+    "description": "GitLab 是一个基于 Git 的 DevOps 平台，提供源代码管理、CI/CD、安全扫描等开发生命周期全流程工具。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "DevOps platform",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "CI/CD",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "Git repository",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "software development",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "GitLab",
+      "GitLab CI/CD",
+      "GitLab Repositories"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://gitlab.com",
+        "accessedAt": "2026-07-02",
+        "description": "GitLab 是一个基于 Git 的 DevOps 平台，提供源代码管理、CI/CD、安全扫描等开发生命周期全流程工具。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "DevOps 平台的重要参与者，开源与 SaaS 并行的商业模式独树一帜"
+  },
+  "golden-v1-17": {
+    "id": "golden-v1-17",
+    "entityName": "Cloudflare",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://cloudflare.com",
+    "description": "Cloudflare 提供内容分发网络（CDN）、DDoS 防护、网络安全和边缘计算等云服务，让互联网更安全高效。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "check-pricing",
+      "check-certifications"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Concept",
+        "text": "CDN",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "DDoS protection",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "edge computing",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "web security",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Cloudflare",
+      "Cloudflare CDN",
+      "Cloudflare Workers",
+      "Cloudflare Security"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://cloudflare.com",
+        "accessedAt": "2026-07-02",
+        "description": "Cloudflare 提供内容分发网络（CDN）、DDoS 防护、网络安全和边缘计算等云服务，让互联网更安全高效。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "全球最大的 CDN 和安全服务提供商之一，网络基础设施云服务标杆"
+  },
+  "golden-v1-18": {
+    "id": "golden-v1-18",
+    "entityName": "Adobe Creative Cloud",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://www.adobe.com/creativecloud.html",
+    "description": "Adobe Creative Cloud 是 Adobe 公司推出的创意软件订阅服务，包含 Photoshop、Illustrator、Premiere Pro 等专业工具。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "creative software",
+        "importance": "High"
+      },
+      {
+        "type": "Product",
+        "text": "design suite",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "subscription model",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "digital media",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Adobe",
+      "Creative Cloud",
+      "Photoshop",
+      "Illustrator",
+      "Premiere Pro",
+      "After Effects"
+    ],
+    "expectedCoverageBand": "Excellent",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://www.adobe.com/creativecloud.html",
+        "accessedAt": "2026-07-02",
+        "description": "Adobe Creative Cloud 是 Adobe 公司推出的创意软件订阅服务，包含 Photoshop、Illustrator、Premiere Pro 等专业工具。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "创意软件行业绝对霸主，SaaS 订阅模式转型的成功典范"
+  },
+  "golden-v1-19": {
+    "id": "golden-v1-19",
+    "entityName": "Twilio",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://twilio.com",
+    "description": "Twilio 是一家云通信平台，通过 API 为开发者提供短信、语音、视频和电子邮件等通信能力。",
+    "expectedScenarios": [
+      "discover-brand",
+      "select-vendor",
+      "find-alternative",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "cloud communications",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "CPaaS",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "SMS API",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "customer engagement",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Twilio",
+      "Twilio API",
+      "Twilio Voice",
+      "Twilio SMS",
+      "Segment"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://twilio.com",
+        "accessedAt": "2026-07-02",
+        "description": "Twilio 是一家云通信平台，通过 API 为开发者提供短信、语音、视频和电子邮件等通信能力。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "CPaaS（通信即服务）品类的开创者，API 驱动增长的典型代表"
+  },
+  "golden-v1-20": {
+    "id": "golden-v1-20",
+    "entityName": "Workday",
+    "entityType": "Company",
+    "industry": "saas",
+    "country": "US",
+    "language": "en",
+    "website": "https://workday.com",
+    "description": "Workday 是一家基于云的人力资源管理和财务管理系统提供商，专注于大型企业的人力资本和财务管理。",
+    "expectedScenarios": [
+      "discover-brand",
+      "research-product",
+      "select-vendor",
+      "check-pricing"
+    ],
+    "expectedIntent": [
+      "discover-brand",
+      "select-vendor"
+    ],
+    "expectedKnowledgeSignals": [
+      {
+        "type": "Product",
+        "text": "HR software",
+        "importance": "High"
+      },
+      {
+        "type": "Concept",
+        "text": "HCM",
+        "importance": "Medium"
+      },
+      {
+        "type": "Product",
+        "text": "cloud ERP",
+        "importance": "Medium"
+      },
+      {
+        "type": "Concept",
+        "text": "enterprise HR",
+        "importance": "Medium"
+      }
+    ],
+    "expectedEntities": [
+      "Workday",
+      "Workday HCM",
+      "Workday Financial Management"
+    ],
+    "expectedCoverageBand": "Good",
+    "expectedConfidenceBand": "Medium",
+    "evidence": [
+      {
+        "type": "official_website",
+        "url": "https://workday.com",
+        "accessedAt": "2026-07-02",
+        "description": "Workday 是一家基于云的人力资源管理和财务管理系统提供商，专注于大型企业的人力资本和财务管理。"
+      }
+    ],
+    "version": "1.0.0",
+    "reviewStatus": "draft",
+    "origin": "imported",
+    "notes": "云端 HCM 市场领导者，取代传统本地部署 ERP 的云原生标杆"
+  }
+}

@@ -31,8 +31,8 @@ function toDTO(record: any): HdzChapterDTO {
     wordCount: record.wordCount ?? null,
     summary: record.summary || null,
     reviewNotes: record.reviewNotes || [],
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
+    createdAt: record.createdAt?.toISOString?.() || '',
+    updatedAt: record.updatedAt?.toISOString?.() || '',
   }
 }
 
@@ -48,6 +48,12 @@ export const hdzChapterRepository = {
   },
 
   async findMany(where?: any, orderBy?: any): Promise<HdzChapterDTO[]> {
+    // Support both (args) and (where, orderBy) signatures
+    if (typeof where === 'object' && where !== null && ('where' in where || 'orderBy' in where || 'skip' in where || 'take' in where)) {
+      // Called as findMany({ where, orderBy }) — single args object
+      const records = await prisma.hdzChapter.findMany(where)
+      return records.map(toDTO)
+    }
     const records = await prisma.hdzChapter.findMany({ where, orderBy })
     return records.map(toDTO)
   },

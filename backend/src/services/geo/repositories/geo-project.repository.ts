@@ -85,6 +85,7 @@ export const geoProjectRepository = {
   async findManyWithCounts(tenantId: string): Promise<any[]> {
     return prisma.gEOProject.findMany({
       where: {
+        userId: tenantId,
         deletedAt: null,
       },
       orderBy: { updatedAt: 'desc' },

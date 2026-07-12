@@ -113,7 +113,7 @@ export async function createProject(input: CreateProjectInput): Promise<ProjectI
 export async function triggerScan(projectId: string): Promise<{ scanId: string; status: string; estimatedSeconds: number }> {
   const raw = await geoApi<{ success: boolean; data: { scanId: string; status: string; estimatedSeconds: number } }>(
     `/projects/${projectId}/scan`,
-    { method: 'POST' }
+    { method: 'POST', body: {} }
   )
   return raw.data
 }

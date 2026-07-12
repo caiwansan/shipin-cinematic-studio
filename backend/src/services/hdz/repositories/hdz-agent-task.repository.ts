@@ -35,8 +35,8 @@ function toDTO(record: any): HdzAgentTaskDTO {
     tokenCost: record.tokenCost ?? null,
     startedAt: record.startedAt?.toISOString() || null,
     completedAt: record.completedAt?.toISOString() || null,
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
+    createdAt: record.createdAt?.toISOString?.() || '',
+    updatedAt: record.updatedAt?.toISOString?.() || '',
   }
 }
 
@@ -47,12 +47,15 @@ export const hdzAgentTaskRepository = {
   },
 
   async findFirst(where: any, orderBy?: any): Promise<HdzAgentTaskDTO | null> {
-    const record = await prisma.hdzAgentTask.findFirst({ where, orderBy })
+    // Compat: support both { where, orderBy } and single-arg { where, orderBy, ... }
+    const args = (typeof where === 'object' && where !== null && ('where' in where || 'orderBy' in where)) ? where : { where, orderBy }
+    const record = await prisma.hdzAgentTask.findFirst(args)
     return record ? toDTO(record) : null
   },
 
   async findMany(where?: any, orderBy?: any): Promise<HdzAgentTaskDTO[]> {
-    const records = await prisma.hdzAgentTask.findMany({ where, orderBy })
+    const args = (where && typeof where === 'object' && ('where' in where || 'orderBy' in where || 'skip' in where || 'take' in where || 'select' in where || 'include' in where)) ? where : { where, orderBy }
+    const records = await prisma.hdzAgentTask.findMany(args)
     return records.map(toDTO)
   },
 

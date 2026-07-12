@@ -1,0 +1,4 @@
+[
+  {"id":"g001","industry":"AI","scenario":"brand_recognition","expectedBand":"Excellent","intent":"general_qa","expectedFindings":3,"expectedConfidence":0.8},
+  {"id":"g002","industry":"AI","scenario":"competitor_discovery","expectedBand":"Good","intent":"competitor_analysis","expectedFindings":2,"expectedConfidence":0.6}
+]

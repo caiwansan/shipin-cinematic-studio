@@ -1,0 +1,1 @@
+import{G as e}from"./B_fXqc96.js";import{p as t,O as a,i as r,ar as s,X as p}from"./GU9kMEGL.js";import"./BrdkkKAh.js";import"./B4lPdjPb.js";const _=t({__name:"GeoWorkspaceLayout",setup(n){return(o,c)=>(a(),r(e,null,{default:s(()=>[p(o.$slots,"default")]),_:3}))}});export{_ as default};

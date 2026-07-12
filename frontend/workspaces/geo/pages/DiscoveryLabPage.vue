@@ -457,7 +457,7 @@ function effortClass(effort: string): string {
 
 <style scoped>
 .discovery-lab {
-  max-width: 1100px;
+  width: 100%;
   margin: 0 auto;
   font-family: Inter, -apple-system, sans-serif;
 }

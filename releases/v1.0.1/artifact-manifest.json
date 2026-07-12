@@ -1,0 +1,35 @@
+{
+  "version": "v1.0.1",
+  "buildId": "REL-20260705003418",
+  "totalFiles": 12,
+  "categories": {
+    "bugFixes": 8,
+    "improvements": 1,
+    "tests": 2,
+    "documentation": 1
+  },
+  "files": {
+    "modified": [
+      "backend/src/services/geo/discovery/services/recommendations-consumer.ts",
+      "backend/src/services/geo/discovery/services/knowledge-consumer.ts",
+      "backend/src/services/geo/repositories/geo-score-snapshot.repository.ts",
+      "backend/src/services/geo/runtime/knowledge/KnowledgeObjectRepository.ts",
+      "backend/src/services/geo/runtime/knowledge/KnowledgeObjectSchema.ts",
+      "backend/src/services/geo/runtime/knowledge/KnowledgePipeline.ts",
+      "backend/src/services/geo/verification/snapshot.service.ts",
+      "backend/src/services/geo/domain/index.ts"
+    ],
+    "added": [
+      "backend/src/services/geo/domain/identifiers.ts",
+      "backend/tests/v1.0.1/regression.test.ts",
+      "releases/v1.0.1/RELEASE-v1.0.1.md"
+    ]
+  },
+  "unaffectedBoundaries": {
+    "frontend": "0 files",
+    "mission": "0 files",
+    "dashboard": "0 files",
+    "workspace": "0 files",
+    "orchestrator": "0 files"
+  }
+}

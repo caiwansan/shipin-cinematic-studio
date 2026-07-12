@@ -1,0 +1,1 @@
+import{af as o,Y as a}from"./wX_zMTef.js";const r="/api/geo";function s(){const e=a();return e?{Authorization:`Bearer ${e}`}:{}}const i=o.create({baseURL:r,onRequest({options:e}){const t=s();t.Authorization&&(e.headers={...e.headers,...t})}});export{i as g};

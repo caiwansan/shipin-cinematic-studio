@@ -14,7 +14,12 @@ export default async function (fastify: FastifyInstance) {
     const { projectId } = request.query as any
     if (!projectId) return reply.status(400).send({ success: false, error: 'projectId required' })
 
-    const kos = await knowledgeObjectService.getByProject(projectId)
+    let kos: any[]
+    try {
+      kos = await knowledgeObjectService.getByProject(projectId)
+    } catch {
+      kos = []
+    }
 
     // Map to frontend KnowledgeData format
     const total = kos.length
@@ -76,6 +81,20 @@ export default async function (fastify: FastifyInstance) {
         relationships: [],
       },
     }
+  })
+
+  // POST /api/geo/knowledge — Create a knowledge object (知识源/知识条目)
+  fastify.post('/api/geo/knowledge', { preHandler: [] }, async (request, reply) => {
+    const { projectId, type, name, content, category } = request.body as any
+    if (!projectId || !name) {
+      return reply.status(400).send({ success: false, error: 'projectId and name are required' })
+    }
+    const ko = await knowledgeObjectService.getOrCreate({
+      projectId,
+      topic: name,
+      provenance: content || undefined,
+    })
+    return reply.status(201).send({ success: true, data: ko })
   })
 
   // GET /api/geo/knowledge/:id

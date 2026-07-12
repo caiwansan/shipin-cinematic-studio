@@ -1,5 +1,13 @@
 // ============================================================
 // GEO Project Service — Project CRUD + Workspace Runtime Integration
+//
+// ★ P0-1 Golden Path: createProject now auto-boots the Runtime
+//   1. Create project record (DB)
+//   2. Create brand setting (DB)
+//   3. Create workspace (Workspace Runtime)
+//   4. Initialize ScoreSnapshot (first baseline)
+//   5. Record Timeline event (project.created)
+//   6. Initialize first Mission (welcome)
 // ============================================================
 
 import { geoProjectRepository } from '../repositories/geo-project.repository.js'
@@ -45,12 +53,20 @@ export interface CreateProjectInput {
 
 export const geoProjectService = {
   /**
-   * Create a GEO project, automatically creating a Workspace Runtime workspace.
+   * Create a GEO project, automatically booting the Runtime:
+   *   1. Create project record (DB)
+   *   2. Create brand setting (DB)
+   *   3. Create workspace (Workspace Runtime)
+   *   4. Initialize ScoreSnapshot (first baseline — naturally low for new project)
+   *   5. Record Timeline event (project.created)
+   *   6. Initialize first Mission (welcome / get started)
+   *
+   * This is the Golden Path entry point. All steps must complete for P0-1 to pass.
    */
   async createProject(input: CreateProjectInput): Promise<GEOProject> {
     const { name, topic, userId, language, industry, config, website, description, region, companyType, primaryLanguage } = input
 
-    // First create the GEO project record
+    // ── Step 1: Create the GEO project record ──
     const project = await geoProjectRepository.create({
       userId,
       name,
@@ -61,14 +77,15 @@ export const geoProjectService = {
       config: JSON.parse(JSON.stringify(config || {})),
       status: 'draft',
     })
+    const projectId = project.id
 
-    // Also create/update the brand setting (GeoBrandSetting) to persist full brand data
+    // ── Step 2: Create/update brand setting ──
     try {
       const { geoBrandSettingRepository } = await import('../repositories/geo-brand-setting.repository.js')
-      const existingSetting = await geoBrandSettingRepository.findUnique({ where: { projectId: project.id } })
+      const existingSetting = await geoBrandSettingRepository.findUnique({ where: { projectId } })
       if (!existingSetting) {
         await geoBrandSettingRepository.create({
-          projectId: project.id,
+          projectId,
           brandName: name,
           website: website || '',
           industry: industry || '',
@@ -79,10 +96,10 @@ export const geoProjectService = {
       }
     } catch (err) {
       console.error('[GEOProjectService] Failed to create brand setting:', err)
-      // Non-fatal: project created, brand setting is supplementary
+      // Non-fatal: step 2 is supplementary
     }
 
-    // Create workspace via Workspace Runtime
+    // ── Step 3: Create workspace via Workspace Runtime ──
     try {
       const wsData = {
         type: 'geo',
@@ -92,26 +109,83 @@ export const geoProjectService = {
         status: 'active',
         settings: JSON.stringify(getDefaultGEOWorkspaceSettings()),
         metadata: JSON.stringify({
-          projectId: project.id,
+          projectId,
           moduleId: 'kmki.geo',
           topic: topic || '',
         }),
       }
-      console.log('[GEOProjectService] Creating workspace with data:', JSON.stringify(wsData, null, 2))
       const ws = await workspaceRuntimeRepository.create(wsData)
 
-      // Link workspace to project
-      const updated = await geoProjectRepository.update(
-        { id: project.id },
+      await geoProjectRepository.update(
+        { id: projectId },
         { workspaceId: ws.id }
       )
-
-      return updated
     } catch (err) {
       console.error('[GEOProjectService] Failed to create workspace:', err)
-      // Still return the project even if workspace creation fails
-      return project
+      // Non-fatal: workspace is not critical for Golden Path
     }
+
+    // ── Step 4: Initialize ScoreSnapshot (first baseline) ──
+    try {
+      const { calculateScore } = await import('../recommendation/recommendation-score.service.js')
+      const { geoScoreSnapshotRepository } = await import('../repositories/geo-score-snapshot.repository.js')
+      const score = await calculateScore(projectId)
+      const scores = {
+        overall: score.overall,
+        visibility: score.breakdown.visibility.score,
+        authority: score.breakdown.authority.score,
+        content: score.breakdown.content.score,
+        website: score.breakdown.website.score,
+        knowledge: score.breakdown.knowledge.score,
+      }
+      await geoScoreSnapshotRepository.create({
+        projectId,
+        snapshot: score as any,
+        scores: scores as any,
+      })
+      console.log(`[GEOProjectService] ✅ ScoreSnapshot initialized for ${projectId}: overall=${score.overall}`)
+    } catch (err) {
+      console.error('[GEOProjectService] Failed to initialize ScoreSnapshot:', err)
+      // Non-fatal: snapshot can be retried later
+    }
+
+    // ── Step 5: Record Timeline event ──
+    try {
+      const { timelineEngine } = await import('../workspace/timeline.js')
+      await timelineEngine.record('PROJECT_CREATED', {
+        projectId,
+        engine: 'geo',
+        entity: 'project',
+        payload: { name, industry },
+        title: `品牌"${name}"已创建`,
+        detail: `品牌"${name}"的 GEO 评估已启动`,
+      })
+      console.log(`[GEOProjectService] ✅ Timeline event recorded for ${projectId}`)
+    } catch (err) {
+      console.error('[GEOProjectService] Failed to record timeline:', err)
+      // Non-fatal
+    }
+
+    // ── Step 6: Initialize first Mission (get-started) ──
+    try {
+      const { timelineEngine } = await import('../workspace/timeline.js')
+      await timelineEngine.record('RECOMMENDATION_GENERATED', {
+        projectId,
+        engine: 'recommendation',
+        entity: 'mission',
+        payload: { type: 'welcome', priority: 'high' },
+        title: '完善品牌知识',
+        detail: '添加品牌描述和官网链接，让 AI 系统更好地理解您的品牌',
+      })
+      console.log(`[GEOProjectService] ✅ First mission generated for ${projectId}`)
+    } catch (err) {
+      console.error('[GEOProjectService] Failed to create first mission:', err)
+      // Non-fatal
+    }
+
+    // ── Return ──
+    const result = await geoProjectRepository.findUnique({ where: { id: projectId } })
+    return result || project
   },
 
   /**

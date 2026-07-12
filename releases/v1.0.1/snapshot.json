@@ -1,0 +1,12 @@
+{
+  "version": "v1.0.1",
+  "buildTime": "2026-07-05T00:34:18+08:00",
+  "buildId": "REL-20260705003418",
+  "databaseSchema": "prisma migrations applied (exists: P1-A_add_geo_report_tables, r1_5_credential_lifecycle)",
+  "nodeVersion": "v22.23.1",
+  "enabledEngines": ["Discovery", "Knowledge", "Recommendations", "Mission", "Verification", "Publishing", "Learning"],
+  "enabledConsumers": 6,
+  "activeConsumers": 5,
+  "enabledProviders": ["deepseek", "chatgpt"],
+  "status": "stable"
+}

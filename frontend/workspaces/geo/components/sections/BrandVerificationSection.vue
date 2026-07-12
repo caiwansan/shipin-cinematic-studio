@@ -1,0 +1,651 @@
+<template>
+  <section class="brand-overview__section">
+    <h2 class="brand-overview__section-title">
+      <CapabilityBadge :meta="_meta" />
+      验证
+      <GeoExplainButton @click="onOpenExplain" />
+      <button
+        v-if="hasAnalysis && !loading && !data"
+        class="brand-overview__verification-trigger"
+        @click="onRunVerification"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12l2 2 4-4" />
+          <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
+        </svg>
+        运行验证
+      </button>
+      <button
+        v-if="data"
+        class="brand-overview__verification-trigger"
+        @click="onClear"
+      >
+        收起
+      </button>
+    </h2>
+
+    <!-- Verification Loading -->
+    <GeoLoading
+      v-if="loading"
+      :steps="veriSteps"
+      :current-step="stepIndex"
+    />
+
+    <!-- Verification Error -->
+    <GeoErrorState v-else-if="error" :message="error" :on-retry="onRunVerification" />
+
+    <!-- Verification Empty State -->
+    <GeoEmptyState
+      v-else-if="!hasAnalysis && !data"
+      icon="✅"
+      title="验证引擎"
+      description="请先运行快速发现，然后验证。"
+    >
+      <template #actions>
+        <button
+          class="geo-btn geo-btn--primary"
+          @click="onQuickDiscovery"
+          :disabled="isQdRunning"
+        >
+          {{ isQdRunning ? '分析中...' : '运行 Quick Discovery' }}
+        </button>
+      </template>
+    </GeoEmptyState>
+
+    <!-- Verification Data -->
+    <div v-else-if="data" class="brand-overview__verification-card">
+      <!-- Status Header -->
+      <div class="brand-overview__veri-status-bar">
+        <span
+          class="brand-overview__veri-status-badge"
+          :class="`brand-overview__veri-status--${data.status.toLowerCase()}`"
+        >
+          {{ data.status }}
+        </span>
+        <span class="brand-overview__veri-confidence">
+          Confidence {{ data.confidence }}%
+        </span>
+        <span class="brand-overview__veri-evidence-grade">
+          证据 {{ data.after.evidenceGrade }}
+        </span>
+      </div>
+
+      <!-- Before / After Comparison Table -->
+      <div class="brand-overview__veri-comparison">
+        <h4 class="brand-overview__veri-subtitle">优化前后对比</h4>
+        <table class="brand-overview__veri-table">
+          <thead>
+            <tr>
+              <th>指标</th>
+              <th>优化前</th>
+              <th>优化后</th>
+              <th>变化</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ADI</td>
+              <td>{{ data.before.adi }}</td>
+              <td>{{ data.after.adi }}</td>
+              <td :class="deltaClass(data.delta.adi)">
+                {{ deltaSign(data.delta.adi) }}{{ data.delta.adi }}
+              </td>
+            </tr>
+            <tr>
+              <td>AI 存在度</td>
+              <td>{{ data.before.aiPresenceScore }}</td>
+              <td>{{ data.after.aiPresenceScore }}</td>
+              <td :class="deltaClass(data.delta.aiPresenceScore)">
+                {{ deltaSign(data.delta.aiPresenceScore) }}{{ data.delta.aiPresenceScore }}
+              </td>
+            </tr>
+            <tr>
+              <td>Visibility</td>
+              <td>{{ data.before.visibilityCount }}</td>
+              <td>{{ data.after.visibilityCount }}</td>
+              <td :class="deltaClass(data.delta.visibilityCount)">
+                {{ deltaSign(data.delta.visibilityCount) }}{{ data.delta.visibilityCount }}
+              </td>
+            </tr>
+            <tr>
+              <td>平均知识</td>
+              <td>{{ data.before.averageKnowledge }}</td>
+              <td>{{ data.after.averageKnowledge }}</td>
+              <td :class="deltaClass(data.delta.averageKnowledge)">
+                {{ deltaSign(data.delta.averageKnowledge) }}{{ data.delta.averageKnowledge }}
+              </td>
+            </tr>
+            <tr>
+              <td>证据等级</td>
+              <td>{{ data.before.evidenceGrade }}</td>
+              <td>{{ data.after.evidenceGrade }}</td>
+              <td :class="deltaClass(data.delta.evidenceGradeDelta)">
+                {{ data.delta.evidenceGradeDelta > 0 ? '↑' : data.delta.evidenceGradeDelta < 0 ? '↓' : '—' }}
+                {{ Math.abs(data.delta.evidenceGradeDelta) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Claims -->
+      <div class="brand-overview__veri-claims">
+        <h4 class="brand-overview__veri-subtitle">
+          Claims ({{ data.claims.length }})
+        </h4>
+        <div
+          v-for="claim in data.claims"
+          :key="claim.id"
+          class="brand-overview__veri-claim-card"
+          :class="`brand-overview__veri-claim--${claim.type}`"
+        >
+          <div class="brand-overview__veri-claim-icon">
+            <span v-if="claim.type === 'improvement'">🟢</span>
+            <span v-else-if="claim.type === 'regression'">🔴</span>
+            <span v-else>⚪</span>
+          </div>
+          <div class="brand-overview__veri-claim-body">
+            <div class="brand-overview__veri-claim-summary">{{ claim.summary }}</div>
+            <div class="brand-overview__veri-claim-meta">
+              <span class="brand-overview__veri-claim-confidence">Confidence {{ claim.confidence }}%</span>
+              <span v-if="claim.evidence.length > 0" class="brand-overview__veri-claim-evidence-count">
+                证据: {{ claim.evidence.length }} 条
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evidence Timeline -->
+      <div class="brand-overview__veri-evidence">
+        <h4 class="brand-overview__veri-subtitle">
+          Evidence Timeline ({{ data.evidence.length }})
+        </h4>
+        <div class="brand-overview__veri-timeline">
+          <div
+            v-for="(ev, idx) in data.evidence"
+            :key="ev.id"
+            class="brand-overview__veri-timeline-item"
+          >
+            <div class="brand-overview__veri-timeline-dot" :class="`brand-overview__veri-timeline-dot--${ev.type}`" />
+            <div class="brand-overview__veri-timeline-content">
+              <div class="brand-overview__veri-timeline-header" @click="toggleEvidence(ev.id)">
+                <span class="brand-overview__veri-timeline-type">{{ ev.type }}</span>
+                <span class="brand-overview__veri-timeline-source">{{ ev.source }}</span>
+                <span class="brand-overview__veri-timeline-toggle">{{ expandedEvidence[ev.id] ? '−' : '+' }}</span>
+              </div>
+              <div v-if="expandedEvidence[ev.id]" class="brand-overview__veri-timeline-body">
+                <p>{{ ev.content }}</p>
+                <small>{{ formatDate(ev.timestamp) }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Explain -->
+      <div class="brand-overview__veri-explain">
+        <h4 class="brand-overview__veri-subtitle">解释</h4>
+        <p class="brand-overview__veri-explain-summary">{{ data.explain.summary }}</p>
+        <div v-if="data.explain.reasons.length > 0" class="brand-overview__veri-explain-reasons">
+          <h5>原因</h5>
+          <ul>
+            <li v-for="(reason, idx) in data.explain.reasons" :key="idx">
+              <code>{{ reason.code }}</code>: {{ reason.message }}
+            </li>
+          </ul>
+        </div>
+        <div v-if="data.explain.limitations.length > 0" class="brand-overview__veri-explain-limitations">
+          <h5>局限性</h5>
+          <ul>
+            <li v-for="(lim, idx) in data.explain.limitations" :key="idx">{{ lim }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="brand-overview__veri-recommendations">
+        <h4 class="brand-overview__veri-subtitle">建议</h4>
+        <div
+          v-for="(rec, idx) in data.recommendations"
+          :key="idx"
+          class="brand-overview__veri-rec-card"
+          :class="`brand-overview__veri-rec--${rec.priority}`"
+        >
+          <div class="brand-overview__veri-rec-header">
+            <span class="brand-overview__veri-rec-priority" :class="`brand-overview__veri-rec-priority--${rec.priority}`">
+              {{ rec.priority === 'high' ? '🔴' : rec.priority === 'medium' ? '🟡' : '🟢' }}
+              {{ priorityLabel(rec.priority) }}
+            </span>
+          </div>
+          <p class="brand-overview__veri-rec-action">
+            {{ rec.action }}
+            <span v-if="rec.expectedImpact" class="brand-overview__veri-rec-impact">
+              — {{ rec.expectedImpact }}
+            </span>
+          </p>
+          <p class="brand-overview__veri-rec-reason">{{ rec.reason }}</p>
+        </div>
+      </div>
+
+      <!-- Verification History -->
+      <div v-if="history && history.length > 1" class="brand-overview__veri-history">
+        <h4 class="brand-overview__veri-subtitle">验证历史</h4>
+        <div class="brand-overview__veri-history-list">
+          <div
+            v-for="entry in history"
+            :key="entry.id"
+            class="brand-overview__veri-history-item"
+            @click="onViewDetail(entry.id)"
+          >
+            <span
+              class="brand-overview__veri-history-status"
+              :class="`brand-overview__veri-status--${entry.status.toLowerCase()}`"
+            >
+              {{ entry.status }}
+            </span>
+            <span class="brand-overview__veri-history-adi" :class="entry.adiDelta >= 0 ? 'delta--positive' : 'delta--negative'">
+              {{ entry.adiDelta >= 0 ? '+' : '' }}{{ entry.adiDelta }}
+            </span>
+            <span class="brand-overview__veri-history-confidence">置信 {{ entry.confidence }}%</span>
+            <span class="brand-overview__veri-history-date">{{ formatDate(entry.createdAt) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import CapabilityBadge from '../business/CapabilityBadge.vue'
+import type { CapabilityMetadata } from '~/workspaces/geo/types/foundation/capability'
+
+const props = defineProps<{
+  data: any | null
+  loading: boolean
+  error: string | null
+  history: any[] | null
+  hasAnalysis: boolean
+  stepIndex: number
+  isQdRunning: boolean
+  onRunVerification: () => void
+  onClear: () => void
+  onOpenExplain: () => void
+  onQuickDiscovery: () => void
+  onViewDetail: (id: string) => void
+  _meta?: CapabilityMetadata
+}>()
+
+const expandedEvidence = ref<Record<string, boolean>>({})
+
+const veriSteps = [
+  { key: 'scan', label: '扫描 AI 平台' },
+  { key: 'compare', label: '对比历史数据' },
+  { key: 'analyze', label: '分析变化' },
+  { key: 'done', label: '完成验证' },
+]
+
+function toggleEvidence(id: string) {
+  expandedEvidence.value[id] = !expandedEvidence.value[id]
+}
+
+function deltaClass(val: number): string {
+  if (val > 0) return 'delta--positive'
+  if (val < 0) return 'delta--negative'
+  return ''
+}
+
+function deltaSign(val: number): string {
+  return val > 0 ? '+' : ''
+}
+
+function priorityLabel(priority: string): string {
+  const map: Record<string, string> = { high: 'High Priority', medium: 'Medium Priority', low: 'Low Priority' }
+  return map[priority] || priority
+}
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '未知'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return '未知'
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+</script>
+
+<style scoped>
+.brand-overview__verification-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.brand-overview__veri-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.brand-overview__veri-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.brand-overview__veri-status--verified {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.brand-overview__veri-status--pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.brand-overview__veri-status--failed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.brand-overview__veri-confidence {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.brand-overview__veri-evidence-grade {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.brand-overview__veri-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 16px 0 12px;
+}
+
+.brand-overview__veri-comparison {
+  margin-bottom: 20px;
+}
+
+.brand-overview__veri-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.brand-overview__veri-table th,
+.brand-overview__veri-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.brand-overview__veri-table th {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.brand-overview__veri-table td.delta--positive {
+  color: #16a34a;
+}
+
+.brand-overview__veri-table td.delta--negative {
+  color: #dc2626;
+}
+
+/* Claims */
+.brand-overview__veri-claim-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+}
+
+.brand-overview__veri-claim--improvement {
+  border-left-color: #16a34a;
+}
+
+.brand-overview__veri-claim--regression {
+  border-left-color: #dc2626;
+}
+
+.brand-overview__veri-claim--neutral {
+  border-left-color: #94a3b8;
+}
+
+.brand-overview__veri-claim-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.brand-overview__veri-claim-summary {
+  font-size: 13px;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.brand-overview__veri-claim-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Timeline */
+.brand-overview__veri-timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  position: relative;
+}
+
+.brand-overview__veri-timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.brand-overview__veri-timeline-dot--presence {
+  background: #3b82f6;
+}
+
+.brand-overview__veri-timeline-dot--knowledge {
+  background: #8b5cf6;
+}
+
+.brand-overview__veri-timeline-dot--discovery {
+  background: #f59e0b;
+}
+
+.brand-overview__veri-timeline-dot--verification {
+  background: #10b981;
+}
+
+.brand-overview__veri-timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.brand-overview__veri-timeline-type {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.brand-overview__veri-timeline-source {
+  color: #64748b;
+}
+
+.brand-overview__veri-timeline-toggle {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.brand-overview__veri-timeline-body {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #475569;
+}
+
+/* Explain */
+.brand-overview__veri-explain-summary {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.brand-overview__veri-explain-reasons h5,
+.brand-overview__veri-explain-limitations h5 {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.brand-overview__veri-explain-reasons ul,
+.brand-overview__veri-explain-limitations ul {
+  list-style: none;
+  padding: 0;
+}
+
+.brand-overview__veri-explain-reasons li,
+.brand-overview__veri-explain-limitations li {
+  font-size: 12px;
+  color: #475569;
+  padding: 4px 0;
+}
+
+/* Recommendations */
+.brand-overview__veri-rec-card {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+}
+
+.brand-overview__veri-rec--high {
+  border-left-color: #dc2626;
+}
+
+.brand-overview__veri-rec--medium {
+  border-left-color: #f59e0b;
+}
+
+.brand-overview__veri-rec--low {
+  border-left-color: #3b82f6;
+}
+
+.brand-overview__veri-rec-priority {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
+.brand-overview__veri-rec-action {
+  font-size: 13px;
+  color: #1e293b;
+  margin: 4px 0;
+}
+
+.brand-overview__veri-rec-impact {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.brand-overview__veri-rec-reason {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* History */
+.brand-overview__veri-history-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.brand-overview__veri-history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.brand-overview__veri-history-item:hover {
+  background: #f8fafc;
+}
+
+.brand-overview__veri-history-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.brand-overview__veri-history-adi {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 40px;
+}
+
+.brand-overview__veri-history-adi.delta--positive {
+  color: #16a34a;
+}
+
+.brand-overview__veri-history-adi.delta--negative {
+  color: #dc2626;
+}
+
+.brand-overview__veri-history-confidence {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.brand-overview__veri-history-date {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+/* Trigger button */
+.brand-overview__verification-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  padding: 4px 12px;
+  background: #f0f9ff;
+  color: #0ea5e9;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.brand-overview__verification-trigger:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+</style>

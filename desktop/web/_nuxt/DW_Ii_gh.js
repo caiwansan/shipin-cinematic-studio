@@ -1,0 +1,1 @@
+import{q as s,l as o,aj as u}from"./GU9kMEGL.js";const i=s(a=>{const e=a.meta.moduleName;if(!e)return;const r=u();let t=!1;if(e==="customer-service"&&(t=r.public.customerServiceEnabled===!0),!t)throw o({statusCode:410,statusMessage:"该功能已下线（Gone）",fatal:!0})});export{i as default};

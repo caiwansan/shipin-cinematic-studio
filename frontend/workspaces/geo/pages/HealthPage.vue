@@ -30,7 +30,7 @@
     </EmptyState>
 
     <!-- ===== STATE: Data ===== -->
-    <template v-else-if="hasProjects">
+    <div v-if="hasProjects">
       <!-- Navigation -->
       <div class="flex items-center gap-3 mb-4">
         <NuxtLink to="/workspace/geo/dashboard" class="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
@@ -79,7 +79,7 @@
       </EmptyState>
 
       <!-- ====== MAIN REPORT ====== -->
-      <template v-if="hasReportData">
+      <div v-if="hasReportData">
         <!-- ===== Section 1: ADI Overall Score (Primary KPI) ===== -->
         <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <div class="flex items-start justify-between flex-wrap gap-4">
@@ -316,13 +316,11 @@
             {{ timelineData.length === 0 ? 'No trend data yet' : 'At least 2 points needed for chart' }}
           </div>
         </div>
-      </template>
-    </template>
+      </div>
+    </div>
   </div>
 </template>
-
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ofetch } from 'ofetch'
 import { useAdiStore } from '../stores/useAdiStore'
@@ -483,7 +481,7 @@ async function loadData() {
   error.value = null
   try {
     const token = getToken()
-    const res: any = await ofetch('/api/v1/geo/projects', {
+    const res: any = await ofetch('/api/geo/projects', {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
     projects.value = (res.data || res || []).map((p: any) => ({

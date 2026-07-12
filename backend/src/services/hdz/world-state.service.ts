@@ -239,7 +239,7 @@ export async function initEntityState(
  * 批量初始化——从已有角色数据迁移到 WorldState
  */
 export async function migrateCharactersToWorldState(projectId: string): Promise<number> {
-  const entityRows = await entityRegistryRepository.findMany({ where: { projectId, entityType: 'character' } })
+  const entityRows = await entityRegistryRepository.findMany({ projectId, entityType: 'character' })
   let count = 0
   for (const entity of entityRows) {
     const existing = await worldStateRepository.findUnique({

@@ -1,0 +1,10 @@
+{
+  "name": "@platform/errors",
+  "version": "0.0.0",
+  "main": "platform-errors.js",
+  "types": "platform-errors.d.ts",
+  "exports": {
+    ".": "./platform-errors.js",
+    "./*": "./*"
+  }
+}

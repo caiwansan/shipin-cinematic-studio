@@ -21,7 +21,7 @@ import { hdzAgentTaskRepository } from './repositories/hdz-agent-task.repository
 class CharacterService {
   async execute(ctx: OrchestratorContext, llmCfg: LLMConfig): Promise<void> {
     console.log(`[HDZ/Character] execute start: task=${ctx.taskId}, project=${ctx.projectId}`)
-    const project = await hdzProjectRepository.findUnique({ where: { id: ctx.projectId } })
+    const project = await hdzProjectRepository.findUnique({ id: ctx.projectId })
     if (!project) throw new Error('项目不存在')
 
     // ★ 读取所有章节大纲（含正文片段），分析角色

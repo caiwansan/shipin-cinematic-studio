@@ -1,0 +1,328 @@
+<template>
+  <section class="brand-overview__section">
+    <h2 class="brand-overview__section-title">
+      AI Presence
+      <GeoExplainButton @click="openExplainDrawer('presence')" />
+      <button
+        v-if="hasAnalysis && !presenceLoading && !presenceData"
+        class="brand-overview__presence-trigger"
+        @click="onLoadPresence"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+        扫描 AI 可见度
+      </button>
+      <button
+        v-if="presenceData"
+        class="brand-overview__presence-trigger"
+        @click="onClear"
+      >
+        收起
+      </button>
+    </h2>
+
+    <!-- Loading -->
+    <GeoLoading
+      v-if="presenceLoading"
+      :steps="presenceSteps"
+      :current-step="presenceStepIndex"
+    ></GeoLoading>
+
+    <!-- Error -->
+    <GeoErrorState v-else-if="presenceError" :message="presenceError" :on-retry="onLoadPresence" />
+
+    <!-- Empty State -->
+    <GeoEmptyState
+      v-else-if="!hasAnalysis && !presenceData"
+      icon="🌐"
+      title="AI 可见度"
+      description="Run Quick Discovery to check AI presence."
+    >
+      <template #actions>
+        <button
+          class="geo-btn geo-btn--primary"
+          @click="onQuickDiscovery"
+          :disabled="isQdRunning"
+        >
+          {{ isQdRunning ? '分析中...' : '运行 Quick Discovery' }}
+        </button>
+      </template>
+    </GeoEmptyState>
+
+    <!-- Presence Data -->
+    <div v-else-if="presenceData" class="brand-overview__presence-card">
+      <!-- Overall KPI Card -->
+      <div class="brand-overview__presence-overall">
+        <div class="brand-overview__presence-overall-score">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e5e7eb" stroke-width="4" />
+            <circle
+              cx="40" cy="40" r="34"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+              :stroke-dasharray="213.63"
+              :stroke-dashoffset="213.63 - (213.63 * presenceData.overall.score) / 100"
+              :class="presenceRingColor(presenceData.overall.score)"
+            />
+            <text x="40" y="36" text-anchor="middle" dominant-baseline="central" class="brand-overview__presence-score-text">
+              {{ presenceData.overall.score }}
+            </text>
+            <text x="40" y="54" text-anchor="middle" dominant-baseline="central" class="brand-overview__presence-score-label">
+              总分
+            </text>
+          </svg>
+        </div>
+        <div class="brand-overview__presence-overall-metrics">
+          <div class="brand-overview__presence-metric">
+            <span class="brand-overview__presence-metric-value">{{ presenceData.overall.visibilityCount }}/{{ presenceData.overall.totalChecked }}</span>
+            <span class="brand-overview__presence-metric-label">监控中</span>
+          </div>
+          <div class="brand-overview__presence-metric">
+            <span class="brand-overview__presence-metric-value">{{ presenceData.overall.averageKnowledge }}</span>
+            <span class="brand-overview__presence-metric-label">平均知识质量</span>
+          </div>
+          <div class="brand-overview__presence-metric">
+            <span class="brand-overview__presence-metric-value">{{ formatRelativeTime(presenceData.checkedAt) }}</span>
+            <span class="brand-overview__presence-metric-label">最后扫描</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Provider List — Grouped by international/china -->
+      <div class="brand-overview__presence-providers">
+        <!-- International Group -->
+        <div class="brand-overview__presence-group">
+          <div class="brand-overview__presence-group-header">
+            <span class="brand-overview__presence-group-icon">🌐</span>
+            <span class="brand-overview__presence-group-label">国际平台</span>
+          </div>
+          <div
+            v-for="provider in filteredProviders('international')"
+            :key="provider.provider"
+            class="brand-overview__presence-provider-card"
+          >
+            <div
+              class="brand-overview__presence-provider-header"
+              @click="togglePresenceExplain(provider.provider)"
+            >
+              <!-- Provider Logo / Initial -->
+              <div class="brand-overview__presence-provider-logo" :class="`brand-overview__provider-logo--${provider.provider}`">
+                {{ provider.displayName.charAt(0) }}
+              </div>
+
+              <!-- Provider Info -->
+              <div class="brand-overview__presence-provider-info">
+                <div class="brand-overview__presence-provider-top">
+                  <span class="brand-overview__presence-provider-name">{{ provider.displayName }}</span>
+                  <span
+                    class="brand-overview__presence-visibility-badge"
+                    :class="`brand-overview__visibility--${provider.visibility}`"
+                  >
+                    {{ visibilityLabel(provider.visibility) }}
+                  </span>
+                </div>
+                <div class="brand-overview__presence-provider-details">
+                  <div class="brand-overview__presence-knowledge-bar" v-if="typeof provider.knowledgeQuality === 'number'">
+                    <div
+                      class="brand-overview__presence-knowledge-fill"
+                      :style="{ width: provider.knowledgeQuality + '%' }"
+                      :class="presenceBarColor(provider.knowledgeQuality)"
+                    />
+                  </div>
+                  <span v-if="typeof provider.knowledgeQuality === 'number'" class="brand-overview__presence-knowledge-text">
+                    知识质量 {{ provider.knowledgeQuality }}
+                  </span>
+                  <span
+                    class="brand-overview__presence-evidence-badge"
+                    :class="`brand-overview__evidence--${provider.evidenceLevel}`"
+                  >
+                    Evidence {{ provider.evidenceLevel }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Expand Toggle -->
+              <span class="brand-overview__presence-expand-toggle">
+                {{ expandedPresence[provider.provider] ? '−' : '+' }}
+              </span>
+            </div>
+
+            <!-- Explain Section (expandable) -->
+            <div v-if="expandedPresence[provider.provider]" class="brand-overview__presence-explain-body">
+              <div class="brand-overview__presence-explain-evidence" v-if="provider.evidenceCount > 0">
+                <h4>证据</h4>
+                <p>{{ provider.explain || provider.summary }}</p>
+              </div>
+              <div class="brand-overview__presence-explain-explain">
+                <h4>分析说明</h4>
+                <p>{{ provider.explain || provider.summary || '暂无可用的分析说明' }}</p>
+              </div>
+              <div class="brand-overview__presence-explain-rec">
+                <h4>建议</h4>
+                <ul>
+                  <li v-for="(rec, ridx) in provider.recommendations" :key="ridx">{{ rec }}</li>
+                  <li v-if="provider.recommendations.length === 0" class="brand-overview__presence-rec-empty">暂无建议</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- China Group -->
+        <div class="brand-overview__presence-group">
+          <div class="brand-overview__presence-group-header">
+            <span class="brand-overview__presence-group-icon">🇨🇳</span>
+            <span class="brand-overview__presence-group-label">国内平台</span>
+          </div>
+          <div
+            v-for="provider in filteredProviders('china')"
+            :key="provider.provider"
+            class="brand-overview__presence-provider-card"
+          >
+            <div
+              class="brand-overview__presence-provider-header"
+              @click="togglePresenceExplain(provider.provider)"
+            >
+              <!-- Provider Logo / Initial -->
+              <div class="brand-overview__presence-provider-logo" :class="`brand-overview__provider-logo--${provider.provider}`">
+                {{ provider.displayName.charAt(0) }}
+              </div>
+
+              <!-- Provider Info -->
+              <div class="brand-overview__presence-provider-info">
+                <div class="brand-overview__presence-provider-top">
+                  <span class="brand-overview__presence-provider-name">{{ provider.displayName }}</span>
+                  <span
+                    class="brand-overview__presence-visibility-badge"
+                    :class="`brand-overview__visibility--${provider.visibility}`"
+                  >
+                    {{ visibilityLabel(provider.visibility) }}
+                  </span>
+                </div>
+                <div class="brand-overview__presence-provider-details">
+                  <div class="brand-overview__presence-knowledge-bar" v-if="typeof provider.knowledgeQuality === 'number'">
+                    <div
+                      class="brand-overview__presence-knowledge-fill"
+                      :style="{ width: provider.knowledgeQuality + '%' }"
+                      :class="presenceBarColor(provider.knowledgeQuality)"
+                    />
+                  </div>
+                  <span v-if="typeof provider.knowledgeQuality === 'number'" class="brand-overview__presence-knowledge-text">
+                    知识质量 {{ provider.knowledgeQuality }}
+                  </span>
+                  <span
+                    class="brand-overview__presence-evidence-badge"
+                    :class="`brand-overview__evidence--${provider.evidenceLevel}`"
+                  >
+                    Evidence {{ provider.evidenceLevel }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Expand Toggle -->
+              <span class="brand-overview__presence-expand-toggle">
+                {{ expandedPresence[provider.provider] ? '−' : '+' }}
+              </span>
+            </div>
+
+            <!-- Explain Section (expandable) -->
+            <div v-if="expandedPresence[provider.provider]" class="brand-overview__presence-explain-body">
+              <div class="brand-overview__presence-explain-evidence" v-if="provider.evidenceCount > 0">
+                <h4>证据</h4>
+                <p>{{ provider.explain || provider.summary }}</p>
+              </div>
+              <div class="brand-overview__presence-explain-explain">
+                <h4>分析说明</h4>
+                <p>{{ provider.explain || provider.summary || '暂无可用的分析说明' }}</p>
+              </div>
+              <div class="brand-overview__presence-explain-rec">
+                <h4>建议</h4>
+                <ul>
+                  <li v-for="(rec, ridx) in provider.recommendations" :key="ridx">{{ rec }}</li>
+                  <li v-if="provider.recommendations.length === 0" class="brand-overview__presence-rec-empty">暂无建议</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+
+const props = defineProps<{
+  hasAnalysis: boolean
+  presenceData: any
+  presenceLoading: boolean
+  presenceError: string | null
+  presenceSteps: { key: string; label: string; icon: string; done: boolean }[]
+  presenceStepIndex: number
+  isQdRunning: boolean
+  onLoadPresence: () => void
+  onQuickDiscovery: () => void
+  onClear: () => void
+  onOpenExplain: (type: string) => void
+}>()
+
+const openExplainDrawer = props.onOpenExplain
+
+// ── Local state: expandable provider explain panels ──
+const expandedPresence = ref<Record<string, boolean>>({})
+
+function togglePresenceExplain(providerKey: string) {
+  expandedPresence.value[providerKey] = !expandedPresence.value[providerKey]
+}
+
+// ── Local helpers (UI-only, no logic migration) ──
+
+function filteredProviders(group: string) {
+  if (!props.presenceData?.providers) return []
+  return props.presenceData.providers.filter((p: any) => p.group === group)
+}
+
+function visibilityLabel(visibility: string): string {
+  const labels: Record<string, string> = {
+    visible: 'Visible',
+    partial: 'Partial',
+    missing: 'Missing',
+    checking: 'Checking',
+    unknown: 'Unknown',
+  }
+  return labels[visibility] || visibility
+}
+
+function presenceRingColor(score: number): string {
+  if (score >= 80) return 'brand-overview__presence-ring--high'
+  if (score >= 50) return 'brand-overview__presence-ring--medium'
+  return 'brand-overview__presence-ring--low'
+}
+
+function presenceBarColor(quality: number): string {
+  if (quality >= 80) return 'brand-overview__presence-bar--high'
+  if (quality >= 50) return 'brand-overview__presence-bar--medium'
+  return 'brand-overview__presence-bar--low'
+}
+
+function formatRelativeTime(dateStr: string): string {
+  if (!dateStr) return '—'
+  const now = Date.now()
+  const d = new Date(dateStr).getTime()
+  const diff = now - d
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
+  if (hours < 24) return `${hours} 小时前`
+  if (days < 7) return `${days} 天前`
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+</script>

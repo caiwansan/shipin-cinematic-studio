@@ -17,6 +17,11 @@ const AI_API_PREFIXES = [
   '/api/characters',
 ]
 
+// GEO workspace — 要求 JWT 认证
+const GEO_REQUIRED_PREFIXES = [
+  '/api/geo/',
+]
+
 export default fp(async function authPlugin(fastify: FastifyInstance) {
   fastify.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -55,8 +60,39 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
    * 免费/基础会员不受限制
    */
   fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
-    // 只检查已登录用户的 AI 相关请求
     const url = request.url
+
+    // ── GEO 工作台 — 强制 JWT 认证 ──
+    const isGeoRequest = GEO_REQUIRED_PREFIXES.some(prefix => url.startsWith(prefix))
+    if (isGeoRequest) {
+      try {
+        await request.jwtVerify()
+        const decoded = request.user as any
+        if (decoded && decoded.id && decoded.tokenVersion !== undefined) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: { tokenVersion: true },
+          })
+          if (dbUser && dbUser.tokenVersion !== decoded.tokenVersion) {
+            reply.status(401).send({ error: '未授权', message: '账号已在其他设备登录，请重新登录' })
+            return reply
+          }
+        }
+        const userId = decoded?.id
+        if (userId) {
+          prisma.user.update({
+            where: { id: userId },
+            data: { lastActiveAt: new Date() },
+          }).catch(() => {})
+        }
+        return // 认证通过
+      } catch {
+        reply.status(401).send({ error: '未授权', message: '请先登录后再使用 GEO 工作台' })
+        return reply
+      }
+    }
+
+    // ── AI 功能 — VIP 会员必须配置私有 API Key ──
     const isAiRequest = AI_API_PREFIXES.some(prefix => url.startsWith(prefix))
     if (!isAiRequest) return
 

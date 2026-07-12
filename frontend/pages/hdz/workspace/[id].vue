@@ -2705,9 +2705,20 @@ async function startWriting() {
     return
   }
   const ch = firstOutline
+
+  // ★ 打包文曲星对话作为写作指导意见
+  const chatHistory = messages.value.map(m => `[${m.role === 'user' ? '用户' : '文曲星'}]\n${m.content}`).join('\n\n---\n\n')
+  const writingGuideline = chatHistory
+    ? `以下是用户与文曲星关于本故事的对话记录，请仔细阅读其中的设定讨论、修改意见和创作方向，将这些指导意见融入正文写作中：\n\n${chatHistory}`
+    : ''
+
   messages.value.push({ role: 'assistant', content: `✍️ 开始写第 ${ch.chapterNo} 章「${ch.title || ''}」...` })
   try {
-    const res: any = await $api.post('/api/hdz/agent/write', { projectId: projectId.value, chapterNo: ch.chapterNo })
+    const res: any = await $api.post('/api/hdz/agent/write', {
+      projectId: projectId.value,
+      chapterNo: ch.chapterNo,
+      userInput: writingGuideline || undefined,
+    })
     const body = res?.data
     if (!body?.success) throw new Error(body?.error || '写作失败')
     messages.value.push({ role: 'assistant', content: `✍️ 第 ${ch.chapterNo} 章的写作任务已提交！AI 正在创作中，写完后会显示在阅读器里等待审阅。` })

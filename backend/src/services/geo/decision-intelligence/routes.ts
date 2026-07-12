@@ -14,7 +14,7 @@ export function registerDIIssueGraphRoutes(fastify: FastifyInstance, opts?: Rout
   const builder = opts?.builder || new IssueGraphBuilder()
 
   // POST — Generate issue graph for a brand
-  fastify.post('/api/geo/recommendation/issues', async (request, reply) => {
+  fastify.post('/api/geo/recommendation/issues', { preHandler: [] }, async (request, reply) => {
     const body = request.body as any
     if (!body.brandId) {
       return reply.status(400).send({ success: false, error: 'brandId is required' })
@@ -29,7 +29,7 @@ export function registerDIIssueGraphRoutes(fastify: FastifyInstance, opts?: Rout
   })
 
   // GET — Get cached issue graph for a brand
-  fastify.get('/api/geo/recommendation/issues/:brandId', async (request, reply) => {
+  fastify.get('/api/geo/recommendation/issues/:brandId', { preHandler: [] }, async (request, reply) => {
     const { brandId } = request.params as any
 
     try {
@@ -46,7 +46,7 @@ export function registerDIIssueGraphRoutes(fastify: FastifyInstance, opts?: Rout
   })
 
   // GET — Get dependencies for a specific issue
-  fastify.get('/api/geo/recommendation/issues/:brandId/:issueId/dependencies', async (request, reply) => {
+  fastify.get('/api/geo/recommendation/issues/:brandId/:issueId/dependencies', { preHandler: [] }, async (request, reply) => {
     const { brandId, issueId } = request.params as any
 
     try {

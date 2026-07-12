@@ -151,6 +151,8 @@ const quickLinks = [
   { label: '会员模块', icon: '👥', to: '/admin/aigc/members', desc: '用户列表管理' },
   { label: '支付设置', icon: '💳', to: '/admin/aigc/payment', desc: '微信/支付宝' },
   { label: '管理员设置', icon: '🛡️', to: '/admin/aigc/admins', desc: '权限管理' },
+  { label: '商城管理', icon: '🛍️', to: '/admin/aigc/mall', desc: '商品/物流配置' },
+  { label: '法律工作台管理', icon: '⚖️', to: '/admin/aigc/legal', desc: '案件/法规/RAG管理' },
 ]
 
 async function fetchData() {

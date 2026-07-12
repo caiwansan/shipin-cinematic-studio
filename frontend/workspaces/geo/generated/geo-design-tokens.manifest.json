@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "hash": "29c95a8359faaca94885b1a9250bdb6fd9492727be7f8c47fdd56f520e0658f6",
+  "generatedAt": "2026-07-03T16:36:50.107Z",
+  "source": "design/tokens.ts",
+  "files": [
+    "generated/geo-design-tokens.css",
+    "generated/geo-design-tokens.json"
+  ]
+}

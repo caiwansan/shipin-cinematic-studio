@@ -9,7 +9,7 @@ import { scanBrand, getScanResult, getScanResultsByProject, getLatestScanByProje
 
 // ─── Helpers ───
 
-type TierKey = 'free' | 'basic' | 'enterprise'
+type TierKey = 'free' | 'basic' | 'pro' | 'enterprise'
 
 interface ScanQuota {
   maxMonthlyScans: number
@@ -27,6 +27,11 @@ const TIER_QUOTAS: Record<TierKey, ScanQuota> = {
     maxMonthlyScans: 15,
     coolDownMinutes: 30,
     maxConcurrent: 1,
+  },
+  pro: {
+    maxMonthlyScans: 50,
+    coolDownMinutes: 10,
+    maxConcurrent: 2,
   },
   enterprise: {
     maxMonthlyScans: 100,
@@ -46,26 +51,32 @@ function getQuotaFromTier(user: any): ScanQuota {
 
 /** 从数据库补充用户的 memberTier（JWT decoded 不包含该字段） */
 async function enrichUserTier(user: any): Promise<void> {
-  if (user.memberTier) return // 已缓存
   try {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { memberTier: true },
-    })
-    user.memberTier = dbUser?.memberTier || 'free'
+    const [dbUser, membership] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { memberTier: true },
+      }),
+      prisma.membership.findUnique({
+        where: { userId: user.id },
+        select: { tier: true },
+      }),
+    ])
+    // SSOT: Membership.tier 优先，User.memberTier 为兼容 fallback
+    const tier = membership?.tier || dbUser?.memberTier || 'free'
+    user.memberTier = tier
   } catch {
     user.memberTier = 'free'
   }
 }
 
 function checkVip(user: any): boolean {
-  // memberTier: 'enterprise' / 'basic' / 'free'
-  // enterprise 及以上可以直接使用 GEO
+  // tier 来自 Membership.tier（SSOT），fallback User.memberTier
+  // Pro（高级会员）/ enterprise（年卡）→ 有权限
+  // basic（基础版）/ free → 无权限
   const tier = (user.memberTier || '').toLowerCase()
-  if (tier === 'enterprise') return true
-  if (tier === 'basic') return true
-  // free 用户暂不开放（MVP 阶段）
-  return false // MVP 阶段 free 不可用
+  const allowedTiers = ['enterprise', 'pro']
+  return allowedTiers.includes(tier)
 }
 
 export default async function geoMvpRoutes(fastify: FastifyInstance) {

@@ -7,7 +7,7 @@
  *   responsive layout, keyboard navigation, aria attributes
  */
 <template>
-  <div class="knowledge-page">
+  <div class="knowledge-page" style="width:100%">
     <!-- ===== STATE: Loading ===== -->
     <LoadingState
       v-if="store.isLoading && !store.hasData"
@@ -47,7 +47,7 @@
     </div>
 
     <!-- ===== STATE: Data (with content) ===== -->
-    <template v-else-if="store.hasData">
+    <div v-if="store.hasData">
       <div class="knowledge-page__header">
         <Hero
           title="Knowledge"
@@ -262,7 +262,7 @@
           </div>
         </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
@@ -339,7 +339,7 @@ function handleStatementClick(id: string) {
 
 <style scoped>
 .knowledge-page {
-  max-width: 960px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

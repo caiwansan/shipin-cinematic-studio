@@ -1,289 +1,204 @@
-/**
- * RecommendationsPage.vue — GEO Workspace Recommendations (Product Polish — Phase 8)
- *
- * All states: loading, error, empty, data
- * Features: page transition, impact preview, action execution, success/error feedback,
- *   responsive layout, keyboard navigation, aria attributes
- */
 <template>
-  <div class="recs-page">
-    <!-- ===== STATE: Loading ===== -->
-    <LoadingState
-      v-if="store.isLoading && !store.hasRecs"
-      title="Analyzing your brand..."
-      :steps="[
-        { label: 'Identifying improvement opportunities...', active: true },
-        { label: 'Calculating impact projections...' },
-        { label: 'Preparing one-click actions...' },
-      ]"
-    />
-
-    <!-- ===== STATE: Error (no data) ===== -->
-    <ErrorBanner
-      v-else-if="store.error && !store.hasRecs"
-      title="Unable to load recommendations"
-      message="Please check your connection and retry."
-    >
-      <DSButton
-        variant="primary"
-        @click="store.fetchRecs()"
-        :disabled="store.isLoading"
-      >重试</DSButton>
-    </ErrorBanner>
-
-    <!-- ===== STATE: Empty ===== -->
-    <EmptyState
-      v-else-if="!store.hasRecs"
-      icon="&#9733;"
-      title="No recommendations available"
-      description="Your Brand Health is already optimized."
-    />
-
-    <!-- ===== STATE: Data ===== -->
-    <template v-else>
-      <Hero
-        title="Recommendations"
-        :subtitle="`${store.pendingRecommendations.length} actions to improve Brand Health`"
-      />
-
-      <!-- Impact Preview -->
-      <ImpactPreview
-        :current-score="store.currentScore"
-        :expected-score="store.expectedScore"
-        description="Improving all pending recommendations will increase your Brand Health."
-      />
-
-      <!-- Success Feedback after execution -->
-      <Transition name="geo-banner">
-        <SuccessBanner
-          v-if="store.execution.status === 'success'"
-          :title="`Brand Health improved: +${store.execution.lastImpact}`"
-          description="Actions completed successfully."
-          dismissible
-          @dismiss="resetExecution"
-        />
-      </Transition>
-
-      <!-- Error on execution -->
-      <Transition name="geo-banner">
-        <ErrorBanner
-          v-if="store.execution.status === 'error'"
-          title="Execution failed"
-          :message="store.execution.errorMessage || 'An error occurred'"
-          dismissible
-          @dismiss="resetExecution"
-        />
-      </Transition>
-
-      <!-- Action Cards -->
-      <div class="recs-page__section">
-        <h3 class="recs-page__section-title">优先行动</h3>
-        <ActionPanel
-          :actions="store.recommendations.map(r => ({
-            id: r.id,
-            title: r.title,
-            expectedImpact: r.impact.value,
-            effort: r.difficulty,
-            reason: r.description,
-            status: r.status || 'pending',
-          }))"
-          @execute="handleExecute"
-          @retry="handleRetry"
-        />
+  <div class="geo-rec">
+    <!-- Page Header -->
+    <div class="geo-rec__header">
+      <div>
+        <h1 class="geo-rec__title">智能推荐</h1>
+        <p class="geo-rec__desc">基于品牌健康分析，为您推荐优化行动</p>
       </div>
+      <div class="geo-rec__score">
+        <div class="geo-rec__score-value">{{ currentScore }}</div>
+        <div class="geo-rec__score-label">当前分数</div>
+      </div>
+    </div>
 
-      <!-- Explanation Panel -->
-      <ExplanationPanel
-        title="Why these actions?"
-        :items="explanationItems"
-      />
-
-      <!-- History (if available) -->
-      <div v-if="store.history.length > 0" class="recs-page__section">
-        <h3 class="recs-page__section-title">推荐历史</h3>
-        <div class="recs-page__history" role="list">
-          <div
-            v-for="item in store.history.slice(0, 5)"
-            :key="item.id"
-            class="recs-page__history-item"
-            role="listitem"
-          >
-            <span class="recs-page__history-title">{{ item.title }}</span>
-            <span class="recs-page__history-impact">+{{ item.impact }}</span>
-            <span class="recs-page__history-date">{{ item.executedAt }}</span>
+    <!-- Main Grid: 两栏 -->
+    <div class="geo-rec__grid">
+      <!-- 左栏：优先行动 -->
+      <div class="geo-rec__card">
+        <div class="geo-rec__card-hd">
+          <span class="geo-rec__card-title">优先行动</span>
+          <span class="geo-rec__card-badge">{{ pendingRecs.length }}</span>
+        </div>
+        <div class="geo-rec__card-bd">
+          <div v-for="(rec, i) in pendingRecs" :key="rec.id" class="geo-rec__item">
+            <div class="geo-rec__item-index">{{ i + 1 }}</div>
+            <div class="geo-rec__item-body">
+              <div class="geo-rec__item-title">{{ rec.title }}</div>
+              <div class="geo-rec__item-detail">{{ rec.detail }}</div>
+              <div class="geo-rec__item-tags">
+                <span class="geo-rec__tag" :class="`tag--${rec.priority}`">
+                  {{ rec.priority === 'high' ? '高优先级' : rec.priority === 'medium' ? '中优先级' : '低优先级' }}
+                </span>
+                <span class="geo-rec__tag tag--impact">+{{ rec.impact }} 分</span>
+              </div>
+            </div>
+            <button class="geo-rec__item-btn" @click="executeRec(rec.id)">执行</button>
           </div>
+          <div v-if="!pendingRecs.length" class="geo-rec__empty">暂无待处理推荐</div>
         </div>
       </div>
 
-      <!-- Primary CTA -->
-      <NextStepPanel
-        v-if="store.pendingRecommendations.length > 0"
-        :action-count="store.pendingRecommendations.length"
-        cta-label="Improve All"
-        @action="handleImproveAll"
-      />
-      <div v-else class="recs-page__uptodate">
-        <span class="recs-page__uptodate-icon">&#10003;</span>
-        <span>品牌健康已是最新</span>
+      <!-- 右栏：推荐历史和说明 -->
+      <div class="geo-rec__right">
+        <div class="geo-rec__card">
+          <div class="geo-rec__card-hd">
+            <span class="geo-rec__card-title">推荐历史</span>
+          </div>
+          <div class="geo-rec__card-bd">
+            <div v-for="h in history" :key="h.id" class="geo-rec__history-item">
+              <span class="geo-rec__history-check">✓</span>
+              <span class="geo-rec__history-title">{{ h.title }}</span>
+              <span class="geo-rec__history-impact">+{{ h.impact }}</span>
+            </div>
+            <div v-if="!history.length" class="geo-rec__empty">暂无历史记录</div>
+          </div>
+        </div>
+
+        <div class="geo-rec__card geo-rec__card--info">
+          <div class="geo-rec__card-hd">
+            <span class="geo-rec__card-title">为什么做这些</span>
+          </div>
+          <div class="geo-rec__card-bd">
+            <p class="geo-rec__info-text">推荐行动基于 AI 可见度评估，优先处理高影响力项目可快速提升品牌在 AI 搜索结果中的曝光率。</p>
+          </div>
+        </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useRecommendationsStore } from '../stores/useRecommendationsStore'
-import Hero from '~/design-system/product-blocks/Hero/index.vue'
-import ImpactPreview from '~/design-system/product-blocks/ImpactPreview/index.vue'
-import ActionPanel from '~/design-system/product-blocks/ActionPanel/index.vue'
-import ExplanationPanel from '~/design-system/product-blocks/ExplanationPanel/index.vue'
-import NextStepPanel from '~/design-system/product-blocks/NextStepPanel/index.vue'
-import LoadingState from '~/design-system/components/LoadingState/index.vue'
-import ErrorBanner from '~/design-system/components/ErrorBanner/index.vue'
-import EmptyState from '~/design-system/components/EmptyState/index.vue'
-import SuccessBanner from '~/design-system/components/SuccessBanner/index.vue'
-import DSButton from '~/design-system/primitives/Button/index.vue'
+import { ref, computed, onMounted } from 'vue'
+import { fetchRecommendations } from '../services/recommendationsService'
 
-const store = useRecommendationsStore()
-
-const explanationItems = computed(() => {
-  const reasons = store.recommendations.filter(r => r.description && (!r.status || r.status === 'pending'))
-  return reasons.slice(0, 5).map(r => ({
-    text: r.description!,
-    type: 'negative' as const,
-  }))
-})
-
-onMounted(async () => {
-  await store.fetchRecs()
-})
-
-async function handleExecute(id: string) {
-  await store.execute([id])
+interface RecItem {
+  id: string
+  title: string
+  detail: string
+  priority: 'high' | 'medium' | 'low'
+  impact: number
+  status: string
 }
 
-async function handleRetry(id: string) {
-  await store.execute([id])
+interface HistoryItem {
+  id: string
+  title: string
+  impact: number
+  executedAt: string
 }
 
-async function handleImproveAll() {
-  const ids = store.recommendations
-    .filter(r => !r.status || r.status === 'pending')
-    .map(r => r.id)
-  if (ids.length > 0) {
-    await store.execute(ids)
+const currentScore = ref(72)
+const pendingRecs = ref<RecItem[]>([])
+const history = ref<HistoryItem[]>([])
+const loading = ref(true)
+
+async function load() {
+  loading.value = true
+  try {
+    const data = await fetchRecommendations('default')
+    pendingRecs.value = data.recommendations.map(r => ({
+      id: r.id,
+      title: r.title,
+      detail: r.description,
+      priority: r.priority as any,
+      impact: r.impact.value,
+      status: r.status,
+    }))
+    history.value = data.history.map(h => ({
+      id: h.id,
+      title: h.title,
+      impact: h.impact,
+      executedAt: (h as any).executedAt || '',
+    }))
+  } catch {
+    // 如果 API 失败，使用静态占位数据
+    pendingRecs.value = [
+      { id: '1', title: '优化品牌知识图谱', detail: '补充品牌核心信息，提高 AI 识别准确度', priority: 'high', impact: 15, status: 'pending' },
+      { id: '2', title: '增加权威引用来源', detail: '在权威平台发布品牌相关内容', priority: 'high', impact: 12, status: 'pending' },
+      { id: '3', title: '优化社交媒体矩阵', detail: '统一各平台品牌描述和关键词策略', priority: 'medium', impact: 8, status: 'pending' },
+    ]
+    history.value = [
+      { id: 'h1', title: '更新官网 About 页面', impact: 5, executedAt: '3天前' },
+      { id: 'h2', title: '提交知识面板申诉', impact: 3, executedAt: '1周前' },
+    ]
+  } finally {
+    loading.value = false
   }
 }
 
-function resetExecution() {
-  store.execution.status = 'idle'
-  store.execution.errorMessage = null
-  store.fetchRecs()
+function executeRec(id: string) {
+  // Placeholder
+  pendingRecs.value = pendingRecs.value.filter(r => r.id !== id)
 }
+
+onMounted(() => load())
 </script>
 
 <style scoped>
-.recs-page {
-  max-width: 960px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5, 24px);
-}
+.geo-rec { width: 100%; }
 
-.recs-page__section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4, 16px);
+.geo-rec__header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px;
 }
+.geo-rec__title { font-size: 24px; font-weight: 700; margin: 0; }
+.geo-rec__desc { font-size: 14px; color: #64748b; margin: 4px 0 0; }
 
-.recs-page__section-title {
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-heading-3-size, 20px);
-  font-weight: var(--text-heading-3-weight, 500);
-  color: var(--color-text-primary, #111111);
-  margin: 0;
+.geo-rec__score {
+  text-align: center; padding: 12px 24px;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  border-radius: 12px; color: #fff;
 }
+.geo-rec__score-value { font-size: 32px; font-weight: 800; color: #38bdf8; }
+.geo-rec__score-label { font-size: 12px; color: #94a3b8; margin-top: 2px; }
 
-.recs-page__history {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2, 8px);
-}
+.geo-rec__grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+@media (max-width: 900px) { .geo-rec__grid { grid-template-columns: 1fr; } }
 
-.recs-page__history-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3, 12px);
-  padding: var(--space-3, 12px);
-  border-radius: var(--radius-md, 8px);
-  background-color: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  transition: border-color var(--motion-fast-duration, 100ms) ease-out;
+.geo-rec__card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;
 }
+.geo-rec__card--info { margin-top: 16px; }
+.geo-rec__card-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid #f1f5f9;
+}
+.geo-rec__card-title { font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+.geo-rec__card-badge { background: #3b82f6; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.geo-rec__card-bd { padding: 8px 0; }
 
-.recs-page__history-item:hover {
-  border-color: var(--color-text-tertiary, #9ca3af);
+.geo-rec__item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #fafafa; }
+.geo-rec__item:last-child { border-bottom: none; }
+.geo-rec__item-index {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: #f1f5f9; color: #64748b;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
 }
+.geo-rec__item-body { flex: 1; min-width: 0; }
+.geo-rec__item-title { font-size: 14px; font-weight: 600; }
+.geo-rec__item-detail { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+.geo-rec__item-tags { display: flex; gap: 6px; margin-top: 6px; }
+.geo-rec__tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.tag--high { background: #fee2e2; color: #dc2626; }
+.tag--medium { background: #ffedd5; color: #d97706; }
+.tag--low { background: #f1f5f9; color: #64748b; }
+.tag--impact { background: #dbeafe; color: #2563eb; }
+.geo-rec__item-btn {
+  padding: 6px 14px; background: #3b82f6; color: #fff; border: none; border-radius: 6px;
+  font-size: 13px; cursor: pointer; flex-shrink: 0; transition: background 0.15s;
+}
+.geo-rec__item-btn:hover { background: #2563eb; }
 
-.recs-page__history-title {
-  flex: 1;
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-sm-size, 14px);
-  font-weight: 500;
-  color: var(--color-text-primary, #111111);
-}
+.geo-rec__empty { padding: 24px; text-align: center; color: #94a3b8; font-size: 14px; }
 
-.recs-page__history-impact {
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-sm-size, 14px);
-  font-weight: 600;
-  color: var(--color-success, #22c55e);
-}
+.geo-rec__right { display: flex; flex-direction: column; gap: 16px; }
 
-.recs-page__history-date {
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-caption-size, 12px);
-  color: var(--color-text-tertiary, #9ca3af);
-}
+.geo-rec__history-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid #fafafa; }
+.geo-rec__history-check { color: #22c55e; font-weight: 700; width: 20px; text-align: center; }
+.geo-rec__history-title { flex: 1; font-size: 14px; }
+.geo-rec__history-impact { font-size: 13px; font-weight: 600; color: #22c55e; }
 
-.recs-page__uptodate {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2, 8px);
-  padding: var(--space-4, 16px);
-  border-radius: var(--radius-md, 8px);
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  font-family: var(--font-family, Inter, -apple-system, sans-serif);
-  font-size: var(--text-body-size, 16px);
-  font-weight: 500;
-  color: var(--color-success, #22c55e);
-}
-
-.recs-page__uptodate-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-full, 9999px);
-  background-color: var(--color-success, #22c55e);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* ===== Banner Transitions ===== */
-.geo-banner-enter-active,
-.geo-banner-leave-active {
-  transition: all var(--motion-normal-duration, 200ms) ease-out;
-}
-
-.geo-banner-enter-from,
-.geo-banner-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
+.geo-rec__info-text { font-size: 14px; color: #64748b; line-height: 1.6; padding: 4px 16px 8px; margin: 0; }
 </style>

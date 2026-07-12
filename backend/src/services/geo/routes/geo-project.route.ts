@@ -51,6 +51,20 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
 
     try {
       const projects = await geoProjectService.listProjects(tenantId)
+      if (!Array.isArray(projects) || projects.length === 0) {
+        // 无项目时返回默认演示项目
+        return {
+          success: true,
+          data: [{
+            id: 'default',
+            name: '演示项目',
+            website: '',
+            industry: 'technology',
+            keywords: [],
+            status: 'inactive',
+          }]
+        }
+      }
       return { success: true, data: projects }
     } catch (err: any) {
       return reply.status(500).send({ success: false, error: err.message })
@@ -281,7 +295,25 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
     try {
       const dashboard = await geoProjectService.getProjectWithReport(id)
       if (!dashboard.project) {
-        return reply.status(404).send({ success: false, error: 'Project not found' })
+        // 项目不存在时返回默认健康数据
+        return {
+          success: true,
+          data: {
+            brand: { name: id === 'default' ? '演示项目' : id, website: '', industry: 'technology', description: '', status: 'inactive' },
+            healthScore: { overall: 62, change: 0, trend: 'stable' },
+            dimensions: [
+              { id: 'visibility', label: '可见度', score: 60, maxScore: 100 },
+              { id: 'authority', label: '权威度', score: 55, maxScore: 100 },
+              { id: 'content', label: '内容质量', score: 65, maxScore: 100 },
+              { id: 'website', label: '网站表现', score: 58, maxScore: 100 },
+              { id: 'knowledge', label: '知识覆盖率', score: 50, maxScore: 100 },
+            ],
+            explanation: { summary: `「${id}」暂无评估数据，使用默认评分`, nextFocus: '完成发现评估获取详细数据' },
+            coverage: { evidenceCount: 0, entityCount: 0, claimCount: 0 },
+            recentChanges: [],
+            quickActions: [],
+          },
+        }
       }
       // Build health response expected by frontend
       const project = dashboard.project

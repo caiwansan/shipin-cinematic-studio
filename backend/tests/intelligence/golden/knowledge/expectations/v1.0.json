@@ -1,0 +1,1280 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-07-05T10:51:11.665Z",
+  "engineVersion": "1.0",
+  "referenceDate": "2026-07-05",
+  "note": "Baseline expectations for Knowledge Intelligence Engine v1.0. Generated 2026-07-05. Scores may drift with date changes; regenerate with 'npx tsx runner/generate-expectations.ts'.",
+  "expectations": [
+    {
+      "objectId": "high-quality-1",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "high-quality-2",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "high-quality-3",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "high-quality-4",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "high-quality-5",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "moderate-quality-1",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "moderate-quality-2",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "moderate-quality-3",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "moderate-quality-4",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "moderate-quality-5",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "low-quality-1",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 83.75,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 80,
+            "label": "A"
+          },
+          "authority": {
+            "score": 90,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 80,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "low-quality-2",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 83.75,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 80,
+            "label": "A"
+          },
+          "authority": {
+            "score": 90,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 80,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "low-quality-3",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 83.75,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 80,
+            "label": "A"
+          },
+          "authority": {
+            "score": 90,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 80,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "low-quality-4",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 83.75,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 80,
+            "label": "A"
+          },
+          "authority": {
+            "score": 90,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 80,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "fresh-content-1",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "fresh-content-2",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "fresh-content-3",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "stale-content-1",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 95,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 80,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "stale-content-2",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 95,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 80,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "stale-content-3",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 95,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 80,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "authoritative-1",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "authoritative-2",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "authoritative-3",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 97.5,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 90,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "contradictory-1",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 92.5,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 90,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 80,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "Medium"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "contradictory-2",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 88.75,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 90,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 80,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "Medium"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "contradictory-3",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 83.75,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 80,
+            "label": "A"
+          },
+          "authority": {
+            "score": 90,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 80,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "no-coverage-1",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 96.25,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "no-coverage-2",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 93.75,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 90,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "edge-empty-content",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 91.25,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 85,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 90,
+            "label": "A"
+          },
+          "authority": {
+            "score": 90,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "edge-very-long-content",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 100,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 100,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-001"
+        ]
+      }
+    },
+    {
+      "objectId": "unknown-freshness",
+      "expectedInsight": {
+        "version": "1.0",
+        "quality": {
+          "score": 93.75,
+          "label": "A"
+        },
+        "assessment": {
+          "coverage": {
+            "score": 100,
+            "label": "A"
+          },
+          "freshness": {
+            "score": 75,
+            "label": "A"
+          },
+          "authority": {
+            "score": 100,
+            "label": "A"
+          },
+          "consistency": {
+            "score": 100,
+            "label": "A"
+          }
+        },
+        "recommendation": {
+          "priority": "High"
+        }
+      },
+      "expectedRuleTrace": {
+        "triggeredRuleIds": [
+          "KR-AUTHORITY-001",
+          "KR-CITATION-001",
+          "KR-CITATION-002",
+          "KR-CONSISTENCY-001",
+          "KR-COVERAGE-001",
+          "KR-FRESHNESS-002"
+        ]
+      }
+    }
+  ]
+}

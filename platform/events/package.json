@@ -1,0 +1,10 @@
+{
+  "name": "@platform/events",
+  "version": "0.0.0",
+  "main": "event-bus.js",
+  "types": "event-bus.d.ts",
+  "exports": {
+    ".": "./event-bus.js",
+    "./*": "./*"
+  }
+}

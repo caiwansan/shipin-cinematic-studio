@@ -1,0 +1,10 @@
+{
+  "name": "@platform/lifecycle",
+  "version": "0.0.0",
+  "main": "runtime-lifecycle.js",
+  "types": "runtime-lifecycle.d.ts",
+  "exports": {
+    ".": "./runtime-lifecycle.js",
+    "./*": "./*"
+  }
+}

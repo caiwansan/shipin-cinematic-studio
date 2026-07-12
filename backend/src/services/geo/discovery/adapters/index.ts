@@ -1,0 +1,5 @@
+export { PresenceAdapter } from './presence/index'
+export type { DiscoveryAdapter } from './types'
+export type { SignalMapper, SignalMapperContext } from './signal-mapper'
+export { DeepSeekSignalMapper } from './deepseek-mapper'
+export { registerMapper, getMapper, hasMapper, getMappers, initDefaultMappers } from './mapper-registry'

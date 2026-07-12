@@ -1208,6 +1208,42 @@
     </template>
 
     <!-- ===== Brand Create Modal (Edit Mode) ===== -->
+    <!-- ===== Add Knowledge Modal ===== -->
+    <div v-if="showAddKnowledge" class="brand-overview__modal-overlay" @click.self="showAddKnowledge = false">
+      <div class="brand-overview__modal">
+        <div class="brand-overview__modal-hd">
+          <h3>添加知识源</h3>
+          <button class="brand-overview__modal-close" @click="showAddKnowledge = false">✕</button>
+        </div>
+        <div class="brand-overview__modal-bd">
+          <label class="brand-overview__modal-label">知识名称</label>
+          <input
+            v-model="knowledgeForm.name"
+            class="brand-overview__modal-input"
+            placeholder="例如：品牌官网、产品介绍、新闻稿"
+          />
+          <label class="brand-overview__modal-label">内容描述</label>
+          <textarea
+            v-model="knowledgeForm.content"
+            class="brand-overview__modal-textarea"
+            rows="4"
+            placeholder="输入知识源的详细内容…"
+          />
+          <p v-if="knowledgeError" class="brand-overview__modal-error">{{ knowledgeError }}</p>
+        </div>
+        <div class="brand-overview__modal-ft">
+          <button class="brand-overview__modal-btn brand-overview__modal-btn--cancel" @click="showAddKnowledge = false">取消</button>
+          <button
+            class="brand-overview__modal-btn brand-overview__modal-btn--confirm"
+            :disabled="knowledgeSaving"
+            @click="submitKnowledge"
+          >
+            {{ knowledgeSaving ? '保存中…' : '保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <BrandCreateModal
       v-if="showEditModal"
       :project="editingProject"
@@ -1242,6 +1278,7 @@ import GeoExplainDrawer from '../components/GeoExplainDrawer/index.vue'
 import DecisionIntelligencePanel from '../components/DecisionIntelligencePanel.vue'
 import { explainService } from '../services/explainService'
 import type { ExplainResult } from '../types/explain'
+import { geoApi } from '../services/api'
 import { walkthroughService, type GuideInfo } from '../services/walkthroughService'
 
 definePageMeta({
@@ -1293,6 +1330,12 @@ const optSteps = [
   { key: 'generating', label: 'Generating recommendations...', icon: '💡', done: false },
 ]
 const optStepIndex = ref(0)
+
+// ── Knowledge Add State ──
+const showAddKnowledge = ref(false)
+const knowledgeForm = ref({ name: '', content: '' })
+const knowledgeSaving = ref(false)
+const knowledgeError = ref<string | null>(null)
 
 // ── Presence State (P0-T005) ──
 const presenceData = ref<any>(null)
@@ -2012,7 +2055,38 @@ function handleGEOAssessment() {
 
 function handleAddKnowledge() {
   if (!project.value) return
-  router.push(`/workspace/geo/knowledge?projectId=${project.value.id}`)
+  knowledgeForm.value = { name: '', content: '' }
+  knowledgeError.value = null
+  showAddKnowledge.value = true
+}
+
+async function submitKnowledge() {
+  if (!project.value || !knowledgeForm.value.name.trim()) {
+    knowledgeError.value = '请输入知识名称'
+    return
+  }
+  knowledgeSaving.value = true
+  knowledgeError.value = null
+  try {
+    const res = await geoApi.post<any>('/api/geo/knowledge', {
+      projectId: project.value.id,
+      name: knowledgeForm.value.name.trim(),
+      content: knowledgeForm.value.content.trim(),
+      type: 'entity',
+      category: '知识源',
+    })
+    if (res.data?.success) {
+      showAddKnowledge.value = false
+      // 重新加载品牌数据刷新知识源
+      loadData()
+    } else {
+      knowledgeError.value = '保存失败，请重试'
+    }
+  } catch (err: any) {
+    knowledgeError.value = err?.message || '保存失败，请重试'
+  } finally {
+    knowledgeSaving.value = false
+  }
 }
 
 async function handleQuickDiscovery() {
@@ -4296,4 +4370,50 @@ function onIssueSelected(issue: any) {
   color: #9ca3af;
   margin-left: auto;
 }
+
+/* Add Knowledge Modal */
+.brand-overview__modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+}
+.brand-overview__modal {
+  background: #fff; border-radius: 12px;
+  width: 480px; max-width: 90vw;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+.brand-overview__modal-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid #e5e7eb;
+}
+.brand-overview__modal-hd h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.brand-overview__modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #6b7280; padding: 4px; }
+.brand-overview__modal-bd { padding: 20px; }
+.brand-overview__modal-label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
+.brand-overview__modal-input {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px;
+  font-size: 14px; font-family: inherit; margin-bottom: 16px; outline: none;
+}
+.brand-overview__modal-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+.brand-overview__modal-textarea {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px;
+  font-size: 14px; font-family: inherit; outline: none;
+}
+.brand-overview__modal-textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+.brand-overview__modal-error { color: #dc2626; font-size: 13px; margin-top: 8px; }
+.brand-overview__modal-ft {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 12px 20px; border-top: 1px solid #e5e7eb;
+}
+.brand-overview__modal-btn {
+  padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
+  cursor: pointer; font-family: inherit; border: none; transition: all 0.15s;
+}
+.brand-overview__modal-btn--cancel { background: #f3f4f6; color: #374151; }
+.brand-overview__modal-btn--cancel:hover { background: #e5e7eb; }
+.brand-overview__modal-btn--confirm { background: #3b82f6; color: #fff; }
+.brand-overview__modal-btn--confirm:hover { background: #2563eb; }
+.brand-overview__modal-btn--confirm:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
