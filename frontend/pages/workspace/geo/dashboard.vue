@@ -113,8 +113,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GeoWorkspaceLayout from 'workspaces/geo/layouts/GeoWorkspaceLayout.vue'
-import { getMissionControl, type MissionControlData } from '../services/missionControlService'
-import { useGeoProjectStore } from '../stores/useGeoProjectStore'
+import { getMissionControl, type MissionControlData } from 'workspaces/geo/services/missionControlService'
+import { useGeoProjectStore } from 'workspaces/geo/stores/useGeoProjectStore'
 
 definePageMeta({ title: 'GEO 工作台' })
 
