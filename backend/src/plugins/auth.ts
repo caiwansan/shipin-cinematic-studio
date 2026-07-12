@@ -89,7 +89,9 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
           }).catch(() => {})
         }
         return // 认证通过
-      } catch {
+      } catch (err: any) {
+        const hasAuth = !!request.headers.authorization
+        console.log('[Auth.GEO] ❌ 401 url=' + url + ' hasAuth=' + hasAuth + ' prefix=' + (request.headers.authorization?.substring(0, 15) || 'none'))
         reply.status(401).send({ error: '未授权', message: '请先登录后再使用 GEO 工作台' })
         return reply
       }
