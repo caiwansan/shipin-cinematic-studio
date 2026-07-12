@@ -8,6 +8,7 @@ function maskPhone(phone: string | null | undefined): string | null {
 // 简单的内存限速（重启后重置，生产环境应用 Redis）
 const loginAttempts = new Map<string, { count: number; blockedUntil: number }>()
 
+import bcrypt from 'bcryptjs'
 import { prisma } from '../utils/index.js'
 import { authService } from '../services/auth.service.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js'
