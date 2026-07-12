@@ -198,7 +198,6 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
           '</script></body></html>')
       } else {
         // 新用户 — QQ 授权直接注册，无需绑手机号
-        const bcrypt = await import('bcryptjs')
         const crypto = await import('crypto')
         const email = `qq_${qqOpenId}@aigc.fushtn.com`
         user = await prisma.user.create({
