@@ -403,7 +403,7 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
       const highCount = actionPlans.filter((ap) => ap.priority === 'high').length
       const mediumCount = actionPlans.filter((ap) => ap.priority === 'medium').length
 
-      console.log("[QuickDiscovery] adi:", adi, "currentConfig:", JSON.stringify(currentConfig));
+      // [fixed] removed undefined adi/currentConfig reference
       return {
         success: true,
         data: {
