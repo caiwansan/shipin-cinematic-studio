@@ -1,6 +1,8 @@
 // ── Decision Intelligence Service ──
-// API client for A1.1 Issue Graph endpoints
+// ★ Fix: uses geoApi (authenticated) instead of raw fetch (no auth)
+// A1.1 — FROZEN
 
+import { geoApi } from './api'
 import type { Issue, IssueEdge, IssueGraph } from './types'
 
 export interface GraphSummary {
@@ -16,30 +18,13 @@ export interface GraphSummary {
 // Re-export for component use
 export type { Issue, IssueEdge, IssueGraph }
 
-function baseUrl(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin
-  }
-  return process.env.API_BASE || 'https://aigc.fushtn.com'
-}
-
 /**
  * Fetch or generate the issue graph for a brand.
- * POST to generate (fresh), GET returns cached.
  */
 export async function fetchIssueGraph(brandId: string): Promise<IssueGraph> {
-  const res = await fetch(`${baseUrl()}/api/geo/recommendation/issues`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ brandId }),
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Failed to generate issue graph: ${res.status} ${text.slice(0, 100)}`)
-  }
-  const json = await res.json()
-  if (!json.success) throw new Error(json.error || 'Unknown error')
-  return json.data
+  const res = await geoApi.post<{ success: boolean; data: IssueGraph }>('/recommendation/issues', { brandId })
+  if (!res.data.success) throw new Error((res.data as any).error || 'Unknown error')
+  return res.data.data
 }
 
 /**
@@ -47,11 +32,9 @@ export async function fetchIssueGraph(brandId: string): Promise<IssueGraph> {
  */
 export async function getCachedIssueGraph(brandId: string): Promise<IssueGraph | null> {
   try {
-    const res = await fetch(`${baseUrl()}/api/geo/recommendation/issues/${encodeURIComponent(brandId)}`)
-    if (!res.ok) return null
-    const json = await res.json()
-    if (!json.success) return null
-    return json.data
+    const res = await geoApi.get<{ success: boolean; data: IssueGraph }>(`/recommendation/issues/${encodeURIComponent(brandId)}`)
+    if (!res.data.success) return null
+    return res.data.data
   } catch {
     return null
   }
@@ -64,11 +47,9 @@ export async function getIssueDependencies(
   brandId: string,
   issueId: string
 ): Promise<IssueEdge[]> {
-  const res = await fetch(
-    `${baseUrl()}/api/geo/recommendation/issues/${encodeURIComponent(brandId)}/${encodeURIComponent(issueId)}/dependencies`
+  const res = await geoApi.get<{ success: boolean; data: IssueEdge[] }>(
+    `/recommendation/issues/${encodeURIComponent(brandId)}/${encodeURIComponent(issueId)}/dependencies`
   )
-  if (!res.ok) throw new Error(`Failed to get dependencies: ${res.status}`)
-  const json = await res.json()
-  if (!json.success) throw new Error(json.error || 'Unknown error')
-  return json.data
+  if (!res.data.success) throw new Error((res.data as any).error || 'Unknown error')
+  return res.data.data
 }

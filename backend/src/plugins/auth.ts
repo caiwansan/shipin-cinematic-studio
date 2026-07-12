@@ -22,6 +22,9 @@ const GEO_REQUIRED_PREFIXES = [
   '/api/geo/',
 ]
 
+// GEO 路由白名单 — 不需要 JWT 认证（目前没有公开端点，保留扩展）
+const GEO_PUBLIC_PATHS: string[] = []
+
 export default fp(async function authPlugin(fastify: FastifyInstance) {
   fastify.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
     try {
