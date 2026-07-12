@@ -244,15 +244,15 @@ export const geoProjectService = {
   /**
    * Soft-delete a project.
    */
+  /**
+   * P0-7: Delete project via ProjectLifecycleService
+   *
+   * 所有生命周期逻辑统一委托给 ProjectLifecycleService。
+   * 这里不再维护任何删除逻辑。
+   */
   async deleteProject(id: string): Promise<boolean> {
-    const existing = await geoProjectRepository.findUnique({ where: { id } })
-    if (!existing || existing.deletedAt) return false
-
-    await geoProjectRepository.update(
-      { id },
-      { deletedAt: new Date() }
-    )
-    return true
+    const { deleteProject } = await import('./project-lifecycle.service.js')
+    return deleteProject(id)
   },
 
   /**
