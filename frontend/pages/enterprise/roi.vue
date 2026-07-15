@@ -8,6 +8,16 @@
     </div>
 
     <div class="max-w-6xl mx-auto p-6 space-y-6">
+      <!-- 来源指示器 -->
+      <div v-if="sourceFrom" class="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 flex items-center gap-3">
+        <span class="text-blue-400 text-sm">📊</span>
+        <div class="flex-1 text-xs">
+          <span class="text-blue-300 font-medium">数据来源：{{ sourceFrom.label }}</span>
+          <span class="text-gray-400 ml-2">{{ sourceFrom.detail }}</span>
+        </div>
+        <NuxtLink to="/enterprise/approval" class="text-xs text-gray-400 hover:text-blue-400 transition">← 返回审批中心</NuxtLink>
+      </div>
+
       <!-- 三分离展示 -->
       <div class="grid grid-cols-3 gap-4">
         <!-- 投入 -->
@@ -108,6 +118,7 @@
 </template>
 
 <script setup>
+const route = useRoute()
 const roi = ref({})
 const channels = ref([])
 const platformLabels = {
@@ -116,6 +127,14 @@ const platformLabels = {
   xiaohongshu: '小红书',
   kuaishou: '快手'
 }
+
+// 跨页面来源
+const sourceFrom = computed(() => {
+  if (route.query.source === 'approval') {
+    return { label: '审批中心', detail: '审批通过后的渠道发布效果' }
+  }
+  return null
+})
 
 async function loadROI() {
   try {

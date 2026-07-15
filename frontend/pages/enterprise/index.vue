@@ -150,10 +150,38 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════
-    快速入口
+    行动闭环入口
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="section flow-section">
+      <h2>⚡ 增长行动流</h2>
+      <div class="flow-row">
+        <NuxtLink to="/enterprise/leads" class="flow-node">
+          <span class="flow-icon">🎯</span>
+          <span class="flow-label">发现商机</span>
+        </NuxtLink>
+        <span class="flow-arrow">→</span>
+        <NuxtLink to="/enterprise/tasks" class="flow-node">
+          <span class="flow-icon">📋</span>
+          <span class="flow-label">创建任务</span>
+        </NuxtLink>
+        <span class="flow-arrow">→</span>
+        <NuxtLink to="/enterprise/approval" class="flow-node">
+          <span class="flow-icon">✅</span>
+          <span class="flow-label">CEO审批</span>
+        </NuxtLink>
+        <span class="flow-arrow">→</span>
+        <NuxtLink to="/enterprise/roi" class="flow-node">
+          <span class="flow-icon">💰</span>
+          <span class="flow-label">增长收益</span>
+        </NuxtLink>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+    模块入口
     ═══════════════════════════════════════════════════════════ -->
     <div class="section quick-actions">
-      <h2>快捷入口</h2>
+      <h2>模块入口</h2>
       <div class="action-grid">
         <NuxtLink to="/enterprise/leads" class="action-card lead-action">
           <span class="action-title">🎯 商机洞察</span>
@@ -642,6 +670,40 @@ onMounted(() => {
 /* ── Loading ── */
 .loading-overlay { text-align: center; padding: 40px; color: #6B7280; }
 
+/* ── Flow ── */
+.flow-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #0D1328 0%, #0A1A2A 50%, #0D1328 100%);
+  border: 1px solid #1A2240;
+  border-radius: 12px;
+  overflow-x: auto;
+}
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  background: #060A18;
+  border: 1px solid #1A2240;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #D1D5DB;
+  transition: all 0.2s;
+  min-width: 90px;
+}
+.flow-node:hover {
+  border-color: #3B82F6;
+  transform: translateY(-2px);
+  color: #fff;
+}
+.flow-icon { font-size: 20px; }
+.flow-label { font-size: 11px; white-space: nowrap; }
+.flow-arrow { color: #4B5563; font-size: 14px; flex-shrink: 0; }
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .value-grid { grid-template-columns: repeat(2, 1fr); }
@@ -649,5 +711,6 @@ onMounted(() => {
   .channel-matrix { grid-template-columns: repeat(2, 1fr); }
   .action-grid { grid-template-columns: repeat(2, 1fr); }
   .employee-grid { grid-template-columns: 1fr; }
+  .flow-row { flex-wrap: wrap; }
 }
 </style>

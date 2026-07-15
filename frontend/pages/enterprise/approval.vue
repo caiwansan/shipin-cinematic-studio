@@ -13,6 +13,18 @@
     </div>
 
     <div class="max-w-6xl mx-auto p-6 space-y-6">
+      <!-- 行动流概览 -->
+      <div class="bg-gradient-to-r from-[#0D1328] to-[#0A1A2A] border border-[#1A2240] rounded-xl p-4">
+        <div class="flex items-center gap-3 text-xs text-gray-400">
+          <span class="text-green-400 font-medium">💡 审批是决策节点</span>
+          <span class="text-gray-600">→</span>
+          <span>批准的内容进入渠道发布</span>
+          <span class="text-gray-600">→</span>
+          <span>效果回流至</span>
+          <NuxtLink to="/enterprise/roi" class="text-blue-400 hover:text-blue-300 underline">增长收益</NuxtLink>
+        </div>
+      </div>
+
       <!-- 统计面板 -->
       <div class="grid grid-cols-5 gap-3">
         <div class="bg-[#0D1328] border border-[#1A2240] rounded-xl p-4">
@@ -35,6 +47,18 @@
           <div class="text-gray-400 text-xs mb-1">平均评分</div>
           <div class="text-2xl font-bold text-blue-400">{{ stats.avgScore || 0 }}</div>
         </div>
+      </div>
+
+      <!-- 审批后行动闭环 -->
+      <div v-if="lastAction?.type === 'approve'" class="bg-green-500/5 border border-green-500/20 rounded-xl p-4 flex items-center gap-3">
+        <span class="text-green-400 text-lg">✓</span>
+        <div class="flex-1">
+          <div class="text-sm text-green-300 font-medium">已批准发布</div>
+          <div class="text-xs text-gray-400 mt-0.5">内容已进入渠道发布队列，效果将回流至增长收益</div>
+        </div>
+        <NuxtLink to="/enterprise/roi?source=approval" class="bg-green-500/10 hover:bg-green-500/20 text-green-400 text-xs px-3 py-1.5 rounded-lg transition">
+          📈 查看增长收益 →
+        </NuxtLink>
       </div>
 
       <!-- 类型筛选 -->
@@ -76,6 +100,7 @@
 const items = ref([])
 const stats = ref({})
 const filterStatus = ref('')
+const lastAction = ref(null) // { type: 'approve'|'reject'|'revision', itemId, contentId }
 
 const filters = [
   { value: '', label: '全部' },
@@ -114,6 +139,7 @@ async function handleApprove(id) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note: '批准发布' })
     })
+    lastAction.value = { type: 'approve', itemId: id }
     await loadList()
     await loadStats()
   } catch (e) { console.error(e) }

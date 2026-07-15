@@ -77,6 +77,21 @@
           <div class="mt-2 text-xs text-gray-500">
             建议: {{ lead.nextAction }}
           </div>
+          <!-- 行动按钮：高意向线索可创建跟进任务 -->
+          <div v-if="lead.temperature === 'hot' || lead.temperature === 'customer'" class="mt-3 flex gap-2">
+            <NuxtLink
+              :to="`/enterprise/tasks?source=leads&customer=${encodeURIComponent(lead.customerName || '')}&platform=${lead.platform}&action=跟进`"
+              class="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-xs px-3 py-1.5 rounded-lg transition"
+            >
+              📋 创建跟进任务
+            </NuxtLink>
+            <NuxtLink
+              :to="`/enterprise/leads/${lead.id}`"
+              class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs px-3 py-1.5 rounded-lg transition"
+            >
+              📊 查看详情
+            </NuxtLink>
+          </div>
           <!-- 证据链 -->
           <div v-if="lead.intentSignalsParsed?.length > 0" class="mt-2 flex flex-wrap gap-1">
             <span v-for="(sig, i) in lead.intentSignalsParsed.slice(0, 3)" :key="i" class="text-[10px] bg-blue-500/10 text-blue-300 px-1.5 py-0.5 rounded">

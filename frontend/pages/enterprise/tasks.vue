@@ -16,6 +16,16 @@
     </div>
 
     <div class="max-w-6xl mx-auto p-6 space-y-6">
+      <!-- 跨页面来源标识：从商机洞察跳转过来 -->
+      <div v-if="sourceFrom" class="bg-orange-500/5 border border-orange-500/20 rounded-xl p-3 flex items-center gap-3">
+        <span class="text-orange-400 text-sm">📌</span>
+        <div class="flex-1 text-xs">
+          <span class="text-orange-300 font-medium">来源：{{ sourceFrom.label }}</span>
+          <span class="text-gray-400 ml-2">{{ sourceFrom.customer }} · {{ sourceFrom.platform }}渠道 {{ sourceFrom.action }}</span>
+        </div>
+        <NuxtLink to="/enterprise/leads" class="text-xs text-gray-400 hover:text-orange-400 transition">← 返回商机洞察</NuxtLink>
+      </div>
+
       <!-- 今日概览 -->
       <div class="grid grid-cols-4 gap-4">
         <div class="bg-[#0D1328] border border-[#1A2240] rounded-xl p-4">
@@ -128,12 +138,35 @@
 </template>
 
 <script setup>
+const route = useRoute()
 const newTaskContent = ref('')
 const creating = ref(false)
 const showCreateModal = ref(false)
 const lastPlan = ref(null)
 const allCommands = ref([])
 const stats = ref({})
+
+// 跨页面来源（商机洞察 → 创建跟进任务）
+const sourceFrom = computed(() => {
+  const source = route.query.source
+  const customer = route.query.customer
+  const platform = route.query.platform
+  const action = route.query.action
+  if (source === 'leads' && customer) {
+    return { label: '商机洞察', customer, platform: platform || '未知', action: action || '跟进' }
+  }
+  return null
+})
+
+// 自动填充初始内容
+onMounted(() => {
+  loadCommands()
+  loadStats()
+  if (sourceFrom.value) {
+    const s = sourceFrom.value
+    newTaskContent.value = `跟进${s.customer} - ${s.platform}渠道高意向用户，准备销售材料和接触方案`
+  }
+})
 
 const agentNames = {
   growth_director: '🧠 AI增长总监',
@@ -214,8 +247,4 @@ function formatTime(ts) {
   return d.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-onMounted(() => {
-  loadCommands()
-  loadStats()
-})
 </script>
