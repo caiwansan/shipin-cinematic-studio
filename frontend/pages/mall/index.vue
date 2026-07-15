@@ -67,8 +67,8 @@
               <h3 class="text-xl md:text-2xl font-bold text-white">{{ p.name }}</h3>
               <p class="text-xs text-gray-500 mt-1">{{ p.description || '精选好物，品质保证' }}</p>
               <div class="mt-3 flex items-center justify-center md:justify-start gap-3">
-                <span class="text-2xl md:text-3xl font-extrabold text-red-400">¥{{ p.price.toFixed(2) }}</span>
-                <span v-if="p.originalPrice && p.originalPrice > p.price" class="text-sm text-gray-500 line-through">¥{{ p.originalPrice.toFixed(2) }}</span>
+                <span class="text-2xl md:text-3xl font-extrabold text-red-400">¥{{ Number(p.price).toFixed(2) }}</span>
+                <span v-if="p.originalPrice && Number(p.originalPrice) > Number(p.price)" class="text-sm text-gray-500 line-through">¥{{ Number(p.originalPrice).toFixed(2) }}</span>
               </div>
               <NuxtLink :to="`/mall/product/${p.id}`"
                 class="inline-block mt-4 px-6 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white text-sm font-medium rounded-lg transition shadow-lg shadow-indigo-600/20">
@@ -95,12 +95,12 @@
         <div class="flex transition-transform duration-500 ease-in-out h-full" :style="{ transform: `translateX(-${currentBanner * 100}%)` }">
           <div v-for="(b, i) in banners" :key="b.id || i" class="w-full h-full shrink-0 flex items-center justify-center">
             <a v-if="b.linkType === 'product' && b.linkValue" :href="`/mall/product/${b.linkValue}`" class="w-full h-full">
-              <img :src="b.imageUrl" :alt="'Banner ' + (i + 1)" class="w-full h-full object-cover" />
+              <img :src="b.image || b.imageUrl" :alt="'Banner ' + (i + 1)" class="w-full h-full object-cover" />
             </a>
             <a v-else-if="b.linkType === 'url' && b.linkValue" :href="b.linkValue" target="_blank" class="w-full h-full">
-              <img :src="b.imageUrl" :alt="'Banner ' + (i + 1)" class="w-full h-full object-cover" />
+              <img :src="b.image || b.imageUrl" :alt="'Banner ' + (i + 1)" class="w-full h-full object-cover" />
             </a>
-            <img v-else :src="b.imageUrl" :alt="'Banner ' + (i + 1)" class="w-full h-full object-cover cursor-default" />
+            <img v-else :src="b.image || b.imageUrl" :alt="'Banner ' + (i + 1)" class="w-full h-full object-cover cursor-default" />
           </div>
         </div>
         <!-- 指示器 -->
@@ -132,7 +132,7 @@
               <div class="p-3">
                 <h3 class="text-sm font-medium text-white truncate">{{ p.name }}</h3>
                 <div class="mt-2 flex items-center justify-between">
-                  <span class="text-base font-bold text-red-400">¥{{ p.price.toFixed(2) }}</span>
+                  <span class="text-base font-bold text-red-400">¥{{ Number(p.price).toFixed(2) }}</span>
                   <span class="text-xs bg-indigo-600/20 text-indigo-400 px-2 py-0.5 rounded">立即购买</span>
                 </div>
               </div>
@@ -208,8 +208,8 @@
                 <h3 class="text-sm font-medium text-white truncate">{{ p.name }}</h3>
                 <div class="text-xs text-gray-500 truncate mt-0.5">{{ p.subtitle || '' }}</div>
                 <div class="mt-2 flex items-baseline gap-1.5">
-                  <span class="text-base font-bold text-red-400">¥{{ p.price.toFixed(2) }}</span>
-                  <span v-if="p.originalPrice > p.price" class="text-xs text-gray-500 line-through">¥{{ p.originalPrice.toFixed(2) }}</span>
+                  <span class="text-base font-bold text-red-400">¥{{ Number(p.price).toFixed(2) }}</span>
+                  <span v-if="Number(p.originalPrice) > Number(p.price)" class="text-xs text-gray-500 line-through">¥{{ Number(p.originalPrice).toFixed(2) }}</span>
                 </div>
                 <div class="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
                   <span>已售 {{ p.sales || 0 }}</span>

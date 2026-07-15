@@ -172,7 +172,7 @@
         </NuxtLink>
         <NuxtLink to="/enterprise/roi" class="action-card roi-action">
           <span class="action-title">💰 增长收益</span>
-          <span class="action-desc">ROI三分离全景分析</span>
+          <span class="action-desc">投入产出比全景分析</span>
           <span class="action-arrow">→</span>
         </NuxtLink>
       </div>

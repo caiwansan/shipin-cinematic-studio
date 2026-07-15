@@ -68,6 +68,33 @@ export interface ScanHistoryItem {
   estimatedSeconds?: number
 }
 
+// ═══════════════════════════════════════
+// Phase 2 — New Runtime scan types
+// ═══════════════════════════════════════
+
+export interface ScanJobResult {
+  scanJobId: string
+  scanId: string
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED'
+  overallScore?: number
+  error?: string
+}
+
+export interface ScanDetail {
+  scanJobId: string
+  scanId: string
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+  overallScore?: number
+  entityName?: string
+  summary?: string
+  error?: string
+  createdAt?: string
+  updatedAt?: string
+  report?: any
+}
+
+export type ScanStatus = 'IDLE' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+
 // ==============================
 // Projects
 // ==============================
@@ -106,7 +133,7 @@ export async function createProject(input: CreateProjectInput): Promise<ProjectI
 }
 
 // ==============================
-// Scans
+// Scans (old)
 // ==============================
 
 /** 触发扫描 */
@@ -123,8 +150,6 @@ export async function fetchScanResult(projectId: string, scanId: string): Promis
   const raw = await geoApi<{ success: boolean; data: any }>(`/projects/${projectId}/scans/${scanId}`)
   const data = raw.data
 
-  // 后端返回的 dimensions 是 { visibility: {score, explanation}, ... } 对象格式
-  // 前端需要 Array<{id, label, score, maxScore, description}> 数组格式
   const dimMap: Record<string, { label: string; maxScore: number }> = {
     visibility: { label: '可见度', maxScore: 100 },
     accuracy: { label: '准确性', maxScore: 100 },
@@ -169,10 +194,57 @@ export async function applyOptimization(projectId: string, scanId: string): Prom
   return raw.success
 }
 
-/** 解析扫描历史列表（从项目详情中获取） */
+/** 解析扫描历史列表 */
 export async function fetchScanHistory(projectId: string): Promise<ScanHistoryItem[]> {
   const project = await fetchProject(projectId)
-  // If the project has a scans list embedded, use it
-  // Otherwise, scan history will be managed by the store
   return []
+}
+
+// ═══════════════════════════════════════
+// Phase 2 — New Runtime scan functions
+// ═══════════════════════════════════════
+
+/** 启动品牌扫描（Phase 2 — 返回 scanJobId） */
+export async function startScan(projectId: string): Promise<ScanJobResult> {
+  const res = await geoApi<{ success: boolean; data: ScanJobResult }>(
+    `/projects/${projectId}/scan`,
+    { method: 'POST' }
+  )
+  return res.data
+}
+
+/** 获取项目最新扫描结果 */
+export async function getLatestScan(projectId: string): Promise<ScanDetail | null> {
+  try {
+    const res = await geoApi<{ success: boolean; data: ScanDetail[] }>(
+      `/projects/${projectId}/scans`,
+      { method: 'GET' }
+    )
+    const scans = res.data || []
+    if (scans.length === 0) return null
+    const latest = scans[0]
+    return {
+      scanJobId: latest.scanJobId || latest.scanId,
+      scanId: latest.scanId,
+      status: latest.status as any,
+      overallScore: latest.overallScore,
+      entityName: latest.entityName,
+      summary: latest.summary,
+      error: latest.error,
+      createdAt: latest.createdAt,
+      updatedAt: latest.updatedAt,
+      report: latest.report,
+    }
+  } catch {
+    return null
+  }
+}
+
+/** 获取指定扫描任务状态 */
+export async function getScanStatus(projectId: string, scanId: string): Promise<ScanDetail> {
+  const res = await geoApi<{ success: boolean; data: ScanDetail }>(
+    `/projects/${projectId}/scans/${scanId}`,
+    { method: 'GET' }
+  )
+  return res.data
 }

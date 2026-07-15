@@ -45,8 +45,9 @@ export { listProviders, getProvider, listModels, verifyProvider, connectProvider
 export { default as storageGateway, get, set, remove, getAuthToken, setAuthToken, getProviderMap, setProviderMap, storageDiagnostics, STORAGE_KEYS } from '../utils/storage-gateway';
 export { default as tokenCache, getToken, setToken, getUser, setUser, clearAuth, isAuthenticated } from '../utils/token-cache';
 export { useAuthStore } from '../stores/auth';
+export { useGeoWorkspaceStore, GEOStage, GEOProjectInfo, GEOWorkflowState, GEOWorkspaceContext } from '../stores/geoWorkspace.store';
 export { Project } from '../stores/project';
 export { PROJECT_TYPE_LABELS, PROJECT_TYPE_ICONS, useProjectStore, ProjectType, ProjectStatus, ProjectCharacter, CharacterMemory, EpisodeData, SceneData, ShotData, CostumeConfig, DirectorDecision, WorkflowState, WorkflowStep, AgentState, ProjectInfo } from '../stores/projectStore';
 export { useWorkbenchStore } from '../stores/workbench';
-export { defineStore, acceptHMRUpdate, usePinia, storeToRefs } from '../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.35_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables';
-export { definePageMeta } from '../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_cac@6.7.14_db0@0.3.4_ioredis@5.10.1_magicast@0.5.3_ro_c1459088cb193865da7a4ed5a3a03886/node_modules/nuxt/dist/pages/runtime/composables';
+export { defineStore, acceptHMRUpdate, usePinia, storeToRefs } from '../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables';
+export { definePageMeta } from '../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/pages/runtime/composables';

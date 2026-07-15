@@ -31,6 +31,9 @@
       <SceneErrorBoundary name="CreatorVoicesScene" min-height="40vh">
         <CreatorVoicesScene />
       </SceneErrorBoundary>
+      <SceneErrorBoundary name="EnterpriseGrowthScene" min-height="50vh">
+        <EnterpriseGrowthBanner />
+      </SceneErrorBoundary>
       <SceneErrorBoundary name="FinalCTAScene" min-height="40vh">
         <FinalCTAScene />
       </SceneErrorBoundary>

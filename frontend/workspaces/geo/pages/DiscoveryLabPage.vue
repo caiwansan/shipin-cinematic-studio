@@ -1,15 +1,9 @@
 <!--
-  DiscoveryLabPage.vue — AI Discovery Lab
+  DiscoveryLabPage.vue — AI Discovery Lab (Runtime Edition)
 
-  P0-T005 — AI Discovery Lab MVP
-  P0-T006 — Opportunity Engine (First Edition) — 升级 Opportunity 展示
-
-  Features:
-    1. Entity input + search
-    2. ADI large card with 3 sub-dimensions (Coverage / Share / Position)
-    3. Scenario Coverage table
-    4. High-priority opportunities list — 带 Expected ADI Gain / Reason / Suggestion / Effort
-    5. Top 5 scenarios comparison
+  Phase 2 — Workflow-driven scan orchestration.
+  No manual entity input. No mockScanner.
+  All scan logic driven by POST /api/v1/geo/projects/:id/scan
 -->
 <template>
   <div class="discovery-lab">
@@ -25,51 +19,77 @@
       </div>
       <h1 class="discovery-lab__title">AI Discovery Lab</h1>
       <p class="discovery-lab__subtitle">
-        Evaluate how your entity performs across demand scenarios
+        Run AI-powered brand intelligence scan
       </p>
     </header>
 
-    <!-- Search Section -->
-    <section class="discovery-lab__search">
-      <div class="discovery-lab__search-inner">
-        <input
-          v-model="entityInput"
-          type="text"
-          class="discovery-lab__input"
-          placeholder="输入实体名称，如：昆仑镜AI、特斯拉、Nike..."
-          @keyup.enter="search"
-          @keydown.escape="entityInput = ''"
-          :disabled="store.isLoading"
-          aria-label="Entity name input"
-        />
-        <button
-          class="discovery-lab__search-btn"
-          :disabled="store.isLoading || !entityInput.trim()"
-          @click="search"
-        >
-          <span v-if="store.isLoading" class="discovery-lab__spinner">⟳</span>
-          <span v-else>🔍 发现扫描</span>
-        </button>
+    <!-- No Project Error -->
+    <section v-if="!geoWorkspace.currentProjectId" class="discovery-lab__empty">
+      <div class="discovery-lab__empty-card">
+        <p class="discovery-lab__empty-icon">⚠️</p>
+        <p class="discovery-lab__empty-title">未选择项目</p>
+        <p class="discovery-lab__empty-desc">请先在品牌工作台中选择或创建一个品牌项目。</p>
+        <NuxtLink to="/workspace/geo/dashboard" class="discovery-lab__action-btn">返回工作台</NuxtLink>
       </div>
-      <p v-if="store.error" class="discovery-lab__error">{{ store.error }}</p>
     </section>
 
-    <!-- Loading State -->
-    <section v-if="store.isLoading" class="discovery-lab__loading">
+    <!-- Scan Control Bar -->
+    <section v-else class="discovery-lab__scan-control">
+      <div class="discovery-lab__scan-status">
+        <div class="discovery-lab__scan-status-icon">
+          <span v-if="scanStatus==='RUNNING'" class="discovery-lab__spinner-lg" style="font-size:28px">⟳</span>
+          <span v-else-if="scanStatus==='COMPLETED'" style="font-size:28px">✅</span>
+          <span v-else-if="scanStatus==='FAILED'" style="font-size:28px">❌</span>
+          <span v-else style="font-size:28px">🔍</span>
+        </div>
+        <div class="discovery-lab__scan-status-info">
+          <h3 class="discovery-lab__scan-status-title">{{ scanStatusLabel }}</h3>
+          <p class="discovery-lab__scan-status-desc">{{ scanStatusDesc }}</p>
+          <p v-if="brandName" class="discovery-lab__scan-brand-name">品牌：{{ brandName }}</p>
+        </div>
+      </div>
+      <div class="discovery-lab__scan-actions">
+        <button
+          v-if="canStartScan"
+          class="discovery-lab__scan-start-btn"
+          :disabled="scanStarting"
+          @click="handleStartScan"
+        >
+          <span v-if="scanStarting" class="discovery-lab__spinner">⟳</span>
+          <span v-else>🚀 开始品牌发现</span>
+        </button>
+        <button
+          v-if="scanStatus==='COMPLETED'||scanStatus==='FAILED'"
+          class="discovery-lab__scan-start-btn discovery-lab__scan-start-btn--secondary"
+          :disabled="scanStarting"
+          @click="handleStartScan"
+        >🔄 重新扫描</button>
+      </div>
+    </section>
+
+    <!-- Error Banner -->
+    <section v-if="scanError" class="discovery-lab__error-section">
+      <p class="discovery-lab__error">{{ scanError }}</p>
+    </section>
+
+    <!-- Running State -->
+    <section v-if="scanStatus==='RUNNING'" class="discovery-lab__loading">
       <div class="discovery-lab__loading-card">
         <div class="discovery-lab__spinner-lg">⟳</div>
-        <p>正在对「{{ entityInput }}」进行发现扫描...</p>
-        <p class="discovery-lab__loading-hint">SIE 场景匹配 → Mock 发现扫描 → ADI 评估 → Opportunity 分析</p>
+        <p>发现扫描进行中...</p>
+        <p class="discovery-lab__loading-hint">AI 模型并行扫描 → ADI 评估 → 品牌快照创建</p>
       </div>
     </section>
 
-    <!-- Empty State -->
-    <section v-if="!store.hasData && !store.isLoading" class="discovery-lab__empty">
+    <!-- IDLE / Empty State -->
+    <section v-if="scanStatus==='IDLE'&&!store.hasData" class="discovery-lab__empty">
       <div class="discovery-lab__empty-card">
         <p class="discovery-lab__empty-icon">🔬</p>
-        <p class="discovery-lab__empty-title">开始你的第一次发现扫描</p>
+        <p class="discovery-lab__empty-title">尚未运行品牌发现</p>
         <p class="discovery-lab__empty-desc">
-          输入一个品牌、产品或概念的名称，系统将通过 Scenario Intelligence Engine (SIE) 匹配相关需求场景，并模拟 AI 发现扫描过程，生成完整的发现评估报告。
+          点击「开始品牌发现」按钮，系统将通过 AI 多模型并行扫描
+          （ChatGPT / Grok / Claude / Gemini / DeepSeek）评估品牌可见度与认知覆盖，
+          生成完整的品牌发现评估报告。
         </p>
       </div>
     </section>
@@ -325,18 +345,27 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useDiscoveryStore } from '../stores/useDiscoveryStore'
+import { useGeoWorkspaceStore } from '~/stores/geoWorkspace.store'
 import GeoWalkthroughBar from '../components/GeoWalkthroughBar.vue'
 import GeoExplainButton from '../components/GeoExplainButton.vue'
 import GeoExplainDrawer from '../components/GeoExplainDrawer/index.vue'
 import { explainService } from '../services/explainService'
 import type { ExplainResult } from '../types/explain'
 import { walkthroughService, type GuideInfo } from '../services/walkthroughService'
+import { startScan, getLatestScan, getScanStatus } from '../services/scanService'
+import type { ScanStatus } from '../services/scanService'
 
 const store = useDiscoveryStore()
-const entityInput = ref('')
+const geoWorkspace = useGeoWorkspaceStore()
 const activeGuide = ref<GuideInfo | null>(null)
 
-// ── Explain Drawer State (RC1-T004) ──
+// ===== Scan State (Phase 2 — Runtime) =====
+const scanStatus = ref<ScanStatus>('IDLE')
+const scanStarting = ref(false)
+const scanError = ref<string | null>(null)
+const brandName = ref<string | null>(null)
+
+// ===== Explain Drawer State =====
 const explainDrawerVisible = ref(false)
 const explainDrawerLoading = ref(false)
 const explainDrawerError = ref<string | null>(null)
@@ -363,6 +392,86 @@ function closeExplainDrawer() {
   explainDrawerError.value = null
 }
 
+// ===== Computed: Scan Status Labels =====
+const scanStatusLabel = computed(() => {
+  switch (scanStatus.value) {
+    case 'IDLE': return '待扫描'
+    case 'RUNNING': return '发现扫描进行中'
+    case 'COMPLETED': return '发现扫描已完成'
+    case 'FAILED': return '发现扫描失败'
+    default: return '未知状态'
+  }
+})
+
+const scanStatusDesc = computed(() => {
+  if (scanStatus.value === 'IDLE' && geoWorkspace.workflowStage === 'CREATED') {
+    return '品牌已创建，等待执行首次发现扫描'
+  }
+  if (scanStatus.value === 'IDLE') return '点击下方按钮开始发现扫描'
+  if (scanStatus.value === 'RUNNING') return '系统正在执行 AI 发现扫描，请稍候...'
+  if (scanStatus.value === 'COMPLETED') return '品牌发现评估已完成，以下为详细报告'
+  if (scanStatus.value === 'FAILED') return scanError.value || '扫描过程中发生错误'
+  return ''
+})
+
+const canStartScan = computed(() => {
+  return geoWorkspace.availableActions.includes('START_SCAN') && scanStatus.value !== 'RUNNING'
+})
+
+// ===== Scan Handlers =====
+async function handleStartScan() {
+  const projectId = geoWorkspace.currentProjectId
+  if (!projectId) {
+    scanError.value = '未选择项目，无法启动扫描'
+    return
+  }
+
+  scanStarting.value = true
+  scanError.value = null
+  scanStatus.value = 'RUNNING'
+
+  try {
+    const result = await startScan(projectId)
+    await pollScanResult(projectId, result.scanId)
+  } catch (err: any) {
+    scanStatus.value = 'FAILED'
+    scanError.value = err?.message || '启动扫描失败'
+  } finally {
+    scanStarting.value = false
+    await geoWorkspace.refreshWorkflow()
+  }
+}
+
+async function pollScanResult(projectId: string, scanId: string) {
+  let attempts = 0
+  const maxAttempts = 60 // 60 * 5s = 5 min
+
+  while (attempts < maxAttempts) {
+    await new Promise((r) => setTimeout(r, 5000))
+    attempts++
+
+    try {
+      const detail = await getScanStatus(projectId, scanId)
+      if (detail.status === 'COMPLETED') {
+        scanStatus.value = 'COMPLETED'
+        return
+      }
+      if (detail.status === 'FAILED') {
+        scanStatus.value = 'FAILED'
+        scanError.value = detail.error || '扫描失败'
+        return
+      }
+      // Still RUNNING — continue
+    } catch {
+      // Status API not yet available
+    }
+  }
+
+  scanStatus.value = 'FAILED'
+  scanError.value = '扫描超时，请稍后重试'
+}
+
+// ===== Lifecycle =====
 onMounted(async () => {
   try {
     const state = await walkthroughService.getState()
@@ -372,8 +481,26 @@ onMounted(async () => {
   } catch {
     // Silent fail
   }
+
+  if (geoWorkspace.currentProjectId) {
+    const latest = await getLatestScan(geoWorkspace.currentProjectId)
+    if (latest) {
+      if (latest.status === 'COMPLETED') scanStatus.value = 'COMPLETED'
+      else if (latest.status === 'FAILED') {
+        scanStatus.value = 'FAILED'
+        scanError.value = latest.error || null
+      } else if (['RUNNING', 'PENDING'].includes(latest.status)) {
+        scanStatus.value = 'RUNNING'
+        await pollScanResult(geoWorkspace.currentProjectId!, latest.scanId)
+      }
+    }
+    if (geoWorkspace.currentProject?.name) {
+      brandName.value = geoWorkspace.currentProject.name
+    }
+  }
 })
 
+// ===== Computed: Report Helpers (preserved from previous) =====
 const sortedScenarios = computed(() => {
   if (!store.report) return []
   return [...store.report.scenarios].sort((a, b) => b.coverageScore - a.coverageScore)
@@ -413,10 +540,6 @@ const dimensions = computed(() => {
     { id: 'position', label: 'Position Score', value: d.position, color: '#f59e0b' },
   ]
 })
-
-function search() {
-  store.evaluateEntity(entityInput.value)
-}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('zh-CN', {
@@ -502,42 +625,56 @@ function effortClass(effort: string): string {
   margin: 0;
 }
 
-/* ===== Search ===== */
-.discovery-lab__search {
+/* ===== Scan Control ===== */
+.discovery-lab__scan-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 24px;
   margin-bottom: 24px;
+  gap: 16px;
 }
 
-.discovery-lab__search-inner {
+.discovery-lab__scan-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.discovery-lab__scan-status-icon { flex-shrink: 0; }
+.discovery-lab__scan-status-info { flex: 1; }
+
+.discovery-lab__scan-status-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+}
+
+.discovery-lab__scan-status-desc {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.discovery-lab__scan-brand-name {
+  font-size: 13px;
+  color: #3b82f6;
+  margin: 4px 0 0;
+  font-weight: 500;
+}
+
+.discovery-lab__scan-actions {
   display: flex;
   gap: 12px;
-  align-items: center;
+  flex-shrink: 0;
 }
 
-.discovery-lab__input {
-  flex: 1;
-  height: 48px;
-  padding: 0 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  font-size: 15px;
-  color: #111827;
-  background: #fff;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  outline: none;
-}
-
-.discovery-lab__input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-.discovery-lab__input:disabled {
-  background: #f9fafb;
-  color: #9ca3af;
-}
-
-.discovery-lab__search-btn {
-  height: 48px;
+.discovery-lab__scan-start-btn {
+  height: 44px;
   padding: 0 24px;
   border: none;
   border-radius: 10px;
@@ -549,20 +686,27 @@ function effortClass(effort: string): string {
   transition: background 0.15s;
   white-space: nowrap;
 }
-
-.discovery-lab__search-btn:hover:not(:disabled) {
-  background: #2563eb;
+.discovery-lab__scan-start-btn:hover:not(:disabled) { background: #2563eb; }
+.discovery-lab__scan-start-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+.discovery-lab__scan-start-btn--secondary {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+.discovery-lab__scan-start-btn--secondary:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
-.discovery-lab__search-btn:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
-
+.discovery-lab__error-section { margin-bottom: 16px; }
 .discovery-lab__error {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 14px;
   color: #ef4444;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
 }
 
 .discovery-lab__spinner {
@@ -570,9 +714,22 @@ function effortClass(effort: string): string {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Action button (for no-project redirect) ===== */
+.discovery-lab__action-btn {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
 }
+.discovery-lab__action-btn:hover { background: #2563eb; }
 
 /* ===== Loading ===== */
 .discovery-lab__loading {
@@ -1103,16 +1260,12 @@ function effortClass(effort: string): string {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .discovery-lab__search-inner {
+  .discovery-lab__scan-control {
     flex-direction: column;
+    align-items: stretch;
   }
-
-  .discovery-lab__input {
-    width: 100%;
-  }
-
-  .discovery-lab__search-btn {
-    width: 100%;
+  .discovery-lab__scan-actions {
+    justify-content: center;
   }
 }
 </style>

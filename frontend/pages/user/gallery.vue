@@ -101,6 +101,7 @@ const tabs = [
   { key: 'frame', label: '成品帧' },
   { key: 'prop', label: '道具图' },
   { key: 'asset', label: '作品图' },
+  { key: 'ecom', label: '电商图' },
 ]
 const activeTab = ref('all')
 const items = ref<any[]>([])

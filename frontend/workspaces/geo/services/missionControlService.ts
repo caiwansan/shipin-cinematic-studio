@@ -11,6 +11,6 @@ export type MissionControlData = MissionControlDTO
 
 export async function getMissionControl(projectId?: string): Promise<MissionControlData> {
   const params = projectId ? `?projectId=${projectId}` : ''
-  const res = await geoApi.get<MissionControlData>(`/api/geo/workspace/mission-control${params}`)
+  const res = await geoApi.get<MissionControlData>(`/workspace/mission-control${params}`)
   return res.data
 }

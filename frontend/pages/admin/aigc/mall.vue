@@ -265,7 +265,7 @@ const bannersLoading = ref(false)
 const banners = ref<any[]>([])
 const showBannerForm = ref(false)
 const editingBanner = ref<any>(null)
-const bannerForm = ref<any>({ imageUrl: '', linkType: '', linkValue: '', sort: 0, isActive: true })
+const bannerForm = ref<any>({ image: '', link: '', sortOrder: 0, isActive: true })
 
 async function fetchBanners() {
   bannersLoading.value = true
@@ -276,12 +276,12 @@ async function fetchBanners() {
 
 function openBannerCreate() {
   editingBanner.value = null
-  bannerForm.value = { imageUrl: '', linkType: '', linkValue: '', sort: 0, isActive: true }
+  bannerForm.value = { image: '', link: '', sortOrder: 0, isActive: true }
   showBannerForm.value = true
 }
 function openBannerEdit(b: any) {
   editingBanner.value = b
-  bannerForm.value = { imageUrl: b.imageUrl, linkType: b.linkType || '', linkValue: b.linkValue || '', sort: b.sort, isActive: b.isActive }
+  bannerForm.value = { image: b.image || b.imageUrl || '', link: b.link || b.linkValue || '', sortOrder: b.sortOrder ?? b.sort ?? 0, isActive: b.isActive }
   showBannerForm.value = true
 }
 function closeBannerForm() { showBannerForm.value = false; editingBanner.value = null }

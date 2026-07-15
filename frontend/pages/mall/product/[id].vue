@@ -77,8 +77,8 @@
           <p v-if="product.subtitle" class="text-sm text-gray-400 mt-1">{{ product.subtitle }}</p>
 
           <div class="flex items-baseline gap-3 mt-4">
-            <span class="text-2xl font-bold text-red-400">¥{{ product.price.toFixed(2) }}</span>
-            <span v-if="product.originalPrice > product.price" class="text-sm text-gray-500 line-through">¥{{ product.originalPrice.toFixed(2) }}</span>
+            <span class="text-2xl font-bold text-red-400">¥{{ Number(product.price).toFixed(2) }}</span>
+            <span v-if="Number(product.originalPrice) > Number(product.price)" class="text-sm text-gray-500 line-through">¥{{ Number(product.originalPrice).toFixed(2) }}</span>
           </div>
 
           <div class="flex items-center gap-4 mt-3 text-sm text-gray-400">
@@ -110,8 +110,8 @@
     <div class="fixed bottom-0 left-0 right-0 bg-[#0A1628]/95 backdrop-blur border-t border-[#1A2D4A] p-4 z-50">
       <div class="max-w-6xl mx-auto flex items-center justify-between">
         <div>
-          <span class="text-xl font-bold text-red-400">¥{{ product?.price.toFixed(2) }}</span>
-          <span v-if="product?.originalPrice > product?.price" class="text-sm text-gray-500 line-through ml-2">¥{{ product?.originalPrice.toFixed(2) }}</span>
+          <span class="text-xl font-bold text-red-400">¥{{ Number(product?.price).toFixed(2) }}</span>
+          <span v-if="Number(product?.originalPrice) > Number(product?.price)" class="text-sm text-gray-500 line-through ml-2">¥{{ Number(product?.originalPrice).toFixed(2) }}</span>
         </div>
         <div class="flex gap-3">
           <button @click="addToCart" :disabled="cartLoading"

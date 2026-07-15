@@ -73,9 +73,9 @@
           </div>
           <div class="flex-1 min-w-0">
             <div class="text-sm text-white truncate">{{ item.productName }}</div>
-            <div class="text-xs text-gray-500">¥{{ item.price.toFixed(2) }} x {{ item.quantity }}</div>
+            <div class="text-xs text-gray-500">¥{{ Number(item.price).toFixed(2) }} x {{ item.quantity }}</div>
           </div>
-          <div class="text-sm font-bold text-red-400">¥{{ item.subtotal.toFixed(2) }}</div>
+          <div class="text-sm font-bold text-red-400">¥{{ Number(item.subtotal).toFixed(2) }}</div>
         </div>
       </section>
 
@@ -98,15 +98,15 @@
         <div class="space-y-2 text-sm">
           <div class="flex justify-between text-gray-400">
             <span>商品总额</span>
-            <span>¥{{ order.totalAmount.toFixed(2) }}</span>
+            <span>¥{{ Number(order.totalAmount).toFixed(2) }}</span>
           </div>
           <div v-if="order.discountAmount > 0" class="flex justify-between text-green-400">
             <span>优惠减免</span>
-            <span>-¥{{ order.discountAmount.toFixed(2) }}</span>
+            <span>-¥{{ Number(order.discountAmount).toFixed(2) }}</span>
           </div>
           <div class="flex justify-between text-white font-semibold border-t border-[#1A2D4A] pt-2 mt-2">
             <span>实付金额</span>
-            <span class="text-lg font-bold text-red-400">¥{{ order.payAmount.toFixed(2) }}</span>
+            <span class="text-lg font-bold text-red-400">¥{{ Number(order.payAmount).toFixed(2) }}</span>
           </div>
         </div>
       </section>

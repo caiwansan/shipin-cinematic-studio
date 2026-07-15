@@ -29,6 +29,16 @@
         <NuxtLink to="/workspace/geo/dashboard" class="nav-link nav-link-geo">
           🌏 品牌GEO
         </NuxtLink>
+        <NuxtLink to="/workspace/ecom-image" class="nav-link nav-link-ecom">
+          🖼️ 电商图片
+        </NuxtLink>
+        <NuxtLink
+          to="/enterprise"
+          class="nav-link nav-link-enterprise"
+          title="配置您的AI增长团队，让AI员工帮助企业获客"
+        >
+          🏢 企业数字部门
+        </NuxtLink>
         <NuxtLink to="/community" class="nav-link">
           🌐 社区
         </NuxtLink>
@@ -197,6 +207,33 @@ onMounted(() => {
 
 .nav-link-geo {
   color: rgba(129, 140, 248, 0.7);
+}
+
+.nav-link-ecom {
+  color: rgba(251, 168, 31, 0.85);
+}
+
+/* 企业数字部门 — 商业主入口 */
+.nav-link-enterprise {
+  color: rgba(96, 165, 250, 0.9);
+  font-weight: 600;
+  position: relative;
+}
+.nav-link-enterprise::after {
+  content: ' ';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.2), rgba(96, 165, 250, 0.8), rgba(96, 165, 250, 0.2));
+  border-radius: 1px;
+  transition: transform 0.3s ease;
+}
+.nav-link-enterprise:hover::after,
+.nav-link-enterprise.router-link-active::after {
+  transform: translateX(-50%) scaleX(1);
 }
 
 /* 操作区 */

@@ -49,9 +49,9 @@
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm text-white truncate">{{ item.productName }}</div>
-                  <div class="text-xs text-gray-500">¥{{ item.price.toFixed(2) }} x {{ item.quantity }}</div>
+                  <div class="text-xs text-gray-500">¥{{ Number(item.price).toFixed(2) }} x {{ item.quantity }}</div>
                 </div>
-                <div class="text-sm font-bold text-red-400">¥{{ item.subtotal.toFixed(2) }}</div>
+                <div class="text-sm font-bold text-red-400">¥{{ Number(item.subtotal).toFixed(2) }}</div>
               </div>
               <div v-if="order.items?.length > 3" class="text-xs text-gray-500 mt-1">...还有 {{ order.items.length - 3 }} 件商品</div>
             </div>
@@ -59,7 +59,7 @@
             <div class="flex items-center justify-between px-4 py-3 bg-[#0A1628] border-t border-[#1A2D4A]">
               <span class="text-xs text-gray-500">{{ formatTime(order.createdAt) }}</span>
               <div class="flex items-center gap-3">
-                <span class="text-sm">合计：<span class="font-bold text-red-400">¥{{ order.payAmount.toFixed(2) }}</span></span>
+                <span class="text-sm">合计：<span class="font-bold text-red-400">¥{{ Number(order.payAmount).toFixed(2) }}</span></span>
                 <!-- 操作按钮 -->
                 <button v-if="order.status === 'pending'" @click.stop="cancelOrder(order.orderNo)" class="text-xs text-gray-500 hover:text-red-400">取消</button>
                 <button v-if="order.status === 'pending'" @click.stop="goPay(order.orderNo)" class="text-xs bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700">去支付</button>

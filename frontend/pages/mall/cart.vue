@@ -45,7 +45,7 @@
           </NuxtLink>
           <div class="flex-1 min-w-0">
             <NuxtLink :to="`/mall/product/${item.product.id}`" class="text-sm font-medium text-white truncate block hover:text-indigo-400">{{ item.product.name }}</NuxtLink>
-            <div class="text-sm font-bold text-red-400 mt-1">¥{{ item.product.price.toFixed(2) }}</div>
+            <div class="text-sm font-bold text-red-400 mt-1">¥{{ Number(item.product.price).toFixed(2) }}</div>
           </div>
           <div class="flex items-center gap-2">
             <button @click="updateQuantity(item.id, item.quantity - 1)" class="w-7 h-7 rounded border border-[#1A2D4A] text-gray-400 hover:border-indigo-500 text-sm">−</button>

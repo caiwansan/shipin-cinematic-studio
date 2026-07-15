@@ -482,6 +482,9 @@ async function fetchData(url: string) {
     const headers: Record<string, string> = {}
     if (token) headers['Authorization'] = `Bearer ${token}`
     const res = await fetch(url, { headers })
+    if (res.status === 401) {
+      return null // 未登录或 token 过期
+    }
     const json = await res.json()
     return json.success ? (json.data || []) : []
   } catch { return [] }
@@ -523,8 +526,14 @@ async function loadDocs() { documentTemplates.value = await fetchData('/api/lega
 async function loadPrompts() { prompts.value = await fetchData('/api/admin/legal/prompts') }
 async function loadConfig() {
   const data = await fetchData('/api/admin/legal/config')
-  if (data) {
-    // 通用配置
+  if (data === null) {
+    // 401 未登录
+    alert('登录已过期，请重新登录')
+    window.location.href = '/admin/aigc/login'
+    return
+  }
+  if (data && data.length === undefined) {
+    // 正常配置对象
     if (data.defaultModel) sysConfig.value.defaultModel = data.defaultModel
     if (data.defaultPrompt) sysConfig.value.defaultPrompt = data.defaultPrompt
     if (data.uploadLimit) sysConfig.value.uploadLimit = data.uploadLimit
@@ -748,10 +757,20 @@ async function saveConfig() {
   const token = getToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
-  await fetch('/api/admin/legal/config', { method: 'PUT', headers, body: JSON.stringify(body) })
-  alert('配置已保存')
-  // 重新加载配置以获取脱敏后的 API Key
-  loadConfig()
+  const res = await fetch('/api/admin/legal/config', { method: 'PUT', headers, body: JSON.stringify(body) })
+  if (res.status === 401) {
+    alert('登录已过期，请重新登录')
+    window.location.href = '/admin/aigc/login'
+    return
+  }
+  const json = await res.json()
+  if (json.success) {
+    alert('配置已保存')
+    // 重新加载配置以获取脱敏后的 API Key
+    loadConfig()
+  } else {
+    alert(`保存失败: ${json.error || '未知错误'}`)
+  }
 }
 
 async function reindexRag() {

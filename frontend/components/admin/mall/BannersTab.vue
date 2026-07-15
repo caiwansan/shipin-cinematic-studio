@@ -25,12 +25,12 @@
           </thead>
           <tbody>
             <tr v-for="b in banners" :key="b.id" class="border-b border-[#1A2240]/50 last:border-0 hover:bg-white/[0.02]">
-              <td class="px-4 py-3 text-gray-500">{{ b.sort }}</td>
+              <td class="px-4 py-3 text-gray-500">{{ b.sortOrder ?? b.sort }}</td>
               <td class="px-4 py-3">
-                <img v-if="b.imageUrl" :src="b.imageUrl" class="h-8 w-14 object-cover rounded" alt="" />
+                <img v-if="b.image || b.imageUrl" :src="b.image || b.imageUrl" class="h-8 w-14 object-cover rounded" alt="" />
                 <span v-else class="text-gray-600">—</span>
               </td>
-              <td class="px-4 py-3 text-gray-400 max-w-[200px] truncate">{{ b.linkValue || '—' }}</td>
+              <td class="px-4 py-3 text-gray-400 max-w-[200px] truncate">{{ b.link || b.linkValue || '—' }}</td>
               <td class="px-4 py-3">
                 <button @click="$emit('toggleActive', b)"
                   class="px-2 py-0.5 rounded-full text-[10px] border-none cursor-pointer"
@@ -63,9 +63,9 @@
           <div class="space-y-3">
             <div>
               <label class="text-[10px] text-gray-500 block mb-1">图片 *</label>
-              <div v-if="form.imageUrl" class="relative mb-2">
-                <img :src="form.imageUrl" class="h-20 w-full object-cover rounded-lg border border-[#1A2240]" alt="banner预览" />
-                <button @click="form.imageUrl = ''"
+              <div v-if="form.image || form.imageUrl" class="relative mb-2">
+                <img :src="form.image || form.imageUrl" class="h-20 w-full object-cover rounded-lg border border-[#1A2240]" alt="banner预览" />
+                <button @click="form.image = ''; form.imageUrl = ''"
                   class="absolute top-1 right-1 bg-black/60 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center hover:bg-black/80 border-none cursor-pointer">✕</button>
               </div>
               <div class="flex gap-2">
@@ -100,7 +100,7 @@
             </div>
             <div>
               <label class="text-[10px] text-gray-500 block mb-1">排序</label>
-              <input v-model.number="form.sort" type="number" min="0"
+              <input v-model.number="form.sortOrder" type="number" min="0"
                 class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50" />
             </div>
             <div class="flex gap-2 justify-end pt-2">
@@ -156,7 +156,7 @@ async function uploadBannerImage(e: Event) {
     const data = await res.json()
     if (data.success) {
       const url = data.data?.url || data.data
-      if (url) props.form.imageUrl = url
+      if (url) { props.form.image = url; props.form.imageUrl = url }
     }
   } catch (err) { console.error('上传失败', err) }
   finally { uploading.value = false }

@@ -12,7 +12,7 @@
       <p class="text-gray-400 mt-2">订单号：{{ route.params.orderNo }}</p>
       <div v-if="order" class="mt-4 bg-[#0D1B33] rounded-xl border border-[#1A2D4A] p-6">
         <div class="text-sm text-gray-400">应付金额</div>
-        <div class="text-3xl font-bold text-red-400 mt-1">¥{{ order.payAmount.toFixed(2) }}</div>
+        <div class="text-3xl font-bold text-red-400 mt-1">¥{{ Number(order.payAmount).toFixed(2) }}</div>
       </div>
 
       <!-- 选择支付方式 -->
@@ -47,7 +47,7 @@
           <h3 class="pay-title">{{ paymentType === 'wxpay_qr' ? '微信扫码付款' : '支付宝扫码付款' }}</h3>
           <div class="pay-body">
             <div class="pay-plan-name">商城订单 {{ order?.orderNo?.slice(0,12) }}...</div>
-            <div class="pay-amount">¥{{ amount.toFixed(2) }}</div>
+            <div class="pay-amount">¥{{ Number(amount).toFixed(2) }}</div>
 
             <div class="pay-alipay-qr-area">
               <div v-if="qrCode" class="pay-alipay-qr-wrapper">
@@ -122,7 +122,7 @@ async function doPay(method: string) {
       return
     }
 
-    amount.value = data.data.amount
+    amount.value = Number(data.data.amount)
     rechargeOrderId.value = data.data.rechargeOrderId || ''
 
     // 降级到收款码模式

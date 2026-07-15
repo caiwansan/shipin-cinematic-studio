@@ -205,7 +205,10 @@
             还没有章节，点击上方按钮或通过对话创建
           </div>
           <div v-else class="hdz-outline-list">
-            <div v-for="(ch, idx) in chapters" :key="ch?.id || idx" class="hdz-outline-item" @click="ch?.id && toggleOutline(ch.id)">
+            <div style="font-size:0.82rem;color:#888;margin-bottom:8px;">
+              共 {{ chapters.length }} 章，第 {{ outlinePage }}/{{ outlineTotalPages }} 页（每页 {{ outlinePageSize }} 章）
+            </div>
+            <div v-for="(ch, idx) in paginatedChapters" :key="ch?.id || idx" class="hdz-outline-item" @click="ch?.id && toggleOutline(ch.id)">
               <div class="hdz-outline-no">第 {{ ch.chapterNo }} 章</div>
               <div class="hdz-outline-info">
                 <div class="hdz-outline-title">{{ cleanText(ch.title) || '未命名' }}</div>
@@ -220,6 +223,14 @@
             <div v-if="expandedChapters.has(ch?.id || ch?.chapterNo) && (ch?.summary || ch?.outline)" class="hdz-outline-detail">
               <div v-if="ch.summary" class="hdz-outline-summary">📖 介绍：{{ cleanText(ch.summary) }}</div>
               <div v-if="ch.outline && !ch.summary" class="hdz-outline-summary">📋 大纲：{{ cleanText(ch.outline) }}</div>
+            </div>
+            <!-- 分页控件 -->
+            <div v-if="outlineTotalPages > 1" class="hdz-outline-pagination">
+              <button class="hdz-page-btn" :disabled="outlinePage <= 1" @click="goToOutlinePage(1)">⏮️</button>
+              <button class="hdz-page-btn" :disabled="outlinePage <= 1" @click="goToOutlinePage(outlinePage - 1)">◀ 上一页</button>
+              <span class="hdz-page-info">第 {{ outlinePage }} / {{ outlineTotalPages }} 页</span>
+              <button class="hdz-page-btn" :disabled="outlinePage >= outlineTotalPages" @click="goToOutlinePage(outlinePage + 1)">下一页 ▶</button>
+              <button class="hdz-page-btn" :disabled="outlinePage >= outlineTotalPages" @click="goToOutlinePage(outlineTotalPages)">⏭️</button>
             </div>
           </div>
         </div>
@@ -3072,6 +3083,19 @@ onMounted(() => {
   checkWritingTasks()
   loadScreenplays()
 })
+
+// ---- 大纲分页 ----
+const outlinePage = ref(1)
+const outlinePageSize = 50
+const outlineTotalPages = computed(() => Math.max(1, Math.ceil(chapters.value.length / outlinePageSize)))
+const paginatedChapters = computed(() => {
+  const start = (outlinePage.value - 1) * outlinePageSize
+  return chapters.value.slice(start, start + outlinePageSize)
+})
+function goToOutlinePage(page: number) {
+  if (page >= 1 && page <= outlineTotalPages.value) outlinePage.value = page
+}
+
 const cancellingWriting = ref(false)
 const scrollChapterRefs = ref<any[]>([])
 
@@ -4527,4 +4551,38 @@ async function showLibraryReader() {
   color: #333;
 }
 .library-reader-panel { min-height: 60vh !important; }
+
+/* 大纲分页 */
+.hdz-outline-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+.hdz-page-btn {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.hdz-page-btn:hover:not(:disabled) {
+  background: #f0f0ff;
+  border-color: #6a5acd;
+}
+.hdz-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.hdz-page-info {
+  font-size: 0.85rem;
+  color: #666;
+  padding: 0 8px;
+  white-space: nowrap;
+}
 </style>

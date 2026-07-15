@@ -12,6 +12,5 @@ module.exports = {
     extend: {},
   },
   plugins: [],
-  blocklist: [],
   safelist: [],
 }
