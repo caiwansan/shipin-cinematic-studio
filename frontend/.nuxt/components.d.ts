@@ -33,6 +33,7 @@ interface _GlobalComponents {
     'EcomPromptsPanel': typeof import("../components/ecom/PromptsPanel.vue")['default']
     'EnterpriseAgentCard': typeof import("../components/enterprise/AgentCard.vue")['default']
     'EnterpriseApprovalCard': typeof import("../components/enterprise/ApprovalCard.vue")['default']
+    'EnterpriseEmployeeCard': typeof import("../components/enterprise/EmployeeCard.vue")['default']
     'HdzLibraryReaderPanel': typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
     'KmkiUiActionCard': typeof import("../components/kmki-ui/ActionCard/index.vue")['default']
     'KmkiUiActionsSection': typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']
@@ -152,6 +153,7 @@ interface _GlobalComponents {
     'LazyEcomPromptsPanel': LazyComponent<typeof import("../components/ecom/PromptsPanel.vue")['default']>
     'LazyEnterpriseAgentCard': LazyComponent<typeof import("../components/enterprise/AgentCard.vue")['default']>
     'LazyEnterpriseApprovalCard': LazyComponent<typeof import("../components/enterprise/ApprovalCard.vue")['default']>
+    'LazyEnterpriseEmployeeCard': LazyComponent<typeof import("../components/enterprise/EmployeeCard.vue")['default']>
     'LazyHdzLibraryReaderPanel': LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
     'LazyKmkiUiActionCard': LazyComponent<typeof import("../components/kmki-ui/ActionCard/index.vue")['default']>
     'LazyKmkiUiActionsSection': LazyComponent<typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']>
@@ -277,6 +279,7 @@ export const EcomGalleryPanel: typeof import("../components/ecom/GalleryPanel.vu
 export const EcomPromptsPanel: typeof import("../components/ecom/PromptsPanel.vue")['default']
 export const EnterpriseAgentCard: typeof import("../components/enterprise/AgentCard.vue")['default']
 export const EnterpriseApprovalCard: typeof import("../components/enterprise/ApprovalCard.vue")['default']
+export const EnterpriseEmployeeCard: typeof import("../components/enterprise/EmployeeCard.vue")['default']
 export const HdzLibraryReaderPanel: typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
 export const KmkiUiActionCard: typeof import("../components/kmki-ui/ActionCard/index.vue")['default']
 export const KmkiUiActionsSection: typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']
@@ -396,6 +399,7 @@ export const LazyEcomGalleryPanel: LazyComponent<typeof import("../components/ec
 export const LazyEcomPromptsPanel: LazyComponent<typeof import("../components/ecom/PromptsPanel.vue")['default']>
 export const LazyEnterpriseAgentCard: LazyComponent<typeof import("../components/enterprise/AgentCard.vue")['default']>
 export const LazyEnterpriseApprovalCard: LazyComponent<typeof import("../components/enterprise/ApprovalCard.vue")['default']>
+export const LazyEnterpriseEmployeeCard: LazyComponent<typeof import("../components/enterprise/EmployeeCard.vue")['default']>
 export const LazyHdzLibraryReaderPanel: LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
 export const LazyKmkiUiActionCard: LazyComponent<typeof import("../components/kmki-ui/ActionCard/index.vue")['default']>
 export const LazyKmkiUiActionsSection: LazyComponent<typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']>
