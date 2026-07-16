@@ -1,10 +1,10 @@
 /**
  * services/hdz/orchestrator.service.ts — 混沌珠 Agent 编排器
  *
- * 从 HdzAgentTask 读取用户配置 → 按 agentType 分派到对应 Agent →
- * 完成后写入 HdzChapter / HdzMemory / HdzCharacter
+ * Enterprise 调用链：
+ * Task → EnterpriseRuntimeContext → ModelRouter → callLLM → AgentAuditTrail
  *
- * BYOK 纪律：所有 LLM 调用走 getUserLLMConfig → callLLM，不硬编码 Key
+ * BYOK 纪律：所有 LLM 调用走 Model Router → callLLM，不硬编码 Key
  */
 
 import { prisma } from '../../utils/index.js'
@@ -16,6 +16,9 @@ import { reviewerService, getReviewPassScore } from './reviewer.service.js'
 import { characterService } from './character.service.js'
 import { directorService } from './director.service.js'
 import { emitEvent } from './event-log.service.js'
+import { modelRouter } from '../enterprise/model-router.service.js'
+import { agentAuditService } from '../enterprise/agent-audit.service.js'
+import { buildEnterpriseRuntimeContext } from '../enterprise/enterprise-runtime.context.js'
 
 class HdzOrchestrator {
   async executeTask(taskId: string): Promise<void> {
@@ -27,13 +30,41 @@ class HdzOrchestrator {
     const project = await prisma.hdzProject.findUnique({ where: { id: task.projectId } })
     if (!project) throw new Error('项目不存在')
 
-    const userCfg = await getUserLLMConfig(project.userId)
+    // ★ Enterprise Model Router 优先（企业员工调用链）
+    let userCfg: LLMConfig | null = null
+    let routeSource = 'user_byok'
+    let enterpriseCtx = await buildEnterpriseRuntimeContext(
+      project.userId, task.projectId, taskId, task.agentType, 'hdz_tasks'
+    )
+
+    if (enterpriseCtx) {
+      const routeResult = await modelRouter.resolve({
+        tenantId: enterpriseCtx.tenantId,
+        agentType: task.agentType,
+        taskType: 'hdz_tasks',
+        organizationId: enterpriseCtx.organizationId,
+        userId: project.userId,
+      })
+      if (routeResult) {
+        userCfg = modelRouter.toLLMConfig(routeResult)
+        routeSource = `enterprise_${routeResult.source}`
+        console.log(`[HDZ] ✅ Enterprise Router: ${routeResult.provider}/${routeResult.modelName} (source=${routeResult.source})`)
+      }
+    }
+
+    // Fallback 到个人 BYOK
+    if (!userCfg) {
+      userCfg = await getUserLLMConfig(project.userId)
+      routeSource = 'user_byok'
+      if (userCfg) console.log(`[HDZ] Task ${taskId}: LLM ${userCfg.provider}/${userCfg.modelName} (user BYOK)`)
+    }
+
     if (!userCfg) {
       console.log(`[HDZ] Task ${taskId}: 用户 ${project.userId} 未配置 LLM`)
       await this.failTask(taskId, '请先在大模型设置中配置 LLM')
       return
     }
-    console.log(`[HDZ] Task ${taskId}: LLM ${userCfg.provider}/${userCfg.modelName}`)
+    console.log(`[HDZ] Task ${taskId}: LLM ${userCfg.provider}/${userCfg.modelName} (${routeSource})`)
 
     await prisma.$transaction(async (tx) => {
       await tx.hdzAgentTask.update({
@@ -100,6 +131,27 @@ class HdzOrchestrator {
         console.log(`[HDZ] Task ${taskId}: completed`)
       }
 
+      // ★ Enterprise Audit Trail — 记录 Agent 执行日志
+      if (enterpriseCtx && updated) {
+        try {
+          await agentAuditService.log({
+            tenantId: enterpriseCtx.tenantId,
+            agentId: enterpriseCtx.agentId,
+            taskId: taskId,
+            action: `hdz_${task.agentType}_executed`,
+            resource: 'hdz_task',
+            resourceId: taskId,
+            outputSummary: `agentType=${task.agentType}, status=${updated.status}`,
+            durationMs: undefined,
+            cost: 0,
+            approvalStatus: 'auto_executed',
+            metadata: { routeSource, agentType: task.agentType },
+          })
+        } catch (auditErr: any) {
+          console.warn(`[HDZ] Audit log skipped: ${auditErr.message}`)
+        }
+      }
+
       // ★ 质量飞轮自动化
       if (updated) {
         // ⚠️ 用 input.mode 而非 output.mode：Prisma JsonValue 反序列化 output.mode 可能返回 undefined
@@ -143,6 +195,22 @@ class HdzOrchestrator {
       }
     } catch (err: any) {
       console.error(`[HDZ] Task ${taskId} FAILED:`, err.message, '\n', err.stack)
+      // ★ Enterprise Audit — 记录失败
+      if (enterpriseCtx) {
+        try {
+          await agentAuditService.log({
+            tenantId: enterpriseCtx.tenantId,
+            agentId: enterpriseCtx.agentId,
+            taskId,
+            action: `hdz_${task.agentType}_failed`,
+            resource: 'hdz_task',
+            resourceId: taskId,
+            outputSummary: err.message?.slice(0, 200),
+            approvalStatus: 'auto_executed',
+            metadata: { error: err.message },
+          })
+        } catch { /* ignore */ }
+      }
       await this.failTask(taskId, err.message)
     }
   }

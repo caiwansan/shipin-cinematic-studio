@@ -149,6 +149,7 @@ declare global {
   const useAsyncData: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/asyncData')['useAsyncData']
   const useAttrs: typeof import('vue')['useAttrs']
   const useAuthStore: typeof import('../../stores/auth')['useAuthStore']
+  const useCommandCenterStore: typeof import('../../stores/enterprise-command-center.store')['useCommandCenterStore']
   const useCookie: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/cookie')['useCookie']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVars: typeof import('vue')['useCssVars']
@@ -271,6 +272,9 @@ declare global {
   // @ts-ignore
   export type { ProviderMetadata, VerifyRequest, VerifyResponse, ConnectRequest, ProviderStatus, TelemetryEvent } from '../../utils/provider-api'
   import('../../utils/provider-api')
+  // @ts-ignore
+  export type { ActionStage } from '../../stores/enterprise-command-center.store'
+  import('../../stores/enterprise-command-center.store')
   // @ts-ignore
   export type { GEOStage, GEOProjectInfo, GEOWorkflowState, GEOWorkspaceContext } from '../../stores/geoWorkspace.store'
   import('../../stores/geoWorkspace.store')
@@ -433,6 +437,7 @@ declare module 'vue' {
     readonly useAsyncData: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/asyncData')['useAsyncData']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useAuthStore: UnwrapRef<typeof import('../../stores/auth')['useAuthStore']>
+    readonly useCommandCenterStore: UnwrapRef<typeof import('../../stores/enterprise-command-center.store')['useCommandCenterStore']>
     readonly useCookie: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/cookie')['useCookie']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>

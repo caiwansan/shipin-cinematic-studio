@@ -48,6 +48,8 @@ import adminGlobalConfigRoutes from './routes/admin-global-config.js'
 import adminStorageConfigRoutes from './routes/admin-storage-config.js'
 import adminMembersStorageRoutes from './routes/admin-members-storage.js'
 import adminAgentRoutes from './routes/admin-agents.js'
+import adminEnterpriseRoutes from './routes/admin-enterprises.js'
+import adminEnterprisePlanRoutes from './routes/admin-enterprise-plans.js'
 import adminMarketAgentRoutes from './routes/admin-market-agents.js'
 import agentPlanRoutes from './routes/agent-plan.js'
 // Platform Agent routes (KMKI-PLAT-010) — dynamic to avoid tsx @platform alias issue
@@ -225,6 +227,12 @@ async function main() {
     prefix: '/uploads/',
     decorateReply: false,
   })
+  // 同时兼容 /api/v1/uploads/ 前缀（数据库历史 URL 带此前缀）
+  await app.register((await import('@fastify/static')).default, {
+    root: __uploadsRoot,
+    prefix: '/api/v1/uploads/',
+    decorateReply: false,
+  })
 
   // Register routes
   await app.register(authRoutes)
@@ -293,6 +301,48 @@ await app.register(projectV2Routes)
   await app.register(await import('./routes/script-breakdown.js').then(m => m.default))
   // HDZ — 混沌珠小说工作台（独立子路由，不走 studio-v2 体系）
   await app.register(await import('./routes/hdz/index.js').then(m => m.default))
+  // Enterprise AI Workforce（企业数字部门）
+  await app.register((await import('./routes/enterprise.js')).enterpriseRoutes)
+  // Enterprise CEO Dashboard（企业数字部门控制台）
+  await app.register((await import('./routes/enterprise-dashboard.js')).enterpriseDashboardRoutes)
+  // Enterprise Intelligence（Phase 4.2 智能决策引擎）
+  await app.register((await import('./routes/enterprise-intelligence.js')).enterpriseIntelligenceRoutes)
+  // Agent Daily Report（AI员工日报）
+  await app.register((await import('./routes/agent-daily-report.js')).agentDailyReportRoutes)
+  // P4.2.5.2 — WeCom Real SDK Callback (IMP-01.1)
+  await app.register((await import('./enterprise/channel/wecom-callback.controller.js')).registerWeComCallbackRoutes, { prefix: '/api/enterprise/wecom' })
+  // Agent Schedule（定时任务 + 目标追踪）
+  await app.register((await import('./routes/agent-schedule.js')).agentScheduleRoutes)
+  // Enterprise Channel Gateway（渠道管理 + 内容发布 + 互动）
+  await app.register((await import('./routes/enterprise-channel')).channelRoutes)
+  // Enterprise Sprint 1 v1.1 — CEO Task Center + AI Employee Management
+  await app.register((await import('./routes/enterprise-command.js')).registerEnterpriseCommandRoutes, { prefix: '/api/enterprise/commands' })
+  await app.register((await import('./routes/enterprise-agent-profiles.js')).registerEnterpriseAgentProfileRoutes, { prefix: '/api/enterprise/agent-profiles' })
+  // Enterprise Sprint 2 — Knowledge Hub + Approval Center (v2.0, 含6项修正)
+  await app.register((await import('./routes/enterprise-knowledge.js')).registerEnterpriseKnowledgeRoutes, { prefix: '/api/enterprise/knowledge' })
+  await app.register((await import('./routes/enterprise-approval.js')).registerEnterpriseApprovalRoutes, { prefix: '/api/enterprise/approvals' })
+  // Enterprise Phase 4 — Revenue Intelligence (Lead智能 + 销售参谋 + ROI驾驶舱)
+  await app.register((await import('./routes/enterprise-leads.js')).default, { prefix: '/api/enterprise/leads' })
+  await app.register((await import('./routes/enterprise-sales.js')).default, { prefix: '/api/enterprise/sales' })
+  await app.register((await import('./routes/enterprise-roi.js')).default, { prefix: '/api/enterprise/roi' })
+
+  // Sprint 4.2.7 — Enterprise Foundation Layer (企业资料 + AI模型 + Onboarding)
+  await app.register((await import('./routes/enterprise-foundation.js')).enterpriseFoundationRoutes, { prefix: '/api' })
+  // Sprint 4.2.8 — Enterprise Billing (订阅中心 + 套餐管理)
+  await app.register((await import('./routes/enterprise-billing.js')).enterpriseBillingRoutes, { prefix: '/api' })
+  // Sprint 4.2.8 Step 5 — Agent Identity Layer
+  await app.register((await import('./routes/agent-identity.js')).registerAgentIdentityRoutes, { prefix: '/api/enterprise/agent-identity' })
+  ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
+
+  // 注册渠道适配器
+  const { channelService } = await import('./services/enterprise/channel.service.js')
+  const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')
+  // P4.2.5.2: WeCom 不再使用 Mock（CTO: No Mock in Production）
+  // 其他渠道继续使用 Mock（开发测试用）
+  channelService.registerAdapter(new VideoAccountAdapter())
+  channelService.registerAdapter(new WeiboAdapter())
+  channelService.registerAdapter(new BilibiliAdapter())
+  channelService.registerAdapter(new QQAdapter())
   // P1.7 — V3 Schema 三层审计系统（只读观测路由）
   await app.register(await import('./routes/v3-metrics.js').then(m => m.default))
   // P1.8 — 生产切换决策模型（只读评估，不修改任何系统状态）
@@ -374,6 +424,12 @@ await app.register(projectV2Routes)
 
   // Admin Agent management
   await app.register(adminAgentRoutes)
+
+  // Admin Enterprise Console
+  await app.register(adminEnterpriseRoutes)
+
+  // Admin Enterprise Plan Management
+  await app.register(adminEnterprisePlanRoutes)
 
   // Admin Market Agents
   await app.register(adminMarketAgentRoutes)
@@ -1018,6 +1074,14 @@ await app.register(projectV2Routes)
 
   // G Product Layer
   // REMOVED: productRoutes
+
+  // Ecom Image Workbench — 电商图片工作台
+  try {
+    await app.register(await import('./routes/ecom-image/ecom-image.route.js').then(m => m.default))
+    console.log('[EcomImage] ✅ Routes registered')
+  } catch (err) {
+    console.warn('[EcomImage] Failed to register:', (err as Error).message)
+  }
 
   // S3 Route Redirect (deprecated routes)
 

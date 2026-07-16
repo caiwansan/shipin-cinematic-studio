@@ -22,8 +22,13 @@ const GEO_REQUIRED_PREFIXES = [
   '/api/geo/',
 ]
 
-// GEO 路由白名单 — 不需要 JWT 认证（目前没有公开端点，保留扩展）
-const GEO_PUBLIC_PATHS: string[] = []
+// GEO 路由白名单 — 不需要 JWT 认证
+const GEO_PUBLIC_PATHS: string[] = [
+  '/api/geo/projects',            // GET 列表（dashboard 首页展示品牌用）
+  '/api/geo/workspace/mission-control',  // GET mission control（dashboard 首页用）
+  '/api/geo/projects/',           // GET 单项目详情
+  '/api/geo/recommendation/',     // GET recommendation 相关
+]
 
 export default fp(async function authPlugin(fastify: FastifyInstance) {
   fastify.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
@@ -65,9 +70,13 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
   fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     const url = request.url
 
-    // ── GEO 工作台 — 强制 JWT 认证 ──
+    // ── GEO 工作台 — 强制 JWT 认证（白名单路径跳过） ──
     const isGeoRequest = GEO_REQUIRED_PREFIXES.some(prefix => url.startsWith(prefix))
     if (isGeoRequest) {
+      // 白名单路径跳过认证
+      if (GEO_PUBLIC_PATHS.some(p => url.startsWith(p))) {
+        return
+      }
       try {
         await request.jwtVerify()
         const decoded = request.user as any

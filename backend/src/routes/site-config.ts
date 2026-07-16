@@ -1,16 +1,34 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 
+const DEFAULT_CONFIG: Record<string, string> = {
+  site_name: '昆仑镜',
+  site_title: '昆仑镜 – AI 短剧创作平台',
+  site_description: '用 AI 从剧本到成片，一站式短剧创作平台',
+  site_keywords: '昆仑镜, AI, 短剧, 创作平台',
+  icp_beian: '',
+  icp_license: '',
+  icp_company: '',
+  icp_business: '',
+  icp_copyright: '',
+  site_domain: 'aigc.fushtn.com',
+  og_image: '',
+}
+
 // 公开配置（前端读取，无需登录）
 async function getPublicConfig() {
-  const rows = await prisma.siteConfig.findMany({
-    where: { key: { in: ['site_name', 'site_title', 'site_description', 'site_keywords', 'icp_beian', 'icp_license', 'icp_company', 'icp_business', 'icp_copyright', 'site_domain', 'og_image'] } }
-  })
-  const config: Record<string, string> = {}
-  for (const row of rows) {
-    config[row.key] = row.value
+  try {
+    const rows = await prisma.siteConfig.findMany({
+      where: { key: { in: Object.keys(DEFAULT_CONFIG) } }
+    })
+    const config: Record<string, string> = { ...DEFAULT_CONFIG }
+    for (const row of rows) {
+      config[row.key] = row.value
+    }
+    return config
+  } catch {
+    return { ...DEFAULT_CONFIG }
   }
-  return config
 }
 
 export default async function siteConfigRoutes(fastify: FastifyInstance) {
@@ -23,28 +41,34 @@ export default async function siteConfigRoutes(fastify: FastifyInstance) {
 
   // GET /api/admin/system/config — 管理员读取全部配置
   fastify.get('/api/admin/system/config', async (_request, _reply) => {
-    const rows = await prisma.siteConfig.findMany()
-    const config: Record<string, string> = {}
-    for (const row of rows) {
-      config[row.key] = row.value
+    try {
+      const rows = await prisma.siteConfig.findMany()
+      const config: Record<string, string> = { ...DEFAULT_CONFIG }
+      for (const row of rows) {
+        config[row.key] = row.value
+      }
+      return config
+    } catch {
+      return { ...DEFAULT_CONFIG }
     }
-    return config
   })
 
   // PUT /api/admin/system/config — 管理员更新配置
   fastify.put('/api/admin/system/config', async (request, _reply) => {
     const body = request.body as Record<string, string>
-    const allowed = ['site_name', 'site_title', 'site_description', 'site_keywords', 'icp_beian', 'icp_license', 'icp_company', 'icp_business', 'icp_copyright', 'site_domain', 'og_image']
+    const allowed = Object.keys(DEFAULT_CONFIG)
 
-    for (const key of allowed) {
-      if (body[key] !== undefined) {
-        await prisma.siteConfig.upsert({
-          where: { key },
-          update: { value: String(body[key]) },
-          create: { key, value: String(body[key]) },
-        })
+    try {
+      for (const key of allowed) {
+        if (body[key] !== undefined) {
+          await prisma.siteConfig.upsert({
+            where: { key },
+            update: { value: String(body[key]) },
+            create: { key, value: String(body[key]) },
+          })
+        }
       }
-    }
+    } catch { /* 表不存在时静默 */ }
 
     return { success: true }
   })

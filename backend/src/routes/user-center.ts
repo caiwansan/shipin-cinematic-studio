@@ -625,6 +625,23 @@ export default async function userCenterRoutes(fastify: FastifyInstance) {
       })))
     }
 
+    if (!type || type === 'ecom') {
+      const ecomAssets = await prisma.userAsset.findMany({
+        where: { userId, type: 'ecom' },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      })
+      items.push(...ecomAssets.map(ea => ({
+        id: ea.id,
+        type: 'ecom' as const,
+        url: ea.url,
+        name: ea.title || `电商图-${ea.source?.replace('ecom:', '') || ''}`,
+        projectId: '',
+        projectTitle: '电商图片',
+        createdAt: ea.createdAt?.toISOString?.() || String(ea.createdAt),
+      })))
+    }
+
     // 过滤非图片URL
     items = items.filter(i => IMAGE_EXT.test(i.url))
 
@@ -651,6 +668,7 @@ export default async function userCenterRoutes(fastify: FastifyInstance) {
       frame: 'frameImage',
       prop: 'propImage',
       asset: 'userAsset',
+      ecom: 'userAsset',
     }
     const modelName = TABLE_MAP[type]
     if (!modelName) return reply.status(400).send({ error: '无效的图库类型' })

@@ -175,7 +175,7 @@ export class PlatformRuntimeService {
       }
 
       const encrypted = encryptKey(keyToEncrypt)
-      await prisma.platformProviderConfig.upsert({
+      await prisma.aIProviderConfig.upsert({
         where: { provider: p.provider },
         update: {
           encryptedApiKey: encrypted,

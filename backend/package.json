@@ -29,6 +29,7 @@
     "@fastify/static": "^9.1.3",
     "@fastify/websocket": "^11.0.0",
     "@prisma/client": "^6.19.3",
+    "@wecom/crypto": "^1.0.1",
     "alipay-sdk": "^4.14.0",
     "archiver": "^7.0.1",
     "axios": "^1.17.0",

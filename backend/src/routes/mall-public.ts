@@ -92,7 +92,7 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     const itemsWithGift = await Promise.all(items.map(async (item) => {
       const giftCoupons = await prisma.mallCoupon.findMany({
         where: { giftProductId: item.id, isActive: true, deletedAt: null },
-        select: { id: true, name: true, value: true, type: true, forVipPlan: true },
+        select: { id: true, name: true, value: true, type: true },
       })
       return { ...item, giftCoupons: giftCoupons.length > 0 ? giftCoupons : null }
     }))
@@ -122,7 +122,7 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     // 附上赠送优惠券信息
     const giftCoupons = await prisma.mallCoupon.findMany({
       where: { giftProductId: id, isActive: true, deletedAt: null },
-      select: { id: true, name: true, value: true, type: true, forVipPlan: true },
+      select: { id: true, name: true, value: true, type: true },
     })
     return { success: true, data: { ...product, giftCoupons: giftCoupons.length > 0 ? giftCoupons : null } }
   })
@@ -160,7 +160,7 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
   /** GET /api/mall/cart — 获取购物车列表 */
   app.get('/api/mall/cart', { preHandler: [app.authenticate] }, async (request, reply) => {
     const user = request.user as any
-    const items = await prisma.mallCartItem.findMany({
+    const items = await prisma.mallCart.findMany({
       where: { userId: user.id },
       include: {
         product: {
@@ -197,19 +197,19 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     }
 
     // upsert: 如果已有则累加数量
-    const existing = await prisma.mallCartItem.findUnique({
-      where: { userId_productId: { userId: user.id, productId } },
+    const existing = await prisma.mallCart.findFirst({
+      where: { userId: user.id, productId },
     })
 
     let item
     if (existing) {
-      item = await prisma.mallCartItem.update({
+      item = await prisma.mallCart.update({
         where: { id: existing.id },
         data: { quantity: existing.quantity + (quantity > 0 ? quantity : 1) },
         include: { product: { select: { id: true, name: true, price: true, cover: true, stock: true } } },
       })
     } else {
-      item = await prisma.mallCartItem.create({
+      item = await prisma.mallCart.create({
         data: { userId: user.id, productId, quantity: Math.max(1, quantity) },
         include: { product: { select: { id: true, name: true, price: true, cover: true, stock: true } } },
       })
@@ -224,17 +224,17 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     const { itemId } = request.params as any
     const { quantity } = request.body as any
 
-    const item = await prisma.mallCartItem.findFirst({ where: { id: itemId, userId: user.id } })
+    const item = await prisma.mallCart.findFirst({ where: { id: itemId, userId: user.id } })
     if (!item) {
       return reply.status(404).send({ success: false, error: '购物车商品不存在' })
     }
 
     if (quantity <= 0) {
-      await prisma.mallCartItem.delete({ where: { id: itemId } })
+      await prisma.mallCart.delete({ where: { id: itemId } })
       return { success: true, data: null, message: '已移除' }
     }
 
-    const updated = await prisma.mallCartItem.update({
+    const updated = await prisma.mallCart.update({
       where: { id: itemId },
       data: { quantity },
       include: { product: { select: { id: true, name: true, price: true, cover: true, stock: true } } },
@@ -247,12 +247,12 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     const user = request.user as any
     const { itemId } = request.params as any
 
-    const item = await prisma.mallCartItem.findFirst({ where: { id: itemId, userId: user.id } })
+    const item = await prisma.mallCart.findFirst({ where: { id: itemId, userId: user.id } })
     if (!item) {
       return reply.status(404).send({ success: false, error: '购物车商品不存在' })
     }
 
-    await prisma.mallCartItem.delete({ where: { id: itemId } })
+    await prisma.mallCart.delete({ where: { id: itemId } })
     return { success: true, data: null }
   })
 
@@ -264,7 +264,7 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
   app.get('/api/mall/addresses', { preHandler: [app.authenticate] }, async (request, reply) => {
     const user = request.user as any
     const addresses = await prisma.mallAddress.findMany({
-      where: { userId: user.id, deletedAt: null },
+      where: { userId: user.id },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
     })
     return { success: true, data: addresses }
@@ -273,15 +273,16 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
   /** POST /api/mall/addresses — 新增地址 */
   app.post('/api/mall/addresses', { preHandler: [app.authenticate] }, async (request, reply) => {
     const user = request.user as any
-    const { name, phone, province, city, district, detail, isDefault } = request.body as any
-    if (!name || !phone || !province || !city || !detail) {
+    const { consignee, phone, province, city, district, detail, isDefault } = request.body as any
+    const nameValue = consignee || request.body.name
+    if (!nameValue || !phone || !province || !city || !detail) {
       return reply.status(400).send({ success: false, error: '缺少必填字段' })
     }
 
     // 如果是默认地址，清除其他默认
     if (isDefault) {
       await prisma.mallAddress.updateMany({
-        where: { userId: user.id, isDefault: true, deletedAt: null },
+        where: { userId: user.id, isDefault: true },
         data: { isDefault: false },
       })
     }
@@ -289,7 +290,7 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     const address = await prisma.mallAddress.create({
       data: {
         userId: user.id,
-        name,
+        consignee: nameValue,
         phone,
         province,
         city,
@@ -307,7 +308,7 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     const { id } = request.params as any
     const body = request.body as any
 
-    const existing = await prisma.mallAddress.findFirst({ where: { id, userId: user.id, deletedAt: null } })
+    const existing = await prisma.mallAddress.findFirst({ where: { id, userId: user.id } })
     if (!existing) {
       return reply.status(404).send({ success: false, error: '地址不存在' })
     }
@@ -315,7 +316,7 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     // 如果是默认地址，清除其他默认
     if (body.isDefault) {
       await prisma.mallAddress.updateMany({
-        where: { userId: user.id, isDefault: true, id: { not: id }, deletedAt: null },
+        where: { userId: user.id, isDefault: true, id: { not: id } },
         data: { isDefault: false },
       })
     }
@@ -323,7 +324,7 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     const updated = await prisma.mallAddress.update({
       where: { id },
       data: {
-        name: body.name ?? undefined,
+        consignee: (body.consignee || body.name) ?? undefined,
         phone: body.phone ?? undefined,
         province: body.province ?? undefined,
         city: body.city ?? undefined,
@@ -335,20 +336,17 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     return { success: true, data: updated }
   })
 
-  /** DELETE /api/mall/addresses/:id — 删除地址（软删除） */
+  /** DELETE /api/mall/addresses/:id — 删除地址 */
   app.delete('/api/mall/addresses/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
     const user = request.user as any
     const { id } = request.params as any
 
-    const existing = await prisma.mallAddress.findFirst({ where: { id, userId: user.id, deletedAt: null } })
+    const existing = await prisma.mallAddress.findFirst({ where: { id, userId: user.id } })
     if (!existing) {
       return reply.status(404).send({ success: false, error: '地址不存在' })
     }
 
-    await prisma.mallAddress.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    })
+    await prisma.mallAddress.delete({ where: { id } })
     return { success: true, data: null }
   })
 
@@ -359,17 +357,19 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
   /** GET /api/mall/coupons/available — 可领取的优惠券列表 */
   app.get('/api/mall/coupons/available', { preHandler: [app.authenticate] }, async (_request, reply) => {
     const now = new Date()
-    const coupons = await prisma.mallCoupon.findMany({
+    const allCoupons = await prisma.mallCoupon.findMany({
       where: {
         isActive: true,
         deletedAt: null,
-        AND: [
-          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
-          { OR: [{ totalCount: 0 }, { usedCount: { lt: prisma.mallCoupon.fields.totalCount } }] },
-        ],
       },
       orderBy: { createdAt: 'desc' },
+    })
+    // 在 JS 里过滤时间 + 总量（避免 Prisma FieldRef 兼容性问题）
+    const coupons = allCoupons.filter((c: any) => {
+      if (c.startAt && new Date(c.startAt) > now) return false
+      if (c.endAt && new Date(c.endAt) < now) return false
+      if (c.totalCount > 0 && c.usedCount >= c.totalCount) return false
+      return true
     })
     return { success: true, data: coupons }
   })
@@ -470,10 +470,10 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
     let addressFull = ''
     if (addressId) {
       const address = await prisma.mallAddress.findFirst({
-        where: { id: addressId, userId: user.id, deletedAt: null },
+        where: { id: addressId, userId: user.id },
       })
       if (address) {
-        addressName = address.name
+        addressName = address.consignee
         addressPhone = address.phone
         addressFull = `${address.province} ${address.city} ${address.district} ${address.detail}`
       }
@@ -558,18 +558,18 @@ export default async function mallPublicRoutes(app: FastifyInstance) {
           userId: user.id,
           status: 'pending',
           totalAmount,
-          discountAmount,
+          paidAmount: 0,
           payAmount,
-          couponId: couponId || null,
-          addressName,
-          addressPhone,
-          addressFull,
+          discount: discountAmount,
+          addressName: addressName || null,
+          addressPhone: addressPhone || null,
+          address: addressFull || null,
           remark: remark || null,
           items: {
             create: orderItemsData.map((item) => ({
               productId: item.productId,
               productName: item.productName,
-              productCover: item.productCover || null,
+              productImage: item.productCover || null,
               price: item.price,
               quantity: item.quantity,
               subtotal: item.subtotal,

@@ -9,6 +9,7 @@ const BUILD_TIME = process.env.BUILD_TIME || new Date().toISOString()
 export default defineNuxtConfig({
   ssr: false,
   telemetry: false,
+  css: ['~/assets/styles/enterprise-tokens.css'],
   alias: {
     'shared': resolve(fileURLToPath(import.meta.url), '..', '..', 'shared'),
     'workspaces': resolve(fileURLToPath(import.meta.url), '..', 'workspaces'),

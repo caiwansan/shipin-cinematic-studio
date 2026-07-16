@@ -17,6 +17,7 @@
 
     <!-- 数据验证 -->
     <div class="validation-section">
+      <div class="demo-badge">📊 演示数据 — Tesla 模拟运营 7 天结果</div>
       <h2>Tesla 模拟运营 7 天结果</h2>
       <div class="validation-metrics">
         <div class="metric-card">
@@ -142,6 +143,18 @@
   margin: 0 auto;
   padding: 80px 24px 60px;
   color: #e0e0e0;
+}
+
+/* AC4.5: Demo Badge */
+.demo-badge {
+  display: inline-block;
+  background: #7C2D12;
+  color: #FCA5A5;
+  border: 1px solid #991B1B;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 16px;
 }
 
 /* Hero */

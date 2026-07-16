@@ -5,12 +5,23 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: '' as string,
     user: null as null | { id: string; username: string; email: string; credits?: number; memberTier?: string },
+    enterpriseContext: null as null | {
+      userId: string
+      governanceTenantId: string | null
+      govUserId: string | null
+      organizationId: string | null
+      roles: string[]
+      capabilities: string[]
+    },
   }),
   getters: {
     isAuthenticated: (state) => !!state.token,
     userName: (state) => state.user?.username || state.user?.email?.split('@')[0] || '用户',
     credits: (state) => 0,
     memberTier: (state) => state.user?.memberTier || 'free',
+    userId: (state) => state.user?.id || '',
+    tenantId: (state) => state.enterpriseContext?.governanceTenantId || state.user?.id || '',
+    userRole: (state) => state.enterpriseContext?.roles?.[0] || 'ceo',
   },
   actions: {
     /**
@@ -87,11 +98,29 @@ export const useAuthStore = defineStore('auth', {
     async logout() {
       try {
         await fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${this.token}` } })
-      } catch { /* ignore */ }
+      } catch (_e) { /* ignore */ }
       this.token = ''
       this.user = null
+      this.enterpriseContext = null
       // 统一清除：token-cache（内存 + localStorage + cookie）
       clearAuth()
+    },
+    /**
+     * 加载企业上下文（Sprint 4.2.3.1）
+     * CTO: Auth Store 负责 identity，EnterpriseContext 负责 tenant/org/permission
+     */
+    async loadEnterpriseContext() {
+      if (!this.token || !this.user) return
+      try {
+        const headers: Record<string, string> = { 'Authorization': `Bearer ${this.token}` }
+        const res = await fetch(`/api/enterprise/${this.user.id}/context/enterprise`, { headers })
+        const json = await res.json()
+        if (json.code === 0 && json.data) {
+          this.enterpriseContext = json.data
+        }
+      } catch (e) {
+        console.error('Load enterprise context failed', e)
+      }
     },
     async fetchMe(forceRefresh?: boolean) {
       if (!this.token) return

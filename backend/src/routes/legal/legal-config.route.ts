@@ -46,17 +46,20 @@ export default async function legalConfigRoutes(app: FastifyInstance) {
         if (value.includes('***')) continue // 脱敏值，跳过
       }
 
+      // configValue 为 String? 类型，非字符串值转为字符串
+      const strValue = value === null || value === undefined ? null : String(value)
+
       await prisma.legalSystemConfig.upsert({
         where: { configKey: key },
-        update: { configValue: value },
-        create: { configKey: key, configValue: value },
+        update: { configValue: strValue },
+        create: { configKey: key, configValue: strValue },
       })
 
       // 如果是 Embedding 或 LLM 相关的 key，存入 process.env + 记录到 envUpdates
       if (EMBED_ENV_KEYS.includes(key) || LLM_ENV_KEYS.includes(key)) {
-        if (typeof value === 'string' && !value.includes('***')) {
-          process.env[key] = value
-          envUpdates[key] = value
+        if (strValue && !strValue.includes('***')) {
+          process.env[key] = strValue
+          envUpdates[key] = strValue
         }
       }
     }

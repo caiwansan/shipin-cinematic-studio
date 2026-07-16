@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["debian-openssl-1.0.x", "debian-openssl-3.0.x", "native"]
 }
 
 datasource db {
@@ -61,6 +62,7 @@ model User {
   messagesSent          UserMessage[]          @relation("messages_sent")
   messagesReceived      UserMessage[]          @relation("messages_received")
   ownedProjects         Project[]              @relation("ProjectOwner")
+  ecomProjects          EcomProject[]
 }
 
 model CreatorDnaProfile {
@@ -114,7 +116,7 @@ model Project {
   userId              String               @db.Uuid
 
   // ── Phase 1a: Tenant & Project Center ──
-  tenantId            String?              @db.Uuid
+  tenantId            String?
   ownerId             String?              @db.Uuid
   type                String?              // 'geo' | 'video' | 'novel' | 'ppt' | 'custom'
   resourceCount       Int                  @default(0)
@@ -1333,6 +1335,11 @@ model UserModelConfigV2 {
   musicModel    String   @default("")
   musicEnabled  Boolean  @default(false)
   musicBaseUrl  String?
+  visionUnderstandProvider String  @default("volcengine")
+  visionUnderstandApiKey   String?
+  visionUnderstandModel    String  @default("doubao-vision-pro-32k")
+  visionUnderstandEnabled  Boolean @default(true)
+  visionUnderstandBaseUrl  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2827,12 +2834,110 @@ model AssetGraphEdge {
 model Organization {
   id         String      @id @default(uuid()) @db.Uuid
   name       String
+  slug       String?     @unique
+  logoUrl    String?     @map("logo_url")
+  ownerId    String?     @map("owner_id") @db.Uuid
+  plan       String      @default("free") // free | pro | enterprise
+  planExpiresAt DateTime? @map("plan_expires_at")
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
-  members    OrgMember[]
-  workspaces Workspace[]
+  members       OrgMember[]
+  workspaces    Workspace[]
+  profile       EnterpriseProfile?
+  aiProviders   AIProviderConfig[]
+  subscription  EnterpriseSubscription?
 
   @@map("Organization")
+}
+
+model EnterpriseProfile {
+  id              String       @id @default(uuid()) @db.Uuid
+  organizationId  String       @unique @map("organization_id") @db.Uuid
+  industry        String?      // SaaS, eCommerce, Education, Finance, Healthcare, Manufacturing, etc.
+  businessSummary String?      @map("business_summary") // 主营业务简介
+  targetCustomer  String?      @map("target_customer")  // 目标客户描述
+  brandVoice      String?      @map("brand_voice")     // 品牌语言风格
+  website         String?
+  location        String?
+  onboardingStep  Int          @default(0) @map("onboarding_step") // 0-6
+  onboardingDone  Boolean      @default(false) @map("onboarding_done")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("enterprise_profile")
+}
+
+model AIProviderConfig {
+  id              String       @id @default(uuid()) @db.Uuid
+  organizationId  String       @map("organization_id") @db.Uuid
+  provider        String       // deepseek | openai | claude | qwen | zhipu
+  encryptedApiKey String       @map("encrypted_api_key")
+  baseUrl         String?      @map("base_url")
+  model           String       // deepseek-chat | gpt-4o | claude-3 | etc.
+  maxTokensPerDay Int          @default(0) @map("max_tokens_per_day")
+  enabled         Boolean      @default(true)
+  status          String       @default("active") // active | expired | rate_limited
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider, model])
+  @@map("ai_provider_config")
+}
+
+// ============================================================
+// Enterprise Subscription (Sprint 4.2.8)
+// ============================================================
+
+model EnterprisePlan {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String   @unique // 套餐标识（管理员配置）
+  displayName       String   @map("display_name") // 显示名称
+  description       String? // 套餐说明
+  price             Int      @default(0) // 价格（分），管理员配置
+  originalPrice     Int      @default(0) @map("original_price") // 原价（分）
+  currency          String   @default("CNY") // CNY | USD
+  billingCycle      String   @default("monthly") @map("billing_cycle") // monthly | yearly
+  maxEmployees      Int      @default(2) @map("max_employees") // AI员工上限
+  maxChannels       Int      @default(1) @map("max_channels") // 渠道上限
+  maxMembers        Int      @default(5) @map("max_members") // 企业成员上限
+  storageLimit      Int      @default(5) @map("storage_limit_gb") // 存储上限（GB）
+  // BYOK 策略
+  requireOwnLLMKey  Boolean  @default(true) @map("require_own_llm_key") // 必须自带模型Key
+  allowedProviders  Json     @default("[\"deepseek\",\"openai\",\"claude\",\"zhipu\"]") @map("allowed_providers") // 允许的模型供应商
+  // 额度策略
+  quotaPolicy      String   @default("unlimited") @map("quota_policy") // unlimited | fixed | pay_as_you_go
+  features          Json     @default("[]") // 功能特性列表
+  enabled           Boolean  @default(true)
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  subscriptions     EnterpriseSubscription[]
+
+  @@map("enterprise_plan")
+}
+
+model EnterpriseSubscription {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @unique @map("organization_id") @db.Uuid
+  planId          String   @map("plan_id") @db.Uuid
+  orderId         String?  @map("order_id") @db.Uuid // 关联 RechargeOrder，复用统一支付体系
+  status          String   @default("active") // active | expired | cancelled | trial
+  trialEndsAt     DateTime? @map("trial_ends_at")
+  startAt         DateTime @default(now()) @map("start_at")
+  expireAt    DateTime @map("expire_at")
+  autoRenew       Boolean  @default(true) @map("auto_renew")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan            EnterprisePlan @relation(fields: [planId], references: [id])
+
+  @@index([status])
+  @@index([expireAt])
+  @@map("enterprise_subscription")
 }
 
 model OrgMember {
@@ -5191,15 +5296,17 @@ model Tenant {
 }
 
 model GovOrganization {
-  id          String   @id @default(uuid())
-  tenantId    String
-  name        String
-  type        String   // personal, team, enterprise, department
-  parentId    String?
-  status      String   @default("active")
-  metadata    String?  // JSON
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid())
+  tenantId        String
+  name            String
+  type            String   // personal, team, enterprise, department
+  parentId        String?
+  status          String   @default("active")
+  departmentRole  String   @default("human") @map("department_role")
+  aiCapabilities  String   @default("[]") @map("ai_capabilities")
+  metadata        String?  // JSON
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   parent      GovOrganization? @relation("GovOrgHierarchy", fields: [parentId], references: [id])
@@ -6128,3 +6235,1183 @@ model WalkthroughProgress {
   @@map("walkthrough_progress")
 }
 
+
+model EcomProject {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  skuName       String   @default("")
+  category      String   @default("")
+  style         String   @default("")
+  language      String   @default("")
+  modelAttrs    String   @default("")
+  modelScene    String   @default("")
+  shootingStyle String   @default("")
+  faceVisible   String   @default("show")
+  status        String   @default("draft")  // draft | analyzing | prompts | generating | done | error
+  promptJson    Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("ecom_projects")
+}
+
+// ============================================================
+// Mall 商城
+// ============================================================
+
+model MallCategory {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  sort      Int      @default(0)
+  visible   Boolean  @default(true)
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products MallProduct[]
+
+  @@map("mall_category")
+}
+
+model MallProduct {
+  id            String        @id @default(uuid()) @db.Uuid
+  categoryId    String?       @db.Uuid
+  name          String
+  subtitle      String?
+  cover         String?
+  images        Json          @default("[]")
+  video         String?
+  detail        String?
+  originalPrice Float         @default(0)
+  price         Float
+  stock         Int           @default(0)
+  sales         Int           @default(0)
+  isRecommend   Boolean       @default(false)
+  isNew         Boolean       @default(false)
+  isActive      Boolean       @default(true)
+  sort          Int           @default(0)
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  category MallCategory? @relation(fields: [categoryId], references: [id])
+  items    MallOrderItem[]
+  carts    MallCart[]
+
+  @@map("mall_product")
+}
+
+model MallBanner {
+  id        String   @id @default(uuid()) @db.Uuid
+  imageUrl  String
+  linkType  String?
+  linkValue String?
+  sort      Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("mall_banner")
+}
+
+model MallCoupon {
+  id                String        @id @default(uuid()) @db.Uuid
+  name              String
+  type              String        // fixed | percent
+  value             Float
+  minAmount         Float         @default(0)
+  maxPerUser        Int           @default(1)
+  totalCount        Int           @default(0)
+  usedCount         Int           @default(0) @map("used_count")
+  startAt           DateTime?
+  endAt             DateTime?
+  isActive          Boolean       @default(true)
+  giftProductId     String?       @db.Uuid
+  forVipPlan        String?
+  maxDiscountAmount Float         @default(0)
+  deletedAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  userCoupons MallUserCoupon[]
+
+  @@map("mall_coupon")
+}
+
+model MallUserCoupon {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  couponId  String    @db.Uuid
+  orderNo   String?
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  coupon MallCoupon @relation(fields: [couponId], references: [id])
+
+  @@index([userId])
+  @@index([orderNo])
+  @@map("mall_user_coupon")
+}
+
+model MallOrder {
+  id           String          @id @default(uuid()) @db.Uuid
+  orderNo      String          @unique @db.VarChar(20)
+  userId       String          @db.Uuid
+  status       String          @default("pending") // pending | paid | shipped | received | cancelled | refunding | refunded
+  totalAmount  Float
+  paidAmount   Float
+  payAmount    Float     @default(0)
+  couponId     String?         @db.Uuid
+  discount     Float           @default(0)
+  addressName  String?
+  addressPhone String?
+  address      String?
+  trackingNo   String?
+  remark       String?
+  paidAt       DateTime?
+  shippedAt    DateTime?
+  receivedAt   DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  items MallOrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNo])
+  @@map("mall_order")
+}
+
+model MallOrderItem {
+  id           String       @id @default(uuid()) @db.Uuid
+  orderId      String       @db.Uuid
+  productId    String       @db.Uuid
+  productName  String?      @db.VarChar(200)
+  productImage String?
+  quantity     Int
+  price        Float
+  subtotal     Float?
+  createdAt    DateTime     @default(now())
+
+  order   MallOrder   @relation(fields: [orderId], references: [id])
+  product MallProduct @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("mall_order_item")
+}
+
+// ============================================================
+// 购物车
+// ============================================================
+
+model MallCart {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  productId String   @db.Uuid
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product MallProduct @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@map("mall_cart")
+}
+
+// ============================================================
+// 收货地址
+// ============================================================
+
+model MallAddress {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  consignee String
+  phone     String
+  province  String
+  city      String
+  district  String?
+  detail    String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("mall_address")
+}
+
+// ============================================================
+// 法律工作台
+// ============================================================
+
+model LegalCase {
+  id                String    @id @default(uuid()) @db.Uuid
+  caseName          String    @db.VarChar(200)
+  description       String?
+  party             String?   @db.VarChar(500)
+  category          String?   @db.VarChar(100)
+  status            String    @default("pending") @db.VarChar(50)
+  analysisProgress  Int       @default(0)
+  userId            String    @db.Uuid
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("legal_case")
+}
+
+model LegalContractTemplate {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String    @db.VarChar(200)
+  content   String?
+  category  String?   @db.VarChar(100)
+  enabled   Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("legal_contract_template")
+}
+
+model LegalDocumentTemplate {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String    @db.VarChar(200)
+  content   String?
+  category  String?   @db.VarChar(100)
+  enabled   Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("legal_document_template")
+}
+
+model LegalKnowledge {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String    @db.VarChar(200)
+  content   String?
+  category  String?   @db.VarChar(100)
+  tags      String?   @db.VarChar(500)
+  enabled   Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("legal_knowledge")
+}
+
+model LegalRegulation {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String    @db.VarChar(200)
+  content   String?
+  category  String?   @db.VarChar(100)
+  tags      String?   @db.VarChar(500)
+  issuedBy  String?   @db.VarChar(200)
+  enabled   Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([category])
+  @@map("legal_regulation")
+}
+
+model LegalCaseTemplate {
+  id        String    @id @default(uuid()) @db.Uuid
+  caseName  String    @db.VarChar(200)
+  title     String?   @db.VarChar(200)
+  content   String?
+  category  String?   @db.VarChar(100)
+  enabled   Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([category])
+  @@map("legal_case_template")
+}
+
+model LegalAiPrompt {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @db.VarChar(200)
+  content   String?
+  category  String?   @db.VarChar(100)
+  version   Int       @default(1)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("legal_ai_prompt")
+}
+
+model LegalSystemConfig {
+  id          String    @id @default(uuid()) @db.Uuid
+  configKey   String    @unique @db.VarChar(200)
+  configValue String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("legal_system_config")
+}
+
+// ============================================================
+// Enterprise AI Workforce (Phase 1 Sprint 1)
+// ============================================================
+
+model EnterpriseLlmConfig {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId              String   @map("tenant_id") @db.Text
+  provider              String   @db.VarChar(50)
+  modelName             String   @map("model_name") @db.VarChar(200)
+  encryptedApiKey       String   @map("encrypted_api_key")
+  baseUrl               String?  @map("base_url")
+  credentialOwner       String   @default("enterprise") @map("credential_owner") @db.VarChar(30)
+  maxTokensPerDay       Int      @default(0) @map("max_tokens_per_day")
+  maxRequestsPerMinute  Int      @default(60) @map("max_requests_per_minute")
+  capabilities          String   @default("[]")
+  enabled               Boolean  @default(true)
+  status                String   @default("active") @db.VarChar(20)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  agentBindings         AgentModelBinding[]
+  routingPolices        ModelRoutingPolicy[]
+
+  @@unique([tenantId, provider, modelName])
+  @@map("enterprise_llm_config")
+}
+
+model EnterpriseAgentProfile {
+  id              String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId        String   @map("tenant_id") @db.Text
+  organizationId  String?  @map("organization_id") @db.Text
+  name            String   @db.VarChar(100)
+  avatarUrl       String?  @map("avatar_url")
+  description     String?
+  role            String   @db.VarChar(100)
+  agentType       String   @map("agent_type") @db.VarChar(50)
+  goal            String?
+  knowledgeScope  String   @default("[]") @map("knowledge_scope")
+  tools           String   @default("[]")
+  permissions     String   @default("[]")
+  capabilities    String   @default("[]")
+  escalationRules String?  @map("escalation_rules")
+  kpiMetrics      String   @default("{}") @map("kpi_metrics")
+  status          String   @default("active") @db.VarChar(20)
+  isDefault       Boolean  @default(false) @map("is_default")
+  metadata        String   @default("{}")
+  // Sprint 1 v1.1 — CEO Intent Layer扩展
+  dailyTarget    Int?      @map("daily_target")
+  workingHours   String?   @map("working_hours")
+  managerNote    String?   @map("manager_note")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  modelBindings   AgentModelBinding[]
+  auditTrails     AgentAuditTrail[]
+  schedules       AgentSchedule[]
+  goals           AgentGoal[]
+
+  @@map("enterprise_agent_profile")
+}
+
+// ============================================================
+// Sprint 4.2.8 Step 5 — Agent Identity Layer
+// ============================================================
+
+model EnterpriseAgentInstance {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  employeeId        String   @unique @map("employee_id") @db.Text // EnterpriseAgentProfile.id
+  agentId           String   @unique @map("agent_id") @db.Text // runtime agent identifier: agent_<tenant>_<shortId>
+  runtime           String   @default("openclaw") @db.VarChar(50)
+  namespace         String   @map("namespace") @db.VarChar(100) // memory namespace: tenant_<id>_<role>
+  runtimeStatus     String   @default("active") @map("runtime_status") // active | paused | stopped
+  lastActiveAt      DateTime? @map("last_active_at")
+  totalTasks        Int      @default(0) @map("total_tasks")
+  totalErrors       Int      @default(0) @map("total_errors")
+  metadata          String   @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("enterprise_agent_instance")
+}
+
+model EmployeeModelBinding {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  employeeId        String   @map("employee_id") @db.Text // EnterpriseAgentProfile.id
+  providerConfigId  String   @map("provider_config_id") @db.Text // AIProviderConfig.id
+  modelName         String   @map("model_name") @db.VarChar(200) // override model
+  temperature       Float    @default(0.7)
+  maxTokens         Int      @default(16384) @map("max_tokens")
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([employeeId, providerConfigId])
+  @@map("employee_model_binding")
+}
+
+// ============================================================
+// Sprint 4.2.9 — Agent Experience Layer
+// ============================================================
+
+model EnterpriseAgentTask {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  agentInstanceId   String   @map("agent_instance_id") @db.Text // EnterpriseAgentInstance.id
+  taskType          String   @map("task_type") @db.VarChar(50)
+  inputSummary      String?  @map("input_summary") @db.Text
+  outputSummary     String?  @map("output_summary") @db.Text
+  status            String   @default("completed") @db.VarChar(20) // success | failed | running
+  tokenInput        Int      @default(0) @map("token_input")
+  tokenOutput       Int      @default(0) @map("token_output")
+  cost              Float    @default(0)
+  durationMs        Int      @default(0) @map("duration_ms")
+  startedAt         DateTime @default(now()) @map("started_at")
+  completedAt       DateTime? @map("completed_at")
+
+  @@index([agentInstanceId, startedAt(sort: Desc)])
+  @@index([tenantId, startedAt(sort: Desc)])
+  @@index([taskType])
+  @@map("enterprise_agent_task")
+}
+
+// Sprint 4.2.9 Phase 4: Agent Channel Binding
+model AgentChannelBinding {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  agentInstanceId   String   @map("agent_instance_id") @db.Text // EnterpriseAgentInstance.id
+  channelAccountId  String   @map("channel_account_id") @db.Text // EnterpriseChannelAccount.id
+  permissions       Json     @default("{\"read\":true,\"reply\":true}") // {read, reply, createTask, execute, delete, publish, analyze, schedule}
+  status            String   @default("active") @map("status") // active | paused
+  publishCount      Int      @default(0) @map("publish_count")  // 今日发布数
+  scheduleCount     Int      @default(0) @map("schedule_count") // 今日排期分析数
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([agentInstanceId, channelAccountId])
+  @@index([tenantId])
+  @@index([agentInstanceId])
+  @@index([channelAccountId])
+  @@map("agent_channel_binding")
+}
+
+// Sprint 4.2.9 Phase 4.5: Channel Provider Registry
+model EnterpriseChannelProvider {
+  id           String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  name         String   @unique @map("name") @db.VarChar(50)       // wechat_work, douyin, kuaishou, weibo...
+  displayName  String   @map("display_name") @db.VarChar(100)       // 企业微信, 抖音, 快手, 微博...
+  category     String   @default("content") @db.VarChar(30)         // content | customer | service
+  capabilities Json     @default("[\"read\",\"reply\"]")            // ["publish","analyze","schedule","reply","createTask"]
+  icon         String   @default("📱") @db.VarChar(10)              // emoji icon
+  status       String   @default("active") @db.VarChar(20)          // active | deprecated
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@index([status])
+  @@map("enterprise_channel_provider")
+}
+
+// Sprint 1 v1.1 — CEO Intent Layer
+model EnterpriseCommand {
+  id             String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId       String   @map("tenant_id") @db.Text
+  creatorId      String   @map("creator_id") @db.Text
+  content        String   @db.Text
+  commandType    String   @default("custom") @map("command_type") @db.VarChar(30)
+  priority       String   @default("normal") @db.VarChar(20)
+  status         String   @default("PENDING") @db.VarChar(20)
+  plannerResult  Json?    @map("planner_result")
+  resultSummary  String?  @map("result_summary") @db.Text
+  resultJson     Json?    @map("result_json")
+  createdAt      DateTime @default(now()) @map("created_at")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("enterprise_command")
+}
+
+model EnterpriseKnowledge {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId         String   @map("tenant_id") @db.Text
+  type             String   @db.VarChar(30)
+  title            String   @db.VarChar(200)
+  content          String   @db.Text
+  fileUrl          String?  @map("file_url")
+  source           String   @default("upload") @db.VarChar(50)
+  status           String   @default("active") @db.VarChar(20)
+  charCount        Int      @default(0) @map("char_count")
+  agentAccessScope String   @default("[]") @map("agent_access_scope")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@map("enterprise_knowledge")
+}
+
+
+model AgentModelBinding {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  agentId           String   @map("agent_id") @db.Text
+  llmConfigId       String   @map("llm_config_id") @db.Text
+  taskType          String   @map("task_type") @db.VarChar(50)
+  priority          Int      @default(0)
+  maxTokens         Int      @default(16384) @map("max_tokens")
+  temperature       Float    @default(0.7)
+  fallbackEnabled   Boolean  @default(true) @map("fallback_enabled")
+  failureStrategy   String   @default("fallback") @map("failure_strategy") @db.VarChar(30)
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  agent             EnterpriseAgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  llmConfig         EnterpriseLlmConfig    @relation(fields: [llmConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, llmConfigId, taskType])
+  @@map("agent_model_binding")
+}
+
+model ModelRoutingPolicy {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  organizationId    String?  @map("organization_id") @db.Text
+  agentType         String?  @map("agent_type") @db.VarChar(50)
+  taskType          String   @map("task_type") @db.VarChar(50)
+  llmConfigId       String?  @map("llm_config_id") @db.Text
+  fallbackChain     String   @default("[]") @map("fallback_chain")
+  priority          Int      @default(0)
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  llmConfig         EnterpriseLlmConfig? @relation(fields: [llmConfigId], references: [id])
+
+  @@unique([tenantId, agentType, taskType, priority])
+  @@map("model_routing_policy")
+}
+
+model AgentAuditTrail {
+  id              String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId        String   @map("tenant_id") @db.Text
+  agentId         String?  @map("agent_id") @db.Text
+  taskId         String?  @map("task_id") @db.Text
+  action          String   @db.VarChar(50)
+  resource        String?  @db.VarChar(100)
+  resourceId     String?  @map("resource_id") @db.Text
+  llmConfigId    String?  @map("llm_config_id") @db.Text
+  tokenUsage     Int      @default(0) @map("token_usage")
+  cost            Float    @default(0)
+  inputSummary   String?  @map("input_summary")
+  outputSummary  String?  @map("output_summary")
+  durationMs     Int      @default(0) @map("duration_ms")
+  approvalStatus String   @default("auto_executed") @map("approval_status") @db.VarChar(30)
+  metadata        String   @default("{}")
+  // Sprint 1 v1.1 — CEO Intent Layer扩展
+  dailyTarget    Int?      @map("daily_target")
+  workingHours   String?   @map("working_hours")
+  managerNote    String?   @map("manager_note")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  agent           EnterpriseAgentProfile? @relation(fields: [agentId], references: [id])
+
+  @@map("agent_audit_trail")
+}
+
+// ============================================================
+// Phase 2.5: Agent Autonomous Operation
+// ============================================================
+
+model AgentSchedule {
+  id              String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId        String    @map("tenant_id") @db.Text
+  agentId         String    @map("agent_id") @db.Text
+  scheduleType    String    @map("schedule_type") @default("daily") @db.VarChar(20) // daily/weekly/cron
+  cronExpression  String    @map("cron_expression") @db.VarChar(50) // e.g. "0 9 * * *"
+  taskTemplate    String    @map("task_template") @db.Text // task prompt template
+  taskType        String    @map("task_type") @default("auto") @db.VarChar(30) // auto/report/analysis
+  enabled         Boolean   @default(true)
+  lastRunAt       DateTime? @map("last_run_at")
+  nextRunAt       DateTime? @map("next_run_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  agent           EnterpriseAgentProfile? @relation(fields: [agentId], references: [id])
+
+  @@index([tenantId, enabled])
+  @@map("agent_schedule")
+}
+
+model AgentGoal {
+  id              String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId        String    @map("tenant_id") @db.Text
+  agentId         String    @map("agent_id") @db.Text
+  goalDate        String    @map("goal_date") @db.VarChar(10) // YYYY-MM-DD
+  goalType        String    @map("goal_type") @db.VarChar(30) // scan/analyze/content/outreach
+  description     String    @db.Text
+  targetCount     Int       @map("target_count") @default(0)
+  actualCount     Int       @map("actual_count") @default(0)
+  status          String    @default("pending") @db.VarChar(20) // pending/in_progress/completed/missed
+  evidence        String    @default("[]") @db.Text // JSON array of achievement summaries
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  agent           EnterpriseAgentProfile? @relation(fields: [agentId], references: [id])
+
+  @@unique([agentId, goalDate, goalType])
+  @@index([tenantId, goalDate])
+  @@map("agent_goal")
+}
+
+model EnterpriseLeadIntelligence {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  interactionId     String?  @map("interaction_id") @db.Text
+  platform          String?  @db.VarChar(30)
+  platformUserId    String?  @map("platform_user_id") @db.Text
+  // 客户画像
+  customerName      String?  @map("customer_name") @db.VarChar(100)
+  customerType      String?  @map("customer_type") @db.VarChar(30)
+  industry          String?  @db.VarChar(50)
+  companySize       String?  @map("company_size") @db.VarChar(20)
+  // 意向分析
+  intentScore       Int      @default(0) @map("intent_score")
+  intentSignals     String   @default("[]") @map("intent_signals")
+  temperature       String   @default("cold") @db.VarChar(10)
+  purchaseProb      Int      @default(0) @map("purchase_prob")
+  probabilitySource String   @default("algorithm") @map("probability_source") @db.VarChar(30)
+  estimatedValue    Int      @default(0) @map("estimated_value")
+  valueSource       String   @default("industry_template") @map("value_source") @db.VarChar(30)
+  // 跟进管理
+  nextAction        String?  @map("next_action")
+  nextActionDate    DateTime? @map("next_action_date") @db.Date
+  assignedAgent     String?  @map("assigned_agent") @db.Text
+  status            String   @default("new") @db.VarChar(20)
+  note              String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, temperature])
+  @@index([tenantId, purchaseProb(sort: Desc)])
+  @@index([tenantId, status])
+  @@map("enterprise_lead_intelligence")
+}
+
+model EnterpriseRoiSnapshot {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  snapshotDate      DateTime @map("snapshot_date") @db.Date
+  // 投入
+  planCost          Int      @default(0) @map("plan_cost")
+  tokenCost         Int      @default(0) @map("token_cost")
+  channelCost       Int      @default(0) @map("channel_cost")
+  totalCost         Int      @default(0) @map("total_cost")
+  // 已产生价值（真实）
+  leadsGenerated    Int      @default(0) @map("leads_generated")
+  hotLeads          Int      @default(0) @map("hot_leads")
+  interactions      Int      @default(0)
+  opportunities     Int      @default(0)
+  // 预测价值（模型）
+  estimatedRevenue  Int      @default(0) @map("estimated_revenue")
+  // 效率
+  costPerLead       Int      @default(0) @map("cost_per_lead")
+  roiRatio          Decimal  @default(0) @map("roi_ratio") @db.Decimal(5, 2)
+  detail            String   @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, snapshotDate])
+  @@map("enterprise_roi_snapshot")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Phase 4.2 Sprint 4.2.1 — Enterprise Signal Foundation
+// ═══════════════════════════════════════════════════════════════
+
+model EnterpriseOperationEvent {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId            String   @map("tenant_id") @db.Text
+  governanceTenantId  String?  @map("governance_tenant_id") @db.Text
+  eventType           String   @map("event_type") @db.Text
+  actorType           String   @map("actor_type") @db.Text
+  actorId             String   @map("actor_id") @db.Text
+  actorName           String?  @map("actor_name") @db.Text
+  targetType          String?  @map("target_type") @db.Text
+  targetId            String?  @map("target_id") @db.Text
+  metadata            Json     @default("{}")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, eventType])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([governanceTenantId])
+  @@map("enterprise_operation_event")
+}
+
+model EnterpriseSignal {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId            String    @map("tenant_id") @db.Text
+  governanceTenantId  String?   @map("governance_tenant_id") @db.Text
+  signalType          String    @map("signal_type") @db.Text
+  severity            String    @default("info") @db.Text
+  sourceEvents        Json      @default("[]") @map("source_events")
+  description         String?   @db.Text
+  suggestedAction     String?   @map("suggested_action") @db.Text
+  status              String    @default("active") @db.Text
+  detectedAt          DateTime  @default(now()) @map("detected_at")
+  resolvedAt          DateTime? @map("resolved_at")
+
+  recommendations EnterpriseRecommendation[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, severity])
+  @@index([governanceTenantId])
+  @@map("enterprise_signal")
+}
+
+model EnterpriseRecommendation {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId            String    @map("tenant_id") @db.Text
+  governanceTenantId  String?   @map("governance_tenant_id") @db.Text
+  signalId            String?   @map("signal_id") @db.Text
+  category            String    @db.Text
+  priority            Int       @default(3)
+  title               String    @db.Text
+  rationale           String?   @db.Text
+  expectedImpact      String?   @map("expected_impact") @db.Text
+  actionPlan          Json      @default("[]")
+  status              String    @default("pending") @db.Text
+  // Sprint 4.2.2: Decision Intelligence
+  priorityScore       Int       @default(0) @map("priority_score")
+  priorityLevel       String?   @map("priority_level") @db.Text
+  impact              Int?
+  urgency             Int?
+  confidence          Int?
+  decisionStatus      String    @default("detected") @map("decision_status")
+  evidenceGraph       Json      @default("[]") @map("evidence_graph")
+  approvedAt          DateTime? @map("approved_at")
+  executedAt          DateTime? @map("executed_at")
+  outcome             String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  signal              EnterpriseSignal? @relation(fields: [signalId], references: [id], onDelete: SetNull)
+  actions             EnterpriseAction[]
+  feedbacks           EnterpriseDecisionFeedback[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, priority])
+  @@index([tenantId, decisionStatus])
+  @@index([tenantId, priorityScore(sort: Desc)])
+  @@index([governanceTenantId])
+  @@map("enterprise_recommendation")
+}
+
+// Sprint 4.2.3 — Action Loop (CTO APPROVED)
+model EnterpriseAction {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId            String    @map("tenant_id") @db.Text
+  governanceTenantId  String?   @map("governance_tenant_id") @db.Text
+  decisionId          String    @map("decision_id") @db.Text
+  
+  title               String    @db.Text
+  description         String?   @db.Text
+  
+  status              String    @default("pending") @db.Text
+  priority            String?   @default("P3") @db.Text
+  
+  ownerType           String    @default("human") @map("owner_type") @db.Text
+  ownerId             String    @map("owner_id") @db.Text
+  
+  // Approval Gate
+  approvedBy          String?   @map("approved_by") @db.Text
+  approvedByGovUserId String?   @map("approved_by_gov_user_id") @db.Text
+  approvedAt          DateTime? @map("approved_at")
+  approvalNote        String?   @map("approval_note") @db.Text
+  
+  // Execution Tracking
+  startedAt           DateTime? @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+  executionResult     String?   @map("execution_result") @db.Text
+  
+  // Verification
+  verifiedAt          DateTime? @map("verified_at")
+  verificationResult  String?   @map("verification_result") @db.Text
+  
+  // CTO 修正: status history (审计日志)
+  statusHistory       Json      @default("[]") @map("status_history")
+  
+  // Metadata
+  dueDate             DateTime? @map("due_date")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  decision            EnterpriseRecommendation? @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  outcome             EnterpriseOutcome? @relation("ActionOutcome")
+  interactions        EnterpriseInteraction[]
+
+  @@index([tenantId])
+  @@index([decisionId])
+  @@index([status])
+  @@index([ownerType, ownerId])
+  @@index([tenantId, status])
+  @@index([tenantId, ownerType, ownerId])
+  @@index([governanceTenantId])
+  @@index([approvedByGovUserId])
+  @@index([dueDate])
+  @@map("enterprise_action")
+}
+
+// Sprint 4.2.4-A — Outcome Intelligence Foundation (CTO APPROVED)
+model EnterpriseOutcome {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId            String    @map("tenant_id") @db.Text
+  governanceTenantId  String?   @map("governance_tenant_id") @db.Text
+  actionId            String    @unique @map("action_id") @db.Text
+
+  // CTO 调整: outcomeType + sourceType
+  outcomeType         String    @default("OPERATIONAL") @map("outcome_type") @db.Text
+  sourceType          String    @default("HUMAN") @map("source_type") @db.Text
+
+  // 生命周期
+  status              String    @default("PENDING_VERIFY") @db.Text
+
+  // 事实内容
+  summary             String?   @db.Text
+  evidence            Json      @default("[]")
+
+  // Impact (Framework, not Revenue)
+  impactType          String?   @map("impact_type") @db.Text
+  impactLevel         Int?      @map("impact_level")
+  impactMetric        String?   @map("impact_metric")
+  impactValue         String?   @map("impact_value")
+  impactSource        String?   @default("manual") @map("impact_source")
+
+  // 时间
+  occurredAt          DateTime? @map("occurred_at")
+  verifiedAt          DateTime? @map("verified_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  action              EnterpriseAction @relation("ActionOutcome", fields: [actionId], references: [id], onDelete: Cascade)
+  feedbacks           EnterpriseDecisionFeedback[]
+  interactions        EnterpriseInteraction[]
+
+  @@index([tenantId])
+  @@index([governanceTenantId])
+  @@index([actionId])
+  @@index([status])
+  @@index([outcomeType])
+  @@index([impactType])
+  @@map("enterprise_outcome")
+}
+
+model EnterpriseDecisionFeedback {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId            String    @map("tenant_id") @db.Text
+  governanceTenantId  String?   @map("governance_tenant_id") @db.Text
+
+  decisionId          String    @map("decision_id") @db.Text
+  outcomeId           String    @map("outcome_id") @db.Text
+
+  confidenceDelta     Int       @default(0) @map("confidence_delta")
+  reason              String?   @db.Text
+  feedbackType        String    @default("learn") @map("feedback_type") @db.Text
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  decision            EnterpriseRecommendation @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  outcome             EnterpriseOutcome @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([decisionId])
+  @@index([outcomeId])
+  @@map("enterprise_decision_feedback")
+}
+
+// Sprint 4.2.5 — Channel Reality Foundation (CTO APPROVED)
+// Sprint 4.2.5.1 — Channel Governance Alignment (CTO APPROVED)
+model EnterpriseChannelAccount {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId              String    @map("tenant_id") @db.Text
+  governanceTenantId    String?   @map("governance_tenant_id") @db.Text
+  channelType           String    @default("wechat_work") @map("channel_type") @db.Text
+  channelName           String    @map("channel_name") @db.Text
+  externalAccountId     String?   @map("external_account_id") @unique @db.Text
+  credentialEncrypted   Json      @default("{}") @map("credential_encrypted")
+  connectionStatus      String    @default("PENDING") @map("connection_status") @db.Text
+  connectedAt           DateTime? @map("connected_at")
+  lastSyncAt            DateTime? @map("last_sync_at")
+  lastError             String?   @map("last_error") @db.Text
+  ownerId               String    @map("owner_id") @db.Text
+  ownerType             String    @default("gov_user") @map("owner_type") @db.Text
+  // Sprint 4.2.5.1: Channel Ownership
+  organizationId        String?   @map("organization_id") @db.Text
+  createdByGovUserId    String?   @map("created_by_gov_user_id") @db.Text
+  manageRole            String    @default("CHANNEL_OWNER") @map("manage_role") @db.Text
+  metadata              Json      @default("{}")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  interactions          EnterpriseInteraction[]
+  syncLogs              EnterpriseChannelSyncLog[]
+
+  @@unique([tenantId, channelType])
+  @@index([tenantId])
+  @@index([governanceTenantId])
+  @@index([connectionStatus])
+  // Sprint 4.2.5.1: CTO suggested indexes
+  @@index([tenantId, organizationId])
+  @@index([ownerId])
+  @@index([channelType, connectionStatus])
+  @@map("enterprise_channel_account")
+}
+
+model EnterpriseInteraction {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId              String    @map("tenant_id") @db.Text
+  governanceTenantId    String?   @map("governance_tenant_id") @db.Text
+  channelType           String    @default("wechat_work") @map("channel_type") @db.Text
+  channelAccountId      String    @map("channel_account_id") @db.Text
+  // Sprint 4.2.5.1: Organization scope for Tenant Isolation
+  organizationId        String?   @map("organization_id") @db.Text
+  externalId            String    @map("external_id") @db.Text
+  externalName          String?   @map("external_name") @db.Text
+  interactionType       String    @map("interaction_type") @db.Text
+  direction             String    @db.Text
+  content               String?   @db.Text
+  contentType           String    @default("text") @map("content_type") @db.Text
+  actionId              String?   @map("action_id") @db.Text
+  outcomeId             String?   @map("outcome_id") @db.Text
+  trustLevel            String    @default("UNVERIFIED") @map("trust_level") @db.Text
+  // IMP-01.4: Link to CustomerIdentity (immutable after write)
+  customerIdentityId    String?   @map("customer_identity_id") @db.Text
+  // IMP-01.5: Trace link for full pipeline visibility
+  traceId               String?   @map("trace_id") @db.Text
+  // IMP-01.5: AI-generated sentiment (stored in metadata, denormalized for query)
+  sentiment             String?   @map("sentiment") @db.Text
+  rawPayload            Json      @default("{}")
+  occurredAt            DateTime  @map("occurred_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  channelAccount        EnterpriseChannelAccount @relation(fields: [channelAccountId], references: [id], onDelete: Cascade)
+  action                EnterpriseAction? @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  outcome               EnterpriseOutcome? @relation(fields: [outcomeId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([governanceTenantId])
+  @@index([channelAccountId])
+  @@index([organizationId])
+  @@index([actionId])
+  @@index([outcomeId])
+  @@index([trustLevel])
+  @@index([customerIdentityId])
+  @@index([traceId])
+  @@index([sentiment])
+  @@index([occurredAt])
+  @@map("enterprise_interaction")
+}
+
+model EnterpriseChannelSyncLog {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId              String    @map("tenant_id") @db.Text
+  channelAccountId      String    @map("channel_account_id") @db.Text
+  syncType              String    @default("full") @map("sync_type") @db.Text
+  startedAt             DateTime  @default(now()) @map("started_at")
+  finishedAt            DateTime? @map("finished_at")
+  status                String    @default("running") @map("status") @db.Text
+  recordsSynced         Int?      @map("records_synced")
+  recordsFailed         Int?      @map("records_failed")
+  errorMessage          String?   @map("error_message") @db.Text
+  errorDetail           Json?     @default("{}")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  channelAccount        EnterpriseChannelAccount @relation(fields: [channelAccountId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([channelAccountId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("enterprise_channel_sync_log")
+}
+
+model ChannelOutcomeMapping {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId                 String    @map("tenant_id") @db.Text
+  channelType              String    @default("wechat_work") @map("channel_type") @db.Text
+  interactionType          String    @map("interaction_type") @db.Text
+  outcomeType              String    @default("ENGAGEMENT") @map("outcome_type") @db.Text
+  confidence               Int       @default(50)
+  requiresHumanVerification Boolean  @default(true) @map("requires_human_verification")
+  isActive                 Boolean   @default(true)
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([channelType])
+  @@map("channel_outcome_mapping")
+}
+
+// Sprint 4.2.5.1 — External Account Binding (Contract 10)
+model ChannelCustomerMapping {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId              String    @map("tenant_id") @db.Text
+  governanceTenantId    String?   @map("governance_tenant_id") @db.Text
+  organizationId        String?   @map("organization_id") @db.Text
+
+  channelType           String    @map("channel_type") @db.Text
+  channelAccountId      String    @map("channel_account_id") @db.Text
+  externalCustomerId    String    @map("external_customer_id") @db.Text
+  externalOpenId        String?   @map("external_open_id") @db.Text
+
+  internalCustomerId    String?   @map("internal_customer_id") @db.Text
+  internalGovUserId     String?   @map("internal_gov_user_id") @db.Text
+  // IMP-01.4: Mapping status for sync pipeline
+  mappingStatus         String    @default("unknown") @map("mapping_status") @db.Text
+
+  externalName          String?   @map("external_name") @db.Text
+  externalAvatar        String?   @map("external_avatar") @db.Text
+  metadata              Json      @default("{}")
+
+  firstInteractionAt    DateTime? @map("first_interaction_at")
+  lastInteractionAt     DateTime? @map("last_interaction_at")
+  interactionCount      Int       @default(0) @map("interaction_count")
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, channelType, externalCustomerId])
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([channelAccountId])
+  @@index([externalCustomerId])
+  @@index([internalGovUserId])
+  @@index([mappingStatus])
+  @@index([lastInteractionAt])
+  @@map("channel_customer_mapping")
+}
+
+// ═══════════════════════════════════════════════════════════
+// P4.2.5.2-IMP-01.4: Customer Identity Sync
+// ═══════════════════════════════════════════════════════════
+
+/// Canonical Customer Identity — external identity mapping result
+/// Holds the resolved enterprise customer after identity resolution
+model CustomerIdentity {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId              String    @map("tenant_id") @db.Text
+  governanceTenantId    String?   @map("governance_tenant_id") @db.Text
+  organizationId        String?   @map("organization_id") @db.Text
+
+  /// Resolved internal customer reference (links to Customer/Client system)
+  internalCustomerId    String?   @map("internal_customer_id") @db.Text
+  /// Internal account owner (gov user)
+  internalGovUserId     String?   @map("internal_gov_user_id") @db.Text
+
+  /// Display name (resolved from external)
+  displayName           String    @map("display_name") @db.Text
+  displayAvatar         String?   @map("display_avatar") @db.Text
+
+  /// Source channel info
+  channelType           String    @map("channel_type") @db.Text
+  channelAccountId      String    @map("channel_account_id") @db.Text
+  externalId            String    @map("external_id") @db.Text
+  externalOpenId        String?   @map("external_open_id") @db.Text
+
+  /// Mapping status: unknown → pending → mapped
+  mappingStatus         String    @default("unknown") @map("mapping_status") @db.Text
+
+  /// Interaction tracking
+  firstInteractionAt    DateTime? @map("first_interaction_at")
+  lastInteractionAt     DateTime? @map("last_interaction_at")
+  interactionCount      Int       @default(0) @map("interaction_count")
+
+  /// Sync metadata
+  lastSyncedAt          DateTime? @map("last_synced_at")
+  syncSource            String?   @map("sync_source") @db.Text
+
+  metadata              Json      @default("{}")
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, channelType, externalId])
+  @@index([tenantId])
+  @@index([governanceTenantId])
+  @@index([organizationId])
+  @@index([channelAccountId])
+  @@index([internalCustomerId])
+  @@index([internalGovUserId])
+  @@index([mappingStatus])
+  @@index([externalId])
+  @@index([lastInteractionAt])
+  @@map("customer_identity")
+}
+
+// ═══════════════════════════════════════════════════════════
+// P4.2.5.2-IMP-01.3: Callback Runtime Hardening
+// ═══════════════════════════════════════════════════════════
+
+model ProcessedEvent {
+  id              String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  eventId         String    @map("event_id") @db.Text
+  tenantId        String    @map("tenant_id") @db.Text
+  channelAccountId String   @map("channel_account_id") @db.Text
+  channelType     String    @default("wechat_work") @map("channel_type") @db.Text
+  eventType       String    @map("event_type") @db.Text
+  status          String    @default("success") @db.Text
+  traceId         String    @map("trace_id") @db.Text
+  processedAt     DateTime  @default(now()) @map("processed_at")
+  error           String?   @db.Text
+
+  @@unique([eventId, channelAccountId])
+  @@index([tenantId])
+  @@index([channelAccountId])
+  @@index([traceId])
+  @@index([processedAt])
+  @@map("processed_event")
+}
+
+model DeadLetterEvent {
+  id              String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  eventId         String    @map("event_id") @db.Text
+  tenantId        String    @map("tenant_id") @db.Text
+  channelAccountId String   @map("channel_account_id") @db.Text
+  channelType     String    @default("wechat_work") @map("channel_type") @db.Text
+  eventType       String    @map("event_type") @db.Text
+  payload         Json      @map("payload")
+  error           String    @db.Text
+  retryCount      Int       @default(0) @map("retry_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  lastRetriedAt   DateTime? @map("last_retried_at")
+  resolvedAt      DateTime? @map("resolved_at")
+  resolution      String?   @db.Text
+
+  @@index([tenantId])
+  @@index([channelAccountId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([resolvedAt])
+  @@map("dead_letter_event")
+}
+
+model EventTraceLog {
+  id              String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  traceId         String    @map("trace_id") @db.Text
+  eventId         String    @map("event_id") @db.Text
+  tenantId        String    @map("tenant_id") @db.Text
+  channelAccountId String   @map("channel_account_id") @db.Text
+  stage           String    @db.Text
+  status          String    @db.Text
+  message         String?   @db.Text
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([traceId])
+  @@index([eventId])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("event_trace_log")
+}

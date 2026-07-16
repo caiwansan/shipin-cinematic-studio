@@ -1,0 +1,78 @@
+/* ═══════════════════════════════════════════════════════════
+   Enterprise Design Tokens v1.0
+   CTO Frozen: 所有 Enterprise 页面必须引用这些变量
+   禁止内联 style="color: #xxx"
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Background ── */
+  --color-bg-primary: #070B16;
+  --color-bg-secondary: #0D1328;
+  --color-bg-elevated: #111827;
+  --color-bg-hover: #1A2240;
+  --color-bg-active: #1E293B;
+
+  /* ── Text ── */
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  --color-text-disabled: #475569;
+
+  /* ── Accent: Intelligence Purple ── */
+  --color-intelligence: #8B5CF6;
+  --color-intelligence-soft: #7C3AED;
+  --color-intelligence-glow: rgba(139, 92, 246, 0.15);
+
+  /* ── Accent: Decision Blue ── */
+  --color-decision: #3B82F6;
+  --color-decision-soft: #2563EB;
+  --color-decision-glow: rgba(59, 130, 246, 0.15);
+
+  /* ── Accent: Execution Green ── */
+  --color-execution: #10B981;
+  --color-execution-soft: #059669;
+  --color-execution-glow: rgba(16, 185, 129, 0.15);
+
+  /* ── Accent: Warning Amber ── */
+  --color-warning: #F59E0B;
+  --color-warning-soft: #D97706;
+
+  /* ── Accent: Danger Red ── */
+  --color-danger: #EF4444;
+  --color-danger-soft: #DC2626;
+
+  /* ── Border ── */
+  --color-border-primary: #1E293B;
+  --color-border-secondary: #334155;
+  --color-border-accent: #3B82F6;
+
+  /* ── Spacing ── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* ── Font ── */
+  --font-family: 'Inter', 'SF Pro Display', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  /* ── Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ── Shadow ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+}

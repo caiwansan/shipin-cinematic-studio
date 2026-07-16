@@ -26,7 +26,7 @@ export interface CompatibilityStatus {
 // Extend PlatformProviderStatus locally since model isn't in the interface
 async function getCredentialModel(provider: string): Promise<string> {
   const { prisma } = await import('../../utils/index.js')
-  const config = await prisma.platformProviderConfig.findUnique({
+  const config = await prisma.aIProviderConfig.findUnique({
     where: { provider },
     select: { model: true },
   })

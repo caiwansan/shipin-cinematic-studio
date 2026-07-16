@@ -1,0 +1,162 @@
+[
+  {
+    "id": "migrated-rel-剑如晦-玄天剑尊",
+    "characterAName": "剑如晦",
+    "characterBName": "玄天剑尊",
+    "currentStage": {
+      "type": "same_organization",
+      "status": "active",
+      "chapterNo": 1
+    },
+    "trustLevel": 0.95,
+    "stages": [
+      {
+        "type": "same_organization",
+        "status": "active",
+        "chapterNo": 1,
+        "evidence": "同属天剑宗"
+      }
+    ],
+    "origin": "MIGRATION"
+  },
+  {
+    "id": "migrated-rel-剑如晦-凌云子",
+    "characterAName": "剑如晦",
+    "characterBName": "凌云子",
+    "currentStage": {
+      "type": "same_organization",
+      "status": "active",
+      "chapterNo": 1
+    },
+    "trustLevel": 0.95,
+    "stages": [
+      {
+        "type": "same_organization",
+        "status": "active",
+        "chapterNo": 1,
+        "evidence": "同属天剑宗"
+      }
+    ],
+    "origin": "MIGRATION"
+  },
+  {
+    "id": "migrated-rel-剑如晦-剑玄通",
+    "characterAName": "剑如晦",
+    "characterBName": "剑玄通",
+    "currentStage": {
+      "type": "same_organization",
+      "status": "active",
+      "chapterNo": 1
+    },
+    "trustLevel": 0.95,
+    "stages": [
+      {
+        "type": "same_organization",
+        "status": "active",
+        "chapterNo": 1,
+        "evidence": "同属天剑宗"
+      }
+    ],
+    "origin": "MIGRATION"
+  },
+  {
+    "id": "migrated-rel-玄天剑尊-凌云子",
+    "characterAName": "玄天剑尊",
+    "characterBName": "凌云子",
+    "currentStage": {
+      "type": "same_organization",
+      "status": "active",
+      "chapterNo": 1
+    },
+    "trustLevel": 0.95,
+    "stages": [
+      {
+        "type": "same_organization",
+        "status": "active",
+        "chapterNo": 1,
+        "evidence": "同属天剑宗"
+      }
+    ],
+    "origin": "MIGRATION"
+  },
+  {
+    "id": "migrated-rel-玄天剑尊-剑玄通",
+    "characterAName": "玄天剑尊",
+    "characterBName": "剑玄通",
+    "currentStage": {
+      "type": "same_organization",
+      "status": "active",
+      "chapterNo": 1
+    },
+    "trustLevel": 0.95,
+    "stages": [
+      {
+        "type": "same_organization",
+        "status": "active",
+        "chapterNo": 1,
+        "evidence": "同属天剑宗"
+      }
+    ],
+    "origin": "MIGRATION"
+  },
+  {
+    "id": "migrated-rel-凌云子-剑玄通",
+    "characterAName": "凌云子",
+    "characterBName": "剑玄通",
+    "currentStage": {
+      "type": "same_organization",
+      "status": "active",
+      "chapterNo": 1
+    },
+    "trustLevel": 0.95,
+    "stages": [
+      {
+        "type": "same_organization",
+        "status": "active",
+        "chapterNo": 1,
+        "evidence": "同属天剑宗"
+      }
+    ],
+    "origin": "MIGRATION"
+  },
+  {
+    "id": "migrated-rel-金镶玉-殷素素",
+    "characterAName": "金镶玉",
+    "characterBName": "殷素素",
+    "currentStage": {
+      "type": "same_organization",
+      "status": "active",
+      "chapterNo": 1
+    },
+    "trustLevel": 0.95,
+    "stages": [
+      {
+        "type": "same_organization",
+        "status": "active",
+        "chapterNo": 1,
+        "evidence": "同属天魔宗"
+      }
+    ],
+    "origin": "MIGRATION"
+  },
+  {
+    "id": "migrated-rel-无觉道长-太初真人",
+    "characterAName": "无觉道长",
+    "characterBName": "太初真人",
+    "currentStage": {
+      "type": "same_organization",
+      "status": "active",
+      "chapterNo": 1
+    },
+    "trustLevel": 0.95,
+    "stages": [
+      {
+        "type": "same_organization",
+        "status": "active",
+        "chapterNo": 1,
+        "evidence": "同属三清观"
+      }
+    ],
+    "origin": "MIGRATION"
+  }
+]

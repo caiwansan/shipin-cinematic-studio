@@ -64,6 +64,7 @@ export function hasApiKeyForProvider(config: any, capability: string): boolean {
     video: "videoApiKey",
     tts: "ttsApiKey",
     music: "musicApiKey",
+    visionUnderstand: "visionUnderstandApiKey",
   }
   const field = fieldMap[capability]
   if (!field) return false

@@ -45,6 +45,7 @@ export { listProviders, getProvider, listModels, verifyProvider, connectProvider
 export { default as storageGateway, get, set, remove, getAuthToken, setAuthToken, getProviderMap, setProviderMap, storageDiagnostics, STORAGE_KEYS } from '../utils/storage-gateway';
 export { default as tokenCache, getToken, setToken, getUser, setUser, clearAuth, isAuthenticated } from '../utils/token-cache';
 export { useAuthStore } from '../stores/auth';
+export { useCommandCenterStore, ActionStage } from '../stores/enterprise-command-center.store';
 export { useGeoWorkspaceStore, GEOStage, GEOProjectInfo, GEOWorkflowState, GEOWorkspaceContext } from '../stores/geoWorkspace.store';
 export { Project } from '../stores/project';
 export { PROJECT_TYPE_LABELS, PROJECT_TYPE_ICONS, useProjectStore, ProjectType, ProjectStatus, ProjectCharacter, CharacterMemory, EpisodeData, SceneData, ShotData, CostumeConfig, DirectorDecision, WorkflowState, WorkflowStep, AgentState, ProjectInfo } from '../stores/projectStore';

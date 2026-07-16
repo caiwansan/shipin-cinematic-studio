@@ -31,9 +31,36 @@ interface _GlobalComponents {
     'EcomAnalysisPanel': typeof import("../components/ecom/AnalysisPanel.vue")['default']
     'EcomGalleryPanel': typeof import("../components/ecom/GalleryPanel.vue")['default']
     'EcomPromptsPanel': typeof import("../components/ecom/PromptsPanel.vue")['default']
+    'EnterpriseUiEnterpriseShell': typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']
+    'EnterpriseUiCardsActionCard': typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']
+    'EnterpriseUiCardsDecisionCard': typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']
+    'EnterpriseUiCardsMetricCard': typeof import("../components/enterprise-ui/cards/MetricCard.vue")['default']
+    'EnterpriseUiCardsSignalCard': typeof import("../components/enterprise-ui/cards/SignalCard.vue")['default']
+    'EnterpriseUiFeedbackEmptyState': typeof import("../components/enterprise-ui/feedback/EmptyState.vue")['default']
+    'EnterpriseUiFeedbackSkeleton': typeof import("../components/enterprise-ui/feedback/Skeleton.vue")['default']
+    'EnterpriseUiFeedbackStatusBadge': typeof import("../components/enterprise-ui/feedback/StatusBadge.vue")['default']
+    'EnterpriseUiNavigationEnterpriseHeader': typeof import("../components/enterprise-ui/navigation/EnterpriseHeader.vue")['default']
+    'EnterpriseUiNavigationEnterpriseSidebar': typeof import("../components/enterprise-ui/navigation/EnterpriseSidebar.vue")['default']
     'EnterpriseAgentCard': typeof import("../components/enterprise/AgentCard.vue")['default']
     'EnterpriseApprovalCard': typeof import("../components/enterprise/ApprovalCard.vue")['default']
     'EnterpriseEmployeeCard': typeof import("../components/enterprise/EmployeeCard.vue")['default']
+    'EnterpriseSetupStepIndicator': typeof import("../components/enterprise/SetupStepIndicator.vue")['default']
+    'EnterpriseWorkspaceAIEmployeeConfig': typeof import("../components/enterprise/workspace/AIEmployeeConfig.vue")['default']
+    'EnterpriseWorkspaceChannelConnectCenter': typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']
+    'EnterpriseWorkspaceEnterpriseIdentityHeader': typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']
+    'EnterpriseWorkspaceEnterpriseModuleRenderer': typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']
+    'EnterpriseWorkspaceEnterpriseOnboardingWizard': typeof import("../components/enterprise/workspace/EnterpriseOnboardingWizard.vue")['default']
+    'EnterpriseWorkspace': typeof import("../components/enterprise/workspace/EnterpriseWorkspace.vue")['default']
+    'EnterpriseWorkspaceModulesChannelsModule': typeof import("../components/enterprise/workspace/modules/ChannelsModule.vue")['default']
+    'EnterpriseWorkspaceModulesDashboardModule': typeof import("../components/enterprise/workspace/modules/DashboardModule.vue")['default']
+    'EnterpriseWorkspaceModulesDecisionsModule': typeof import("../components/enterprise/workspace/modules/DecisionsModule.vue")['default']
+    'EnterpriseWorkspaceModulesEmployeesModule': typeof import("../components/enterprise/workspace/modules/EmployeesModule.vue")['default']
+    'EnterpriseWorkspaceModulesExecutionModule': typeof import("../components/enterprise/workspace/modules/ExecutionModule.vue")['default']
+    'EnterpriseWorkspaceModulesGovernanceModule': typeof import("../components/enterprise/workspace/modules/GovernanceModule.vue")['default']
+    'EnterpriseWorkspaceModulesGrowthModule': typeof import("../components/enterprise/workspace/modules/GrowthModule.vue")['default']
+    'EnterpriseWorkspaceModulesIntelligenceModule': typeof import("../components/enterprise/workspace/modules/IntelligenceModule.vue")['default']
+    'EnterpriseWorkspaceModulesKnowledgeModule': typeof import("../components/enterprise/workspace/modules/KnowledgeModule.vue")['default']
+    'EnterpriseWorkspaceModulesSettingsModule': typeof import("../components/enterprise/workspace/modules/SettingsModule.vue")['default']
     'HdzLibraryReaderPanel': typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
     'KmkiUiActionCard': typeof import("../components/kmki-ui/ActionCard/index.vue")['default']
     'KmkiUiActionsSection': typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']
@@ -151,9 +178,36 @@ interface _GlobalComponents {
     'LazyEcomAnalysisPanel': LazyComponent<typeof import("../components/ecom/AnalysisPanel.vue")['default']>
     'LazyEcomGalleryPanel': LazyComponent<typeof import("../components/ecom/GalleryPanel.vue")['default']>
     'LazyEcomPromptsPanel': LazyComponent<typeof import("../components/ecom/PromptsPanel.vue")['default']>
+    'LazyEnterpriseUiEnterpriseShell': LazyComponent<typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']>
+    'LazyEnterpriseUiCardsActionCard': LazyComponent<typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']>
+    'LazyEnterpriseUiCardsDecisionCard': LazyComponent<typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']>
+    'LazyEnterpriseUiCardsMetricCard': LazyComponent<typeof import("../components/enterprise-ui/cards/MetricCard.vue")['default']>
+    'LazyEnterpriseUiCardsSignalCard': LazyComponent<typeof import("../components/enterprise-ui/cards/SignalCard.vue")['default']>
+    'LazyEnterpriseUiFeedbackEmptyState': LazyComponent<typeof import("../components/enterprise-ui/feedback/EmptyState.vue")['default']>
+    'LazyEnterpriseUiFeedbackSkeleton': LazyComponent<typeof import("../components/enterprise-ui/feedback/Skeleton.vue")['default']>
+    'LazyEnterpriseUiFeedbackStatusBadge': LazyComponent<typeof import("../components/enterprise-ui/feedback/StatusBadge.vue")['default']>
+    'LazyEnterpriseUiNavigationEnterpriseHeader': LazyComponent<typeof import("../components/enterprise-ui/navigation/EnterpriseHeader.vue")['default']>
+    'LazyEnterpriseUiNavigationEnterpriseSidebar': LazyComponent<typeof import("../components/enterprise-ui/navigation/EnterpriseSidebar.vue")['default']>
     'LazyEnterpriseAgentCard': LazyComponent<typeof import("../components/enterprise/AgentCard.vue")['default']>
     'LazyEnterpriseApprovalCard': LazyComponent<typeof import("../components/enterprise/ApprovalCard.vue")['default']>
     'LazyEnterpriseEmployeeCard': LazyComponent<typeof import("../components/enterprise/EmployeeCard.vue")['default']>
+    'LazyEnterpriseSetupStepIndicator': LazyComponent<typeof import("../components/enterprise/SetupStepIndicator.vue")['default']>
+    'LazyEnterpriseWorkspaceAIEmployeeConfig': LazyComponent<typeof import("../components/enterprise/workspace/AIEmployeeConfig.vue")['default']>
+    'LazyEnterpriseWorkspaceChannelConnectCenter': LazyComponent<typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']>
+    'LazyEnterpriseWorkspaceEnterpriseIdentityHeader': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']>
+    'LazyEnterpriseWorkspaceEnterpriseModuleRenderer': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']>
+    'LazyEnterpriseWorkspaceEnterpriseOnboardingWizard': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseOnboardingWizard.vue")['default']>
+    'LazyEnterpriseWorkspace': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseWorkspace.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesChannelsModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/ChannelsModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesDashboardModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/DashboardModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesDecisionsModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/DecisionsModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesEmployeesModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/EmployeesModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesExecutionModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/ExecutionModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesGovernanceModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/GovernanceModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesGrowthModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/GrowthModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesIntelligenceModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/IntelligenceModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesKnowledgeModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/KnowledgeModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesSettingsModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/SettingsModule.vue")['default']>
     'LazyHdzLibraryReaderPanel': LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
     'LazyKmkiUiActionCard': LazyComponent<typeof import("../components/kmki-ui/ActionCard/index.vue")['default']>
     'LazyKmkiUiActionsSection': LazyComponent<typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']>
@@ -277,9 +331,36 @@ export const DirectorOllamaSetupModal: typeof import("../components/director/Oll
 export const EcomAnalysisPanel: typeof import("../components/ecom/AnalysisPanel.vue")['default']
 export const EcomGalleryPanel: typeof import("../components/ecom/GalleryPanel.vue")['default']
 export const EcomPromptsPanel: typeof import("../components/ecom/PromptsPanel.vue")['default']
+export const EnterpriseUiEnterpriseShell: typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']
+export const EnterpriseUiCardsActionCard: typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']
+export const EnterpriseUiCardsDecisionCard: typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']
+export const EnterpriseUiCardsMetricCard: typeof import("../components/enterprise-ui/cards/MetricCard.vue")['default']
+export const EnterpriseUiCardsSignalCard: typeof import("../components/enterprise-ui/cards/SignalCard.vue")['default']
+export const EnterpriseUiFeedbackEmptyState: typeof import("../components/enterprise-ui/feedback/EmptyState.vue")['default']
+export const EnterpriseUiFeedbackSkeleton: typeof import("../components/enterprise-ui/feedback/Skeleton.vue")['default']
+export const EnterpriseUiFeedbackStatusBadge: typeof import("../components/enterprise-ui/feedback/StatusBadge.vue")['default']
+export const EnterpriseUiNavigationEnterpriseHeader: typeof import("../components/enterprise-ui/navigation/EnterpriseHeader.vue")['default']
+export const EnterpriseUiNavigationEnterpriseSidebar: typeof import("../components/enterprise-ui/navigation/EnterpriseSidebar.vue")['default']
 export const EnterpriseAgentCard: typeof import("../components/enterprise/AgentCard.vue")['default']
 export const EnterpriseApprovalCard: typeof import("../components/enterprise/ApprovalCard.vue")['default']
 export const EnterpriseEmployeeCard: typeof import("../components/enterprise/EmployeeCard.vue")['default']
+export const EnterpriseSetupStepIndicator: typeof import("../components/enterprise/SetupStepIndicator.vue")['default']
+export const EnterpriseWorkspaceAIEmployeeConfig: typeof import("../components/enterprise/workspace/AIEmployeeConfig.vue")['default']
+export const EnterpriseWorkspaceChannelConnectCenter: typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']
+export const EnterpriseWorkspaceEnterpriseIdentityHeader: typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']
+export const EnterpriseWorkspaceEnterpriseModuleRenderer: typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']
+export const EnterpriseWorkspaceEnterpriseOnboardingWizard: typeof import("../components/enterprise/workspace/EnterpriseOnboardingWizard.vue")['default']
+export const EnterpriseWorkspace: typeof import("../components/enterprise/workspace/EnterpriseWorkspace.vue")['default']
+export const EnterpriseWorkspaceModulesChannelsModule: typeof import("../components/enterprise/workspace/modules/ChannelsModule.vue")['default']
+export const EnterpriseWorkspaceModulesDashboardModule: typeof import("../components/enterprise/workspace/modules/DashboardModule.vue")['default']
+export const EnterpriseWorkspaceModulesDecisionsModule: typeof import("../components/enterprise/workspace/modules/DecisionsModule.vue")['default']
+export const EnterpriseWorkspaceModulesEmployeesModule: typeof import("../components/enterprise/workspace/modules/EmployeesModule.vue")['default']
+export const EnterpriseWorkspaceModulesExecutionModule: typeof import("../components/enterprise/workspace/modules/ExecutionModule.vue")['default']
+export const EnterpriseWorkspaceModulesGovernanceModule: typeof import("../components/enterprise/workspace/modules/GovernanceModule.vue")['default']
+export const EnterpriseWorkspaceModulesGrowthModule: typeof import("../components/enterprise/workspace/modules/GrowthModule.vue")['default']
+export const EnterpriseWorkspaceModulesIntelligenceModule: typeof import("../components/enterprise/workspace/modules/IntelligenceModule.vue")['default']
+export const EnterpriseWorkspaceModulesKnowledgeModule: typeof import("../components/enterprise/workspace/modules/KnowledgeModule.vue")['default']
+export const EnterpriseWorkspaceModulesSettingsModule: typeof import("../components/enterprise/workspace/modules/SettingsModule.vue")['default']
 export const HdzLibraryReaderPanel: typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
 export const KmkiUiActionCard: typeof import("../components/kmki-ui/ActionCard/index.vue")['default']
 export const KmkiUiActionsSection: typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']
@@ -397,9 +478,36 @@ export const LazyDirectorOllamaSetupModal: LazyComponent<typeof import("../compo
 export const LazyEcomAnalysisPanel: LazyComponent<typeof import("../components/ecom/AnalysisPanel.vue")['default']>
 export const LazyEcomGalleryPanel: LazyComponent<typeof import("../components/ecom/GalleryPanel.vue")['default']>
 export const LazyEcomPromptsPanel: LazyComponent<typeof import("../components/ecom/PromptsPanel.vue")['default']>
+export const LazyEnterpriseUiEnterpriseShell: LazyComponent<typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']>
+export const LazyEnterpriseUiCardsActionCard: LazyComponent<typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']>
+export const LazyEnterpriseUiCardsDecisionCard: LazyComponent<typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']>
+export const LazyEnterpriseUiCardsMetricCard: LazyComponent<typeof import("../components/enterprise-ui/cards/MetricCard.vue")['default']>
+export const LazyEnterpriseUiCardsSignalCard: LazyComponent<typeof import("../components/enterprise-ui/cards/SignalCard.vue")['default']>
+export const LazyEnterpriseUiFeedbackEmptyState: LazyComponent<typeof import("../components/enterprise-ui/feedback/EmptyState.vue")['default']>
+export const LazyEnterpriseUiFeedbackSkeleton: LazyComponent<typeof import("../components/enterprise-ui/feedback/Skeleton.vue")['default']>
+export const LazyEnterpriseUiFeedbackStatusBadge: LazyComponent<typeof import("../components/enterprise-ui/feedback/StatusBadge.vue")['default']>
+export const LazyEnterpriseUiNavigationEnterpriseHeader: LazyComponent<typeof import("../components/enterprise-ui/navigation/EnterpriseHeader.vue")['default']>
+export const LazyEnterpriseUiNavigationEnterpriseSidebar: LazyComponent<typeof import("../components/enterprise-ui/navigation/EnterpriseSidebar.vue")['default']>
 export const LazyEnterpriseAgentCard: LazyComponent<typeof import("../components/enterprise/AgentCard.vue")['default']>
 export const LazyEnterpriseApprovalCard: LazyComponent<typeof import("../components/enterprise/ApprovalCard.vue")['default']>
 export const LazyEnterpriseEmployeeCard: LazyComponent<typeof import("../components/enterprise/EmployeeCard.vue")['default']>
+export const LazyEnterpriseSetupStepIndicator: LazyComponent<typeof import("../components/enterprise/SetupStepIndicator.vue")['default']>
+export const LazyEnterpriseWorkspaceAIEmployeeConfig: LazyComponent<typeof import("../components/enterprise/workspace/AIEmployeeConfig.vue")['default']>
+export const LazyEnterpriseWorkspaceChannelConnectCenter: LazyComponent<typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']>
+export const LazyEnterpriseWorkspaceEnterpriseIdentityHeader: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']>
+export const LazyEnterpriseWorkspaceEnterpriseModuleRenderer: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']>
+export const LazyEnterpriseWorkspaceEnterpriseOnboardingWizard: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseOnboardingWizard.vue")['default']>
+export const LazyEnterpriseWorkspace: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseWorkspace.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesChannelsModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/ChannelsModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesDashboardModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/DashboardModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesDecisionsModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/DecisionsModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesEmployeesModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/EmployeesModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesExecutionModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/ExecutionModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesGovernanceModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/GovernanceModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesGrowthModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/GrowthModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesIntelligenceModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/IntelligenceModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesKnowledgeModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/KnowledgeModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesSettingsModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/SettingsModule.vue")['default']>
 export const LazyHdzLibraryReaderPanel: LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
 export const LazyKmkiUiActionCard: LazyComponent<typeof import("../components/kmki-ui/ActionCard/index.vue")['default']>
 export const LazyKmkiUiActionsSection: LazyComponent<typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']>

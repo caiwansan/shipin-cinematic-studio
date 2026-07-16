@@ -5,11 +5,17 @@
  * 所有路由需要 authenticate + 检查 user.role === 'admin'
  */
 import type { FastifyInstance } from 'fastify'
-import { prisma } from '../utils/index.js'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 /** admin preHandler: 先认证，再检查角色 */
 async function adminOnly(request: any, reply: any) {
-  if (!request.user?.role || !['admin', 'superadmin', 'operator'].includes(request.user.role)) {
+  // 如果认证未通过（authenticate 已返回 401，但 Fastify 仍会执行后续 preHandler）
+  if (!request.user) {
+    return // 不重复写 response，authenticate 已经写了
+  }
+  if (!request.user.role || !['admin', 'superadmin', 'operator'].includes(request.user.role)) {
     return reply.status(403).send({ success: false, error: '无权访问，仅限管理员' })
   }
 }
@@ -25,6 +31,7 @@ export async function adminMallRoutes(app: FastifyInstance) {
 
   /** GET /api/admin/mall/products — 商品列表（含下架/软删除） */
   app.get('/api/admin/mall/products', async (request, reply) => {
+    console.log('[DEBUG mall] prisma:', !!prisma, 'mallProduct:', typeof prisma?.mallProduct)
     const query = request.query as any
     const page = Math.max(1, parseInt(query.page || '1', 10))
     const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize || '20', 10)))

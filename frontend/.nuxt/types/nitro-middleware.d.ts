@@ -1,4 +1,4 @@
-export type MiddlewareKey = "auth" | "deprecated-module-guard" | "route-guard"
+export type MiddlewareKey = "auth" | "deprecated-module-guard" | "enterprise-onboarding" | "route-guard"
 declare module 'nitropack' {
   interface NitroRouteConfig {
     appMiddleware?: MiddlewareKey | MiddlewareKey[] | Record<MiddlewareKey, boolean>
