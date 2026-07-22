@@ -14,6 +14,8 @@ import { prisma } from '../../utils/index.js'
 import { encryptKey } from '../../services/crypto.service.js'
 import { platformRuntimeService } from '../../runtime/platform/platform-runtime.service.js'
 import { platformCompatibilityService } from '../../runtime/platform/compatibility.service.js'
+import { credentialResolver } from '../services/credential/credential-resolver.js'
+import { resolveAICredential } from '../services/credential/credential-adapter.js'
 
 export default async function adminPlatformRuntimeRoutes(fastify: FastifyInstance) {
   // GET /api/admin/platform-runtime/providers — 获取所有 Provider 状态
@@ -101,8 +103,7 @@ export default async function adminPlatformRuntimeRoutes(fastify: FastifyInstanc
           let apisecret = body.apisecret || ''
           if ((!appid || !apisecret) && existingConfig.encrypted_api_key) {
             try {
-              const { decryptKey } = await import('../../services/crypto.service.js')
-              const decrypted = decryptKey(existingConfig.encrypted_api_key)
+              const decrypted = credential.apiKey
               const parsed = JSON.parse(decrypted)
               if (!appid && parsed.appid) appid = parsed.appid
               if (!apisecret && parsed.apisecret) apisecret = parsed.apisecret

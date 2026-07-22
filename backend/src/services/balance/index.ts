@@ -59,7 +59,7 @@ export async function getUserBalances(userId: string): Promise<{
   return { balances: results, alert: hasAlert }
 }
 
-async function fetchBalance(provider: string, apiKey: *** userId: string): Promise<BalanceResult> {
+async function fetchBalance(provider: string, apiKey: string, userId: string): Promise<BalanceResult> {
   let balance: number | null = null
   let currency = 'CNY'
   let unit = '元'

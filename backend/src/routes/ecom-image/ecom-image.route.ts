@@ -5,6 +5,8 @@
 import path from 'path'
 import { prisma } from '../../utils/index.js'
 import { runAnalysis, runGeneration } from '../../services/ecom-image/ecom-bridge.service.js'
+import { credentialResolver } from '../services/credential/credential-resolver.js'
+import { resolveAICredential } from '../services/credential/credential-adapter.js'
 
 interface LLMConfig {
   apiKey: string
@@ -18,39 +20,39 @@ interface LLMConfig {
 async function getUserLLMConfig(userId: string): Promise<{ llm: LLMConfig | null; vision: LLMConfig | null }> {
   const fallback = { llm: null, vision: null }
   try {
-    const v2 = await (prisma as any).userModelConfigV2?.findUnique?.({ where: { userId } })
-    console.log('[Ecom] getUserModelConfigV2:', { userId, found: !!v2, llmEnabled: v2?.llmEnabled, imageEnabled: v2?.imageEnabled })
-    if (!v2) return fallback
+    const { credentialResolver } = await import('../../services/credential/credential-resolver.js')
+    const { vaultService } = await import('../../services/credential/vault-service.js')
+    const resolved = await credentialResolver.resolve({ ownerType: 'user', ownerId: userId, capability: 'text-generation' })
+    if (!resolved) return fallback
 
-    // ── 文本 LLM（现有配置）──
+    // ── 文本 LLM（通过 Credential Resolver）──
     let llm: LLMConfig | null = null
-    if (v2.llmEnabled && v2.llmApiKey?.trim()) {
-      let apiKey = v2.llmApiKey
-      if (apiKey.includes(':')) {
-        const { decryptKey } = await import('../../services/crypto.service.js')
-        try { apiKey = decryptKey(apiKey) } catch { /* 明文 key 不解密 */ }
+    try {
+      const decrypted = await vaultService.getDecryptedCredential(resolved.credentialId)
+      if (decrypted?.apiKey) {
+        llm = {
+          apiKey: decrypted.apiKey,
+          baseUrl: decrypted.provider?.baseUrl || '',
+          modelName: decrypted.provider?.model || '',
+        }
       }
-      llm = {
-        apiKey,
-        baseUrl: resolveProviderBaseUrl(v2.llmBaseUrl, v2.llmProvider) || undefined,
-        modelName: v2.llmModel || undefined,
-      }
-    }
+    } catch { /* ignore */ }
 
-    // ── 视觉模型（从 visionUnderstand 配置读取）──
+    // ── 视觉模型（通过 Credential Resolver）──
     let vision: LLMConfig | null = null
-    if (v2.visionUnderstandEnabled && v2.visionUnderstandApiKey?.trim()) {
-      let apiKey = v2.visionUnderstandApiKey
-      if (apiKey.includes(':')) {
-        const { decryptKey } = await import('../../services/crypto.service.js')
-        try { apiKey = decryptKey(apiKey) } catch { /* 明文 key 不解密 */ }
+    try {
+      const visionResolved = await credentialResolver.resolve({ ownerType: 'user', ownerId: userId, capability: 'image-generation' })
+      if (visionResolved) {
+        const visionDecrypted = await vaultService.getDecryptedCredential(visionResolved.credentialId)
+        if (visionDecrypted?.apiKey) {
+          vision = {
+            apiKey: visionDecrypted.apiKey,
+            baseUrl: visionDecrypted.provider?.baseUrl || '',
+            modelName: visionDecrypted.provider?.model || '',
+          }
+        }
       }
-      vision = {
-        apiKey,
-        baseUrl: resolveProviderBaseUrl(v2.visionUnderstandBaseUrl, v2.visionUnderstandProvider) || undefined,
-        modelName: v2.visionUnderstandModel || '',
-      }
-    }
+    } catch { /* ignore */ }
 
     console.log('[Ecom] config resolved:', { llm: !!llm, vision: !!vision })
     return { llm, vision }

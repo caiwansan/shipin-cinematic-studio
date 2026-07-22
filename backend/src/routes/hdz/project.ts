@@ -4,6 +4,8 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../../utils/index.js'
 import { hdzCreateProjectSchema, hdzUpdateProjectSchema, validateOrReject } from '../../schemas/hdz.js'
+import { credentialResolver } from '../../services/credential/credential-resolver'
+import { resolveAICredential } from '../../services/credential/credential-adapter'
 
 export default async function hdzProjectRoutes(app: FastifyInstance) {
   // 用户身份验证装饰器
@@ -169,8 +171,8 @@ export default async function hdzProjectRoutes(app: FastifyInstance) {
 
       if (provider) {
         // 从 DB 直接读取用户图片模型配置
-        const v2 = await prisma.userModelConfigV2.findUnique({ where: { userId: user.id } })
-        const apiKey = v2?.imageApiKey ? (await import('../../services/crypto.service.js').then(m => m.decryptKey(v2!.imageApiKey!))) : ''
+        const v2 = await credentialResolver.resolve({ ownerType: 'user', ownerId: userId, capability: 'text-generation' })
+        const apiKey = v2?.imageApiKey ? v2.imageApiKey : ''
         const baseUrl = v2?.imageBaseUrl || v2?.baseUrl || provider.baseUrl || ''
         const modelName = provider.modelName || v2?.imageModel || 'wanx2.1-t2i-turbo'
 

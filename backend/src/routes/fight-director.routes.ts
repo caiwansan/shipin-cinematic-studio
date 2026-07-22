@@ -5,6 +5,8 @@
 import { FastifyInstance } from 'fastify'
 import { generateFightStoryboard } from '../services/fight-director.service.js'
 import { prisma } from '../utils/index.js'
+import { credentialResolver } from '../services/credential/credential-resolver.js'
+import { resolveAICredential } from '../services/credential/credential-adapter.js'
 
 interface ApiResponse<T> {
   success: boolean
@@ -51,13 +53,11 @@ export default async function fightDirectorRoutes(fastify: FastifyInstance) {
     try {
       const uid = (request.user as any)?.id || ''
       if (uid) {
-        const config = await prisma.userModelConfigV2.findFirst({
-          where: { userId: uid },
-        })
+        const config = await credentialResolver.resolve({ ownerType: 'user', ownerId: userId, capability: 'text-generation' })
         if (config?.llmApiKey) {
           try {
-            const { decryptKey } = await import('../services/crypto.service.js')
-            apiKey = decryptKey(config.llmApiKey)
+            // const { decryptKey } = await import('../services/crypto.service.js')
+            apiKey = credential.apiKey
           } catch {
             // 明文 key（历史数据），直接使用
             apiKey = config.llmApiKey

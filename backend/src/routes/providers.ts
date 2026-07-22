@@ -18,6 +18,8 @@ import type { FastifyInstance } from 'fastify'
 import { providerRegistry } from '../providers/index.js'
 import { prisma } from '../utils/index.js'
 import { encryptKey } from '../services/crypto.service.js'
+import { credentialResolver } from '../services/credential/credential-resolver.js'
+import { resolveAICredential } from '../services/credential/credential-adapter.js'
 
 export default async function providerRoutes(fastify: FastifyInstance) {
   // ── POST /api/providers/verify ──
@@ -187,23 +189,18 @@ export default async function providerRoutes(fastify: FastifyInstance) {
       })
     }
 
-    // 更新 UserModelConfigV2（无则创建）
+    // 通过 Vault 保存
     try {
-      await prisma.userModelConfigV2.upsert({
-        where: { userId },
-        create: {
-          userId,
-          [fields.providerField]: provider,
-          [fields.apiKeyField]: encryptedKey,
-          [fields.modelField]: model || '',
-          [fields.baseUrlField]: baseURL || metadata.baseURL,
-        },
-        update: {
-          [fields.providerField]: provider,
-          [fields.apiKeyField]: encryptedKey,
-          [fields.modelField]: model || '',
-          [fields.baseUrlField]: baseURL || metadata.baseURL,
-        },
+      const { vaultService } = await import('../../services/credential/vault-service.js')
+      await vaultService.createCredential({
+        ownerType: 'user',
+        ownerId: userId,
+        capability: type,
+        vendor: provider,
+        modelFamily: model,
+        baseUrl: baseURL || metadata.baseURL,
+        apiKey: apiKey,
+        createdBy: userId,
       })
 
       return {
@@ -231,9 +228,7 @@ export default async function providerRoutes(fastify: FastifyInstance) {
       return reply.status(401).send({ success: false, error: '未授权' })
     }
 
-    const config = await prisma.userModelConfigV2.findUnique({
-      where: { userId },
-    })
+    const config = await credentialResolver.resolve({ ownerType: 'user', ownerId: userId, capability: 'text-generation' })
 
     if (!config) {
       return {

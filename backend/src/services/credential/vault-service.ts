@@ -12,7 +12,8 @@ export interface VaultCredentialInput {
   vendor: string
   modelFamily?: string
   baseUrl?: string
-  apiKey: ***  createdBy: string
+  apiKey: string
+  createdBy: string
 }
 
 export const vaultService = {
@@ -34,12 +35,13 @@ export const vaultService = {
     })
   },
 
-  async getDecryptedCredential(credentialId: string): Promise<{ apiKey: *** provider?: { vendor: string; modelFamily: string; baseUrl: string } } | null> {
+  async getDecryptedCredential(credentialId: string): Promise<{ apiKey: string; provider?: { vendor: string; modelFamily: string; baseUrl: string } } | null> {
     const record = await (prisma as any).credentialVault.findUnique({ where: { id: credentialId } })
     if (!record) return null
 
     return {
-      apiKey: ***      provider: {
+      apiKey: record.apiKey,
+      provider: {
         vendor: (record.metadata as any)?.provider_registry_id || '',
         modelFamily: (record.metadata as any)?.model_family || '',
         baseUrl: (record.metadata as any)?.base_url || '',

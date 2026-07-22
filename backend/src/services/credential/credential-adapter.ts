@@ -3,7 +3,8 @@ import { vaultService } from './vault-service'
 
 export interface AICredential {
   provider: string
-  apiKey: ***  baseUrl?: string
+  apiKey: string
+  baseUrl?: string
   model?: string
 }
 
