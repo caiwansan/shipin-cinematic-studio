@@ -1,8 +1,9 @@
 import { prisma } from '../../utils/index.js'
-import { decryptKey } from '../crypto.service.js'
+import { credentialResolver } from '../credential/credential-resolver'
+import { vaultService } from '../credential/vault-service'
 import { queryDeepSeekBalance } from './adapters/deepseek.adapter.js'
 
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 分钟
+const CACHE_TTL_MS = 5 * 60 * 1000
 
 interface BalanceResult {
   provider: string
@@ -15,72 +16,56 @@ interface BalanceResult {
   fetchedAt: string | null
 }
 
-/**
- * 获取用户所有已配置 Provider 的余额
- * 1. 从 UserModelConfigV2 找已配置的 Provider
- * 2. 查缓存，过期则调适配器刷新
- * 3. 返回余额 + 告警标记
- */
 export async function getUserBalances(userId: string): Promise<{
   balances: BalanceResult[]
   alert: boolean
 }> {
-  const configs = await prisma.userModelConfigV2.findMany({
-    where: { userId },
-  })
+  const resolved = await credentialResolver.resolve({ ownerType: 'user', ownerId: userId, capability: 'text-generation' })
+  if (!resolved) return { balances: [], alert: false }
 
   const results: BalanceResult[] = []
   let hasAlert = false
 
-  for (const cfg of configs) {
-    const provider = cfg.llmProvider
-    if (!provider || !cfg.llmApiKey) continue
-
-    // 查缓存
-    let record = await prisma.providerBalanceRecord.findUnique({
-      where: { userId_provider: { userId, provider } },
-    })
-
-    // 缓存有效则返回缓存
-    if (record && record.fetchedAt && (Date.now() - record.fetchedAt.getTime()) < CACHE_TTL_MS) {
-      const alert = record.balance !== null && record.balance < 3
-      if (alert) hasAlert = true
-      results.push({
-        provider,
-        label: getProviderLabel(provider),
-        balance: record.balance,
-        currency: record.currency || 'CNY',
-        unit: record.unit || '元',
-        alert,
-        error: record.error || undefined,
-        fetchedAt: record.fetchedAt.toISOString(),
+  try {
+    const decrypted = await vaultService.getDecryptedCredential(resolved.credentialId)
+    if (decrypted) {
+      let record = await prisma.providerBalanceRecord.findUnique({
+        where: { userId_provider: { userId, provider: resolved.providerCapability.vendor } },
       })
-      continue
-    }
 
-    // 缓存过期 → 刷新
-    const balanceResult = await fetchBalance(provider, cfg, userId)
-    results.push(balanceResult)
-    if (balanceResult.alert) hasAlert = true
+      if (record && record.fetchedAt && (Date.now() - record.fetchedAt.getTime()) < CACHE_TTL_MS) {
+        const alert = record.balance !== null && record.balance < 3
+        if (alert) hasAlert = true
+        results.push({
+          provider: resolved.providerCapability.vendor,
+          label: getProviderLabel(resolved.providerCapability.vendor),
+          balance: record.balance,
+          currency: record.currency || 'CNY',
+          unit: record.unit || '元',
+          alert,
+          error: record.error || undefined,
+          fetchedAt: record.fetchedAt.toISOString(),
+        })
+      } else {
+        const balanceResult = await fetchBalance(resolved.providerCapability.vendor, decrypted.apiKey, userId)
+        results.push(balanceResult)
+        if (balanceResult.alert) hasAlert = true
+      }
+    }
+  } catch (err: any) {
+    // ignore
   }
 
   return { balances: results, alert: hasAlert }
 }
 
-async function fetchBalance(
-  provider: string,
-  cfg: any,
-  userId: string
-): Promise<BalanceResult> {
+async function fetchBalance(provider: string, apiKey: *** userId: string): Promise<BalanceResult> {
   let balance: number | null = null
   let currency = 'CNY'
   let unit = '元'
   let error: string | undefined
 
   try {
-    // 解密 API Key
-    const apiKey = decryptKey(cfg.llmApiKey)
-
     switch (provider) {
       case 'deepseek': {
         const r = await queryDeepSeekBalance(apiKey)
@@ -90,7 +75,6 @@ async function fetchBalance(
         error = r.error
         break
       }
-      // 其他 Provider 后续添加
       default:
         error = '余额查询暂不支持此 Provider'
     }
@@ -98,7 +82,6 @@ async function fetchBalance(
     error = err.message
   }
 
-  // 写缓存
   await prisma.providerBalanceRecord.upsert({
     where: { userId_provider: { userId, provider } },
     create: { userId, provider, balance, currency, unit, error, fetchedAt: new Date() },
