@@ -1,0 +1,48 @@
+# Architecture Sentinel Baseline
+# 日期: 2026-07-23
+# 此文件记录已知的 legacy 违规，不阻塞 CI
+
+# P2 Geo 子系统 (experimental/sunset)
+/root/shipin-cinematic-studio/backend/src/services/hdz/repositories/user-model-config-v2.repository.ts:    const record = await prisma.userModelConfigV2.findUnique(condition);
+/root/shipin-cinematic-studio/backend/src/services/hdz/llm.client.ts:      apiKey = decryptKey(v2.llmApiKey)
+/root/shipin-cinematic-studio/backend/src/services/geo/repositories/resource-credential.repository.ts:    const credentials = await prisma.resourceCredential.findMany({
+/root/shipin-cinematic-studio/backend/src/services/geo/repositories/user-model-config.repository.ts:    return prisma.userModelConfigV2.findUnique({ where })
+/root/shipin-cinematic-studio/backend/src/services/geo/runtime/encryption-guard.ts:        decryptKey(key.keyValue)
+/root/shipin-cinematic-studio/backend/src/services/geo/runtime/encryption-guard.ts:          decryptKey(key)
+/root/shipin-cinematic-studio/backend/src/services/geo/runtime/encryption-guard.ts:    const userConfigs = await prisma.userModelConfigV2.findMany({
+/root/shipin-cinematic-studio/backend/src/services/geo/v1/geo-scan.service.ts:      const config = await prisma.userModelConfigV2.findUnique({
+/root/shipin-cinematic-studio/backend/src/services/legal/legal-agent.service.ts:        const decrypted = decryptKey(userConfig.llmApiKey)
+
+# P2 业务服务 (待迁移)
+/root/shipin-cinematic-studio/backend/src/services/cos-service.ts:function decryptKey(ciphertext: string): string {
+/root/shipin-cinematic-studio/backend/src/services/cos-service.ts:        rawSecretKey = decryptKey(config.secretKey)
+/root/shipin-cinematic-studio/backend/src/services/user-model-resolver-v2.ts:    const v2 = await prisma.userModelConfigV2.findUnique({ where: { userId } })
+/root/shipin-cinematic-studio/backend/src/services/user-model-resolver-v2.ts:      const decrypted = decryptKey(cfg.key)
+/root/shipin-cinematic-studio/backend/src/services/scroll-generator.service.ts:    const v2 = await _prisma.userModelConfigV2.findUnique({ where: { userId } })
+/root/shipin-cinematic-studio/backend/src/services/scroll-generator.service.ts:    const apiKey = v2.imageApiKey ? decryptKey(v2.imageApiKey) : ''
+/root/shipin-cinematic-studio/backend/src/services/api-router.service.ts:        const v2 = await prisma.userModelConfigV2.findUnique({ where: { userId } })
+/root/shipin-cinematic-studio/backend/src/services/music/registry.ts:          const v2 = await prisma.userModelConfigV2.findUnique({ where: { userId } })
+/root/shipin-cinematic-studio/backend/src/services/music/registry.ts:            const decrypted = decryptKey(v2.musicApiKey)
+/root/shipin-cinematic-studio/backend/src/services/with-user-key.ts:  const v2 = await prisma.userModelConfigV2.findUnique({ where: { userId } })
+/root/shipin-cinematic-studio/backend/src/services/with-user-key.ts:    decryptedKey = decryptKey(encryptedKey)
+
+# P2 Enterprise/Platform 模块 (git checkout 恢复)
+/root/shipin-cinematic-studio/backend/src/services/platform/resource/repositories/credential.repository.ts:      const record = await prisma.resourceCredential.create({
+/root/shipin-cinematic-studio/backend/src/services/platform/resource/repositories/credential.repository.ts:      const record = await prisma.resourceCredential.findUnique({ where: { id } })
+/root/shipin-cinematic-studio/backend/src/services/platform/resource/repositories/credential.repository.ts:      const record = await prisma.resourceCredential.findUnique({
+/root/shipin-cinematic-studio/backend/src/services/platform/resource/repositories/credential.repository.ts:      const records = await prisma.resourceCredential.findMany({
+/root/shipin-cinematic-studio/backend/src/services/platform/resource/repositories/credential.repository.ts:      const record = await prisma.resourceCredential.update({
+/root/shipin-cinematic-studio/backend/src/services/platform/resource/repositories/credential.repository.ts:      await prisma.resourceCredential.delete({ where: { id } })
+/root/shipin-cinematic-studio/backend/src/services/enterprise/organization/ai-provider-config.service.ts:  decryptKey(encryptedKey: string): string {
+/root/shipin-cinematic-studio/backend/src/services/enterprise/enterprise-llm.service.ts:      return decryptKey(c.encryptedApiKey)
+/root/shipin-cinematic-studio/backend/src/services/user-model-resolver.ts:      decrypted = decryptKey(cfg.key)
+/root/shipin-cinematic-studio/backend/src/services/user-model-resolver.ts:      v2 = await prisma.userModelConfigV2.findUnique({ where: { userId } })
+
+# P1 Routes (legacy endpoints)
+/root/shipin-cinematic-studio/backend/src/routes/customer-service.ts:  const dsKey = process.env.DEEPSEEK_API_KEY || ''
+/root/shipin-cinematic-studio/backend/src/routes/customer-service.ts:  const envKey = process.env.VOLCENGINE_API_KEY || ''
+/root/shipin-cinematic-studio/backend/src/routes/payment.ts:    if (apiKey) process.env.BAILIAN_API_KEY=***    /root/shipin-cinematic-studio/backend/src/routes/payment.ts:    const apiKey = process.env.BAILIAN_API_KEY || ''
+/root/shipin-cinematic-studio/backend/src/routes/asr.ts:const DASHSCOPE_API_KEY=*** || ''
+
+# Provider name in code (warning only)
+/root/shipin-cinematic-studio/backend/src/routes/voice.ts:      if (provider === 'volcengine') {

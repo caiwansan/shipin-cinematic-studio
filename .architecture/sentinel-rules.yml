@@ -1,0 +1,80 @@
+# Architecture Sentinel Rules
+# 防止未来代码产生新的 Authority 冲突
+# 版本: Phase C v1.0
+# 日期: 2026-07-23
+
+rules:
+  - name: "No Direct Credential Access"
+    description: "禁止直接访问 userModelConfigV2 / enterpriseLLMConfig / resourceCredential 表，必须通过 Credential Resolver"
+    pattern: "prisma\\.(userModelConfigV2|enterpriseLLMConfig|resourceCredential)\\.(findUnique|findMany|findFirst|upsert|create|update|delete)"
+    forbidden_in:
+      - "src/routes/"
+      - "src/controllers/"
+      - "src/services/"
+    whitelist:
+      - "credential-resolver.ts"
+      - "vault-service.ts"
+      - "credential-adapter.ts"
+      - "legacy-usage-monitor.ts"
+      - "migration-scripts/"
+    severity: "error"
+
+  - name: "No Decrypt in Business Code"
+    description: "禁止在业务代码中直接调用 decryptKey()，必须通过 Credential Vault"
+    pattern: "decryptKey\\s*\\("
+    forbidden_in:
+      - "src/routes/"
+      - "src/controllers/"
+      - "src/services/"
+    whitelist:
+      - "credential-resolver.ts"
+      - "vault-service.ts"
+      - "crypto.service.ts"
+      - "legacy-usage-monitor.ts"
+    severity: "error"
+
+  - name: "No Governance Write"
+    description: "禁止向 governance_user / governance_tenant / governance_subscription 写入数据"
+    pattern: "prisma\\.(governance_user|governance_tenant|governance_subscription)\\.(create|update|upsert|delete|createMany|updateMany|deleteMany)"
+    forbidden_in:
+      - "src/"
+    whitelist:
+      - "migration-scripts/"
+      - "deprecated/"
+    severity: "error"
+
+  - name: "TenantId from JWT Only"
+    description: "禁止从 req.body / req.query / req.headers 读取 tenantId，只能从 JWT 获取"
+    pattern: "req\\.(body|query|params|headers)\\[?['\"](\\\\w*[Tt]enant\\\\w*)"
+    forbidden_in:
+      - "src/routes/"
+      - "src/controllers/"
+    whitelist:
+      - "tenant-guard.ts"
+    severity: "error"
+
+  - name: "Provider Name in Code"
+    description: "禁止硬编码 provider 名称，使用 Provider Registry"
+    pattern: "if\\s*\\([^)]*provider\\s*===?\\s*['\"](deepseek|openai|volcengine)['\"]"
+    forbidden_in:
+      - "src/routes/"
+      - "src/controllers/"
+      - "src/services/"
+    whitelist:
+      - "provider-registry.ts"
+      - "credential-resolver.ts"
+      - "vault-service.ts"
+      - "provider-config.ts"
+    severity: "warning"
+
+  - name: "No Process.env Direct Key Access"
+    description: "禁止直接通过 process.env 读取 API Key，使用 Credential Resolver"
+    pattern: "process\\.env\\.[A-Z_]*(API_KEY|SECRET|TOKEN|APIKEY)[A-Z_]*"
+    forbidden_in:
+      - "src/routes/"
+      - "src/controllers/"
+      - "src/services/"
+    whitelist:
+      - "env-config.ts"
+      - "credential-resolver.ts"
+    severity: "warning"
