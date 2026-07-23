@@ -21,8 +21,10 @@ function extractUserId(request: any): string | null {
   }
 }
 
+import { requireMemberTierByPolicy } from '../middleware/require-member-tier.js'
+
 export default async function aiOptimizeImagePromptRoutes(app: FastifyInstance) {
-  app.post('/api/ai/optimize-image-prompt', { preHandler: [app.authenticate] }, async (request, reply) => {
+  app.post('/api/ai/optimize-image-prompt', { preHandler: [app.authenticate, requireMemberTierByPolicy('aiOptimize.imagePrompt')] }, async (request, reply) => {
     const userId = extractUserId(request) || 'anonymous'
     const { prompt, negativePrompt, hasRefImage } = request.body as any
 

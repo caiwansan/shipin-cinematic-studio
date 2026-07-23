@@ -58,3 +58,34 @@ export function createRequireMemberTier(minTier: MemberTier) {
 export function requireMemberTier(minTier: MemberTier) {
   return createRequireMemberTier(minTier)
 }
+
+// 根据策略 key 创建中间件（从 routeTierPolicy 读取配置）
+export function requireMemberTierByPolicy(policyKey: string) {
+  return async (request: any, reply: any) => {
+    const { routeTierPolicy } = await import('../config/routeTierPolicy.js')
+    const policy = routeTierPolicy[policyKey]
+
+    if (!policy) {
+      return reply.status(500).send({
+        error: `Missing route tier policy: ${policyKey}`
+      })
+    }
+
+    const user = request.user
+    if (!user) {
+      return reply.status(401).send({ error: 'Unauthorized' })
+    }
+
+    const userTier = toMemberTier(user.memberTier)
+    if (policy.enforce && userTier < policy.tier) {
+      return reply.status(403).send({
+        error: 'Membership tier insufficient',
+        requiredTier: MemberTier[policy.tier],
+        current: MemberTier[userTier],
+        routePolicy: policyKey,
+        pendingConfirmation: policy.pendingConfirmation ?? false,
+        upgradeUrl: '/user/membership',
+      })
+    }
+  }
+}

@@ -87,8 +87,10 @@ async function getStyleDesc(style: string): Promise<string> {
   return profile?.description || profile?.styleTokens || style
 }
 
+import { requireMemberTierByPolicy } from '../middleware/require-member-tier.js'
+
 export default async function aiOptimizeAdScriptRoutes(app: FastifyInstance) {
-  app.post('/api/ai/optimize-ad-script', { preHandler: [app.authenticate] }, async (request, reply) => {
+  app.post('/api/ai/optimize-ad-script', { preHandler: [app.authenticate, requireMemberTierByPolicy('aiOptimize.adScript')] }, async (request, reply) => {
     const userId = extractUserId(request) || 'anonymous'
     const { script, style } = request.body as any
 

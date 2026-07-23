@@ -13,6 +13,7 @@
 
 import { FastifyInstance } from 'fastify'
 import crypto from 'crypto'
+import { requireMemberTierByPolicy } from '../middleware/require-member-tier.js'
 import { directorRuntime, logDirectorEvent } from '../director-runtime/core.js'
 import { compileBlueprint } from '../director-runtime/director-to-blueprint-compiler.js'
 import { matchDirector } from '../director-registry/index.js'
@@ -53,7 +54,7 @@ export default async function workbenchRoutes(app: FastifyInstance) {
   // 产品操作: "输入故事 → 生成导演方案"
   // OS 链路: Director Runtime → Convergence → NarrativeGraph
   // ============================================
-  app.post('/api/workbench/generate-director', async (req, reply) => {
+  app.post('/api/workbench/generate-director', { preHandler: requireMemberTierByPolicy('director.generate') }, async (req, reply) => {
     const tid = traceId()
     const { story } = req.body as { story: string }
 
@@ -89,7 +90,7 @@ export default async function workbenchRoutes(app: FastifyInstance) {
   // 产品操作: "确认叙事结构 → 生成分镜"
   // OS 链路: compileBlueprint
   // ============================================
-  app.post('/api/workbench/compile-blueprint', async (req, reply) => {
+  app.post('/api/workbench/compile-blueprint', { preHandler: requireMemberTierByPolicy('director.compileBlueprint') }, async (req, reply) => {
     const tid = traceId()
     const { directorPlan, narrativeGraph } = req.body as { directorPlan: any; narrativeGraph: any }
 
@@ -116,7 +117,7 @@ export default async function workbenchRoutes(app: FastifyInstance) {
   // 产品操作: "一键生成视频"
   // OS 链路: → Job Queue（mocked for now）→ mock video URL
   // ============================================
-  app.post('/api/workbench/render', async (req, reply) => {
+  app.post('/api/workbench/render', { preHandler: requireMemberTierByPolicy('director.render') }, async (req, reply) => {
     const tid = traceId()
     const { blueprint } = req.body as { blueprint: any }
 
@@ -258,7 +259,7 @@ export default async function workbenchRoutes(app: FastifyInstance) {
   // GET /api/workbench/observatory/:traceId
   // 产品操作: "查看 DAG 执行天文台（可视化图谱）"
   // ============================================
-  app.get('/api/workbench/observatory/:traceId', async (req, reply) => {
+  app.get('/api/workbench/observatory/:traceId', { preHandler: requireMemberTierByPolicy('director.observatory') }, async (req, reply) => {
     const { traceId: traceIdParam } = req.params as { traceId: string }
     const tid = traceId()
 

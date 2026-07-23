@@ -7,10 +7,12 @@
 
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../../utils/index.js'
+import { requireMemberTier } from '../../middleware/require-member-tier.js'
+import { MemberTier } from '../../middleware/require-member-tier.js'
 
 export default async function legalAgentChatRoutes(app: FastifyInstance) {
-  // POST /api/legal/agent/chat — 法律顾问自由咨询
-  app.post('/api/legal/agent/chat', async (request) => {
+  // POST /api/legal/agent/chat — 法律顾问自由咨询（Pro+）
+  app.post('/api/legal/agent/chat', { preHandler: requireMemberTier(MemberTier.Pro) }, async (request) => {
     const body = request.body as any
     const message = (body.message || '').trim()
     const sessionId = body.sessionId || ''
