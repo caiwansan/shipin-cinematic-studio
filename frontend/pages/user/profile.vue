@@ -2,10 +2,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { getTierLabel } from '~/constants/membership'
+import RegionPicker from '~/components/RegionPicker.vue'
+import { useRegions } from '~/composables/useRegions'
 
 definePageMeta({ layout: 'user', middleware: 'auth' })
 
 const auth = useAuthStore()
+const { loading: regionsLoading } = useRegions()
 
 // ─── Mock Profile Data ───────────────────────────
 
@@ -64,6 +67,19 @@ const loading = ref(true)
 const editing = ref(false)
 const editForm = ref({ username: '', bio: '', phone: '' })
 
+// 地区编辑
+const userRegion = ref({
+  provinceCode: '', provinceName: '',
+  cityCode: '', cityName: '',
+  districtCode: '', districtName: '',
+})
+const regionEditing = ref(false)
+const selectedProvince = ref('')
+const selectedCity = ref('')
+const selectedDistrict = ref('')
+const regionSaving = ref(false)
+const regionError = ref('')
+
 function loadProfile() {
   loading.value = true
   const getToken = () => { try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' } }
@@ -78,6 +94,15 @@ function loadProfile() {
     .then(res => res.ok ? res.json() : null)
     .then(data => {
       if (data) {
+        // 加载地区数据
+        userRegion.value = {
+          provinceCode: data.provinceCode || '',
+          provinceName: data.provinceName || '',
+          cityCode: data.cityCode || '',
+          cityName: data.cityName || '',
+          districtCode: data.districtCode || '',
+          districtName: data.districtName || '',
+        }
         profile.value = {
           username: data.username || '用户',
           email: data.email || '',
@@ -159,6 +184,72 @@ const tierBadge = computed(() => {
   return { label, cls }
 })
 
+function onRegionChange(data: {
+  provinceCode: string; provinceName: string
+  cityCode: string; cityName: string
+  districtCode: string; districtName: string
+} | null) {
+  regionError.value = ''
+  if (data) {
+    userRegion.value = {
+      provinceCode: data.provinceCode,
+      provinceName: data.provinceName,
+      cityCode: data.cityCode,
+      cityName: data.cityName,
+      districtCode: data.districtCode,
+      districtName: data.districtName,
+    }
+  }
+}
+
+function editRegion() {
+  selectedProvince.value = userRegion.value.provinceCode
+  selectedCity.value = userRegion.value.cityCode
+  selectedDistrict.value = userRegion.value.districtCode
+  regionEditing.value = true
+}
+
+function cancelRegionEdit() {
+  regionEditing.value = false
+  regionError.value = ''
+}
+
+async function saveRegion() {
+  if (!selectedProvince.value || !selectedCity.value || !selectedDistrict.value) {
+    regionError.value = '请选择完整的所在地区（省/市/区县）'
+    return
+  }
+  regionSaving.value = true
+  regionError.value = ''
+  try {
+    const token = auth.token || localStorage.getItem('auth_token') || ''
+    const res = await fetch('/api/user/region', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(userRegion.value),
+    })
+    const data = await res.json()
+    if (!data.success) throw new Error(data.error || '保存失败')
+    regionEditing.value = false
+  } catch (e: any) {
+    regionError.value = e.message || '网络错误'
+  } finally {
+    regionSaving.value = false
+  }
+}
+
+function getRegionText() {
+  const parts = [
+    userRegion.value.provinceName,
+    userRegion.value.cityName,
+    userRegion.value.districtName,
+  ].filter(Boolean)
+  return parts.length ? parts.join(' / ') : '未设置'
+}
+
 onMounted(loadProfile)
 </script>
 
@@ -206,10 +297,17 @@ onMounted(loadProfile)
               <p class="text-sm text-gray-400 mb-1">{{ profile.email }}</p>
               <p v-if="profile.bio" class="text-sm text-gray-500 mb-2">{{ profile.bio }}</p>
               <p class="text-xs text-gray-600">注册时间：{{ new Date(profile.createdAt).toLocaleDateString('zh-CN') }}</p>
-              <button @click="startEdit"
-                class="mt-3 px-4 py-1.5 rounded-lg bg-[#0B1020] border border-[#1a1a24] text-xs text-[#00D4FF] hover:bg-[#00D4FF]/10 transition-all border-none cursor-pointer">
-                ✏️ 编辑资料
-              </button>
+              <p class="text-xs text-gray-500 mt-1">所在地区：{{ getRegionText() }}</p>
+              <div class="flex gap-2 mt-3">
+                <button @click="startEdit"
+                  class="px-4 py-1.5 rounded-lg bg-[#0B1020] border border-[#1a1a24] text-xs text-[#00D4FF] hover:bg-[#00D4FF]/10 transition-all border-none cursor-pointer">
+                  ✏️ 编辑资料
+                </button>
+                <button v-if="!regionEditing" @click="editRegion"
+                  class="px-4 py-1.5 rounded-lg bg-[#0B1020] border border-[#1a1a24] text-xs text-gray-400 hover:text-white transition-all border-none cursor-pointer">
+                  📍 {{ userRegion.provinceCode ? '修改地区' : '设置地区' }}
+                </button>
+              </div>
             </div>
             <!-- Edit Mode -->
             <div v-else class="space-y-3">
@@ -318,6 +416,28 @@ onMounted(loadProfile)
             class="inline-block mt-3 px-4 py-1.5 rounded-lg bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 text-xs text-yellow-400 hover:from-yellow-500/30 hover:to-orange-500/30 transition-all no-underline">
             升级会员 →
           </router-link>
+        </div>
+      </div>
+
+      <!-- 地区设置 -->
+      <div v-if="regionEditing" class="bg-[#09090c] border border-[#1a1a24] rounded-xl p-5">
+        <h3 class="text-white font-semibold text-sm mb-4">设置所在地区</h3>
+        <RegionPicker
+          v-model:selected-province="selectedProvince"
+          v-model:selected-city="selectedCity"
+          v-model:selected-district="selectedDistrict"
+          @change="onRegionChange"
+        />
+        <p v-if="regionError" class="text-red-400 text-xs mt-2">{{ regionError }}</p>
+        <div class="flex gap-2 mt-3">
+          <button @click="saveRegion" :disabled="regionSaving"
+            class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-[#00D4FF] to-blue-500 text-xs text-white font-medium hover:from-[#00D4FF]/90 hover:to-blue-500/90 transition-all border-none cursor-pointer">
+            {{ regionSaving ? '保存中...' : '保存' }}
+          </button>
+          <button @click="cancelRegionEdit"
+            class="px-4 py-1.5 rounded-lg bg-[#0B1020] border border-[#1a1a24] text-xs text-gray-400 hover:text-white transition-all border-none cursor-pointer">
+            取消
+          </button>
         </div>
       </div>
 

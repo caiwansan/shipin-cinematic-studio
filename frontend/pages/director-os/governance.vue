@@ -1,4 +1,7 @@
 <template><NuxtLayout name="workbench"><div class="max-w-6xl space-y-4">
+  <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-400">
+    ⚖️ 当前模块读取冻结治理数据，后续将迁移至新治理体系。
+  </div>
   <h2 class="text-lg font-medium text-gray-200">⚖️ 治理规则</h2>
   <div class="grid grid-cols-2 gap-4">
     <div v-for="rule in rules" :key="rule.id" class="p-4 bg-gray-900 rounded-lg border border-gray-800">

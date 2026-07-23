@@ -75,7 +75,7 @@ export const REALMS: RealmDefinition[] = [
     icon: '📖',
     route: '/hdz',
     color: '#C9A86C',
-    enabled: true,
+    enabled: false,
     order: 2,
   },
   {
@@ -101,7 +101,7 @@ export const REALMS: RealmDefinition[] = [
     icon: '🎵',
     route: '/studio/v2',
     color: '#F472B6',
-    enabled: true,
+    enabled: false,
     order: 4,
   },
   {

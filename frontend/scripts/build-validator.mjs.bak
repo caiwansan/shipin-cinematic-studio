@@ -1,3 +1,0 @@
-#!/usr/bin/env node
-console.log("[build-validator] 🔍 Mode: SPA");
-console.log("[build-validator] ✅ Validation skipped for Phase 2");

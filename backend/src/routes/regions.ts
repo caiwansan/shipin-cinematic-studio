@@ -1,35 +1,25 @@
 // 中国行政区划 API
-// Data source: frontend/public/pca-code.json (flat dict format)
+// Data source: backend/data/regions/pca-code.json (唯一权威来源)
 // 格式: { "86": {"110000":"北京市"}, "110000": {"110100":"市辖区"}, "110100": {"110101":"东城区", ...} }
 import { FastifyInstance } from 'fastify'
 import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // 缓存 pca 数据
 let pcaData: Record<string, Record<string, string>> | null = null
 
 function loadPCAData(): Record<string, Record<string, string>> {
   if (pcaData) return pcaData
-  // 尝试多个路径：同目录（拷贝版）> 前端public > node_modules
-  const candidates = [
-    new URL('./pca-code.json', import.meta.url).pathname,
-    path.resolve(process.cwd(), 'src/routes/pca-code.json'),
-    path.resolve(process.cwd(), '../frontend/public/pca-code.json'),
-    path.resolve(process.cwd(), 'frontend/public/pca-code.json'),
-    path.resolve(__dirname, '../../frontend/public/pca-code.json'),
-    path.resolve(__dirname, '../../node_modules/china-area-data/v5/data.json'),
-  ]
-  for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      try {
-        pcaData = JSON.parse(fs.readFileSync(p, 'utf-8'))
-        return pcaData!
-      } catch { continue }
+  const dataPath = path.resolve(process.cwd(), 'data/regions/pca-code.json')
+  if (fs.existsSync(dataPath)) {
+    try {
+      pcaData = JSON.parse(fs.readFileSync(dataPath, 'utf-8'))
+      return pcaData!
+    } catch (e) {
+      console.error('[regions] Failed to load pca-code.json:', e)
     }
   }
+  console.error('[regions] pca-code.json not found at', dataPath)
   pcaData = { '86': {} }
   return pcaData!
 }
@@ -83,25 +73,50 @@ export default async function regionRoutes(app: FastifyInstance) {
     }
   })
 
-  // PUT /api/user/region — 设置/更新用户地区（仅一次，后续报错）
+  // GET /api/user/region — 获取当前用户地区信息
+  app.get('/api/user/region', { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
+    try {
+      const userId = request.user.id
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { provinceCode: true, provinceName: true, cityCode: true, cityName: true, districtCode: true, districtName: true },
+      })
+      if (!user || (!user.provinceCode && !user.cityCode && !user.districtCode)) {
+        return { success: true, data: { hasRegion: false } }
+      }
+      return {
+        success: true,
+        data: {
+          hasRegion: true,
+          provinceCode: user.provinceCode,
+          provinceName: user.provinceName,
+          cityCode: user.cityCode,
+          cityName: user.cityName,
+          districtCode: user.districtCode,
+          districtName: user.districtName,
+        },
+      }
+    } catch (e: any) {
+      return reply.status(500).send({ success: false, error: e.message })
+    }
+  })
+
+  // PUT /api/user/region — 设置/更新用户地区（幂等，可重复更新）
   app.put('/api/user/region', { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
     try {
       const userId = request.user.id
       const { provinceCode, provinceName, cityCode, cityName, districtCode, districtName } = request.body as any
 
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { provinceCode: true, cityCode: true, districtCode: true },
-      })
-      if (user?.provinceCode || user?.cityCode || user?.districtCode) {
-        return reply.status(400).send({ success: false, error: '地区已设置，不可修改' })
+      // 验证必填字段
+      if (!provinceCode || !cityCode || !districtCode) {
+        return reply.status(400).send({ success: false, error: '请提供完整的地区信息（省/市/区县）' })
       }
 
       await prisma.user.update({
         where: { id: userId },
         data: { provinceCode, provinceName, cityCode, cityName, districtCode, districtName },
       })
-      return { success: true, message: '地区已设置' }
+      return { success: true, message: '地区已更新' }
     } catch (e: any) {
       return reply.status(500).send({ success: false, error: e.message })
     }

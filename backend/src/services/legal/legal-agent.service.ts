@@ -359,7 +359,7 @@ async function getUserLLMConfig(userId: string): Promise<{
 
   // 2. 回退：从 legal_system_configs 表读取 LLM 配置（若用户未配置）
   try {
-    const sysConfig = await prisma.legalSystemConfigs?.findFirst({
+    const sysConfig = await prisma.legalSystemConfig?.findFirst({
       where: { key: 'LLM_ENV_KEYS' },
     })
     if (sysConfig?.value) {

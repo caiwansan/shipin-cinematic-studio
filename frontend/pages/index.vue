@@ -109,26 +109,16 @@
             <label>邀请码</label>
             <input :value="refCode" type="text" disabled class="form-input" style="color:#8b8fa3" />
           </div>
-          <!-- 注册时选择所在地区（三级级联，设置后不可修改） -->
+          <!-- 注册时选择所在地区（三级级联，统一数据源 /api/regions） -->
           <div v-if="isRegisterMode" class="form-group">
-            <label>所在地区 <span style="color:#e74c3c;font-size:0.65rem">（必选，设置后不可修改）</span></label>
-            <div class="region-select-row" style="display:flex;gap:6px;flex-wrap:wrap">
-              <select v-model="selectedProvince" @change="onProvinceChange" class="region-select"
-                style="flex:1;min-width:0;background:#0B1020;border:1px solid #1A2240;border-radius:8px;padding:8px 6px;font-size:0.7rem;color:rgba(255,255,255,0.7);outline:none">
-                <option value="">请选择省份</option>
-                <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
-              </select>
-              <select v-model="selectedCity" @change="onCityChange" class="region-select"
-                style="flex:1;min-width:0;background:#0B1020;border:1px solid #1A2240;border-radius:8px;padding:8px 6px;font-size:0.7rem;color:rgba(255,255,255,0.7);outline:none">
-                <option value="">城市</option>
-                <option v-for="c in cities" :key="c.code" :value="c.code">{{ c.name }}</option>
-              </select>
-              <select v-model="selectedDistrict" class="region-select"
-                style="flex:1;min-width:0;background:#0B1020;border:1px solid #1A2240;border-radius:8px;padding:8px 6px;font-size:0.7rem;color:rgba(255,255,255,0.7);outline:none">
-                <option value="">区县</option>
-                <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
-              </select>
-            </div>
+            <label>所在地区 <span style="color:#e74c3c;font-size:0.65rem">（必选）</span></label>
+            <RegionPicker
+              v-model:selected-province="selectedProvince"
+              v-model:selected-city="selectedCity"
+              v-model:selected-district="selectedDistrict"
+              @change="onRegionChange"
+            />
+            <p v-if="regionError" style="font-size:0.7rem;color:#e74c3c;margin-top:4px">{{ regionError }}</p>
           </div>
           <p v-if="authError" class="form-error">{{ authError }}</p>
           <p v-if="authSuccess" class="form-success">{{ authSuccess }}</p>
@@ -195,6 +185,8 @@ import CreationLawScene from '~/components/kunlun/scenes/CreationLawScene.vue'
 import FourStepScene from '~/components/kunlun/scenes/FourStepScene.vue'
 import CreatorVoicesScene from '~/components/kunlun/scenes/CreatorVoicesScene.vue'
 import FinalCTAScene from '~/components/kunlun/scenes/FinalCTAScene.vue'
+import RegionPicker from '~/components/RegionPicker.vue'
+import { useRegions } from '~/composables/useRegions'
 
 const router = useRouter()
 const showLogin = ref(false)
@@ -237,41 +229,21 @@ const selectedCity = ref('')
 const selectedDistrict = ref('')
 const regionNameMap = ref<Record<string, string>>({})
 
-async function fetchRegions(parentCode?: string) {
-  try {
-    const url = parentCode ? `/api/regions?parentCode=${parentCode}` : '/api/regions'
-    const res = await fetch(url)
-    const d = await res.json()
-    return d.data || []
-  } catch { return [] }
-}
+// 省市区选择器数据（使用统一 RegionPicker 组件）
+const regionError = ref('')
 
-async function loadProvinces() {
-  provinces.value = await fetchRegions()
-  provinces.value.forEach((p: any) => { regionNameMap.value[p.code] = p.name })
-}
-
-function onProvinceChange() {
-  selectedCity.value = ''
-  selectedDistrict.value = ''
-  cities.value = []
-  districts.value = []
-  if (selectedProvince.value) {
-    fetchRegions(selectedProvince.value).then(data => {
-      cities.value = data
-      data.forEach((c: any) => { regionNameMap.value[c.code] = c.name })
-    })
-  }
-}
-
-function onCityChange() {
-  selectedDistrict.value = ''
-  districts.value = []
-  if (selectedCity.value) {
-    fetchRegions(selectedCity.value).then(data => {
-      districts.value = data
-      data.forEach((d: any) => { regionNameMap.value[d.code] = d.name })
-    })
+function onRegionChange(data: {
+  provinceCode: string; provinceName: string
+  cityCode: string; cityName: string
+  districtCode: string; districtName: string
+} | null) {
+  regionError.value = ''
+  if (data) {
+    regionNameMap.value = {
+      [data.provinceCode]: data.provinceName,
+      [data.cityCode]: data.cityName,
+      [data.districtCode]: data.districtName,
+    }
   }
 }
 
@@ -291,7 +263,6 @@ onMounted(() => {
     }
   }, 50)
   console.log('[HOME] mounted — scroll fix applied', window.location.pathname)
-  loadProvinces()
 })
 
 const needSmsCode = computed(() => {
@@ -710,7 +681,6 @@ onMounted(() => {
       .then(r => r.json())
       .then(d => { if (d.data) wechatStatus.value = d.data })
       .catch(() => {})
-    loadProvinces()
   }, 100)
 
   // ⭐ 只要有 token，就从 /api/auth/me 获取完整用户信息（覆盖可能不完整的 QQ 登录缓存）

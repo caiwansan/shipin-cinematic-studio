@@ -24,6 +24,12 @@ export default async function memberRoutes(fastify: FastifyInstance) {
         agentLevel: true,
         agentStatus: true,
         agentExpiresAt: true,
+        provinceCode: true,
+        provinceName: true,
+        cityCode: true,
+        cityName: true,
+        districtCode: true,
+        districtName: true,
         membership: {
           select: {
             tier: true,
@@ -51,6 +57,12 @@ export default async function memberRoutes(fastify: FastifyInstance) {
       agentLevel: user.agentLevel,
       agentStatus: user.agentStatus || 'none',
       agentExpiresAt: user.agentExpiresAt,
+      provinceCode: user.provinceCode,
+      provinceName: user.provinceName,
+      cityCode: user.cityCode,
+      cityName: user.cityName,
+      districtCode: user.districtCode,
+      districtName: user.districtName,
       membership: user.membership ? {
         tier: user.membership.tier,
         credits: user.membership.credits !== null ? Number(user.membership.credits) : null,
