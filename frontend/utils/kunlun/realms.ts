@@ -7,6 +7,8 @@
  * 新增工作台只需在此注册，首页自动扩展（零组件改动）
  */
 
+export type RealmStatus = 'stable' | 'beta' | 'preview' | 'hidden' | 'deprecated'
+
 export interface RealmDefinition {
   /** 唯一标识 */
   id: string
@@ -26,12 +28,16 @@ export interface RealmDefinition {
   route: string | (() => Promise<string>)
   /** 主题色 CSS color */
   color: string
-  /** 是否启用 */
+  /** 是否启用（已废弃，改用 status） */
   enabled: boolean
+  /** 工作台状态 */
+  status: RealmStatus
   /** 排序 */
   order: number
   /** 标签（如 "全新" / "Beta"） */
   tag?: string
+  /** 状态提示文案 */
+  statusNotice?: string
 }
 
 /**
@@ -63,7 +69,10 @@ export const REALMS: RealmDefinition[] = [
     route: '/studio/v2',
     color: '#00D4FF',
     enabled: true,
+    status: 'beta',
     order: 1,
+    tag: 'Beta',
+    statusNote: '公测版，BYOK，Pro 临时策略',
   },
   {
     id: 'novel',
@@ -76,7 +85,9 @@ export const REALMS: RealmDefinition[] = [
     route: '/hdz',
     color: '#C9A86C',
     enabled: false,
+    status: 'hidden',
     order: 2,
+    statusNote: '半成品，暂时隐藏',
   },
   {
     id: 'ppt',
@@ -89,6 +100,7 @@ export const REALMS: RealmDefinition[] = [
     route: '/ppt/',
     color: '#A78BFA',
     enabled: true,
+    status: 'stable',
     order: 3,
   },
   {
@@ -102,7 +114,9 @@ export const REALMS: RealmDefinition[] = [
     route: '/studio/v2',
     color: '#F472B6',
     enabled: false,
+    status: 'hidden',
     order: 4,
+    statusNote: '半成品，无独立数据表，暂时隐藏',
   },
   {
     id: 'ad',
@@ -115,15 +129,35 @@ export const REALMS: RealmDefinition[] = [
     route: '/studio/v2',
     color: '#34D399',
     enabled: true,
+    status: 'stable',
     order: 5,
   },
 ]
 
 /**
- * 获取已启用的 Realm 列表（按 order 排序）
+ * 获取首页可见的 Realm 列表（按 order 排序）
+ * 只展示 stable / beta / preview，过滤 hidden / deprecated
+ *
+ * 替代旧的 getEnabledRealms()，统一使用 status 字段
  */
 export function getEnabledRealms(): RealmDefinition[] {
-  return REALMS.filter(r => r.enabled).sort((a, b) => a.order - b.order)
+  return REALMS
+    .filter(r => r.status !== 'hidden' && r.status !== 'deprecated')
+    .sort((a, b) => a.order - b.order)
+}
+
+/**
+ * 获取 Realm 状态提示文案
+ */
+export function getRealmStatusNotice(status: RealmStatus): string | null {
+  const map: Record<RealmStatus, string | null> = {
+    stable: null,
+    beta: '公测版，功能完整但可能存在 bug。',
+    preview: '预览版，部分功能未开放。',
+    hidden: '该工作台暂未开放。',
+    deprecated: '该工作台即将下线，仅保留历史数据查询。',
+  }
+  return map[status]
 }
 
 /**

@@ -33,6 +33,10 @@
       {{ realm.description }}
     </p>
 
+    <div v-if="statusNotice" class="realm-status-notice">
+      {{ statusNotice }}
+    </div>
+
     <div class="realm-manifesto">
       「{{ realm.manifesto }}」
     </div>
@@ -111,12 +115,16 @@
  * 限制：无 Realm 实例不渲染。
  */
 
+import { computed } from 'vue'
 import type { RealmDefinition } from '~/utils/kunlun/realms'
+import { getRealmStatusNotice } from '~/utils/kunlun/realms'
 
 const props = defineProps<{
   realm: RealmDefinition
   layout?: 'bento' | 'compact' | 'expanded'
 }>()
+
+const statusNotice = computed(() => getRealmStatusNotice(props.realm.status))
 
 const cardStyle = computed(() => ({
   '--realm-color': props.realm.color,
@@ -233,5 +241,14 @@ const isExternal = computed(() => {
 .realm-card:hover .realm-arrow {
   opacity: 1;
   transform: translateX(0);
+}
+
+.realm-status-notice {
+  font-size: 0.72rem;
+  color: rgba(201, 168, 108, 0.7);
+  background: rgba(201, 168, 108, 0.08);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
 }
 </style>
