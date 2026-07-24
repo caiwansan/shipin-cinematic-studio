@@ -334,6 +334,14 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/agent-identity.js')).registerAgentIdentityRoutes, { prefix: '/api/enterprise/agent-identity' })
   // Phase 5-A1 — Enterprise AI Recruitment Onboarding
   await app.register((await import('./routes/enterprise-onboarding.routes.js')).enterpriseOnboardingRoutes, { prefix: '/api' })
+  // Phase 5-B1 — Resume Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/resume.routes.js')).resumeRoutes, { prefix: '/api' })
+  // Phase 5-B2 — Pipeline Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/pipeline.routes.js')).pipelineRoutes, { prefix: '/api' })
+  // Phase 5-B3 — Interview Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/interview.routes.js')).interviewRoutes, { prefix: '/api' })
+  // Phase 5-B4 — Dashboard Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/dashboard.routes.js')).dashboardRoutes, { prefix: '/api' })
   ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
 
   // 注册渠道适配器

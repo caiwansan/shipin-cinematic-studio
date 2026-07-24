@@ -25,10 +25,8 @@ export const navCategories: NavCategory[] = [
     title: '第一排',
     items: [
       { label: '短剧工作台', icon: '🎬', to: '/studio/v2', desc: 'AI短剧策划、剧本、分镜、视频生产', status: 'beta' },
-      // 音乐创作：半成品，已隐藏（无独立数据表）
-      // { label: '音乐创作', icon: '🎵', to: '/workspace/music' },
-      // 小说创作：半成品，已隐藏
-      // { label: '小说创作', icon: '📖', to: '/hdz', desc: 'AI小说生成、世界观、角色创作' },
+      { label: '音乐创作', icon: '🎵', to: '/workspace/music', desc: 'AI音乐创作、作曲、编曲' },
+      { label: '小说创作', icon: '📖', to: '/hdz', desc: 'AI小说生成、世界观、角色创作' },
     ],
   },
   {

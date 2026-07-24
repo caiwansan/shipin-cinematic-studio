@@ -63,6 +63,7 @@ model User {
   messagesReceived      UserMessage[]          @relation("messages_received")
   ownedProjects         Project[]              @relation("ProjectOwner")
   ecomProjects          EcomProject[]
+  jobCandidates JobCandidate[]
 }
 
 model CreatorDnaProfile {
@@ -7431,6 +7432,7 @@ model JobCompanyProfile {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("job_company_profile")
+  jobPostings JobPosting[]
 }
 
 model EnterpriseJobWorkspace {
@@ -7445,6 +7447,10 @@ model EnterpriseJobWorkspace {
 
   @@unique([enterpriseId])
   @@map("enterprise_job_workspace")
+  resumes Resume[]
+  recruitmentPipelines RecruitmentPipeline[]
+  interviewSessions InterviewSession[]
+  candidateMatches CandidateMatch[]
 }
 
 model EnterpriseOnboardingState {
@@ -7506,4 +7512,322 @@ model EnterpriseRecruitmentNeeds {
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@map("enterprise_recruitment_needs")
+}
+
+// ==================== 企业招聘缺失模型 (Prisma Schema Sync) ====================
+
+model Resume {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  candidateName   String   @map("candidate_name")
+  fileName        String   @map("file_name")
+  fileUrl         String   @map("file_url")
+  fileType        String   @map("file_type")
+  fileSize        Int      @map("file_size")
+  status          String
+  fileHash        String?  @map("file_hash")
+  modelName       String?  @map("model_name")
+  parseDurationMs Int?     @map("parse_duration_ms")
+  parseError      String?  @map("parse_error")
+  parserType      String   @map("parser_type")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime? @updatedAt @map("updated_at")
+
+  workspace    EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+  profile      ResumeProfile?
+  @@map("resume")
+}
+
+model ResumeProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  resumeId       String   @unique @map("resume_id") @db.Uuid
+  name           String
+  email          String?
+  phone          String?
+  education      String?
+  major          String?
+  skills         String[]
+  experience     String?
+  experienceYears Int     @map("experience_years")
+  city           String?
+  salaryMin      Int?     @map("salary_min")
+  salaryMax      Int?     @map("salary_max")
+  careerGoal     String?  @map("career_goal")
+  projects       String?
+  qualityScore   Int      @map("quality_score")
+  strengths      String[]
+  weaknesses     String[]
+  suggestions    String[]
+  rawText        String?  @map("raw_text")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  resume      Resume @relation(fields: [resumeId], references: [id])
+  @@map("resume_profile")
+}
+
+model RecruitmentPipeline {
+  id               String   @id @default(uuid()) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  resumeId         String?  @map("resume_id") @db.Uuid
+  jobId            String   @map("job_id") @db.Uuid
+  candidateName    String   @map("candidate_name")
+  stage            String
+  screeningScore   Int?     @map("screening_score")
+  screeningNote    String?  @map("screening_note")
+  interviewCount   Int      @default(0) @map("interview_count")
+  lastActivityAt   DateTime @map("last_activity_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  autoCreated      Boolean  @default(false) @map("auto_created")
+  offerStatus      String?  @map("offer_status")
+  tags             String[]
+
+  workspace    EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+  job          JobPosting           @relation(fields: [jobId], references: [id])
+  events       PipelineEvent[]
+  candidateNotes CandidateNote[]
+  interviewSessions InterviewSession[]
+  @@map("recruitment_pipeline")
+}
+
+model PipelineEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  pipelineId String   @map("pipeline_id") @db.Uuid
+  type       String
+  fromStage  String?  @map("from_stage")
+  toStage    String?  @map("to_stage")
+  actor      String
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  pipeline    RecruitmentPipeline @relation(fields: [pipelineId], references: [id])
+  @@map("pipeline_event")
+}
+
+model JobPosting {
+  id                String   @id @default(uuid()) @db.Uuid
+  enterpriseId      String   @map("enterpriseId") @db.Uuid
+  title             String
+  salary            String?
+  location          String?
+  description       String?
+  requirements      String?
+  qualityScore      Int      @default(0) @map("quality_score")
+  status            String
+  careerPath        String?  @map("career_path")
+  industry          String?
+  promotionPath     String?  @map("promotion_path")
+  relatedSkills     String[] @map("related_skills")
+  skillRequirements String[] @map("skill_requirements")
+  tags              String[]
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  enterprise         JobCompanyProfile        @relation(fields: [enterpriseId], references: [id])
+  recruitmentPipelines RecruitmentPipeline[]
+  interviewSessions    InterviewSession[]
+  candidateMatches     CandidateMatch[]
+  channelMappings      RecruitmentChannelMapping[]
+  @@map("job_posting")
+}
+
+model InterviewSession {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  pipelineId    String?   @map("pipeline_id") @db.Uuid
+  jobId         String    @map("job_id") @db.Uuid
+  candidateName String    @map("candidate_name")
+  resumeId      String?   @map("resume_id") @db.Uuid
+  interviewerId String?   @map("interviewer_id") @db.Uuid
+  title         String
+  status        String
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  workspace   EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+  pipeline    RecruitmentPipeline?  @relation(fields: [pipelineId], references: [id])
+  job         JobPosting           @relation(fields: [jobId], references: [id])
+  questions   InterviewQuestion[]
+  evaluation  InterviewEvaluation?
+  decision    InterviewDecision?
+  notes       InterviewNote[]
+  @@map("interview_session")
+}
+
+model InterviewQuestion {
+  id              String   @id @default(uuid()) @db.Uuid
+  sessionId       String   @map("session_id") @db.Uuid
+  category        String
+  question        String
+  expectedAnswer  String?  @map("expected_answer")
+  answer          String?
+  score           Int?
+  followUp        String?  @map("followUp")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  session     InterviewSession @relation(fields: [sessionId], references: [id])
+  @@map("interview_question")
+}
+
+model InterviewEvaluation {
+  id                String   @id @default(uuid()) @db.Uuid
+  sessionId         String   @unique @map("session_id") @db.Uuid
+  overallScore      Int      @map("overall_score")
+  technicalScore    Int      @map("technical_score")
+  communicationScore Int     @map("communication_score")
+  cultureScore      Int      @map("culture_score")
+  strengths         String[]
+  risks             String[]
+  recommendation    String
+  summary           String
+  nextSteps         String[] @map("nextSteps")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  session     InterviewSession @relation(fields: [sessionId], references: [id])
+  @@map("interview_evaluation")
+}
+
+model CandidateNote {
+  id         String   @id @default(uuid()) @db.Uuid
+  pipelineId String   @map("pipeline_id") @db.Uuid
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  pipeline    RecruitmentPipeline @relation(fields: [pipelineId], references: [id])
+  @@map("candidate_note")
+}
+
+model JobCandidate {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("userId") @db.Uuid
+  education         String?
+  skills            String[]
+  experience        String?
+  city              String?
+  salaryExpectation String?  @map("salaryExpectation")
+  careerGoal        String?  @map("careerGoal")
+  profileJson       Json?    @map("profileJson")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user        User             @relation(fields: [userId], references: [id])
+  matches     CandidateMatch[]
+  @@map("job_candidate")
+}
+
+model TalentProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  email          String?
+  phone          String?
+  education      String?
+  skills         String[]
+  experience     String?
+  experienceYears Int     @map("experience_years")
+  city           String?
+  salaryMin      Int?     @map("salary_min")
+  salaryMax      Int?     @map("salary_max")
+  careerLevel    String?  @map("career_level")
+  strengths      String[]
+  risks          String[]
+  careerGoal     String?  @map("career_goal")
+  projects       String?
+  sourceType     String   @map("source_type")
+  sourceId       String?  @map("source_id") @db.Uuid
+  matchCount     Int      @default(0) @map("match_count")
+  lastMatchedAt  DateTime? @map("last_matched_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("talent_profile")
+}
+
+model CandidateMatch {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  jobId           String   @map("job_id") @db.Uuid
+  candidateId     String   @map("candidate_id") @db.Uuid
+  matchScore      Int      @map("match_score")
+  matchBreakdown  Json?    @map("match_breakdown")
+  status          String
+  aiAnalysis      String?  @map("ai_analysis")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  workspace   EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+  job         JobPosting           @relation(fields: [jobId], references: [id])
+  candidate   JobCandidate         @relation(fields: [candidateId], references: [id])
+  interviewRecords InterviewRecord[]
+  @@map("candidate_match")
+}
+
+model RecruitmentChannel {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  type        String
+  description String?
+  enabled     Boolean?
+  sortOrder   Int?     @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  mappings    RecruitmentChannelMapping[]
+  @@map("recruitment_channel")
+}
+
+model RecruitmentChannelMapping {
+  id           String   @id @default(uuid()) @db.Uuid
+  jobId        String   @map("job_id") @db.Uuid
+  channelId    String   @map("channel_id") @db.Uuid
+  channelJobId String?  @map("channel_job_id")
+  status       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  channel     RecruitmentChannel @relation(fields: [channelId], references: [id])
+  job         JobPosting        @relation(fields: [jobId], references: [id])
+  @@map("recruitment_channel_mapping")
+}
+
+model InterviewRecord {
+  id           String    @id @default(uuid()) @db.Uuid
+  matchId      String    @map("match_id") @db.Uuid
+  round        Int
+  scheduledAt  DateTime? @map("scheduled_at")
+  status       String
+  interviewer  String?
+  feedback     String?
+  rating       Int?
+  aiSummary    String?   @map("ai_summary")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  match       CandidateMatch @relation(fields: [matchId], references: [id])
+  @@map("interview_record")
+}
+
+model InterviewDecision {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @unique @map("session_id") @db.Uuid
+  decision  String
+  reason    String?
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session     InterviewSession @relation(fields: [sessionId], references: [id])
+  @@map("interview_decision")
+}
+
+model InterviewNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  content   String
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  session     InterviewSession @relation(fields: [sessionId], references: [id])
+  @@map("interview_note")
 }
