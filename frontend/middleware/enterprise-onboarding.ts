@@ -23,6 +23,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return
   }
 
+  // 企业招聘 Onboarding 页面豁免完成重定向（只检查登录态）
+  if (to.path.startsWith('/workspace/enterprise/onboarding')) {
+    return
+  }
+
   // 检查是否已初始化
   try {
     const res = await $fetch<{ code: number; data: { isComplete: boolean; tenant: boolean; agents: number } }>(

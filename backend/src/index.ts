@@ -332,6 +332,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise-billing.js')).enterpriseBillingRoutes, { prefix: '/api' })
   // Sprint 4.2.8 Step 5 — Agent Identity Layer
   await app.register((await import('./routes/agent-identity.js')).registerAgentIdentityRoutes, { prefix: '/api/enterprise/agent-identity' })
+  // Phase 5-A1 — Enterprise AI Recruitment Onboarding
+  await app.register((await import('./routes/enterprise-onboarding.routes.js')).enterpriseOnboardingRoutes, { prefix: '/api' })
   ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
 
   // 注册渠道适配器

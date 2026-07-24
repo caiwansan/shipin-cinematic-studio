@@ -1,4 +1,10 @@
 /**
+ * @deprecated
+ * Legacy tenant-based enterprise onboarding.
+ * New flow uses workspace-based enterprise-onboarding.routes.ts.
+ * Do not extend. Plan removal after confirmation.
+ */
+/**
  * Enterprise AI Workforce — Enterprise Onboarding Service
  * 企业注册初始化向导
  */
