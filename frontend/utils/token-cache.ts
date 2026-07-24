@@ -98,6 +98,11 @@ export function clearAuth(): void {
   }
 }
 
+/** 获取管理员 Token（优先取 admin_token，回退到 auth_token） */
+export function getAdminToken(): string {
+  return localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || ''
+}
+
 /** 检查是否已登录（有 token 即认为已登录） */
 export function isAuthenticated(): boolean {
   return !!getToken()

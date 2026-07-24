@@ -70,10 +70,6 @@ const props = defineProps({
 
 const emit = defineEmits(['addChannel', 'removeChannel'])
 
-const props = defineProps({
-  detail: { type: Object, default: null }
-})
-
 const agentEmoji = {
   growth_director: '🧠',
   market_analyst: '📊',
