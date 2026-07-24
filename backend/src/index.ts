@@ -342,6 +342,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/interview.routes.js')).interviewRoutes, { prefix: '/api' })
   // Phase 5-B4 — Dashboard Center (skeleton: read-only + maintenance gates)
   await app.register((await import('./routes/dashboard.routes.js')).dashboardRoutes, { prefix: '/api' })
+  // Phase 5-B5 — Job Posting Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/job-posting.routes.js')).jobPostingRoutes, { prefix: '/api' })
   ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
 
   // 注册渠道适配器
