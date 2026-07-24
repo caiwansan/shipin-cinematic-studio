@@ -76,7 +76,7 @@ import { ref, onMounted } from 'vue'
 
 const props = defineProps({
   bindings: { type: Array, default: () => [] },
-  availableChannels: { type: Array, default: () => [] })
+  availableChannels: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits(['add', 'remove'])

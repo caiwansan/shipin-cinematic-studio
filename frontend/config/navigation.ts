@@ -30,6 +30,7 @@ export const navCategories: NavCategory[] = [
       // 小说创作：半成品，已隐藏
       // { label: '小说创作', icon: '📖', to: '/hdz', desc: 'AI小说生成、世界观、角色创作' },
     ],
+  },
   {
     title: '第二排',
     items: [

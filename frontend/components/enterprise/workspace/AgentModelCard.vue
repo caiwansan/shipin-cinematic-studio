@@ -106,7 +106,7 @@ async function setDefaultModel(bindingId) {
       // 更新本地状态
       props.bindings.forEach(b => { b.enabled = b.id === bindingId })
       // 触发父组件刷新
-      window.dispatchEvent(new CustomEvent:model-binding-changed', { detail: { bindingId } }))
+      window.dispatchEvent(new CustomEvent('model-binding-changed', { detail: { bindingId } }))
     }
   } catch (e) {
     console.error('[AgentModelCard] Switch model failed:', e)
