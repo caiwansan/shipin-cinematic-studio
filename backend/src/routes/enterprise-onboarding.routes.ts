@@ -118,7 +118,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
 
   // ─── 获取/创建 Onboarding 状态 ───
 
-  fastify.get('/enterprise/onboarding/v2/status', async (request, reply) => {
+  fastify.get('/enterprise/onboarding/v2/status', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { enterpriseId } = request.query as { enterpriseId?: string }
     if (!enterpriseId) {
       return reply.status(400).send({ error: 'enterpriseId is required' })
@@ -163,7 +163,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
 
   // ─── Step 1: 创建企业档案 ───
 
-  fastify.post('/enterprise/onboarding/step1', async (request, reply) => {
+  fastify.post('/enterprise/onboarding/step1', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = request.body as {
       enterpriseId: string
       companyName: string
