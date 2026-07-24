@@ -7481,7 +7481,7 @@ model EnterpriseAgentWorkforce {
   pauseReason      String?   @map("pause_reason")
   monthlyCalls     Int       @default(0) @map("monthly_calls")
   monthlyTokens    Int       @default(0) @map("monthly_tokens")
-  monthlyCost      Decimal   @default(0) @db.Decimal(10, 4)
+  monthlyCost      Decimal   @default(0) @map("monthly_cost") @db.Decimal(10, 4)
   sortOrder        Int       @default(0) @map("sort_order")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
