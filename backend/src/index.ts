@@ -334,6 +334,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/agent-identity.js')).registerAgentIdentityRoutes, { prefix: '/api/enterprise/agent-identity' })
   // Phase 5-A1 — Enterprise AI Recruitment Onboarding
   await app.register((await import('./routes/enterprise-onboarding.routes.js')).enterpriseOnboardingRoutes, { prefix: '/api' })
+  // Phase 5-B1 — Resume Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/resume.routes.js')).resumeRoutes, { prefix: '/api' })
   ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
 
   // 注册渠道适配器
