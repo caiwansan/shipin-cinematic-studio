@@ -7531,7 +7531,7 @@ model Resume {
   parseError      String?  @map("parse_error")
   parserType      String   @map("parser_type")
   createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  updatedAt        DateTime? @updatedAt @map("updated_at")
 
   workspace    EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
   profile      ResumeProfile?
