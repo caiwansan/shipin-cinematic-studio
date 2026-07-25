@@ -1,9 +1,77 @@
+# =============================================
+# Build outputs
+# =============================================
 node_modules/
 .output/
+.output.*/
 dist/
+build/
+.nuxt/
+.vue-ssr/
+.cache/
+*.tsbuildinfo
+
+# =============================================
+# Environment & secrets
+# =============================================
 .env
+.env.*
+!.env.example
+*.key
+*.pem
+*.cert
+*.crt
+
+# =============================================
+# Runtime / user data (never commit)
+# =============================================
+backend/public/uploads/
+backend/public/watermarked/
+backend/reports/
+backend/snapshots/
+backend/benchmarks/reports/
+archive/runtime-trace/
+data/
+logs/
 *.log
+
+# =============================================
+# OS / editor junk
+# =============================================
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# =============================================
+# Backups & temp
+# =============================================
 backups/
 tmp/
 *.bak
+*.backup
+*.old
+*.orig
+*.temp
+*.tmp
+
+# =============================================
+# Desktop build artifacts
+# =============================================
+desktop/web/_nuxt/
+desktop/dist/
+desktop/release/
+*.dmg
+*.exe
+*.AppImage
+*.deb
+*.rpm
+
+# =============================================
+# Misc
+# =============================================
+*.pyc
+__pycache__/
+.idea/
+.vscode/

@@ -121,7 +121,7 @@ export const workspaces: WorkspaceConfig[] = [
     visibleOnHome: true,
     routeAccessible: true,
     completion: 35,
-    note: '半成品，无独立数据表',
+    note: 'AI音乐创作、作曲、编曲',
   },
   {
     id: 'hdz',

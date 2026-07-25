@@ -45,6 +45,7 @@ const navItems = [
   { id: 'execution', label: '执行中心', icon: '🚀', path: 'execution' },
   { id: 'channels', label: '渠道中心', icon: '📡', path: 'channels' },
   { id: 'ai-employees', label: 'AI 员工中心', icon: '🤖', path: 'ai-employees' },
+  { id: 'recruitment', label: 'AI 招聘中心', icon: '🎯', path: 'recruitment' },
   { id: 'knowledge', label: '企业知识库', icon: '📚', path: 'knowledge' },
   { id: 'growth', label: '增长分析', icon: '📈', path: 'growth' },
   { id: 'governance', label: '企业治理', icon: '🔐', path: 'governance' },

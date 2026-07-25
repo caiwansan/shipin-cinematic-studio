@@ -12,9 +12,13 @@ const KANBAN_STAGES = ['discovered', 'screening', 'interview', 'offer', 'hired']
 
 export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
 
-  // 503: Pipeline 关系尚未完成同步
-  fastify.addHook('onRequest', async (_request, reply) => {
-    return reply.status(503).send({ error: 'Pipeline module is under maintenance', module: 'pipeline', status: 'maintenance' })
+  // 所有 Pipeline 接口都需要 JWT 认证
+  fastify.addHook('onRequest', async (request, reply) => {
+    try {
+      await request.jwtVerify()
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' })
+    }
   })
 
   // ─── 获取 Kanban 全量数据 ───
@@ -78,8 +82,9 @@ export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
         workspaceId: body.workspaceId,
         candidateName: body.candidateName,
         jobId: body.jobId,
-        resumeId: body.resumeId,
+        resumeId: body.resumeId || null,
         stage: 'discovered',
+        lastActivityAt: new Date(),
       },
     })
 
@@ -145,7 +150,7 @@ export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
       include: {
         events: { orderBy: { createdAt: 'asc' } },
         job: { select: { title: true } },
-        interviews: { orderBy: { createdAt: 'asc' } },
+        interviewSessions: { orderBy: { createdAt: 'asc' } },
       },
     })
 
@@ -158,7 +163,7 @@ export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
       currentStage: pipeline.stage,
       screeningScore: pipeline.screeningScore,
       createdAt: pipeline.createdAt,
-      events: pipeline.events.map(e => ({
+      events: pipeline.events.map((e: any) => ({
         id: e.id,
         type: e.type,
         fromStage: e.fromStage,
@@ -167,7 +172,7 @@ export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
         metadata: e.metadata,
         time: e.createdAt,
       })),
-      interviews: pipeline.interviews.map(i => ({
+      interviews: pipeline.interviewSessions.map((i: any) => ({
         id: i.id,
         status: i.status,
         score: i.overallScore,
@@ -252,14 +257,20 @@ export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
         const plan = agent.generateInterviewPlan(
           {
             title: pipeline.job.title,
-            description: pipeline.job.description || '',
-            requirements: pipeline.job.requirements || [],
+            skills: pipeline.job.skillRequirements || [],
+            salary: pipeline.job.salary || '',
+            location: pipeline.job.location || '',
+            requirements: pipeline.job.requirements ? pipeline.job.requirements.split(/[,，、\n]/).map((s: string) => s.trim()).filter(Boolean) : [],
+            level: '',
           },
           {
             name: resumeProfile.name || pipeline.candidateName,
             skills: resumeProfile.skills || [],
-            experience: resumeProfile.experience || '',
+            experienceYears: resumeProfile.experienceYears || 0,
             education: resumeProfile.education || '',
+            city: resumeProfile.city || '',
+            careerGoal: resumeProfile.careerGoal || '',
+            projects: resumeProfile.projects || '',
           }
         )
         questions = plan.questions.map(q => ({
@@ -385,8 +396,8 @@ AI 评分：${score}/100
       include: {
         job: { select: { title: true, location: true, salary: true } },
         events: { orderBy: { createdAt: 'desc' }, take: 20 },
-        notes: { orderBy: { createdAt: 'desc' } },
-        interviews: { orderBy: { createdAt: 'asc' } },
+        candidateNotes: { orderBy: { createdAt: 'desc' } },
+        interviewSessions: { orderBy: { createdAt: 'asc' } },
       },
     })
 
@@ -437,9 +448,9 @@ AI 评分：${score}/100
         offerStatus: pipeline.offerStatus,
         lastActivityAt: pipeline.lastActivityAt,
         createdAt: pipeline.createdAt,
-        recentEvents: pipeline.events.slice(0, 5),
-        notes: pipeline.notes,
-        interviews: pipeline.interviews,
+        recentEvents: (pipeline as any).events?.slice(0, 5) || [],
+        notes: (pipeline as any).candidateNotes || [],
+        interviews: (pipeline as any).interviewSessions || [],
         resume: resumeData,
       },
     }

@@ -51,6 +51,8 @@ import adminAgentRoutes from './routes/admin-agents.js'
 import adminEnterpriseRoutes from './routes/admin-enterprises.js'
 import adminEnterprisePlanRoutes from './routes/admin-enterprise-plans.js'
 import adminMarketAgentRoutes from './routes/admin-market-agents.js'
+import adminRecruitmentRoutes from './routes/admin-recruitment.js'
+import { enterpriseHomeRoutes } from './routes/enterprise-home.js'
 import agentPlanRoutes from './routes/agent-plan.js'
 // Platform Agent routes (KMKI-PLAT-010) — dynamic to avoid tsx @platform alias issue
 let agentDefinitionRoutes: any = undefined
@@ -332,8 +334,12 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise-billing.js')).enterpriseBillingRoutes, { prefix: '/api' })
   // Sprint 4.2.8 Step 5 — Agent Identity Layer
   await app.register((await import('./routes/agent-identity.js')).registerAgentIdentityRoutes, { prefix: '/api/enterprise/agent-identity' })
+  // BETA-06.1 — Enterprise Agent Runtime (激活/执行/生命周期)
+  await app.register((await import('./routes/enterprise-agent-runtime.js')).registerEnterpriseAgentRuntimeRoutes, { prefix: '/api/enterprise' })
   // Phase 5-A1 — Enterprise AI Recruitment Onboarding
   await app.register((await import('./routes/enterprise-onboarding.routes.js')).enterpriseOnboardingRoutes, { prefix: '/api' })
+  // Enterprise Home — 企业招聘中心首页 (CTO Directive: Domain Separation)
+  await app.register(enterpriseHomeRoutes)
   // Phase 5-B1 — Resume Center (skeleton: read-only + maintenance gates)
   await app.register((await import('./routes/resume.routes.js')).resumeRoutes, { prefix: '/api' })
   // Phase 5-B2 — Pipeline Center (skeleton: read-only + maintenance gates)
@@ -343,7 +349,18 @@ await app.register(projectV2Routes)
   // Phase 5-B4 — Dashboard Center (skeleton: read-only + maintenance gates)
   await app.register((await import('./routes/dashboard.routes.js')).dashboardRoutes, { prefix: '/api' })
   // Phase 5-B5 — Job Posting Center (skeleton: read-only + maintenance gates)
-  await app.register((await import('./routes/job-posting.routes.js')).jobPostingRoutes, { prefix: '/api' })
+  await app.register((await import('./routes/job-posting.routes.js')).jobPostingRoutes)
+  await app.register((await import('./routes/recruitment-department.routes.js')).recruitmentDepartmentRoutes)
+  // Sprint-08B — Recruitment Conversation Domain
+  await app.register((await import('./routes/recruitment-conversation.routes.js')).default, { prefix: '/api/enterprise/recruitment-conversation' })
+  // Sprint-08C — Recruitment Campaign Domain
+  await app.register((await import('./routes/recruitment-campaign.routes.js')).default, { prefix: '/api/enterprise/recruitment-campaign' })
+  // Sprint-08D — Interview Agent Domain
+  await app.register((await import('./routes/recruitment-interview.routes.js')).default, { prefix: '/api/enterprise/recruitment-interview' })
+  // Phase 5-B6 — Enterprise Pipeline Center (Kanban + Timeline + Notes + Tags + AI Actions)
+  await app.register((await import('./routes/enterprise-pipeline.routes.js')).enterprisePipelineRoutes)
+  // Phase 5-B7 — Enterprise Recruitment (workspace + JD generate + match)
+  await app.register((await import('./routes/enterprise.routes.js')).enterpriseRoutes)
   ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
 
   // 注册渠道适配器
@@ -445,6 +462,36 @@ await app.register(projectV2Routes)
 
   // Admin Market Agents
   await app.register(adminMarketAgentRoutes)
+  await app.register(adminRecruitmentRoutes)
+
+  // Candidate Domain routes (P3)
+  const { default: candidateProfileRoutes } = await import('./services/candidate/routes/candidate-profile.routes.js')
+  const { default: candidateResumeRoutes } = await import('./services/candidate/routes/candidate-resume.routes.js')
+  const { default: candidateSkillRoutes } = await import('./services/candidate/routes/candidate-skill.routes.js')
+  const { default: jobAgentConfigRoutes } = await import('./services/candidate/routes/job-agent-config.routes.js')
+  await app.register(candidateProfileRoutes)
+  await app.register(candidateResumeRoutes)
+  await app.register(candidateSkillRoutes)
+  await app.register(jobAgentConfigRoutes)
+
+  // Candidate Card + Career Timeline routes (P3-Implement-04)
+  const { candidateCardRoutes } = await import('./services/candidate/routes/candidate-card.routes.js')
+  const { careerTimelineRoutes } = await import('./services/candidate/routes/career-timeline.routes.js')
+  await app.register(candidateCardRoutes)
+  await app.register(careerTimelineRoutes)
+
+  // Talent Matching Engine routes (P4-01)
+  const { talentMatchingRoutes } = await import('./services/matching/routes/talent-matching.routes.js')
+  await app.register(talentMatchingRoutes, { prefix: '/api' })
+
+  const { matchExplanationRoutes } = await import('./services/matching/routes/match-explanation.routes.js')
+  await app.register(matchExplanationRoutes, { prefix: '/api' })
+
+  const { jobUnderstandingRoutes } = await import('./services/matching/routes/job-understanding.routes.js')
+  await app.register(jobUnderstandingRoutes, { prefix: '/api' })
+
+  const { batchMatchingRoutes } = await import('./services/matching/routes/batch-matching.routes.js')
+  await app.register(batchMatchingRoutes, { prefix: '/api' })
 
   // Mall (商城) routes
   const { adminMallRoutes } = await import('./routes/mall-admin.js')
@@ -1185,6 +1232,15 @@ await app.register(projectV2Routes)
   } catch (err) {
     app.log.error(err)
     process.exit(1)
+  }
+
+  // Hardening-01: Startup Recovery — PM2 重启后自动恢复 Agent 状态
+  try {
+    const { enterpriseAgentRuntime } = await import('./services/enterprise/enterprise-agent-runtime.service.js')
+    const recoveryResult = await enterpriseAgentRuntime.startupRecovery()
+    console.log(`[Hardening-01] ✅ Startup Recovery: ${recoveryResult.recovered} agents recovered, ${recoveryResult.emergencyReset} emergency→paused`)
+  } catch (err: any) {
+    console.warn(`[Hardening-01] ⚠️ Startup Recovery failed: ${err.message}`)
   }
 
   // 启动统一 Worker Runtime（替代旧的 mock-worker）

@@ -1,1 +1,0 @@
-import{aq as r,as as o,a9 as u}from"./wX_zMTef.js";const i=r(a=>{const e=a.meta.moduleName;if(!e)return;const s=u();let t=!1;if(e==="customer-service"&&(t=s.public.customerServiceEnabled===!0),!t)throw o({statusCode:410,statusMessage:"该功能已下线（Gone）",fatal:!0})});export{i as default};

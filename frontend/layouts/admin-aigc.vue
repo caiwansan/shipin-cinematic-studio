@@ -90,6 +90,7 @@ const menu = [
   { id: 'qq', label: 'QQ登录配置', icon: '🐧', to: '/admin/aigc/qq' },
   { id: 'agents', label: 'Agent管理', icon: '🤖', to: '/admin/aigc/agents' },
   { id: 'market', label: '市场代理管理', icon: '📈', to: '/admin/aigc/market' },
+  { id: 'recruitment', label: '求职招聘管理', icon: '🏢', to: '/admin/recruitment' },
 ]
 
 function isActive(path: string) {

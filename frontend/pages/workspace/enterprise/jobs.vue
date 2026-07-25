@@ -1,9 +1,19 @@
+<!--
+  ⚠️ DEPRECATE — JOB-WORKSPACE-BOUNDARY-AUDIT 2026-07-26
+  旧企业职位管理页面，已被 /workspace/recruitment 替代。
+  保留原因：含引导 banner 指向新版，P4-FE-02 后删除。
+  禁止：修改功能、添加新逻辑。
+-->
 <template>
   <div class="jobs-workspace">
-    <!-- Maintenance Banner -->
-    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#856404;">
-      ⚠️ 职位管理模块正在升级中，部分功能暂不可用。
+    <!-- AI 招聘中心引导 Banner -->
+    <div v-if="!bannerDismissed" class="ai-recruitment-banner">
+      <span class="banner-icon">✨</span>
+      <span class="banner-text">已升级 AI 招聘中心 — 体验智能岗位解析、人才匹配和 AI 推荐</span>
+      <button class="banner-btn" @click="goToAiRecruitment">进入 AI 招聘中心</button>
+      <button class="banner-close" @click="dismissBanner" title="关闭">×</button>
     </div>
+
     <!-- Top Navigation Bar -->
     <div class="ceo-top-nav">
       <button @click="goToWorkspaceCenter" class="ceo-nav-btn" title="返回工作台中心">
@@ -369,6 +379,14 @@ const identityStore = useIdentityStore()
 
 // ─── State ───
 const loading = ref(false)
+const bannerDismissed = ref(false)
+
+// Check if banner was previously dismissed
+onMounted(async () => {
+  try {
+    bannerDismissed.value = localStorage.getItem('ai-recruitment-banner-dismissed') === '1'
+  } catch {}
+})
 const jobs = ref<any[]>([])
 const statusFilter = ref('')
 const searchQuery = ref('')
@@ -671,6 +689,15 @@ function goToBilling() {
   window.location.href = '/workspace/enterprise/billing'
 }
 
+function goToAiRecruitment() {
+  window.location.href = '/workspace/recruitment'
+}
+
+function dismissBanner() {
+  bannerDismissed.value = true
+  try { localStorage.setItem('ai-recruitment-banner-dismissed', '1') } catch {}
+}
+
 // ─── Lifecycle ───
 onMounted(async () => {
   // Sprint-08: Fetch identity context from backend
@@ -692,6 +719,65 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ─── AI Recruitment Banner ─── */
+.ai-recruitment-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(168, 85, 247, 0.1));
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 12px;
+}
+
+.banner-icon {
+  font-size: 1.2rem;
+}
+
+.banner-text {
+  flex: 1;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.banner-btn {
+  padding: 6px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: box-shadow 0.15s;
+}
+
+.banner-btn:hover {
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+.banner-close {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.banner-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 .jobs-workspace {
   padding: 24px;
   max-width: 1200px;

@@ -108,7 +108,4 @@ export function isAuthenticated(): boolean {
   return !!getToken()
 }
 
-/** @deprecated Use getToken instead */
-export const getAdminToken = getToken
-
 export default { getToken, setToken, getUser, setUser, clearAuth, isAuthenticated }

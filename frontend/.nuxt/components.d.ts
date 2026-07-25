@@ -13,8 +13,11 @@ type HydrationStrategies = {
 type LazyComponent<T> = (T & DefineComponent<HydrationStrategies, {}, {}, {}, {}, {}, {}, { hydrated: () => void }>)
 interface _GlobalComponents {
       'AppFooter': typeof import("../components/AppFooter.vue")['default']
+    'CommunityPostCard': typeof import("../components/CommunityPostCard.vue")['default']
+    'EnterpriseWorkspaceShell': typeof import("../components/EnterpriseWorkspaceShell.vue")['default']
     'LibraryReaderPanel': typeof import("../components/LibraryReaderPanel.vue")['default']
     'RegionPicker': typeof import("../components/RegionPicker.vue")['default']
+    'WorkspaceSwitcher': typeof import("../components/WorkspaceSwitcher.vue")['default']
     'AdminMallBannersTab': typeof import("../components/admin/mall/BannersTab.vue")['default']
     'AdminMallCategoriesTab': typeof import("../components/admin/mall/CategoriesTab.vue")['default']
     'AdminMallCouponsTab': typeof import("../components/admin/mall/CouponsTab.vue")['default']
@@ -23,7 +26,6 @@ interface _GlobalComponents {
     'AdminMallRecommendTab': typeof import("../components/admin/mall/RecommendTab.vue")['default']
     'BusinessLoginModal': typeof import("../components/business/LoginModal.vue")['default']
     'CommunityHero': typeof import("../components/community/CommunityHero.vue")['default']
-    'CommunityPostCard': typeof import("../components/community/CommunityPostCard.vue")['default']
     'CustomerService': typeof import("../components/customer/CustomerService.vue")['default']
     'DirectorLocalEngineInstaller': typeof import("../components/director/LocalEngineInstaller.vue")['default']
     'DirectorModelSettingsModal': typeof import("../components/director/ModelSettingsModal.vue")['default']
@@ -45,8 +47,36 @@ interface _GlobalComponents {
     'EnterpriseApprovalCard': typeof import("../components/enterprise/ApprovalCard.vue")['default']
     'EnterpriseEmployeeCard': typeof import("../components/enterprise/EmployeeCard.vue")['default']
     'EnterpriseSetupStepIndicator': typeof import("../components/enterprise/SetupStepIndicator.vue")['default']
+    'EnterpriseDashboardAIAgentMiniCard': typeof import("../components/enterprise/dashboard/AIAgentMiniCard.vue")['default']
+    'EnterpriseDashboardAIAgentStatusGrid': typeof import("../components/enterprise/dashboard/AIAgentStatusGrid.vue")['default']
+    'EnterpriseDashboardAIDepartmentOverview': typeof import("../components/enterprise/dashboard/AIDepartmentOverview.vue")['default']
+    'EnterpriseDashboardAINextActionCard': typeof import("../components/enterprise/dashboard/AINextActionCard.vue")['default']
+    'EnterpriseDashboardAITeamActivityFeed': typeof import("../components/enterprise/dashboard/AITeamActivityFeed.vue")['default']
+    'EnterpriseDashboardAITeamHealthCard': typeof import("../components/enterprise/dashboard/AITeamHealthCard.vue")['default']
+    'EnterpriseDashboardSection': typeof import("../components/enterprise/dashboard/DashboardSection.vue")['default']
+    'EnterpriseDashboardEmployeeCardAdapter': typeof import("../components/enterprise/dashboard/EmployeeCardAdapter.vue")['default']
+    'EnterpriseDashboardEnterpriseTimeline': typeof import("../components/enterprise/dashboard/EnterpriseTimeline.vue")['default']
+    'EnterpriseDashboardOutcomeHeroCard': typeof import("../components/enterprise/dashboard/OutcomeHeroCard.vue")['default']
+    'EnterpriseEmployeeProfileCEOCommandContext': typeof import("../components/enterprise/employee-profile/CEOCommandContext.vue")['default']
+    'EnterpriseEmployeeProfileContributionTimeline': typeof import("../components/enterprise/employee-profile/ContributionTimeline.vue")['default']
+    'EnterpriseEmployeeProfileEmployeeCapability': typeof import("../components/enterprise/employee-profile/EmployeeCapability.vue")['default']
+    'EnterpriseEmployeeProfileEmployeeIdentity': typeof import("../components/enterprise/employee-profile/EmployeeIdentity.vue")['default']
+    'EnterpriseEmployeeProfileEmployeeKnowledge': typeof import("../components/enterprise/employee-profile/EmployeeKnowledge.vue")['default']
+    'EnterpriseEmployeeProfilePage': typeof import("../components/enterprise/employee-profile/EmployeeProfilePage.vue")['default']
+    'EnterpriseEmployeeProfileEmployeeRole': typeof import("../components/enterprise/employee-profile/EmployeeRole.vue")['default']
+    'EnterpriseEmployeeProfileEmployeeTools': typeof import("../components/enterprise/employee-profile/EmployeeTools.vue")['default']
+    'EnterpriseEmployeeProfileGrowthRecord': typeof import("../components/enterprise/employee-profile/GrowthRecord.vue")['default']
+    'EnterpriseEmployeeProfileHistoricalOutcomes': typeof import("../components/enterprise/employee-profile/HistoricalOutcomes.vue")['default']
     'EnterpriseWorkspaceAIEmployeeConfig': typeof import("../components/enterprise/workspace/AIEmployeeConfig.vue")['default']
+    'EnterpriseWorkspaceAgentCard': typeof import("../components/enterprise/workspace/AgentCard.vue")['default']
+    'EnterpriseWorkspaceAgentChannelCard': typeof import("../components/enterprise/workspace/AgentChannelCard.vue")['default']
+    'EnterpriseWorkspaceAgentDetailPanel': typeof import("../components/enterprise/workspace/AgentDetailPanel.vue")['default']
+    'EnterpriseWorkspaceAgentHealthCard': typeof import("../components/enterprise/workspace/AgentHealthCard.vue")['default']
+    'EnterpriseWorkspaceAgentModelCard': typeof import("../components/enterprise/workspace/AgentModelCard.vue")['default']
+    'EnterpriseWorkspaceAgentRuntimeCard': typeof import("../components/enterprise/workspace/AgentRuntimeCard.vue")['default']
+    'EnterpriseWorkspaceAgentTimeline': typeof import("../components/enterprise/workspace/AgentTimeline.vue")['default']
     'EnterpriseWorkspaceChannelConnectCenter': typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']
+    'EnterpriseWorkspaceCreateOrganizationModal': typeof import("../components/enterprise/workspace/CreateOrganizationModal.vue")['default']
     'EnterpriseWorkspaceEnterpriseIdentityHeader': typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']
     'EnterpriseWorkspaceEnterpriseModuleRenderer': typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']
     'EnterpriseWorkspaceEnterpriseOnboardingWizard': typeof import("../components/enterprise/workspace/EnterpriseOnboardingWizard.vue")['default']
@@ -60,7 +90,10 @@ interface _GlobalComponents {
     'EnterpriseWorkspaceModulesGrowthModule': typeof import("../components/enterprise/workspace/modules/GrowthModule.vue")['default']
     'EnterpriseWorkspaceModulesIntelligenceModule': typeof import("../components/enterprise/workspace/modules/IntelligenceModule.vue")['default']
     'EnterpriseWorkspaceModulesKnowledgeModule': typeof import("../components/enterprise/workspace/modules/KnowledgeModule.vue")['default']
+    'EnterpriseWorkspaceModulesProviderSettingsModule': typeof import("../components/enterprise/workspace/modules/ProviderSettingsModule.vue")['default']
+    'EnterpriseWorkspaceModulesRecruitmentModule': typeof import("../components/enterprise/workspace/modules/RecruitmentModule.vue")['default']
     'EnterpriseWorkspaceModulesSettingsModule': typeof import("../components/enterprise/workspace/modules/SettingsModule.vue")['default']
+    'EnterpriseWorkspaceModulesTasksModule': typeof import("../components/enterprise/workspace/modules/TasksModule.vue")['default']
     'HdzLibraryReaderPanel': typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
     'KmkiUiActionCard': typeof import("../components/kmki-ui/ActionCard/index.vue")['default']
     'KmkiUiActionsSection': typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']
@@ -130,6 +163,14 @@ interface _GlobalComponents {
     'R11ReplayInspector': typeof import("../components/r11/ReplayInspector.vue")['default']
     'R11StabilityDashboard': typeof import("../components/r11/StabilityDashboard.vue")['default']
     'R11Api': typeof import("../components/r11/r11-api")['default']
+    'RecruitmentActivityFeed': typeof import("../components/recruitment/ActivityFeed.vue")['default']
+    'RecruitmentHealthBanner': typeof import("../components/recruitment/HealthBanner.vue")['default']
+    'RecruitmentMetricCard': typeof import("../components/recruitment/MetricCard.vue")['default']
+    'RecruitmentPendingList': typeof import("../components/recruitment/PendingList.vue")['default']
+    'RecruitmentFunnel': typeof import("../components/recruitment/RecruitmentFunnel.vue")['default']
+    'RecruitmentShell': typeof import("../components/recruitment/RecruitmentShell.vue")['default']
+    'RecruitmentSectionCard': typeof import("../components/recruitment/SectionCard.vue")['default']
+    'RecruitmentStatusBadge': typeof import("../components/recruitment/StatusBadge.vue")['default']
     'RevenueUpgradeModal': typeof import("../components/revenue/UpgradeModal.vue")['default']
     'UIEmptyState': typeof import("../components/ui/UIEmptyState.vue")['default']
     'UIErrorCard': typeof import("../components/ui/UIErrorCard.vue")['default']
@@ -160,8 +201,11 @@ interface _GlobalComponents {
     'NuxtIsland': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-island")['default']
     'NuxtRouteAnnouncer': IslandComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/server-placeholder")['default']>
       'LazyAppFooter': LazyComponent<typeof import("../components/AppFooter.vue")['default']>
+    'LazyCommunityPostCard': LazyComponent<typeof import("../components/CommunityPostCard.vue")['default']>
+    'LazyEnterpriseWorkspaceShell': LazyComponent<typeof import("../components/EnterpriseWorkspaceShell.vue")['default']>
     'LazyLibraryReaderPanel': LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
     'LazyRegionPicker': LazyComponent<typeof import("../components/RegionPicker.vue")['default']>
+    'LazyWorkspaceSwitcher': LazyComponent<typeof import("../components/WorkspaceSwitcher.vue")['default']>
     'LazyAdminMallBannersTab': LazyComponent<typeof import("../components/admin/mall/BannersTab.vue")['default']>
     'LazyAdminMallCategoriesTab': LazyComponent<typeof import("../components/admin/mall/CategoriesTab.vue")['default']>
     'LazyAdminMallCouponsTab': LazyComponent<typeof import("../components/admin/mall/CouponsTab.vue")['default']>
@@ -170,7 +214,6 @@ interface _GlobalComponents {
     'LazyAdminMallRecommendTab': LazyComponent<typeof import("../components/admin/mall/RecommendTab.vue")['default']>
     'LazyBusinessLoginModal': LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
     'LazyCommunityHero': LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
-    'LazyCommunityPostCard': LazyComponent<typeof import("../components/community/CommunityPostCard.vue")['default']>
     'LazyCustomerService': LazyComponent<typeof import("../components/customer/CustomerService.vue")['default']>
     'LazyDirectorLocalEngineInstaller': LazyComponent<typeof import("../components/director/LocalEngineInstaller.vue")['default']>
     'LazyDirectorModelSettingsModal': LazyComponent<typeof import("../components/director/ModelSettingsModal.vue")['default']>
@@ -192,8 +235,36 @@ interface _GlobalComponents {
     'LazyEnterpriseApprovalCard': LazyComponent<typeof import("../components/enterprise/ApprovalCard.vue")['default']>
     'LazyEnterpriseEmployeeCard': LazyComponent<typeof import("../components/enterprise/EmployeeCard.vue")['default']>
     'LazyEnterpriseSetupStepIndicator': LazyComponent<typeof import("../components/enterprise/SetupStepIndicator.vue")['default']>
+    'LazyEnterpriseDashboardAIAgentMiniCard': LazyComponent<typeof import("../components/enterprise/dashboard/AIAgentMiniCard.vue")['default']>
+    'LazyEnterpriseDashboardAIAgentStatusGrid': LazyComponent<typeof import("../components/enterprise/dashboard/AIAgentStatusGrid.vue")['default']>
+    'LazyEnterpriseDashboardAIDepartmentOverview': LazyComponent<typeof import("../components/enterprise/dashboard/AIDepartmentOverview.vue")['default']>
+    'LazyEnterpriseDashboardAINextActionCard': LazyComponent<typeof import("../components/enterprise/dashboard/AINextActionCard.vue")['default']>
+    'LazyEnterpriseDashboardAITeamActivityFeed': LazyComponent<typeof import("../components/enterprise/dashboard/AITeamActivityFeed.vue")['default']>
+    'LazyEnterpriseDashboardAITeamHealthCard': LazyComponent<typeof import("../components/enterprise/dashboard/AITeamHealthCard.vue")['default']>
+    'LazyEnterpriseDashboardSection': LazyComponent<typeof import("../components/enterprise/dashboard/DashboardSection.vue")['default']>
+    'LazyEnterpriseDashboardEmployeeCardAdapter': LazyComponent<typeof import("../components/enterprise/dashboard/EmployeeCardAdapter.vue")['default']>
+    'LazyEnterpriseDashboardEnterpriseTimeline': LazyComponent<typeof import("../components/enterprise/dashboard/EnterpriseTimeline.vue")['default']>
+    'LazyEnterpriseDashboardOutcomeHeroCard': LazyComponent<typeof import("../components/enterprise/dashboard/OutcomeHeroCard.vue")['default']>
+    'LazyEnterpriseEmployeeProfileCEOCommandContext': LazyComponent<typeof import("../components/enterprise/employee-profile/CEOCommandContext.vue")['default']>
+    'LazyEnterpriseEmployeeProfileContributionTimeline': LazyComponent<typeof import("../components/enterprise/employee-profile/ContributionTimeline.vue")['default']>
+    'LazyEnterpriseEmployeeProfileEmployeeCapability': LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeCapability.vue")['default']>
+    'LazyEnterpriseEmployeeProfileEmployeeIdentity': LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeIdentity.vue")['default']>
+    'LazyEnterpriseEmployeeProfileEmployeeKnowledge': LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeKnowledge.vue")['default']>
+    'LazyEnterpriseEmployeeProfilePage': LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeProfilePage.vue")['default']>
+    'LazyEnterpriseEmployeeProfileEmployeeRole': LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeRole.vue")['default']>
+    'LazyEnterpriseEmployeeProfileEmployeeTools': LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeTools.vue")['default']>
+    'LazyEnterpriseEmployeeProfileGrowthRecord': LazyComponent<typeof import("../components/enterprise/employee-profile/GrowthRecord.vue")['default']>
+    'LazyEnterpriseEmployeeProfileHistoricalOutcomes': LazyComponent<typeof import("../components/enterprise/employee-profile/HistoricalOutcomes.vue")['default']>
     'LazyEnterpriseWorkspaceAIEmployeeConfig': LazyComponent<typeof import("../components/enterprise/workspace/AIEmployeeConfig.vue")['default']>
+    'LazyEnterpriseWorkspaceAgentCard': LazyComponent<typeof import("../components/enterprise/workspace/AgentCard.vue")['default']>
+    'LazyEnterpriseWorkspaceAgentChannelCard': LazyComponent<typeof import("../components/enterprise/workspace/AgentChannelCard.vue")['default']>
+    'LazyEnterpriseWorkspaceAgentDetailPanel': LazyComponent<typeof import("../components/enterprise/workspace/AgentDetailPanel.vue")['default']>
+    'LazyEnterpriseWorkspaceAgentHealthCard': LazyComponent<typeof import("../components/enterprise/workspace/AgentHealthCard.vue")['default']>
+    'LazyEnterpriseWorkspaceAgentModelCard': LazyComponent<typeof import("../components/enterprise/workspace/AgentModelCard.vue")['default']>
+    'LazyEnterpriseWorkspaceAgentRuntimeCard': LazyComponent<typeof import("../components/enterprise/workspace/AgentRuntimeCard.vue")['default']>
+    'LazyEnterpriseWorkspaceAgentTimeline': LazyComponent<typeof import("../components/enterprise/workspace/AgentTimeline.vue")['default']>
     'LazyEnterpriseWorkspaceChannelConnectCenter': LazyComponent<typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']>
+    'LazyEnterpriseWorkspaceCreateOrganizationModal': LazyComponent<typeof import("../components/enterprise/workspace/CreateOrganizationModal.vue")['default']>
     'LazyEnterpriseWorkspaceEnterpriseIdentityHeader': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']>
     'LazyEnterpriseWorkspaceEnterpriseModuleRenderer': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']>
     'LazyEnterpriseWorkspaceEnterpriseOnboardingWizard': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseOnboardingWizard.vue")['default']>
@@ -207,7 +278,10 @@ interface _GlobalComponents {
     'LazyEnterpriseWorkspaceModulesGrowthModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/GrowthModule.vue")['default']>
     'LazyEnterpriseWorkspaceModulesIntelligenceModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/IntelligenceModule.vue")['default']>
     'LazyEnterpriseWorkspaceModulesKnowledgeModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/KnowledgeModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesProviderSettingsModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/ProviderSettingsModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesRecruitmentModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/RecruitmentModule.vue")['default']>
     'LazyEnterpriseWorkspaceModulesSettingsModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/SettingsModule.vue")['default']>
+    'LazyEnterpriseWorkspaceModulesTasksModule': LazyComponent<typeof import("../components/enterprise/workspace/modules/TasksModule.vue")['default']>
     'LazyHdzLibraryReaderPanel': LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
     'LazyKmkiUiActionCard': LazyComponent<typeof import("../components/kmki-ui/ActionCard/index.vue")['default']>
     'LazyKmkiUiActionsSection': LazyComponent<typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']>
@@ -277,6 +351,14 @@ interface _GlobalComponents {
     'LazyR11ReplayInspector': LazyComponent<typeof import("../components/r11/ReplayInspector.vue")['default']>
     'LazyR11StabilityDashboard': LazyComponent<typeof import("../components/r11/StabilityDashboard.vue")['default']>
     'LazyR11Api': LazyComponent<typeof import("../components/r11/r11-api")['default']>
+    'LazyRecruitmentActivityFeed': LazyComponent<typeof import("../components/recruitment/ActivityFeed.vue")['default']>
+    'LazyRecruitmentHealthBanner': LazyComponent<typeof import("../components/recruitment/HealthBanner.vue")['default']>
+    'LazyRecruitmentMetricCard': LazyComponent<typeof import("../components/recruitment/MetricCard.vue")['default']>
+    'LazyRecruitmentPendingList': LazyComponent<typeof import("../components/recruitment/PendingList.vue")['default']>
+    'LazyRecruitmentFunnel': LazyComponent<typeof import("../components/recruitment/RecruitmentFunnel.vue")['default']>
+    'LazyRecruitmentShell': LazyComponent<typeof import("../components/recruitment/RecruitmentShell.vue")['default']>
+    'LazyRecruitmentSectionCard': LazyComponent<typeof import("../components/recruitment/SectionCard.vue")['default']>
+    'LazyRecruitmentStatusBadge': LazyComponent<typeof import("../components/recruitment/StatusBadge.vue")['default']>
     'LazyRevenueUpgradeModal': LazyComponent<typeof import("../components/revenue/UpgradeModal.vue")['default']>
     'LazyUIEmptyState': LazyComponent<typeof import("../components/ui/UIEmptyState.vue")['default']>
     'LazyUIErrorCard': LazyComponent<typeof import("../components/ui/UIErrorCard.vue")['default']>
@@ -313,8 +395,11 @@ declare module 'vue' {
 }
 
 export const AppFooter: typeof import("../components/AppFooter.vue")['default']
+export const CommunityPostCard: typeof import("../components/CommunityPostCard.vue")['default']
+export const EnterpriseWorkspaceShell: typeof import("../components/EnterpriseWorkspaceShell.vue")['default']
 export const LibraryReaderPanel: typeof import("../components/LibraryReaderPanel.vue")['default']
 export const RegionPicker: typeof import("../components/RegionPicker.vue")['default']
+export const WorkspaceSwitcher: typeof import("../components/WorkspaceSwitcher.vue")['default']
 export const AdminMallBannersTab: typeof import("../components/admin/mall/BannersTab.vue")['default']
 export const AdminMallCategoriesTab: typeof import("../components/admin/mall/CategoriesTab.vue")['default']
 export const AdminMallCouponsTab: typeof import("../components/admin/mall/CouponsTab.vue")['default']
@@ -323,7 +408,6 @@ export const AdminMallProductsTab: typeof import("../components/admin/mall/Produ
 export const AdminMallRecommendTab: typeof import("../components/admin/mall/RecommendTab.vue")['default']
 export const BusinessLoginModal: typeof import("../components/business/LoginModal.vue")['default']
 export const CommunityHero: typeof import("../components/community/CommunityHero.vue")['default']
-export const CommunityPostCard: typeof import("../components/community/CommunityPostCard.vue")['default']
 export const CustomerService: typeof import("../components/customer/CustomerService.vue")['default']
 export const DirectorLocalEngineInstaller: typeof import("../components/director/LocalEngineInstaller.vue")['default']
 export const DirectorModelSettingsModal: typeof import("../components/director/ModelSettingsModal.vue")['default']
@@ -345,8 +429,36 @@ export const EnterpriseAgentCard: typeof import("../components/enterprise/AgentC
 export const EnterpriseApprovalCard: typeof import("../components/enterprise/ApprovalCard.vue")['default']
 export const EnterpriseEmployeeCard: typeof import("../components/enterprise/EmployeeCard.vue")['default']
 export const EnterpriseSetupStepIndicator: typeof import("../components/enterprise/SetupStepIndicator.vue")['default']
+export const EnterpriseDashboardAIAgentMiniCard: typeof import("../components/enterprise/dashboard/AIAgentMiniCard.vue")['default']
+export const EnterpriseDashboardAIAgentStatusGrid: typeof import("../components/enterprise/dashboard/AIAgentStatusGrid.vue")['default']
+export const EnterpriseDashboardAIDepartmentOverview: typeof import("../components/enterprise/dashboard/AIDepartmentOverview.vue")['default']
+export const EnterpriseDashboardAINextActionCard: typeof import("../components/enterprise/dashboard/AINextActionCard.vue")['default']
+export const EnterpriseDashboardAITeamActivityFeed: typeof import("../components/enterprise/dashboard/AITeamActivityFeed.vue")['default']
+export const EnterpriseDashboardAITeamHealthCard: typeof import("../components/enterprise/dashboard/AITeamHealthCard.vue")['default']
+export const EnterpriseDashboardSection: typeof import("../components/enterprise/dashboard/DashboardSection.vue")['default']
+export const EnterpriseDashboardEmployeeCardAdapter: typeof import("../components/enterprise/dashboard/EmployeeCardAdapter.vue")['default']
+export const EnterpriseDashboardEnterpriseTimeline: typeof import("../components/enterprise/dashboard/EnterpriseTimeline.vue")['default']
+export const EnterpriseDashboardOutcomeHeroCard: typeof import("../components/enterprise/dashboard/OutcomeHeroCard.vue")['default']
+export const EnterpriseEmployeeProfileCEOCommandContext: typeof import("../components/enterprise/employee-profile/CEOCommandContext.vue")['default']
+export const EnterpriseEmployeeProfileContributionTimeline: typeof import("../components/enterprise/employee-profile/ContributionTimeline.vue")['default']
+export const EnterpriseEmployeeProfileEmployeeCapability: typeof import("../components/enterprise/employee-profile/EmployeeCapability.vue")['default']
+export const EnterpriseEmployeeProfileEmployeeIdentity: typeof import("../components/enterprise/employee-profile/EmployeeIdentity.vue")['default']
+export const EnterpriseEmployeeProfileEmployeeKnowledge: typeof import("../components/enterprise/employee-profile/EmployeeKnowledge.vue")['default']
+export const EnterpriseEmployeeProfilePage: typeof import("../components/enterprise/employee-profile/EmployeeProfilePage.vue")['default']
+export const EnterpriseEmployeeProfileEmployeeRole: typeof import("../components/enterprise/employee-profile/EmployeeRole.vue")['default']
+export const EnterpriseEmployeeProfileEmployeeTools: typeof import("../components/enterprise/employee-profile/EmployeeTools.vue")['default']
+export const EnterpriseEmployeeProfileGrowthRecord: typeof import("../components/enterprise/employee-profile/GrowthRecord.vue")['default']
+export const EnterpriseEmployeeProfileHistoricalOutcomes: typeof import("../components/enterprise/employee-profile/HistoricalOutcomes.vue")['default']
 export const EnterpriseWorkspaceAIEmployeeConfig: typeof import("../components/enterprise/workspace/AIEmployeeConfig.vue")['default']
+export const EnterpriseWorkspaceAgentCard: typeof import("../components/enterprise/workspace/AgentCard.vue")['default']
+export const EnterpriseWorkspaceAgentChannelCard: typeof import("../components/enterprise/workspace/AgentChannelCard.vue")['default']
+export const EnterpriseWorkspaceAgentDetailPanel: typeof import("../components/enterprise/workspace/AgentDetailPanel.vue")['default']
+export const EnterpriseWorkspaceAgentHealthCard: typeof import("../components/enterprise/workspace/AgentHealthCard.vue")['default']
+export const EnterpriseWorkspaceAgentModelCard: typeof import("../components/enterprise/workspace/AgentModelCard.vue")['default']
+export const EnterpriseWorkspaceAgentRuntimeCard: typeof import("../components/enterprise/workspace/AgentRuntimeCard.vue")['default']
+export const EnterpriseWorkspaceAgentTimeline: typeof import("../components/enterprise/workspace/AgentTimeline.vue")['default']
 export const EnterpriseWorkspaceChannelConnectCenter: typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']
+export const EnterpriseWorkspaceCreateOrganizationModal: typeof import("../components/enterprise/workspace/CreateOrganizationModal.vue")['default']
 export const EnterpriseWorkspaceEnterpriseIdentityHeader: typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']
 export const EnterpriseWorkspaceEnterpriseModuleRenderer: typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']
 export const EnterpriseWorkspaceEnterpriseOnboardingWizard: typeof import("../components/enterprise/workspace/EnterpriseOnboardingWizard.vue")['default']
@@ -360,7 +472,10 @@ export const EnterpriseWorkspaceModulesGovernanceModule: typeof import("../compo
 export const EnterpriseWorkspaceModulesGrowthModule: typeof import("../components/enterprise/workspace/modules/GrowthModule.vue")['default']
 export const EnterpriseWorkspaceModulesIntelligenceModule: typeof import("../components/enterprise/workspace/modules/IntelligenceModule.vue")['default']
 export const EnterpriseWorkspaceModulesKnowledgeModule: typeof import("../components/enterprise/workspace/modules/KnowledgeModule.vue")['default']
+export const EnterpriseWorkspaceModulesProviderSettingsModule: typeof import("../components/enterprise/workspace/modules/ProviderSettingsModule.vue")['default']
+export const EnterpriseWorkspaceModulesRecruitmentModule: typeof import("../components/enterprise/workspace/modules/RecruitmentModule.vue")['default']
 export const EnterpriseWorkspaceModulesSettingsModule: typeof import("../components/enterprise/workspace/modules/SettingsModule.vue")['default']
+export const EnterpriseWorkspaceModulesTasksModule: typeof import("../components/enterprise/workspace/modules/TasksModule.vue")['default']
 export const HdzLibraryReaderPanel: typeof import("../components/hdz/LibraryReaderPanel.vue")['default']
 export const KmkiUiActionCard: typeof import("../components/kmki-ui/ActionCard/index.vue")['default']
 export const KmkiUiActionsSection: typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']
@@ -430,6 +545,14 @@ export const R11GraphRenderer: typeof import("../components/r11/GraphRenderer.vu
 export const R11ReplayInspector: typeof import("../components/r11/ReplayInspector.vue")['default']
 export const R11StabilityDashboard: typeof import("../components/r11/StabilityDashboard.vue")['default']
 export const R11Api: typeof import("../components/r11/r11-api")['default']
+export const RecruitmentActivityFeed: typeof import("../components/recruitment/ActivityFeed.vue")['default']
+export const RecruitmentHealthBanner: typeof import("../components/recruitment/HealthBanner.vue")['default']
+export const RecruitmentMetricCard: typeof import("../components/recruitment/MetricCard.vue")['default']
+export const RecruitmentPendingList: typeof import("../components/recruitment/PendingList.vue")['default']
+export const RecruitmentFunnel: typeof import("../components/recruitment/RecruitmentFunnel.vue")['default']
+export const RecruitmentShell: typeof import("../components/recruitment/RecruitmentShell.vue")['default']
+export const RecruitmentSectionCard: typeof import("../components/recruitment/SectionCard.vue")['default']
+export const RecruitmentStatusBadge: typeof import("../components/recruitment/StatusBadge.vue")['default']
 export const RevenueUpgradeModal: typeof import("../components/revenue/UpgradeModal.vue")['default']
 export const UIEmptyState: typeof import("../components/ui/UIEmptyState.vue")['default']
 export const UIErrorCard: typeof import("../components/ui/UIErrorCard.vue")['default']
@@ -460,8 +583,11 @@ export const Body: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watc
 export const NuxtIsland: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-island")['default']
 export const NuxtRouteAnnouncer: IslandComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/server-placeholder")['default']>
 export const LazyAppFooter: LazyComponent<typeof import("../components/AppFooter.vue")['default']>
+export const LazyCommunityPostCard: LazyComponent<typeof import("../components/CommunityPostCard.vue")['default']>
+export const LazyEnterpriseWorkspaceShell: LazyComponent<typeof import("../components/EnterpriseWorkspaceShell.vue")['default']>
 export const LazyLibraryReaderPanel: LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
 export const LazyRegionPicker: LazyComponent<typeof import("../components/RegionPicker.vue")['default']>
+export const LazyWorkspaceSwitcher: LazyComponent<typeof import("../components/WorkspaceSwitcher.vue")['default']>
 export const LazyAdminMallBannersTab: LazyComponent<typeof import("../components/admin/mall/BannersTab.vue")['default']>
 export const LazyAdminMallCategoriesTab: LazyComponent<typeof import("../components/admin/mall/CategoriesTab.vue")['default']>
 export const LazyAdminMallCouponsTab: LazyComponent<typeof import("../components/admin/mall/CouponsTab.vue")['default']>
@@ -470,7 +596,6 @@ export const LazyAdminMallProductsTab: LazyComponent<typeof import("../component
 export const LazyAdminMallRecommendTab: LazyComponent<typeof import("../components/admin/mall/RecommendTab.vue")['default']>
 export const LazyBusinessLoginModal: LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
 export const LazyCommunityHero: LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
-export const LazyCommunityPostCard: LazyComponent<typeof import("../components/community/CommunityPostCard.vue")['default']>
 export const LazyCustomerService: LazyComponent<typeof import("../components/customer/CustomerService.vue")['default']>
 export const LazyDirectorLocalEngineInstaller: LazyComponent<typeof import("../components/director/LocalEngineInstaller.vue")['default']>
 export const LazyDirectorModelSettingsModal: LazyComponent<typeof import("../components/director/ModelSettingsModal.vue")['default']>
@@ -492,8 +617,36 @@ export const LazyEnterpriseAgentCard: LazyComponent<typeof import("../components
 export const LazyEnterpriseApprovalCard: LazyComponent<typeof import("../components/enterprise/ApprovalCard.vue")['default']>
 export const LazyEnterpriseEmployeeCard: LazyComponent<typeof import("../components/enterprise/EmployeeCard.vue")['default']>
 export const LazyEnterpriseSetupStepIndicator: LazyComponent<typeof import("../components/enterprise/SetupStepIndicator.vue")['default']>
+export const LazyEnterpriseDashboardAIAgentMiniCard: LazyComponent<typeof import("../components/enterprise/dashboard/AIAgentMiniCard.vue")['default']>
+export const LazyEnterpriseDashboardAIAgentStatusGrid: LazyComponent<typeof import("../components/enterprise/dashboard/AIAgentStatusGrid.vue")['default']>
+export const LazyEnterpriseDashboardAIDepartmentOverview: LazyComponent<typeof import("../components/enterprise/dashboard/AIDepartmentOverview.vue")['default']>
+export const LazyEnterpriseDashboardAINextActionCard: LazyComponent<typeof import("../components/enterprise/dashboard/AINextActionCard.vue")['default']>
+export const LazyEnterpriseDashboardAITeamActivityFeed: LazyComponent<typeof import("../components/enterprise/dashboard/AITeamActivityFeed.vue")['default']>
+export const LazyEnterpriseDashboardAITeamHealthCard: LazyComponent<typeof import("../components/enterprise/dashboard/AITeamHealthCard.vue")['default']>
+export const LazyEnterpriseDashboardSection: LazyComponent<typeof import("../components/enterprise/dashboard/DashboardSection.vue")['default']>
+export const LazyEnterpriseDashboardEmployeeCardAdapter: LazyComponent<typeof import("../components/enterprise/dashboard/EmployeeCardAdapter.vue")['default']>
+export const LazyEnterpriseDashboardEnterpriseTimeline: LazyComponent<typeof import("../components/enterprise/dashboard/EnterpriseTimeline.vue")['default']>
+export const LazyEnterpriseDashboardOutcomeHeroCard: LazyComponent<typeof import("../components/enterprise/dashboard/OutcomeHeroCard.vue")['default']>
+export const LazyEnterpriseEmployeeProfileCEOCommandContext: LazyComponent<typeof import("../components/enterprise/employee-profile/CEOCommandContext.vue")['default']>
+export const LazyEnterpriseEmployeeProfileContributionTimeline: LazyComponent<typeof import("../components/enterprise/employee-profile/ContributionTimeline.vue")['default']>
+export const LazyEnterpriseEmployeeProfileEmployeeCapability: LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeCapability.vue")['default']>
+export const LazyEnterpriseEmployeeProfileEmployeeIdentity: LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeIdentity.vue")['default']>
+export const LazyEnterpriseEmployeeProfileEmployeeKnowledge: LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeKnowledge.vue")['default']>
+export const LazyEnterpriseEmployeeProfilePage: LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeProfilePage.vue")['default']>
+export const LazyEnterpriseEmployeeProfileEmployeeRole: LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeRole.vue")['default']>
+export const LazyEnterpriseEmployeeProfileEmployeeTools: LazyComponent<typeof import("../components/enterprise/employee-profile/EmployeeTools.vue")['default']>
+export const LazyEnterpriseEmployeeProfileGrowthRecord: LazyComponent<typeof import("../components/enterprise/employee-profile/GrowthRecord.vue")['default']>
+export const LazyEnterpriseEmployeeProfileHistoricalOutcomes: LazyComponent<typeof import("../components/enterprise/employee-profile/HistoricalOutcomes.vue")['default']>
 export const LazyEnterpriseWorkspaceAIEmployeeConfig: LazyComponent<typeof import("../components/enterprise/workspace/AIEmployeeConfig.vue")['default']>
+export const LazyEnterpriseWorkspaceAgentCard: LazyComponent<typeof import("../components/enterprise/workspace/AgentCard.vue")['default']>
+export const LazyEnterpriseWorkspaceAgentChannelCard: LazyComponent<typeof import("../components/enterprise/workspace/AgentChannelCard.vue")['default']>
+export const LazyEnterpriseWorkspaceAgentDetailPanel: LazyComponent<typeof import("../components/enterprise/workspace/AgentDetailPanel.vue")['default']>
+export const LazyEnterpriseWorkspaceAgentHealthCard: LazyComponent<typeof import("../components/enterprise/workspace/AgentHealthCard.vue")['default']>
+export const LazyEnterpriseWorkspaceAgentModelCard: LazyComponent<typeof import("../components/enterprise/workspace/AgentModelCard.vue")['default']>
+export const LazyEnterpriseWorkspaceAgentRuntimeCard: LazyComponent<typeof import("../components/enterprise/workspace/AgentRuntimeCard.vue")['default']>
+export const LazyEnterpriseWorkspaceAgentTimeline: LazyComponent<typeof import("../components/enterprise/workspace/AgentTimeline.vue")['default']>
 export const LazyEnterpriseWorkspaceChannelConnectCenter: LazyComponent<typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']>
+export const LazyEnterpriseWorkspaceCreateOrganizationModal: LazyComponent<typeof import("../components/enterprise/workspace/CreateOrganizationModal.vue")['default']>
 export const LazyEnterpriseWorkspaceEnterpriseIdentityHeader: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']>
 export const LazyEnterpriseWorkspaceEnterpriseModuleRenderer: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']>
 export const LazyEnterpriseWorkspaceEnterpriseOnboardingWizard: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseOnboardingWizard.vue")['default']>
@@ -507,7 +660,10 @@ export const LazyEnterpriseWorkspaceModulesGovernanceModule: LazyComponent<typeo
 export const LazyEnterpriseWorkspaceModulesGrowthModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/GrowthModule.vue")['default']>
 export const LazyEnterpriseWorkspaceModulesIntelligenceModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/IntelligenceModule.vue")['default']>
 export const LazyEnterpriseWorkspaceModulesKnowledgeModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/KnowledgeModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesProviderSettingsModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/ProviderSettingsModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesRecruitmentModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/RecruitmentModule.vue")['default']>
 export const LazyEnterpriseWorkspaceModulesSettingsModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/SettingsModule.vue")['default']>
+export const LazyEnterpriseWorkspaceModulesTasksModule: LazyComponent<typeof import("../components/enterprise/workspace/modules/TasksModule.vue")['default']>
 export const LazyHdzLibraryReaderPanel: LazyComponent<typeof import("../components/hdz/LibraryReaderPanel.vue")['default']>
 export const LazyKmkiUiActionCard: LazyComponent<typeof import("../components/kmki-ui/ActionCard/index.vue")['default']>
 export const LazyKmkiUiActionsSection: LazyComponent<typeof import("../components/kmki-ui/ActionsSection/index.vue")['default']>
@@ -577,6 +733,14 @@ export const LazyR11GraphRenderer: LazyComponent<typeof import("../components/r1
 export const LazyR11ReplayInspector: LazyComponent<typeof import("../components/r11/ReplayInspector.vue")['default']>
 export const LazyR11StabilityDashboard: LazyComponent<typeof import("../components/r11/StabilityDashboard.vue")['default']>
 export const LazyR11Api: LazyComponent<typeof import("../components/r11/r11-api")['default']>
+export const LazyRecruitmentActivityFeed: LazyComponent<typeof import("../components/recruitment/ActivityFeed.vue")['default']>
+export const LazyRecruitmentHealthBanner: LazyComponent<typeof import("../components/recruitment/HealthBanner.vue")['default']>
+export const LazyRecruitmentMetricCard: LazyComponent<typeof import("../components/recruitment/MetricCard.vue")['default']>
+export const LazyRecruitmentPendingList: LazyComponent<typeof import("../components/recruitment/PendingList.vue")['default']>
+export const LazyRecruitmentFunnel: LazyComponent<typeof import("../components/recruitment/RecruitmentFunnel.vue")['default']>
+export const LazyRecruitmentShell: LazyComponent<typeof import("../components/recruitment/RecruitmentShell.vue")['default']>
+export const LazyRecruitmentSectionCard: LazyComponent<typeof import("../components/recruitment/SectionCard.vue")['default']>
+export const LazyRecruitmentStatusBadge: LazyComponent<typeof import("../components/recruitment/StatusBadge.vue")['default']>
 export const LazyRevenueUpgradeModal: LazyComponent<typeof import("../components/revenue/UpgradeModal.vue")['default']>
 export const LazyUIEmptyState: LazyComponent<typeof import("../components/ui/UIEmptyState.vue")['default']>
 export const LazyUIErrorCard: LazyComponent<typeof import("../components/ui/UIErrorCard.vue")['default']>

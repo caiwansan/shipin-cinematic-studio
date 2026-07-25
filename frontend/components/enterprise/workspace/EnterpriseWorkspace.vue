@@ -106,6 +106,7 @@ const moduleMeta: Record<string, { title: string; subtitle: string }> = {
   'execution': { title: '执行中心', subtitle: 'AI 落地执行，全程透明可控' },
   'channels': { title: '渠道中心', subtitle: '管理企业微信、官网等客户触达渠道' },
   'ai-employees': { title: 'AI 员工中心', subtitle: '管理企业的数字员工团队' },
+  'recruitment': { title: 'AI 招聘中心', subtitle: '智能匹配，一键找到最佳候选人' },
   'knowledge': { title: '企业知识库', subtitle: '积累企业知识资产，供 AI 和员工调用' },
   'growth': { title: '增长分析', subtitle: '收入、客户、转化、ROI 一站式分析' },
   'governance': { title: '企业治理', subtitle: '权限、审批、审计、安全管控' },

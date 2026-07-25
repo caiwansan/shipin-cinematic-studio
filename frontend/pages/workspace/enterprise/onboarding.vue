@@ -687,6 +687,11 @@ async function handleComplete() {
     })
     const data = await res.json()
     if (data.success) {
+      // ✅ Gate-1 Fix: 完成 onboarding 后必须写入 localStorage，否则 index.vue 会再次跳转 onboarding
+      localStorage.setItem('enterprise_id', enterpriseId.value)
+      if (workspaceId.value) {
+        localStorage.setItem('workspace_id', workspaceId.value)
+      }
       window.location.href = '/workspace/enterprise'
     } else {
       alert(data.error || '完成失败')

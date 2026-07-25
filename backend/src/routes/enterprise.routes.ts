@@ -16,9 +16,13 @@ const prisma = new PrismaClient()
 
 export async function enterpriseRoutes(fastify: FastifyInstance) {
 
-  // 503: Enterprise recruitment 关系尚未完成同步
-  fastify.addHook('onRequest', async (_request, reply) => {
-    return reply.status(503).send({ error: 'Enterprise recruitment module is under maintenance', module: 'enterprise-recruit', status: 'maintenance' })
+  // 所有企业招聘接口都需要 JWT 认证
+  fastify.addHook('onRequest', async (request, reply) => {
+    try {
+      await request.jwtVerify()
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' })
+    }
   })
 
   // ─── 获取/创建企业招聘空间 ───
@@ -189,9 +193,6 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
 
       // 获取所有求职者画像
       const candidates = await prisma.jobCandidate.findMany({
-        where: {
-          city: job.city || undefined,
-        },
         take: 50,
       })
 
@@ -207,16 +208,19 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
         jobSkills: job.skillRequirements || [],
         jobSalary: job.salary || '',
         jobLocation: job.location || '',
-        candidates: candidates.map(c => ({
-          id: c.id,
-          name: c.profileJson?.name || '求职者',
-          skills: c.skills || [],
-          experience: c.experience || '',
-          city: c.city || '',
-          salaryMin: c.profileJson?.salaryMin || 0,
-          salaryMax: c.profileJson?.salaryMax || 0,
-          education: c.education || '',
-        })),
+        candidates: candidates.map(c => {
+          const pj = c.profileJson as any || {}
+          return {
+            id: c.id,
+            name: pj.name || '求职者',
+            skills: c.skills || [],
+            experience: c.experience || '',
+            city: c.city || '',
+            salaryMin: pj.salaryMin || 0,
+            salaryMax: pj.salaryMax || 0,
+            education: c.education || '',
+          }
+        }),
       })
 
       // 保存匹配记录
@@ -239,6 +243,7 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
               matchScore: match.matchScore,
               matchBreakdown: match.matchBreakdown as any,
               aiAnalysis: match.reasons.join('; '),
+              status: 'pending',
             },
           })
           savedMatches.push({
@@ -312,7 +317,7 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
           jobId: m.jobId,
           jobTitle: m.job?.title || '',
           candidateId: m.candidateId,
-          candidateName: m.candidate?.profileJson?.name || '求职者',
+          candidateName: (m.candidate?.profileJson as any)?.name || '求职者',
           matchScore: m.matchScore,
           matchBreakdown: m.matchBreakdown,
           status: m.status,

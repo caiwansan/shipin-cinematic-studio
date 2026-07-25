@@ -64,6 +64,8 @@ model User {
   ownedProjects         Project[]              @relation("ProjectOwner")
   ecomProjects          EcomProject[]
   jobCandidates JobCandidate[]
+  enterpriseMemberships EnterpriseMember[]
+  careerProfile CareerProfile?
 }
 
 model CreatorDnaProfile {
@@ -6599,6 +6601,10 @@ model EnterpriseAgentProfile {
   escalationRules String?  @map("escalation_rules")
   kpiMetrics      String   @default("{}") @map("kpi_metrics")
   status          String   @default("active") @db.VarChar(20)
+  runtimeStatus   String   @default("draft") @map("runtime_status") @db.VarChar(20)
+  runtimeAgentId  String?  @map("runtime_agent_id") @db.Text
+  runtimeType     String?  @map("runtime_type") @db.VarChar(50)
+  lastExecutionAt DateTime? @map("last_execution_at")
   isDefault       Boolean  @default(false) @map("is_default")
   metadata        String   @default("{}")
   // Sprint 1 v1.1 — CEO Intent Layer扩展
@@ -6628,7 +6634,10 @@ model EnterpriseAgentInstance {
   runtime           String   @default("openclaw") @db.VarChar(50)
   namespace         String   @map("namespace") @db.VarChar(100) // memory namespace: tenant_<id>_<role>
   runtimeStatus     String   @default("active") @map("runtime_status") // active | paused | stopped
+  // Hardening-01: Agent Lifecycle State Machine (replaces emergencyStop boolean)
+  lifecycleState    String   @default("ACTIVE") @map("lifecycle_state") // ACTIVE | PAUSED | STOPPED | EMERGENCY_STOP | RECOVERING
   lastActiveAt      DateTime? @map("last_active_at")
+  lastRecoveredAt   DateTime? @map("last_recovered_at") // Hardening-01: timestamp of last startup recovery
   totalTasks        Int      @default(0) @map("total_tasks")
   totalErrors       Int      @default(0) @map("total_errors")
   metadata          String   @default("{}")
@@ -7433,6 +7442,25 @@ model JobCompanyProfile {
 
   @@map("job_company_profile")
   jobPostings JobPosting[]
+  members EnterpriseMember[]
+}
+
+model EnterpriseMember {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  enterpriseId String   @map("enterprise_id") @db.Uuid
+  role         String   @default("OWNER") // OWNER | HR | RECRUITER | VIEWER
+  status       String   @default("ACTIVE") // ACTIVE | INACTIVE | PENDING
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enterprise   JobCompanyProfile @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, enterpriseId])
+  @@index([userId])
+  @@index([enterpriseId])
+  @@map("enterprise_member")
 }
 
 model EnterpriseJobWorkspace {
@@ -7451,6 +7479,8 @@ model EnterpriseJobWorkspace {
   recruitmentPipelines RecruitmentPipeline[]
   interviewSessions InterviewSession[]
   candidateMatches CandidateMatch[]
+  recruitmentConversations RecruitmentConversation[]
+  recruitmentCampaigns RecruitmentCampaign[]
 }
 
 model EnterpriseOnboardingState {
@@ -7588,6 +7618,7 @@ model RecruitmentPipeline {
   events       PipelineEvent[]
   candidateNotes CandidateNote[]
   interviewSessions InterviewSession[]
+  conversation RecruitmentConversation?
   @@map("recruitment_pipeline")
 }
 
@@ -7629,6 +7660,8 @@ model JobPosting {
   interviewSessions    InterviewSession[]
   candidateMatches     CandidateMatch[]
   channelMappings      RecruitmentChannelMapping[]
+  recruitmentConversations RecruitmentConversation[]
+  recruitmentCampaigns RecruitmentCampaign[]
   @@map("job_posting")
 }
 
@@ -7775,6 +7808,7 @@ model RecruitmentChannel {
   createdAt   DateTime @default(now()) @map("created_at")
 
   mappings    RecruitmentChannelMapping[]
+  publishingTasks PublishingTask[]
   @@map("recruitment_channel")
 }
 
@@ -7830,4 +7864,768 @@ model InterviewNote {
 
   session     InterviewSession @relation(fields: [sessionId], references: [id])
   @@map("interview_note")
+}
+
+// ============================================================
+// Sprint-08B: Recruitment Conversation Domain
+// ============================================================
+
+/// 招聘会话 — 整个招聘过程的主对象
+/// Ownership: 由 Enterprise Recruiter Agent 创建和持有
+model RecruitmentConversation {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  enterpriseId      String    @map("enterprise_id") @db.Uuid
+
+  // ── 关联对象 ──
+  jobPostingId      String?   @map("job_posting_id") @db.Uuid
+  candidateId       String?   @map("candidate_id") @db.Uuid
+  pipelineId        String?   @unique @map("pipeline_id") @db.Uuid
+  recruiterAgentId  String    @map("recruiter_agent_id") @db.Uuid
+
+  // ── 状态机 ──
+  status            String    @default("DISCOVERED")
+  stage             String    @default("discovered")
+
+  // ── AI 评估 ──
+  matchScore        Int?      @map("match_score")
+  briefSnapshotId   String?   @map("brief_snapshot_id") @db.Uuid
+
+  // ── HR 审核 ──
+  reviewPriority    Int       @default(0) @map("review_priority")
+  reviewSubmittedAt DateTime? @map("review_submitted_at")
+  reviewedBy        String?   @map("reviewed_by") @db.Uuid
+  reviewDecision    String?   @map("review_decision")
+  reviewNote        String?   @map("review_note")
+
+  // ── 时间戳 ──
+  invitedAt         DateTime? @map("invited_at")
+  chattingStartedAt DateTime? @map("chatting_started_at")
+  closedAt          DateTime? @map("closed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  workspace         EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+  jobPosting        JobPosting?           @relation(fields: [jobPostingId], references: [id])
+  pipeline          RecruitmentPipeline?  @relation(fields: [pipelineId], references: [id])
+  messages          ConversationMessage[]
+  briefs            CandidateBrief[]
+  humanReview       HumanReviewItem?
+
+  @@index([workspaceId, status])
+  @@index([enterpriseId, status])
+  @@index([recruiterAgentId])
+  @@index([status, reviewPriority(sort: Desc)])
+  @@map("recruitment_conversation")
+}
+
+/// 会话消息 — Conversation 的子对象
+model ConversationMessage {
+  id              String    @id @default(uuid()) @db.Uuid
+  conversationId  String    @map("conversation_id") @db.Uuid
+  role            String
+  content         String
+  tokenCount      Int       @default(0) @map("token_count")
+  metadata        Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  conversation    RecruitmentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("conversation_message")
+}
+
+/// Candidate Brief — 持续更新的候选人画像
+model CandidateBrief {
+  id              String    @id @default(uuid()) @db.Uuid
+  conversationId  String    @map("conversation_id") @db.Uuid
+
+  // ── 结构化画像 ──
+  candidateName   String?   @map("candidate_name")
+  skills          String[]  @default([])
+  experience      String?
+  experienceYears Int?      @map("experience_years")
+  education       String?
+  city            String?
+  salaryMin       Int?      @map("salary_min")
+  salaryMax       Int?      @map("salary_max")
+
+  // ── AI 评估维度 ──
+  skillMatch      Int?      @map("skill_match")
+  cultureFit      Int?      @map("culture_fit")
+  stabilityScore  Int?      @map("stability_score")
+  growthPotential Int?      @map("growth_potential")
+  overallScore    Int?      @map("overall_score")
+
+  // ── 风险与优势 ──
+  strengths       String[]  @default([])
+  risks           String[]  @default([])
+  redFlags        String[]  @default([]) @map("red_flags")
+
+  // ── AI 总结 ──
+  aiSummary       String?   @map("ai_summary")
+  jobUnderstanding String?  @map("job_understanding")
+  communicationScore Int?   @map("communication_score")
+
+  // ── 版本控制 ──
+  version         Int       @default(1)
+  changeSummary   String?   @map("change_summary")
+  sourceMessageIds String[] @default([]) @map("source_message_ids")
+
+  // ── 时间戳 ──
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  conversation    RecruitmentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, version(sort: Desc)])
+  @@map("candidate_brief")
+}
+
+/// Human Review — 等待人工审核的队列项
+model HumanReviewItem {
+  id                String    @id @default(uuid()) @db.Uuid
+  conversationId    String    @unique @map("conversation_id") @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  enterpriseId      String    @map("enterprise_id") @db.Uuid
+
+  // ── 审核内容 ──
+  candidateName     String?   @map("candidate_name")
+  jobTitle          String?   @map("job_title")
+  matchScore        Int?      @map("match_score")
+  overallScore      Int?      @map("overall_score")
+  briefSummary      String?   @map("brief_summary")
+  aiRecommendation  String    @map("ai_recommendation")
+  priority          Int       @default(2)
+
+  // ── 审核状态 ──
+  status            String    @default("pending")
+  reviewedBy        String?   @map("reviewed_by") @db.Uuid
+  reviewedAt        DateTime? @map("reviewed_at")
+  decision          String?
+  reviewNote        String?   @map("review_note")
+
+  // ── 时间戳 ──
+  submittedAt       DateTime  @default(now()) @map("submitted_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  conversation      RecruitmentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, priority(sort: Desc)])
+  @@index([enterpriseId, status])
+  @@map("human_review_item")
+}
+
+// ============================================================
+// Sprint-08C: Recruitment Campaign Domain
+// ============================================================
+
+/// 招聘营销活动 — AI 宣发官的核心工作对象
+/// Campaign = 一个岗位的一次营销行动
+/// 包含：文案、图片、发布计划、统计
+model RecruitmentCampaign {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  enterpriseId      String    @map("enterprise_id") @db.Uuid
+
+  // ── 关联对象 ──
+  jobPostingId      String    @map("job_posting_id") @db.Uuid
+  marketingAgentId  String    @map("marketing_agent_id") @db.Uuid // EnterpriseAgentWorkforce.id
+
+  // ── 基本信息 ──
+  title             String
+  description       String?
+  status            String    @default("draft")
+  /// draft → generating → pending_review → approved → publishing → published → paused → closed
+
+  // ── AI 生成内容 ──
+  promotionalText   String?   @map("promotional_text") // 宣传文案
+  promotionalImageId String?  @map("promotional_image_id") @db.Uuid // 关联图片素材
+  aiGeneratedContent Json?    @map("ai_generated_content") // { headline, body, hashtags, callToAction }
+
+  // ── 发布配置 ──
+  targetChannelIds  String[]  @default([]) @map("target_channel_ids") // 目标渠道 ID 列表
+  scheduledAt       DateTime? @map("scheduled_at") // 计划发布时间
+
+  // ── 审核 ──
+  reviewStatus      String    @default("pending") @map("review_status")
+  /// pending | approved | rejected | needs_revision
+  reviewedBy        String?   @map("reviewed_by") @db.Uuid
+  reviewedAt        DateTime? @map("reviewed_at")
+  reviewNote        String?   @map("review_note")
+
+  // ── 统计 ──
+  viewCount         Int       @default(0) @map("view_count")
+  clickCount        Int       @default(0) @map("click_count")
+  applicationCount  Int       @default(0) @map("application_count")
+
+  // ── 时间戳 ──
+  publishedAt       DateTime? @map("published_at")
+  closedAt          DateTime? @map("closed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  workspace         EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+  jobPosting        JobPosting           @relation(fields: [jobPostingId], references: [id])
+  publishingTasks   PublishingTask[]
+
+  @@index([workspaceId, status])
+  @@index([enterpriseId, status])
+  @@index([jobPostingId])
+  @@index([marketingAgentId])
+  @@map("recruitment_campaign")
+}
+
+/// 发布任务 — Campaign 的子对象，每个 Channel 一个 Task
+/// Campaign → PublishingTask → Channel Adapter
+model PublishingTask {
+  id              String    @id @default(uuid()) @db.Uuid
+  campaignId      String    @map("campaign_id") @db.Uuid
+  channelId       String    @map("channel_id") @db.Uuid // RecruitmentChannel.id
+
+  // ── 发布内容（从 Campaign 快照） ──
+  content         String    // 实际发布的文案
+  imageUrl        String?   @map("image_url")
+  externalJobId   String?   @map("external_job_id") // 外部平台返回的职位 ID
+
+  // ── 状态 ──
+  status          String    @default("pending")
+  /// pending → scheduled → publishing → published | failed | cancelled
+
+  // ── 执行记录 ──
+  scheduledAt     DateTime? @map("scheduled_at")
+  publishedAt     DateTime? @map("published_at")
+  failedAt        DateTime? @map("failed_at")
+  failReason      String?   @map("fail_reason")
+  retryCount      Int       @default(0) @map("retry_count")
+
+  // ── 统计 ──
+  viewCount       Int       @default(0) @map("view_count")
+  clickCount      Int       @default(0) @map("click_count")
+  applicationCount Int      @default(0) @map("application_count")
+
+  // ── 时间戳 ──
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  campaign        RecruitmentCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  channel         RecruitmentChannel  @relation(fields: [channelId], references: [id])
+
+  @@index([campaignId, status])
+  @@index([channelId])
+  @@index([status, scheduledAt])
+  @@map("publishing_task")
+}
+
+// ============================================================
+// P3 Candidate Domain v1.0 — FROZEN 2026-07-25
+// 人才资产领域：Career Profile / CandidateResume / Candidate Card / Skill Graph / Career Timeline
+// 设计文档：docs/product/candidate-domain/CANDIDATE_DOMAIN_V1.md
+// ============================================================
+
+/// Career Profile：唯一真实档案（SSOT）
+/// 一个 User 终身只有一份 Career Profile
+/// 设计原则：DP-P3-01 SSOT · DP-P3-05 唯一档案
+model CareerProfile {
+  id                 String   @id @default(uuid()) @map("id") @db.Uuid
+  candidateId        String   @unique @map("candidate_id") @db.Uuid
+  userId             String   @unique @map("user_id") @db.Uuid
+
+  // ── 基本信息 ──
+  fullName           String   @map("full_name")
+  headline           String?  @map("headline")
+  bio                String?  @map("bio")
+  avatarUrl          String?  @map("avatar_url")
+
+  // ── 联系信息（私有）──
+  email              String?  @map("email")
+  phone              String?  @map("phone")
+  city               String?  @map("city")
+  country            String?  @default("CN") @map("country")
+
+  // ── 职业方向 ──
+  careerDirection    String?  @map("career_direction")
+  industry           String?  @map("industry")
+  yearsExperience    Int      @default(0) @map("years_experience")
+  currentLevel       String?  @map("current_level")
+
+  // ── 求职状态 ──
+  jobSeekingStatus   String   @default("not_looking") @map("job_seeking_status")
+  openToOpportunity  Boolean  @default(false) @map("open_to_opportunity")
+
+  // ── 可见性 ──
+  visibility         String   @default("private") @map("visibility")
+
+  // ── 元数据 ──
+  completionScore    Int      @default(0) @map("completion_score")
+  lastActiveAt       DateTime @default(now()) @map("last_active_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workExperiences    WorkExperience[]
+  educations         Education[]
+  skills             CandidateSkill[]
+  resumes            CandidateResume[]
+  candidateCard      CandidateCard?
+  timelineEvents     CareerTimelineEvent[]
+
+  @@index([candidateId])
+  @@index([jobSeekingStatus])
+  @@index([visibility])
+  @@map("career_profile")
+}
+
+/// Work Experience：工作经历
+/// 属于 Career Profile 的事实数据，AI 不可自动修改（DP-P3-06）
+model WorkExperience {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  profileId       String   @map("profile_id") @db.Uuid
+
+  company         String   @map("company")
+  title           String   @map("title")
+  department      String?  @map("department")
+  employmentType  String?  @map("employment_type")
+  startDate       DateTime @map("start_date")
+  endDate         DateTime? @map("end_date")
+  isCurrent       Boolean  @default(false) @map("is_current")
+  location        String?  @map("location")
+  description     String?  @map("description")
+  achievements    String[] @map("achievements")
+  skillsUsed      String[] @map("skills_used")
+
+  // ── 来源与验证 ──
+  source          String   @default("user") @map("source")
+  verified        Boolean  @default(false) @map("verified")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  profile         CareerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([startDate])
+  @@map("work_experience")
+}
+
+/// Education：教育经历
+/// 属于 Career Profile 的事实数据，AI 不可自动修改（DP-P3-06）
+model Education {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  profileId       String   @map("profile_id") @db.Uuid
+
+  school          String   @map("school")
+  degree          String?  @map("degree")
+  major           String?  @map("major")
+  startDate       DateTime? @map("start_date")
+  endDate         DateTime? @map("end_date")
+  gpa             Float?   @map("gpa")
+  description     String?  @map("description")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  profile         CareerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("education")
+}
+
+/// CandidateResume：Career Profile 的派生视图
+/// 一份档案可生成多份简历（多语言/多岗位方向）
+/// 设计原则：DP-P3-01 Resume = Career Profile 的视图
+/// 与已有企业侧 Resume 模型共存，通过 candidate_resume 表名区分
+model CandidateResume {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  profileId       String   @map("profile_id") @db.Uuid
+
+  // ── 简历元信息 ──
+  name            String   @map("name")
+  language        String   @default("zh") @map("language")
+  targetRole      String?  @map("target_role")
+  version         Int      @default(1) @map("version")
+
+  // ── 内容（从 Career Profile 派生的结构化数据）──
+  contentJson     Json     @map("content_json")
+
+  // ── 生成方式 ──
+  generatedBy     String   @default("user") @map("generated_by")
+  sourceResumeId  String?  @map("source_resume_id") @db.Uuid
+
+  // ── 文件 ──
+  fileUrl         String?  @map("file_url")
+  fileFormat      String?  @map("file_format")
+
+  // ── 状态 ──
+  isDefault       Boolean  @default(false) @map("is_default")
+  status          String   @default("active") @map("status")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  profile         CareerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  sourceResume    CandidateResume?  @relation("ResumeDerivation", fields: [sourceResumeId], references: [id])
+  derivedResumes  CandidateResume[] @relation("ResumeDerivation")
+
+  @@index([profileId])
+  @@index([status])
+  @@map("candidate_resume")
+}
+
+/// Candidate Card：企业看到的公开投影
+/// 不是 Career Profile 的 Copy，而是 Projection
+/// 设计原则：DP-P3-02 默认最小公开
+model CandidateCard {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  profileId       String   @unique @map("profile_id") @db.Uuid
+
+  // ── 公开摘要 ──
+  headline        String?  @map("headline")
+  summary         String?  @map("summary")
+  skillTags       String[] @map("skill_tags")
+  yearsExperience Int      @default(0) @map("years_experience")
+  currentCity     String?  @map("current_city")
+  currentCompany  String?  @map("current_company")
+  currentTitle    String?  @map("current_title")
+
+  // ── 匹配信号 ──
+  openToOpportunity Boolean @default(false) @map("open_to_opportunity")
+
+  // ── 可见性控制 ──
+  visibility      String   @default("private") @map("visibility")
+  hiddenFields    String[] @map("hidden_fields")
+
+  // ── AI 摘要 ──
+  aiSummary       String?  @map("ai_summary")
+  aiSummaryAt     DateTime? @map("ai_summary_at")
+
+  // ── 浏览统计 ──
+  viewCount       Int      @default(0) @map("view_count")
+  lastViewedAt    DateTime? @map("last_viewed_at")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  profile         CareerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([visibility])
+  @@map("candidate_card")
+}
+
+/// Skill：标准化技能词表
+/// 统一管理技能名称，避免 "Go" 和 "golang" 被当作两个技能
+model Skill {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  name            String   @unique @map("name")
+  category        String?  @map("category")
+  aliases         String[] @map("aliases")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // ── Relations ──
+  candidateSkills CandidateSkill[]
+
+  @@index([category])
+  @@map("skill")
+}
+
+/// CandidateSkill：人才与技能的关联（含 Level / Confidence）
+/// 设计原则：DP-P3-03 可成长但证据不可篡改
+model CandidateSkill {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  profileId       String   @map("profile_id") @db.Uuid
+  skillId         String   @map("skill_id") @db.Uuid
+
+  // ── 技能评估 ──
+  level           String   @default("beginner") @map("level")
+  confidence      Float    @default(0.0) @map("confidence")
+
+  // ── 来源 ──
+  source          String   @default("user") @map("source")
+
+  // ── 时间追踪 ──
+  lastAssessedAt  DateTime @default(now()) @map("last_assessed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  profile         CareerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill           Skill         @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  evidence        SkillEvidence[]
+
+  @@unique([profileId, skillId])
+  @@index([profileId])
+  @@index([skillId])
+  @@map("candidate_skill")
+}
+
+/// SkillEvidence：技能的证据链
+/// 每个 CandidateSkill 可有多条证据（工作经历/GitHub/AI Interview/证书）
+/// 设计原则：DP-P3-03 每个 Skill 必须有 Evidence
+model SkillEvidence {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  candidateSkillId String  @map("candidate_skill_id") @db.Uuid
+
+  evidenceType    String   @map("evidence_type")
+  refId           String?  @map("ref_id") @db.Uuid
+  description     String?  @map("description")
+  metadata        Json?    @map("metadata")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // ── Relations ──
+  candidateSkill  CandidateSkill @relation(fields: [candidateSkillId], references: [id], onDelete: Cascade)
+
+  @@index([candidateSkillId])
+  @@index([evidenceType])
+  @@map("skill_evidence")
+}
+
+/// CareerTimelineEvent：职业成长事件流
+/// Append-only，不允许 Update（DP-P3-04）
+/// Correction 通过追加 Correction Event 实现，不覆盖原始事件
+model CareerTimelineEvent {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  profileId       String   @map("profile_id") @db.Uuid
+
+  // ── 事件定义 ──
+  eventType       String   @map("event_type")
+  title           String   @map("title")
+  description     String?  @map("description")
+  organization    String?  @map("organization")
+
+  // ── 时间 ──
+  occurredAt      DateTime @map("occurred_at")
+  granularity     String   @default("day") @map("granularity")
+
+  // ── Correction ──
+  relatedEventId  String?  @map("related_event_id") @db.Uuid
+
+  // ── 关联 ──
+  relatedSkillNames String[] @map("related_skill_names")
+  metadata        Json?    @map("metadata")
+
+  // ── 来源 ──
+  source          String   @default("user") @map("source")
+
+  // ── 不可变性：无 updatedAt ──
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // ── Relations ──
+  profile         CareerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, occurredAt])
+  @@index([eventType])
+  @@map("career_timeline_event")
+}
+
+// ============================================================
+// Job Agent Config — 求职管家 Agent 模型配置
+// 平台 SaaS 服务，不走用户 BYOK
+// 复用现有 ModelProvider + RouteConfig 体系
+// ============================================================
+
+/// JobAgentConfig：求职管家 Agent 的模型配置
+/// 平台统一管理 API Key，不暴露给用户
+model JobAgentConfig {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+
+  // ── Agent 定义 ──
+  agentType       String   @default("career_assistant") @map("agent_type")
+  agentName       String   @default("求职管家") @map("agent_name")
+
+  // ── 模型配置 ──
+  provider        String   @map("provider")
+  model           String   @map("model")
+  apiKeyEncrypted String   @map("api_key_encrypted")
+  baseUrl         String?  @map("base_url")
+
+  // ── 提示词与参数 ──
+  systemPrompt    String?  @map("system_prompt")
+  temperature     Float    @default(0.7) @map("temperature")
+  maxTokens       Int      @default(2000) @map("max_tokens")
+
+  // ── 状态 ──
+  enabled         Boolean  @default(true) @map("enabled")
+
+  // ── 调用统计 ──
+  totalCalls      Int      @default(0) @map("total_calls")
+  totalTokens     Int      @default(0) @map("total_tokens")
+
+  // ── 时间戳 ──
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([agentType])
+  @@index([enabled])
+  @@map("job_agent_config")
+}
+
+// ============================================================
+// P4-01 Talent Matching Engine — 招聘智能匹配引擎
+// 数据性质：Derived / Computed（非事实数据）
+// 设计原则：DP-M01 事实不可篡改 · DP-M02 计算与解释分离
+// ============================================================
+
+/// JobRequirementProfile：JD 的结构化解析结果
+/// 数据性质：Derived from JD
+/// 不是岗位事实替代品，是匹配引擎可消费的结构化条件
+model JobRequirementProfile {
+  id                String   @id @default(uuid()) @map("id") @db.Uuid
+
+  // ── 来源信息 ──
+  enterpriseId      String   @map("enterprise_id") @db.Uuid
+  jobTitle          String   @map("job_title")
+  jobDescription    String?  @map("job_description")
+
+  // ── 结构化要求（Derived from JD）──
+  requiredSkills    Json     @map("required_skills")
+  preferredSkills   Json?    @map("preferred_skills")
+
+  experienceMin     Int      @default(0) @map("experience_min")
+  experienceMax     Int?     @map("experience_max")
+  educationMin      String?  @map("education_min")
+  preferredMajors   String[] @map("preferred_majors")
+  industries        String[]
+
+  // ── 职位信息 ──
+  employmentType    String?  @map("employment_type")
+  location          String?
+  remoteOption      String?  @map("remote_option")
+  salaryMin         Int?     @map("salary_min")
+  salaryMax         Int?     @map("salary_max")
+
+  // ── 匹配配置 ──
+  weights           Json?
+
+  // ── 状态 ──
+  status            String   @default("draft")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  matchResults      TalentMatchResult[]
+  batchJobs         BatchJob[]
+
+  @@index([enterpriseId])
+  @@index([status])
+  @@map("job_requirement_profile")
+}
+
+/// TalentMatchResult：一次匹配计算的结果
+/// 数据性质：Computed（可重算、可删除、不影响事实数据）
+model TalentMatchResult {
+  id                String   @id @default(uuid()) @map("id") @db.Uuid
+
+  // ── 关联（只读引用）──
+  jobRequirementId  String   @map("job_requirement_id") @db.Uuid
+  candidateId       String   @map("candidate_id") @db.Uuid
+  profileId         String   @map("profile_id") @db.Uuid
+
+  // ── 匹配分数（Computed）──
+  score             Int
+  breakdown         Json
+
+  // ── 匹配详情（Computed）──
+  matchedSkills     Json     @map("matched_skills")
+  missingSkills     Json     @map("missing_skills")
+  skillGap          Json?    @map("skill_gap")
+
+  // ── 风险与解释 ──
+  riskFlags         Json?    @map("risk_flags")
+  reasoning         String?
+  reasoningAt       DateTime? @map("reasoning_at")
+
+  // ── 排序 ──
+  rank              Int?
+  rankingVersion    String?  @map("ranking_version")
+
+  // ── 元数据 ──
+  matchVersion      String   @default("v1") @map("match_version")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // ── Relations ──
+  jobRequirement    JobRequirementProfile @relation(fields: [jobRequirementId], references: [id], onDelete: Cascade)
+  evidence          MatchEvidence[]
+  batchJobs         BatchJob[]
+
+  @@unique([jobRequirementId, candidateId])
+  @@index([jobRequirementId, score(sort: Desc)])
+  @@index([candidateId])
+  @@map("talent_match_result")
+}
+
+/// MatchEvidence：匹配结论的证据链
+/// 数据性质：Computed Evidence
+/// 建立 Computed Data → Fact Data 的审计链
+model MatchEvidence {
+  id                String   @id @default(uuid()) @map("id") @db.Uuid
+
+  matchResultId     String   @map("match_result_id") @db.Uuid
+
+  // ── 证据内容 ──
+  evidenceType      String   @map("evidence_type")
+  claim             String
+  sourceType        String   @map("source_type")
+  sourceId          String   @map("source_id") @db.Uuid
+  confidence        Float
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // ── Relations ──
+  matchResult       TalentMatchResult @relation(fields: [matchResultId], references: [id], onDelete: Cascade)
+
+  @@index([matchResultId])
+  @@index([sourceType, sourceId])
+  @@map("match_evidence")
+}
+
+/// BatchJob：批量匹配执行记录
+/// 数据性质：Execution Record（非 Business Fact）
+/// 职责：编排状态跟踪，不存储匹配真相
+model BatchJob {
+  id                String   @id @default(uuid()) @map("id") @db.Uuid
+
+  // ── 关联 ──
+  enterpriseId      String   @map("tenant_id") @db.Uuid
+  jobRequirementId  String   @map("job_requirement_id") @db.Uuid
+
+  // ── 执行状态 ──
+  status            String   @default("PENDING") @db.VarChar(20)
+  totalCandidates   Int      @default(0) @map("total_candidates")
+  processedCount    Int      @default(0) @map("processed_count")
+  matchedCount      Int      @default(0) @map("matched_count")
+
+  // ── 排名参数 ──
+  threshold         Int      @default(60)
+  maxResults        Int      @default(20) @map("max_results")
+  rankingVersion    String   @default("v1") @map("ranking_version")
+
+  // ── 错误信息 ──
+  errorMessage      String?  @map("error_message")
+
+  // ── 时间戳 ──
+  startedAt         DateTime? @map("started_at")
+  completedAt       DateTime? @map("completed_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  jobRequirement    JobRequirementProfile @relation(fields: [jobRequirementId], references: [id], onDelete: Cascade)
+  results           TalentMatchResult[]
+
+  @@index([enterpriseId])
+  @@index([jobRequirementId])
+  @@index([status])
+  @@map("batch_job")
 }

@@ -1,1 +1,0 @@
-import{g as n}from"./GKwpgY9a.js";async function r(a){const e=(await n(`health/${a}`)).data;return{score:e.healthScore.overall,scoreChange:e.healthScore.change,trend:e.healthScore.trend,brand:e.brand,dimensions:e.dimensions,explanation:e.explanation,coverage:e.coverage,recentChanges:e.recentChanges,quickActions:e.quickActions}}export{r as f};

@@ -39,6 +39,7 @@ function initFromRoute() {
   else if (path.includes('/execution')) currentModule.value = 'execution'
   else if (path.includes('/channels')) currentModule.value = 'channels'
   else if (path.includes('/people')) currentModule.value = 'ai-employees'
+  else if (path.includes('/recruitment')) currentModule.value = 'recruitment'
   else if (path.includes('/knowledge')) currentModule.value = 'knowledge'
   else if (path.includes('/growth')) currentModule.value = 'growth'
   else if (path.includes('/governance')) currentModule.value = 'governance'

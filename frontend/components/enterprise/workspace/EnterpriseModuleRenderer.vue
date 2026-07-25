@@ -24,6 +24,7 @@ const moduleMap: Record<string, any> = {
   'execution': defineAsyncComponent(() => import('./modules/ExecutionModule.vue')),
   'channels': defineAsyncComponent(() => import('./modules/ChannelsModule.vue')),
   'ai-employees': defineAsyncComponent(() => import('./modules/EmployeesModule.vue')),
+  'recruitment': defineAsyncComponent(() => import('./modules/RecruitmentModule.vue')),
   'knowledge': defineAsyncComponent(() => import('./modules/KnowledgeModule.vue')),
   'growth': defineAsyncComponent(() => import('./modules/GrowthModule.vue')),
   'governance': defineAsyncComponent(() => import('./modules/GovernanceModule.vue')),

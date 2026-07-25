@@ -1,1223 +1,758 @@
+<!--
+  ⚠️ DEPRECATE — JOB-WORKSPACE-BOUNDARY-AUDIT 2026-07-26
+  旧企业面试管理页面，已被 /workspace/recruitment 替代。
+  保留原因：暂无替代页面，P4-FE-02 后删除。
+  禁止：修改功能、添加新逻辑。
+-->
 <template>
   <div class="interview-workspace">
-    <!-- Maintenance Banner -->
-    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#856404;">
-      ⚠️ 面试管理模块正在升级中，部分功能暂不可用。
-    </div>
-    <!-- Top Navigation Bar -->
-    <div class="ceo-top-nav">
-      <button @click="goToWorkspaceCenter" class="ceo-nav-btn" title="返回工作台中心">
-        ← 工作台中心
-      </button>
-      <WorkspaceSwitcher />
-      <button @click="goToBilling" class="ceo-nav-btn" title="套餐订阅">
-        📦 套餐订阅
-      </button>
-    </div>
-
-    <!-- Page Header -->
+    <!-- PageHeader -->
     <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">🎤 面试管理</h1>
-        <p class="page-subtitle">管理所有面试安排、记录和决策</p>
+      <div>
+        <h1 class="page-title">面试决策</h1>
+        <p class="page-subtitle">基于综合评估完成录用决策</p>
       </div>
-      <div class="header-right">
-        <button @click="refresh" class="ceo-btn-secondary" :disabled="loading">
-          🔄 刷新
-        </button>
-      </div>
-    </div>
-
-    <!-- Stats Summary -->
-    <div class="stats-bar">
-      <div class="stat-item">
-        <span class="stat-num">{{ stats.total }}</span>
-        <span class="stat-label">总面试</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-num">{{ stats.preparing }}</span>
-        <span class="stat-label">准备中</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-num">{{ stats.ongoing }}</span>
-        <span class="stat-label">进行中</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-num">{{ stats.completed }}</span>
-        <span class="stat-label">已完成</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-num">{{ stats.cancelled }}</span>
-        <span class="stat-label">已取消</span>
+      <div class="header-actions">
+        <button class="btn-ghost" @click="loadData">🔄</button>
+        <div class="date-toggle">
+          <button
+            v-for="opt in dateOptions"
+            :key="opt.value"
+            :class="['toggle-btn', { active: dateRange === opt.value }]"
+            @click="dateRange = opt.value; loadData()"
+          >{{ opt.label }}</button>
+        </div>
       </div>
     </div>
 
-    <!-- Filter Bar -->
-    <div class="filter-bar">
-      <select v-model="statusFilter" class="ceo-select" @change="loadInterviews">
-        <option value="">全部状态</option>
-        <option value="preparing">准备中</option>
-        <option value="ongoing">进行中</option>
-        <option value="completed">已完成</option>
-        <option value="cancelled">已取消</option>
-      </select>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="搜索候选人或职位..."
-        class="ceo-input"
-        @input="debounceSearch"
-      />
+    <!-- 空状态 -->
+    <div v-if="!loading && interviews.length === 0" class="empty-state">
+      <div class="empty-icon">📅</div>
+      <h3>今天没有面试安排</h3>
+      <p>查看本周或待审核的面试记录</p>
+      <div class="empty-actions">
+        <button class="btn-secondary" @click="dateRange = 'week'; loadData()">查看本周</button>
+        <button class="btn-secondary" @click="filterByPending">查看待审核</button>
+      </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="loading-spinner"></div>
-      <span>加载中...</span>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="filteredInterviews.length === 0" class="ceo-empty">
-      <h2>暂无面试</h2>
-      <p>在 Pipeline 中点击 ❓ 按钮为候选人安排面试</p>
-    </div>
-
-    <!-- Interview List -->
-    <div v-else class="interview-list">
-      <div
-        v-for="item in filteredInterviews"
-        :key="item.id"
-        class="interview-card"
-        @click="openDetail(item)"
-      >
-        <div class="interview-main">
-          <div class="interview-candidate">
-            <span class="candidate-avatar">{{ item.candidateName?.charAt(0) || '?' }}</span>
+    <!-- 第一屏：需要处理 -->
+    <SectionCard v-if="pendingDecisions.length > 0" title="需要确认" :badge="String(pendingDecisions.length)">
+      <div class="decision-list">
+        <div
+          v-for="item in pendingDecisions"
+          :key="item.id"
+          class="decision-card"
+          @click="selectInterview(item)"
+        >
+          <div class="decision-main">
             <div class="candidate-info">
-              <div class="candidate-name">{{ item.candidateName }}</div>
-              <div class="candidate-job">{{ item.jobTitle || '未知职位' }}</div>
+              <h3 class="candidate-name">{{ item.candidateName || '未知候选人' }}</h3>
+              <span class="job-title">{{ item.jobTitle }}</span>
+            </div>
+            <div class="decision-metrics">
+              <div class="metric-score">
+                <span class="metric-label">综合评估</span>
+                <span class="metric-value score-large">{{ item.overallScore ?? '—' }}</span>
+              </div>
+              <div class="metric-confidence" v-if="item.overallScore">
+                <span class="metric-label">可信度</span>
+                <span class="metric-value">{{ calcConfidence(item) }}%</span>
+              </div>
+            </div>
+            <div class="decision-recommendation">
+              <StatusBadge :status="item.recommendation || 'pending'" type="recommendation" />
             </div>
           </div>
-          <div class="interview-meta">
-            <span :class="['status-badge', item.status]">{{ statusLabels[item.status] || item.status }}</span>
-            <span v-if="item.overallScore" class="score-badge">{{ item.overallScore }}分</span>
-            <span v-if="item.questionCount" class="question-count">{{ item.questionCount }}题</span>
-          </div>
-          <div class="interview-time">
-            <div class="time-label">创建时间</div>
-            <div class="time-value">{{ formatDate(item.createdAt) }}</div>
-          </div>
-          <div class="interview-actions" @click.stop>
-            <button @click="openDetail(item)" class="ceo-btn-small">查看详情</button>
+          <div class="decision-action">
+            <button class="btn-primary btn-sm">查看详情 →</button>
           </div>
         </div>
       </div>
-    </div>
+    </SectionCard>
 
-    <!-- Interview Detail Drawer -->
-    <div v-if="showDetail" class="drawer-overlay" @click.self="closeDetail">
-      <div class="drawer-panel">
-        <div class="drawer-header">
-          <h2>{{ detail?.candidateName || '面试详情' }}</h2>
-          <button @click="closeDetail" class="close-btn">✕</button>
+    <!-- 综合评估（选中候选人） -->
+    <SectionCard v-if="selected" title="综合评估">
+      <div class="evaluation-detail">
+        <div class="eval-header">
+          <div class="eval-candidate">
+            <h2>{{ selected.candidateName || '未知候选人' }}</h2>
+            <span class="eval-job">{{ selected.jobTitle }}</span>
+          </div>
+          <div class="eval-score-ring">
+            <div class="score-circle">
+              <span class="score-number">{{ selected.overallScore ?? '—' }}</span>
+              <span class="score-label">综合评分</span>
+            </div>
+          </div>
         </div>
 
-        <div v-if="detailLoading" class="drawer-loading">
-          <div class="loading-spinner"></div>
-          <span>加载中...</span>
+        <div class="eval-dimensions">
+          <div class="dim-row">
+            <span class="dim-label">技术能力</span>
+            <div class="dim-bar">
+              <div class="dim-fill" :style="{ width: ((selected.technicalScore || 0) * 10) + '%' }"></div>
+            </div>
+            <span class="dim-value">{{ selected.technicalScore ?? '—' }}</span>
+          </div>
+          <div class="dim-row">
+            <span class="dim-label">沟通表达</span>
+            <div class="dim-bar">
+              <div class="dim-fill" :style="{ width: ((selected.communicationScore || 0) * 10) + '%' }"></div>
+            </div>
+            <span class="dim-value">{{ selected.communicationScore ?? '—' }}</span>
+          </div>
+          <div class="dim-row">
+            <span class="dim-label">文化契合</span>
+            <div class="dim-bar">
+              <div class="dim-fill" :style="{ width: ((selected.cultureScore || 0) * 10) + '%' }"></div>
+            </div>
+            <span class="dim-value">{{ selected.cultureScore ?? '—' }}</span>
+          </div>
         </div>
 
-        <div v-else-if="detail" class="drawer-content">
-          <!-- Status & Decision -->
-          <div class="detail-section">
-            <div class="section-header">
-              <h3>📊 状态</h3>
-              <span :class="['status-badge', detail.status]">{{ statusLabels[detail.status] || detail.status }}</span>
-            </div>
-            <div class="detail-info">
-              <div class="info-row">
-                <span class="info-label">职位</span>
-                <span class="info-value">{{ detail.job?.title || '-' }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">创建时间</span>
-                <span class="info-value">{{ formatDate(detail.createdAt) }}</span>
-              </div>
-              <div v-if="detail.startedAt" class="info-row">
-                <span class="info-label">开始时间</span>
-                <span class="info-value">{{ formatDate(detail.startedAt) }}</span>
-              </div>
-              <div v-if="detail.completedAt" class="info-row">
-                <span class="info-label">完成时间</span>
-                <span class="info-value">{{ formatDate(detail.completedAt) }}</span>
-              </div>
-            </div>
-          </div>
+        <div class="eval-summary" v-if="selected.summary">
+          <h4>综合评价</h4>
+          <p>{{ selected.summary }}</p>
+        </div>
 
-          <!-- Timeline -->
-          <div class="detail-section">
-            <h3>📅 时间线</h3>
-            <div v-if="timeline.length === 0" class="empty-text">暂无事件</div>
-            <div v-else class="timeline">
-              <div v-for="(event, idx) in timeline" :key="idx" class="timeline-item">
-                <div :class="['timeline-dot', event.type]"></div>
-                <div class="timeline-content">
-                  <div class="timeline-title">{{ event.title }}</div>
-                  <div v-if="event.description" class="timeline-desc">{{ event.description }}</div>
-                  <div class="timeline-time">{{ formatDate(event.time) }}</div>
-                </div>
-              </div>
-            </div>
+        <div class="eval-strengths" v-if="selected.strengths && selected.strengths.length">
+          <h4>优势</h4>
+          <div class="tag-list">
+            <span v-for="s in selected.strengths" :key="s" class="tag tag-success">{{ s }}</span>
           </div>
+        </div>
 
-          <!-- AI Interview Questions -->
-          <div v-if="detail.questions?.length" class="detail-section">
-            <h3>❓ 面试题</h3>
-            <div class="questions-list">
-              <div v-for="(q, idx) in detail.questions" :key="q.id" class="question-item">
-                <div class="question-header">
-                  <span class="question-num">Q{{ idx + 1 }}</span>
-                  <span :class="['question-category', q.category]">{{ categoryLabels[q.category] || q.category }}</span>
-                </div>
-                <div class="question-text">{{ q.question }}</div>
-                <div v-if="q.answer" class="question-answer">
-                  <strong>回答：</strong>{{ q.answer }}
-                </div>
-              </div>
-            </div>
+        <div class="eval-concerns" v-if="selected.risks && selected.risks.length">
+          <h4>关注点</h4>
+          <div class="tag-list">
+            <span v-for="r in selected.risks" :key="r" class="tag tag-warning">{{ r }}</span>
           </div>
+        </div>
 
-          <!-- AI Evaluation -->
-          <div v-if="detail.evaluation" class="detail-section">
-            <h3>🤖 AI 评价 <span class="beta-tag">Beta</span></h3>
-            <div class="evaluation-card">
-              <div class="eval-scores">
-                <div class="eval-score">
-                  <span class="score-value">{{ detail.evaluation.overallScore }}</span>
-                  <span class="score-label">综合</span>
-                </div>
-                <div class="eval-score">
-                  <span class="score-value">{{ detail.evaluation.technicalScore }}</span>
-                  <span class="score-label">技术</span>
-                </div>
-                <div class="eval-score">
-                  <span class="score-value">{{ detail.evaluation.communicationScore }}</span>
-                  <span class="score-label">沟通</span>
-                </div>
-                <div class="eval-score">
-                  <span class="score-value">{{ detail.evaluation.cultureScore }}</span>
-                  <span class="score-label">文化</span>
-                </div>
-              </div>
-              <div class="eval-summary">{{ detail.evaluation.summary }}</div>
-              <div v-if="detail.evaluation.recommendation" class="eval-recommendation">
-                建议：{{ detail.evaluation.recommendation }}
-              </div>
-            </div>
+        <div class="eval-actions">
+          <button class="btn-success" @click="makeDecision('pass')">✅ 通过</button>
+          <button class="btn-danger" @click="makeDecision('reject')">❌ 拒绝</button>
+          <button class="btn-secondary" @click="makeDecision('second_round')">🔄 二面</button>
+        </div>
+      </div>
+    </SectionCard>
+
+    <!-- 今日时间线 -->
+    <SectionCard v-if="todayInterviews.length > 0" title="今日时间线">
+      <div class="timeline">
+        <div
+          v-for="item in todayInterviews"
+          :key="item.id"
+          class="timeline-item"
+          :class="'status-' + item.status"
+          @click="selectInterview(item)"
+        >
+          <div class="timeline-marker">
+            <span v-if="item.status === 'COMPLETED'" class="marker-icon done">✅</span>
+            <span v-else-if="item.status === 'IN_PROGRESS'" class="marker-icon active">●</span>
+            <span v-else class="marker-icon pending">○</span>
           </div>
-
-          <!-- Interview Notes -->
-          <div class="detail-section">
-            <div class="section-header">
-              <h3>📝 面试笔记</h3>
-              <button @click="showAddNote = !showAddNote" class="ceo-btn-small">+ 添加笔记</button>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <span class="timeline-name">{{ item.candidateName || '未知候选人' }}</span>
+              <span class="timeline-time">{{ item.createdAt }}</span>
             </div>
-            <div v-if="showAddNote" class="add-note">
-              <textarea
-                v-model="newNote"
-                placeholder="输入面试笔记..."
-                class="note-input"
-                rows="3"
-              ></textarea>
-              <div class="note-actions">
-                <button @click="addNote" class="ceo-btn-primary" :disabled="!newNote.trim()">保存</button>
-                <button @click="showAddNote = false; newNote = ''" class="ceo-btn-secondary">取消</button>
-              </div>
-            </div>
-            <div v-if="detail.notes?.length === 0" class="empty-text">暂无笔记</div>
-            <div v-else class="notes-list">
-              <div v-for="note in detail.notes" :key="note.id" class="note-item">
-                <div class="note-content">{{ note.content }}</div>
-                <div class="note-meta">
-                  <span>{{ formatDate(note.createdAt) }}</span>
-                  <button @click="deleteNote(note.id)" class="note-delete">删除</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Decision -->
-          <div v-if="!detail.decision" class="detail-section">
-            <h3>🎯 面试决策</h3>
-            <div class="decision-buttons">
-              <button @click="makeDecision('recommend_offer')" class="decision-btn offer">
-                ✅ 建议录用
-              </button>
-              <button @click="makeDecision('hold')" class="decision-btn hold">
-                ⏸️ 暂缓
-              </button>
-              <button @click="makeDecision('reject')" class="decision-btn reject">
-                ❌ 拒绝
-              </button>
-            </div>
-          </div>
-
-          <!-- Decision Result -->
-          <div v-else class="detail-section">
-            <h3>🎯 决策结果</h3>
-            <div :class="['decision-result', detail.decision.decision]">
-              <span class="decision-label">
-                {{ decisionLabels[detail.decision.decision] || detail.decision.decision }}
-              </span>
-              <span v-if="detail.decision.reason" class="decision-reason">{{ detail.decision.reason }}</span>
+            <div class="timeline-meta">
+              <span>{{ item.jobTitle }}</span>
+              <span v-if="item.overallScore" class="timeline-score">综合 {{ item.overallScore }} 分</span>
+              <StatusBadge v-if="item.recommendation" :status="item.recommendation" type="recommendation" size="sm" />
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </SectionCard>
+
+    <!-- 招聘漏斗 -->
+    <SectionCard title="招聘漏斗">
+      <RecruitmentFunnel :data="funnelData" />
+    </SectionCard>
+
+    <!-- 历史记录 -->
+    <SectionCard v-if="historyInterviews.length > 0" title="历史记录">
+      <div class="history-list">
+        <div
+          v-for="item in historyInterviews"
+          :key="item.id"
+          class="history-item"
+          @click="selectInterview(item)"
+        >
+          <span class="history-name">{{ item.candidateName || '未知候选人' }}</span>
+          <span class="history-job">{{ item.jobTitle }}</span>
+          <span class="history-score" v-if="item.overallScore">{{ item.overallScore }} 分</span>
+          <StatusBadge v-if="item.recommendation" :status="item.recommendation" type="recommendation" size="sm" />
+          <span class="history-date">{{ item.createdAt }}</span>
+        </div>
+      </div>
+    </SectionCard>
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useEnterpriseContext } from '~/composables/useEnterpriseContext'
-import { useIdentityStore } from '~/stores/identity'
-import WorkspaceSwitcher from '~/components/WorkspaceSwitcher.vue'
+import SectionCard from '~/components/recruitment/SectionCard.vue'
+import StatusBadge from '~/components/recruitment/StatusBadge.vue'
+import RecruitmentFunnel from '~/components/recruitment/RecruitmentFunnel.vue'
 
-const ctx = useEnterpriseContext()
-const identityStore = useIdentityStore()
+const loading = ref(true)
+const interviews = ref([])
+const selected = ref(null)
+const dateRange = ref('today')
+const funnelData = ref([])
 
-// ─── State ───
-const loading = ref(false)
-const interviews = ref<any[]>([])
-const statusFilter = ref('')
-const searchQuery = ref('')
-const stats = ref({ total: 0, preparing: 0, ongoing: 0, completed: 0, cancelled: 0 })
+const dateOptions = [
+  { label: '今天', value: 'today' },
+  { label: '本周', value: 'week' },
+  { label: '本月', value: 'month' },
+]
 
-// Detail drawer
-const showDetail = ref(false)
-const detail = ref<any>(null)
-const detailLoading = ref(false)
-const timeline = ref<any[]>([])
-const showAddNote = ref(false)
-const newNote = ref('')
+// 需要处理的面试（有评估结果但尚未做决策）
+const pendingDecisions = computed(() =>
+  interviews.value.filter(i => i.overallScore && i.status === 'COMPLETED')
+)
 
-// ─── Labels ───
-const statusLabels: Record<string, string> = {
-  preparing: '准备中',
-  ongoing: '进行中',
-  completed: '已完成',
-  cancelled: '已取消',
+// 今日面试时间线
+const todayInterviews = computed(() => interviews.value.slice(0, 10))
+
+// 历史记录（非今日）
+const historyInterviews = computed(() => interviews.value.slice(10))
+
+function calcConfidence(item) {
+  if (!item.overallScore) return 0
+  // 可信度 = 综合评分的百分比映射（85分以上=高可信度）
+  return Math.min(95, Math.max(60, item.overallScore))
 }
 
-const categoryLabels: Record<string, string> = {
-  technical: '技术',
-  project: '项目',
-  behavioral: '行为',
-  deep: '深度',
+function selectInterview(item) {
+  selected.value = item
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-const decisionLabels: Record<string, string> = {
-  recommend_offer: '建议录用',
-  hold: '暂缓',
-  reject: '拒绝',
-}
-
-// ─── Computed ───
-const filteredInterviews = computed(() => {
-  let result = interviews.value
-  if (statusFilter.value) {
-    result = result.filter(i => i.status === statusFilter.value)
+function filterByPending() {
+  // 筛选待审核的面试
+  if (interviews.value.length > 0) {
+    const pending = interviews.value.find(i => i.status === 'COMPLETED' && i.overallScore)
+    if (pending) selected.value = pending
   }
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    result = result.filter(i =>
-      i.candidateName?.toLowerCase().includes(q) ||
-      i.jobTitle?.toLowerCase().includes(q)
-    )
-  }
-  return result
-})
-
-// ─── Methods ───
-function getWorkspaceId(): string {
-  return identityStore.workspaceId || ctx.getWorkspaceId()
 }
 
-function formatDate(date: string | Date): string {
-  if (!date) return '-'
-  return new Date(date).toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+async function makeDecision(decision) {
+  if (!selected.value) return
+  const labels = { pass: '通过', reject: '拒绝', second_round: '安排二面' }
+  alert(`决策：${labels[decision]} - ${selected.value.candidateName}\n\n（实际项目中调用 POST /api/admin/recruitment/interviews/:id/decision）`)
 }
 
-async function loadInterviews() {
+async function loadData() {
   loading.value = true
-  const wsId = getWorkspaceId()
   try {
-    const params = new URLSearchParams()
-    if (wsId) params.set('workspaceId', wsId)
-    if (statusFilter.value) params.set('status', statusFilter.value)
-
-    const res = await fetch(`/api/enterprise/interviews?${params}`)
-    const data = await res.json()
-    interviews.value = data.interviews || []
-
-    // Calculate stats
-    stats.value = {
-      total: interviews.value.length,
-      preparing: interviews.value.filter((i: any) => i.status === 'preparing').length,
-      ongoing: interviews.value.filter((i: any) => i.status === 'ongoing').length,
-      completed: interviews.value.filter((i: any) => i.status === 'completed').length,
-      cancelled: interviews.value.filter((i: any) => i.status === 'cancelled').length,
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    const res = await fetch('/api/admin/recruitment/interviews?page=1&pageSize=50', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      interviews.value = data.list || data.data || []
+      // 默认选中第一个待决策的
+      if (!selected.value && pendingDecisions.value.length > 0) {
+        selected.value = pendingDecisions.value[0]
+      }
+    }
+    // 加载漏斗数据
+    const funnelRes = await fetch('/api/enterprise/home', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (funnelRes.ok) {
+      const homeData = await funnelRes.json()
+      if (homeData.funnel) funnelData.value = homeData.funnel
     }
   } catch (e) {
-    console.error('加载面试列表失败', e)
+    console.error('Failed to load interview data:', e)
   } finally {
     loading.value = false
   }
 }
 
-let searchTimer: any = null
-function debounceSearch() {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {}, 300)
-}
-
-function refresh() {
-  loadInterviews()
-}
-
-async function openDetail(item: any) {
-  showDetail.value = true
-  detailLoading.value = true
-  detail.value = null
-  timeline.value = []
-
-  try {
-    const [detailRes, timelineRes] = await Promise.all([
-      fetch(`/api/enterprise/interview/${item.id}`),
-      fetch(`/api/enterprise/interview/${item.id}/timeline`),
-    ])
-
-    const detailData = await detailRes.json()
-    if (detailData.success) {
-      detail.value = detailData.data
-    }
-
-    const timelineData = await timelineRes.json()
-    if (timelineData.success) {
-      timeline.value = timelineData.data
-    }
-  } catch (e) {
-    console.error('加载面试详情失败', e)
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-function closeDetail() {
-  showDetail.value = false
-  detail.value = null
-  showAddNote.value = false
-  newNote.value = ''
-}
-
-async function addNote() {
-  if (!newNote.value.trim() || !detail.value) return
-  try {
-    const res = await fetch(`/api/enterprise/interview/${detail.value.id}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: newNote.value.trim() }),
-    })
-    const data = await res.json()
-    if (data.success) {
-      newNote.value = ''
-      showAddNote.value = false
-      openDetail(detail.value) // Reload
-    }
-  } catch (e) {
-    console.error('添加笔记失败', e)
-  }
-}
-
-async function deleteNote(noteId: string) {
-  if (!confirm('确定删除此笔记？')) return
-  try {
-    const res = await fetch(`/api/enterprise/interview/notes/${noteId}`, {
-      method: 'DELETE',
-    })
-    const data = await res.json()
-    if (data.success && detail.value) {
-      openDetail(detail.value) // Reload
-    }
-  } catch (e) {
-    console.error('删除笔记失败', e)
-  }
-}
-
-async function makeDecision(decision: string) {
-  if (!detail.value) return
-  const reason = prompt('请输入决策原因（可选）：') || ''
-  try {
-    const res = await fetch(`/api/enterprise/interview/${detail.value.id}/decision`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ decision, reason }),
-    })
-    const data = await res.json()
-    if (data.success) {
-      openDetail(detail.value) // Reload
-    } else {
-      alert(data.error || '保存失败')
-    }
-  } catch (e) {
-    console.error('保存决策失败', e)
-  }
-}
-
-// ─── Navigation ───
-function goToWorkspaceCenter() {
-  window.location.href = '/workspace/enterprise/onboarding'
-}
-
-function goToBilling() {
-  window.location.href = '/workspace/enterprise/billing'
-}
-
-// ─── Lifecycle ───
-onMounted(async () => {
-  // Sprint-08: Fetch identity context from backend
-  await identityStore.fetchContext()
-
-  if (!getWorkspaceId()) {
-    window.location.href = '/workspace/enterprise/onboarding'
-    return
-  }
-  loadInterviews()
-
-  // Sprint-08: Listen for workspace switch events
-  window.addEventListener('workspace-switched', () => {
-    loadInterviews()
-  })
+onMounted(() => {
+  loadData()
+  // 60秒自动刷新
+  setInterval(loadData, 60000)
 })
 </script>
 
 <style scoped>
 .interview-workspace {
-  padding: 24px;
-  max-width: 1200px;
+  max-width: 960px;
   margin: 0 auto;
-}
-
-.ceo-top-nav {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.ceo-nav-btn {
-  padding: 8px 16px;
-  border: 1px solid #1A2240;
-  background: #0A0F1E;
-  color: #9ca3af;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.15s;
-}
-
-.ceo-nav-btn:hover {
-  border-color: #2563eb;
-  color: #60a5fa;
+  padding: 32px 24px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #1A1A1A;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 700;
   margin: 0;
 }
 
 .page-subtitle {
-  color: #6b7280;
-  font-size: 13px;
-  margin-top: 4px;
+  font-size: 14px;
+  color: #6B7280;
+  margin: 4px 0 0;
 }
 
-.header-right {
-  display: flex;
-  gap: 12px;
-}
-
-.stats-bar {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.stat-item {
-  flex: 1;
-  background: #0A0F1E;
-  border: 1px solid #1A2240;
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-}
-
-.stat-num {
-  display: block;
-  font-size: 28px;
-  font-weight: 700;
-  color: #60a5fa;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.filter-bar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.ceo-select,
-.ceo-input {
-  padding: 8px 12px;
-  border: 1px solid #1A2240;
-  background: #0A0F1E;
-  color: white;
-  border-radius: 8px;
-  font-size: 13px;
-}
-
-.ceo-input {
-  flex: 1;
-}
-
-.loading-state {
+.header-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  padding: 60px;
-  color: #6b7280;
 }
 
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid #1A2240;
-  border-top-color: #60a5fa;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.date-toggle {
+  display: flex;
+  background: #F3F4F6;
+  border-radius: 6px;
+  padding: 2px;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.toggle-btn {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #6B7280;
+  transition: all 0.15s;
 }
 
-.ceo-empty {
+.toggle-btn.active {
+  background: #fff;
+  color: #1A1A1A;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* 空状态 */
+.empty-state {
   text-align: center;
-  padding: 60px;
-  color: #6b7280;
+  padding: 80px 24px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
 }
 
-.ceo-empty h2 {
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
   font-size: 18px;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 
-.interview-list {
+.empty-state p {
+  color: #6B7280;
+  margin: 0 0 24px;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* 需要处理 */
+.decision-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.interview-card {
-  background: #0A0F1E;
-  border: 1px solid #1A2240;
-  border-radius: 12px;
-  padding: 16px;
+.decision-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background: #FAFAFA;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
   cursor: pointer;
   transition: all 0.15s;
 }
 
-.interview-card:hover {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+.decision-card:hover {
+  border-color: #2563EB;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
 }
 
-.interview-main {
+.decision-main {
   display: flex;
   align-items: center;
-  gap: 16px;
-}
-
-.interview-candidate {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 32px;
   flex: 1;
 }
 
-.candidate-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #1e3a5f;
-  color: #60a5fa;
+.candidate-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.job-title {
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.decision-metrics {
   display: flex;
+  gap: 24px;
+}
+
+.metric-score, .metric-confidence {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
   font-size: 16px;
   font-weight: 600;
 }
 
-.candidate-info {
-  flex: 1;
+.score-large {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2563EB;
 }
 
-.candidate-name {
-  font-size: 15px;
-  font-weight: 500;
+/* 综合评估 */
+.evaluation-detail {
+  padding: 8px 0;
 }
 
-.candidate-job {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-.interview-meta {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.status-badge {
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.status-badge.preparing { background: #fef3c7; color: #92400e; }
-.status-badge.ongoing { background: #dbeafe; color: #1e40af; }
-.status-badge.completed { background: #d1fae5; color: #065f46; }
-.status-badge.cancelled { background: #fee2e2; color: #991b1b; }
-
-.score-badge {
-  padding: 4px 8px;
-  background: #1e3a5f;
-  color: #60a5fa;
-  border-radius: 12px;
-  font-size: 11px;
-}
-
-.question-count {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.interview-time {
-  text-align: right;
-  min-width: 100px;
-}
-
-.time-label {
-  font-size: 10px;
-  color: #6b7280;
-}
-
-.time-value {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.ceo-btn-small {
-  padding: 6px 12px;
-  border: 1px solid #1A2240;
-  background: transparent;
-  color: #9ca3af;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.ceo-btn-small:hover {
-  border-color: #2563eb;
-  color: #60a5fa;
-}
-
-.ceo-btn-secondary {
-  padding: 8px 16px;
-  border: 1px solid #1A2240;
-  background: transparent;
-  color: #9ca3af;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.ceo-btn-secondary:hover {
-  border-color: #2563eb;
-  color: #60a5fa;
-}
-
-/* Drawer */
-.drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 100;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.drawer-panel {
-  width: 600px;
-  max-width: 90vw;
-  height: 100vh;
-  background: #060A18;
-  border-left: 1px solid #1A2240;
-  overflow-y: auto;
-  animation: slideIn 0.2s ease;
-}
-
-@keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-.drawer-header {
+.eval-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #1A2240;
-  position: sticky;
-  top: 0;
-  background: #060A18;
-  z-index: 1;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #E5E7EB;
 }
 
-.drawer-header h2 {
+.eval-candidate h2 {
+  font-size: 20px;
+  font-weight: 700;
   margin: 0;
-  font-size: 18px;
 }
 
-.close-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #1A2240;
-  background: transparent;
-  color: #9ca3af;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
+.eval-job {
+  font-size: 14px;
+  color: #6B7280;
 }
 
-.drawer-loading {
+.score-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 60px;
-  color: #6b7280;
+  color: #fff;
 }
 
-.drawer-content {
-  padding: 20px;
+.score-number {
+  font-size: 24px;
+  font-weight: 700;
 }
 
-.detail-section {
+.score-label {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.eval-dimensions {
   margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #1A2240;
 }
 
-.detail-section:last-child {
-  border-bottom: none;
-}
-
-.section-header {
+.dim-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
   margin-bottom: 12px;
 }
 
-.detail-section h3 {
-  font-size: 15px;
+.dim-label {
+  width: 80px;
+  font-size: 13px;
+  color: #6B7280;
+  text-align: right;
+}
+
+.dim-bar {
+  flex: 1;
+  height: 8px;
+  background: #F3F4F6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dim-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563EB, #60A5FA);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.dim-value {
+  width: 32px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.eval-summary, .eval-strengths, .eval-concerns {
+  margin-bottom: 20px;
+}
+
+.eval-summary h4, .eval-strengths h4, .eval-concerns h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+}
+
+.eval-summary p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1A1A1A;
   margin: 0;
 }
 
-.detail-info {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tag-success {
+  background: #ECFDF5;
+  color: #059669;
+}
+
+.tag-warning {
+  background: #FFFBEB;
+  color: #D97706;
+}
+
+.eval-actions {
+  display: flex;
   gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid #E5E7EB;
 }
 
-.info-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.info-label {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.info-value {
-  font-size: 13px;
-}
-
-/* Timeline */
+/* 时间线 */
 .timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  position: relative;
 }
 
 .timeline-item {
   display: flex;
-  gap: 12px;
-  padding-bottom: 16px;
-  position: relative;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #F3F4F6;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 6px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
-.timeline-item:not(:last-child)::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 18px;
-  bottom: 0;
-  width: 2px;
-  background: #1A2240;
+.timeline-item:hover {
+  background: #FAFAFA;
 }
 
-.timeline-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+.timeline-item:last-child {
+  border-bottom: none;
+}
+
+.timeline-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
-.timeline-dot.created { background: #60a5fa; }
-.timeline-dot.started { background: #fbbf24; }
-.timeline-dot.note { background: #a78bfa; }
-.timeline-dot.evaluation { background: #34d399; }
-.timeline-dot.decision { background: #f87171; }
-.timeline-dot.completed { background: #10b981; }
+.marker-icon {
+  font-size: 14px;
+}
+
+.marker-icon.done { color: #10B981; }
+.marker-icon.active { color: #2563EB; }
+.marker-icon.pending { color: #D1D5DB; }
 
 .timeline-content {
   flex: 1;
 }
 
-.timeline-title {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.timeline-desc {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-.timeline-time {
-  font-size: 11px;
-  color: #4b5563;
-  margin-top: 4px;
-}
-
-/* Questions */
-.questions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.question-item {
-  background: #0A0F1E;
-  border: 1px solid #1A2240;
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.question-header {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.question-num {
-  font-size: 12px;
-  font-weight: 600;
-  color: #60a5fa;
-}
-
-.question-category {
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: #1e3a5f;
-  color: #60a5fa;
-}
-
-.question-text {
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.question-answer {
-  margin-top: 8px;
-  padding: 8px;
-  background: #060A18;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-/* Evaluation */
-.beta-tag {
-  font-size: 10px;
-  padding: 2px 8px;
-  background: #f59e0b;
-  color: white;
-  border-radius: 10px;
-  font-weight: 500;
-}
-
-.evaluation-card {
-  background: #0A0F1E;
-  border: 1px solid #1A2240;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.eval-scores {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.eval-score {
-  text-align: center;
-}
-
-.score-value {
-  display: block;
-  font-size: 24px;
-  font-weight: 700;
-  color: #60a5fa;
-}
-
-.score-label {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.eval-summary {
-  font-size: 13px;
-  line-height: 1.5;
-  margin-bottom: 8px;
-}
-
-.eval-recommendation {
-  font-size: 12px;
-  color: #34d399;
-  padding: 8px;
-  background: rgba(52, 211, 153, 0.1);
-  border-radius: 6px;
-}
-
-/* Notes */
-.add-note {
-  margin-bottom: 16px;
-}
-
-.note-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #1A2240;
-  background: #060A18;
-  color: white;
-  border-radius: 8px;
-  font-size: 13px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.note-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.ceo-btn-primary {
-  padding: 8px 16px;
-  border: none;
-  background: #2563eb;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.ceo-btn-primary:hover {
-  background: #1d4ed8;
-}
-
-.notes-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.note-item {
-  background: #0A0F1E;
-  border: 1px solid #1A2240;
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.note-content {
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-.note-meta {
+.timeline-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.note-delete {
-  border: none;
-  background: transparent;
-  color: #ef4444;
-  cursor: pointer;
-  font-size: 11px;
-}
-
-.note-delete:hover {
-  color: #dc2626;
-}
-
-.empty-text {
-  font-size: 13px;
-  color: #6b7280;
-  text-align: center;
-  padding: 20px;
-}
-
-/* Decision */
-.decision-buttons {
-  display: flex;
-  gap: 12px;
-}
-
-.decision-btn {
-  flex: 1;
-  padding: 12px;
-  border: 2px solid;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.15s;
-}
-
-.decision-btn.offer {
-  border-color: #10b981;
-  color: #10b981;
-}
-
-.decision-btn.offer:hover {
-  background: #10b981;
-  color: white;
-}
-
-.decision-btn.hold {
-  border-color: #f59e0b;
-  color: #f59e0b;
-}
-
-.decision-btn.hold:hover {
-  background: #f59e0b;
-  color: white;
-}
-
-.decision-btn.reject {
-  border-color: #ef4444;
-  color: #ef4444;
-}
-
-.decision-btn.reject:hover {
-  background: #ef4444;
-  color: white;
-}
-
-.decision-result {
-  padding: 16px;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.decision-result.recommend_offer {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid #10b981;
-}
-
-.decision-result.hold {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid #f59e0b;
-}
-
-.decision-result.reject {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid #ef4444;
-}
-
-.decision-label {
-  display: block;
-  font-size: 16px;
-  font-weight: 600;
   margin-bottom: 4px;
 }
 
-.decision-result.recommend_offer .decision-label { color: #10b981; }
-.decision-result.hold .decision-label { color: #f59e0b; }
-.decision-result.reject .decision-label { color: #ef4444; }
+.timeline-name {
+  font-size: 15px;
+  font-weight: 600;
+}
 
-.decision-reason {
+.timeline-time {
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.timeline-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.timeline-score {
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+/* 历史记录 */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.history-item:hover {
+  background: #FAFAFA;
+}
+
+.history-name {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.history-job {
+  font-size: 13px;
+  color: #6B7280;
+  flex: 1;
+}
+
+.history-score {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.history-date {
   font-size: 12px;
-  color: #6b7280;
+  color: #9CA3AF;
+}
+
+/* 按钮 */
+.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-ghost {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.btn-primary {
+  background: #2563EB;
+  color: #fff;
+}
+.btn-primary:hover { background: #1D4ED8; }
+
+.btn-secondary {
+  background: #F3F4F6;
+  color: #1A1A1A;
+}
+.btn-secondary:hover { background: #E5E7EB; }
+
+.btn-success {
+  background: #10B981;
+  color: #fff;
+}
+.btn-success:hover { background: #059669; }
+
+.btn-danger {
+  background: #EF4444;
+  color: #fff;
+}
+.btn-danger:hover { background: #DC2626; }
+
+.btn-ghost {
+  background: transparent;
+  color: #6B7280;
+  padding: 8px;
+}
+.btn-ghost:hover { background: #F3F4F6; }
+
+/* 响应式 */
+@media (max-width: 767px) {
+  .interview-workspace { padding: 16px; }
+  .page-header { flex-direction: column; gap: 16px; }
+  .decision-main { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .eval-header { flex-direction: column; gap: 16px; }
+  .eval-actions { flex-wrap: wrap; }
+  .history-item { flex-wrap: wrap; }
 }
 </style>
