@@ -105,8 +105,8 @@
             <span v-if="job.experienceMin">💼 {{ job.experienceMin }}年+</span>
             <span v-if="job.requiredSkills?.length">🛠 {{ job.requiredSkills.slice(0, 3).join(', ') }}</span>
           </div>
-          <div class="job-match-info" v-if="job.matchCount > 0">
-            <span class="match-badge">🎯 {{ job.matchCount }} 位匹配</span>
+          <div class="job-match-info" v-if="jobMatchCounts[job.id] > 0">
+            <span class="match-badge">🎯 {{ jobMatchCounts[job.id] }} 位匹配</span>
           </div>
         </div>
         <div class="job-card-footer">
@@ -157,9 +157,23 @@ const stats = computed(() => {
   const totalCandidates = batchJobs.value
     .filter(b => b.status === 'COMPLETED')
     .reduce((sum, b) => sum + (b.matchedCount || 0), 0)
-  const pendingReview = totalCandidates > 0 ? Math.min(totalCandidates, 5) : 0
+  // Reality Debt 修复：pendingReview 不再使用 Math.min 伪造数据
+  const pendingReview = totalCandidates
 
   return { totalJobs, matchingTasks, totalCandidates, pendingReview }
+})
+
+// Reality Debt 修复：matchCount 断链修复
+// 后端 JobRequirementDTO 不含 matchCount 字段
+// 真实来源：batchJobs 中该 job 的 matchedCount 聚合
+const jobMatchCounts = computed(() => {
+  const counts: Record<string, number> = {}
+  for (const b of batchJobs.value) {
+    if (b.status === 'COMPLETED' && b.jobRequirementId) {
+      counts[b.jobRequirementId] = (counts[b.jobRequirementId] || 0) + (b.matchedCount || 0)
+    }
+  }
+  return counts
 })
 
 // ─── Helpers ───
