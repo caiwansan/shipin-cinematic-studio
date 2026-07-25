@@ -44,6 +44,30 @@
       </div>
     </div>
 
+    <!-- Identity Loading -->
+    <div v-if="identityLoading" class="recruitment-loading">
+      <div class="loading-spinner"></div>
+      <span>身份验证中...</span>
+    </div>
+
+    <!-- Identity Gate: 无企业身份用户 -->
+    <div v-else-if="!identity?.hasEnterprise" class="recruitment-gate">
+      <div class="gate-card">
+        <div class="gate-icon">🏢</div>
+        <h2>企业身份认证</h2>
+        <p>您需要完成企业身份认证才能使用 AI 招聘中心</p>
+        <div class="gate-features">
+          <div class="gate-feature">🤖 AI 智能匹配候选人</div>
+          <div class="gate-feature">📄 简历自动分析</div>
+          <div class="gate-feature">🎤 AI 面试官</div>
+          <div class="gate-feature">📊 招聘数据看板</div>
+        </div>
+        <button @click="goToOnboarding" class="gate-btn-primary">
+          立即认证企业身份
+        </button>
+      </div>
+    </div>
+
     <!-- Loading State -->
     <div v-if="loading" class="recruitment-loading">
       <div class="loading-spinner"></div>
@@ -97,6 +121,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { listRequirements, listBatchJobs } from '~/studio-v2/api/recruitment-api'
+import { getEnterpriseIdentity, type EnterpriseIdentityStatus } from '~/studio-v2/api/job/enterprise-identity-api'
 
 // ─── Navigation ───
 function goToHome() {
@@ -110,6 +135,14 @@ function goToCreateJob() {
 function goToJobDetail(id: string) {
   window.location.href = `/workspace/recruitment/jobs/${id}`
 }
+
+function goToOnboarding() {
+  window.location.href = '/workspace/recruitment/onboarding'
+}
+
+// ─── Identity Gate ───
+const identityLoading = ref(true)
+const identity = ref<EnterpriseIdentityStatus | null>(null)
 
 // ─── State ───
 const loading = ref(true)
@@ -173,8 +206,22 @@ async function refresh() {
   }
 }
 
-onMounted(() => {
-  refresh()
+onMounted(async () => {
+  // Step 1: 验证企业身份
+  try {
+    identity.value = await getEnterpriseIdentity()
+  } catch (e: any) {
+    error.value = e.message || '身份验证失败'
+  } finally {
+    identityLoading.value = false
+  }
+
+  // Step 2: 有企业身份才加载数据
+  if (identity.value?.hasEnterprise) {
+    refresh()
+  } else {
+    loading.value = false
+  }
 })
 </script>
 
@@ -465,5 +512,74 @@ onMounted(() => {
 .job-arrow {
   color: rgba(255, 255, 255, 0.3);
   font-size: 1rem;
+}
+
+/* ─── Identity Gate ─── */
+.recruitment-gate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80px 24px;
+}
+
+.gate-card {
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  background: #0d1220;
+  border: 1px solid #1a2240;
+  border-radius: 16px;
+  padding: 48px 36px;
+}
+
+.gate-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.gate-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+.gate-card p {
+  margin: 0 0 24px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.gate-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.gate-feature {
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: left;
+}
+
+.gate-btn-primary {
+  padding: 14px 32px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.gate-btn-primary:hover {
+  box-shadow: 0 4px 20px rgba(96, 165, 250, 0.35);
+  transform: translateY(-1px);
 }
 </style>
