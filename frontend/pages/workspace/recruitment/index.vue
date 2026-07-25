@@ -11,36 +11,45 @@
       </button>
     </div>
 
-    <!-- Page Header -->
-    <div class="recruitment-header">
-      <div class="header-left">
-        <h1 class="recruitment-title">🤖 AI 招聘中心</h1>
-        <p class="recruitment-subtitle">智能匹配，一键找到最佳候选人</p>
-      </div>
-      <div class="header-right">
-        <button @click="refresh" class="recruitment-btn-secondary" :disabled="loading">
-          🔄 刷新
-        </button>
-      </div>
-    </div>
-
-    <!-- Stats Summary -->
+    <!-- Cockpit Stats — 招聘状态驾驶舱（第一屏即见） -->
     <div class="recruitment-stats">
-      <div class="stat-card">
-        <span class="stat-num">{{ stats.totalJobs }}</span>
-        <span class="stat-label">岗位数</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-num">{{ stats.matchingTasks }}</span>
-        <span class="stat-label">匹配任务</span>
+      <div class="stat-card stat-card--primary">
+        <span class="stat-num">{{ stats.activeJobs }}</span>
+        <span class="stat-label">招聘中岗位</span>
       </div>
       <div class="stat-card">
         <span class="stat-num">{{ stats.totalCandidates }}</span>
-        <span class="stat-label">候选人才</span>
+        <span class="stat-label">候选匹配</span>
       </div>
       <div class="stat-card">
         <span class="stat-num">{{ stats.pendingReview }}</span>
         <span class="stat-label">待处理推荐</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">{{ stats.interviewsPending }}</span>
+        <span class="stat-label">待面试</span>
+      </div>
+    </div>
+
+    <!-- Next Actions — 下一步行动（紧跟状态仪表） -->
+    <div v-if="!loading && hasEnterprise" class="recruitment-actions">
+      <h2 class="section-title">📌 下一步行动</h2>
+      <div class="action-grid">
+        <div class="action-card" @click="goToCreateJob">
+          <span class="action-icon">➕</span>
+          <span class="action-label">创建新岗位</span>
+          <span class="action-desc">AI 自动生成 JD 并匹配候选人</span>
+        </div>
+        <div class="action-card" @click="goToJobList" :class="{ 'action-card--muted': stats.totalCandidates === 0 }">
+          <span class="action-icon">🎯</span>
+          <span class="action-label">查看匹配结果</span>
+          <span class="action-desc">{{ stats.totalCandidates > 0 ? stats.totalCandidates + ' 位候选人待查看' : '暂无匹配结果' }}</span>
+        </div>
+        <div class="action-card" @click="goToInterview" :class="{ 'action-card--muted': stats.interviewsPending === 0 }">
+          <span class="action-icon">🎤</span>
+          <span class="action-label">AI 面试</span>
+          <span class="action-desc">{{ stats.interviewsPending > 0 ? stats.interviewsPending + ' 场待安排' : '完成匹配后可安排面试' }}</span>
+        </div>
       </div>
     </div>
 
@@ -74,7 +83,7 @@
       <span>加载中...</span>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty State — 无岗位时引导创建 -->
     <div v-else-if="jobs.length === 0" class="recruitment-empty">
       <div class="empty-icon">🤖</div>
       <h2>开始使用 AI 招聘</h2>
@@ -140,6 +149,16 @@ function goToOnboarding() {
   window.location.href = '/workspace/recruitment/onboarding'
 }
 
+function goToJobList() {
+  // 滚动到岗位列表区域
+  const el = document.querySelector('.recruitment-job-list')
+  if (el) el.scrollIntoView({ behavior: 'smooth' })
+}
+
+function goToInterview() {
+  window.location.href = '/workspace/recruitment/interviews'
+}
+
 // ─── Identity Gate ───
 const identityLoading = ref(true)
 const identity = ref<EnterpriseIdentityStatus | null>(null)
@@ -153,14 +172,18 @@ const error = ref('')
 // ─── Stats ───
 const stats = computed(() => {
   const totalJobs = jobs.value.length
+  const activeJobs = jobs.value.filter(j => j.status === 'active').length
   const matchingTasks = batchJobs.value.filter(b => b.status === 'RUNNING').length
   const totalCandidates = batchJobs.value
     .filter(b => b.status === 'COMPLETED')
     .reduce((sum, b) => sum + (b.matchedCount || 0), 0)
   // Reality Debt 修复：pendingReview 不再使用 Math.min 伪造数据
   const pendingReview = totalCandidates
+  // 面试数据：当前 API 使用 workspaceId 体系，enterprise 维度暂无法统计
+  // 无真实数据显示 0，不补假数据
+  const interviewsPending = 0
 
-  return { totalJobs, matchingTasks, totalCandidates, pendingReview }
+  return { totalJobs, activeJobs, matchingTasks, totalCandidates, pendingReview, interviewsPending }
 })
 
 // Reality Debt 修复：matchCount 断链修复
@@ -175,6 +198,8 @@ const jobMatchCounts = computed(() => {
   }
   return counts
 })
+
+const hasEnterprise = computed(() => identity.value?.hasEnterprise === true)
 
 // ─── Helpers ───
 function getStatusLabel(status: string): string {
@@ -326,6 +351,27 @@ onMounted(async () => {
   color: #fff;
 }
 
+/* ─── Cockpit Stat Card Zero State ─── */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.stat-card--primary::after {
+  background: linear-gradient(90deg, #60a5fa, #3b82f6);
+}
+
 .recruitment-btn-primary {
   padding: 10px 20px;
   font-size: 0.9rem;
@@ -347,6 +393,88 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.stat-card--primary {
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.stat-card--primary .stat-num {
+  font-size: 2.4rem;
+  color: #60a5fa;
+}
+
+.stat-card--zero .stat-num {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.action-card--muted {
+  opacity: 0.6;
+}
+
+.action-card--muted:hover {
+  opacity: 1;
+}
+
+/* ─── Next Actions ─── */
+.recruitment-actions {
+  padding: 0 24px 32px;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  background: #0d1220;
+  border: 1px solid #1a2240;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.action-card:hover {
+  border-color: rgba(96, 165, 250, 0.3);
+  box-shadow: 0 4px 20px rgba(96, 165, 250, 0.1);
+}
+
+.action-icon {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.action-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.action-desc {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .action-grid {
+    grid-template-columns: 1fr;
+  }
+  .recruitment-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ─── Original Stats padding (overridden above) ─── */
+.recruitment-stats-original {
   padding: 0 24px 24px;
 }
 
