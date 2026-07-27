@@ -477,21 +477,32 @@ function stepCompleted(num: number): boolean {
 }
 
 function goToWorkspace() {
-  window.location.href = '/workspace/enterprise'
+  window.location.href = '/workspace/recruitment'
 }
 
 // ─── 方法 ───
 
-function getEnterpriseId(): string {
-  return ctx.getEnterpriseId()
-}
-
 async function loadOnboardingState() {
   loading.value = true
-  enterpriseId.value = getEnterpriseId()
+  enterpriseId.value = ctx.getEnterpriseId()
 
-  // Guard: if no enterpriseId, skip API call
-  if (!enterpriseId.value) {
+  // 加载套餐列表（无论是否有 enterpriseId 都需要）
+  try {
+    const plansRes = await fetch('/api/enterprise/plans')
+    if (plansRes.ok) {
+      const plansData = await plansRes.json()
+      plans.value = plansData.plans || []
+    }
+  } catch (e) {
+    console.error('加载套餐列表失败', e)
+  }
+
+  // mode=new-workspace: 强制从头创建，跳过已有 enterpriseId 的状态加载
+  const urlParams = new URLSearchParams(window.location.search)
+  const isNewWorkspace = urlParams.get('mode') === 'new-workspace'
+
+  // Guard: if no enterpriseId or force new workspace, skip onboarding state API call
+  if (!enterpriseId.value || isNewWorkspace) {
     loading.value = false
     return
   }
@@ -505,18 +516,11 @@ async function loadOnboardingState() {
         currentStep.value = stateData.state.currentStep || 1
         if (stateData.state.workspaceId) workspaceId.value = stateData.state.workspaceId
         if (stateData.state.completed) {
-          // 已完成，跳转到 Dashboard
-          window.location.href = '/workspace/enterprise'
+          // 已完成，跳转到招聘工作台
+          window.location.href = '/workspace/recruitment'
           return
         }
       }
-    }
-
-    // 加载套餐列表
-    const plansRes = await fetch('/api/enterprise/plans')
-    if (plansRes.ok) {
-      const plansData = await plansRes.json()
-      plans.value = plansData.plans || []
     }
   } catch (e) {
     console.error('加载Onboarding状态失败', e)
@@ -526,7 +530,6 @@ async function loadOnboardingState() {
 }
 
 async function handleStep1() {
-  if (!enterpriseId.value) return
   saving.value = true
   try {
     const token = localStorage.getItem('token') || ''
@@ -534,13 +537,21 @@ async function handleStep1() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        enterpriseId: enterpriseId.value,
+        enterpriseId: enterpriseId.value || undefined,
         ...step1.value,
       }),
     })
     const data = await res.json()
     if (data.success) {
-      workspaceId.value = data.workspace.id
+      // 保存返回的 enterpriseId 和 workspaceId
+      if (data.enterpriseId) {
+        enterpriseId.value = data.enterpriseId
+        ctx.setEnterprise(data.enterpriseId)
+      }
+      if (data.workspace?.id) {
+        workspaceId.value = data.workspace.id
+        ctx.setWorkspace(data.workspace.id)
+      }
       currentStep.value = 2
     } else {
       alert(data.error || '保存失败')
@@ -678,21 +689,22 @@ async function handleStep4() {
 async function handleComplete() {
   saving.value = true
   try {
+    const token = localStorage.getItem('token') || ''
     const res = await fetch('/api/enterprise/onboarding/complete', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         enterpriseId: enterpriseId.value,
       }),
     })
     const data = await res.json()
     if (data.success) {
-      // ✅ Gate-1 Fix: 完成 onboarding 后必须写入 localStorage，否则 index.vue 会再次跳转 onboarding
-      localStorage.setItem('enterprise_id', enterpriseId.value)
+      // P0-1-B: 通过统一 Context 写入身份，禁止直接操作 localStorage
+      ctx.setEnterprise(enterpriseId.value)
       if (workspaceId.value) {
-        localStorage.setItem('workspace_id', workspaceId.value)
+        ctx.setWorkspace(workspaceId.value)
       }
-      window.location.href = '/workspace/enterprise'
+      window.location.href = '/workspace/recruitment'
     } else {
       alert(data.error || '完成失败')
     }
