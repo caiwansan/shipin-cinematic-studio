@@ -343,7 +343,7 @@ onMounted(async () => {
     }
   } catch (e) {
     supportedProviders.value = [
-      { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-chat', 'deepseek-coder'] },
+      { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-v4-flash', 'deepseek-v4-pro'] },
       { id: 'openai', name: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini'] },
       { id: 'claude', name: 'Claude', models: ['claude-3-5-sonnet', 'claude-3-haiku'] },
     ]

@@ -20,6 +20,9 @@ export interface UnifiedPayload {
 
 const ALL_CAPS = ['llm', 'image', 'video', 'tts', 'music', 'visionUnderstand'] as const
 
+/** 非列式存储的能力（存入 capabilityLlmConfigs JSONB） */
+const JSONB_CAPS = ['career_agent', 'hdz', 'ppt', 'novel'] as const
+
 export async function saveUnifiedModelConfig(
   userId: string,
   payload: UnifiedPayload
@@ -114,4 +117,44 @@ export async function saveUnifiedModelConfig(
       visionUnderstandBaseUrl: baseUrlMap.visionUnderstand,
     },
   })
+
+  // ⭐ Phase 3: JSONB 能力配置（career_agent, hdz, ppt, novel）
+  const jsonbConfigs: Record<string, any> = {}
+  for (const cap of JSONB_CAPS) {
+    const hasProvider = payload.providerMap[cap]
+    const hasModel = payload.modelMap[cap]
+    const hasKey = payload.apiKeys[cap]
+    if (hasProvider || hasModel || hasKey) {
+      // 读取现有配置，避免覆盖
+      const existingCfg = await prisma.userModelConfigV2.findUnique({
+        where: { userId },
+        select: { capabilityLlmConfigs: true },
+      })
+      const existing = (existingCfg?.capabilityLlmConfigs as Record<string, any>) || {}
+      const prev = existing[cap] || {}
+      jsonbConfigs[cap] = {
+        provider: hasProvider || prev.provider || '',
+        model: hasModel || prev.model || '',
+        baseUrl: baseUrlMap[cap] || prev.baseUrl || '',
+        enabled: payload.enabledMap?.[cap] ?? prev.enabled ?? true,
+        ...(hasKey ? { hasApiKey: true } : { hasApiKey: prev.hasApiKey || false }),
+      }
+    }
+  }
+
+  if (Object.keys(jsonbConfigs).length > 0) {
+    // 合并到现有 capabilityLlmConfigs
+    const existingCfg = await prisma.userModelConfigV2.findUnique({
+      where: { userId },
+      select: { capabilityLlmConfigs: true },
+    })
+    const merged = { ...((existingCfg?.capabilityLlmConfigs as Record<string, any>) || {}) }
+    for (const [cap, cfg] of Object.entries(jsonbConfigs)) {
+      merged[cap] = { ...(merged[cap] || {}), ...cfg }
+    }
+    await prisma.userModelConfigV2.update({
+      where: { userId },
+      data: { capabilityLlmConfigs: merged },
+    })
+  }
 }

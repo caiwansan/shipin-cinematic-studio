@@ -306,7 +306,7 @@ export class AgentIdentityService {
       return await prisma.employeeModelBinding.update({
         where: { id: existing.id },
         data: {
-          modelName: input.modelName || 'deepseek-chat',
+          modelName: input.modelName || 'deepseek-v4-flash',
           temperature: input.temperature ?? 0.7,
           maxTokens: input.maxTokens ?? 16384,
           enabled: true,
@@ -319,7 +319,7 @@ export class AgentIdentityService {
         tenantId: input.tenantId,
         employeeId: input.employeeId,
         providerConfigId: input.providerConfigId,
-        modelName: input.modelName || 'deepseek-chat',
+        modelName: input.modelName || 'deepseek-v4-flash',
         temperature: input.temperature ?? 0.7,
         maxTokens: input.maxTokens ?? 16384,
         enabled: true,

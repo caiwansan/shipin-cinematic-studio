@@ -70,7 +70,7 @@ const MODEL_CAPABILITY_RULES: Record<string, Capability[]> = {
   'qwen2.5-72b-instruct': ['llm-text'],
   'qwen2.5-32b-instruct': ['llm-text'],
   'qwen2.5-14b-instruct': ['llm-text'],
-  'deepseek-chat': ['llm-text'],
+  'deepseek-v4-flash': ['llm-text'],
   'deepseek-r1': ['llm-text'],
   'gemini-2.0-flash': ['llm-text'],
   'gemini-2.5-pro': ['llm-text'],

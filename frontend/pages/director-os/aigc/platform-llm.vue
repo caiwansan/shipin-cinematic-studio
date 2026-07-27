@@ -40,7 +40,7 @@
             </div>
             <div>
               <label class="text-[10px] text-gray-500 block mb-1">模型列表（逗号分隔）</label>
-              <input v-model="form.models" class="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-white/70 outline-none focus:border-indigo-500/40" placeholder="deepseek-chat, deepseek-reasoner" />
+              <input v-model="form.models" class="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-white/70 outline-none focus:border-indigo-500/40" placeholder="deepseek-v4-flash, deepseek-v4-pro" />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -156,7 +156,7 @@ function onTypeChange() {
   const presets: Record<string, { name: string; baseUrl: string; models: string }> = {
     qwen: { name: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', models: 'qwen-plus, qwen-max, qwen-turbo' },
     meituan: { name: '美团大模型', baseUrl: 'https://api.mt.cn/v1', models: 'mt-nlp-1.0, mt-ocr-1.0' },
-    deepseek: { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com', models: 'deepseek-chat, deepseek-reasoner' },
+    deepseek: { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com', models: 'deepseek-v4-flash, deepseek-v4-pro' },
     openai: { name: 'OpenAI 兼容', baseUrl: '', models: '' },
     custom: { name: '', baseUrl: '', models: '' },
   }

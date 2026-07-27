@@ -10,10 +10,17 @@
  *
  * 解析链优先级（从高到低）：
  *   1. 输入层 input.model / input.apiKey（前端用户选）
- *   2. 用户配置层 UserModelConfig（DB 存储）
- *   3. 阶段配置层 AiStageModelConfig（管理配置）
- *   4. Provider 注册表 ModelProvider（系统默认）
- *   5. 环境变量 process.env（最低优先级，仅作为开发后门）
+ *   2. 企业配置层 EnterpriseLlmConfig（tenantId + credentialOwner=enterprise）
+ *   3. 平台配置层 admin-global-config（businessType 区分短剧/求职/PPT/音乐）
+ *   4. 用户配置层 UserModelConfig（DB 存储，BYOK）
+ *   5. 阶段配置层 AiStageModelConfig（管理配置）
+ *   6. Provider 注册表 ModelProvider（系统默认）
+ *   7. 环境变量 process.env（最低优先级，仅作为开发后门）
+ *
+ * Sprint-06A 新增：
+ *   - tenantId 参数 → 读取 EnterpriseLlmConfig
+ *   - businessType 参数 → 读取平台全局配置
+ *   - 三类调用统一入口：平台 AI / 用户 BYOK / 企业 AI 员工
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -21,6 +28,7 @@ import { prisma } from '../utils/index.js'
 import { loadFullConfigV2 } from '../config/v2.js'
 import { getRuntimeContext, type RuntimeContext } from '../services/runtime-context.js'
 import { decryptKey } from '../services/crypto.service.js'
+import { getRouteConfig } from '../utils/index.js'
 import { env } from '../config/env.js'
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -46,9 +54,9 @@ export interface ResolvedRuntimeConfig {
   retry: number
   /** 配置来源追踪 */
   source: {
-    model: 'input' | 'user_config' | 'stage_config' | 'provider_registry' | 'env_default'
-    apiKey: 'user_config' | 'env' | 'none'
-    baseUrl: 'user_config' | 'provider_registry' | 'env_default'
+    model: 'input' | 'enterprise_config' | 'platform_config' | 'user_config' | 'stage_config' | 'provider_registry' | 'env_default'
+    apiKey: 'enterprise_config' | 'user_config' | 'platform_config' | 'env' | 'none'
+    baseUrl: 'enterprise_config' | 'user_config' | 'provider_registry' | 'env_default'
   }
 }
 
@@ -85,15 +93,39 @@ export async function resolveRuntimeConfig(
     model?: string
     provider?: string
     userId?: string
+    tenantId?: string      // Sprint-06A: 企业 ID → EnterpriseLlmConfig
+    businessType?: string  // Sprint-07A.3: 'hdz' | 'career_advisor' | 'ppt' | 'music' → admin-global-config
   }
 ): Promise<ResolvedRuntimeConfig> {
   const ctx = getRuntimeContext() as RuntimeContext | undefined
   const userId = input?.userId || ctx?.userId || ''
+  const tenantId = input?.tenantId || ''
   const executionId = ctx?.executionId || `exec_${Date.now().toString(36)}`
 
   // ── 1. 输入层（最高优先级） ──
   if (input?.model && input?.provider) {
-    const apiKey = await resolveApiKeyExact(userId, input.provider, capability)
+    let apiKey: string | undefined
+    // Sprint-06A: 如果有 tenantId，优先从 EnterpriseLlmConfig 取 Key
+    if (tenantId) {
+      try {
+        const enterpriseConfig = await prisma.enterpriseLlmConfig.findFirst({
+          where: {
+            tenantId,
+            provider: input.provider,
+            modelName: input.model,
+            enabled: true,
+            status: 'active',
+            credentialOwner: 'enterprise',
+          },
+        })
+        if (enterpriseConfig?.encryptedApiKey) {
+          apiKey = decryptKey(enterpriseConfig.encryptedApiKey)
+        }
+      } catch { /* ignore */ }
+    }
+    if (!apiKey) {
+      apiKey = await resolveApiKeyExact(userId, input.provider, capability)
+    }
     return buildConfig({
       userId,
       executionId,
@@ -101,20 +133,145 @@ export async function resolveRuntimeConfig(
       model: input.model,
       baseUrl: PROVIDER_BASE_URLS[input.provider] || '',
       apiKey,
-      source: { model: 'input', apiKey: apiKey ? 'user_config' : 'env', baseUrl: 'provider_registry' },
+      source: { model: 'input', apiKey: apiKey ? (tenantId ? 'enterprise_config' : 'user_config') : 'env', baseUrl: 'provider_registry' },
     })
   }
 
-  // ── 2. 用户配置层（V2 单行配置） ──
+  // ── 2. 企业配置层（EnterpriseLlmConfig, credentialOwner=enterprise）──
+  // Sprint-06A: 企业 AI 员工走这里，不走用户 BYOK
+  if (tenantId && capability === 'llm') {
+    try {
+      const enterpriseConfig = await prisma.enterpriseLlmConfig.findFirst({
+        where: {
+          tenantId,
+          enabled: true,
+          status: 'active',
+          credentialOwner: 'enterprise',
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+      if (enterpriseConfig && enterpriseConfig.encryptedApiKey) {
+        const apiKey = decryptKey(enterpriseConfig.encryptedApiKey)
+        if (apiKey) {
+          return buildConfig({
+            userId,
+            executionId,
+            provider: enterpriseConfig.provider,
+            model: enterpriseConfig.modelName,
+            baseUrl: enterpriseConfig.baseUrl || PROVIDER_BASE_URLS[enterpriseConfig.provider] || '',
+            apiKey,
+            source: {
+              model: 'enterprise_config',
+              apiKey: 'enterprise_config',
+              baseUrl: enterpriseConfig.baseUrl ? 'enterprise_config' : 'provider_registry',
+            },
+          })
+        }
+      }
+    } catch (e) {
+      console.warn(`[resolveRuntimeConfig] EnterpriseLlmConfig 读取失败:`, e)
+    }
+  }
+
+  // ── 3. 平台配置层（admin-global-config + businessType）──
+  // Sprint-07A.2: 平台 AI 能力走这里，API Key 优先从 apiKey 表读取
+  if (input?.businessType && capability === 'llm') {
+    try {
+      const platformModel = await getRouteConfig(
+        `route:admin-global-config:${input.businessType}`,
+        'llm_model',
+        ''
+      )
+      const platformProvider = await getRouteConfig(
+        `route:admin-global-config:${input.businessType}`,
+        'llm_provider',
+        'deepseek'
+      )
+      if (platformModel) {
+        // Sprint-07A.2: 优先从 apiKey 表读取管理员配置的 Key
+        let apiKey = ''
+        try {
+          const apiKeyRow = await prisma.apiKey.findUnique({
+            where: { provider: `business_type_${input.businessType}` }
+          })
+          if (apiKeyRow?.keyValue) {
+            apiKey = apiKeyRow.keyValue
+          }
+        } catch { /* apiKey 表不存在时忽略 */ }
+
+        // Fallback: 环境变量
+        if (!apiKey) {
+          const envKey = envKeyForProvider(platformProvider)
+          apiKey = process.env[envKey] || ''
+        }
+
+        // Base URL（优先从 routeConfig 读取）
+        let baseUrl = ''
+        try {
+          baseUrl = await getRouteConfig(
+            `route:admin-global-config:${input.businessType}`,
+            'llm_base_url',
+            ''
+          )
+        } catch { /* 忽略 */ }
+        if (!baseUrl) {
+          baseUrl = PROVIDER_BASE_URLS[platformProvider as string] || ''
+        }
+
+        if (apiKey) {
+          return buildConfig({
+            userId,
+            executionId,
+            provider: platformProvider,
+            model: platformModel as string,
+            baseUrl,
+            apiKey,
+            source: {
+              model: 'platform_config',
+              apiKey: 'platform_config',
+              baseUrl: baseUrl ? 'platform_config' : 'provider_registry',
+            },
+          })
+        }
+      }
+    } catch (e) {
+      console.warn(`[resolveRuntimeConfig] Platform config 读取失败 (businessType=${input.businessType}):`, e)
+    }
+  }
+
+  // ── 4. 用户配置层（V2 单行配置） ──
   if (userId && userId !== 'anonymous') {
     try {
       const v2 = await loadFullConfigV2(userId)
       if (v2) {
+        // Sprint-07A.2-AI-03: LLM 能力级覆盖（capabilityLlmConfigs）
+        if (capability === 'llm' && v2.capabilityLlmConfigs) {
+          const capConfigs = v2.capabilityLlmConfigs as Record<string, any>
+          // Sprint-07A.3: 从 input.businessType 或默认 'career_agent' 读取能力级配置
+          const capType = input?.businessType || 'career_agent'
+          const capConfig = capConfigs[capType]
+          if (capConfig?.provider && capConfig?.model && capConfig?.apiKey) {
+            return buildConfig({
+              userId,
+              executionId,
+              provider: capConfig.provider,
+              model: capConfig.model,
+              baseUrl: capConfig.baseUrl || PROVIDER_BASE_URLS[capConfig.provider] || '',
+              apiKey: capConfig.apiKey,
+              source: {
+                model: 'user_capability_config',
+                apiKey: 'user_capability_config',
+                baseUrl: capConfig.baseUrl ? 'user_capability_config' : 'provider_registry',
+              },
+            })
+          }
+        }
+
         // 根据 capability 取对应字段
-        const providerMap: Record<string, string> = { image: 'imageProvider', video: 'videoProvider', tts: 'ttsProvider' }
-        const keyMap: Record<string, string> = { image: 'imageApiKey', video: 'videoApiKey', tts: 'ttsApiKey' }
-        const modelMap: Record<string, string> = { image: 'imageModel', video: 'videoModel', tts: 'ttsModel' }
-        const enabledMap: Record<string, string> = { image: 'imageEnabled', video: 'videoEnabled', tts: 'ttsEnabled' }
+        const providerMap: Record<string, string> = { llm: 'llmProvider', image: 'imageProvider', video: 'videoProvider', tts: 'ttsProvider' }
+        const keyMap: Record<string, string> = { llm: 'llmApiKey', image: 'imageApiKey', video: 'videoApiKey', tts: 'ttsApiKey' }
+        const modelMap: Record<string, string> = { llm: 'llmModel', image: 'imageModel', video: 'videoModel', tts: 'ttsModel' }
+        const enabledMap: Record<string, string> = { llm: 'llmEnabled', image: 'imageEnabled', video: 'videoEnabled', tts: 'ttsEnabled' }
 
         const providerField = providerMap[capability]
         const keyField = keyMap[capability]
@@ -149,7 +306,7 @@ export async function resolveRuntimeConfig(
     }
   }
 
-  // ── 3. 阶段配置层 ──
+  // ── 5. 阶段配置层 ──
   try {
     const stageConfig = await prisma.aiStageModelConfig.findUnique({
       where: { stage: capability },
@@ -170,7 +327,7 @@ export async function resolveRuntimeConfig(
     // stage config 不存在是正常的（未迁移）
   }
 
-  // ── 4. 环境变量（开发后门） ──
+  // ── 6. 环境变量（开发后门） ──
   const provider = input?.provider || 'bailian'
   const model = env[`${provider.toUpperCase()}_${capability.toUpperCase()}_MODEL` as keyof typeof env] as string
               || env[`ALIYUN_${capability.toUpperCase()}_MODEL` as keyof typeof env] as string

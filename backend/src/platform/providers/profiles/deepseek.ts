@@ -4,7 +4,7 @@ export const deepseekProfile: ProviderProfile = {
   name: 'deepseek',
   displayName: 'DeepSeek',
   baseUrl: 'https://api.deepseek.com/v1',
-  models: ['deepseek-chat', 'deepseek-reasoner'],
+  models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
   authentication: {
     type: 'bearer',
   },

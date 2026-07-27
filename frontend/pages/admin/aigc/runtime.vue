@@ -343,7 +343,7 @@ const HEALTHY_MAP = ref<Record<string,string>>({})
 // 预定义所有 Presence 用到的 Provider — 在 setup 阶段初始化（SSR safe）
 const presetProviders = ref<any[]>(
   [
-    { provider: 'deepseek',    displayName: 'DeepSeek',      model: 'deepseek-chat',      baseUrl: 'https://api.deepseek.com/v1',                       dailyQuota: 5000, modelOptions: ['deepseek-chat', 'deepseek-reasoner'] },
+    { provider: 'deepseek',    displayName: 'DeepSeek',      model: 'deepseek-v4-flash',  baseUrl: 'https://api.deepseek.com',                       dailyQuota: 5000, modelOptions: ['deepseek-v4-flash', 'deepseek-v4-pro'] },
     { provider: 'chatgpt',     displayName: 'ChatGPT',       model: 'gpt-4o-mini',        baseUrl: 'https://api.openai.com/v1',                        dailyQuota: 1000, modelOptions: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
     { provider: 'claude',      displayName: 'Claude',        model: 'claude-sonnet-4-20250514', baseUrl: 'https://api.anthropic.com',                   dailyQuota: 1000, modelOptions: ['claude-sonnet-4-20250514', 'claude-sonnet-4-20241022', 'claude-3-5-haiku'] },
     { provider: 'gemini',      displayName: 'Gemini',        model: 'gemini-2.5-pro-0325',  baseUrl: 'https://generativelanguage.googleapis.com',        dailyQuota: 1000, modelOptions: ['gemini-2.5-pro-0325', 'gemini-2.0-flash', 'gemini-1.5-pro'] },

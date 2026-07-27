@@ -127,7 +127,7 @@
             <div class="flex gap-2 mb-2">
               <input v-model="deepseekBaseUrl" type="text" placeholder="API 地址（默认 https://api.deepseek.com）"
                 class="flex-1 bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50 font-mono" />
-              <input v-model="deepseekModel" type="text" placeholder="模型名（默认 deepseek-chat）"
+              <input v-model="deepseekModel" type="text" placeholder="模型名（默认 deepseek-v4-flash）"
                 class="w-48 bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50 font-mono" />
             </div>
             <button @click="saveDeepseekConfig"

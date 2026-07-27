@@ -209,7 +209,7 @@ ${charInfo}
       { role: 'system', content: systemPrompt },
       { role: 'user', content: `为 ${input.characters.map(c => c.name).join(' vs ')} 设计打斗分镜，${input.storyText.slice(0, 200)}` },
     ],
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     apiKey,
     provider: 'deepseek',
     temperature: 0.7,

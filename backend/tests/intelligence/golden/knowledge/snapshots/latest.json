@@ -1,0 +1,317 @@
+{
+  "version": "latest",
+  "domain": "knowledge",
+  "timestamp": "2026-07-05T10:59:45.534Z",
+  "results": [
+    {
+      "objectId": "high-quality-1",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "high-quality-2",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "high-quality-3",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "high-quality-4",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "high-quality-5",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "moderate-quality-1",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "moderate-quality-2",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "moderate-quality-3",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "moderate-quality-4",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "moderate-quality-5",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "low-quality-1",
+      "quality": {
+        "score": 83.75,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "low-quality-2",
+      "quality": {
+        "score": 83.75,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "low-quality-3",
+      "quality": {
+        "score": 83.75,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "low-quality-4",
+      "quality": {
+        "score": 83.75,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "fresh-content-1",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "fresh-content-2",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "fresh-content-3",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "stale-content-1",
+      "quality": {
+        "score": 95,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "stale-content-2",
+      "quality": {
+        "score": 95,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "stale-content-3",
+      "quality": {
+        "score": 95,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "authoritative-1",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "authoritative-2",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "authoritative-3",
+      "quality": {
+        "score": 97.5,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "contradictory-1",
+      "quality": {
+        "score": 92.5,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "Medium"
+      }
+    },
+    {
+      "objectId": "contradictory-2",
+      "quality": {
+        "score": 88.75,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "Medium"
+      }
+    },
+    {
+      "objectId": "contradictory-3",
+      "quality": {
+        "score": 83.75,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "no-coverage-1",
+      "quality": {
+        "score": 96.25,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "no-coverage-2",
+      "quality": {
+        "score": 93.75,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "edge-empty-content",
+      "quality": {
+        "score": 91.25,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "edge-very-long-content",
+      "quality": {
+        "score": 100,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    },
+    {
+      "objectId": "unknown-freshness",
+      "quality": {
+        "score": 93.75,
+        "label": "A"
+      },
+      "recommendation": {
+        "priority": "High"
+      }
+    }
+  ]
+}

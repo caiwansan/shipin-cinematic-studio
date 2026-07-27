@@ -275,10 +275,10 @@ async function callModel(
     }
 
     // 如果 actualProvider 和 model.provider 不同（系统 fallback），切换模型名
-    // 例如：deepseek 的 key 只能用 deepseek-chat
+    // 例如：deepseek 的 key 只能用 deepseek-v4-flash
     let actualModel = model.model
     if (actualProvider === 'deepseek' && model.provider !== 'deepseek') {
-      actualModel = 'deepseek-chat'
+      actualModel = 'deepseek-v4-flash'
     }
 
     // 统一走 genericLLM.chat()，用 actualProvider 确保 key 与 provider 匹配

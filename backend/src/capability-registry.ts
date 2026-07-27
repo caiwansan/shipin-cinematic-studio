@@ -52,7 +52,7 @@ const CAPABILITY_REGISTRY: Record<Capability, CapabilityModelEntry[]> = {
     { model: 'deepseek*', family: 'siliconflow' },
     { model: 'Pro*', family: 'siliconflow' },
     // DeepSeek
-    { model: 'deepseek-chat', family: 'deepseek' },
+    { model: 'deepseek-v4-flash', family: 'deepseek' },
     // Google Gemini
     { model: 'gemini*', family: 'google' },
   ],

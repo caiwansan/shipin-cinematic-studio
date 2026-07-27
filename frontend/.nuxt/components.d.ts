@@ -24,6 +24,7 @@ interface _GlobalComponents {
     'AdminMallOrdersTab': typeof import("../components/admin/mall/OrdersTab.vue")['default']
     'AdminMallProductsTab': typeof import("../components/admin/mall/ProductsTab.vue")['default']
     'AdminMallRecommendTab': typeof import("../components/admin/mall/RecommendTab.vue")['default']
+    'AiModelSettingsLauncher': typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']
     'BusinessLoginModal': typeof import("../components/business/LoginModal.vue")['default']
     'CommunityHero': typeof import("../components/community/CommunityHero.vue")['default']
     'CustomerService': typeof import("../components/customer/CustomerService.vue")['default']
@@ -164,6 +165,7 @@ interface _GlobalComponents {
     'R11StabilityDashboard': typeof import("../components/r11/StabilityDashboard.vue")['default']
     'R11Api': typeof import("../components/r11/r11-api")['default']
     'RecruitmentActivityFeed': typeof import("../components/recruitment/ActivityFeed.vue")['default']
+    'RecruitmentAgentWorkforceCard': typeof import("../components/recruitment/AgentWorkforceCard.vue")['default']
     'RecruitmentHealthBanner': typeof import("../components/recruitment/HealthBanner.vue")['default']
     'RecruitmentMetricCard': typeof import("../components/recruitment/MetricCard.vue")['default']
     'RecruitmentPendingList': typeof import("../components/recruitment/PendingList.vue")['default']
@@ -212,6 +214,7 @@ interface _GlobalComponents {
     'LazyAdminMallOrdersTab': LazyComponent<typeof import("../components/admin/mall/OrdersTab.vue")['default']>
     'LazyAdminMallProductsTab': LazyComponent<typeof import("../components/admin/mall/ProductsTab.vue")['default']>
     'LazyAdminMallRecommendTab': LazyComponent<typeof import("../components/admin/mall/RecommendTab.vue")['default']>
+    'LazyAiModelSettingsLauncher': LazyComponent<typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']>
     'LazyBusinessLoginModal': LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
     'LazyCommunityHero': LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
     'LazyCustomerService': LazyComponent<typeof import("../components/customer/CustomerService.vue")['default']>
@@ -352,6 +355,7 @@ interface _GlobalComponents {
     'LazyR11StabilityDashboard': LazyComponent<typeof import("../components/r11/StabilityDashboard.vue")['default']>
     'LazyR11Api': LazyComponent<typeof import("../components/r11/r11-api")['default']>
     'LazyRecruitmentActivityFeed': LazyComponent<typeof import("../components/recruitment/ActivityFeed.vue")['default']>
+    'LazyRecruitmentAgentWorkforceCard': LazyComponent<typeof import("../components/recruitment/AgentWorkforceCard.vue")['default']>
     'LazyRecruitmentHealthBanner': LazyComponent<typeof import("../components/recruitment/HealthBanner.vue")['default']>
     'LazyRecruitmentMetricCard': LazyComponent<typeof import("../components/recruitment/MetricCard.vue")['default']>
     'LazyRecruitmentPendingList': LazyComponent<typeof import("../components/recruitment/PendingList.vue")['default']>
@@ -406,6 +410,7 @@ export const AdminMallCouponsTab: typeof import("../components/admin/mall/Coupon
 export const AdminMallOrdersTab: typeof import("../components/admin/mall/OrdersTab.vue")['default']
 export const AdminMallProductsTab: typeof import("../components/admin/mall/ProductsTab.vue")['default']
 export const AdminMallRecommendTab: typeof import("../components/admin/mall/RecommendTab.vue")['default']
+export const AiModelSettingsLauncher: typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']
 export const BusinessLoginModal: typeof import("../components/business/LoginModal.vue")['default']
 export const CommunityHero: typeof import("../components/community/CommunityHero.vue")['default']
 export const CustomerService: typeof import("../components/customer/CustomerService.vue")['default']
@@ -546,6 +551,7 @@ export const R11ReplayInspector: typeof import("../components/r11/ReplayInspecto
 export const R11StabilityDashboard: typeof import("../components/r11/StabilityDashboard.vue")['default']
 export const R11Api: typeof import("../components/r11/r11-api")['default']
 export const RecruitmentActivityFeed: typeof import("../components/recruitment/ActivityFeed.vue")['default']
+export const RecruitmentAgentWorkforceCard: typeof import("../components/recruitment/AgentWorkforceCard.vue")['default']
 export const RecruitmentHealthBanner: typeof import("../components/recruitment/HealthBanner.vue")['default']
 export const RecruitmentMetricCard: typeof import("../components/recruitment/MetricCard.vue")['default']
 export const RecruitmentPendingList: typeof import("../components/recruitment/PendingList.vue")['default']
@@ -594,6 +600,7 @@ export const LazyAdminMallCouponsTab: LazyComponent<typeof import("../components
 export const LazyAdminMallOrdersTab: LazyComponent<typeof import("../components/admin/mall/OrdersTab.vue")['default']>
 export const LazyAdminMallProductsTab: LazyComponent<typeof import("../components/admin/mall/ProductsTab.vue")['default']>
 export const LazyAdminMallRecommendTab: LazyComponent<typeof import("../components/admin/mall/RecommendTab.vue")['default']>
+export const LazyAiModelSettingsLauncher: LazyComponent<typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']>
 export const LazyBusinessLoginModal: LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
 export const LazyCommunityHero: LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
 export const LazyCustomerService: LazyComponent<typeof import("../components/customer/CustomerService.vue")['default']>
@@ -734,6 +741,7 @@ export const LazyR11ReplayInspector: LazyComponent<typeof import("../components/
 export const LazyR11StabilityDashboard: LazyComponent<typeof import("../components/r11/StabilityDashboard.vue")['default']>
 export const LazyR11Api: LazyComponent<typeof import("../components/r11/r11-api")['default']>
 export const LazyRecruitmentActivityFeed: LazyComponent<typeof import("../components/recruitment/ActivityFeed.vue")['default']>
+export const LazyRecruitmentAgentWorkforceCard: LazyComponent<typeof import("../components/recruitment/AgentWorkforceCard.vue")['default']>
 export const LazyRecruitmentHealthBanner: LazyComponent<typeof import("../components/recruitment/HealthBanner.vue")['default']>
 export const LazyRecruitmentMetricCard: LazyComponent<typeof import("../components/recruitment/MetricCard.vue")['default']>
 export const LazyRecruitmentPendingList: LazyComponent<typeof import("../components/recruitment/PendingList.vue")['default']>

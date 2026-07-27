@@ -109,7 +109,7 @@ async function resolveFallbackConfig(): Promise<UserLLMConfig | null> {
     console.log(`[V2_RESOLVER] fallback 到 ENV: DEEPSEEK_API_KEY`)
     return {
       provider: 'deepseek',
-      model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-chat',
+      model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
       apiKey: envKey,
       source: 'ENV_FALLBACK',
     }

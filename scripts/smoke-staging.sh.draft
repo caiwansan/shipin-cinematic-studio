@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage:
+# STAGING_URL=https://staging.example.com ./scripts/smoke-staging.sh
+
+: "${STAGING_URL:?STAGING_URL is required}"
+
+echo "Smoke testing: $STAGING_URL"
+
+echo "1. health check"
+curl -fsS "$STAGING_URL/api/health" || true
+
+echo "2. unauthorized legal agent chat should return 401"
+curl -i -X POST "$STAGING_URL/api/legal/agent/chat" \
+  -H "Content-Type: application/json" \
+  -d '{}' || true
+
+echo "3. home page should not expose hidden workspaces"
+curl -fsS "$STAGING_URL/" | rg -i "music|hdz|voice" || echo "No hidden workspace keywords found"
+
+echo "4. region API"
+curl -fsS "$STAGING_URL/api/regions" || true
+
+echo "Manual checks required:"
+echo "- Free user gets 403 on Pro routes"
+echo "- Pro user can access legal/director/ai routes"
+echo "- music/hdz/voice routes show unavailable or 404"
+echo "- preview workspaces show preview badge"

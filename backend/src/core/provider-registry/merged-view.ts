@@ -29,7 +29,7 @@ const SYSTEM_DEFAULTS: Record<Capability, { provider: string; model: string }[]>
     { provider: 'volcengine', model: 'video-01' },
   ],
   llm: [
-    { provider: 'deepseek', model: 'deepseek-chat' },
+    { provider: 'deepseek', model: 'deepseek-v4-flash' },
     { provider: 'openai', model: 'gpt-4o-mini' },
   ],
   tts: [

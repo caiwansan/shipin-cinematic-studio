@@ -43,14 +43,14 @@ export interface AgentCapabilityRequirement {
 const PROVIDER_CAPABILITIES: ProviderCapability[] = [
   {
     provider: 'deepseek',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     displayName: 'DeepSeek Chat',
     supports: ['chat', 'structured_json', 'streaming', 'thinking'],
     maxTokens: 65536,
   },
   {
     provider: 'deepseek',
-    model: 'deepseek-reasoner',
+    model: 'deepseek-v4-pro',
     displayName: 'DeepSeek Reasoner',
     supports: ['chat', 'streaming', 'thinking'],
     maxTokens: 65536,

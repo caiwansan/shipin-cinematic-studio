@@ -62,7 +62,7 @@ const builtInAdapters: Record<string, AIProviderAdapter> = {
       const messages = input.messages || (Array.isArray(input) ? input : [{ role: 'user', content: typeof input === 'string' ? input : JSON.stringify(input) }])
       return genericLLM.chat({
         messages,
-        model: config.model || 'deepseek-chat',
+        model: config.model || 'deepseek-v4-flash',
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,
         provider: 'deepseek',

@@ -22,7 +22,7 @@ export interface FilmIRMetadata {
   createdAt: string;           // ISO 8601
   source: string;              // "ai-optimize-shot" | "film-compiler"
   confidence: number;          // 0-1（LLM 直接输出时不准确，Compiler 输出时为 1）
-  provider?: string;           // 使用的 AI provider（如 deepseek-chat）
+  provider?: string;           // 使用的 AI provider（如 deepseek-v4-flash）
   schemaVersion: string;       // "film-ir@0.1"
   parentId?: string;           // 如果由 clone() 生成，指向原始 ID
 }

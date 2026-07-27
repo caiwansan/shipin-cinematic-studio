@@ -1,0 +1,35 @@
+=== TS ERROR HOTSPOTS ===
+Generated: 2026-05-28 21:30
+
+=== TOP 10 FILES ===
+ 1. src/routes/admin-global-config.ts      (21 errors)
+ 2. src/routes/member.ts                   (16 errors)
+ 3. src/routes/kernel-causal.ts            (13 errors)
+ 4. src/director-v2/runtime/director-projection.ts  (12 errors)
+ 5. src/director-v2/runtime/api-surface.ts (11 errors)
+ 6. src/routes/execution-graph.ts          (9 errors)
+ 7. src/director-v2/render/backends/execution-plan.ts  (9 errors)
+ 8. src/routes/workflow-visualizer.ts      (8 errors)
+ 9. src/routes/agent-orchestrator.ts       (8 errors)
+10. src/director-v2/memory/director-memory.ts  (8 errors)
+
+=== TOP 10 DIRECTORIES ===
+ 1. src/director-v2/runtime                (35 errors)
+ 2. src/director-v2/render                 (20 errors)
+ 3. src/director-v2/memory                 (10 errors)
+ 4. src/engine/director                    (9 errors)
+ 5. src/runtime/adapters                   (7 errors)
+ 6. src/engine/prompt-compiler            (7 errors)
+ 7. src/director-v2/cinematic-compiler    (5 errors)
+ 8. src/core/verification                 (5 errors)
+ 9. src/model-adapters/llm                (4 errors)
+10. src/model-adapters/images             (4 errors)
+
+=== SUMMARY ===
+Unique errors: 284
+Unique files: 90
+L1 (auto-fixable): 91 (32%)
+L2 (needs interface adjust): 145 (51%)
+L3 (arch refactor): 0 (0%)
+Auto-fixable ratio: 32%
+Recommendation: PARTIAL_REFACTOR

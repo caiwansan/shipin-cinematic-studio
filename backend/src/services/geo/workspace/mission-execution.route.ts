@@ -158,7 +158,7 @@ export async function missionExecutionRoutes(app: FastifyInstance) {
       const { ProviderRegistry, ResourceAllocator } = await import('../execution/index.js')
       const providerRegistry = new ProviderRegistry()
       providerRegistry.register({
-        provider: 'deepseek-chat',
+        provider: 'deepseek-v4-flash',
         baseUrl: '',
         capabilities: [
           { capability: 'reasoning', priority: 1, supportsStream: true },
@@ -168,7 +168,7 @@ export async function missionExecutionRoutes(app: FastifyInstance) {
           { capability: 'custom', priority: 5, supportsStream: false },
         ],
         enabled: true,
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         priority: 1,
       })
       providerRegistry.register({

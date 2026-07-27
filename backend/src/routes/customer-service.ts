@@ -33,8 +33,8 @@ async function getCustomerServiceLLM(): Promise<{ apiKey: string; model: string;
       console.log('[小麒] 使用后台配置的 DeepSeek Key')
       return {
         apiKey: configuredKey.value,
-        model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-chat',
-        baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
+        model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
+        baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
         provider: 'deepseek',
       }
     }
@@ -48,8 +48,8 @@ async function getCustomerServiceLLM(): Promise<{ apiKey: string; model: string;
     console.log('[小麒] 使用环境变量 DeepSeek')
     return {
       apiKey: dsKey,
-      model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-chat',
-      baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
+      model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
+      baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
       provider: 'deepseek',
     }
   }

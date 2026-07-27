@@ -34,8 +34,8 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'doubao-seed-evolving': 'Seed 进化版',
   'gpt-4o': 'GPT-4o',
   'gpt-4o-mini': 'GPT-4o Mini',
-  'deepseek-chat': 'DeepSeek Chat',
-  'deepseek-reasoner': 'DeepSeek Reasoner',
+  'deepseek-v4-flash': 'DeepSeek V4 Flash',
+  'deepseek-v4-pro': 'DeepSeek V4 Pro',
   'gemini-2-5-pro': 'Gemini 2.5 Pro',
   'gemini-2-0-flash': 'Gemini 2.0 Flash',
   'claude-3-5-sonnet': 'Claude 3.5 Sonnet',
@@ -49,7 +49,7 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
 const RECOMMENDED_MODELS: Record<string, string[]> = {
   image: ['doubao-seedream-4-0-250828', 'doubao-seedream-4-5-251128', 'doubao-seedream-5-0-260128', 'flux-pro', 'stable-diffusion-3-5'],
   video: ['doubao-seedance-2-0-260128', 'doubao-seedance-1-5-pro-251215', 'kling-2-0', 'runway-gen-4'],
-  llm: ['gpt-4o', 'doubao-seed-2-1-pro-260628', 'doubao-seed-2-1-turbo-260628', 'doubao-seed-2-0-mini-260428', 'claude-3-5-sonnet', 'deepseek-chat'],
+  llm: ['gpt-4o', 'doubao-seed-2-1-pro-260628', 'doubao-seed-2-1-turbo-260628', 'doubao-seed-2-0-mini-260428', 'claude-3-5-sonnet', 'deepseek-v4-flash', 'deepseek-v4-pro'],
 }
 
 // API key 检查：provider → env var name

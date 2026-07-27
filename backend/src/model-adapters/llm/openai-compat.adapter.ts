@@ -16,7 +16,8 @@
 import { ModelAdapter, ModelAdapterInput, ModelAdapterResult } from '../types.js'
 
 const BASE_URLS: Record<string, string> = {
-  deepseek: 'https://api.deepseek.com/v1/chat/completions',
+  // DeepSeek 官方: /chat/completions（无 /v1 前缀）
+  deepseek: 'https://api.deepseek.com/chat/completions',
   openai: 'https://api.openai.com/v1/chat/completions',
   siliconflow: 'https://api.siliconflow.cn/v1/chat/completions',
 }

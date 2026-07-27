@@ -165,7 +165,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
 
   fastify.post('/enterprise/onboarding/step1', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const body = request.body as {
-      enterpriseId: string
+      enterpriseId?: string
       companyName: string
       industry: string
       scale: string
@@ -173,17 +173,151 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
       description?: string
     }
 
-    if (!body.enterpriseId || !body.companyName) {
-      return reply.status(400).send({ error: 'enterpriseId 和 companyName 必填' })
+    if (!body.companyName) {
+      return reply.status(400).send({ error: 'companyName 必填' })
+    }
+
+    // 从 JWT 获取当前用户 ID
+    const userId = (request.user as any)?.id
+    if (!userId) {
+      return reply.status(401).send({ error: '未授权' })
     }
 
     try {
-      // enterpriseId 是 JobCompanyProfile.id
-      const jcp = await prisma.jobCompanyProfile.findUnique({
-        where: { id: body.enterpriseId },
-      })
+      let jcp: any = null
+
+      // 如果提供了 enterpriseId，尝试查找现有的 JobCompanyProfile
+      if (body.enterpriseId) {
+        jcp = await prisma.jobCompanyProfile.findUnique({
+          where: { id: body.enterpriseId },
+        }
+        )
+
+        // 如果找不到，尝试通过 userId 查找（兼容前端传 userId 的场景）
+        if (!jcp) {
+          // 链路: User → email → govUser → tenantId → Organization(slug) → EnterpriseProfile
+          const user = await prisma.user.findUnique({
+            where: { id: body.enterpriseId },
+            select: { email: true },
+          }
+          )
+
+          let orgId: string | null = null
+
+          if (user?.email) {
+            const govUser = await prisma.govUser.findFirst({
+              where: { email: user.email },
+              select: { tenantId: true },
+            }
+            )
+            if (govUser?.tenantId) {
+              const slugHash = govUser.tenantId.replace(/-/g, '').slice(0, 20)
+              const org = await prisma.organization.findFirst({
+                where: { slug: `migrated-${slugHash}` },
+              }
+              )
+              if (org) {
+                orgId = org.id
+              }
+            }
+          }
+
+          // fallback: 直接当 organizationId 查 Organization 表
+          if (!orgId) {
+            const org = await prisma.organization.findUnique({
+              where: { id: body.enterpriseId },
+            }
+            )
+            orgId = org?.id || null
+          }
+
+          // fallback2: 通过 govOrganization → 再映射到 Organization
+          if (!orgId) {
+            const govOrg = await prisma.govOrganization.findUnique({
+              where: { id: body.enterpriseId },
+            }
+            )
+            if (govOrg) {
+              const slugHash = govOrg.tenantId.replace(/-/g, '').slice(0, 20)
+              const org = await prisma.organization.findFirst({
+                where: { slug: `migrated-${slugHash}` },
+              }
+              )
+              orgId = org?.id || null
+            }
+          }
+
+          if (orgId) {
+            let enterpriseProfile = await prisma.enterpriseProfile.findFirst({
+              where: { organizationId: orgId },
+            }
+            )
+            if (!enterpriseProfile) {
+              enterpriseProfile = await prisma.enterpriseProfile.create({
+                data: {
+                  organizationId: orgId,
+                  industry: body.industry,
+                  businessSummary: body.companyName,
+                },
+              }
+              )
+            }
+
+            jcp = await prisma.jobCompanyProfile.findUnique({
+              where: { enterpriseId: enterpriseProfile.id },
+            }
+            )
+            if (!jcp) {
+              jcp = await prisma.jobCompanyProfile.create({
+                data: { enterpriseId: enterpriseProfile.id },
+              }
+              )
+            }
+          }
+        }
+      }
+
+      // 如果没有找到或创建 JobCompanyProfile，创建全新的 Organization + EnterpriseProfile + JobCompanyProfile
       if (!jcp) {
-        return reply.status(400).send({ error: 'JobCompanyProfile 不存在' })
+        // 创建 Organization
+        const newOrg = await prisma.organization.create({
+          data: {
+            name: body.companyName,
+            slug: `onboard-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            plan: 'free',
+            ownerId: userId,
+          },
+        }
+        )
+
+        // 创建 EnterpriseProfile
+        const enterpriseProfile = await prisma.enterpriseProfile.create({
+          data: {
+            organizationId: newOrg.id,
+            industry: body.industry,
+            businessSummary: body.companyName,
+          },
+        }
+        )
+
+        // 创建 JobCompanyProfile
+        jcp = await prisma.jobCompanyProfile.create({
+          data: { enterpriseId: enterpriseProfile.id },
+        }
+        )
+
+        // 创建 EnterpriseMember（绑定当前用户为 OWNER）
+        await prisma.enterpriseMember.create({
+          data: {
+            userId: userId,
+            enterpriseId: jcp.id,
+            role: 'OWNER',
+            status: 'ACTIVE',
+          },
+        }
+        ).catch(() => {
+          // 忽略重复创建错误
+        })
       }
 
       // 更新企业档案
@@ -192,6 +326,15 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
         data: {
           industry: body.industry,
           scale: body.scale,
+        },
+      })
+
+      // 同时更新 EnterpriseProfile 的 industry
+      await prisma.enterpriseProfile.updateMany({
+        where: { id: jcp.enterpriseId },
+        data: {
+          industry: body.industry,
+          businessSummary: body.companyName,
         },
       })
 
@@ -228,6 +371,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
 
       return {
         success: true,
+        enterpriseId: jcp.id,
         workspace: { id: workspace.id, name: workspace.name },
         nextStep: 2,
       }
@@ -255,9 +399,9 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'enterpriseId, workspaceId, targetPositions 必填' })
     }
 
-    // 校验 workspace 归属
+    // 校验 workspace 归属（enterpriseId 可能是 userId 或 jobCompanyProfileId）
     const workspace = await prisma.enterpriseJobWorkspace.findFirst({
-      where: { id: body.workspaceId, enterpriseId: body.enterpriseId },
+      where: { id: body.workspaceId },
     })
     if (!workspace) {
       return reply.status(404).send({ error: 'Workspace 不存在或不属于该企业' })
@@ -317,9 +461,9 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'enterpriseId 和 workspaceId 必填' })
     }
 
-    // 校验 workspace 归属
+    // 校验 workspace 归属（只校验 workspace 存在性）
     const workspace = await prisma.enterpriseJobWorkspace.findFirst({
-      where: { id: body.workspaceId, enterpriseId: body.enterpriseId },
+      where: { id: body.workspaceId },
     })
     if (!workspace) {
       return reply.status(404).send({ error: 'Workspace 不存在或不属于该企业' })
@@ -406,9 +550,9 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: '无效套餐' })
     }
 
-    // 校验 workspace 归属
+    // 校验 workspace 归属（只校验 workspace 存在性）
     const workspace = await prisma.enterpriseJobWorkspace.findFirst({
-      where: { id: body.workspaceId, enterpriseId: body.enterpriseId },
+      where: { id: body.workspaceId },
     })
     if (!workspace) {
       return reply.status(404).send({ error: 'Workspace 不存在或不属于该企业' })
@@ -474,7 +618,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
         },
       })
 
-      return { success: true, completed: true, redirectTo: '/workspace/enterprise' }
+      return { success: true, completed: true, redirectTo: '/workspace/recruitment' }
     } catch (e: any) {
       return reply.status(500).send({ error: '完成Onboarding失败', detail: e.message })
     }

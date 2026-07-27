@@ -16,7 +16,7 @@ async function getProviderTestConfigs(): Promise<any[]> {
   return await getRouteConfig('route:system-health', 'provider_test_configs', [
     {
       name: 'deepseek', displayName: 'DeepSeek', envKey: 'DEEPSEEK_API_KEY',
-      endpoint: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat',
+      endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-v4-flash',
     },
     {
       name: 'siliconflow', displayName: '硅基流动', envKey: 'SILICONFLOW_API_KEY',

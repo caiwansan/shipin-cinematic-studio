@@ -1,5 +1,65 @@
 <template>
   <div class="job-workspace-layout">
+    <!-- Sprint-07A.2: AI 职业助理（折叠摘要，~80px） -->
+    <div class="career-agent-dashboard">
+      <div v-if="careerAgentLoading" class="ca-loading">
+        <span>加载中...</span>
+      </div>
+      <div v-else-if="careerAgentError && !hasCareerAgent" class="ca-error">
+        <span>⚠️ {{ careerAgentError }}</span>
+        <button @click="loadCareerAgentStatus" class="ca-retry-btn">重试</button>
+      </div>
+      <!-- 未创建：单行摘要 -->
+      <div v-else-if="!hasCareerAgent" class="ca-compact">
+        <span class="ca-compact-icon">🤖</span>
+        <span class="ca-compact-text">我的AI职业助理</span>
+        <span class="ca-compact-source">个人模型</span>
+        <button class="ca-create-btn ca-create-btn-sm" @click="handleCreateAgent" :disabled="careerAgentCreating">
+          {{ careerAgentCreating ? '创建中...' : '+ 创建' }}
+        </button>
+        <button class="ca-settings-link" title="配置模型" @click="showModelSettings = true">⚙️ 模型设置</button>
+      </div>
+      <!-- 已创建：单行摘要 + 展开 -->
+      <div v-else class="ca-compact">
+        <span class="ca-compact-icon">🤖</span>
+        <span class="ca-compact-text">{{ careerAgent?.name || 'AI 职业助理' }}</span>
+        <span class="ca-compact-source">个人模型</span>
+        <span class="ca-compact-status" :class="careerAgentStatus?.status">{{ getStatusText(careerAgentStatus?.status) }}</span>
+        <button class="ca-toggle-btn" @click="caExpanded = !caExpanded">
+          {{ caExpanded ? '收起' : '查看' }}
+        </button>
+        <button class="ca-settings-link" title="配置模型" @click="showModelSettings = true">⚙️</button>
+      </div>
+      <!-- 展开详情 -->
+      <div v-if="caExpanded && hasCareerAgent" class="ca-expanded">
+        <div class="ca-expanded-row">
+          <span class="ca-section-label">能力</span>
+          <div class="ca-tags">
+            <span v-for="tool in careerAgentCapabilities" :key="tool" class="ca-tag">✓ {{ tool }}</span>
+          </div>
+        </div>
+        <div class="ca-expanded-row">
+          <span class="ca-section-label">快捷任务</span>
+          <div class="ca-quick-actions">
+            <button class="ca-action-btn" @click="handleExecuteWorkflow('resume_analyze')">📊 分析简历</button>
+            <button class="ca-action-btn" @click="handleExecuteWorkflow('job_search')">🔍 推荐岗位</button>
+            <button class="ca-action-btn" @click="handleExecuteWorkflow('interview_prepare')">🎯 准备面试</button>
+            <button class="ca-action-btn" @click="handleExecuteWorkflow('career_plan')">📋 职业规划</button>
+          </div>
+        </div>
+        <div v-if="careerAgentStatus?.recentTasks?.length" class="ca-recent-tasks">
+          <span class="ca-section-label">最近任务</span>
+          <div class="ca-task-list">
+            <div v-for="task in careerAgentStatus.recentTasks" :key="task.id" class="ca-task-item">
+              <span class="ca-task-status" :class="task.status">{{ getTaskStatusText(task.status) }}</span>
+              <span class="ca-task-type">{{ task.taskType }}</span>
+              <span class="ca-task-date">{{ formatTaskDate(task.startedAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 主体：左栏聊天 + 右栏推荐 -->
     <div class="job-workspace-main">
       <!-- 左栏：AI 求职顾问聊天 -->
@@ -7,9 +67,17 @@
         <div class="job-chat-panel">
           <!-- 聊天头部 -->
           <div class="job-chat-header">
-            <h3>💼 AI 求职顾问</h3>
+            <div class="chat-title-row">
+              <h3>🤖 AI 求职顾问</h3>
+              <span class="chat-badge chat-badge-platform">昆仑镜 AI 服务 · 平台提供</span>
+            </div>
             <div class="chat-header-right">
-              <span class="job-chat-subtitle">聊天式求职，5分钟生成职业画像</span>
+              <div class="chat-capabilities">
+                <span class="chat-cap">📊 简历分析</span>
+                <span class="chat-cap">🎯 职业规划</span>
+                <span class="chat-cap">🔍 岗位匹配</span>
+                <span class="chat-cap">💡 面试建议</span>
+              </div>
               <button class="chat-clear-btn" @click="clearChat" title="开始新对话">新对话</button>
             </div>
           </div>
@@ -332,26 +400,44 @@
       </div>
     </div>
   </div>
+
+  <!-- AI 职业助理模型设置弹窗（复用全局 ModelSettingsModal） -->
+  <ModelSettingsModal :visible="showModelSettings" @close="showModelSettings = false" filterCapability="career_agent" />
 </template>
 
 <script setup lang="ts">
 /**
  * JobWorkspaceLayout.vue - 昆仑镜 AI 求职招聘工作台布局
  *
- * Phase 1: AI求职MVP
- * - 中间栏：AI职业顾问聊天（真实对话流程）
- * - 右栏：实时职业画像 + AI推荐岗位卡片
+ * Sprint-03C: Frontend Reality Integration
+ * - Career Agent 状态卡（真实数据）
+ * - 职业画像状态
+ * - Agent 激活入口
+ * - Workflow 状态展示
  */
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { getPipelineStages } from '~/studio-v2/config/workspace-config'
 import { chatWithCareerAgent, getJobRecommendations, submitJobFeedback, getCareerProfileCenter } from '~/studio-v2/api/job/candidate-api'
+import { getCareerAgentStatus, activateAndExecuteCareerAgent, type CareerAgentStatus } from '~/studio-v2/api/job/career-agent-api'
+import ModelSettingsModal from '~/components/director/ModelSettingsModal.vue'
 
 const activeStageId = ref<string>('job-career')
+const caExpanded = ref(false)
 const chatInput = ref('')
 const isLoading = ref(false)
 const messages = ref<Array<{ role: 'user' | 'assistant'; content: string }>>([])
 const messagesRef = ref<HTMLElement | null>(null)
 const welcomeMessage = ref('你好！我是你的 AI 职业顾问 👋\n\n我会通过几个问题了解你的情况，帮你找到最合适的工作机会。\n\n先告诉我，你希望我怎么称呼你？')
+
+// ─── Sprint-03C: Career Agent 真实状态 ───
+const careerAgentStatus = ref<CareerAgentStatus | null>(null)
+const careerAgentLoading = ref(false)
+const careerAgentCreating = ref(false)
+const careerAgentError = ref('')
+
+const careerAgent = computed(() => careerAgentStatus.value?.agent || null)
+const hasCareerAgent = computed(() => careerAgentStatus.value?.hasAgent || false)
+const careerAgentCapabilities = computed(() => careerAgent.value?.tools || [])
 
 // 聊天历史持久化
 function saveChatHistory() {
@@ -382,6 +468,7 @@ function clearChat() {
 
 // Phase 1.6: 职业档案中心
 const showProfileCenter = ref(false)
+const showModelSettings = ref(false)
 const profileCenter = ref<any>(null)
 
 // 职业画像
@@ -505,6 +592,86 @@ function getUserId(): string {
   return 'anonymous'
 }
 
+// ─── Sprint-03C: Career Agent 辅助函数 ───
+function getStatusText(status?: string): string {
+  const map: Record<string, string> = {
+    active: '🟢 在线',
+    paused: '⏸️ 暂停',
+    running: '🔄 执行中',
+    error: '❌ 异常',
+    not_created: '未创建',
+  }
+  return map[status || ''] || status || '未知'
+}
+
+function getTaskStatusText(status: string): string {
+  const map: Record<string, string> = {
+    running: '执行中',
+    completed: '完成',
+    failed: '失败',
+  }
+  return map[status] || status
+}
+
+function formatTaskDate(dateStr?: string): string {
+  if (!dateStr) return ''
+  try {
+    return new Date(dateStr).toLocaleDateString('zh-CN', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return dateStr
+  }
+}
+
+// ─── Sprint-03C: Career Agent 方法 ───
+async function loadCareerAgentStatus() {
+  careerAgentLoading.value = true
+  careerAgentError.value = ''
+  try {
+    const status = await getCareerAgentStatus()
+    careerAgentStatus.value = status
+  } catch (err: any) {
+    careerAgentError.value = err.message || '加载 Career Agent 状态失败'
+    careerAgentStatus.value = { hasAgent: false, status: 'error', stats: { totalTasks: 0, completedTasks: 0, failedTasks: 0 }, recentTasks: [], message: err.message }
+  } finally {
+    careerAgentLoading.value = false
+  }
+}
+
+async function handleCreateAgent() {
+  careerAgentCreating.value = true
+  careerAgentError.value = ''
+  try {
+    const result = await activateAndExecuteCareerAgent({
+      goal: '帮助用户进行求职规划、简历分析、岗位匹配',
+    })
+    // 重新加载状态
+    await loadCareerAgentStatus()
+    // 添加系统消息
+    if (result.execution?.output) {
+      messages.value.push({ role: 'assistant', content: `🤖 ${result.message}\n\n${result.execution.output.slice(0, 200)}` })
+    } else if (result.execution?.status === 'failed') {
+      messages.value.push({ role: 'assistant', content: `🤖 AI 职业助理已创建，但首次任务执行遇到问题。\n\n这通常是因为 LLM API Key 未配置。掌柜正在修复中。` })
+    }
+  } catch (err: any) {
+    careerAgentError.value = err.message || '创建 Career Agent 失败'
+  } finally {
+    careerAgentCreating.value = false
+  }
+}
+
+async function handleExecuteWorkflow(workflowType: string) {
+  if (!hasCareerAgent.value) {
+    await handleCreateAgent()
+    return
+  }
+  messages.value.push({ role: 'assistant', content: `🤖 正在执行任务: ${workflowType}...\n\n（LLM API Key 待配置，任务将创建但可能无法完成。掌柜正在修复中。）` })
+}
+
 onMounted(async () => {
   // 加载聊天历史
   const history = loadChatHistory()
@@ -523,6 +690,9 @@ onMounted(async () => {
       messages.value.push({ role: 'assistant', content: welcomeMessage.value })
     }
   }
+
+  // Sprint-03C: 加载 Career Agent 真实状态
+  await loadCareerAgentStatus()
 
   // 监听消息变化，自动保存到 localStorage
   watch(messages, () => {
@@ -555,6 +725,244 @@ onMounted(async () => {
   min-height: 0;
 }
 
+/* ─── Sprint-07A.2: Career Agent Dashboard（折叠摘要） ─── */
+.career-agent-dashboard {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0d1117 0%, #111827 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 6px 16px;
+}
+
+.ca-loading, .ca-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.8rem;
+}
+
+.ca-error { color: #f59e0b; }
+
+.ca-retry-btn {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* 单行摘要 */
+.ca-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.ca-compact-source {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.ca-settings-link {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: color 0.2s;
+  white-space: nowrap;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ca-settings-link:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+}
+
+.ca-compact-icon { font-size: 1.2rem; }
+
+.ca-compact-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+
+.ca-compact-status {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(74,222,128,0.1);
+  color: #4ade80;
+}
+
+.ca-compact-status.paused { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.ca-compact-status.error { background: rgba(239,68,68,0.1); color: #ef4444; }
+.ca-compact-status.running { background: rgba(96,165,250,0.1); color: #60a5fa; }
+
+.ca-compact-recent {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.4);
+  flex: 1;
+}
+
+.ca-toggle-btn {
+  padding: 4px 12px;
+  font-size: 0.72rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ca-toggle-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* 展开详情 */
+.ca-expanded {
+  padding: 8px 0;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ca-expanded-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ca-section-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.3);
+  display: block;
+  flex-shrink: 0;
+  width: 50px;
+  padding-top: 4px;
+}
+
+.ca-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ca-tag {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  background: rgba(74,222,128,0.08);
+  color: #4ade80;
+  border-radius: 10px;
+}
+
+.ca-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ca-action-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  background: rgba(201,168,108,0.12);
+  border: 1px solid rgba(201,168,108,0.25);
+  border-radius: 8px;
+  color: rgba(201,168,108,0.9);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ca-action-btn:hover {
+  background: rgba(201,168,108,0.2);
+  border-color: rgba(201,168,108,0.4);
+}
+
+.ca-recent-tasks {
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding-top: 8px;
+}
+
+.ca-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ca-task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 0.75rem;
+}
+
+.ca-task-status {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.5);
+}
+
+.ca-task-status.completed { color: #4ade80; background: rgba(74,222,128,0.1); }
+.ca-task-status.failed { color: #ef4444; background: rgba(239,68,68,0.1); }
+.ca-task-status.running { color: #60a5fa; background: rgba(96,165,250,0.1); }
+
+.ca-task-type {
+  color: rgba(255,255,255,0.7);
+  flex: 1;
+}
+
+.ca-task-date {
+  color: rgba(255,255,255,0.3);
+  font-size: 0.68rem;
+}
+
+.ca-create-btn {
+  padding: 8px 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #C9A86C, #E2C88A);
+  color: #08131F;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ca-create-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(201,168,108,0.3);
+}
+
+.ca-create-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ca-create-btn-sm {
+  padding: 5px 14px;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
 /* 聊天面板 */
 .job-chat-panel {
   flex: 1;
@@ -575,6 +983,12 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+.chat-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .job-chat-header h3 {
   margin: 0;
   font-size: 1rem;
@@ -582,15 +996,39 @@ onMounted(async () => {
   color: rgba(255,255,255,0.9);
 }
 
+.chat-badge {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.chat-badge-platform {
+  background: rgba(96,165,250,0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(96,165,250,0.2);
+}
+
 .chat-header-right {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-top: 4px;
 }
 
-.job-chat-subtitle {
-  font-size: 0.78rem;
-  color: rgba(255,255,255,0.4);
+.chat-capabilities {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chat-cap {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.5);
 }
 
 .chat-clear-btn {
@@ -742,7 +1180,7 @@ onMounted(async () => {
 
 /* 右栏推荐面板 */
 .job-recommend-panel {
-  width: 300px;
+  width: 380px;
   background: #0d1117;
   border-left: 1px solid rgba(255,255,255,0.04);
   display: flex;
@@ -878,10 +1316,10 @@ onMounted(async () => {
   color: rgba(255,255,255,0.35);
 }
 
-/* 推荐卡片（横向滚动项） */
+/* 推荐卡片 */
 .job-rec-card {
-  min-width: 280px;
-  max-width: 320px;
+  min-width: 320px;
+  max-width: 360px;
   flex-shrink: 0;
   padding: 14px;
   background: rgba(255,255,255,0.03);
@@ -1352,8 +1790,8 @@ onMounted(async () => {
 
 /* ─── 迷你卡片（画像/建议）─── */
 .job-card-mini {
-  min-width: 200px;
-  max-width: 240px;
+  min-width: 280px;
+  max-width: 340px;
   flex-shrink: 0;
   margin: 0;
 }

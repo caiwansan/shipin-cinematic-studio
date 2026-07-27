@@ -29,7 +29,7 @@ export interface CostMetrics {
   totalTokens?: number
   estimatedCostUsd?: number
   creditsUsed?: number       // platform-specific
-  modelName?: string          // e.g. deepseek-chat, flux-schnell
+  modelName?: string          // e.g. deepseek-v4-flash, flux-schnell
   provider?: string           // e.g. deepseek, openai, replicate
 }
 

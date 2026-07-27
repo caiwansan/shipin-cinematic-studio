@@ -284,6 +284,99 @@ export async function listRequirements(): Promise<JobRequirement[]> {
   return []
 }
 
+// ─── Job Posting (Enterprise) ───
+// 对接 POST /api/enterprise/postings（企业岗位 CRUD）
+
+/**
+ * 创建企业岗位（JobPosting）
+ * 后端自动从 JWT 解析 enterpriseId，禁止前端传入
+ */
+export async function createPosting(data: {
+  title: string
+  description?: string
+  requirements?: string
+  salary?: string
+  location?: string
+  skillRequirements?: string[]
+  tags?: string[]
+  industry?: string
+  careerPath?: string
+  status?: 'draft' | 'published' | 'paused' | 'closed'
+}): Promise<any> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/postings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}))
+    throw new Error(errData.error || `API Error: ${res.status}`)
+  }
+
+  return res.json()
+}
+
+// ─── Enterprise Candidates ───
+
+/**
+ * 获取企业候选人列表
+ * 返回该企业所有岗位匹配的候选人（按匹配分降序）
+ */
+export async function listEnterpriseCandidates(): Promise<{
+  success: boolean
+  candidates: any[]
+  total: number
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/candidates', {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    if (res.status === 401) {
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        localStorage.removeItem('auth_token')
+        window.location.href = '/login'
+      }
+      throw new Error('未登录或登录已过期')
+    }
+    throw new Error(`API Error: ${res.status}`)
+  }
+  return res.json()
+}
+
+// ─── Job Posting Status ───
+
+/**
+ * 更新岗位状态
+ * 支持: draft→published, published→paused, paused→published, published/paused→closed
+ */
+export async function updatePostingStatus(
+  postingId: string,
+  status: 'draft' | 'published' | 'paused' | 'closed'
+): Promise<any> {
+  const token = getToken()
+  const res = await fetch(`/api/enterprise/postings/${postingId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ status }),
+  })
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}))
+    throw new Error(errData.error || `API Error: ${res.status}`)
+  }
+
+  return res.json()
+}
+
 // ─── Batch Matching ───
 
 /**
@@ -380,4 +473,168 @@ export async function getTemplateExplanation(resultId: string): Promise<Explanat
  */
 export async function getSkillVocabulary(): Promise<{ skills: string[] }> {
   return request('/skills/vocabulary')
+}
+
+// ─── Talent Agent (Sprint-07B-2) ───
+
+/**
+ * 候选人深度分析
+ */
+export async function analyzeCandidate(candidateId: string): Promise<{
+  success: boolean
+  result: any
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/agents/talent/analyze', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ candidateId }),
+  })
+  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  return res.json()
+}
+
+/**
+ * 匹配分解释
+ */
+export async function explainMatch(matchId: string): Promise<{
+  success: boolean
+  result: any
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/agents/talent/explain', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ matchId }),
+  })
+  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  return res.json()
+}
+
+/**
+ * 候选人搜索推荐
+ */
+export async function searchTalent(jobId: string, limit?: number): Promise<{
+  success: boolean
+  result: any
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/agents/talent/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ jobId, limit }),
+  })
+  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  return res.json()
+}
+
+// ─── Interview Agent (Sprint-07B-3) ───
+
+/**
+ * 生成面试问题
+ */
+export async function generateInterviewQuestions(jobId: string, candidateId: string): Promise<{
+  success: boolean
+  result: any
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/agents/interview/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ jobId, candidateId }),
+  })
+  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  return res.json()
+}
+
+/**
+ * 追问建议
+ */
+export async function suggestInterviewFollowUp(
+  sessionId: string,
+  lastQuestion: string,
+  lastAnswer: string
+): Promise<{
+  success: boolean
+  result: any
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/agents/interview/followup', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ sessionId, lastQuestion, lastAnswer }),
+  })
+  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  return res.json()
+}
+
+/**
+ * 面试总结
+ */
+export async function summarizeInterview(sessionId: string): Promise<{
+  success: boolean
+  result: any
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/agents/interview/summary', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ sessionId }),
+  })
+  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  return res.json()
+}
+
+/**
+ * Interview Agent 状态查询
+ */
+export async function getInterviewAgentStatus(): Promise<{
+  success: boolean
+  agent: any
+  llmConfigured: boolean
+  llmProvider: string | null
+  llmModel: string | null
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/agents/interview/status', {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  return res.json()
+}
+
+/**
+ * Talent Agent 状态查询
+ */
+export async function getTalentAgentStatus(): Promise<{
+  success: boolean
+  agent: any
+  llmConfigured: boolean
+  llmProvider: string | null
+  llmModel: string | null
+}> {
+  const token = getToken()
+  const res = await fetch('/api/enterprise/agents/talent/status', {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  return res.json()
 }

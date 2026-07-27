@@ -1,0 +1,597 @@
+{
+  "summary": {
+    "totalRegistrations": 117,
+    "routeFiles": 0,
+    "pluginsOnly": 0,
+    "fileMissing": 117
+  },
+  "routes": [],
+  "plugins": [
+    {
+      "registerName": "corsPlugin",
+      "importSource": "./plugins/cors.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "jwt",
+      "importSource": "@fastify/jwt",
+      "fileExists": false
+    },
+    {
+      "registerName": "authPlugin",
+      "importSource": "./plugins/auth.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "runtimeContextPlugin",
+      "importSource": "./plugins/runtime-context.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "multipart",
+      "importSource": "@fastify/multipart",
+      "fileExists": false
+    },
+    {
+      "registerName": "authRoutes",
+      "importSource": "./routes/auth.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "systemVersionRoutes",
+      "importSource": "./routes/system-version.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "captchaRoutes",
+      "importSource": "./routes/captcha.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "smsRoutes",
+      "importSource": "./routes/sms.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "projectRoutes",
+      "importSource": "./routes/projects.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "storyboardRoutes",
+      "importSource": "./routes/storyboards.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "taskRoutes",
+      "importSource": "./routes/tasks.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "aiTaskRoutes",
+      "importSource": "./routes/ai-tasks.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "aiRouterRoutes",
+      "importSource": "./routes/ai-router.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "sandboxRoutes",
+      "importSource": "./routes/sandbox.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "shadowRoutes",
+      "importSource": "./routes/shadow.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "showrunnerRoutes",
+      "importSource": "./routes/showrunner.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "jobRoutes",
+      "importSource": "./routes/jobs.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "directorSimulationRoutes",
+      "importSource": "./routes/director-simulation.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerSimulationRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerIsolationRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerBackpressureRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerLongRunRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerObservabilityPersistence",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerStudioRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerReplayRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerReplayAnalyticsRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerOptimizationRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerPatchRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerCompareRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerSessionRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerProductionRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "executionGraphRoutes",
+      "importSource": "./routes/execution-graph.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "sceneRoutes",
+      "importSource": "./routes/scenes.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "assetRoutes",
+      "importSource": "./routes/assets.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "runtimeRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "imageRoutes",
+      "importSource": "./routes/images.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "executionImageRoutes",
+      "importSource": "./routes/execution-images.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "uploadRoutes",
+      "importSource": "./routes/upload.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "adminAuthRoutes",
+      "importSource": "./routes/admin-auth.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "memberRoutes",
+      "importSource": "./routes/member.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "userCenterRoutes",
+      "importSource": "./routes/user-center.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "optimizeRoutes",
+      "importSource": "./routes/optimize.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "optimizeVideoPromptRoutes",
+      "importSource": "./routes/optimize-video-prompt.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "featuredRoutes",
+      "importSource": "./routes/featured.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerOnlineAIRoutes",
+      "importSource": "./routes/online-ai.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerModelProviderRoutes",
+      "importSource": "./routes/model-provider.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "queueRuntimeRoutes",
+      "importSource": "./routes/queue-runtime.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "pipelineRoutes",
+      "importSource": "./routes/pipeline.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "pipelineJobRoutes",
+      "importSource": "./routes/pipeline-jobs.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "renderShotsRoutes",
+      "importSource": "./routes/render-shots.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "executionJournalRoutes",
+      "importSource": "./routes/execution-journal.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "feedbackRoutes",
+      "importSource": "./routes/feedback.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "schedulerRoutes",
+      "importSource": "./routes/scheduler.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "runtimeCheckpointRoutes",
+      "importSource": "./routes/runtime-checkpoint.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "projectV2Routes",
+      "importSource": "./routes/projects-v2.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "narrativeLLMRoutes",
+      "importSource": "./routes/narrative-llm.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "anchorRoutes",
+      "importSource": "./routes/anchor.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "costumeRoutes",
+      "importSource": "./routes/costume.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "characterStateRoutes",
+      "importSource": "./routes/character-state.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "storyGraphRoutes",
+      "importSource": "./routes/story-graph.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "directorEngineRoutes",
+      "importSource": "./routes/director-engine.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "directorRoutes",
+      "importSource": "./routes/director.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "directorV2Routes",
+      "importSource": "./routes/director-v2.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "desktopRuntimeRoutes",
+      "importSource": "./routes/desktop-runtime.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "userApiKeyRoutes",
+      "importSource": "./routes/user-api-keys.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "userModelConfigRoutes",
+      "importSource": "./routes/user-model-config.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "assetRegistryRoutes",
+      "importSource": "./routes/asset-registry.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "assetVersionRoutes",
+      "importSource": "./routes/asset-versions.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "aiGatewayRoutes",
+      "importSource": "./routes/ai-gateway.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "assetCardRoutes",
+      "importSource": "./routes/asset-cards.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "continuityRoutes",
+      "importSource": "./routes/continuity.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "jobManagerRoutes",
+      "importSource": "./routes/job-manager.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerAssetEconomyRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "wechatOAuthRoutes",
+      "importSource": "./routes/wechat-oauth.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "customerServiceRoutes",
+      "importSource": "./routes/customer-service.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "paymentRoutes",
+      "importSource": "./routes/payment.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "scriptSubmitRoutes",
+      "importSource": "./routes/script-submit.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerPaymentRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "agentOrchestratorRoutes",
+      "importSource": "./routes/agent-orchestrator.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "stabilityRoutes",
+      "importSource": "./routes/stability.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "aigcSpecDbRoutes",
+      "importSource": "./routes/aigc-spec-db.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "stageModelConfigRoutes",
+      "importSource": "./routes/stage-model-config.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "modelRoutes",
+      "importSource": "./routes/models.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "adminModelRoutes",
+      "importSource": "./routes/admin-models.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "adminModelV2Routes",
+      "importSource": "./routes/admin-models-v2.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "adminApiKeyRoutes",
+      "importSource": "./routes/admin-api-keys.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "adminGlobalConfigRoutes",
+      "importSource": "./routes/admin-global-config.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "registerRuntimeObservabilityRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "musicRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "ttsRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "worldModelRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "referenceRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "worldRuntimeRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "omsDashboardRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "omsV2Routes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "characterRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "omsFusionRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "universeImageRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "consistencyReferenceRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "apiKeyRoutes",
+      "importSource": "./routes/api-keys.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "adminAssetRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "systemHealthRoutes",
+      "importSource": "./routes/system-health.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "observabilityRoutes",
+      "importSource": "./routes/observability.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "optimizationRoutes",
+      "importSource": "./routes/optimization.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "governanceRoutes",
+      "importSource": "./routes/governance.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "orchestratorRoutes",
+      "importSource": "./routes/orchestrator.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "voiceRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "cognitionRoutes",
+      "importSource": "./routes/cognition-loop.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "worldMemoryRoutes",
+      "importSource": "./routes/world-memory.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "exportRoutes",
+      "importSource": "./routes/export-runtime.js",
+      "fileExists": false
+    },
+    {
+      "registerName": "controlPlaneV2Routes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "systemDashboardRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "tenantRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "productRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "routeRedirect",
+      "importSource": "unknown",
+      "fileExists": false
+    },
+    {
+      "registerName": "hitlRoutes",
+      "importSource": "unknown",
+      "fileExists": false
+    }
+  ],
+  "timestamp": "2026-05-21T04:09:13.590Z"
+}

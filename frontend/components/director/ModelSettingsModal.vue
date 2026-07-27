@@ -38,7 +38,7 @@
           <!-- 云端模式卡片（原内容） -->
           <template v-if="!localMode">
             <div class="ms-cards">
-              <div v-for="(card, idx) in modelCards" :key="card.key" class="ms-card">
+              <div v-for="(card, idx) in filteredCards" :key="card.key" class="ms-card">
                 <!-- 卡片头部 -->
                 <div class="ms-card-header">
                   <div class="ms-card-title">
@@ -46,7 +46,7 @@
                     <span class="ms-card-label">{{ card.label }}</span>
                   </div>
                   <label class="ms-toggle">
-                    <input type="checkbox" v-model="card.enabled" @change="onCardToggle(idx)" />
+                    <input type="checkbox" v-model="card.enabled" @change="onCardToggle(card.key)" />
                     <span class="ms-toggle-slider"></span>
                   </label>
                 </div>
@@ -57,13 +57,13 @@
                   <div class="ms-row">
                     <label class="ms-sublabel">供应商</label>
                     <template v-if="card.key === 'music'">
-                      <select v-model="card.provider" class="ms-select" @change="onProviderChange(idx)">
+                      <select v-model="card.provider" class="ms-select" @change="onProviderChange(card.key)">
                         <option value="">-- 选择供应商 --</option>
                         <option v-for="p in musicProviders" :key="p.id" :value="p.id">{{ p.name }}</option>
                       </select>
                     </template>
                     <template v-else>
-                      <select v-model="card.provider" class="ms-select" @change="onProviderChange(idx)">
+                      <select v-model="card.provider" class="ms-select" @change="onProviderChange(card.key)">
                         <option value="">-- 选择供应商 --</option>
                         <option v-for="p in availableProviders" :key="p.id" :value="p.id">{{ p.name }}</option>
                       </select>
@@ -160,7 +160,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from "vue"
 
-const props = defineProps<{ visible: boolean }>()
+const props = defineProps<{ visible: boolean; filterCapability?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 
 const saving = ref(false)
@@ -289,7 +289,27 @@ const modelCards = reactive<ModelCard[]>([
   { key:"music", icon:"🎵", label:"音乐模型（生成配乐）", enabled:false, provider:"", modelName:"",
     enabledField:"musicEnabled", modelField:"musicModel",
     apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
+  { key:"career_agent", icon:"🎯", label:"AI 职业助理", enabled:true, provider:"", modelName:"",
+    enabledField:"careerAgentEnabled", modelField:"careerAgentModel",
+    apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
+  { key:"hdz", icon:"🎬", label:"短剧工作台", enabled:true, provider:"", modelName:"",
+    enabledField:"hdzEnabled", modelField:"hdzModel",
+    apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
+  { key:"ppt", icon:"📊", label:"PPT 生成", enabled:true, provider:"", modelName:"",
+    enabledField:"pptEnabled", modelField:"pptModel",
+    apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
+  { key:"novel", icon:"📖", label:"小说创作", enabled:true, provider:"", modelName:"",
+    enabledField:"novelEnabled", modelField:"novelModel",
+    apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
 ])
+
+/** 根据 filterCapability 过滤卡片（工作台模式 vs 全局设置模式） */
+const filteredCards = computed(() => {
+  if (props.filterCapability) {
+    return modelCards.filter(c => c.key === props.filterCapability)
+  }
+  return modelCards
+})
 
 // 音乐模型可选供应商
 const musicProviders = [
@@ -312,20 +332,47 @@ async function loadUnifiedConfig() {
     const json = await res.json()
     if (!json.success || !json.data) return
     const data = json.data
+
+    // 字段映射：card.key → API response field names
+    const fieldMap: Record<string, { provider: string; model: string; enabled: string; baseUrl: string; hasKey: string }> = {
+      llm: { provider: 'llmProvider', model: 'llmModel', enabled: 'llmEnabled', baseUrl: 'llmBaseUrl', hasKey: 'hasLlmApiKey' },
+      image: { provider: 'imageProvider', model: 'imageModel', enabled: 'imageEnabled', baseUrl: 'imageBaseUrl', hasKey: 'hasImageApiKey' },
+      video: { provider: 'videoProvider', model: 'videoModel', enabled: 'videoEnabled', baseUrl: 'videoBaseUrl', hasKey: 'hasVideoApiKey' },
+      tts: { provider: 'ttsProvider', model: 'ttsModel', enabled: 'ttsEnabled', baseUrl: 'ttsBaseUrl', hasKey: 'hasTtsApiKey' },
+      music: { provider: 'musicProvider', model: 'musicModel', enabled: 'musicEnabled', baseUrl: 'musicBaseUrl', hasKey: 'hasMusicApiKey' },
+      visionUnderstand: { provider: 'visionUnderstandProvider', model: 'visionUnderstandModel', enabled: 'visionUnderstandEnabled', baseUrl: 'visionUnderstandBaseUrl', hasKey: 'hasVisionUnderstandApiKey' },
+      career_agent: { provider: 'careerAgentProvider', model: 'careerAgentModel', enabled: 'careerAgentEnabled', baseUrl: 'careerAgentBaseUrl', hasKey: 'hasCareerAgentApiKey' },
+      hdz: { provider: 'hdzProvider', model: 'hdzModel', enabled: 'hdzEnabled', baseUrl: 'hdzBaseUrl', hasKey: 'hasHdzApiKey' },
+      ppt: { provider: 'pptProvider', model: 'pptModel', enabled: 'pptEnabled', baseUrl: 'pptBaseUrl', hasKey: 'hasPptApiKey' },
+      novel: { provider: 'novelProvider', model: 'novelModel', enabled: 'novelEnabled', baseUrl: 'novelBaseUrl', hasKey: 'hasNovelApiKey' },
+    }
+
     for (const card of modelCards) {
-      const k = card.key
-      const provField = k + "Provider"
-      if (data[provField]) card.provider = data[provField]
-      if (data[card.modelField]) card.modelName = data[card.modelField]
-      if (data[card.enabledField] !== undefined) card.enabled = data[card.enabledField]
-      const hasKeyField = "has" + k.charAt(0).toUpperCase() + k.slice(1) + "ApiKey"
-      card.keyConfigured = data[hasKeyField] || false
-      if (card.keyConfigured) card.editingKey = false
-      if (card.provider === "custom" && data.baseUrl) card.baseUrlInput = data.baseUrl
-      // ⭐ BYO: per-capability baseUrl
-      const perCapBaseUrlKey = card.key + "BaseUrl"
-      if (card.provider === "custom" && data[perCapBaseUrlKey]) {
-        card.baseUrlInput = data[perCapBaseUrlKey]
+      const fm = fieldMap[card.key]
+      if (fm) {
+        if (data[fm.provider]) card.provider = data[fm.provider]
+        if (data[fm.model]) card.modelName = data[fm.model]
+        if (data[fm.enabled] !== undefined) card.enabled = data[fm.enabled]
+        card.keyConfigured = data[fm.hasKey] || false
+        if (card.keyConfigured) card.editingKey = false
+        if (card.provider === "custom" && data[fm.baseUrl]) {
+          card.baseUrlInput = data[fm.baseUrl]
+        }
+      } else {
+        // Legacy fallback
+        const k = card.key
+        const provField = k + "Provider"
+        if (data[provField]) card.provider = data[provField]
+        if (data[card.modelField]) card.modelName = data[card.modelField]
+        if (data[card.enabledField] !== undefined) card.enabled = data[card.enabledField]
+        const hasKeyField = "has" + k.charAt(0).toUpperCase() + k.slice(1) + "ApiKey"
+        card.keyConfigured = data[hasKeyField] || false
+        if (card.keyConfigured) card.editingKey = false
+        if (card.provider === "custom" && data.baseUrl) card.baseUrlInput = data.baseUrl
+        const perCapBaseUrlKey = card.key + "BaseUrl"
+        if (card.provider === "custom" && data[perCapBaseUrlKey]) {
+          card.baseUrlInput = data[perCapBaseUrlKey]
+        }
       }
     }
   } catch (e) {
@@ -355,10 +402,28 @@ function getModelsForCard(card: ModelCard): any[] {
     return musicModelMap[card.provider] || []
   }
 
+  // Capability → Model Type 映射
+  // 后端模型类型是通用的：llm/image/video/tts/vision
+  // 前端能力是业务性的：career_agent/hdz/ppt/novel 都使用 llm 模型
+  const CAPABILITY_MODEL_TYPE: Record<string, string> = {
+    llm: 'llm',
+    image: 'image',
+    video: 'video',
+    tts: 'tts',
+    visionUnderstand: 'vision',
+    // 所有 LLM 能力类工作台都使用 llm 模型列表
+    career_agent: 'llm',
+    hdz: 'llm',
+    ppt: 'llm',
+    novel: 'llm',
+  }
+
+  const modelType = CAPABILITY_MODEL_TYPE[card.key] || card.key
+
   const prov = providerList.value.find((p: any) => p.provider === card.provider)
   if (!prov?.models) return []
   return prov.models
-    .filter((m: any) => m.type === card.key)
+    .filter((m: any) => m.type === modelType)
     .map((m: any) => ({ name: m.id, label: m.name || m.id }))
 }
 
@@ -374,8 +439,9 @@ async function loadProviders() {
   }
 }
 
-async function onProviderChange(idx: number) {
-  const card = modelCards[idx]
+async function onProviderChange(key: string) {
+  const card = modelCards.find(c => c.key === key)
+  if (!card) return
   card.modelName = ""
   card.apiKeyInput = ""
   card.keyConfigured = false
@@ -385,8 +451,9 @@ async function onProviderChange(idx: number) {
   await loadUnifiedConfig()
 }
 
-function onCardToggle(idx: number) {
-  const card = modelCards[idx]
+function onCardToggle(key: string) {
+  const card = modelCards.find(c => c.key === key)
+  if (!card) return
   if (card.key === 'music') {
     // 音乐卡 toggle 立即保存
     saveUnified()
@@ -445,10 +512,15 @@ async function handleSaveAll() {
       statusIsErr.value = true
     } else {
       const data = json.data
+      const hasKeyMap: Record<string, string> = {
+        llm: 'hasLlmApiKey', image: 'hasImageApiKey', video: 'hasVideoApiKey',
+        tts: 'hasTtsApiKey', music: 'hasMusicApiKey', visionUnderstand: 'hasVisionUnderstandApiKey',
+        career_agent: 'hasCareerAgentApiKey', hdz: 'hasHdzApiKey',
+        ppt: 'hasPptApiKey', novel: 'hasNovelApiKey',
+      }
       for (const card of modelCards) {
-        const k = card.key
-        const hasKeyField = "has" + k.charAt(0).toUpperCase() + k.slice(1) + "ApiKey"
-        if (data[hasKeyField]) {
+        const hf = hasKeyMap[card.key]
+        if (hf && data[hf]) {
           card.keyConfigured = true
           card.editingKey = false
         }

@@ -99,7 +99,7 @@ export interface OnboardingState {
  * 后端: GET /enterprise/onboarding/v2/status
  */
 export async function getOnboardingStatus(enterpriseId: string): Promise<OnboardingState | null> {
-  const res = await apiRequest('/enterprise/onboarding/v2/status', {
+  const res = await apiRequest('/api/enterprise/onboarding/v2/status', {
     params: { enterpriseId },
   })
   return res.state || null
@@ -121,7 +121,7 @@ export interface CreateEnterpriseParams {
  * 后端: POST /enterprise/onboarding/step1
  */
 export async function createEnterpriseProfile(params: CreateEnterpriseParams) {
-  return apiRequest('/enterprise/onboarding/step1', {
+  return apiRequest('/api/enterprise/onboarding/step1', {
     method: 'POST',
     body: params,
   })
@@ -134,6 +134,6 @@ export async function createEnterpriseProfile(params: CreateEnterpriseParams) {
  * 后端: GET /enterprise/plans
  */
 export async function getEnterprisePlans() {
-  const res = await apiRequest('/enterprise/plans')
+  const res = await apiRequest('/api/enterprise/plans')
   return res.plans
 }

@@ -48,7 +48,7 @@ function readConfig(): EmbedConfig | null {
   if (dsKey) {
     return {
       provider: 'deepseek',
-      model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-chat',
+      model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
       apiKey: dsKey,
       baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
     }

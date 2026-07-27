@@ -138,7 +138,7 @@ export class AIProviderConfigService {
    */
   getSupportedProviders() {
     return [
-      { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'], defaultBaseUrl: 'https://api.deepseek.com/v1' },
+      { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-v4-flash', 'deepseek-v4-pro'], defaultBaseUrl: 'https://api.deepseek.com' },
       { id: 'openai', name: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o1-preview'], defaultBaseUrl: 'https://api.openai.com/v1' },
       { id: 'claude', name: 'Anthropic Claude', models: ['claude-3-5-sonnet', 'claude-3-opus', 'claude-3-haiku'], defaultBaseUrl: 'https://api.anthropic.com/v1' },
       { id: 'qwen', name: '通义千问', models: ['qwen-max', 'qwen-plus', 'qwen-turbo'], defaultBaseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
@@ -168,7 +168,7 @@ export async function testProviderConnection(
   try {
     const base = baseUrl || 'https://api.deepseek.com/v1'
     const url = `${base.replace(/\/$/, '')}/chat/completions`
-    const testModel = model || 'deepseek-chat'
+    const testModel = model || 'deepseek-v4-flash'
 
     const response = await fetch(url, {
       method: 'POST',

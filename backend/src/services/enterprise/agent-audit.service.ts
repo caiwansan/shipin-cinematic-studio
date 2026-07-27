@@ -26,10 +26,16 @@ export class AgentAuditService {
    * 记录一条审计日志
    */
   async log(entry: AuditLogEntry) {
+    // FK safety: 如果 agentId 存在但指向不存在的 AgentDef，置为 null 避免 FK 约束报错
+    let safeAgentId = entry.agentId || null
+    if (safeAgentId) {
+      const agentExists = await prisma.agentDef.findUnique({ where: { id: safeAgentId }, select: { id: true } })
+      if (!agentExists) safeAgentId = null
+    }
     return await prisma.agentAuditTrail.create({
       data: {
         tenantId: entry.tenantId,
-        agentId: entry.agentId || null,
+        agentId: safeAgentId,
         taskId: entry.taskId || null,
         action: entry.action,
         resource: entry.resource || null,

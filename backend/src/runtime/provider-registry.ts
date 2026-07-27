@@ -279,7 +279,7 @@ export async function verifyModelProvider(
 
 function getDefaultModelForProvider(provider: string): string | undefined {
   const map: Record<string, string> = {
-    deepseek: 'deepseek-chat',
+    deepseek: 'deepseek-v4-flash',
     volcengine: 'volcengine-llm',
     aliyun: 'aliyun-llm',
     siliconflow: 'siliconflow-llm',

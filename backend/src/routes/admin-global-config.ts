@@ -539,6 +539,73 @@ export default async function adminGlobalConfigRoutes(fastify: FastifyInstance) 
     return { success: true, data: { quota } }
   })
 
+  // ─── Sprint-07A.2-AI-02: 业务 AI 模型配置（按 businessType 隔离） ───
+
+  // GET /api/admin/global-config/business-type/:type — 读取业务 AI 配置
+  fastify.get('/api/admin/global-config/business-type/:type', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { type } = request.params as { type: string }
+    const allowedTypes = ['hdz', 'career_advisor', 'ppt', 'music', 'novel']
+    if (!allowedTypes.includes(type)) {
+      return reply.status(400).send({ success: false, error: '无效的业务类型' })
+    }
+    const provider = await getRouteConfig(`route:admin-global-config:${type}`, 'llm_provider', 'deepseek')
+    const model = await getRouteConfig(`route:admin-global-config:${type}`, 'llm_model', '')
+    // 检查 API Key 是否存在（不返回实际 Key）
+    const apiKeyRow = await prisma.apiKey.findUnique({ where: { provider: `business_type_${type}` } })
+    const hasApiKey = !!apiKeyRow?.keyValue
+    return { success: true, config: { provider, model, hasApiKey } }
+  })
+
+  // PUT /api/admin/global-config/business-type/:type — 保存业务 AI 配置
+  fastify.put('/api/admin/global-config/business-type/:type', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { type } = request.params as { type: string }
+    const allowedTypes = ['hdz', 'career_advisor', 'ppt', 'music', 'novel']
+    if (!allowedTypes.includes(type)) {
+      return reply.status(400).send({ success: false, error: '无效的业务类型' })
+    }
+    const body = request.body as any
+    const provider = body.provider || 'deepseek'
+    const model = body.model || ''
+    const apiKey = body.apiKey || ''
+    const baseUrl = body.baseUrl || ''
+
+    // 保存 Provider 和 Model
+    await prisma.routeConfig.upsert({
+      where: { scope_key: { scope: `route:admin-global-config:${type}`, key: 'llm_provider' } },
+      update: { value: provider, isActive: true },
+      create: { scope: `route:admin-global-config:${type}`, key: 'llm_provider', value: provider, isActive: true, label: `${type}业务LLM供应商` },
+    })
+    await prisma.routeConfig.upsert({
+      where: { scope_key: { scope: `route:admin-global-config:${type}`, key: 'llm_model' } },
+      update: { value: model, isActive: true },
+      create: { scope: `route:admin-global-config:${type}`, key: 'llm_model', value: model, isActive: true, label: `${type}业务LLM模型` },
+    })
+
+    // 保存 Base URL（可选）
+    if (baseUrl) {
+      await prisma.routeConfig.upsert({
+        where: { scope_key: { scope: `route:admin-global-config:${type}`, key: 'llm_base_url' } },
+        update: { value: baseUrl, isActive: true },
+        create: { scope: `route:admin-global-config:${type}`, key: 'llm_base_url', value: baseUrl, isActive: true, label: `${type}业务LLM Base URL` },
+      })
+    }
+
+    // 保存 API Key（如果提供了）
+    if (apiKey) {
+      await prisma.apiKey.upsert({
+        where: { provider: `business_type_${type}` },
+        update: { keyValue: apiKey, keyName: `${type} Business AI Key` },
+        create: { provider: `business_type_${type}`, keyValue: apiKey, keyName: `${type} Business AI Key` },
+      })
+    }
+
+    // 检查 API Key 是否存在
+    const apiKeyRow = await prisma.apiKey.findUnique({ where: { provider: `business_type_${type}` } })
+    const hasApiKey = !!apiKeyRow?.keyValue
+
+    return { success: true, config: { provider, model, hasApiKey } }
+  })
+
   // GET /api/public/global-models — 公开接口，用户端获取所有供应商和模型列表（无需鉴权）
   fastify.get('/api/public/global-models', async (request, reply) => {
     const providers = await getProviders()

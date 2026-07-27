@@ -87,12 +87,21 @@ export const workspaces: WorkspaceConfig[] = [
   // ===== preview =====
   {
     id: 'job',
-    name: '求职招聘',
+    name: '求职管家',
     status: 'preview',
     visibleOnHome: true,
     routeAccessible: true,
     completion: 55,
-    note: 'MVP 求职者端，内存会话（计划迁 Redis）',
+    note: 'MVP 求职者端，AI职业顾问+岗位推荐+面试助手',
+  },
+  {
+    id: 'recruitment',
+    name: '企业招聘',
+    status: 'preview',
+    visibleOnHome: true,
+    routeAccessible: true,
+    completion: 60,
+    note: '企业招聘中心，AI岗位解析+人才匹配+招聘管理',
   },
   {
     id: 'ecom-image',

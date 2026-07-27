@@ -1,0 +1,140 @@
+/**
+ * enterprise-interview-agent.ts — AI 面试官 API 路由
+ * Sprint-07B-3: Interview Agent MVP
+ *
+ * 三个核心 API：
+ * POST /api/enterprise/agents/interview/generate   — 生成面试问题
+ * POST /api/enterprise/agents/interview/followup    — 追问建议
+ * POST /api/enterprise/agents/interview/summary     — 面试总结
+ *
+ * 架构：EnterpriseLlmConfig → executeViaGateway
+ * 数据权限：只读本企业面试记录和候选人
+ */
+
+import type { FastifyInstance } from 'fastify'
+import { prisma } from '../utils/index.js'
+import { interviewAgentService } from '../services/enterprise/interview-agent.service.js'
+
+export async function registerInterviewAgentRoutes(app: FastifyInstance) {
+
+  // ── POST /api/enterprise/agents/interview/generate ──
+  app.post('/api/enterprise/agents/interview/generate', async (request, reply) => {
+    const userId = (request as any).user?.id || (request as any).userId
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' })
+
+    const { jobId, candidateId } = request.body as { jobId?: string; candidateId?: string }
+    if (!jobId || !candidateId) {
+      return reply.status(400).send({ error: 'jobId and candidateId are required' })
+    }
+
+    try {
+      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
+      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
+
+      const agent = await interviewAgentService.ensureInterviewAgent(ep.organizationId)
+      if (!agent) return reply.status(500).send({ error: 'Failed to create interview agent' })
+
+      const result = await interviewAgentService.generateQuestions(
+        ep.organizationId, userId, agent.id, jobId, candidateId
+      )
+
+      return reply.send({ success: true, result })
+    } catch (error: any) {
+      request.log.error(`[interview-agent] generate: ${error.message}`)
+      return reply.status(500).send({ error: 'Generation failed', message: error.message?.slice(0, 200) })
+    }
+  })
+
+  // ── POST /api/enterprise/agents/interview/followup ──
+  app.post('/api/enterprise/agents/interview/followup', async (request, reply) => {
+    const userId = (request as any).user?.id || (request as any).userId
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' })
+
+    const { sessionId, lastQuestion, lastAnswer } = request.body as {
+      sessionId?: string
+      lastQuestion?: string
+      lastAnswer?: string
+    }
+    if (!sessionId || !lastQuestion) {
+      return reply.status(400).send({ error: 'sessionId and lastQuestion are required' })
+    }
+
+    try {
+      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
+      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
+
+      const agent = await interviewAgentService.ensureInterviewAgent(ep.organizationId)
+      if (!agent) return reply.status(500).send({ error: 'Failed to create interview agent' })
+
+      const result = await interviewAgentService.suggestFollowUp(
+        ep.organizationId, userId, agent.id, sessionId, lastQuestion, lastAnswer || ''
+      )
+
+      return reply.send({ success: true, result })
+    } catch (error: any) {
+      request.log.error(`[interview-agent] followup: ${error.message}`)
+      return reply.status(500).send({ error: 'Follow-up failed', message: error.message?.slice(0, 200) })
+    }
+  })
+
+  // ── POST /api/enterprise/agents/interview/summary ──
+  app.post('/api/enterprise/agents/interview/summary', async (request, reply) => {
+    const userId = (request as any).user?.id || (request as any).userId
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' })
+
+    const { sessionId } = request.body as { sessionId?: string }
+    if (!sessionId) {
+      return reply.status(400).send({ error: 'sessionId is required' })
+    }
+
+    try {
+      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
+      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
+
+      const agent = await interviewAgentService.ensureInterviewAgent(ep.organizationId)
+      if (!agent) return reply.status(500).send({ error: 'Failed to create interview agent' })
+
+      const result = await interviewAgentService.summarizeInterview(
+        ep.organizationId, userId, agent.id, sessionId
+      )
+
+      return reply.send({ success: true, result })
+    } catch (error: any) {
+      request.log.error(`[interview-agent] summary: ${error.message}`)
+      return reply.status(500).send({ error: 'Summary failed', message: error.message?.slice(0, 200) })
+    }
+  })
+
+  // ── GET /api/enterprise/agents/interview/status ──
+  app.get('/api/enterprise/agents/interview/status', async (request, reply) => {
+    const userId = (request as any).user?.id || (request as any).userId
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' })
+
+    try {
+      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
+      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
+
+      const agent = await prisma.enterpriseAgentProfile.findFirst({
+        where: { tenantId: ep.organizationId, agentType: 'interview_agent' },
+        select: { id: true, name: true, status: true, createdAt: true, lastExecutionAt: true },
+      })
+
+      const llmConfig = await prisma.enterpriseLlmConfig.findFirst({
+        where: { tenantId: ep.organizationId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
+        select: { provider: true, modelName: true },
+      })
+
+      return reply.send({
+        success: true,
+        agent,
+        llmConfigured: !!llmConfig,
+        llmProvider: llmConfig?.provider || null,
+        llmModel: llmConfig?.modelName || null,
+      })
+    } catch {
+      return reply.status(500).send({ error: 'Failed to get status' })
+    }
+  })
+}
+
+export default registerInterviewAgentRoutes

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Deploying release/audit-p1-20260724 to staging"
+
+# 1. checkout release branch
+git checkout release/audit-p1-20260724
+
+# 2. install dependencies
+pnpm install --frozen-lockfile || npm ci
+
+# 3. prisma generate
+cd backend && npx prisma generate && cd ..
+
+# 4. build
+pnpm build || npm run build
+
+# 5. run tests
+pnpm test || npm test
+
+# 6. start staging service
+# TODO: 填入掌柜提供的 staging 启动命令
+echo "TODO: staging start command from 掌柜"

@@ -1,0 +1,146 @@
+[
+  {
+    "modelName": "StabilitySession",
+    "schemaLine": 1189
+  },
+  {
+    "modelName": "DegradationEvent",
+    "schemaLine": 1226
+  },
+  {
+    "modelName": "AgentMemory",
+    "schemaLine": 1687
+  },
+  {
+    "modelName": "UserLimit",
+    "schemaLine": 1725
+  },
+  {
+    "modelName": "TaskExecution",
+    "schemaLine": 1761
+  },
+  {
+    "modelName": "AgentExecutionLog",
+    "schemaLine": 1782
+  },
+  {
+    "modelName": "DAGGraph",
+    "schemaLine": 1804
+  },
+  {
+    "modelName": "DAGState",
+    "schemaLine": 1820
+  },
+  {
+    "modelName": "GPUNode",
+    "schemaLine": 1839
+  },
+  {
+    "modelName": "GPUTaskLog",
+    "schemaLine": 1854
+  },
+  {
+    "modelName": "GPUThrottleState",
+    "schemaLine": 1877
+  },
+  {
+    "modelName": "SystemMonitor",
+    "schemaLine": 1890
+  },
+  {
+    "modelName": "RateLimit",
+    "schemaLine": 1905
+  },
+  {
+    "modelName": "WorkerHeartbeat",
+    "schemaLine": 1936
+  },
+  {
+    "modelName": "DesktopRuntimeConfig",
+    "schemaLine": 1956
+  },
+  {
+    "modelName": "LocalGPUNode",
+    "schemaLine": 1969
+  },
+  {
+    "modelName": "LocalAssetIndex",
+    "schemaLine": 2002
+  },
+  {
+    "modelName": "KernelEvent",
+    "schemaLine": 2023
+  },
+  {
+    "modelName": "KernelStateSnapshot",
+    "schemaLine": 2041
+  },
+  {
+    "modelName": "RuntimeRegistry",
+    "schemaLine": 2054
+  },
+  {
+    "modelName": "KernelHealthLog",
+    "schemaLine": 2071
+  },
+  {
+    "modelName": "SchedulerTask",
+    "schemaLine": 2087
+  },
+  {
+    "modelName": "EventLoopViolation",
+    "schemaLine": 2127
+  },
+  {
+    "modelName": "RuntimeDependencyGraph",
+    "schemaLine": 2142
+  },
+  {
+    "modelName": "KernelShadowEventLog",
+    "schemaLine": 2161
+  },
+  {
+    "modelName": "KernelCutoverScore",
+    "schemaLine": 2179
+  },
+  {
+    "modelName": "KernelDualExecutionLog",
+    "schemaLine": 2197
+  },
+  {
+    "modelName": "KernelStateDiffLog",
+    "schemaLine": 2217
+  },
+  {
+    "modelName": "KernelRollbackHistory",
+    "schemaLine": 2234
+  },
+  {
+    "modelName": "KernelHealthMetrics",
+    "schemaLine": 2251
+  },
+  {
+    "modelName": "PropLibrary",
+    "schemaLine": 2575
+  },
+  {
+    "modelName": "CommunityPost",
+    "schemaLine": 2931
+  },
+  {
+    "modelName": "CommunityComment",
+    "schemaLine": 2964
+  },
+  {
+    "modelName": "CommunityLike",
+    "schemaLine": 2986
+  },
+  {
+    "modelName": "CommunityCommentLike",
+    "schemaLine": 3000
+  },
+  {
+    "modelName": "CommunityReward",
+    "schemaLine": 3014
+  }
+]

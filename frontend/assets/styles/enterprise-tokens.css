@@ -76,3 +76,25 @@
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Sprint-07A.3: 全局 select/option 白字黑底规则
+   所有 select 元素必须黑底白字，避免白底白字
+   ═══════════════════════════════════════════════════════════ */
+select {
+  background-color: #0B1020 !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+select option {
+  background-color: #0B1020 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #1A2240 !important;
+  color: #fff !important;
+}

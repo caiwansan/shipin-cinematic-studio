@@ -67,7 +67,14 @@ export function hasApiKeyForProvider(config: any, capability: string): boolean {
     visionUnderstand: "visionUnderstandApiKey",
   }
   const field = fieldMap[capability]
-  if (!field) return false
-  const val = config[field]
-  return !!val && val.length > 0
+  if (field) {
+    const val = config[field]
+    return !!val && val.length > 0
+  }
+  // JSONB 能力（career_agent, hdz, ppt, novel）
+  const jsonb = config.capabilityLlmConfigs as Record<string, any> | null
+  if (jsonb?.[capability]) {
+    return !!jsonb[capability].hasApiKey || !!jsonb[capability].apiKey
+  }
+  return false
 }

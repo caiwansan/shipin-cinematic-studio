@@ -48,6 +48,8 @@ export async function executeViaGateway(
     userId?: string
     provider?: string
     model?: string
+    tenantId?: string      // Sprint-06A: 企业 ID → EnterpriseLlmConfig
+    businessType?: string  // Sprint-06A: 平台业务类型 → admin-global-config
   }
 ): Promise<V2Result> {
   // 1. 解析运行时配置
@@ -55,6 +57,8 @@ export async function executeViaGateway(
     model: options?.model || input.model as string,
     provider: options?.provider || input.provider as string,
     userId: options?.userId,
+    tenantId: options?.tenantId,
+    businessType: options?.businessType,
   })
 
   // 2. 创建/注入 RuntimeContext
@@ -64,7 +68,10 @@ export async function executeViaGateway(
     provider: {
       name: config.provider,
       model: config.model,
-      source: config.source.apiKey === 'user_config' ? 'BYOK' : 'SYSTEM',
+      source: config.source.apiKey === 'user_config' ? 'BYOK'
+           : config.source.apiKey === 'enterprise_config' ? 'ENTERPRISE'
+           : config.source.apiKey === 'platform_config' ? 'PLATFORM'
+           : 'SYSTEM',
     },
   })
 

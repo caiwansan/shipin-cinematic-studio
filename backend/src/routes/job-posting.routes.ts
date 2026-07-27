@@ -1,14 +1,63 @@
 /**
  * job-posting.routes.ts — Job Posting CRUD API
- * Sprint-07B: Job Posting Productization
+ * Sprint-05B: Job Posting Reality Layer
  *
- * Tenant isolation: frontend sends workspaceId → resolve to enterpriseId → filter JobPosting
+ * Tenant isolation: auto-resolve enterprise from JWT → identity context
+ * Fallback: workspaceId → EnterpriseJobWorkspace → enterpriseId
  * All routes require JWT authentication
  */
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 
-// ─── Helper: resolve workspaceId → enterpriseId ───
+// ─── Helper: resolve enterpriseId from JWT userId (new identity system) ───
+async function resolveEnterpriseFromUser(userId: string): Promise<string | null> {
+  // 1. 首选: EnterpriseMember (最直接的 User → Enterprise 链接, 取最新)
+  const entMember = await prisma.enterpriseMember.findFirst({
+    where: { userId, status: 'ACTIVE' },
+    orderBy: { createdAt: 'desc' },
+  })
+  if (entMember) {
+    const jcp = await prisma.jobCompanyProfile.findUnique({ where: { id: entMember.enterpriseId } })
+    if (jcp?.enterpriseId) {
+      const ep = await prisma.enterpriseProfile.findUnique({ where: { id: jcp.enterpriseId } })
+      if (ep) return ep.id
+      return jcp.id
+    }
+    return entMember.enterpriseId
+  }
+
+  // 2. Fallback: onboard- organization (onboarding 创建的)
+  const onboardOrg = await prisma.organization.findFirst({
+    where: { ownerId: userId, slug: { startsWith: 'onboard-' } },
+    orderBy: { createdAt: 'desc' },
+  })
+  if (onboardOrg) {
+    const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: onboardOrg.id } })
+    if (ep) return ep.id
+  }
+
+  // 3. Fallback: direct organizationId = userId (旧模型)
+  const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
+  if (ep) return ep.id
+
+  // 4. Fallback: migrated organization (govUser tenantId)
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+  if (user?.email) {
+    const govUser = await prisma.govUser.findFirst({ where: { email: user.email } })
+    if (govUser?.tenantId) {
+      const slugHash = govUser.tenantId.replace(/-/g, '').slice(0, 20)
+      const org = await prisma.organization.findFirst({ where: { slug: `migrated-${slugHash}` } })
+      if (org) {
+        const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: org.id } })
+        if (ep) return ep.id
+      }
+    }
+  }
+
+  return null
+}
+
+// ─── Helper: resolve workspaceId → enterpriseId (legacy) ───
 async function resolveEnterpriseId(workspaceId?: string): Promise<string | null> {
   if (!workspaceId) return null
   const workspace = await prisma.enterpriseJobWorkspace.findUnique({
@@ -47,9 +96,13 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
         keyword?: string
       }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
+      const userId = (request as any).user?.id || (request as any).userId
+      let enterpriseId = await resolveEnterpriseId(workspaceId)
+      if (!enterpriseId && userId) {
+        enterpriseId = await resolveEnterpriseFromUser(userId)
+      }
       if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
+        return reply.status(400).send({ error: 'No enterprise identity found' })
       }
 
       const jobs = await prisma.jobPosting.findMany({
@@ -101,9 +154,13 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
       const { id } = request.params as { id: string }
       const { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
+      const userId = (request as any).user?.id || (request as any).userId
+      let enterpriseId = await resolveEnterpriseId(workspaceId)
+      if (!enterpriseId && userId) {
+        enterpriseId = await resolveEnterpriseFromUser(userId)
+      }
       if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
+        return reply.status(400).send({ error: 'No enterprise identity found' })
       }
 
       const job = await prisma.jobPosting.findFirst({
@@ -157,6 +214,86 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
     }
   })
 
+  // ─── GET /api/enterprise/candidates — 企业候选人列表 ───
+  // 返回该企业所有岗位匹配的候选人
+  fastify.get('/api/enterprise/candidates', async (request, reply) => {
+    try {
+      const userId = (request as any).user?.id || (request as any).userId
+      if (!userId) {
+        return reply.status(401).send({ error: 'Unauthorized' })
+      }
+
+      let enterpriseId = await resolveEnterpriseFromUser(userId)
+      if (!enterpriseId) {
+        return reply.status(400).send({ error: 'No enterprise identity found' })
+      }
+
+      // 1. 获取该企业所有岗位ID
+      const jobPostings = await prisma.jobPosting.findMany({
+        where: { enterpriseId },
+        select: { id: true, title: true },
+      })
+      const jobIds = jobPostings.map(j => j.id)
+
+      if (jobIds.length === 0) {
+        return reply.send({ success: true, candidates: [], total: 0 })
+      }
+
+      // 2. 获取所有匹配记录（按 matchScore 降序）
+      const matches = await prisma.candidateMatch.findMany({
+        where: { jobId: { in: jobIds } },
+        orderBy: { matchScore: 'desc' },
+        include: {
+          candidate: {
+            select: {
+              id: true,
+              userId: true,
+              education: true,
+              skills: true,
+              experience: true,
+              city: true,
+              salaryExpectation: true,
+              careerGoal: true,
+            },
+          },
+          job: {
+            select: { id: true, title: true },
+          },
+        },
+      })
+
+      // 3. 聚合同一候选人的最高匹配分
+      const candidateMap = new Map<string, any>()
+      for (const m of matches) {
+        if (!m.candidate) continue
+        const cid = m.candidate.id
+        const existing = candidateMap.get(cid)
+        if (!existing || m.matchScore > existing.matchScore) {
+          candidateMap.set(cid, {
+            id: m.candidate.id,
+            education: m.candidate.education,
+            skills: m.candidate.skills,
+            experience: m.candidate.experience,
+            city: m.candidate.city,
+            salaryExpectation: m.candidate.salaryExpectation,
+            careerGoal: m.candidate.careerGoal,
+            matchScore: m.matchScore,
+            jobId: m.job.id,
+            jobTitle: m.job.title,
+            matchStatus: m.status,
+            matchedAt: m.createdAt,
+          })
+        }
+      }
+
+      const candidates = Array.from(candidateMap.values())
+      return reply.send({ success: true, candidates, total: candidates.length })
+    } catch (error: any) {
+      request.log.error(`[job-posting] candidates: ${error.message}`)
+      return reply.status(500).send({ error: 'Failed to fetch candidates' })
+    }
+  })
+
   // ─── POST /api/enterprise/postings — 创建职位 ───
   fastify.post('/api/enterprise/postings', async (request, reply) => {
     try {
@@ -179,13 +316,19 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
         return reply.status(400).send({ error: 'title is required' })
       }
 
-      // Resolve enterpriseId from workspaceId or direct enterpriseId
+      // Resolve enterpriseId from workspaceId, enterpriseId, or JWT user
       let enterpriseId = body.enterpriseId
       if (!enterpriseId && body.workspaceId) {
         enterpriseId = await resolveEnterpriseId(body.workspaceId) || undefined
       }
       if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId or enterpriseId' })
+        const userId = (request as any).user?.id || (request as any).userId
+        if (userId) {
+          enterpriseId = await resolveEnterpriseFromUser(userId) || undefined
+        }
+      }
+      if (!enterpriseId) {
+        return reply.status(400).send({ error: 'No enterprise identity found' })
       }
 
       const job = await prisma.jobPosting.create({
@@ -228,11 +371,24 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
         careerPath?: string
         promotionPath?: string
         relatedSkills?: string[]
+        status?: 'draft' | 'published' | 'paused' | 'closed'
       }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
+      // Status transition validation
+      const VALID_TRANSITIONS: Record<string, string[]> = {
+        draft: ['published'],
+        published: ['paused', 'closed'],
+        paused: ['published', 'closed'],
+        closed: [],
+      }
+
+      const userId = (request as any).user?.id || (request as any).userId
+      let enterpriseId = await resolveEnterpriseId(workspaceId)
+      if (!enterpriseId && userId) {
+        enterpriseId = await resolveEnterpriseFromUser(userId)
+      }
       if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
+        return reply.status(400).send({ error: 'No enterprise identity found' })
       }
 
       // Verify ownership
@@ -241,6 +397,16 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
       })
       if (!existing) {
         return reply.status(404).send({ error: 'Job not found' })
+      }
+
+      // Validate status transition
+      if (body.status && body.status !== existing.status) {
+        const allowed = VALID_TRANSITIONS[existing.status] || []
+        if (!allowed.includes(body.status)) {
+          return reply.status(400).send({
+            error: `Invalid status transition: ${existing.status} → ${body.status}. Allowed: ${allowed.join(', ') || 'none'}`,
+          })
+        }
       }
 
       const job = await prisma.jobPosting.update({
@@ -257,6 +423,7 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
           ...(body.careerPath !== undefined ? { careerPath: body.careerPath } : {}),
           ...(body.promotionPath !== undefined ? { promotionPath: body.promotionPath } : {}),
           ...(body.relatedSkills !== undefined ? { relatedSkills: body.relatedSkills } : {}),
+          ...(body.status !== undefined ? { status: body.status } : {}),
         },
       })
 
@@ -279,9 +446,13 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
         return reply.status(400).send({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` })
       }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
+      const userId = (request as any).user?.id || (request as any).userId
+      let enterpriseId = await resolveEnterpriseId(workspaceId)
+      if (!enterpriseId && userId) {
+        enterpriseId = await resolveEnterpriseFromUser(userId)
+      }
       if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
+        return reply.status(400).send({ error: 'No enterprise identity found' })
       }
 
       // Verify ownership
@@ -310,9 +481,13 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
       const { id } = request.params as { id: string }
       const { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
+      const userId = (request as any).user?.id || (request as any).userId
+      let enterpriseId = await resolveEnterpriseId(workspaceId)
+      if (!enterpriseId && userId) {
+        enterpriseId = await resolveEnterpriseFromUser(userId)
+      }
       if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
+        return reply.status(400).send({ error: 'No enterprise identity found' })
       }
 
       // Verify ownership

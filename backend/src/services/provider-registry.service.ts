@@ -609,8 +609,8 @@ export async function seedProviderRegistry(): Promise<void> {
     // LLM
     { modelName: 'gpt-4o', provider: 'openai', capabilities: ['chat', 'vision'], priority: 10, fallback: ['deepseek'] },
     { modelName: 'gpt-4o-mini', provider: 'openai', capabilities: ['chat', 'vision'], priority: 9, fallback: ['deepseek'] },
-    { modelName: 'deepseek-chat', provider: 'deepseek', capabilities: ['chat'], priority: 10, fallback: ['openai'] },
-    { modelName: 'deepseek-reasoner', provider: 'deepseek', capabilities: ['chat'], priority: 10, fallback: ['openai'] },
+    { modelName: 'deepseek-v4-flash', provider: 'deepseek', capabilities: ['chat'], priority: 10, fallback: ['openai'] },
+    { modelName: 'deepseek-v4-pro', provider: 'deepseek', capabilities: ['chat'], priority: 10, fallback: ['openai'] },
     { modelName: 'doubao-seed-*', provider: 'volcengine', capabilities: ['chat'], priority: 10, fallback: ['deepseek', 'openai'] },
     { modelName: 'doubao-1.5-*', provider: 'volcengine', capabilities: ['chat'], priority: 8, fallback: ['deepseek'] },
     { modelName: 'doubao-vl-*', provider: 'volcengine', capabilities: ['chat', 'vision'], priority: 10, fallback: ['bailian'] },

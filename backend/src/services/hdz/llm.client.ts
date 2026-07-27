@@ -79,7 +79,8 @@ export async function callLLM(
   options?: { maxTokens?: number; temperature?: number },
 ): Promise<string> {
   const url = getBaseUrl(llmCfg.provider, llmCfg.baseUrl)
-  const model = llmCfg.modelName
+  // 自动转换废弃模型名（如 deepseek-chat → deepseek-v4-flash）
+  const model = llmCfg.provider === 'deepseek' ? resolveDeepSeekModel(llmCfg.modelName) : llmCfg.modelName
 
   const body = {
     model,
@@ -247,15 +248,30 @@ export async function getLockContext(projectId: string, chapterNo?: number): Pro
   return `\n═══════════ 三大锁定系统 ═══════════\n${lockStatus}\n\n${parts.join('\n')}\n═══════════════════════════════\n`
 }
 
-function getBaseUrl(provider: string, customUrl?: string): string {
+export function getBaseUrl(provider: string, customUrl?: string): string {
   if (customUrl) return customUrl.replace(/\/+$/, '')
   const defaults: Record<string, string> = {
     volcengine: 'https://ark.cn-beijing.volces.com/api/v3',
+    // DeepSeek 官方: https://api.deepseek.com（OpenAI 兼容）
+    // 注意：不要加 /v1 后缀，DeepSeek 的 endpoint 是 /chat/completions 而非 /v1/chat/completions
     deepseek: 'https://api.deepseek.com',
     aliyun: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     longcat: 'https://api.longcat.chat/openai',
   }
   return defaults[provider] || 'https://api.openai.com/v1'
+}
+
+/**
+ * DeepSeek 模型名映射（兼容旧名 → 新名）
+ * deepseek-chat / deepseek-reasoner 已于 2026/07/24 废弃
+ */
+export function resolveDeepSeekModel(modelName: string): string {
+  const deprecated: Record<string, string> = {
+    'deepseek-chat': 'deepseek-v4-flash',
+    'deepseek-reasoner': 'deepseek-v4-flash',  // reasoning → v4-flash + thinking 模式
+    'deepseek-coder': 'deepseek-v4-flash',
+  }
+  return deprecated[modelName] || modelName
 }
 
 /**

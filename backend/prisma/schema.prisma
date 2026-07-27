@@ -1343,6 +1343,9 @@ model UserModelConfigV2 {
   visionUnderstandModel    String  @default("doubao-vision-pro-32k")
   visionUnderstandEnabled  Boolean @default(true)
   visionUnderstandBaseUrl  String?
+  // Sprint-07A.2-AI-03: 能力级 LLM 配置（per-capability override）
+  // 格式：{ career: { provider, model, apiKey, baseUrl }, hdz: { ... }, ... }
+  capabilityLlmConfigs Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -6645,6 +6648,30 @@ model EnterpriseAgentInstance {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("enterprise_agent_instance")
+}
+
+// ============================================================
+// KM-AI-JOB-AGENT-06 — Hermes Profile Binding (Identity Layer)
+// 一个 AI 员工 = 一个 Hermes 子代理身份
+// ============================================================
+
+model HermesProfileBinding {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  organizationId    String?  @map("organization_id") @db.Text
+  agentInstanceId   String   @unique @map("agent_instance_id") @db.Text // EnterpriseAgentInstance.id
+  hermesAgentId     String   @unique @map("hermes_agent_id") @db.Text // Hermes 子代理唯一标识
+  soulMdContent     String?  @map("soul_md_content")
+  toolAllowList     String   @default("[]") @map("tool_allow_list")
+  memoryNamespace   String   @map("memory_namespace") // tenant/{tenantId}/agent/{agentInstanceId}
+  identityProvider  String   @default("hermes") @map("identity_provider")
+  status            String   @default("active") @db.VarChar(20)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([agentInstanceId])
+  @@map("hermes_profile_binding")
 }
 
 model EmployeeModelBinding {

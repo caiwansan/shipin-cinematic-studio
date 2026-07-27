@@ -467,7 +467,7 @@ export class CredentialLifecycleService {
       const { unifiedAIGateway } = await import('../../services/unified-ai-gateway.js')
       await unifiedAIGateway.callLLM({
         provider,
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         messages: [{ role: 'user', content: 'Reply with exactly one word: ok' }],
         apiKey,
         maxTokens: 10,

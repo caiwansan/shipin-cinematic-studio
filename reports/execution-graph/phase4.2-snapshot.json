@@ -1,0 +1,38 @@
+{
+  "phase": "4.2",
+  "title": "Runtime Trace Wiring + Invocation Source of Truth",
+  "timestamp": "2026-05-21T12:40:00+08:00",
+  "status": "deployed and verified",
+  "deliverables": {
+    "narrative_gateway_trace": {
+      "file": "src/runtime/narrative-gateway.ts",
+      "change": "added runtimeTrace.record() at top of execute(GatewayRequest)",
+      "principle": "non-invasive, try/catch wrapped, does not alter return/flow"
+    },
+    "pipeline_executor_trace": {
+      "file": "src/runtime/pipeline-executor.ts",
+      "change": "added runtimeTrace.record() at top of execute(ExecutionPlan)",
+      "principle": "same non-invasive pattern"
+    },
+    "trace_route": {
+      "path": "GET /api/v1/runtime/trace",
+      "file": "src/routes/runtime-trace.ts",
+      "response": "{ success, totalEvents, invokedModules, events }"
+    },
+    "registered_in_index_ts": true,
+    "deployed_as": "pm2 restart api-server (id 17, restart #71)"
+  },
+  "verified": {
+    "trace_returns_data": true,
+    "invoked_modules_after_call": ["narrative-gateway"],
+    "event_count_after_call": 2,
+    "tsc_new_errors": 0
+  },
+  "what_this_means": "Reachability is now invocation-based instead of import-graph-based. runtimeTrace.isInvoked() is the new source of truth.",
+  "not_done_yet": [
+    "Wire runtimeTrace into provider.registry (TOOL domain)",
+    "Wire PipelineAdapter into pipeline-executor.createRuntime()",
+    "Deploy ESLint rules",
+    "Build import graph baseline for shadow module blocking"
+  ]
+}

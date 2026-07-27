@@ -10,8 +10,8 @@ import type { RunMetricsAggregate } from '../metrics/execution.metrics.js'
 
 // Cost per 1K tokens (approx)
 const MODEL_COST_MAP: Record<string, { inputPer1K: number; outputPer1K: number }> = {
-  'deepseek-chat': { inputPer1K: 0.0005, outputPer1K: 0.002 },
-  'deepseek-reasoner': { inputPer1K: 0.004, outputPer1K: 0.016 },
+  'deepseek-v4-flash': { inputPer1K: 0.0005, outputPer1K: 0.002 },
+  'deepseek-v4-pro': { inputPer1K: 0.004, outputPer1K: 0.016 },
   'gpt-4o': { inputPer1K: 0.005, outputPer1K: 0.015 },
   'gpt-4o-mini': { inputPer1K: 0.00015, outputPer1K: 0.0006 },
   'flux-schnell': { inputPer1K: 0, outputPer1K: 0 },
@@ -104,7 +104,7 @@ export function analyzeCost(
       nodeType,
       estimatedTokens: totalNodeTokens,
       estimatedCostUsd: finalCost,
-      modelName: nodeEvent?.nodeType === 'image_gen' ? 'flux-schnell' : 'deepseek-chat',
+      modelName: nodeEvent?.nodeType === 'image_gen' ? 'flux-schnell' : 'deepseek-v4-flash',
       pctOfTotal: 0, // calculated below
     })
   }

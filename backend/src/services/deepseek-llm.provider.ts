@@ -25,7 +25,7 @@ const BASE_URL_MAP: Record<string, string> = {
 async function chat(params: ChatParams): Promise<{ text: string }> {
   const { messages, apiKey, model: modelInput } = params
   const provider = params.provider || 'deepseek'
-  const model = modelInput || (provider === 'volcengine' ? 'doubao-seed-2-1-pro-260628' : 'deepseek-chat')
+  const model = modelInput || (provider === 'volcengine' ? 'doubao-seed-2-1-pro-260628' : 'deepseek-v4-flash')
   const baseUrl = params.baseUrl || BASE_URL_MAP[provider] || 'https://api.deepseek.com'
   const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`
 

@@ -13,13 +13,13 @@ const METADATA: ProviderMetadata = {
   id: 'deepseek',
   name: 'DeepSeek',
   type: 'cloud',
-  baseURL: 'https://api.deepseek.com/v1',
+  baseURL: 'https://api.deepseek.com',
   icon: 'deepseek',
   docsUrl: 'https://platform.deepseek.com/docs',
   description: 'DeepSeek 大语言模型，支持 V3 和 R1',
   models: [
-    { id: 'deepseek-chat', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 65536, description: 'DeepSeek V4 Flash' },
-    { id: 'deepseek-reasoner', capabilities: ['llm'], contextWindow: 65536, description: 'DeepSeek R1 推理模型' },
+    { id: 'deepseek-v4-flash', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 131072, description: 'DeepSeek V4 Flash（原 deepseek-chat）' },
+    { id: 'deepseek-v4-pro', capabilities: ['llm'], contextWindow: 131072, description: 'DeepSeek V4 Pro（原 deepseek-reasoner）' },
   ],
 }
 
@@ -29,7 +29,7 @@ export const deepseekProvider: ProviderLifecycle = {
   metadata: METADATA,
 
   async verify(apiKey: string, baseURL?: string) {
-    const adapter = modelAdapterRegistry.findAdapter('deepseek-chat')
+    const adapter = modelAdapterRegistry.findAdapter('deepseek-v4-flash')
     if (!adapter) {
       return { success: false, latency: 0, availableModels: [], capabilities: [] }
     }
@@ -38,7 +38,7 @@ export const deepseekProvider: ProviderLifecycle = {
       requestId: `verify-ds-${Date.now()}`,
       userId: '__verify__',
       provider: 'deepseek',
-      model: 'deepseek-chat',
+      model: 'deepseek-v4-flash',
       taskType: 'llm',
       apiKey,
       baseURL,
@@ -55,7 +55,7 @@ export const deepseekProvider: ProviderLifecycle = {
       return {
         success: true,
         latency: Date.now() - start,
-        availableModels: ['deepseek-chat', 'deepseek-reasoner'],
+        availableModels: ['deepseek-v4-flash', 'deepseek-v4-pro'],
         capabilities: ['llm'],
       }
     } catch (err) {
@@ -89,6 +89,6 @@ export const deepseekProvider: ProviderLifecycle = {
   },
 
   defaultModel(capability: Capability): string {
-    return capability === 'llm' ? 'deepseek-chat' : ''
+    return capability === 'llm' ? 'deepseek-v4-flash' : ''
   },
 }

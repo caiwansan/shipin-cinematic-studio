@@ -26,6 +26,7 @@ import smsAuthRoutes from './routes/sms-auth.js'
 import projectRoutes from './routes/projects.js'
 import storyboardRoutes from './routes/storyboards.js'
 import aiTaskRoutes from './routes/ai-tasks.js'
+import jobRoutes from './routes/job.routes.js'
 import apiKeyRoutes from './routes/api-keys.js'
 import systemHealthRoutes from './routes/system-health.js'
 // autograph imports removed — code pruned per audit recommendation (2026-05-21)
@@ -252,8 +253,8 @@ async function main() {
   // REMOVED: shadowRoutes
   // Showrunner Core routes (总导演大脑)
   // Director Simulation Layer (导演预演层)
-  // Job routes (异步长任务状态查询)
-  // REMOVED: jobRoutes
+  // Job routes (AI 求职招聘工作台)
+  await app.register(jobRoutes)
   // autograph registration removed — code pruned (2026-05-21)
 
   // ExecutionGraph routes (Graph Runtime 前端客户端 API)
@@ -307,8 +308,10 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise.js')).enterpriseRoutes)
   // Enterprise CEO Dashboard（企业数字部门控制台）
   await app.register((await import('./routes/enterprise-dashboard.js')).enterpriseDashboardRoutes)
-  // Enterprise Intelligence（Phase 4.2 智能决策引擎）
-  await app.register((await import('./routes/enterprise-intelligence.js')).enterpriseIntelligenceRoutes)
+  // Enterprise Intelligence（KM-AI-JOB-AGENT-04 AI招聘经理 Intelligence Layer）
+  await app.register((await import('./routes/enterprise-intelligence.js')).registerEnterpriseIntelligenceRoutes)
+  // Enterprise Action（KM-AI-JOB-AGENT-05 AI招聘官 Copilot Action Layer）
+  await app.register((await import('./routes/enterprise-action.js')).registerEnterpriseActionRoutes)
   // Agent Daily Report（AI员工日报）
   await app.register((await import('./routes/agent-daily-report.js')).agentDailyReportRoutes)
   // P4.2.5.2 — WeCom Real SDK Callback (IMP-01.1)
@@ -320,6 +323,9 @@ await app.register(projectV2Routes)
   // Enterprise Sprint 1 v1.1 — CEO Task Center + AI Employee Management
   await app.register((await import('./routes/enterprise-command.js')).registerEnterpriseCommandRoutes, { prefix: '/api/enterprise/commands' })
   await app.register((await import('./routes/enterprise-agent-profiles.js')).registerEnterpriseAgentProfileRoutes, { prefix: '/api/enterprise/agent-profiles' })
+  // Enterprise AI 员工实例管理 (media-department)
+  // Phase 1: 路由前缀统一为 /api/enterprise，与 enterprise domain 保持一致
+  await app.register((await import('./routes/enterprise-agents.js')).default, { prefix: '/api/enterprise' })
   // Enterprise Sprint 2 — Knowledge Hub + Approval Center (v2.0, 含6项修正)
   await app.register((await import('./routes/enterprise-knowledge.js')).registerEnterpriseKnowledgeRoutes, { prefix: '/api/enterprise/knowledge' })
   await app.register((await import('./routes/enterprise-approval.js')).registerEnterpriseApprovalRoutes, { prefix: '/api/enterprise/approvals' })
@@ -334,6 +340,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise-billing.js')).enterpriseBillingRoutes, { prefix: '/api' })
   // Sprint 4.2.8 Step 5 — Agent Identity Layer
   await app.register((await import('./routes/agent-identity.js')).registerAgentIdentityRoutes, { prefix: '/api/enterprise/agent-identity' })
+  // Sprint-08 — Identity Context (统一身份上下文)
+  await app.register((await import('./routes/identity-context.routes.js')).default)
   // BETA-06.1 — Enterprise Agent Runtime (激活/执行/生命周期)
   await app.register((await import('./routes/enterprise-agent-runtime.js')).registerEnterpriseAgentRuntimeRoutes, { prefix: '/api/enterprise' })
   // Phase 5-A1 — Enterprise AI Recruitment Onboarding
@@ -350,9 +358,23 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/dashboard.routes.js')).dashboardRoutes, { prefix: '/api' })
   // Phase 5-B5 — Job Posting Center (skeleton: read-only + maintenance gates)
   await app.register((await import('./routes/job-posting.routes.js')).jobPostingRoutes)
+  await app.register((await import('./routes/enterprise-job-intelligence.routes.js')).enterpriseJobIntelligenceRoutes)
   await app.register((await import('./routes/recruitment-department.routes.js')).recruitmentDepartmentRoutes)
   // Sprint-08B — Recruitment Conversation Domain
   await app.register((await import('./routes/recruitment-conversation.routes.js')).default, { prefix: '/api/enterprise/recruitment-conversation' })
+  // Sprint-07B-2 — Talent Agent (AI 猎聘顾问)
+  await app.register((await import('./routes/enterprise-talent-agent.js')).registerTalentAgentRoutes)
+  // Sprint-07B-3 — Interview Agent (AI 面试官)
+  await app.register((await import('./routes/enterprise-interview-agent.js')).registerInterviewAgentRoutes)
+  // KM-AI-JOB-AGENT-07 — Hermes AI招聘经理 Workflow Engine
+  await app.register((await import('./routes/workflow.js')).workflowRoutes)
+  // KM-AI-JOB-AGENT-08 — AI 职业助理 Career Workflow
+  await app.register((await import('./routes/career-workflow.js')).careerWorkflowRoutes)
+  await app.register((await import('./routes/career-activation.js')).careerActivationRoutes)
+  await app.register((await import('./routes/career-llm-config.js')).careerLlmConfigRoutes)
+  // Sprint-07A.2-AI-03: 统一能力级 LLM 配置
+  await app.register((await import('./routes/capability-llm-config.js')).capabilityLlmConfigRoutes)
+  await app.register((await import('./routes/llm-config.js')).llmConfigRoutes)
   // Sprint-08C — Recruitment Campaign Domain
   await app.register((await import('./routes/recruitment-campaign.routes.js')).default, { prefix: '/api/enterprise/recruitment-campaign' })
   // Sprint-08D — Interview Agent Domain

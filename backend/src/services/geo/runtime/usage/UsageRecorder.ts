@@ -27,8 +27,8 @@ export interface UsageRecord {
 }
 
 const COST_PER_1K_TOKENS: Record<string, { input: number; output: number }> = {
-  'deepseek/deepseek-chat': { input: 0.00027, output: 0.0011 },
-  'deepseek/deepseek-reasoner': { input: 0.00055, output: 0.0022 },
+  'deepseek/deepseek-v4-flash': { input: 0.00027, output: 0.0011 },
+  'deepseek/deepseek-v4-pro': { input: 0.00055, output: 0.0022 },
   'volcengine/doubao-seed-2-0-mini-260428': { input: 0.0003, output: 0.0006 },
   'volcengine/doubao-seed-2-0-plus-260428': { input: 0.0008, output: 0.0012 },
   'openai/gpt-4o': { input: 0.005, output: 0.015 },

@@ -27,11 +27,6 @@ const interviewSessions = new Map<string, JobCareerEngine>()
 
 export default async function jobRoutes(fastify: FastifyInstance) {
 
-  // 503: Job Posting 关系尚未完成同步
-  fastify.addHook('onRequest', async (_request, reply) => {
-    return reply.status(503).send({ error: 'Job Posting module is under maintenance', module: 'job-posting', status: 'maintenance' })
-  })
-
   // ─── AI 求职助手聊天（Phase 1 核心）───
 
   fastify.post('/api/job/chat', async (request, reply) => {
@@ -55,7 +50,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
         // 尝试从数据库加载已有画像
         let existingProfile: Partial<CandidateProfile> | undefined
         if (userId !== 'anonymous') {
-          const saved = await prisma.jobCandidate.findUnique({
+          const saved = await prisma.jobCandidate.findFirst({
             where: { userId },
           })
           if (saved) {
@@ -78,44 +73,30 @@ export default async function jobRoutes(fastify: FastifyInstance) {
       // 处理消息
       const result = engine.processMessage(body.message)
 
-      // 持久化到数据库（Phase 1 简化版）
+      // 持久化到数据库（Sprint-07A: 修复 upsert → findFirst + upsert）
       if (userId !== 'anonymous' && result.profile) {
-        await prisma.jobCandidate.upsert({
-          where: { userId },
-          update: {
-            education: result.profile.education || '',
-            skills: result.profile.skills || [],
-            experience: result.profile.experience || '',
-            city: result.profile.city || '',
-            salaryExpectation: result.profile.salaryMin ? `${result.profile.salaryMin}-${result.profile.salaryMax}K` : '',
-            careerGoal: result.profile.careerGoal || '',
-            profileJson: {
-              name: result.profile.name,
-              major: result.profile.major,
-              experienceYears: result.profile.experienceYears,
-              salaryMin: result.profile.salaryMin,
-              salaryMax: result.profile.salaryMax,
-              completeness: result.profile.completeness,
-            },
+        const existing = await prisma.jobCandidate.findFirst({ where: { userId } })
+        const data = {
+          education: result.profile.education || '',
+          skills: result.profile.skills || [],
+          experience: result.profile.experience || '',
+          city: result.profile.city || '',
+          salaryExpectation: result.profile.salaryMin ? `${result.profile.salaryMin}-${result.profile.salaryMax}K` : '',
+          careerGoal: result.profile.careerGoal || '',
+          profileJson: {
+            name: result.profile.name,
+            major: result.profile.major,
+            experienceYears: result.profile.experienceYears,
+            salaryMin: result.profile.salaryMin,
+            salaryMax: result.profile.salaryMax,
+            completeness: result.profile.completeness,
           },
-          create: {
-            userId,
-            education: result.profile.education || '',
-            skills: result.profile.skills || [],
-            experience: result.profile.experience || '',
-            city: result.profile.city || '',
-            salaryExpectation: result.profile.salaryMin ? `${result.profile.salaryMin}-${result.profile.salaryMax}K` : '',
-            careerGoal: result.profile.careerGoal || '',
-            profileJson: {
-              name: result.profile.name,
-              major: result.profile.major,
-              experienceYears: result.profile.experienceYears,
-              salaryMin: result.profile.salaryMin,
-              salaryMax: result.profile.salaryMax,
-              completeness: result.profile.completeness,
-            },
-          },
-        })
+        }
+        if (existing) {
+          await prisma.jobCandidate.update({ where: { id: existing.id }, data })
+        } else {
+          await prisma.jobCandidate.create({ data: { userId, ...data } })
+        }
       }
 
       // 如果访谈完成，生成推荐
@@ -124,15 +105,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
         // 从数据库获取真实岗位，如果没有则用模拟数据
         const dbJobs = await prisma.jobPosting.findMany({
           where: { status: 'active' },
-          include: {
-            enterprise: {
-              include: {
-                enterprise: {
-                  include: { organization: true }
-                }
-              }
-            }
-          },
+          include: { enterprise: true },
           take: 20,
         })
 
@@ -140,7 +113,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
           ? dbJobs.map(j => ({
               id: j.id,
               title: j.title,
-              company: j.enterprise?.enterprise?.organization?.name || j.enterprise?.businessSummary || '未知企业',
+              company: j.enterprise?.industry || '入驻企业',
               salary: j.salary || '',
               location: j.location || '',
               description: j.description || '',
@@ -151,28 +124,28 @@ export default async function jobRoutes(fastify: FastifyInstance) {
 
         recommendations = matchJobs(result.profile, jobPosts)
 
-        // 保存推荐记录（Phase 1.5: 包含推荐解释增强字段）
+        // 保存推荐记录（Sprint-07A: 模型可能不存在，安全降级）
         if (userId !== 'anonymous') {
-          // 获取 jobCandidate 记录
-          const candidate = await prisma.jobCandidate.findUnique({ where: { userId } })
-          if (candidate) {
-            for (const rec of recommendations.slice(0, 5)) {
-              await prisma.jobRecommendation.create({
-                data: {
-                  candidateId: candidate.id,
-                  jobId: rec.jobId,
-                  matchScore: rec.matchScore,
-                  reason: rec.reasons.join('；'),
-                  status: 'pending',
-                  // Phase 1.5: 推荐解释增强
-                  recommendReason: rec.recommendReason || null,
-                  strengthMatch: rec.strengthMatch || [],
-                  skillGap: rec.skillGap || [],
-                  growthAdvice: rec.growthAdvice || null,
-                },
-              }).catch(() => {}) // 忽略重复
+          try {
+            const candidate = await prisma.jobCandidate.findFirst({ where: { userId } })
+            if (candidate) {
+              for (const rec of recommendations.slice(0, 5)) {
+                await (prisma as any).jobRecommendation?.create?.({
+                  data: {
+                    candidateId: candidate.id,
+                    jobId: rec.jobId,
+                    matchScore: rec.matchScore,
+                    reason: rec.reasons.join('；'),
+                    status: 'pending',
+                    recommendReason: rec.recommendReason || null,
+                    strengthMatch: rec.strengthMatch || [],
+                    skillGap: rec.skillGap || [],
+                    growthAdvice: rec.growthAdvice || null,
+                  },
+                }).catch(() => {})
+              }
             }
-          }
+          } catch { /* 推荐记录保存失败不影响主流程 */ }
         }
       }
 
@@ -201,7 +174,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
 
     // 检查是否有历史画像
     if (userId && userId !== 'anonymous') {
-      const saved = await prisma.jobCandidate.findUnique({ where: { userId } }).catch(() => null)
+      const saved = await prisma.jobCandidate.findFirst({ where: { userId } }).catch(() => null)
       if (saved) {
         const profile = {
           name: saved.profileJson?.name || '',
@@ -223,67 +196,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
   })
 
   // ─── 求职者画像 ───
-
-  fastify.get('/api/job/profile', async (request, reply) => {
-    const userId = (request.query as any)?.userId as string
-    if (!userId) {
-      return reply.status(400).send({ error: 'userId is required' })
-    }
-
-    try {
-      const profile = await prisma.jobCandidate.findUnique({
-        where: { userId },
-      })
-      return profile || { message: '未找到职业画像' }
-    } catch (e: any) {
-      return reply.status(500).send({ error: '查询失败', detail: e?.message || '未知错误' })
-    }
-  })
-
-  fastify.put('/api/job/profile', async (request, reply) => {
-    const body = request.body as {
-      userId: string
-      education?: string
-      skills?: string[]
-      experience?: string
-      city?: string
-      salaryExpectation?: string
-      careerGoal?: string
-      profileJson?: any
-    }
-
-    if (!body.userId) {
-      return reply.status(400).send({ error: 'userId is required' })
-    }
-
-    try {
-      const profile = await prisma.jobCandidate.upsert({
-        where: { userId: body.userId },
-        update: {
-          education: body.education,
-          skills: body.skills,
-          experience: body.experience,
-          city: body.city,
-          salaryExpectation: body.salaryExpectation,
-          careerGoal: body.careerGoal,
-          profileJson: body.profileJson,
-        },
-        create: {
-          userId: body.userId,
-          education: body.education || '',
-          skills: body.skills || [],
-          experience: body.experience || '',
-          city: body.city || '',
-          salaryExpectation: body.salaryExpectation || '',
-          careerGoal: body.careerGoal || '',
-          profileJson: body.profileJson || {},
-        },
-      })
-      return profile
-    } catch (e) {
-      return reply.status(500).send({ error: '保存失败' })
-    }
-  })
+  // NOTE: /api/job/profile (GET/PUT) 已迁移至 candidate-profile.routes.ts
 
   // ─── 推荐岗位 ───
 
@@ -446,7 +359,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
 
     try {
       // 获取 candidate
-      const candidate = await prisma.jobCandidate.findUnique({ where: { userId: body.userId } })
+      const candidate = await prisma.jobCandidate.findFirst({ where: { userId: body.userId } })
       if (!candidate) {
         return reply.status(404).send({ error: '未找到求职者画像' })
       }
@@ -498,7 +411,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const candidate = await prisma.jobCandidate.findUnique({
+      const candidate = await prisma.jobCandidate.findFirst({
         where: { userId },
         include: {
           recommendations: {

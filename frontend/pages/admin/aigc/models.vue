@@ -10,6 +10,56 @@
       </div>
     </div>
 
+    <!-- Sprint-06A: 业务 AI 模型配置（按 businessType 隔离） -->
+    <div class="bg-[#0D1328]/60 border border-[#1A2240] rounded-xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-sm text-white/70 font-medium">🏷️ 业务 AI 模型配置</h3>
+          <p class="text-[10px] text-gray-500 mt-1">平台自供 LLM，各业务独立配置，用户无需 BYOK</p>
+        </div>
+        <button @click="saveBusinessTypeConfig" :disabled="savingBusinessType" class="px-4 py-1.5 rounded-lg text-[11px] bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 hover:bg-indigo-600/30 transition-all cursor-pointer">
+          {{ savingBusinessType ? '⏳ 保存中...' : '💾 保存配置' }}
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div v-for="bt in businessTypes" :key="bt.key" class="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm">{{ bt.icon }}</span>
+            <span class="text-[11px] text-white/70 font-medium">{{ bt.label }}</span>
+            <span v-if="bt.config.hasApiKey" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">已配置 Key</span>
+          </div>
+          <div class="space-y-2">
+            <div>
+              <label class="text-[9px] text-gray-500 block mb-0.5">供应商</label>
+              <select v-model="bt.config.provider" class="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-[10px] text-white/70 outline-none">
+                <option value="deepseek">DeepSeek</option>
+                <option value="openai">OpenAI</option>
+                <option value="volcengine">火山引擎</option>
+                <option value="aliyun">阿里百炼</option>
+                <option value="qwen">通义千问</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[9px] text-gray-500 block mb-0.5">模型</label>
+              <input v-model="bt.config.model" class="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-[10px] text-white/70 outline-none" placeholder="deepseek-v4-flash" />
+            </div>
+            <div>
+              <label class="text-[9px] text-gray-500 block mb-0.5">API Key</label>
+              <input v-model="bt.config.apiKey" type="password" class="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-[10px] text-white/70 outline-none" placeholder="sk-********（留空则不修改）" />
+            </div>
+            <div>
+              <label class="text-[9px] text-gray-500 block mb-0.5">Base URL（可选）</label>
+              <input v-model="bt.config.baseUrl" class="w-full bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-[10px] text-white/70 outline-none" placeholder="https://api.deepseek.com" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="businessTypeMsg" class="mt-2 text-[10px]" :class="businessTypeMsgErr ? 'text-red-400' : 'text-emerald-400'">{{ businessTypeMsg }}</div>
+    </div>
+
+    <!-- Sprint-06A: 分割线 -->
+    <div class="border-t border-[#1A2240]/50 my-2"></div>
+
     <!-- API Key 配置区域 -->
     <div class="bg-[#0D1328]/60 border border-[#1A2240] rounded-xl p-5">
       <div class="flex items-center justify-between mb-4">
@@ -148,6 +198,77 @@ const savingKeys = ref(false)
 const keyMsg = ref('')
 const keyMsgErr = ref(false)
 const providers = ref<any[]>([])
+
+// ─── Sprint-06A: 业务 AI 模型配置 ───
+const savingBusinessType = ref(false)
+const businessTypeMsg = ref('')
+const businessTypeMsgErr = ref(false)
+const businessTypes = reactive([
+  { key: 'hdz', icon: '🎬', label: '短剧', config: { provider: 'deepseek', model: '', apiKey: '', baseUrl: '', hasApiKey: false } },
+  { key: 'career_advisor', icon: '🎯', label: '求职顾问', config: { provider: 'deepseek', model: '', apiKey: '', baseUrl: '', hasApiKey: false } },
+  { key: 'ppt', icon: '📊', label: 'PPT', config: { provider: 'deepseek', model: '', apiKey: '', baseUrl: '', hasApiKey: false } },
+  { key: 'music', icon: '🎵', label: '音乐', config: { provider: 'deepseek', model: '', apiKey: '', baseUrl: '', hasApiKey: false } },
+])
+
+async function loadBusinessTypeConfig() {
+  try {
+    const token = getToken()
+    for (const bt of businessTypes) {
+      const res = await fetch(`/api/admin/global-config/business-type/${bt.key}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      })
+      const d = await res.json()
+      if (d.success && d.config) {
+        bt.config.provider = d.config.provider || 'deepseek'
+        bt.config.model = d.config.model || ''
+        bt.config.hasApiKey = !!d.config.hasApiKey
+        bt.config.apiKey = ''
+        bt.config.baseUrl = ''
+      }
+    }
+  } catch { /* ignore */ }
+}
+
+async function saveBusinessTypeConfig() {
+  savingBusinessType.value = true
+  businessTypeMsg.value = ''
+  businessTypeMsgErr.value = false
+  try {
+    const token = getToken()
+    for (const bt of businessTypes) {
+      const res = await fetch(`/api/admin/global-config/business-type/${bt.key}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          provider: bt.config.provider,
+          model: bt.config.model,
+          apiKey: bt.config.apiKey,
+          baseUrl: bt.config.baseUrl,
+        })
+      })
+      const d = await res.json()
+      if (!d.success) {
+        businessTypeMsg.value = `❌ ${bt.label}: ${d.error || '保存失败'}`
+        businessTypeMsgErr.value = true
+        savingBusinessType.value = false
+        return
+      }
+      // 更新 hasApiKey 状态
+      bt.config.hasApiKey = d.config?.hasApiKey || false
+      bt.config.apiKey = ''
+    }
+    businessTypeMsg.value = '✅ 业务 AI 模型配置已保存'
+    businessTypeMsgErr.value = false
+  } catch (e: any) {
+    businessTypeMsg.value = '❌ ' + e.message
+    businessTypeMsgErr.value = true
+  }
+  savingBusinessType.value = false
+  setTimeout(() => { businessTypeMsg.value = '' }, 3000)
+}
 
 function maskValue(val: string): string {
   if (!val) return ''
@@ -424,5 +545,6 @@ async function saveKeys() {
 onMounted(() => {
   fetchData()
   loadKeys()
+  loadBusinessTypeConfig()
 })
 </script>

@@ -252,8 +252,8 @@
           <h3 class="admin-legal__config-section">AI 法律顾问对话模型</h3>
           <p class="admin-legal__config-note">⚖️ 配置后法律顾问对话使用此 LLM，留空则使用平台默认模型</p>
           <div class="admin-legal__config-row">
-            <label>Model <span class="admin-legal__config-hint">(模型名称，如 deepseek-chat)</span></label>
-            <input v-model="LEGAL_LLM_MODEL" class="admin-legal__input" placeholder="deepseek-chat" />
+            <label>Model <span class="admin-legal__config-hint">(模型名称，如 deepseek-v4-flash)</span></label>
+            <input v-model="LEGAL_LLM_MODEL" class="admin-legal__input" placeholder="deepseek-v4-flash" />
           </div>
           <div class="admin-legal__config-row">
             <label>API Key <span class="admin-legal__config-hint">(对话模型 API Key)</span></label>
@@ -428,7 +428,7 @@ const llmKeyVisible = ref(false)
 const EMBEDDING_PRESETS: Record<string, { model: string; baseURL: string }> = {
   openai:     { model: 'text-embedding-v3',      baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
   dashscope:  { model: 'text-embedding-v3',      baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
-  deepseek:   { model: 'deepseek-chat',          baseURL: 'https://api.deepseek.com/v1' },
+  deepseek:   { model: 'deepseek-v4-flash',      baseURL: 'https://api.deepseek.com' },
 }
 function onProviderChange() {
   const preset = EMBEDDING_PRESETS[LEGAL_EMBEDDING_PROVIDER.value]
@@ -439,7 +439,7 @@ function onProviderChange() {
 }
 
 const sysConfig = ref({
-  defaultModel: 'deepseek-chat',
+  defaultModel: 'deepseek-v4-flash',
   defaultPrompt: '',
   uploadLimit: 50,
   ocrEnabled: true,

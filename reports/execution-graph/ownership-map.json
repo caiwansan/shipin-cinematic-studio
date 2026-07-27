@@ -1,0 +1,1267 @@
+{
+  "summary": {
+    "totalFiles": 157,
+    "byMode": {
+      "SYNC": {
+        "count": 71,
+        "entries": [
+          "narrative-gateway",
+          "pipeline-executor"
+        ]
+      },
+      "LEGACY": {
+        "count": 18,
+        "entries": [
+          "cognition-loop",
+          "control-plane",
+          "director-simulation",
+          "director-v1",
+          "execution-graph",
+          "showrunner-v1"
+        ]
+      },
+      "OBSERVE": {
+        "count": 11,
+        "entries": [
+          "director-api"
+        ]
+      },
+      "SHADOW": {
+        "count": 35,
+        "entries": [
+          "graph-runtime",
+          "shadow-jobs",
+          "queue-legacy",
+          "sandbox",
+          "shadow",
+          "asset-state"
+        ]
+      },
+      "WORKER": {
+        "count": 7,
+        "entries": [
+          "worker-registry"
+        ]
+      },
+      "ASYNC": {
+        "count": 1,
+        "entries": [
+          "narrative-gateway"
+        ]
+      },
+      "TOOL": {
+        "count": 14,
+        "entries": [
+          "provider.registry"
+        ]
+      }
+    },
+    "byEntry": {
+      "narrative-gateway": {
+        "count": 63,
+        "modes": [
+          "SYNC",
+          "ASYNC"
+        ]
+      },
+      "cognition-loop": {
+        "count": 6,
+        "modes": [
+          "LEGACY"
+        ]
+      },
+      "director-api": {
+        "count": 11,
+        "modes": [
+          "OBSERVE"
+        ]
+      },
+      "graph-runtime": {
+        "count": 11,
+        "modes": [
+          "SHADOW"
+        ]
+      },
+      "worker-registry": {
+        "count": 7,
+        "modes": [
+          "WORKER"
+        ]
+      },
+      "shadow-jobs": {
+        "count": 11,
+        "modes": [
+          "SHADOW"
+        ]
+      },
+      "queue-legacy": {
+        "count": 7,
+        "modes": [
+          "SHADOW"
+        ]
+      },
+      "control-plane": {
+        "count": 2,
+        "modes": [
+          "LEGACY"
+        ]
+      },
+      "director-simulation": {
+        "count": 1,
+        "modes": [
+          "LEGACY"
+        ]
+      },
+      "director-v1": {
+        "count": 1,
+        "modes": [
+          "LEGACY"
+        ]
+      },
+      "execution-graph": {
+        "count": 1,
+        "modes": [
+          "LEGACY"
+        ]
+      },
+      "sandbox": {
+        "count": 1,
+        "modes": [
+          "SHADOW"
+        ]
+      },
+      "shadow": {
+        "count": 1,
+        "modes": [
+          "SHADOW"
+        ]
+      },
+      "asset-state": {
+        "count": 4,
+        "modes": [
+          "SHADOW"
+        ]
+      },
+      "pipeline-executor": {
+        "count": 9,
+        "modes": [
+          "SYNC"
+        ]
+      },
+      "provider.registry": {
+        "count": 14,
+        "modes": [
+          "TOOL"
+        ]
+      },
+      "showrunner-v1": {
+        "count": 7,
+        "modes": [
+          "LEGACY"
+        ]
+      }
+    }
+  },
+  "records": [
+    {
+      "file": "agents/aigc-orchestrator.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "agents/aigc-spec-agent.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "agents/character.agent.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "agents/image.agent.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "agents/portrait-prompt.agent.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "agents/scene-image-prompt.agent.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "agents/scheduler.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "api/runtime/dto/runtime.dto.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "api/runtime/graph.adapter.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "api/runtime/index.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "api/runtime/run.model.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "api/runtime/runtime.controller.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "api/runtime/runtime.routes.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "api/runtime/runtime.service.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "cognition-loop/director-cognition-loop.engine.ts",
+      "owner": {
+        "entry": "cognition-loop",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "cognition-loop/director-intent-state.ts",
+      "owner": {
+        "entry": "cognition-loop",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "cognition-loop/index.ts",
+      "owner": {
+        "entry": "cognition-loop",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "cognition-loop/intent-enforcement.ts",
+      "owner": {
+        "entry": "cognition-loop",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "cognition-loop/intent-feedback-analyzer.ts",
+      "owner": {
+        "entry": "cognition-loop",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "director-v2/constitution-compiler.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/diagnostics/director-field.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/diagnostics/golden-suite.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/diagnostics/system-diagnostics.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/director-bridge.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/index.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/runtime/api-surface.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/runtime/cinematic-intent.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/runtime/director-projection.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "director-v2/runtime/semantic-energy.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "graph-runtime/compiler/graph.compiler.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/core/edge.contract.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/core/graph.types.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/core/node.schema.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/index.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/registry/node.registry.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/runtime/context.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/runtime/edge.resolver.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/runtime/graph.runtime.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/runtime/node.executor.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "graph-runtime/validator/graph.validator.ts",
+      "owner": {
+        "entry": "graph-runtime",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/cognition-worker.ts",
+      "owner": {
+        "entry": "worker-registry",
+        "mode": "WORKER"
+      }
+    },
+    {
+      "file": "jobs/index.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/intent-engine-v3/index.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/intent-engine-v3/intent-classifier.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/intent-engine-v3/intent-router.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/intent-engine-v3/intent-strength-analyzer.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/intent-engine-v3/narrative-elasticity-engine.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/job-queue.ts",
+      "owner": {
+        "entry": "worker-registry",
+        "mode": "WORKER"
+      }
+    },
+    {
+      "file": "jobs/job-store.ts",
+      "owner": {
+        "entry": "worker-registry",
+        "mode": "WORKER"
+      }
+    },
+    {
+      "file": "jobs/llm-pool.ts",
+      "owner": {
+        "entry": "worker-registry",
+        "mode": "WORKER"
+      }
+    },
+    {
+      "file": "jobs/multi-scenario-v4/director-selection-brain.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/multi-scenario-v4/index.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/multi-scenario-v4/scenario-evaluator.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/multi-scenario-v4/scenario-generator.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/multi-scenario-v4/scenario-simulator.ts",
+      "owner": {
+        "entry": "shadow-jobs",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "jobs/reflection-engine.ts",
+      "owner": {
+        "entry": "worker-registry",
+        "mode": "WORKER"
+      }
+    },
+    {
+      "file": "jobs/showrunner-worker.ts",
+      "owner": {
+        "entry": "worker-registry",
+        "mode": "WORKER"
+      }
+    },
+    {
+      "file": "jobs/worker-memory.ts",
+      "owner": {
+        "entry": "worker-registry",
+        "mode": "WORKER"
+      }
+    },
+    {
+      "file": "plugins/auth.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "plugins/cors.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "plugins/runtime-context.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "queue/capability-dispatcher.ts",
+      "owner": {
+        "entry": "queue-legacy",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "queue/job-events.ts",
+      "owner": {
+        "entry": "queue-legacy",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "queue/mock-provider.ts",
+      "owner": {
+        "entry": "queue-legacy",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "queue/queue-manager.ts",
+      "owner": {
+        "entry": "queue-legacy",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "queue/redis.ts",
+      "owner": {
+        "entry": "queue-legacy",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "queue/task-queue.ts",
+      "owner": {
+        "entry": "queue-legacy",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "queue/worker-runtime.ts",
+      "owner": {
+        "entry": "queue-legacy",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "routes/admin-auth.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/ai-tasks.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/auth.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/cognition-loop.ts",
+      "owner": {
+        "entry": "cognition-loop",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "routes/control-plane-v2.ts",
+      "owner": {
+        "entry": "control-plane",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "routes/control-plane.ts",
+      "owner": {
+        "entry": "control-plane",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "routes/director-simulation.ts",
+      "owner": {
+        "entry": "director-simulation",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "routes/director-v2.ts",
+      "owner": {
+        "entry": "director-api",
+        "mode": "OBSERVE"
+      }
+    },
+    {
+      "file": "routes/director.ts",
+      "owner": {
+        "entry": "director-v1",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "routes/execution-graph.ts",
+      "owner": {
+        "entry": "execution-graph",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "routes/execution-images.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/execution-journal.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/images.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/member.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/narrative-llm.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/pipeline-jobs.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/pipeline.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/projects-v2.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/projects.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/sandbox.ts",
+      "owner": {
+        "entry": "sandbox",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "routes/scenes.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/script-submit.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/shadow.ts",
+      "owner": {
+        "entry": "shadow",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "routes/showrunner.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "ASYNC"
+      }
+    },
+    {
+      "file": "routes/storyboards.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/tasks.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/tts.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/universe-images.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/upload.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/user-api-keys.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/user-model-config.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/video-tasks.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "routes/wechat-oauth.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/asset-state-audit.ts",
+      "owner": {
+        "entry": "asset-state",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "runtime/asset-state-guard.ts",
+      "owner": {
+        "entry": "asset-state",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "runtime/asset-state-machine.ts",
+      "owner": {
+        "entry": "asset-state",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "runtime/asset-state-transition.ts",
+      "owner": {
+        "entry": "asset-state",
+        "mode": "SHADOW"
+      }
+    },
+    {
+      "file": "runtime/degrade-engine.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/execution-guard.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/base-llm.executor.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/base.executor.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/executor.registry.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/image-gen.executor.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/image-prompt.executor.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/prompt-builder.executor.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/script-writer.executor.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/shot-split.executor.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/executors/storyboard.executor.ts",
+      "owner": {
+        "entry": "pipeline-executor",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/narrative-gateway.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/pipeline-executor.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/providers/base.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "runtime/providers/deepseek.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "runtime/providers/image.base.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "runtime/providers/openai.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "runtime/providers/provider.registry.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "runtime/providers/replicate.image.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "runtime/task-stream.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "runtime/with-user-model-config.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "scheduler/agent-pool.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "scheduler/aggregation-layer.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "scheduler/graph-scheduler.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "scheduler/graph.instance.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "scheduler/index.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "scheduler/resource-router.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "services/aliyun-image.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "services/aliyun-llm.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "services/aliyun-tts.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "services/aliyun-video.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "services/crypto.service.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "services/download.service.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "services/project.service.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "services/scene.service.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "services/siliconflow-tts.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "services/usage-quota.service.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "services/video.service.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "services/volcengine-image.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "services/volcengine-tts.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "services/volcengine-video.provider.ts",
+      "owner": {
+        "entry": "provider.registry",
+        "mode": "TOOL"
+      }
+    },
+    {
+      "file": "services/with-user-key.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "services/world-memory.service.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "showrunner/emotional-engine.ts",
+      "owner": {
+        "entry": "showrunner-v1",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "showrunner/execution-orchestrator.ts",
+      "owner": {
+        "entry": "showrunner-v1",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "showrunner/index.ts",
+      "owner": {
+        "entry": "showrunner-v1",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "showrunner/narrative-understanding.ts",
+      "owner": {
+        "entry": "showrunner-v1",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "showrunner/production-strategist.ts",
+      "owner": {
+        "entry": "showrunner-v1",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "showrunner/showrunner-core.ts",
+      "owner": {
+        "entry": "showrunner-v1",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "showrunner/structural-planner.ts",
+      "owner": {
+        "entry": "showrunner-v1",
+        "mode": "LEGACY"
+      }
+    },
+    {
+      "file": "utils/index.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    },
+    {
+      "file": "utils/redis-state.ts",
+      "owner": {
+        "entry": "narrative-gateway",
+        "mode": "SYNC"
+      }
+    }
+  ],
+  "timestamp": "2026-05-21T04:16:24.197Z"
+}

@@ -82,7 +82,7 @@ export async function resolveLLMConfig(
   for (const provider of globalProviders) {
     const keyRecord = await apiKeyRepository.findUnique({ where: { provider } })
     if (keyRecord?.keyValue) {
-      const model = provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o'
+      const model = provider === 'deepseek' ? 'deepseek-v4-flash' : 'gpt-4o'
       // 验证能力
       if (requiredCapabilities && requiredCapabilities.length > 0) {
         const allSupported = requiredCapabilities.every((cap) =>
