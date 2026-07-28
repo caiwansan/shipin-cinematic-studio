@@ -77,6 +77,18 @@ export default async function enterpriseAgentRoutes(fastify: FastifyInstance) {
       : []
     const profileMap = new Map(profiles.map((p) => [p.id, p]))
 
+    // Sprint 07 Week 2: 查询 UsageLog 统计每个 Agent 的使用量
+    const instanceIds = instances.map((inst) => inst.id)
+    const usageLogs = instanceIds.length > 0
+      ? await prisma.usageLog.groupBy({
+          by: ['taskId'],
+          where: { tenantId: orgId },
+          _count: { id: true },
+        })
+      : []
+    // 注意：UsageLog 没有直接关联 agentInstance，使用 totalTasks 作为使用量
+    // TODO: Sprint-09 关联 UsageLog 到 EnterpriseAgentInstance
+
     return {
       code: 0,
       data: {
@@ -96,6 +108,8 @@ export default async function enterpriseAgentRoutes(fastify: FastifyInstance) {
             totalTasks: inst.totalTasks,
             totalErrors: inst.totalErrors,
             metadata: inst.metadata,
+            // Sprint 07 Week 2: 使用量（基于 totalTasks，未来关联 UsageLog）
+            usage: inst.totalTasks || 0,
           }
         }),
       },

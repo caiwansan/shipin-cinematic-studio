@@ -15,6 +15,7 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { PrismaClient } from '@prisma/client'
+import { requireEnterpriseWorkspaceContext } from '../services/enterprise-context.service.js'
 
 const prisma = new PrismaClient()
 
@@ -64,6 +65,15 @@ function isValidTransition(from: string, to: string): boolean {
 
 export default async function recruitmentCampaignRoutes(fastify: FastifyInstance) {
 
+  // Sprint 1B-5: JWT 认证
+  fastify.addHook('onRequest', async (request, reply) => {
+    try {
+      await request.jwtVerify()
+    } catch (err) {
+      return reply.status(401).send({ error: 'Unauthorized' })
+    }
+  })
+
   /**
    * GET /api/enterprise/recruitment-campaign
    * 列出当前 workspace 的所有 Campaign
@@ -72,6 +82,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
   fastify.get('/', async (req: FastifyRequest, reply: FastifyReply) => {
     const workspaceId = getWorkspaceId(req)
     if (!workspaceId) return reply.status(400).send({ success: false, message: 'workspaceId required' })
+
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     const { status, limit = '50', offset = '0' } = req.query as any
     const where: any = { workspaceId }
@@ -102,6 +119,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
     const { id } = req.params as any
     const workspaceId = getWorkspaceId(req)
 
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId && workspaceId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
+
     const campaign = await prisma.recruitmentCampaign.findFirst({
       where: { id, ...(workspaceId ? { workspaceId } : {}) },
       include: {
@@ -130,6 +154,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
     if (!workspaceId) return reply.status(400).send({ success: false, message: 'workspaceId required' })
     if (!jobPostingId) return reply.status(400).send({ success: false, message: 'jobPostingId required' })
     if (!marketingAgentId) return reply.status(400).send({ success: false, message: 'marketingAgentId required' })
+
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     // Validate workspace
     const ws = await prisma.enterpriseJobWorkspace.findUnique({ where: { id: workspaceId } })
@@ -175,6 +206,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
   fastify.post('/:id/generate', async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as any
     const workspaceId = getWorkspaceId(req)
+
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId && workspaceId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     const campaign = await prisma.recruitmentCampaign.findFirst({
       where: { id, ...(workspaceId ? { workspaceId } : {}) },
@@ -241,6 +279,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
     const campaign = await prisma.recruitmentCampaign.findUnique({ where: { id } })
     if (!campaign) return reply.status(404).send({ success: false, message: 'Campaign not found' })
 
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, campaign.workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
+
     if (!isValidTransition(campaign.status, newStatus)) {
       return reply.status(409).send({
         success: false,
@@ -278,6 +323,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
 
     const campaign = await prisma.recruitmentCampaign.findUnique({ where: { id } })
     if (!campaign) return reply.status(404).send({ success: false, message: 'Campaign not found' })
+
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, campaign.workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     const reviewStatusMap: Record<string, string> = {
       approve: 'approved',
@@ -330,6 +382,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
       include: { publishingTasks: true },
     })
     if (!campaign) return reply.status(404).send({ success: false, message: 'Campaign not found' })
+
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, campaign.workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     if (!isValidTransition(campaign.status, CAMPAIGN_STATUS.PUBLISHING)) {
       return reply.status(409).send({ success: false, message: `Cannot publish from status: ${campaign.status}` })
@@ -396,8 +455,16 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
 
     const task = await prisma.publishingTask.findFirst({
       where: { id: taskId, campaignId: id },
+      include: { campaign: { select: { workspaceId: true } } },
     })
     if (!task) return reply.status(404).send({ success: false, message: 'Task not found' })
+
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, task.campaign.workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     if (task.status !== TASK_STATUS.FAILED) {
       return reply.status(409).send({ success: false, message: `Cannot retry from status: ${task.status}` })
@@ -423,6 +490,18 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
    */
   fastify.get('/:id/tasks', async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as any
+
+    // Sprint 1B-5: Tenant boundary guard — 先查 campaign 确认 workspace 归属
+    const campaign = await prisma.recruitmentCampaign.findUnique({
+      where: { id },
+      select: { workspaceId: true },
+    })
+    if (!campaign) return reply.status(404).send({ success: false, message: 'Campaign not found' })
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, campaign.workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     const tasks = await prisma.publishingTask.findMany({
       where: { campaignId: id },
@@ -459,6 +538,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
   fastify.get('/stats', async (req: FastifyRequest, reply: FastifyReply) => {
     const workspaceId = getWorkspaceId(req)
     if (!workspaceId) return reply.status(400).send({ success: false, message: 'workspaceId required' })
+
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     const [
       total,
@@ -516,6 +602,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
     const campaign = await prisma.recruitmentCampaign.findUnique({ where: { id } })
     if (!campaign) return reply.status(404).send({ success: false, message: 'Campaign not found' })
 
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, campaign.workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
+
     if (campaign.status !== CAMPAIGN_STATUS.DRAFT) {
       return reply.status(409).send({ success: false, message: `Cannot edit in status: ${campaign.status}. Only draft campaigns are editable.` })
     }
@@ -542,6 +635,13 @@ export default async function recruitmentCampaignRoutes(fastify: FastifyInstance
 
     const campaign = await prisma.recruitmentCampaign.findUnique({ where: { id } })
     if (!campaign) return reply.status(404).send({ success: false, message: 'Campaign not found' })
+
+    // Sprint 1B-5: Tenant boundary guard
+    const userId = (req.user as any)?.id || (req as any)?.userId
+    if (userId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, campaign.workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace access denied' })
+    }
 
     const deletable = ['draft', 'closed']
     if (!deletable.includes(campaign.status)) {

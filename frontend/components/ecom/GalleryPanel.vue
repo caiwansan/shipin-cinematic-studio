@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 // ─── 图片生成面板 ───
 // 基于 Stage3 prompt 调 images.edit API 生成图片
 // 展示生成的图片网格 + 下载 + 保存到图库
@@ -45,7 +46,7 @@ watch(() => props.project, async (p) => {
 
 async function loadGeneratedImages() {
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const res = await fetch(`/api/ecom/projects/${props.projectId}/generated-images`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -96,7 +97,7 @@ async function startGenerate() {
   progress.value = '正在调用 AI 生成图片...'
   projectStatus.value = 'generating'
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const res = await fetch(`/api/ecom/projects/${props.projectId}/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

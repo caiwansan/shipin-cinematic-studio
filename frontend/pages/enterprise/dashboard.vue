@@ -205,6 +205,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import DashboardSection from '~/components/enterprise/dashboard/DashboardSection.vue'
 import EnterpriseTimeline from '~/components/enterprise/dashboard/EnterpriseTimeline.vue'
@@ -230,7 +231,7 @@ async function loadDashboardData() {
   loading.value = true
   try {
     const res = await fetch('/api/enterprise/dashboard/ceo', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      headers: { Authorization: `Bearer ${getAuthToken() || ''}` },
     })
     const data = await res.json()
     if (data.code === 0) {

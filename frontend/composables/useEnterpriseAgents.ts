@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * useEnterpriseAgents — AI 员工数据获取 Composable
  * Sprint 4.2.9 Phase 2
@@ -14,7 +15,7 @@ export function useEnterpriseAgents() {
   const error = ref(null)
 
   async function fetchJSON(path) {
-    const token = localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch(`${API_BASE}${path}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -32,7 +33,7 @@ export function useEnterpriseAgents() {
     try {
       // Step 1: 获取 employee profiles
       const employeesRes = await fetch(`/api/enterprise/agent-profiles`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` },
+        headers: { Authorization: `Bearer ${getAuthToken() || ''}` },
       })
       const employees = employeesRes.ok ? (await employeesRes.json()).data || [] : []
 
@@ -83,7 +84,7 @@ export function useEnterpriseAgents() {
    * 暂停/恢复 Agent
    */
   async function toggleAgent(instanceId, status) {
-    const token = localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch(`${API_BASE}/instances/${instanceId}/status`, {
       method: 'PATCH',
       headers: {

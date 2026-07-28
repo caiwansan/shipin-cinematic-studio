@@ -19,12 +19,23 @@ export default async function proxyImageRoutes(app: FastifyInstance) {
 
     // 只允许代理火山 TOS 图片
     const decodedUrl = decodeURIComponent(url)
-    if (!decodedUrl.includes('tos-cn-beijing.volces.com') && !decodedUrl.includes('volces.com')) {
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(decodedUrl)
+    } catch {
+      return reply.status(400).send({ error: '无效的 URL' })
+    }
+
+    // SSRF 防护：精确域名匹配，禁止内网
+    const ALLOWED_HOSTS = ['tos-cn-beijing.volces.com', 'volces.com']
+    if (!ALLOWED_HOSTS.includes(parsedUrl.hostname)) {
       return reply.status(403).send({ error: '只允许代理火山 TOS 图片' })
+    }
+    if (parsedUrl.hostname === '127.0.0.1' || parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '0.0.0.0') {
+      return reply.status(403).send({ error: '禁止代理内网地址' })
     }
 
     try {
-      const parsedUrl = new URL(decodedUrl)
       const client = parsedUrl.protocol === 'https:' ? https : http
 
       const response = await new Promise<{ statusCode: number; headers: any; data: Buffer }>((resolve, reject) => {

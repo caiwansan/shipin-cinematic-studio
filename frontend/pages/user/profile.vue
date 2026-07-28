@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { getTierLabel } from '~/constants/membership'
@@ -222,7 +223,7 @@ async function saveRegion() {
   regionSaving.value = true
   regionError.value = ''
   try {
-    const token = auth.token || localStorage.getItem('auth_token') || ''
+    const token = auth.token || getAuthToken() || ''
     const res = await fetch('/api/user/region', {
       method: 'PUT',
       headers: {

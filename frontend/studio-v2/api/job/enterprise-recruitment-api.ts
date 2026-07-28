@@ -1,7 +1,20 @@
 /**
+ * @deprecated — TASK-04 RECRUITMENT-PROD-READY-GATE 2026-07-28
+ *
+ * ⚠️ 此文件已确认零运行时引用（0 call sites），将在后续 sprint 删除。
+ *
+ * 替代方案:
+ *   - 岗位 CRUD:          直接 fetch /api/enterprise/postings (job-posting.routes.ts)
+ *   - 智能体 (Talent/Interview): 直接 fetch /api/enterprise/agents/talent/*
+ *   - 人才匹配 P4:        ~/studio-v2/api/recruitment-api.ts (base: /api/job/match/*)
+ *   - 面试管理:          直接 fetch /api/enterprise/recruitment-interview/*
+ *   - 招聘 Dashboard:    直接 fetch /api/enterprise/home
+ *   - 渠道管理:          直接 fetch /api/enterprise/recruitment-campaign/*
+ *   - 对话管理:          直接 fetch /api/enterprise/recruitment-conversation/*
+ *
  * enterprise-recruitment-api.ts — 企业招聘中心 API Client
  *
- * 归属: 企业招聘中心 (Enterprise Recruitment) → /workspace/recruitment
+ * 归属: 企业招聘中心 (Enterprise Recruitment) → /workspace/enterprise
  * 审计: JOB-WORKSPACE-BOUNDARY-AUDIT 2026-07-26 — Phase 2 拆分
  *
  * 职责:

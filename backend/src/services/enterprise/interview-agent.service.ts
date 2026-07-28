@@ -80,13 +80,41 @@ export class InterviewAgentService {
     })
     if (!job) return this.errorResult('JOB_NOT_FOUND', startTime)
 
-    const candidate = await this.prisma.jobCandidate.findUnique({
+    const candidate = await this.prisma.careerProfile.findUnique({
       where: { id: candidateId },
-      include: { matches: { where: { jobId }, take: 1 } },
+      select: {
+        id: true,
+        candidateId: true,
+        fullName: true,
+        headline: true,
+        bio: true,
+        city: true,
+        careerDirection: true,
+        skills: { select: { name: true } },
+        workExperiences: { orderBy: { startDate: 'desc' }, take: 1, select: { title: true, company: true } },
+        educations: { orderBy: { startDate: 'desc' }, take: 1, select: { degree: true, field: true } },
+      },
     })
-    if (!candidate || candidate.matches.length === 0) {
+    if (!candidate) {
       return this.errorResult('CANDIDATE_NOT_IN_TENANT', startTime)
     }
+
+    // 通过 CareerProfile.candidateId 查询匹配记录
+    const matches = await this.prisma.candidateMatch.findMany({
+      where: { candidateId: candidate.candidateId, jobId },
+      take: 1,
+    })
+    if (matches.length === 0) {
+      return this.errorResult('CANDIDATE_NOT_IN_TENANT', startTime)
+    }
+
+    const skills = candidate.skills?.map(s => s.name).join(', ') || '未提供'
+    const experience = candidate.workExperiences?.[0]
+      ? `${candidate.workExperiences[0].title} @ ${candidate.workExperiences[0].company || '未提供'}`
+      : (candidate.headline || '未提供')
+    const education = candidate.educations?.[0]
+      ? `${candidate.educations[0].degree || ''} ${candidate.educations[0].field || ''}`.trim() || '未提供'
+      : '未提供'
 
     const prompt = `请基于以下岗位和候选人信息，生成一套完整的面试问题：
 
@@ -97,13 +125,13 @@ export class InterviewAgentService {
 - 经验要求：${job.experienceMin ? job.experienceMin + '年+' : '未填写'}
 
 ## 候选人
-- 学历：${candidate.education || '未提供'}
-- 技能：${candidate.skills?.join(', ') || '未提供'}
-- 经验：${candidate.experience || '未提供'}
+- 姓名：${candidate.fullName || '求职者'}
+- 学历：${education}
+- 技能：${skills}
+- 经验：${experience}
 - 城市：${candidate.city || '未提供'}
-- 期望薪资：${candidate.salaryExpectation || '未提供'}
-- 求职目标：${candidate.careerGoal || '未提供'}
-- 当前匹配度：${candidate.matches[0].matchScore}%
+- 求职目标：${candidate.careerDirection || candidate.bio || '未提供'}
+- 当前匹配度：${matches[0].matchScore}%
 
 请生成以下类别的面试问题（每个类别 2-3 题）：
 

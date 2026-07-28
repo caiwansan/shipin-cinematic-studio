@@ -99,6 +99,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, reactive, onMounted } from 'vue'
 
 const capabilities = [
@@ -143,7 +144,7 @@ const providerEmoji: Record<string, string> = {
 }
 
 function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || ''
+  const token = getAuthToken() || ''
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -43,8 +43,10 @@ export const POLICY = {
 
 // ─── 运行时标志 ────────────────────────────────────────
 
+// Sprint 13: Security P0 — 默认 enforce 模式生效
+// shadow 模式已淘汰。如需临时关闭请设置 SSR_FORCE_SHADOW=true
 export const SSRF_MODE: 'shadow' | 'enforce' = (
-  process.env.SSRF_MODE === 'enforce' ? 'enforce' : 'shadow'
+  process.env.SSRF_FORCE_SHADOW === 'true' ? 'shadow' : 'enforce'
 )
 
 // ─── IP → CIDR 匹配 ────────────────────────────────────

@@ -8,10 +8,10 @@
  *    因此 Candidate 信息需要二次查询。Repository 负责执行查询，
  *    Mapper 负责组装 DTO。
  *
- * 数据路径（已验证）：
- *   Conversation.candidateId → JobCandidate.id（手动，无 @relation）
- *   JobCandidate.profileJson.name → Candidate Name 快照
- *   JobCandidate.userId → User.id（有 @relation）
+ * 数据路径（Sprint-SSOT-CLEANUP-01）：
+ *   Conversation.candidateId → CareerProfile.id（手动，无 @relation）
+ *   CareerProfile.fullName → Candidate Name
+ *   CareerProfile.userId → User.id（有 @relation）
  *   User.email → Candidate Email
  *
  * 注意：candidateId 可能为 null（现有数据确实为 null），
@@ -89,46 +89,23 @@ export const conversationRepository = {
       prisma.recruitmentConversation.count({ where }),
     ])
 
-    // 手动关联 Step 1: candidateId → JobCandidate
+    // 手动关联 Step 1: candidateId → CareerProfile
     const candidateIds = conversations
       .map(c => c.candidateId)
       .filter((id): id is string => id != null)
 
     const candidates = candidateIds.length > 0
-      ? await prisma.jobCandidate.findMany({
+      ? await prisma.careerProfile.findMany({
           where: { id: { in: candidateIds } },
-          select: { id: true, userId: true, profileJson: true },
+          select: { id: true, userId: true, fullName: true, email: true },
         })
       : []
 
     const candidateMap = new Map(candidates.map(c => [c.id, c]))
 
-    // 手动关联 Step 2: userId → User.email
-    const userIds = candidates
-      .map(c => c.userId)
-      .filter((id): id is string => id != null)
-
-    const users = userIds.length > 0
-      ? await prisma.user.findMany({
-          where: { id: { in: userIds } },
-          select: { id: true, email: true },
-        })
-      : []
-
-    const userMap = new Map(users.map(u => [u.id, u]))
-
-    // 内存组装：Conversation + Candidate + User → ConversationRow
+    // 内存组装：Conversation + CareerProfile → ConversationRow
     const rows: ConversationRow[] = conversations.map(conv => {
       const candidate = conv.candidateId ? candidateMap.get(conv.candidateId) : undefined
-      const user = candidate?.userId ? userMap.get(candidate.userId) : undefined
-
-      // Candidate Name: profileJson.name 快照（DP-1: Candidate Identity 的 name 来源）
-      const profileName = candidate?.profileJson != null && typeof candidate.profileJson === 'object'
-        ? (candidate.profileJson as Record<string, unknown>).name as string | undefined ?? null
-        : null
-
-      // Candidate Email: 从 User.email 获取（JobCandidate.userId → User @relation）
-      const userEmail = user?.email ?? null
 
       return {
         id: conv.id,
@@ -143,8 +120,8 @@ export const conversationRepository = {
         createdAt: conv.createdAt,
         updatedAt: conv.updatedAt,
         jobPosting: conv.jobPosting,
-        candidateName: profileName,
-        candidateEmail: userEmail,
+        candidateName: candidate?.fullName ?? null,
+        candidateEmail: candidate?.email ?? null,
       }
     })
 

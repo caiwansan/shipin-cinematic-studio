@@ -122,6 +122,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 const loading = ref(false)
 const error = ref('')
 const list = ref<any[]>([])
@@ -144,7 +145,7 @@ async function fetchData() {
     if (filterStatus.value) params.set('status', filterStatus.value)
 
     const res = await fetch(`/api/admin/recruitment/reviews?${params}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+      headers: { 'Authorization': `Bearer ${getAuthToken() || ''}` },
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()

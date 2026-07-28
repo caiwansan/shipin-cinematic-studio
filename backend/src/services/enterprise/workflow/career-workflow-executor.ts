@@ -555,7 +555,11 @@ export class CareerWorkflowExecutor {
    */
   private async resolveAgentProfileId(agentId: string, tenantId?: string): Promise<string> {
     const p = this.prisma as any
-    const tid = tenantId || '5ba4891a-511f-4620-8862-7dc83f37ea75'
+    // Sprint-02 Fix: 禁止 fallback UUID，tenantId 必须显式传入
+    if (!tenantId) {
+      throw new Error('resolveAgentProfileId: tenantId is required')
+    }
+    const tid = tenantId
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (uuidRegex.test(agentId)) {

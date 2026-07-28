@@ -406,6 +406,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * JobWorkspaceLayout.vue - 昆仑镜 AI 求职招聘工作台布局
  *
@@ -583,7 +584,7 @@ async function scrollToBottom() {
 
 function getUserId(): string {
   try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
+    const token = getAuthToken()
     if (token) {
       const payload = JSON.parse(atob(token.split('.')[1]))
       return payload.userId || payload.sub || 'anonymous'

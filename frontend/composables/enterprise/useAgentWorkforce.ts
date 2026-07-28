@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * useAgentWorkforce — AI Workforce 数据层
  *
@@ -22,6 +23,11 @@ export interface AgentInstance {
   totalTasks: number
   totalErrors: number
   metadata: Record<string, any> | null
+  // Sprint 07 Week 2: 统一数据字段
+  /** 最后活跃时间（格式化展示用） */
+  lastActive: string
+  /** 使用量（关联 UsageLog） */
+  usage: number
 }
 
 export interface AgentSummary {
@@ -92,7 +98,7 @@ export function useAgentWorkforce(): {
     state.value.error = ''
 
     try {
-      const token = localStorage.getItem('auth_token') || ''
+      const token = getAuthToken() || ''
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -114,6 +120,9 @@ export function useAgentWorkforce(): {
       const instances: AgentInstance[] = rawInstances.map((i: any) => ({
         ...i,
         capabilities: parseCapabilities(i.capabilities),
+        // Sprint 07 Week 2: 统一数据字段映射
+        lastActive: i.lastActiveAt || i.createdAt || null,
+        usage: i.totalTasks || 0,
       }))
 
       const summary: AgentSummary = summaryJson.data || {
@@ -134,7 +143,7 @@ export function useAgentWorkforce(): {
 
   // ─── Copilot Action 执行 ───────────────────────────────────
   async function executeAction(action: CopilotAction): Promise<any> {
-    const token = localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || ''
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

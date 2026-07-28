@@ -26,6 +26,21 @@
       ⚠️ {{ error }} <button @click="fetchKanban" class="ml-2 underline cursor-pointer">重试</button>
     </div>
 
+    <!-- Empty State: 完全无候选人 -->
+    <div v-else-if="totalCount === 0" class="pipeline-empty">
+      <div class="pipeline-empty-icon">🎯</div>
+      <h2>当前岗位还没有候选人</h2>
+      <p>创建岗位后，AI 猎聘顾问将自动为您寻找匹配的人才</p>
+      <div class="pipeline-empty-actions">
+        <button class="pipeline-empty-btn pipeline-empty-btn--primary" @click="navigateTo('/workspace/recruitment/jobs/create')">
+          ➕ 创建岗位
+        </button>
+        <button class="pipeline-empty-btn" @click="navigateTo('/workspace/recruitment')">
+          🤖 启动 AI 人才搜索
+        </button>
+      </div>
+    </div>
+
     <!-- Kanban Board -->
     <div v-else class="kanban-board">
       <div v-for="stage in stages" :key="stage.id" class="kanban-column">
@@ -114,6 +129,78 @@
             </div>
           </div>
 
+          <!-- Sprint 08: 招聘决策摘要 -->
+          <div class="modal-section">
+            <div class="text-xs text-gray-500 mb-2">决策摘要</div>
+            <div class="p-3 rounded-lg bg-[#0D1328] border border-[#1A2240]">
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-xs text-gray-500">评分：</span>
+                <span class="text-sm font-semibold" :class="(selectedCard.screeningScore || 0) >= 70 ? 'text-green-400' : (selectedCard.screeningScore || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'">{{ selectedCard.screeningScore || '—' }}</span>
+                <span class="text-xs text-gray-500">面试：</span>
+                <span class="text-xs text-white/70">{{ selectedCard.interviewCount || 0 }} 场</span>
+              </div>
+              <div class="flex gap-2">
+                <button @click="viewCandidateDetail(selectedCard.id)" class="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer bg-transparent border-none underline">
+                  查看完整画像 →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sprint 07 Week 2: Stage-specific AI Actions -->
+          <div class="modal-section">
+            <div class="text-xs text-gray-500 mb-2">AI 动作</div>
+            <div class="flex flex-wrap gap-2">
+              <!-- Screening: AI分析候选人 -->
+              <button
+                v-if="selectedCard.stage === 'screening'"
+                @click="aiAnalyzeCandidate(selectedCard)"
+                :disabled="aiActionLoading"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer border-none transition bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 disabled:opacity-40"
+              >
+                {{ aiActionLoading ? '⏳ AI 分析中...' : '🤖 AI分析候选人' }}
+              </button>
+
+              <!-- Interview: 生成面试计划 -->
+              <button
+                v-if="selectedCard.stage === 'interview'"
+                @click="aiGenerateInterview(selectedCard)"
+                :disabled="aiActionLoading"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer border-none transition bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-40"
+              >
+                {{ aiActionLoading ? '⏳ 生成中...' : '📋 生成面试计划' }}
+              </button>
+
+              <!-- Offer: 生成录用建议 (Week 1 已添加) -->
+              <button
+                v-if="selectedCard.stage === 'offer'"
+                @click="generateHireAdvice(selectedCard)"
+                :disabled="hireAdviceLoading"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer border-none transition bg-green-600/20 text-green-400 hover:bg-green-600/30 disabled:opacity-40"
+              >
+                {{ hireAdviceLoading ? '⏳ AI 正在分析...' : '📋 生成录用建议' }}
+              </button>
+
+              <!-- Hired: 完成入职记录 -->
+              <button
+                v-if="selectedCard.stage === 'hired'"
+                @click="completeOnboarding(selectedCard)"
+                :disabled="aiActionLoading"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer border-none transition bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 disabled:opacity-40"
+              >
+                {{ aiActionLoading ? '⏳ 处理中...' : '✅ 完成入职记录' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- AI Action Result -->
+          <div v-if="aiActionResult" class="modal-section">
+            <div class="text-xs text-gray-500 mb-2">AI 结果</div>
+            <div class="p-3 rounded-lg bg-[#0D1328] border border-[#1A2240]">
+              <div class="text-[11px] text-gray-400 whitespace-pre-wrap leading-relaxed">{{ aiActionResult }}</div>
+            </div>
+          </div>
+
           <!-- Recent Events -->
           <div v-if="selectedCard.recentEvents?.length" class="modal-section">
             <div class="text-xs text-gray-500 mb-2">最近事件</div>
@@ -123,6 +210,23 @@
                 <span class="text-gray-400">{{ evt.type }}</span>
                 <span v-if="evt.fromStage && evt.toStage" class="text-gray-600">{{ evt.fromStage }} → {{ evt.toStage }}</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Offer 阶段：生成录用建议 -->
+          <div v-if="selectedCard.stage === 'offer'" class="modal-section">
+            <div class="text-xs text-gray-500 mb-2">录用决策</div>
+            <button
+              @click="generateHireAdvice(selectedCard)"
+              :disabled="hireAdviceLoading"
+              class="w-full px-4 py-2 rounded-lg text-xs font-medium cursor-pointer border-none transition bg-green-600/20 text-green-400 hover:bg-green-600/30 disabled:opacity-40"
+            >
+              {{ hireAdviceLoading ? '⏳ AI 正在分析...' : '📋 生成录用建议' }}
+            </button>
+            <!-- 录用建议结果 -->
+            <div v-if="hireAdviceResult" class="mt-3 p-3 rounded-lg bg-[#0D1328] border border-[#1A2240]">
+              <div class="text-xs font-medium text-green-400 mb-2">🤖 AI 录用建议</div>
+              <div class="text-[11px] text-gray-400 whitespace-pre-wrap leading-relaxed">{{ hireAdviceResult }}</div>
             </div>
           </div>
 
@@ -146,6 +250,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 // P5-RECRUITMENT-BETA-01: 企业招聘 Pipeline 看板
 // 数据来源：GET /api/pipeline/kanban
 // 推进动作：PATCH /api/pipeline/:id/stage
@@ -160,6 +265,11 @@ const totalCount = ref(0)
 const selectedCard = ref<any>(null)
 const advanceLoading = ref(false)
 const noteInput = ref('')
+const hireAdviceLoading = ref(false)
+const hireAdviceResult = ref('')
+// Sprint 07 Week 2: AI Action state
+const aiActionLoading = ref(false)
+const aiActionResult = ref('')
 
 const stages = [
   { id: 'discovered', label: '发现候选', dotClass: 'bg-blue-400', actionClass: 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30' },
@@ -169,7 +279,7 @@ const stages = [
   { id: 'hired', label: '已录用', dotClass: 'bg-emerald-400', actionClass: 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30' },
 ]
 
-const token = computed(() => localStorage.getItem('token') || '')
+const token = computed(() => getAuthToken() || '')
 const workspaceId = computed(() => localStorage.getItem('workspace_id') || localStorage.getItem('enterprise_id') || '')
 
 async function fetchKanban() {
@@ -198,6 +308,10 @@ async function fetchKanban() {
 
 function openCard(card: any) {
   selectedCard.value = card
+}
+
+function viewCandidateDetail(cardId: string) {
+  window.location.href = `/workspace/enterprise/candidates/${cardId}`
 }
 
 function stageLabel(id: string): string {
@@ -271,6 +385,41 @@ async function addNote(card: any) {
   }
 }
 
+// ─── 生成录用建议 ───
+async function generateHireAdvice(card: any) {
+  hireAdviceLoading.value = true
+  hireAdviceResult.value = ''
+  try {
+    // 调用 AI Offer 生成 API
+    const res = await fetch(`/api/pipeline/${card.id}/ai-offer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`,
+      },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    hireAdviceResult.value = data.content || data.message || '生成失败，请重试'
+  } catch (e: any) {
+    // API 不可用时，基于评分生成简单建议
+    const score = card.screeningScore || 70
+    const recommendation = score >= 80 ? '推荐录用' : score >= 60 ? '建议考虑' : '不建议录用'
+    hireAdviceResult.value = `📋 录用建议（基于评分）
+
+候选人：${card.candidateName}
+职位：${card.jobTitle}
+AI 评分：${score}/100
+
+建议：${recommendation}
+${score >= 80 ? '理由：综合评估优秀，建议尽快发放 Offer' : score >= 60 ? '理由：基本符合岗位要求，建议进一步评估' : '理由：综合评估未达标准，建议谨慎考虑'}
+
+⚠️ 当前为 Beta 评分建议，真实 AI 录用建议将在后续版本接入`
+  } finally {
+    hireAdviceLoading.value = false
+  }
+}
+
 function scoreClass(score: number): string {
   if (score >= 70) return 'text-green-400'
   if (score >= 50) return 'text-yellow-400'
@@ -287,6 +436,106 @@ function formatTime(t: string): string {
   if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
   if (diff < 604800000) return `${Math.floor(diff / 86400000)} 天前`
   return d.toLocaleDateString('zh-CN')
+}
+
+// ─── Sprint 07 Week 2: AI Actions ───
+
+/** AI分析候选人 — 调用 ai-rescore API */
+async function aiAnalyzeCandidate(card: any) {
+  aiActionLoading.value = true
+  aiActionResult.value = ''
+  try {
+    const res = await fetch(`/api/pipeline/${card.id}/ai-rescore`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`,
+      },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    aiActionResult.value = `🤖 AI 分析完成
+
+候选人：${card.candidateName}
+职位：${card.jobTitle}
+AI 评分：${data.score}/100
+
+${data.disclaimer || ''}
+
+建议：${data.score >= 70 ? '推荐进入面试环节' : data.score >= 50 ? '建议进一步评估' : '不建议继续'}`
+    // 刷新卡片状态
+    await fetchKanban()
+  } catch (e: any) {
+    aiActionResult.value = `❌ AI 分析失败: ${e.message}`
+  } finally {
+    aiActionLoading.value = false
+  }
+}
+
+/** 生成面试计划 — 调用 ai-interview API */
+async function aiGenerateInterview(card: any) {
+  aiActionLoading.value = true
+  aiActionResult.value = ''
+  try {
+    const res = await fetch(`/api/pipeline/${card.id}/ai-interview`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`,
+      },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    if (data.questions && data.questions.length > 0) {
+      const questionsText = data.questions.map((q: any, i: number) => `${i + 1}. ${q.question} (${q.purpose})`).join('\n')
+      aiActionResult.value = `📋 面试计划已生成
+
+候选人：${card.candidateName}
+职位：${card.jobTitle}
+
+面试题目：
+${questionsText}`
+    } else {
+      aiActionResult.value = `📋 面试计划生成完成，但未返回具体题目`
+    }
+    // 刷新卡片状态
+    await fetchKanban()
+  } catch (e: any) {
+    aiActionResult.value = `❌ 面试计划生成失败: ${e.message}`
+  } finally {
+    aiActionLoading.value = false
+  }
+}
+
+/** 完成入职记录 — 更新 Pipeline 状态 */
+async function completeOnboarding(card: any) {
+  aiActionLoading.value = true
+  aiActionResult.value = ''
+  try {
+    // 添加入职完成备注
+    const res = await fetch(`/api/pipeline/${card.id}/notes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`,
+      },
+      body: JSON.stringify({ content: `✅ 入职记录已完成\n候选人：${card.candidateName}\n职位：${card.jobTitle}\n入职时间：${new Date().toLocaleDateString('zh-CN')}` }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    aiActionResult.value = `✅ 入职记录已完成
+
+候选人：${card.candidateName}
+职位：${card.jobTitle}
+入职时间：${new Date().toLocaleDateString('zh-CN')}
+
+该候选人已完成所有招聘流程。`
+    // 刷新卡片状态
+    await fetchKanban()
+  } catch (e: any) {
+    aiActionResult.value = `❌ 入职记录失败: ${e.message}`
+  } finally {
+    aiActionLoading.value = false
+  }
 }
 
 onMounted(fetchKanban)
@@ -408,6 +657,69 @@ onMounted(fetchKanban)
   padding: 1.5rem 0;
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.2);
+}
+
+/* ─── Pipeline Empty State ─── */
+.pipeline-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.pipeline-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: 16px;
+}
+
+.pipeline-empty h2 {
+  margin: 0 0 8px;
+  font-size: 1.3rem;
+  color: #fff;
+}
+
+.pipeline-empty p {
+  margin: 0 0 28px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pipeline-empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.pipeline-empty-btn {
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pipeline-empty-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.pipeline-empty-btn--primary {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  border: none;
+  font-weight: 600;
+}
+
+.pipeline-empty-btn--primary:hover {
+  box-shadow: 0 4px 16px rgba(96, 165, 250, 0.3);
+  transform: translateY(-1px);
 }
 
 /* Modal */

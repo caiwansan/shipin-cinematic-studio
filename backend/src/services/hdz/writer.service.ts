@@ -14,6 +14,9 @@ import { consistencyVerifier } from './consistency-verifier.service.js'
 import { sceneCompiler, sceneCompilerV2 } from './scene-compiler.service.js'
 import { getWorldState } from './world-state.service.js'
 import { getAllEntities } from './entity-registry.service.js'
+import { getLatestBlueprint, formatBlueprintForLLM } from './master-plan-analyzer.service.js'
+import { getCharacterProfiles } from './character-state.service.js'
+import { getTimeline } from './story-event.service.js'
 
 class WriterService {
   async execute(ctx: OrchestratorContext, llmCfg: LLMConfig): Promise<void> {
@@ -245,6 +248,15 @@ class WriterService {
       styleRef = `**参考写作风格（AI 应模仿此文风）：**\n${styleDna.sourceText.slice(0, 1500)}`
     }
 
+    // ★ Story Blueprint — AI 分析生成的结构化故事蓝图
+    const blueprint = await getLatestBlueprint(ctx.projectId)
+    const blueprintContext = formatBlueprintForLLM(blueprint)
+
+    // ★ 角色当前状态（从 Character State 服务获取）
+    const characterProfiles = await getCharacterProfiles(ctx.projectId)
+    const recentEvents = await getTimeline(ctx.projectId)
+    const recentStoryEvents = recentEvents.slice(-10) // 最近10个事件
+
     const systemPrompt = await getAgentPrompt('hdz-writer', {
       '$TITLE': project.title,
       '$GENRE': project.genre || '未指定',
@@ -263,6 +275,42 @@ class WriterService {
     // ★ 三大锁定注入
     const lockContext = await getLockContext(ctx.projectId, ctx.chapterNo)
     let fullSystemPrompt = systemPrompt + (lockContext ? `\n${lockContext}` : '')
+
+    // ★ Story Blueprint 注入（AI 分析生成的结构化故事蓝图）
+    if (blueprintContext) {
+      fullSystemPrompt += `\n\n${blueprintContext}`
+    }
+
+    // ★ 角色当前状态注入（动态状态时间线）
+    if (characterProfiles.length > 0) {
+      const stateLines: string[] = []
+      stateLines.push('\n【🎭 角色当前状态（写作必须以此为准，不能凭记忆）：】')
+      for (const profile of characterProfiles.slice(0, 10)) {
+        const cs = profile.currentState
+        const stateParts: string[] = []
+        if (cs.HEALTH?.length) stateParts.push(`健康：${cs.HEALTH.map((s: any) => s.description || s.event).join('、')}`)
+        if (cs.INJURY?.length) stateParts.push(`伤势：${cs.INJURY.map((s: any) => s.description || s.event).join('、')}`)
+        if (cs.POWER?.length) stateParts.push(`能力：${cs.POWER.map((s: any) => s.description || s.event).join('、')}`)
+        if (cs.LOCATION?.length) stateParts.push(`位置：${cs.LOCATION.map((s: any) => s.description || s.event).join('、')}`)
+        if (cs.MENTAL?.length) stateParts.push(`心理：${cs.MENTAL.map((s: any) => s.description || s.event).join('、')}`)
+        if (cs.IDENTITY?.length) stateParts.push(`身份：${cs.IDENTITY.map((s: any) => s.description || s.event).join('、')}`)
+        if (stateParts.length > 0) {
+          stateLines.push(`- **${profile.name}**：${stateParts.join('；')}`)
+        }
+      }
+      if (stateLines.length > 1) {
+        fullSystemPrompt += '\n' + stateLines.join('\n')
+      }
+    }
+
+    // ★ 近期剧情事件注入
+    if (recentStoryEvents.length > 0) {
+      const eventLines = ['\n【📜 近期剧情事件（写作需承接以下事件）：】']
+      for (const evt of recentStoryEvents.slice(-5)) {
+        eventLines.push(`- 第${evt.chapterNo}章「${evt.title}」：${evt.description?.slice(0, 100) || ''}`)
+      }
+      fullSystemPrompt += '\n' + eventLines.join('\n')
+    }
 
         // ★ Phase X.4 — EntityContract 软提示注入（非强制，仅供 Writer 感知）
     //    SceneGraph v2 产出 required/optional/forbidden 实体，Writer 倾向性遵循
@@ -439,6 +487,23 @@ ${contract.forbidden.map(n => `  • ${n}`).join('\n')}
 
     // ★ Phase X — 7-Truths 记忆系统全面更新
     await this.updateAllMemoryDimensions(chapter, text, llmCfg)
+
+    // ★ V2: 事件提取 + 角色状态自动更新
+    try {
+      const { processChapterEvents } = await import('./event-extractor.service.js')
+      const project = await prisma.hdzProject.findUnique({ where: { id: ctx.projectId }, select: { userId: true } })
+      if (project) {
+        const { events, statesCreated } = await processChapterEvents(
+          ctx.projectId,
+          chapterNo,
+          text,
+          project.userId
+        )
+        console.log(`[HDZ/Writer] ch${chapterNo}: extracted ${events.length} events, ${statesCreated} state changes`)
+      }
+    } catch (e: any) {
+      console.warn(`[HDZ/Writer] ch${chapterNo}: event extraction failed: ${e?.message}`)
+    }
 
     // ★ Phase Y.1 — Narrative Reader Runtime 异步阅读（待 Y.1 重构完成后恢复）
     // const { onChapterCompleted } = await import('../narrative-reader/index.js')

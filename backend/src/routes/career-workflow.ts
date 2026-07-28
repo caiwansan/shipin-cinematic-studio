@@ -14,6 +14,7 @@ import { PrismaClient } from '@prisma/client'
 import { AgentExecutorImpl } from '../agent-runtime/brain/agent-executor'
 import { CareerAgentService } from '../services/enterprise/workflow/career-agent.service'
 import { createCareerWorkflowExecutor, type CareerWorkflowType } from '../services/enterprise/workflow/career-workflow-executor'
+import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
 
 export async function careerWorkflowRoutes(fastify: FastifyInstance) {
   const prisma = new PrismaClient()
@@ -88,8 +89,10 @@ export async function careerWorkflowRoutes(fastify: FastifyInstance) {
         where: { employeeId: agent.profileId },
       })
 
+      // Sprint-SSOT-OBSERVATION-1B-7: tenantId 从 enterprise context 解析，不再用 userId
+      const enterpriseContext = await resolveCurrentEnterprise(userId)
       const tasks = await (prisma as any).enterpriseAgentTask.findMany({
-        where: { tenantId: userId },
+        where: { tenantId: enterpriseContext?.enterpriseId || userId },
         orderBy: { startedAt: 'desc' },
         take: 10,
         select: {

@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * useAIDepartment — AI Department Overview data fetching
  * Sprint 4.2.9 Phase 3
@@ -15,7 +16,7 @@ export function useAIDepartment() {
     loading.value = true
     error.value = null
     try {
-      const token = localStorage.getItem('auth_token') || ''
+      const token = getAuthToken() || ''
       const res = await fetch(`${API_BASE}/${tenantId}/ai-department/overview`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })

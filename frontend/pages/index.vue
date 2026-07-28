@@ -170,6 +170,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken, setAuthToken, clearAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -478,7 +479,7 @@ function startOAuth(authUrl: string, onSuccess: (token: string, user: any) => vo
       onError('登录超时，请重试')
       return
     }
-    const token = localStorage.getItem('accessToken')
+    const token = getAuthToken()
     if (token) {
       clearInterval(oauthTimer!)
       oauthTimer = null
@@ -501,7 +502,7 @@ function qqLogin() {
       if (authUrl) {
         startOAuth(authUrl,
           (token, user) => {
-            localStorage.setItem('auth_token', token)
+            setAuthToken(token)
             localStorage.setItem('auth_user', JSON.stringify(user))
             qqLoading.value = false
             showLogin.value = false
@@ -529,7 +530,7 @@ function wechatLogin() {
       if (authUrl) {
         startOAuth(authUrl,
           (token, user) => {
-            localStorage.setItem('auth_token', token)
+            setAuthToken(token)
             localStorage.setItem('auth_user', JSON.stringify(user))
             wechatLoading.value = false
             showLogin.value = false
@@ -618,8 +619,8 @@ async function doAuth() {
       if (!res.ok) throw new Error(data.error || '注册失败')
       const token = data.accessToken || data.token
       if (token) {
-        localStorage.setItem('accessToken', token)
-        localStorage.setItem('auth_token', token)
+        
+        setAuthToken(token)
         document.cookie = `auth_token=${token}; path=/; max-age=86400; samesite=lax`
         if (data.user) localStorage.setItem('auth_user', JSON.stringify(data.user))
         authSuccess.value = '注册成功！'
@@ -639,8 +640,8 @@ async function doAuth() {
       if (!res.ok) throw new Error(data.error || '登录失败')
       const token = data.accessToken || data.token
       if (token) {
-        localStorage.setItem('accessToken', token)
-        localStorage.setItem('auth_token', token)
+        
+        setAuthToken(token)
         document.cookie = `auth_token=${token}; path=/; max-age=86400; samesite=lax`
         if (data.user) localStorage.setItem('auth_user', JSON.stringify(data.user))
         authSuccess.value = '登录成功！'
@@ -659,7 +660,7 @@ async function doAuth() {
 // ── 全局初始化 ──
 onMounted(() => {
   // 恢复登录态
-  const token = localStorage.getItem('accessToken')
+  const token = getAuthToken()
   isLoggedIn.value = !!token
   const authUserRaw = localStorage.getItem('auth_user')
   if (authUserRaw) { try { authUser.value = JSON.parse(authUserRaw) } catch {} }
@@ -700,7 +701,7 @@ onMounted(() => {
   // 页面级 OAuth 轮询兜底
   let oauthPollTimer: ReturnType<typeof setInterval> | null = null
   oauthPollTimer = setInterval(() => {
-    const tk = localStorage.getItem('accessToken')
+    const tk = getAuthToken()
     if (tk && showLogin.value) {
       showLogin.value = false
       isLoggedIn.value = true

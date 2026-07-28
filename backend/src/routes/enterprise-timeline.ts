@@ -9,8 +9,9 @@
  * - 仅 View Layer（不新增 Event Model / Schema）
  * - organizationId 来自 JWT (Identity Resolution)
  * - 禁止从 URL tenantId 查询
- * - 严格复用 EnterpriseOperationEvent + AgentExecutionLog + OutcomeRecord + ImpactMeasurement
+ * - 严格复用 EnterpriseOperationEvent + AgentAuditTrail + OutcomeRecord + ImpactMeasurement
  * - 所有查询均通过组织隔离
+ * - Sprint 12: AgentExecutionLog deprecated → use AgentAuditTrail
  */
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
@@ -59,7 +60,7 @@ export async function enterpriseTimelineRoutes(app: FastifyInstance) {
       // ═══════════════════════════════════════════════════════════════
       const operationEvents = await prisma.enterpriseOperationEvent.findMany({
         where: {
-          tenantId: orgId,
+          organizationId: orgId,
           createdAt: { gte: startOfDay, lte: endOfDay },
         },
         orderBy: { createdAt: 'desc' },
@@ -67,10 +68,12 @@ export async function enterpriseTimelineRoutes(app: FastifyInstance) {
       })
 
       // ═══════════════════════════════════════════════════════════════
-      // 第二来源: AgentExecutionLog — "哪个 AI 员工执行"
+      // 第二来源: AgentAuditTrail — "哪个 AI 员工执行"
+      // Sprint 12: Migrated from deprecated AgentExecutionLog → AgentAuditTrail
       // ═══════════════════════════════════════════════════════════════
-      const executionLogs = await prisma.agentExecutionLog.findMany({
+      const auditTrails = await prisma.agentAuditTrail.findMany({
         where: {
+          organizationId: orgId,
           createdAt: { gte: startOfDay, lte: endOfDay },
         },
         orderBy: { createdAt: 'desc' },
@@ -80,7 +83,7 @@ export async function enterpriseTimelineRoutes(app: FastifyInstance) {
       // 获取 Agent 信息
       const agentIds = [
         ...new Set([
-          ...executionLogs.map((l) => l.agentId).filter(Boolean),
+          ...auditTrails.map((t) => t.agentId).filter(Boolean),
           ...operationEvents.map((e) => e.actorId).filter(Boolean),
         ]),
       ] as string[]

@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * useCareerAgent — AI 职业助理数据层
  *
@@ -60,7 +61,7 @@ let cache: {
 const CACHE_TTL = 30_000 // 30s
 
 function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('auth_token') || ''
+  const token = getAuthToken() || ''
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

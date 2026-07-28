@@ -58,6 +58,7 @@ export class CareerAgentRuntimeService {
         await (this.prisma as any).usageLog.create({
           data: {
             userId,
+            tenantId: userId, // Career Agent: userId 作为 tenantId
             taskType: `career_agent_${params.taskType || 'task'}`,
             cost: 0, // 用户 BYOK，平台不计费
             provider: result.provider || 'unknown',

@@ -9,6 +9,7 @@
 
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { requireEnterpriseWorkspaceContext } from '../services/enterprise-context.service.js'
 
 export const resumeRoutes = async (fastify: FastifyInstance) => {
   // ─── GET /enterprise/resumes — 简历列表 ───
@@ -16,23 +17,15 @@ export const resumeRoutes = async (fastify: FastifyInstance) => {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     try {
-      const { user } = request as any
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as any
 
-      // 归属校验：如果传了 workspaceId，校验用户是否有权访问
-      if (workspaceId) {
-        const workspace = await prisma.enterpriseJobWorkspace.findFirst({
-          where: {
-            id: workspaceId,
-          },
-        })
-        if (!workspace) {
-          return reply.status(404).send({ error: 'Workspace not found' })
-        }
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = workspaceId ? await requireEnterpriseWorkspaceContext(userId, workspaceId) : null
+      if (workspaceId && !wsc) return reply.status(403).send({ error: 'Workspace access denied' })
 
       const resumes = await prisma.resume.findMany({
-        where: workspaceId ? { workspaceId } : {},
+        where: wsc ? { workspaceId: wsc.workspace.id } : {},
         include: {
           profile: true,
         },
@@ -58,12 +51,17 @@ export const resumeRoutes = async (fastify: FastifyInstance) => {
   }, async (request, reply) => {
     try {
       const { id } = request.params as any
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as any
+
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = workspaceId ? await requireEnterpriseWorkspaceContext(userId, workspaceId) : null
+      if (workspaceId && !wsc) return reply.status(403).send({ error: 'Workspace access denied' })
 
       const resume = await prisma.resume.findFirst({
         where: {
           id,
-          ...(workspaceId ? { workspaceId } : {}),
+          ...(wsc ? { workspaceId: wsc.workspace.id } : {}),
         },
         include: {
           profile: true,
@@ -86,20 +84,17 @@ export const resumeRoutes = async (fastify: FastifyInstance) => {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     try {
-      const { user } = request as any
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as any
 
       if (!workspaceId) {
         return reply.status(400).send({ error: 'workspaceId is required' })
       }
 
-      // 校验 workspace 归属
-      const workspace = await prisma.enterpriseJobWorkspace.findFirst({
-        where: { id: workspaceId },
-      })
-      if (!workspace) {
-        return reply.status(404).send({ error: 'Workspace not found' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const workspace = wsc.workspace
 
       const data = await request.file()
       if (!data) {
@@ -223,10 +218,15 @@ export const resumeRoutes = async (fastify: FastifyInstance) => {
   }, async (request, reply) => {
     try {
       const { id } = request.params as any
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as any
 
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = workspaceId ? await requireEnterpriseWorkspaceContext(userId, workspaceId) : null
+      if (workspaceId && !wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+
       const resume = await prisma.resume.findFirst({
-        where: { id, ...(workspaceId ? { workspaceId } : {}) },
+        where: { id, ...(wsc ? { workspaceId: wsc.workspace.id } : {}) },
       })
       if (!resume) {
         return reply.status(404).send({ error: 'Resume not found' })
@@ -282,10 +282,15 @@ export const resumeRoutes = async (fastify: FastifyInstance) => {
   }, async (request, reply) => {
     try {
       const { id } = request.params as any
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as any
 
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = workspaceId ? await requireEnterpriseWorkspaceContext(userId, workspaceId) : null
+      if (workspaceId && !wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+
       const resume = await prisma.resume.findFirst({
-        where: { id, ...(workspaceId ? { workspaceId } : {}) },
+        where: { id, ...(wsc ? { workspaceId: wsc.workspace.id } : {}) },
       })
       if (!resume) {
         return reply.status(404).send({ error: 'Resume not found' })

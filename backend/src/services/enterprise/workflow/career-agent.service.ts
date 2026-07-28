@@ -2,18 +2,9 @@
  * Career Agent Service — KM-AI-JOB-AGENT-08
  * 个人 AI 职业助理创建/部署服务
  *
- * 核心命题：一个普通用户是否可以拥有自己的 AI 员工？
- *
- * 架构（复用企业端已验证的路径）：
- *   1. 创建 EnterpriseAgentProfile（agentType: career_advisor）
- *   2. 部署 → 自动创建 EnterpriseAgentInstance + HermesProfileBinding
- *   3. Memory namespace: tenant/{userId}/agent/career-assistant
- *   4. Tool allow list: 6个求职工具
- *
- * 与企业端的区别：
- *   - userId 作为 tenantId（个人用户）
- *   - organizationId = userId（个人租户）
- *   - 工具集为求职工具（非招聘工具）
+ * Sprint-Enterprise-Identity-Hardening-01 Phase 3 (2026-07-28):
+ * 修复 identity 回退：先查 OrgMember 获取组织ID，再创建资源。
+ * 无组织用户仍使用 userId 作为 tenant（个人租户模式）。
  */
 
 import type { PrismaClient } from '@prisma/client'
@@ -77,6 +68,35 @@ export class CareerAgentService {
   }
 
   /**
+   * 解析用户的组织 ID — 优先 OrgMember，fallback 到 userId
+   * Sprint-Enterprise-Identity-Hardening-01 Phase 3:
+   * 替代硬编码 organizationId: userId 模式
+   */
+  private async resolveOrg(userId: string): Promise<{ orgId: string; tenantId: string; source: string }> {
+    // 1. Try OrgMember → organization
+    const member = await this.prisma.orgMember.findFirst({
+      where: { userId },
+      select: { organizationId: true },
+      orderBy: { createdAt: 'asc' },
+    })
+
+    if (member) {
+      return {
+        orgId: member.organizationId,
+        tenantId: member.organizationId, // 企业用户用组织ID作为tenant
+        source: 'org_member',
+      }
+    }
+
+    // 2. Fallback: personal tenant mode (userId as orgId)
+    return {
+      orgId: userId,
+      tenantId: userId,
+      source: 'personal_tenant',
+    }
+  }
+
+  /**
    * 创建并部署个人 AI 职业助理
    */
   async createAndDeploy(req: CreateCareerAgentRequest): Promise<CareerAgentInfo> {
@@ -89,13 +109,17 @@ export class CareerAgentService {
       return existing
     }
 
+    // ─── Resolve identity: OrgMember → fallback personal tenant ──
+    const { orgId, tenantId, source } = await this.resolveOrg(userId)
+    console.log(`[CareerAgent] resolveOrg userId=${userId.slice(0,8)} → org=${orgId.slice(0,8)} source=${source}`)
+
     // ─── Step 1: 创建 EnterpriseAgentProfile ────────────
     const agentName = `${req.userName || '用户'}的AI职业助理`
 
     const profile = await p.enterpriseAgentProfile.create({
       data: {
-        organizationId: userId,   // 个人租户
-        tenantId: userId,          // userId 作为 tenantId
+        organizationId: orgId,    // resolved org ID
+        tenantId: orgId,          // resolved tenant ID
         name: agentName,
         role: 'career_assistant',
         agentType: 'career_advisor',
@@ -109,6 +133,7 @@ export class CareerAgentService {
           source: 'career_agent',
           userId: userId,
           resumeId: req.resumeId || null,
+          identitySource: source,
           createdAt: new Date().toISOString(),
         }),
         status: 'draft',
@@ -120,11 +145,11 @@ export class CareerAgentService {
     // ─── Step 2: 创建 EnterpriseAgentInstance ───────────
     const instance = await p.enterpriseAgentInstance.create({
       data: {
-        tenantId: userId,
+        tenantId: tenantId,
         employeeId: profile.id,
         agentId: `agent_career_${userId.slice(0, 8)}_${profile.id.slice(0, 8)}`,
         runtime: 'enterprise',
-        namespace: `tenant_${userId}`,
+        namespace: `tenant_${tenantId.slice(0, 8)}`,
         runtimeStatus: 'active',
         lifecycleState: 'ACTIVE',
       },
@@ -132,12 +157,12 @@ export class CareerAgentService {
 
     // ─── Step 3: 创建 HermesProfileBinding ──────────────
     const hermesAgentId = `hermes_${userId.slice(0, 8)}_${instance.id.slice(0, 8)}`
-    const memoryNamespace = `tenant/${userId}/agent/${instance.id}`
+    const memoryNamespace = `tenant/${tenantId}/agent/${instance.id}`
 
     const binding = await p.hermesProfileBinding.create({
       data: {
-        tenantId: userId,
-        organizationId: userId,
+        tenantId: tenantId,
+        organizationId: orgId,
         agentInstanceId: instance.id,
         hermesAgentId,
         toolAllowList: JSON.stringify(CareerAgentService.CAREER_TOOLS),
@@ -176,10 +201,13 @@ export class CareerAgentService {
   async getCareerAgent(userId: string): Promise<CareerAgentInfo | null> {
     const p = this.prisma as any
 
-    // 通过 metadata 中的 userId 查找
+    // Resolve org for lookup
+    const { tenantId } = await this.resolveOrg(userId)
+
+    // 通过 metadata 中的 userId 查找（跨 tenant 搜索）
     const profiles = await p.enterpriseAgentProfile.findMany({
       where: {
-        tenantId: userId,
+        tenantId: tenantId,
         agentType: 'career_advisor',
         metadata: { contains: '"source":"career_agent"' },
       },
@@ -187,9 +215,20 @@ export class CareerAgentService {
       take: 1,
     })
 
-    if (profiles.length === 0) return null
+    // Fallback: also search by userId in metadata for backward compat
+    const allProfiles = profiles.length > 0 ? profiles
+      : await p.enterpriseAgentProfile.findMany({
+          where: {
+            agentType: 'career_advisor',
+            metadata: { contains: `"userId":"${userId}"` },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        })
 
-    const profile = profiles[0]
+    if (allProfiles.length === 0) return null
+
+    const profile = allProfiles[0]
 
     // 查找 Instance
     const instance = await p.enterpriseAgentInstance.findUnique({
@@ -207,12 +246,14 @@ export class CareerAgentService {
       ? JSON.parse(binding.toolAllowList)
       : CareerAgentService.CAREER_TOOLS
 
+    const effectiveTenant = binding?.tenantId || profile.tenantId || userId
+
     return {
       profileId: profile.id,
       instanceId: instance.id,
       bindingId: binding?.id || '',
       hermesAgentId: binding?.hermesAgentId || '',
-      memoryNamespace: binding?.memoryNamespace || `tenant/${userId}/agent/${instance.id}`,
+      memoryNamespace: binding?.memoryNamespace || `tenant/${effectiveTenant}/agent/${instance.id}`,
       agentName: profile.name,
       status: profile.status,
       tools,
@@ -260,12 +301,14 @@ export class CareerAgentService {
     const agent = await this.getCareerAgent(userId)
     if (!agent) return null
 
+    const { tenantId } = await this.resolveOrg(userId)
+
     return {
       agentId: agent.profileId,
       agentInstanceId: agent.instanceId,
       memoryNamespace: agent.memoryNamespace,
       hermesAgentId: agent.hermesAgentId,
-      tenantId: userId,
+      tenantId,
     }
   }
 }

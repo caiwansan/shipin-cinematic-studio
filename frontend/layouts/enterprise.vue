@@ -34,6 +34,24 @@ function initFromRoute() {
     return
   }
   const path = route.path
+
+  // ─── TASK-UX-01: /workspace/enterprise 根路径 → recruitment 模块 ───
+  if (path === '/workspace/enterprise' || path === '/workspace/enterprise/' || path === '/workspace/enterprise?recruitment') {
+    currentModule.value = 'recruitment'
+    return
+  }
+
+  // ─── TASK-UX-02: recruitment 子页面路径 → 全部回到 recruitment 模块 ───
+  // 防止跳转到 jobs/talent/candidates/interview 时落入 dashboard
+  const recSubPages = ['/jobs', '/talent', '/candidates', '/interview', '/onboarding']
+  for (const sub of recSubPages) {
+    if (path.startsWith('/workspace/enterprise' + sub)) {
+      currentModule.value = 'recruitment'
+      return
+    }
+  }
+
+  // ─── 其他工作区模块 ───
   if (path.includes('/intelligence')) currentModule.value = 'intelligence'
   else if (path.includes('/decisions')) currentModule.value = 'decisions'
   else if (path.includes('/execution')) currentModule.value = 'execution'

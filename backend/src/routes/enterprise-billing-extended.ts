@@ -8,10 +8,10 @@ import { prisma } from '../utils/index.js'
 
 export async function enterpriseBillingExtendedRoutes(app: FastifyInstance) {
 
-  // 503: Billing 用量统计依赖招聘模块
-  app.addHook('onRequest', async (_request, reply) => {
-    return reply.status(503).send({ error: 'Enterprise recruitment module is under maintenance', module: 'enterprise-billing-extended', status: 'maintenance' })
-  })
+  // Sprint-04: 移除 503 维护模式，恢复 Billing API
+  // app.addHook('onRequest', async (_request, reply) => {
+  //   return reply.status(503).send({ error: 'Enterprise recruitment module is under maintenance', module: 'enterprise-billing-extended', status: 'maintenance' })
+  // })
 
   // ─── 企业订阅中心（企业用户视角）───
 
@@ -106,33 +106,45 @@ export async function enterpriseBillingExtendedRoutes(app: FastifyInstance) {
     })
   })
 
-  // POST /api/enterprise/:tenantId/billing/upgrade — 创建升级订单
+  // POST /api/enterprise/:tenantId/billing/upgrade — 创建升级订单（Sprint-05: 复用昆仑镜统一支付）
   app.post('/api/enterprise/:tenantId/billing/upgrade', async (request, reply) => {
     const { tenantId } = request.params as any
-    const { planId } = request.body as any
+    const { planId, cycle } = request.body as any
 
     if (!planId) {
       return reply.status(400).send({ success: false, message: 'planId 为必填' })
     }
 
     const plan = await prisma.enterprisePlan.findUnique({ where: { id: planId } })
-    if (!plan) {
-      return reply.status(404).send({ success: false, message: '套餐不存在' })
+    if (!plan || !plan.enabled) {
+      return reply.status(404).send({ success: false, message: '套餐不存在或已停用' })
     }
 
-    // 创建订单
-    const orderNo = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+    const selectedCycle = cycle === 'yearly' ? 'yearly' : 'monthly'
+    const price = selectedCycle === 'yearly' ? plan.yearlyPrice : plan.price
+    const periodDays = selectedCycle === 'yearly' ? 365 : 30
+
+    // 创建支付订单（复用昆仑镜支付系统）
+    const orderNo = `ENT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
     const order = await prisma.paymentOrder.create({
       data: {
+        organizationId: tenantId,
         userId: tenantId,
         orderNo,
-        amount: plan.price / 100, // 分转元
-        coins: 0,
-        method: 'pending',
-        type: 'subscription',
-        planType: plan.name,
+        amount: price / 100, // 分转元
+        currency: plan.currency,
+        type: 'enterprise_subscription',
         status: 'pending',
-        remark: `企业订阅: ${plan.displayName}`,
+        metadata: {
+          planId,
+          planName: plan.displayName,
+          cycle: selectedCycle,
+          periodDays,
+          maxEmployees: plan.maxEmployees,
+          maxChannels: plan.maxChannels,
+          maxMembers: plan.maxMembers,
+          features: plan.features,
+        },
       },
     })
 
@@ -142,7 +154,10 @@ export async function enterpriseBillingExtendedRoutes(app: FastifyInstance) {
         orderId: order.id,
         orderNo: order.orderNo,
         amount: order.amount,
+        currency: order.currency,
         planName: plan.displayName,
+        cycle: selectedCycle,
+        periodDays,
       },
     })
   })

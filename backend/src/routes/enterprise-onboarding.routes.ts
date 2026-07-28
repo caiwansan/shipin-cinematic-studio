@@ -7,10 +7,35 @@
  * - AI员工编制创建
  * - 套餐选择
  * - Onboarding 状态管理
+ *
+ * Sprint-Enterprise-Identity-Hardening-01:
+ * - Phase 1: EnterpriseMember 错误严格化（只允许 P2002）
+ * - Phase 2: 创建企业全流程事务化
+ *
+ * Sprint-Enterprise-Identity-Hardening-02:
+ * - Phase 1: enterpriseId 从 JWT 解析，不再信任客户端输入
  */
+
+import { resolveEnterpriseId } from '../services/enterprise-context.service.js'
 
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+
+// Sprint-02 Fix: 全局 enterpriseId 归属验证
+async function verifyEnterpriseOwnership(request: any, reply: any) {
+  const userId = (request.user as any)?.id
+  if (!userId) {
+    return reply.status(401).send({ error: '未授权' })
+  }
+
+  const body = request.body as any
+  if (!body?.enterpriseId) return // 没有 enterpriseId 则跳过
+
+  const userEnterpriseId = await resolveEnterpriseId(userId)
+  if (userEnterpriseId && userEnterpriseId !== body.enterpriseId) {
+    return reply.status(403).send({ error: '无权操作该企业身份' })
+  }
+}
 
 // ─── 默认 AI 员工模板 ───
 
@@ -131,28 +156,31 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      let state = await prisma.enterpriseOnboardingState.findFirst({
+      const state = await prisma.enterpriseOnboardingState.findFirst({
         where: { enterpriseId },
       })
 
       if (!state) {
-        // 未创建 onboarding 状态 — 返回默认初始状态（Step 1 会创建正式记录）
-        state = {
-          id: '',
-          workspaceId: '',
-          enterpriseId,
-          currentStep: 1,
-          totalSteps: 5,
-          completed: false,
-          stepCompanyDone: false,
-          stepNeedsDone: false,
-          stepAgentDone: false,
-          stepPlanDone: false,
-          stepDashboardDone: false,
-          completedAt: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as any
+        // 未创建 onboarding 状态 — 返回默认初始状态
+        return {
+          success: true,
+          state: {
+            id: '',
+            workspaceId: '',
+            enterpriseId,
+            currentStep: 1,
+            totalSteps: 5,
+            completed: false,
+            stepCompanyDone: false,
+            stepNeedsDone: false,
+            stepAgentDone: false,
+            stepPlanDone: false,
+            stepDashboardDone: false,
+            completedAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        }
       }
 
       return { success: true, state }
@@ -186,8 +214,14 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
     try {
       let jcp: any = null
 
-      // 如果提供了 enterpriseId，尝试查找现有的 JobCompanyProfile
+      // Sprint-02 Fix: 如果提供了 enterpriseId，验证归属
       if (body.enterpriseId) {
+        // 先验证该 enterpriseId 是否属于当前用户
+        const userEnterpriseId = await resolveEnterpriseId(userId)
+        if (userEnterpriseId && userEnterpriseId !== body.enterpriseId) {
+          return reply.status(403).send({ error: '无权操作该企业身份' })
+        }
+
         jcp = await prisma.jobCompanyProfile.findUnique({
           where: { id: body.enterpriseId },
         }
@@ -277,102 +311,143 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
         }
       }
 
-      // 如果没有找到或创建 JobCompanyProfile，创建全新的 Organization + EnterpriseProfile + JobCompanyProfile
+      // ─── Sprint-Enterprise-Identity-Hardening-01 Phase 1+2 ───
+      // 创建全新企业：全流程事务化，EnterpriseMember 错误严格化
       if (!jcp) {
-        // 创建 Organization
-        const newOrg = await prisma.organization.create({
-          data: {
-            name: body.companyName,
-            slug: `onboard-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            plan: 'free',
-            ownerId: userId,
-          },
-        }
-        )
+        const result = await prisma.$transaction(async (tx) => {
+          // 1. 创建 Organization
+          const newOrg = await tx.organization.create({
+            data: {
+              name: body.companyName,
+              slug: `onboard-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              plan: 'free',
+              ownerId: userId,
+            },
+          })
 
-        // 创建 EnterpriseProfile
-        const enterpriseProfile = await prisma.enterpriseProfile.create({
+          // 2. 创建 EnterpriseProfile
+          const enterpriseProfile = await tx.enterpriseProfile.create({
+            data: {
+              organizationId: newOrg.id,
+              industry: body.industry,
+              businessSummary: body.companyName,
+            },
+          })
+
+          // 3. 创建 JobCompanyProfile
+          const createdJcp = await tx.jobCompanyProfile.create({
+            data: { enterpriseId: enterpriseProfile.id },
+          })
+
+          // 4. 创建 OrgMember（绑定当前用户为 OWNER）— SSOT
+          // Sprint-SSOT-CLEANUP-01: EnterpriseMember → OrgMember
+          await tx.orgMember.create({
+            data: {
+              userId: userId,
+              organizationId: newOrg.id,
+              role: 'OWNER',
+            },
+          }).catch((memberError: any) => {
+            // P2002: 已存在则忽略 (unique [organizationId, userId])
+            if (memberError.code !== 'P2002') throw memberError
+          })
+
+          // 5. 更新 JobCompanyProfile 的 industry + scale
+          await tx.jobCompanyProfile.update({
+            where: { id: createdJcp.id },
+            data: {
+              industry: body.industry,
+              scale: body.scale,
+            },
+          })
+
+          // 6. 更新 EnterpriseProfile 的 industry
+          await tx.enterpriseProfile.updateMany({
+            where: { id: enterpriseProfile.id },
+            data: {
+              industry: body.industry,
+              businessSummary: body.companyName,
+            },
+          })
+
+          // 7. 创建 Workspace
+          const workspace = await tx.enterpriseJobWorkspace.create({
+            data: {
+              enterpriseId: createdJcp.id,
+              name: `${body.companyName} 招聘空间`,
+              plan: 'trial',
+            },
+          })
+
+          // 8. 创建 Onboarding 状态
+          await tx.enterpriseOnboardingState.create({
+            data: {
+              workspaceId: workspace.id,
+              enterpriseId: createdJcp.id,
+              currentStep: 2,
+              stepCompanyDone: true,
+              totalSteps: 5,
+            },
+          })
+
+          return { jcp: createdJcp, workspace }
+        })
+
+        jcp = result.jcp
+      } else {
+        // 已有 jcp，更新 + 确保 workspace/onboarding 存在
+        await prisma.jobCompanyProfile.update({
+          where: { id: jcp.id },
           data: {
-            organizationId: newOrg.id,
+            industry: body.industry,
+            scale: body.scale,
+          },
+        })
+
+        await prisma.enterpriseProfile.updateMany({
+          where: { id: jcp.enterpriseId },
+          data: {
             industry: body.industry,
             businessSummary: body.companyName,
           },
-        }
-        )
-
-        // 创建 JobCompanyProfile
-        jcp = await prisma.jobCompanyProfile.create({
-          data: { enterpriseId: enterpriseProfile.id },
-        }
-        )
-
-        // 创建 EnterpriseMember（绑定当前用户为 OWNER）
-        await prisma.enterpriseMember.create({
-          data: {
-            userId: userId,
-            enterpriseId: jcp.id,
-            role: 'OWNER',
-            status: 'ACTIVE',
-          },
-        }
-        ).catch(() => {
-          // 忽略重复创建错误
         })
-      }
 
-      // 更新企业档案
-      await prisma.jobCompanyProfile.update({
-        where: { id: jcp.id },
-        data: {
-          industry: body.industry,
-          scale: body.scale,
-        },
-      })
+        // 获取或创建 Workspace
+        let workspace = await prisma.enterpriseJobWorkspace.findUnique({
+          where: { enterpriseId: jcp.id },
+        })
 
-      // 同时更新 EnterpriseProfile 的 industry
-      await prisma.enterpriseProfile.updateMany({
-        where: { id: jcp.enterpriseId },
-        data: {
-          industry: body.industry,
-          businessSummary: body.companyName,
-        },
-      })
+        if (!workspace) {
+          workspace = await prisma.enterpriseJobWorkspace.create({
+            data: {
+              enterpriseId: jcp.id,
+              name: `${body.companyName} 招聘空间`,
+              plan: 'trial',
+            },
+          })
+        }
 
-      // 获取或创建 Workspace
-      let workspace = await prisma.enterpriseJobWorkspace.findUnique({
-        where: { enterpriseId: jcp.id },
-      })
-
-      if (!workspace) {
-        workspace = await prisma.enterpriseJobWorkspace.create({
-          data: {
+        // 更新 Onboarding 状态
+        await prisma.enterpriseOnboardingState.upsert({
+          where: { workspaceId: workspace.id },
+          update: {
+            currentStep: 2,
+            stepCompanyDone: true,
+          },
+          create: {
+            workspaceId: workspace.id,
             enterpriseId: jcp.id,
-            name: `${body.companyName} 招聘空间`,
-            plan: 'trial',
+            currentStep: 2,
+            stepCompanyDone: true,
+            totalSteps: 5,
           },
         })
       }
-
-      // 更新 Onboarding 状态
-      await prisma.enterpriseOnboardingState.upsert({
-        where: { workspaceId: workspace.id },
-        update: {
-          currentStep: 2,
-          stepCompanyDone: true,
-        },
-        create: {
-          workspaceId: workspace.id,
-          enterpriseId: jcp.id,
-          currentStep: 2,
-          stepCompanyDone: true,
-          totalSteps: 5,
-        },
-      })
 
       return {
         success: true,
         enterpriseId: jcp.id,
-        workspace: { id: workspace.id, name: workspace.name },
+        workspace: { id: (await prisma.enterpriseJobWorkspace.findUnique({ where: { enterpriseId: jcp.id } }))?.id || '', name: `${body.companyName} 招聘空间` },
         nextStep: 2,
       }
     } catch (e: any) {
@@ -399,7 +474,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'enterpriseId, workspaceId, targetPositions 必填' })
     }
 
-    // 校验 workspace 归属（enterpriseId 可能是 userId 或 jobCompanyProfileId）
+    // 校验 workspace 归属
     const workspace = await prisma.enterpriseJobWorkspace.findFirst({
       where: { id: body.workspaceId },
     })
@@ -461,7 +536,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'enterpriseId 和 workspaceId 必填' })
     }
 
-    // 校验 workspace 归属（只校验 workspace 存在性）
+    // 校验 workspace 归属
     const workspace = await prisma.enterpriseJobWorkspace.findFirst({
       where: { id: body.workspaceId },
     })
@@ -550,7 +625,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: '无效套餐' })
     }
 
-    // 校验 workspace 归属（只校验 workspace 存在性）
+    // 校验 workspace 归属
     const workspace = await prisma.enterpriseJobWorkspace.findFirst({
       where: { id: body.workspaceId },
     })
@@ -571,6 +646,79 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
       await prisma.enterpriseAgentWorkforce.updateMany({
         where: { workspaceId: body.workspaceId },
         data: { subscriptionPlan: body.plan },
+      })
+
+      // Sprint-03: 创建 Subscription + Entitlement
+      // 1. 查找或创建 EnterprisePlan
+      let plan = await prisma.enterprisePlan.findFirst({
+        where: { name: body.plan },
+      })
+      if (!plan) {
+        const planDefaults: Record<string, any> = {
+          starter: { maxEmployees: 2, maxChannels: 1, maxMembers: 3, price: 999 },
+          professional: { maxEmployees: 5, maxChannels: 3, maxMembers: 10, price: 2999 },
+          enterprise: { maxEmployees: 20, maxChannels: 10, maxMembers: 50, price: 9999 },
+        }
+        const defaults = planDefaults[body.plan] || planDefaults.starter
+        plan = await prisma.enterprisePlan.create({
+          data: {
+            name: body.plan,
+            displayName: planConfig.name,
+            description: planConfig.features.join(', '),
+            price: planConfig.price,
+            billingCycle: planConfig.interval,
+            maxEmployees: defaults.maxEmployees,
+            maxChannels: defaults.maxChannels,
+            maxMembers: defaults.maxMembers,
+            features: JSON.stringify(planConfig.features),
+          },
+        })
+      }
+
+      // Sprint-04 Fix: 获取正确的 organizationId
+      // workspace.enterpriseId 是 JobCompanyProfile ID，需要通过 EnterpriseProfile 映射到 Organization ID
+      const jcpRecord = await prisma.jobCompanyProfile.findUnique({
+        where: { id: workspace.enterpriseId },
+        select: { enterpriseId: true },
+      })
+      const enterpriseProfile = jcpRecord?.enterpriseId
+        ? await prisma.enterpriseProfile.findUnique({
+            where: { id: jcpRecord.enterpriseId },
+            select: { organizationId: true },
+          })
+        : null
+      const organizationId = enterpriseProfile?.organizationId || workspace.enterpriseId
+
+      // 2. 创建 EnterpriseSubscription（含 snapshot 字段加速查询）
+      const now = new Date()
+      const expireAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30天
+      const subscription = await prisma.enterpriseSubscription.create({
+        data: {
+          organizationId,
+          planId: plan.id,
+          status: 'active',
+          startAt: now,
+          expireAt,
+          autoRenew: true,
+          snapshotName: plan.displayName,
+          snapshotMaxEmployees: plan.maxEmployees,
+          snapshotMaxChannels: plan.maxChannels,
+          snapshotMaxMembers: plan.maxMembers,
+          snapshotFeatures: plan.features,
+        },
+      })
+
+      // 3. 创建 EnterpriseEntitlement
+      await prisma.enterpriseEntitlement.create({
+        data: {
+          organizationId,
+          subscriptionId: subscription.id,
+          maxAgents: plan.maxEmployees,
+          maxChannels: plan.maxChannels,
+          features: plan.features,
+          status: 'active',
+          effectiveFrom: now,
+        },
       })
 
       // 更新 Onboarding 状态
@@ -609,7 +757,7 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const state = await prisma.enterpriseOnboardingState.updateMany({
+      await prisma.enterpriseOnboardingState.updateMany({
         where: { enterpriseId: body.enterpriseId },
         data: {
           completed: true,

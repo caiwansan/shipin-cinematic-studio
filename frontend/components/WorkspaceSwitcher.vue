@@ -2,7 +2,9 @@
  * components/WorkspaceSwitcher.vue — 多工作空间切换器
  *
  * Sprint-08 Phase C: Multi-Workspace 能力
- * 所有工作台共享同一套工作空间切换机制。
+ * Sprint-Enterprise-Identity-Hardening-01 Phase 6:
+ * - hasEnterprise=true → 创建招聘空间
+ * - hasEnterprise=false → 创建企业（onboarding）
  */
 
 <template>
@@ -51,8 +53,9 @@
       </div>
 
       <div class="dropdown-footer">
+        <!-- Phase 6: 根据 hasEnterprise 显示不同按钮 -->
         <button class="footer-btn" @click="handleCreateWorkspace">
-          + 创建新工作空间
+          {{ hasEnterprise ? '+ 创建招聘空间' : '+ 创建企业' }}
         </button>
       </div>
     </div>
@@ -71,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useIdentityStore } from '~/stores/identity'
 
 const identityStore = useIdentityStore()
@@ -84,6 +87,9 @@ const switchError = ref('')
 // Current workspace from Identity Store
 const currentWorkspace = identityStore.currentWorkspace
 const currentEnterprise = identityStore.currentEnterprise
+
+// Phase 6: 判断用户是否已有企业
+const hasEnterprise = computed(() => identityStore.hasEnterprise)
 
 // Toggle dropdown
 function toggleDropdown() {
@@ -115,7 +121,6 @@ async function handleSwitch(ws: any) {
     if (success) {
       dropdownOpen.value = false
       // Reload page data without F5
-      // Use a custom event to notify all components to reload
       window.dispatchEvent(new CustomEvent('workspace-switched', {
         detail: { workspaceId: ws.id }
       }))
@@ -129,11 +134,16 @@ async function handleSwitch(ws: any) {
   }
 }
 
-// Handle create workspace
+// Phase 6: 根据 hasEnterprise 决定跳转目标
 function handleCreateWorkspace() {
   dropdownOpen.value = false
-  // Navigate to onboarding for new workspace
-  window.location.href = '/workspace/enterprise/onboarding?mode=new-workspace'
+  if (hasEnterprise.value) {
+    // 已有企业 → 创建招聘空间
+    window.location.href = '/workspace/enterprise/onboarding?mode=new-workspace'
+  } else {
+    // 无企业 → 创建企业（完整 onboarding）
+    window.location.href = '/workspace/enterprise/onboarding'
+  }
 }
 
 // Close dropdown when clicking outside

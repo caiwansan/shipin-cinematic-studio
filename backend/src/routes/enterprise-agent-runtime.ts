@@ -7,6 +7,7 @@
 import type { FastifyInstance } from 'fastify';
 import { getOrganizationIdForUser } from '../services/enterprise/organization/identity-bootstrap.service.js';
 import { enterpriseAgentRuntime } from '../services/enterprise/enterprise-agent-runtime.service.js';
+import { entitlementService } from '../services/enterprise/enterprise-entitlement.service.js';
 import { prisma } from '../utils/index.js';
 
 export async function registerEnterpriseAgentRuntimeRoutes(app: FastifyInstance) {
@@ -416,6 +417,18 @@ export async function registerEnterpriseAgentRuntimeRoutes(app: FastifyInstance)
       const validAgentTypes = ['director', 'hotspot_analyst', 'content_creator', 'content_reviewer', 'sales', 'support', 'data_analyst']
       if (!validAgentTypes.includes(body.agentType)) {
         return reply.status(400).send({ code: 400, message: 'INVALID_AGENT_TYPE' })
+      }
+
+      // Sprint-03: Entitlement 检查 — 创建 Agent 前验证套餐限额
+      const check = await entitlementService.checkAgentCapability(orgId)
+      if (!check.allowed) {
+        return reply.status(403).send({
+          code: 403,
+          message: 'AGENT_LIMIT_REACHED',
+          detail: check.reason,
+          current: check.current,
+          limit: check.limit,
+        })
       }
 
       // 创建 Profile

@@ -13,9 +13,10 @@
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { PrismaClient } from '@prisma/client'
+import { resolveCurrentEnterprise, requireEnterpriseWorkspaceContext } from '../services/enterprise-context.service.js'
+import { prisma } from '../utils/index.js'
 
-const prisma = new PrismaClient()
+// Sprint 13: Security P0 — 改用共享 PrismaClient 单例，替代独立 new PrismaClient()
 
 // ─── Status Constants ───
 const STATUS = {
@@ -50,15 +51,9 @@ function getWorkspaceId(req: FastifyRequest): string {
   return (req.query as any)?.workspaceId || (req.body as any)?.workspaceId || ''
 }
 
-function getEnterpriseId(req: FastifyRequest): string {
-  return (req.query as any)?.enterpriseId || (req.body as any)?.enterpriseId || ''
-}
-
-async function validateWorkspaceAccess(workspaceId: string): Promise<{ ok: boolean; enterpriseId?: string }> {
-  const ws = await prisma.enterpriseJobWorkspace.findUnique({ where: { id: workspaceId } })
-  if (!ws) return { ok: false }
-  return { ok: true, enterpriseId: ws.enterpriseId }
-}
+/**
+ * Sprint 1B-5: 用标准 resolveCurrentEnterprise + requireEnterpriseWorkspaceContext 替代自制 helper
+ */
 
 function isValidTransition(from: string, to: string): boolean {
   return VALID_TRANSITIONS[from]?.includes(to) ?? false
@@ -67,6 +62,31 @@ function isValidTransition(from: string, to: string): boolean {
 // ─── Routes ───
 
 export default async function recruitmentConversationRoutes(fastify: FastifyInstance) {
+
+  // Sprint-02 Fix: JWT 认证
+  fastify.addHook('onRequest', async (request, reply) => {
+    try {
+      await request.jwtVerify()
+    } catch (err) {
+      return reply.status(401).send({ error: 'Unauthorized' })
+    }
+  })
+
+  // Sprint 1B-5: Tenant boundary — 用 requireEnterpriseWorkspaceContext 替代自制 workspace 归属验证
+  fastify.addHook('preHandler', async (request, reply) => {
+    const workspaceId = getWorkspaceId(request)
+    if (!workspaceId) return // 没有 workspaceId 则跳过
+
+    const userId = (request.user as any)?.id || (request.user as any)?.userId
+    if (!userId) {
+      return reply.status(401).send({ error: '用户未认证' })
+    }
+
+    const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+    if (!wsc) {
+      return reply.status(404).send({ error: '招聘空间不存在 or 无权限' })
+    }
+  })
 
   /**
    * GET /api/enterprise/recruitment-conversation
@@ -145,9 +165,12 @@ export default async function recruitmentConversationRoutes(fastify: FastifyInst
     if (!workspaceId) return reply.status(400).send({ success: false, message: 'workspaceId required' })
     if (!recruiterAgentId) return reply.status(400).send({ success: false, message: 'recruiterAgentId required' })
 
-    // Validate workspace
-    const wsCheck = await validateWorkspaceAccess(workspaceId)
-    if (!wsCheck.ok) return reply.status(404).send({ success: false, message: 'Workspace not found' })
+    // Sprint 1B-5: Tenant boundary — 用 requireEnterpriseWorkspaceContext 替代 validateWorkspaceAccess
+    const initUserId = (request.user as any)?.id || (request as any)?.userId
+    if (initUserId) {
+      const wsc = await requireEnterpriseWorkspaceContext(initUserId, workspaceId)
+      if (!wsc) return reply.status(404).send({ success: false, message: 'Workspace not found' })
+    }
 
     // Validate recruiter agent exists
     const agent = await prisma.enterpriseAgentWorkforce.findFirst({

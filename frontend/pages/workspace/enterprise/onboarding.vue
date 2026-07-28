@@ -341,6 +341,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import { useEnterpriseContext } from '~/composables/useEnterpriseContext'
 
@@ -477,7 +478,7 @@ function stepCompleted(num: number): boolean {
 }
 
 function goToWorkspace() {
-  window.location.href = '/workspace/recruitment'
+  window.location.href = '/workspace/enterprise'
 }
 
 // ─── 方法 ───
@@ -517,7 +518,7 @@ async function loadOnboardingState() {
         if (stateData.state.workspaceId) workspaceId.value = stateData.state.workspaceId
         if (stateData.state.completed) {
           // 已完成，跳转到招聘工作台
-          window.location.href = '/workspace/recruitment'
+          window.location.href = '/workspace/enterprise'
           return
         }
       }
@@ -532,7 +533,7 @@ async function loadOnboardingState() {
 async function handleStep1() {
   saving.value = true
   try {
-    const token = localStorage.getItem('token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/onboarding/step1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -567,7 +568,7 @@ async function handleStep2() {
   if (!enterpriseId.value) return
   saving.value = true
   try {
-    const token = localStorage.getItem('token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/onboarding/step2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -629,7 +630,7 @@ async function handleStep3() {
   if (!enterpriseId.value) return
   saving.value = true
   try {
-    const token = localStorage.getItem('token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/onboarding/step3', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -663,7 +664,7 @@ async function handleStep4() {
   if (!enterpriseId.value) return
   saving.value = true
   try {
-    const token = localStorage.getItem('token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/onboarding/step4', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -689,7 +690,7 @@ async function handleStep4() {
 async function handleComplete() {
   saving.value = true
   try {
-    const token = localStorage.getItem('token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/onboarding/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -704,7 +705,7 @@ async function handleComplete() {
       if (workspaceId.value) {
         ctx.setWorkspace(workspaceId.value)
       }
-      window.location.href = '/workspace/recruitment'
+      window.location.href = '/workspace/enterprise'
     } else {
       alert(data.error || '完成失败')
     }

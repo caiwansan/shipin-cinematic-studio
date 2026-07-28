@@ -27,12 +27,9 @@ export class AgentService {
     definition: Omit<AgentDefinition, 'id' | 'createdAt' | 'updatedAt'>,
     executor?: (input: any, ctx?: any) => Promise<any>,
   ): Promise<AgentDefinition> {
-    const uuidModule = await import('uuid')
-    console.log('[AgentService] uuid module keys:', Object.keys(uuidModule))
-    const uuid = uuidModule.default
-    console.log('[AgentService] uuid type:', typeof uuid)
+    const { v4: uuidv4 } = await import('uuid')
     const fullDef: AgentDefinition = {
-      id: uuid(),
+      id: uuidv4(),
       ...definition,
       status: definition.status || 'active',
       schemaVersion: definition.schemaVersion || 1,

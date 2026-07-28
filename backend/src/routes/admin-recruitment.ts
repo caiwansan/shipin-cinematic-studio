@@ -27,6 +27,164 @@ import { mapPlatformOverviewToDTO } from '../mappers/recruitment/overview.mapper
 
 export default async function adminRecruitmentRoutes(app: FastifyInstance) {
 
+  // ─── Sprint-05: 企业套餐管理（集成在求职招聘管理下）───
+
+  // GET /api/admin/recruitment/plans — 套餐列表
+  app.get('/api/admin/recruitment/plans', { preHandler: [requireAdmin] }, async () => {
+    const plans = await prisma.enterprisePlan.findMany({
+      orderBy: { sortOrder: 'asc' },
+      include: { _count: { select: { subscriptions: true } } },
+    })
+    return { success: true, data: plans }
+  })
+
+  // POST /api/admin/recruitment/plans — 创建套餐
+  app.post('/api/admin/recruitment/plans', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const b = request.body as any
+    if (!b.name || !b.displayName) {
+      return reply.status(400).send({ success: false, message: 'name 和 displayName 为必填' })
+    }
+    if (b.price === undefined || b.price < 0) {
+      return reply.status(400).send({ success: false, message: 'price 必须 ≥ 0' })
+    }
+    const plan = await prisma.enterprisePlan.create({
+      data: {
+        name: b.name,
+        displayName: b.displayName,
+        description: b.description || null,
+        price: b.price,
+        yearlyPrice: b.yearlyPrice || b.price * 10, // 默认年付=10个月
+        originalPrice: b.originalPrice ?? b.price,
+        currency: b.currency || 'CNY',
+        billingCycle: b.billingCycle || 'monthly',
+        maxEmployees: b.maxEmployees ?? 2,
+        maxChannels: b.maxChannels ?? 1,
+        maxMembers: b.maxMembers ?? 5,
+        storageLimit: b.storageLimit ?? 5,
+        requireOwnLLMKey: b.requireOwnLLMKey !== undefined ? b.requireOwnLLMKey : true,
+        allowedProviders: b.allowedProviders ?? ['deepseek', 'openai', 'claude', 'zhipu'],
+        quotaPolicy: b.quotaPolicy || 'unlimited',
+        features: b.features ?? [],
+        enabled: b.enabled !== undefined ? b.enabled : true,
+        sortOrder: b.sortOrder ?? 0,
+      },
+    })
+    return { success: true, data: plan }
+  })
+
+  // PUT /api/admin/recruitment/plans/:id — 更新套餐
+  app.put('/api/admin/recruitment/plans/:id', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { id } = request.params as any
+    const b = request.body as any
+    const data: any = {}
+    if (b.name !== undefined) data.name = b.name
+    if (b.displayName !== undefined) data.displayName = b.displayName
+    if (b.description !== undefined) data.description = b.description
+    if (b.price !== undefined) data.price = b.price
+    if (b.yearlyPrice !== undefined) data.yearlyPrice = b.yearlyPrice
+    if (b.originalPrice !== undefined) data.originalPrice = b.originalPrice
+    if (b.currency !== undefined) data.currency = b.currency
+    if (b.billingCycle !== undefined) data.billingCycle = b.billingCycle
+    if (b.maxEmployees !== undefined) data.maxEmployees = b.maxEmployees
+    if (b.maxChannels !== undefined) data.maxChannels = b.maxChannels
+    if (b.maxMembers !== undefined) data.maxMembers = b.maxMembers
+    if (b.storageLimit !== undefined) data.storageLimit = b.storageLimit
+    if (b.requireOwnLLMKey !== undefined) data.requireOwnLLMKey = b.requireOwnLLMKey
+    if (b.allowedProviders !== undefined) data.allowedProviders = b.allowedProviders
+    if (b.quotaPolicy !== undefined) data.quotaPolicy = b.quotaPolicy
+    if (b.features !== undefined) data.features = b.features
+    if (b.enabled !== undefined) data.enabled = b.enabled
+    if (b.sortOrder !== undefined) data.sortOrder = b.sortOrder
+
+    const plan = await prisma.enterprisePlan.update({ where: { id }, data })
+    return { success: true, data: plan }
+  })
+
+  // DELETE /api/admin/recruitment/plans/:id — 删除套餐
+  app.delete('/api/admin/recruitment/plans/:id', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { id } = request.params as any
+    await prisma.enterprisePlan.delete({ where: { id } })
+    return { success: true }
+  })
+
+  // PATCH /api/admin/recruitment/plans/:id/toggle — 启用/停用
+  app.patch('/api/admin/recruitment/plans/:id/toggle', { preHandler: [requireAdmin] }, async (request) => {
+    const { id } = request.params as any
+    const plan = await prisma.enterprisePlan.findUnique({ where: { id } })
+    if (!plan) return { success: false, message: '套餐不存在' }
+    const updated = await prisma.enterprisePlan.update({
+      where: { id },
+      data: { enabled: !plan.enabled },
+    })
+    return { success: true, data: { id: updated.id, enabled: updated.enabled } }
+  })
+
+  // ─── Sprint-05: 企业订阅管理（Admin 视角）───
+
+  // GET /api/admin/recruitment/subscriptions — 所有企业订阅列表
+  app.get('/api/admin/recruitment/subscriptions', { preHandler: [requireAdmin] }, async (request) => {
+    const { status, page = 1, limit = 20 } = request.query as any
+    const where: any = {}
+    if (status) where.status = status
+
+    const [subscriptions, total] = await Promise.all([
+      prisma.enterpriseSubscription.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          plan: true,
+          organization: { select: { id: true, name: true, slug: true } },
+        },
+      }),
+      prisma.enterpriseSubscription.count({ where }),
+    ])
+
+    return { success: true, data: subscriptions, total, page, limit }
+  })
+
+  // GET /api/admin/recruitment/subscriptions/:id — 订阅详情
+  app.get('/api/admin/recruitment/subscriptions/:id', { preHandler: [requireAdmin] }, async (request) => {
+    const { id } = request.params as any
+    const sub = await prisma.enterpriseSubscription.findUnique({
+      where: { id },
+      include: {
+        plan: true,
+        organization: { include: { profile: true } },
+        entitlement: true,
+      },
+    })
+    return { success: true, data: sub }
+  })
+
+  // PATCH /api/admin/recruitment/subscriptions/:id/status — 手动变更订阅状态
+  app.patch('/api/admin/recruitment/subscriptions/:id/status', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { id } = request.params as any
+    const { status, reason } = request.body as any
+    if (!status || !['active', 'suspended', 'cancelled', 'expired'].includes(status)) {
+      return reply.status(400).send({ success: false, message: '无效状态' })
+    }
+
+    const sub = await prisma.enterpriseSubscription.findUnique({ where: { id } })
+    if (!sub) return reply.status(404).send({ success: false, message: '订阅不存在' })
+
+    await prisma.enterpriseSubscription.update({
+      where: { id },
+      data: { status },
+    })
+
+    // 同步 Entitlement
+    const { entitlementService } = await import('../services/enterprise/enterprise-entitlement.service.js')
+    if (status === 'active') {
+      await entitlementService.createFromSubscription(sub.organizationId, sub.id)
+    } else {
+      await entitlementService.setStatus(sub.organizationId, status === 'suspended' ? 'suspended' : 'expired', reason || `Admin ${status}`)
+    }
+
+    return { success: true, message: `订阅已${status === 'active' ? '激活' : status === 'suspended' ? '冻结' : '变更'}` }
+  })
+
   // ─── 平台运营概览 ───
   app.get('/api/admin/recruitment/overview', { preHandler: [requireAdmin] }, async (_request, reply) => {
     try {
@@ -613,7 +771,7 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
     }
   })
 
-  // P5-ADMIN-02: 候选人详情（含 TalentProfile + 匹配记录）
+  // P5-ADMIN-02: 候选人详情（含 CareerProfile + 匹配记录）
   app.get('/api/admin/recruitment/candidates/:id', { preHandler: [requireAdmin] }, async (request, reply) => {
     try {
       const { id } = request.params as any
@@ -876,6 +1034,270 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
       })
     } catch (error: any) {
       return reply.status(500).send({ error: 'Failed to fetch audit', message: error.message })
+    }
+  })
+
+  // ─── Sprint-06: Enterprise Revenue Analytics ───
+
+  // GET /api/admin/recruitment/revenue — 收入总览
+  app.get('/api/admin/recruitment/revenue', { preHandler: [requireAdmin] }, async () => {
+    // 1. 企业总数 & 付费企业数
+    const [totalOrgs, paidOrgs] = await Promise.all([
+      prisma.organization.count(),
+      prisma.organization.count({ where: { subscription: { isNot: null } } }),
+    ])
+
+    // 2. 当前有效订阅（MRR 基础）
+    const activeSubs = await prisma.enterpriseSubscription.findMany({
+      where: { status: 'active' },
+      select: { snapshotPrice: true, snapshotCycle: true, plan: { select: { price: true, yearlyPrice: true, displayName: true } } },
+    })
+
+    // MRR 计算：月付=月价格，年付=年价格/12
+    let mrr = 0
+    for (const sub of activeSubs) {
+      const monthlyAmount = sub.snapshotCycle === 'yearly'
+        ? (sub.snapshotPrice ?? sub.plan.yearlyPrice) / 12
+        : (sub.snapshotPrice ?? sub.plan.price)
+      mrr += monthlyAmount
+    }
+    const arr = mrr * 12
+
+    // 3. 本月收入（已支付订单）
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const [monthRevenueResult, totalRevenueResult] = await Promise.all([
+      prisma.paymentOrder.aggregate({
+        where: { type: 'enterprise_subscription', status: 'paid', payTime: { gte: monthStart } },
+        _sum: { amount: true },
+      }),
+      prisma.paymentOrder.aggregate({
+        where: { type: 'enterprise_subscription', status: 'paid' },
+        _sum: { amount: true },
+      }),
+    ])
+
+    // 4. 本月新增企业
+    const newOrgsThisMonth = await prisma.organization.count({
+      where: { createdAt: { gte: monthStart } },
+    })
+
+    // 5. 套餐分布
+    const planDistribution = await prisma.enterpriseSubscription.groupBy({
+      by: ['planId'],
+      where: { status: 'active' },
+      _count: { planId: true },
+    })
+    const planDetails = await prisma.enterprisePlan.findMany({
+      where: { id: { in: planDistribution.map(p => p.planId) } },
+      select: { id: true, displayName: true },
+    })
+    const planMap = new Map(planDetails.map(p => [p.id, p.displayName]))
+    const planStats = planDistribution.map(p => ({
+      planId: p.planId,
+      planName: planMap.get(p.planId) || 'Unknown',
+      count: p._count.planId,
+      revenueShare: activeSubs.filter(s => s.plan.displayName === planMap.get(p.planId)).length > 0
+        ? Math.round((activeSubs.filter(s => s.plan.displayName === planMap.get(p.planId)).reduce((sum, s) => {
+            const monthly = s.snapshotCycle === 'yearly' ? (s.snapshotPrice ?? s.plan.yearlyPrice) / 12 : (s.snapshotPrice ?? s.plan.price)
+            return sum + monthly
+          }, 0) / mrr) * 100)
+        : 0,
+    }))
+
+    // 6. 订阅状态分布
+    const subStatusStats = await prisma.enterpriseSubscription.groupBy({
+      by: ['status'],
+      _count: { status: true },
+    })
+
+    return {
+      success: true,
+      data: {
+        overview: {
+          totalOrgs,
+          paidOrgs,
+          mrr: Math.round(mrr), // 分
+          arr: Math.round(arr), // 分
+          monthRevenue: Math.round((monthRevenueResult._sum.amount ?? 0) * 100), // 元转分
+          totalRevenue: Math.round((totalRevenueResult._sum.amount ?? 0) * 100), // 元转分
+          newOrgsThisMonth,
+          activeSubsCount: activeSubs.length,
+        },
+        planDistribution: planStats,
+        subscriptionStatus: subStatusStats.map(s => ({ status: s.status, count: s._count.status })),
+      },
+    }
+  })
+
+  // GET /api/admin/recruitment/revenue/ai-roi — AI Employee ROI
+  app.get('/api/admin/recruitment/revenue/ai-roi', { preHandler: [requireAdmin] }, async () => {
+    // 1. 每个 AI Employee 的使用量和成本
+    const agentUsage = await prisma.agentAuditTrail.groupBy({
+      by: ['agentId'],
+      _sum: { tokenUsage: true, cost: true, durationMs: true },
+      _count: { id: true },
+    })
+
+    // 2. 获取 agent 信息
+    const agentIds = agentUsage.map(a => a.agentId).filter(Boolean) as string[]
+    const agentInstances = await prisma.enterpriseAgentInstance.findMany({
+      where: { agentId: { in: agentIds } },
+      select: { agentId: true, tenantId: true },
+    })
+    const agentMap = new Map(agentInstances.map(a => [a.agentId, a]))
+
+    // 3. 获取组织信息
+    const tenantIds = [...new Set(agentInstances.map(a => a.tenantId))]
+    const orgs = await prisma.organization.findMany({
+      where: { id: { in: tenantIds } },
+      select: { id: true, name: true },
+    })
+    const orgMap = new Map(orgs.map(o => [o.id, o.name]))
+
+    // 4. 获取使用量（UsageLog）
+    const usageByTenant = await prisma.usageLog.groupBy({
+      by: ['tenantId'],
+      where: { tenantId: { in: tenantIds } },
+      _sum: { cost: true },
+      _count: { id: true },
+    })
+    const usageMap = new Map(usageByTenant.map(u => [u.tenantId, u]))
+
+    const aiRoi = agentUsage.filter(a => a.agentId).map(a => {
+      const instance = agentMap.get(a.agentId!)
+      const tenantId = instance?.tenantId
+      const orgName = tenantId ? orgMap.get(tenantId) : 'Unknown'
+      const usage = tenantId ? usageMap.get(tenantId) : null
+
+      return {
+        agentId: a.agentId,
+        orgName,
+        executionCount: a._count.id,
+        totalTokens: a._sum.tokenUsage ?? 0,
+        totalCost: Math.round((a._sum.cost ?? 0) * 100), // 元转分
+        avgDurationMs: Math.round((a._sum.durationMs ?? 0) / (a._count.id || 1)),
+        usageCost: Math.round((usage?._sum.cost ?? 0) * 100), // 元转分
+      }
+    }).sort((a, b) => b.totalCost - a.totalCost)
+
+    return { success: true, data: aiRoi }
+  })
+
+  // GET /api/admin/recruitment/customers — 客户成功看板
+  app.get('/api/admin/recruitment/customers', { preHandler: [requireAdmin] }, async (request) => {
+    const { page = 1, limit = 20, risk } = request.query as any
+
+    // 1. 获取所有有效订阅的企业
+    const subs = await prisma.enterpriseSubscription.findMany({
+      where: { status: 'active' },
+      include: {
+        plan: true,
+        organization: {
+          include: {
+            profile: true,
+            _count: { select: { members: true } },
+          },
+        },
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    })
+
+    // 2. 获取每个企业的 AI Employee 数量
+    const orgIds = subs.map(s => s.organizationId)
+    const agentCounts = await prisma.enterpriseAgentInstance.groupBy({
+      by: ['tenantId'],
+      where: { tenantId: { in: orgIds } },
+      _count: { agentId: true },
+    })
+    const agentCountMap = new Map(agentCounts.map(a => [a.tenantId, a._count.agentId]))
+
+    // 3. 获取本月使用量
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const usageThisMonth = await prisma.usageLog.groupBy({
+      by: ['tenantId'],
+      where: { tenantId: { in: orgIds }, createdAt: { gte: monthStart } },
+      _sum: { cost: true },
+      _count: { id: true },
+    })
+    const usageMap = new Map(usageThisMonth.map(u => [u.tenantId, u]))
+
+    // 4. 获取 AgentAuditTrail 本月成本
+    const auditThisMonth = await prisma.agentAuditTrail.groupBy({
+      by: ['tenantId'],
+      where: { tenantId: { in: orgIds }, createdAt: { gte: monthStart } },
+      _sum: { cost: true, tokenUsage: true },
+    })
+    const auditMap = new Map(auditThisMonth.map(a => [a.tenantId, a]))
+
+    // 5. 计算续费风险
+    const days30FromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const customers = subs.map(sub => {
+      const orgId = sub.organizationId
+      const usage = usageMap.get(orgId)
+      const audit = auditMap.get(orgId)
+      const agentCount = agentCountMap.get(orgId) ?? 0
+      const monthUsageCount = usage?._count.id ?? 0
+      const monthCost = Math.round(((usage?._sum.cost ?? 0) + (audit?._sum.cost ?? 0)) * 100) // 分
+      const tokensUsed = audit?._sum.tokenUsage ?? 0
+
+      // 额度使用率（基于 maxAgents）
+      const maxAgents = sub.snapshotMaxEmployees ?? sub.plan.maxEmployees
+      const agentUsageRate = maxAgents > 0 ? Math.round((agentCount / maxAgents) * 100) : 0
+
+      // 续费风险规则
+      let riskLevel = 'healthy'
+      const daysToExpire = Math.ceil((sub.expireAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      if (daysToExpire <= 30 && monthUsageCount < 10) {
+        riskLevel = 'high' // 即将到期 + 低使用
+      } else if (agentUsageRate >= 90) {
+        riskLevel = 'high' // 额度即将耗尽
+      } else if (monthUsageCount > 100 && sub.status === 'active') {
+        riskLevel = 'high_value' // 高使用 + 持续付费
+      } else if (daysToExpire <= 60) {
+        riskLevel = 'medium' // 中期关注
+      }
+
+      return {
+        orgId,
+        orgName: sub.organization.name,
+        planName: sub.plan.displayName,
+        agentCount,
+        maxAgents,
+        agentUsageRate,
+        monthUsageCount,
+        monthCost, // 分
+        tokensUsed,
+        expireAt: sub.expireAt.toISOString(),
+        daysToExpire,
+        riskLevel,
+      }
+    })
+
+    // 按风险过滤
+    const filtered = risk ? customers.filter(c => c.riskLevel === risk) : customers
+
+    // 统计
+    const [totalHighRisk, totalHighValue, totalMedium] = await Promise.all([
+      prisma.enterpriseSubscription.count({ where: { status: 'active', expireAt: { lte: days30FromNow } } }),
+      prisma.enterpriseSubscription.count({ where: { status: 'active' } }),
+      prisma.enterpriseSubscription.count({ where: { status: 'active', expireAt: { lte: new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000) } } }),
+    ])
+
+    return {
+      success: true,
+      data: filtered,
+      summary: {
+        total: subs.length,
+        highRisk: customers.filter(c => c.riskLevel === 'high').length,
+        highValue: customers.filter(c => c.riskLevel === 'high_value').length,
+        medium: customers.filter(c => c.riskLevel === 'medium').length,
+        healthy: customers.filter(c => c.riskLevel === 'healthy').length,
+      },
+      page,
+      limit,
     }
   })
 }

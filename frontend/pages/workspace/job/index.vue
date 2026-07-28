@@ -8,7 +8,7 @@
       </div>
       <div class="nav-right">
         <span v-if="userName" class="user-name">{{ userName }}</span>
-        <NuxtLink to="/workspace/recruitment" class="nav-btn nav-btn-enterprise">🏢 企业招聘</NuxtLink>
+        <NuxtLink to="/workspace/enterprise" class="nav-btn nav-btn-enterprise">🏢 企业招聘</NuxtLink>
         <button v-if="isLoggedIn" class="nav-btn" @click="goToUserCenter">会员中心</button>
         <button v-if="isLoggedIn" class="nav-btn" @click="handleLogout">退出</button>
         <button v-if="!isLoggedIn" class="nav-btn" @click="goToLogin">登录</button>
@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * /workspace/job — 求职管家（昆仑镜双边市场 · 求职者侧）
  * 引用昆仑镜用户体系 + Hermes Agent Runtime
@@ -36,7 +37,7 @@ const userName = ref('')
 
 onMounted(() => {
   try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
+    const token = getAuthToken()
     if (token) {
       isLoggedIn.value = true
       const payload = JSON.parse(atob(token.split('.')[1]))

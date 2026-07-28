@@ -114,6 +114,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted } from 'vue'
 
 const posts = ref<any[]>([])
@@ -129,7 +130,7 @@ const rejectReason = ref('')
 const rejectTarget = ref<any>(null)
 
 function getToken(): string {
-  try { return localStorage.getItem('auth_token') || '' } catch { return '' }
+  try { return getAuthToken() || '' } catch { return '' }
 }
 
 function formatTime(dateStr: string) {

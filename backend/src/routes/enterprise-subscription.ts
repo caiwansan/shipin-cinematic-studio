@@ -283,8 +283,14 @@ export default async function enterpriseSubscriptionRoutes(app: FastifyInstance)
         return reply.status(404).send(toApiResponse({ success: false, message: '订阅不存在' }))
       }
 
-      // TTFV: 记录支付成功 + 订阅激活（从订单和订阅快照获取信息）
+      // Sprint-04: 激活订阅时同步创建/更新 Entitlement
       const subscription = await prisma.enterpriseSubscription.findUnique({ where: { organizationId: orgId } })
+      if (subscription) {
+        const { entitlementService } = await import('../services/enterprise/enterprise-entitlement.service.js')
+        await entitlementService.createFromSubscription(orgId, subscription.id)
+      }
+
+      // TTFV: 记录支付成功 + 订阅激活（从订单和订阅快照获取信息）
       const paymentAmount = Math.round((order.amount || 0) * 100)
       await ttfvEventService.trackPaymentSuccess(orgId, subscription?.id || '', orderId, paymentAmount, subscription?.snapshotName || '', subscription?.snapshotCycle || 'monthly')
       await ttfvEventService.trackSubscriptionActive(orgId, subscription?.snapshotName || '', subscription?.snapshotMaxEmployees || 2, subscription?.snapshotMaxChannels || 1)

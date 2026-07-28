@@ -191,6 +191,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 import { KunlunMediaApi } from '~/composables/enterprise/useMediaApi'
@@ -237,7 +238,7 @@ let _connectPollTimer: any = null
 const BASE_URL = 'https://aigc.fushtn.com'
 
 function getToken(): string {
-  try { return localStorage.getItem('accessToken') || '' } catch { return '' }
+  try { return getAuthToken() || '' } catch { return '' }
 }
 
 /** BETA-06.9.6: 统一 Auth Header — 不再手动传递 organizationId */

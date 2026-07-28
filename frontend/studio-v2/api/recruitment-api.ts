@@ -1,3 +1,4 @@
+import { getAuthToken, setAuthToken, clearAuthToken } from '~/utils/auth/token'
 /**
  * recruitment-api.ts — AI 招聘中心 API Client
  *
@@ -37,7 +38,7 @@ async function request(path: string, options: ApiOptions = {}) {
 
   if (res.status === 401) {
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      localStorage.removeItem('auth_token')
+      clearAuthToken()
       window.location.href = '/login'
     }
     throw new Error('未登录或登录已过期')
@@ -339,7 +340,7 @@ export async function listEnterpriseCandidates(): Promise<{
   if (!res.ok) {
     if (res.status === 401) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        localStorage.removeItem('auth_token')
+        clearAuthToken()
         window.location.href = '/login'
       }
       throw new Error('未登录或登录已过期')

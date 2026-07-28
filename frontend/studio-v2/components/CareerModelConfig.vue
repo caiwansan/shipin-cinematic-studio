@@ -86,6 +86,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, reactive, onMounted, computed } from 'vue'
 
 const expanded = ref(false)
@@ -135,7 +136,7 @@ const modelPlaceholder = computed(() => {
 })
 
 function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || ''
+  const token = getAuthToken() || ''
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

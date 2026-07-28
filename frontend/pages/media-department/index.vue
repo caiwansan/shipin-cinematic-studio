@@ -162,6 +162,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted, watch } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 import { KunlunMediaApi } from '~/composables/enterprise/useMediaApi'
@@ -205,7 +206,7 @@ const aiEmployees = ref([
 // ─── 方法 ───
 function getToken(): string {
   try {
-    return localStorage.getItem('accessToken') || ''
+    return getAuthToken() || ''
   } catch { return '' }
 }
 

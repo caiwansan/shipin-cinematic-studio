@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 // @deprecated — GEO v3 Legacy. Use design-system product blocks instead.
 // ============================================================
 // useGeoHydrate — GEO Workspace 唯一状态入口
@@ -99,7 +100,7 @@ export function useGeoHydrate(projectId: string | null | undefined | (() => stri
   function authHeaders(): Record<string, string> {
     const h: Record<string, string> = { 'Content-Type': 'application/json' }
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = getAuthToken()
       if (token) h['Authorization'] = `Bearer ${token}`
     } catch {}
     return h

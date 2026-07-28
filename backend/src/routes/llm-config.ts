@@ -10,6 +10,7 @@
 import type { FastifyInstance } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import { callLLM } from '../services/hdz/llm.client'
+import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
 
 export async function llmConfigRoutes(app: FastifyInstance) {
   const prisma = new PrismaClient()
@@ -95,16 +96,12 @@ export async function llmConfigRoutes(app: FastifyInstance) {
     }
 
     try {
-      // 查找用户的企业
-      const member = await (prisma as any).enterpriseMember.findFirst({
-        where: { userId },
-        select: { organizationId: true },
-      })
-
-      const tenantId = member?.organizationId || userId
+      // Sprint 1B-5: 用 resolveCurrentEnterprise 替代 orgMember 查询
+      const enterprise = await resolveCurrentEnterprise(userId)
+      const tenantId = enterprise?.id || userId
 
       const configs = await (prisma as any).enterpriseLlmConfig.findMany({
-        where: { tenantId },
+        where: { organizationId: tenantId },
         select: {
           id: true,
           provider: true,
@@ -142,17 +139,13 @@ export async function llmConfigRoutes(app: FastifyInstance) {
     }
 
     try {
-      // 查找用户的企业
-      const member = await (prisma as any).enterpriseMember.findFirst({
-        where: { userId },
-        select: { organizationId: true },
-      })
-
-      const tenantId = member?.organizationId || userId
+      // Sprint 1B-5: 用 resolveCurrentEnterprise 替代 orgMember 查询
+      const enterprise = await resolveCurrentEnterprise(userId)
+      const tenantId = enterprise?.id || userId
 
       // 获取 Agent Instances
       const instances = await (prisma as any).enterpriseAgentInstance.findMany({
-        where: { tenantId },
+        where: { organizationId: tenantId },
         include: {
           profile: {
             select: {

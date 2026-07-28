@@ -18,6 +18,7 @@
  */
 
 import { FastifyInstance } from 'fastify'
+import { resolveEnterpriseId } from '../services/enterprise-context.service.js'
 import { prisma } from '../utils/index.js'
 import { JobCareerEngine, CandidateProfile } from '../agents/job/job-career-engine.js'
 import { matchJobs, generateMockJobs } from '../agents/job/job-matching.service.js'
@@ -50,19 +51,28 @@ export default async function jobRoutes(fastify: FastifyInstance) {
         // 尝试从数据库加载已有画像
         let existingProfile: Partial<CandidateProfile> | undefined
         if (userId !== 'anonymous') {
-          const saved = await prisma.jobCandidate.findFirst({
+          const saved = await prisma.careerProfile.findFirst({
             where: { userId },
+            select: {
+              fullName: true,
+              bio: true,
+              headline: true,
+              city: true,
+              skills: { select: { name: true } },
+              workExperiences: { take: 1, select: { title: true, company: true } },
+              educations: { take: 1, select: { degree: true, field: true } },
+            },
           })
           if (saved) {
             existingProfile = {
-              name: saved.profileJson?.name || '',
-              education: saved.education || '',
-              skills: saved.skills || [],
-              experience: saved.experience || '',
+              name: saved.fullName || '',
+              education: saved.educations?.[0]?.degree || saved.educations?.[0]?.field || '',
+              skills: saved.skills?.map(s => s.name) || [],
+              experience: saved.workExperiences?.[0]?.title || saved.headline || '',
               city: saved.city || '',
-              salaryMin: saved.profileJson?.salaryMin || 0,
-              salaryMax: saved.profileJson?.salaryMax || 0,
-              careerGoal: saved.careerGoal || '',
+              salaryMin: 0,
+              salaryMax: 0,
+              careerGoal: saved.bio || '',
             }
           }
         }
@@ -73,31 +83,16 @@ export default async function jobRoutes(fastify: FastifyInstance) {
       // 处理消息
       const result = engine.processMessage(body.message)
 
-      // 持久化到数据库（Sprint-07A: 修复 upsert → findFirst + upsert）
-      if (userId !== 'anonymous' && result.profile) {
-        const existing = await prisma.jobCandidate.findFirst({ where: { userId } })
-        const data = {
-          education: result.profile.education || '',
-          skills: result.profile.skills || [],
-          experience: result.profile.experience || '',
-          city: result.profile.city || '',
-          salaryExpectation: result.profile.salaryMin ? `${result.profile.salaryMin}-${result.profile.salaryMax}K` : '',
-          careerGoal: result.profile.careerGoal || '',
-          profileJson: {
-            name: result.profile.name,
-            major: result.profile.major,
-            experienceYears: result.profile.experienceYears,
-            salaryMin: result.profile.salaryMin,
-            salaryMax: result.profile.salaryMax,
-            completeness: result.profile.completeness,
-          },
-        }
-        if (existing) {
-          await prisma.jobCandidate.update({ where: { id: existing.id }, data })
-        } else {
-          await prisma.jobCandidate.create({ data: { userId, ...data } })
-        }
-      }
+      // ─── Sprint 12.5: JobCandidate @deprecated — 停止新数据写入 ───
+      // Replaced by CareerProfile as single source of truth.
+      // 历史数据保留，禁止新写入。
+      // 原写入逻辑已注释：
+      // if (userId !== 'anonymous' && result.profile) {
+      //   const existing = await prisma.jobCandidate.findFirst({ where: { userId } })
+      //   ...
+      //   await prisma.jobCandidate.create/update(...)
+      // }
+      // 新数据写入请走 CareerProfile 体系：prisma.careerProfile.create/update()
 
       // 如果访谈完成，生成推荐
       let recommendations: any[] = []
@@ -127,7 +122,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
         // 保存推荐记录（Sprint-07A: 模型可能不存在，安全降级）
         if (userId !== 'anonymous') {
           try {
-            const candidate = await prisma.jobCandidate.findFirst({ where: { userId } })
+            const candidate = await prisma.careerProfile.findFirst({ where: { userId } })
             if (candidate) {
               for (const rec of recommendations.slice(0, 5)) {
                 await (prisma as any).jobRecommendation?.create?.({
@@ -174,17 +169,17 @@ export default async function jobRoutes(fastify: FastifyInstance) {
 
     // 检查是否有历史画像
     if (userId && userId !== 'anonymous') {
-      const saved = await prisma.jobCandidate.findFirst({ where: { userId } }).catch(() => null)
+      const saved = await prisma.careerProfile.findFirst({ where: { userId } }).catch(() => null)
       if (saved) {
         const profile = {
-          name: saved.profileJson?.name || '',
-          education: saved.education || '',
-          skills: saved.skills || [],
-          experience: saved.experience || '',
+          name: saved.fullName || '',
+          education: saved.educations?.[0]?.degree || saved.educations?.[0]?.field || '',
+          skills: saved.skills?.map(s => s.name) || [],
+          experience: saved.workExperiences?.[0]?.title || saved.headline || '',
           city: saved.city || '',
-          salaryMin: saved.profileJson?.salaryMin || 0,
-          salaryMax: saved.profileJson?.salaryMax || 0,
-          careerGoal: saved.careerGoal || '',
+          salaryMin: 0,
+          salaryMax: 0,
+          careerGoal: saved.bio || '',
         }
         const newEngine = new JobCareerEngine(profile)
         interviewSessions.set(userId, newEngine)
@@ -253,8 +248,25 @@ export default async function jobRoutes(fastify: FastifyInstance) {
   })
 
   fastify.post('/api/job/postings', async (request, reply) => {
+    // Sprint-02 Fix: JWT 认证
+    try {
+      await request.jwtVerify()
+    } catch (err) {
+      return reply.status(401).send({ error: 'Unauthorized' })
+    }
+
+    const userId = (request.user as any)?.id || (request.user as any)?.userId
+    if (!userId) {
+      return reply.status(401).send({ error: '用户未认证' })
+    }
+
+    // Sprint-02 Fix: 从 JWT 解析 enterpriseId
+    const enterpriseId = await resolveEnterpriseId(userId)
+    if (!enterpriseId) {
+      return reply.status(404).send({ error: '未找到企业身份，请先完成企业创建' })
+    }
+
     const body = request.body as {
-      enterpriseId: string
       title: string
       salary?: string
       location?: string
@@ -262,14 +274,14 @@ export default async function jobRoutes(fastify: FastifyInstance) {
       requirements?: string
     }
 
-    if (!body.enterpriseId || !body.title) {
-      return reply.status(400).send({ error: 'enterpriseId and title are required' })
+    if (!body.title) {
+      return reply.status(400).send({ error: 'title is required' })
     }
 
     try {
       const posting = await prisma.jobPosting.create({
         data: {
-          enterpriseId: body.enterpriseId,
+          enterpriseId,
           title: body.title,
           salary: body.salary,
           location: body.location,
@@ -315,7 +327,7 @@ export default async function jobRoutes(fastify: FastifyInstance) {
     try {
       const [totalPostings, totalCandidates, totalCompanies] = await Promise.all([
         prisma.jobPosting.count({ where: { status: 'active' } }),
-        prisma.jobCandidate.count(),
+        prisma.careerProfile.count(),
         prisma.jobCompanyProfile.count(),
       ])
 
@@ -358,8 +370,8 @@ export default async function jobRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      // 获取 candidate
-      const candidate = await prisma.jobCandidate.findFirst({ where: { userId: body.userId } })
+      // 获取 candidate — Sprint-SSOT-CLEANUP-01: JobCandidate → CareerProfile
+      const candidate = await prisma.careerProfile.findFirst({ where: { userId: body.userId } })
       if (!candidate) {
         return reply.status(404).send({ error: '未找到求职者画像' })
       }
@@ -411,13 +423,21 @@ export default async function jobRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const candidate = await prisma.jobCandidate.findFirst({
+      const candidate = await prisma.careerProfile.findFirst({
         where: { userId },
         include: {
-          recommendations: {
-            include: { job: true },
-            orderBy: { matchScore: 'desc' },
-            take: 10,
+          user: {
+            include: {
+              candidateOnCareerProfile: {
+                include: {
+                  recommendations: {
+                    include: { job: true },
+                    orderBy: { matchScore: 'desc' },
+                    take: 10,
+                  },
+                },
+              },
+            },
           },
         },
       })

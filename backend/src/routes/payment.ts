@@ -822,6 +822,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       if (parsed.outTradeNo?.startsWith('AGT')) {
         await handleAgentRechargeOrder(parsed.outTradeNo, parsed.tradeNo, parsed.paidAt || new Date())
       }
+
+      // 处理企业订阅订单
+      if (parsed.outTradeNo?.startsWith('ENT')) {
+        await handleEnterpriseSubscriptionOrder(parsed.outTradeNo, parsed.tradeNo, parsed.paidAt || new Date())
+      }
     } catch (err: any) {
       console.error('[alipay/notify] 处理失败:', err.message)
     }
@@ -869,6 +874,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         }
         if (outTradeNo?.startsWith('AGT')) {
           await handleAgentRechargeOrder(outTradeNo, transactionId || '', new Date())
+        }
+        if (outTradeNo?.startsWith('ENT')) {
+          await handleEnterpriseSubscriptionOrder(outTradeNo, transactionId || '', new Date())
         }
       }
 
@@ -1049,5 +1057,49 @@ async function handleAgentRechargeOrder(orderNo: string, tradeNo: string, payTim
     console.log(`[alipay-agent] 代理激活成功: user=${order.userId}, level=${agentPlan.level}`)
   } catch (err: any) {
     console.error('[alipay-agent] 处理失败:', err.message)
+  }
+}
+
+/** 处理企业订阅订单回调 */
+async function handleEnterpriseSubscriptionOrder(orderNo: string, tradeNo: string, payTime: Date) {
+  try {
+    const order = await prisma.paymentOrder.findFirst({ where: { orderNo } })
+    if (!order) {
+      console.warn(`[enterprise-subscription] 订单不存在: ${orderNo}`)
+      return
+    }
+    if (order.status === 'paid') return
+
+    const metadata = (order.metadata as any) || {}
+    const periodDays = metadata.periodDays || 30
+
+    await prisma.$transaction([
+      prisma.paymentOrder.update({
+        where: { id: order.id },
+        data: { status: 'paid', payTime, tradeNo },
+      }),
+      prisma.enterpriseSubscription.updateMany({
+        where: { orderId: order.id },
+        data: {
+          status: 'active',
+          startAt: new Date(),
+          expireAt: new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000),
+        },
+      }),
+    ])
+
+    // 同步创建 Entitlement
+    const subscription = await prisma.enterpriseSubscription.findFirst({
+      where: { orderId: order.id },
+    })
+    if (subscription) {
+      const { entitlementService } = await import('../services/enterprise/enterprise-entitlement.service.js')
+      await entitlementService.createFromSubscription(order.organizationId, subscription.id)
+      console.log(`[enterprise-subscription] Entitlement 已同步: org=${order.organizationId}`)
+    }
+
+    console.log(`[enterprise-subscription] 订阅已激活: order=${orderNo}, org=${order.organizationId}`)
+  } catch (err: any) {
+    console.error('[enterprise-subscription] 处理失败:', err.message)
   }
 }

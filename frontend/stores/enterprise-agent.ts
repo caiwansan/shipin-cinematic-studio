@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * Enterprise Agent Store — AI 员工管理
  * Phase 3.3 P0-2: AI Employee CRUD
@@ -73,7 +74,7 @@ export const useEnterpriseAgentStore = defineStore('enterpriseAgent', () => {
   // Helper: Auth Headers
   // ═══════════════════════════════════════════════════════════
   function getAuthHeaders(): Record<string, string> {
-    const token = localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || ''
     const organizationId = localStorage.getItem('organization_id') || ''
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

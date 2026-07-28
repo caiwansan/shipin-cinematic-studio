@@ -1,7 +1,7 @@
 /**
  * enterprise-identity-api.ts — 企业身份 API Client
  *
- * 归属: 企业招聘中心 (Enterprise Recruitment) → /workspace/recruitment
+ * 归属: 企业招聘中心 (Enterprise Recruitment) → /workspace/enterprise
  * 审计: JOB-WORKSPACE-BOUNDARY-AUDIT 2026-07-26 — P4-FE-02
  *
  * 职责:

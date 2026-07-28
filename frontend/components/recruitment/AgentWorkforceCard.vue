@@ -23,8 +23,11 @@
     <!-- Empty -->
     <div v-else-if="state.instances.length === 0" class="aw-empty">
       <div class="aw-empty-icon">🤖</div>
-      <p>暂无 AI 招聘员工</p>
-      <span class="aw-empty-hint">完成企业认证后将自动分配 AI 招聘团队</span>
+      <p>AI 招聘主管待命中</p>
+      <span class="aw-empty-hint">创建岗位后自动开始工作</span>
+      <button class="aw-empty-btn" @click="navigateToJobs">
+        📝 创建首个岗位
+      </button>
     </div>
 
     <!-- Agent List -->
@@ -313,6 +316,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { computed, onMounted, ref } from 'vue'
 import { useAgentWorkforce, type AgentInstance } from '~/composables/enterprise/useAgentWorkforce'
 
@@ -379,7 +383,7 @@ async function fetchReport() {
   reportLoading.value = true
   reportError.value = ''
   try {
-    const token = localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || ''
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -473,6 +477,10 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
+function navigateToJobs() {
+  window.location.href = '/workspace/enterprise/jobs'
+}
+
 onMounted(() => {
   refresh()
 })
@@ -541,6 +549,24 @@ onMounted(() => {
 .aw-empty-hint {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 16px;
+}
+
+.aw-empty-btn {
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.aw-empty-btn:hover {
+  box-shadow: 0 4px 16px rgba(96, 165, 250, 0.3);
+  transform: translateY(-1px);
 }
 
 /* ─── Agent Grid ─── */

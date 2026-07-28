@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 definePageMeta({ middleware: 'auth' })
 
 // 入口页 → 自动创建新项目并跳转到工作台
@@ -9,7 +10,7 @@ const router = useRouter()
 
 onMounted(async () => {
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     if (!token) return
 
     // 创建新项目

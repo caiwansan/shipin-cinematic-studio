@@ -1,21 +1,24 @@
 /**
- * token-cache.ts — 内存级 Token 缓存
- * 
- * 原则：
- * 1. 写入时：同时写入内存 + localStorage（双写）
- * 2. 读取时：优先读内存 → fallback localStorage
- * 3. 清除时：同时清除内存 + localStorage
- * 
- * 内存层防御 XSS 窃取：注入脚本可读 localStorage 但无法读 JS 内存闭包。
- * 
- * 兼容旧 key：auth_token, accessToken, token
+ * token-cache.ts — Token 缓存（兼容层）
+ *
+ * Sprint-Enterprise-Identity-Hardening-01 Phase 4
+ * 底层实现已迁移到 utils/auth/token.ts。
+ * 本文件保留旧 API 名称作为兼容别名。
+ *
+ * 新代码请直接引入:
+ *   import { getAuthToken, setAuthToken, clearAuthToken } from '~/utils/auth/token'
  */
 
-// 内存缓存（模块闭包，XSS 无法访问）
-let _memoryToken = ''
+import {
+  getAuthToken as _getAuthToken,
+  setAuthToken as _setAuthToken,
+  clearAuthToken as _clearAuthToken,
+  isAuthenticated as _isAuthenticated,
+} from './auth/token'
+
+// 内存用户缓存（保留）
 let _memoryUser: Record<string, any> | null = null
 
-// 尝试读取 localStorage
 function safeLsGet(key: string): string {
   if (typeof window === 'undefined') return ''
   try { return localStorage.getItem(key) || '' } catch { return '' }
@@ -31,32 +34,34 @@ function safeLsRemove(key: string): void {
   try { localStorage.removeItem(key) } catch { /* ignore */ }
 }
 
-// 优先读取的 key 列表
-const TOKEN_KEYS = ['auth_token', 'accessToken', 'token']
 const USER_KEY = 'auth_user'
 
-/** 获取 token：内存 → fallback localStorage（按优先级） */
+// ─── 兼容别名（旧 API） ───
+
+/** @deprecated 使用 getAuthToken() 替代 */
 export function getToken(): string {
-  if (_memoryToken) return _memoryToken
-  for (const key of TOKEN_KEYS) {
-    const val = safeLsGet(key)
-    if (val) {
-      _memoryToken = val
-      return val
-    }
-  }
-  return ''
+  return _getAuthToken()
 }
 
-/** 写入 token：内存 + localStorage（同时写入所有关键 key） */
+/** @deprecated 使用 setAuthToken() 替代 */
 export function setToken(token: string): void {
-  _memoryToken = token
-  for (const key of TOKEN_KEYS) {
-    safeLsSet(key, token)
-  }
+  _setAuthToken(token)
 }
 
-/** 获取用户信息缓存：内存 → fallback localStorage */
+/** @deprecated 使用 clearAuthToken() 替代 */
+export function clearAuth(): void {
+  _clearAuthToken()
+  _memoryUser = null
+  safeLsRemove(USER_KEY)
+}
+
+/** @deprecated 使用 isAuthenticated() 替代 */
+export function isAuthenticated(): boolean {
+  return _isAuthenticated()
+}
+
+// ─── 用户信息缓存（保留） ───
+
 export function getUser<T = Record<string, any>>(): T | null {
   if (_memoryUser) return _memoryUser as T
   const raw = safeLsGet(USER_KEY)
@@ -72,7 +77,6 @@ export function getUser<T = Record<string, any>>(): T | null {
   return null
 }
 
-/** 写入用户信息缓存：内存 + localStorage */
 export function setUser(user: Record<string, any> | null): void {
   _memoryUser = user
   if (user) {
@@ -82,30 +86,9 @@ export function setUser(user: Record<string, any> | null): void {
   }
 }
 
-/** 清除所有 token 和用户信息（内存 + localStorage） */
-export function clearAuth(): void {
-  _memoryToken = ''
-  _memoryUser = null
-  for (const key of TOKEN_KEYS) {
-    safeLsRemove(key)
-  }
-  safeLsRemove(USER_KEY)
-  // 也清除所有相关的 cookies
-  if (typeof document !== 'undefined') {
-    ;['auth_token', 'auth_user', 'token', 'accessToken', 'refreshToken'].forEach(k => {
-      document.cookie = `${k}=; path=/; max-age=0; samesite=lax`
-    })
-  }
-}
-
-/** 获取管理员 Token（优先取 admin_token，回退到 auth_token） */
+/** 获取管理员 Token */
 export function getAdminToken(): string {
-  return localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || ''
-}
-
-/** 检查是否已登录（有 token 即认为已登录） */
-export function isAuthenticated(): boolean {
-  return !!getToken()
+  return _getAuthToken()
 }
 
 export default { getToken, setToken, getUser, setUser, clearAuth, isAuthenticated }

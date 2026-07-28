@@ -191,6 +191,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 const route = useRoute()
 const loading = ref(false)
 const error = ref('')
@@ -205,7 +206,7 @@ async function fetchData() {
   error.value = ''
   try {
     const res = await fetch(`/api/admin/recruitment/reviews/${reviewId.value}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+      headers: { 'Authorization': `Bearer ${getAuthToken() || ''}` },
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     review.value = await res.json()
@@ -223,7 +224,7 @@ async function submitDecision(decision: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        'Authorization': `Bearer ${getAuthToken() || ''}`,
       },
       body: JSON.stringify({ decision, note: decisionNote.value || undefined }),
     })

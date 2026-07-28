@@ -35,12 +35,14 @@
 <script setup lang="ts">
 const route = useRoute()
 
+// Sprint 07 Week 1: 统一入口 — 所有导航指向 /workspace/enterprise
 const navItems = [
   { id: 'overview', label: '概览', path: '/workspace/enterprise' },
-  { id: 'conversations', label: '沟通', path: '/workspace/enterprise/conversations' },
+  { id: 'jobs', label: '岗位', path: '/workspace/enterprise/jobs' },
   { id: 'candidates', label: '候选人', path: '/workspace/enterprise/candidates' },
-  { id: 'interviews', label: '面试', path: '/workspace/enterprise/interviews' },
-  { id: 'jobs', label: '职位', path: '/workspace/enterprise/jobs' },
+  { id: 'interviews', label: '面试', path: '/workspace/enterprise/interview' },
+  { id: 'conversations', label: '沟通', path: '/workspace/enterprise/conversations' },
+  { id: 'talent', label: '人才库', path: '/workspace/enterprise/talent' },
 ]
 
 function isActive(path: string): boolean {

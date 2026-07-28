@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 // ─── Prompt 预览/编辑面板 ───
 // 显示 Stage3 生成的 14 条 GPT-Image-2 提示词
 // 支持双击编辑 + 一键复制
@@ -103,7 +104,7 @@ async function saveEdit(code: string) {
   // 保存回后端
   saving.value = true
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     // 重建 promptJson
     const newPrompts: any = {}
     for (const p of promptsList.value) {

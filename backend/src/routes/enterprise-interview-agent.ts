@@ -9,13 +9,21 @@
  *
  * 架构：EnterpriseLlmConfig → executeViaGateway
  * 数据权限：只读本企业面试记录和候选人
+ *
+ * Observation Sprint Step 1-B-1:
+ * Identity 解析必须经过 resolveCurrentEnterprise(OrgMember SSOT)
+ * 禁止直接查询 prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
  */
 
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { interviewAgentService } from '../services/enterprise/interview-agent.service.js'
+import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
 
 export async function registerInterviewAgentRoutes(app: FastifyInstance) {
+
+  // Sprint 13: Security P0 — JWT auth for all Agent routes
+  app.addHook('preHandler', app.authenticate)
 
   // ── POST /api/enterprise/agents/interview/generate ──
   app.post('/api/enterprise/agents/interview/generate', async (request, reply) => {
@@ -28,14 +36,15 @@ export async function registerInterviewAgentRoutes(app: FastifyInstance) {
     }
 
     try {
-      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
-      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
+      const ctx = await resolveCurrentEnterprise(userId)
+      if (!ctx?.enterpriseProfile?.organizationId) return reply.status(403).send({ error: 'No enterprise identity' })
+      const tenantId = ctx.enterpriseProfile.organizationId
 
-      const agent = await interviewAgentService.ensureInterviewAgent(ep.organizationId)
+      const agent = await interviewAgentService.ensureInterviewAgent(tenantId)
       if (!agent) return reply.status(500).send({ error: 'Failed to create interview agent' })
 
       const result = await interviewAgentService.generateQuestions(
-        ep.organizationId, userId, agent.id, jobId, candidateId
+        tenantId, userId, agent.id, jobId, candidateId
       )
 
       return reply.send({ success: true, result })
@@ -60,14 +69,15 @@ export async function registerInterviewAgentRoutes(app: FastifyInstance) {
     }
 
     try {
-      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
-      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
+      const ctx = await resolveCurrentEnterprise(userId)
+      if (!ctx?.enterpriseProfile?.organizationId) return reply.status(403).send({ error: 'No enterprise identity' })
+      const tenantId = ctx.enterpriseProfile.organizationId
 
-      const agent = await interviewAgentService.ensureInterviewAgent(ep.organizationId)
+      const agent = await interviewAgentService.ensureInterviewAgent(tenantId)
       if (!agent) return reply.status(500).send({ error: 'Failed to create interview agent' })
 
       const result = await interviewAgentService.suggestFollowUp(
-        ep.organizationId, userId, agent.id, sessionId, lastQuestion, lastAnswer || ''
+        tenantId, userId, agent.id, sessionId, lastQuestion, lastAnswer || ''
       )
 
       return reply.send({ success: true, result })
@@ -88,14 +98,15 @@ export async function registerInterviewAgentRoutes(app: FastifyInstance) {
     }
 
     try {
-      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
-      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
+      const ctx = await resolveCurrentEnterprise(userId)
+      if (!ctx?.enterpriseProfile?.organizationId) return reply.status(403).send({ error: 'No enterprise identity' })
+      const tenantId = ctx.enterpriseProfile.organizationId
 
-      const agent = await interviewAgentService.ensureInterviewAgent(ep.organizationId)
+      const agent = await interviewAgentService.ensureInterviewAgent(tenantId)
       if (!agent) return reply.status(500).send({ error: 'Failed to create interview agent' })
 
       const result = await interviewAgentService.summarizeInterview(
-        ep.organizationId, userId, agent.id, sessionId
+        tenantId, userId, agent.id, sessionId
       )
 
       return reply.send({ success: true, result })
@@ -111,16 +122,17 @@ export async function registerInterviewAgentRoutes(app: FastifyInstance) {
     if (!userId) return reply.status(401).send({ error: 'Unauthorized' })
 
     try {
-      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
-      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
+      const ctx = await resolveCurrentEnterprise(userId)
+      if (!ctx?.enterpriseProfile?.organizationId) return reply.status(403).send({ error: 'No enterprise identity' })
+      const tenantId = ctx.enterpriseProfile.organizationId
 
       const agent = await prisma.enterpriseAgentProfile.findFirst({
-        where: { tenantId: ep.organizationId, agentType: 'interview_agent' },
+        where: { tenantId, agentType: 'interview_agent' },
         select: { id: true, name: true, status: true, createdAt: true, lastExecutionAt: true },
       })
 
       const llmConfig = await prisma.enterpriseLlmConfig.findFirst({
-        where: { tenantId: ep.organizationId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
+        where: { tenantId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
         select: { provider: true, modelName: true },
       })
 

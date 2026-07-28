@@ -53,6 +53,7 @@ import adminEnterpriseRoutes from './routes/admin-enterprises.js'
 import adminEnterprisePlanRoutes from './routes/admin-enterprise-plans.js'
 import adminMarketAgentRoutes from './routes/admin-market-agents.js'
 import adminRecruitmentRoutes from './routes/admin-recruitment.js'
+import adminRevenueDashboardRoutes from './routes/admin-revenue-dashboard.js'
 import { enterpriseHomeRoutes } from './routes/enterprise-home.js'
 import agentPlanRoutes from './routes/agent-plan.js'
 // Platform Agent routes (KMKI-PLAT-010) — dynamic to avoid tsx @platform alias issue
@@ -360,6 +361,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/job-posting.routes.js')).jobPostingRoutes)
   await app.register((await import('./routes/enterprise-job-intelligence.routes.js')).enterpriseJobIntelligenceRoutes)
   await app.register((await import('./routes/recruitment-department.routes.js')).recruitmentDepartmentRoutes)
+  // Sprint 10 — AI Recruitment Director (AI 招聘主管)
+  await app.register((await import('./routes/recruitment-director.routes.js')).recruitmentDirectorRoutes)
   // Sprint-08B — Recruitment Conversation Domain
   await app.register((await import('./routes/recruitment-conversation.routes.js')).default, { prefix: '/api/enterprise/recruitment-conversation' })
   // Sprint-07B-2 — Talent Agent (AI 猎聘顾问)
@@ -379,8 +382,12 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/recruitment-campaign.routes.js')).default, { prefix: '/api/enterprise/recruitment-campaign' })
   // Sprint-08D — Interview Agent Domain
   await app.register((await import('./routes/recruitment-interview.routes.js')).default, { prefix: '/api/enterprise/recruitment-interview' })
+  // Sprint-09: Recruitment Analytics (ROI Dashboard, Capability Center, Automation, Renewal)
+  await app.register((await import('./routes/recruitment-analytics.routes.js')).recruitmentAnalyticsRoutes)
   // Phase 5-B6 — Enterprise Pipeline Center (Kanban + Timeline + Notes + Tags + AI Actions)
   await app.register((await import('./routes/enterprise-pipeline.routes.js')).enterprisePipelineRoutes)
+  // Sprint-08 — Hiring Intelligence (招聘洞察 + 决策记录)
+  await app.register((await import('./routes/hiring-intelligence.routes.js')).hiringIntelligenceRoutes)
   // Phase 5-B7 — Enterprise Recruitment (workspace + JD generate + match)
   await app.register((await import('./routes/enterprise.routes.js')).enterpriseRoutes)
   ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
@@ -485,6 +492,7 @@ await app.register(projectV2Routes)
   // Admin Market Agents
   await app.register(adminMarketAgentRoutes)
   await app.register(adminRecruitmentRoutes)
+  await app.register(adminRevenueDashboardRoutes)
 
   // Candidate Domain routes (P3)
   const { default: candidateProfileRoutes } = await import('./services/candidate/routes/candidate-profile.routes.js')

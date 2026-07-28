@@ -16,6 +16,9 @@ import phaseXRoutes from './phasex.js'
 import uploadRoutes from './upload.js'
 import libraryReaderRoutes from './library-reader.js'
 import adminReviewRoutes from './admin-review.js'
+import masterPlanRoutes from './master-plan.js'
+import characterStateRoutes from './character-state.js'
+import storyEventRoutes from './story-event.js'
 
 export default async function hdzRoutes(app: FastifyInstance) {
   // 图书馆管理员 health 检查（公开接口）
@@ -37,4 +40,7 @@ export default async function hdzRoutes(app: FastifyInstance) {
   await app.register(uploadRoutes)
   await app.register(libraryReaderRoutes)
   await app.register(adminReviewRoutes)
+  await app.register(masterPlanRoutes)
+  await app.register(characterStateRoutes)
+  await app.register(storyEventRoutes)
 }

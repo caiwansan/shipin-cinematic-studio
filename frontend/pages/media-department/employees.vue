@@ -242,6 +242,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 import { KunlunMediaApi } from '~/composables/enterprise/useMediaApi'
@@ -294,7 +295,7 @@ const canProceed = computed(() => {
 })
 
 function getToken(): string {
-  try { return localStorage.getItem('accessToken') || '' } catch { return '' }
+  try { return getAuthToken() || '' } catch { return '' }
 }
 
 function positionIcon(positionType: string): string {

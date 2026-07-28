@@ -174,6 +174,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, reactive, onMounted } from 'vue'
 
 const activeTab = ref('create')
@@ -236,7 +237,7 @@ function timelineActionLabel(action: string) {
 
 async function loadAgents() {
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/agent-profiles', {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -251,7 +252,7 @@ async function loadAgents() {
 
 async function loadTasks() {
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/agent-tasks', {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -266,7 +267,7 @@ async function loadTasks() {
 
 async function loadTimeline(taskId: string) {
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken() || ''
     const res = await fetch(`/api/enterprise/agent-tasks/${taskId}/timeline`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -289,7 +290,7 @@ async function handleCreateTask() {
   error.value = ''
 
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/agent-tasks', {
       method: 'POST',
       headers: {

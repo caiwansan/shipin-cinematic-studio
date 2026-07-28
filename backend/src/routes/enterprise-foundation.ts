@@ -8,8 +8,29 @@ import { prisma } from '../utils/index.js'
 import { enterpriseProfileService } from '../services/enterprise/organization/enterprise-profile.service.js'
 import { aiProviderConfigService } from '../services/enterprise/organization/ai-provider-config.service.js'
 import { testProviderConnection } from '../services/enterprise/organization/ai-provider-config.service.js'
+import { getEnterpriseContext } from '../repositories/recruitment/enterprise-member.repository.js'
 
 export async function enterpriseFoundationRoutes(app: FastifyInstance) {
+
+  // GET /api/enterprise/foundation/workspace — 获取当前用户企业的招聘 workspaceId
+  app.get('/enterprise/foundation/workspace', async (request, reply) => {
+    try {
+      const userId = (request.user as any)?.id
+      if (!userId) {
+        return reply.status(401).send({ success: false, error: '未授权' })
+      }
+      const context = await getEnterpriseContext(userId)
+      if (!context) {
+        return reply.status(200).send({ success: true, data: { workspaceId: null } })
+      }
+      const workspace = await prisma.enterpriseJobWorkspace.findFirst({
+        where: { enterpriseId: context.enterpriseId },
+      })
+      return reply.send({ success: true, data: { workspaceId: workspace?.id || null } })
+    } catch (err: any) {
+      reply.status(500).send({ success: false, error: err.message })
+    }
+  })
   // ─── Enterprise Profile ─────────────────────────────────
 
   // Get enterprise profile with stats

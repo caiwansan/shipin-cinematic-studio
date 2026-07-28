@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 // ============================================================
 // Asset Service — API calls to backend
 // ============================================================
@@ -13,7 +14,7 @@ function getAuthHeaders(): Record<string, string> {
   try {
     const el = document.cookie.match(/token=([^;]+)/)
     if (el) headers['Authorization'] = `Bearer ${el[1]}`
-    const lsToken = window.localStorage.getItem('auth_token')
+    const lsToken = window.getAuthToken()
     if (lsToken) headers['Authorization'] = `Bearer ${lsToken}`
   } catch { /* ignore */ }
   return headers

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 // ─── 分析面板 ───
 // Stage1: 产品视觉分析结果（product.json）
 // Stage2: 营销策略结果（campaign.json）
@@ -26,7 +27,7 @@ async function startAnalysis() {
   stage.value = 'analyzing'
   error.value = ''
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const res = await fetch(`/api/ecom/projects/${props.projectId}/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

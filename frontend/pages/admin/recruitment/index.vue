@@ -133,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 definePageMeta({ layout: 'admin-aigc' })
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -185,7 +186,7 @@ async function loadData() {
   loading.value = true
   data.value = null
   try {
-    const token = localStorage.getItem('token') || localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || getAuthToken() || ''
     const headers: Record<string, string> = {}
     if (token) headers['Authorization'] = `Bearer ${token}`
     const res = await fetch('/api/admin/recruitment/overview', { headers })

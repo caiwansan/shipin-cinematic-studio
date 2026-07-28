@@ -38,6 +38,8 @@ const emit = defineEmits<{
 }>()
 
 // 10 个一级导航 — 昆仑镜企业数字部门 (CTO Frozen)
+// FRONTEND-RECRUITMENT-ENTRY-CONSOLIDATION-01 SubTask 3:
+// 'recruitment' 导航不再使用 SPA 模块切换，而是跳转到 SSOT 独立页面
 const navItems = [
   { id: 'dashboard', label: '企业驾驶舱', icon: '🏠', path: 'dashboard' },
   { id: 'intelligence', label: '智能洞察', icon: '🧠', path: 'intelligence' },
@@ -45,7 +47,7 @@ const navItems = [
   { id: 'execution', label: '执行中心', icon: '🚀', path: 'execution' },
   { id: 'channels', label: '渠道中心', icon: '📡', path: 'channels' },
   { id: 'ai-employees', label: 'AI 员工中心', icon: '🤖', path: 'ai-employees' },
-  { id: 'recruitment', label: 'AI 招聘中心', icon: '🎯', path: 'recruitment' },
+  { id: 'recruitment', label: 'AI 招聘中心', icon: '🎯', path: 'recruitment', isExternal: true },
   { id: 'knowledge', label: '企业知识库', icon: '📚', path: 'knowledge' },
   { id: 'growth', label: '增长分析', icon: '📈', path: 'growth' },
   { id: 'governance', label: '企业治理', icon: '🔐', path: 'governance' },
@@ -53,6 +55,11 @@ const navItems = [
 ]
 
 function handleModuleChange(pathOrModule: string) {
+  // FRONTEND-RECRUITMENT-ENTRY-CONSOLIDATION-01: recruitment → full page navigation to SSOT
+  if (pathOrModule === 'recruitment') {
+    window.location.href = '/workspace/enterprise/'
+    return
+  }
   const moduleId = pathOrModule.replace('/enterprise', '').replace('/', '') || 'dashboard'
   emit('module-change', moduleId)
 }

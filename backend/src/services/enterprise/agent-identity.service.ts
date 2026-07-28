@@ -70,7 +70,7 @@ export class AgentIdentityService {
         employeeId: input.employeeId,
         agentId,
         namespace,
-        runtime: 'openclaw',
+        runtime: 'enterprise', // Sprint-02 Fix: 企业 agent 必须使用 enterprise runtime
         runtimeStatus: 'active',
         totalTasks: 0,
         totalErrors: 0,

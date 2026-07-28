@@ -87,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 
 // Types
@@ -198,7 +199,7 @@ async function fetchData() {
   }
 
   try {
-    const token = localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch(`/api/enterprise/outcomes/summary?period=TODAY`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

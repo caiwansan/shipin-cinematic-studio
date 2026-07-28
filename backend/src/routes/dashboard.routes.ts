@@ -15,7 +15,7 @@ export const dashboardRoutes = async (fastify: FastifyInstance) => {
         prisma.recruitmentPipeline.count({ where: workspaceId ? { workspaceId } : {} }),
         prisma.interviewSession.count({ where: workspaceId ? { workspaceId } : {} }),
         prisma.jobPosting.count({ where: workspaceId ? { workspaceId } : {} }),
-        prisma.jobCandidate.count({ where: workspaceId ? { workspaceId } : {} }),
+        prisma.careerProfile.count({ where: workspaceId ? { workspaceId: { has: workspaceId } } : {} }),
       ])
 
       // 最近活动

@@ -9,6 +9,7 @@ import { enterpriseAgentService } from '../services/enterprise/enterprise-agent.
 import { modelRouter } from '../services/enterprise/model-router.service.js'
 import { agentAuditService } from '../services/enterprise/agent-audit.service.js'
 import { enterpriseOnboarding } from '../services/enterprise/enterprise-onboarding.service.js'
+import { entitlementService } from '../services/enterprise/enterprise-entitlement.service.js'
 import { tenantOwnershipGuard } from '../enterprise/reality/tenant-guard.js'
 
 export async function enterpriseRoutes(app: FastifyInstance) {
@@ -144,6 +145,18 @@ export async function enterpriseRoutes(app: FastifyInstance) {
       return reply.status(400).send({ success: false, error: 'name/agentType 必填' })
     }
     try {
+      // Sprint-03: Entitlement 检查 — 创建 Agent 前验证套餐限额
+      const orgId = body.organizationId || tenantId
+      const check = await entitlementService.checkAgentCapability(orgId)
+      if (!check.allowed) {
+        return reply.status(403).send({
+          success: false,
+          error: 'AGENT_LIMIT_REACHED',
+          message: check.reason,
+          current: check.current,
+          limit: check.limit,
+        })
+      }
       const agent = await enterpriseAgentService.create({
         tenantId,
         organizationId: body.organizationId,

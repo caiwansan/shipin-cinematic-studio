@@ -27,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { getToken, setToken, clearAuth } from '~/utils/token-cache'
 definePageMeta({ layout: false })
 import { ref, onMounted } from 'vue'
@@ -40,7 +41,7 @@ const loginError = ref('')
 
 onMounted(() => {
   if (process.client) {
-    const token = localStorage.getItem('token')
+    const token = getAuthToken()
     if (token) {
       router.push('/admin/aigc/overview')
     }

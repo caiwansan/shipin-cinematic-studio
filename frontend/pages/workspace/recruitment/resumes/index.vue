@@ -304,6 +304,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 // P5-RECRUITMENT-BETA-03: 企业简历管理页
 // 数据来源：Resume + ResumeProfile
 // API：GET/POST/DELETE /enterprise/resumes
@@ -319,7 +320,7 @@ const selectedResume = ref<any>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const toast = ref<{ message: string; type: string } | null>(null)
 
-const token = computed(() => localStorage.getItem('token') || '')
+const token = computed(() => getAuthToken() || '')
 const workspaceId = computed(() => localStorage.getItem('workspace_id') || localStorage.getItem('enterprise_id') || '')
 
 const parsedCount = computed(() => resumes.value.filter(r => r.status === 'parsed' || r.status === 'analyzed').length)

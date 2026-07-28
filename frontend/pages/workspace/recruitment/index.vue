@@ -12,6 +12,7 @@
       <div class="rh-header-right">
         <WorkspaceSwitcher />
         <button @click="goToCreateJob" class="rh-create-btn">➕ 创建岗位</button>
+        <button @click="goToEnterprise" class="rh-enterprise-btn" title="进入企业招聘工作台">🏢 企业工作台</button>
       </div>
     </div>
 
@@ -34,7 +35,7 @@
       <div class="gate-card">
         <div class="gate-icon">🏢</div>
         <h2>企业身份认证</h2>
-        <p>您需要完成企业身份认证才能使用 AI 招聘中心</p>
+        <p>完成企业认证，解锁 AI 招聘团队为您自动寻找人才</p>
         <div class="gate-features">
           <div class="gate-feature">🤖 AI 猎聘顾问 — 智能寻找和分析候选人</div>
           <div class="gate-feature">🎤 AI 面试官 — 设计面试流程评估人才</div>
@@ -107,12 +108,22 @@
       <div v-if="!loading" class="recruitment-section">
         <h2 class="section-title">📌 招聘任务中心</h2>
 
-        <!-- Empty State -->
-        <div v-if="jobs.length === 0" class="task-empty">
+        <!-- Phase 7: Error State -->
+        <div v-if="jobsLoadError" class="task-error">
+          <div class="task-error-icon">⚠️</div>
+          <h3>{{ jobsLoadError }}</h3>
+          <button @click="refresh" class="task-error-btn">重新加载</button>
+        </div>
+
+        <!-- Phase 7: Empty State (only when no error) -->
+        <div v-else-if="jobs.length === 0" class="task-empty">
           <div class="task-empty-icon">🤖</div>
           <h3>开始你的第一次招聘</h3>
           <p>创建首个岗位，AI 猎聘顾问将自动为您寻找最佳候选人</p>
-          <button @click="goToCreateJob" class="task-empty-btn">➕ 创建首个岗位</button>
+          <div class="task-empty-actions">
+            <button @click="goToCreateJob" class="task-empty-btn task-empty-btn--primary">➕ 创建首个岗位</button>
+            <button @click="goToTalentSearch" class="task-empty-btn">🔍 浏览人才库</button>
+          </div>
         </div>
 
         <!-- Job List -->
@@ -142,6 +153,14 @@
             <div class="job-card-footer">
               <span class="job-date">创建于 {{ formatDate(job.createdAt) }}</span>
               <div class="job-actions" @click.stop>
+                <button 
+                  v-if="job.status === 'published' || job.status === 'paused'" 
+                  class="job-action-btn match" 
+                  @click="handleStartMatch(job.id)"
+                  :disabled="matchingJobId === job.id"
+                >
+                  {{ matchingJobId === job.id ? '⏳ 匹配中...' : '🎯 开始 AI 匹配' }}
+                </button>
                 <button v-if="job.status === 'draft'" class="job-action-btn publish" @click="handlePublish(job.id)">发布</button>
                 <button v-if="job.status === 'published'" class="job-action-btn pause" @click="handlePause(job.id)">暂停</button>
                 <button v-if="job.status === 'paused'" class="job-action-btn publish" @click="handlePublish(job.id)">发布</button>
@@ -150,6 +169,14 @@
               <span class="job-arrow">→</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ═══ Candidate Error (Phase 7) ═══ -->
+      <div v-if="!loading && candidatesLoadError" class="recruitment-section">
+        <div class="task-error" style="padding: 24px;">
+          <span>⚠️ {{ candidatesLoadError }}</span>
+          <button @click="refresh" class="task-error-btn" style="margin-left: 12px;">重试</button>
         </div>
       </div>
 
@@ -219,26 +246,36 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import { getEnterpriseIdentity, type EnterpriseIdentityStatus } from '~/studio-v2/api/job/enterprise-identity-api'
 import { updatePostingStatus, listEnterpriseCandidates, analyzeCandidate, explainMatch, generateInterviewQuestions } from '~/studio-v2/api/recruitment-api'
 import AgentWorkforceCard from '~/components/recruitment/AgentWorkforceCard.vue'
 
 // ─── Navigation ───
+// Sprint 07 Week 1: 统一入口 — 所有导航指向 /workspace/enterprise
 function goToHome() {
   window.location.href = '/'
 }
 
+function goToEnterprise() {
+  window.location.href = '/workspace/enterprise'
+}
+
 function goToCreateJob() {
-  window.location.href = '/workspace/recruitment/jobs/create'
+  window.location.href = '/workspace/enterprise/jobs'
 }
 
 function goToJobDetail(id: string) {
-  window.location.href = `/workspace/recruitment/jobs/${id}`
+  window.location.href = `/workspace/enterprise/jobs/${id}`
 }
 
 function goToOnboarding() {
   window.location.href = '/workspace/enterprise/onboarding'
+}
+
+function goToTalentSearch() {
+  window.location.href = '/workspace/recruitment/matches'
 }
 
 async function retryIdentity() {
@@ -262,7 +299,7 @@ function goToJobList() {
 }
 
 function goToInterview() {
-  window.location.href = '/workspace/recruitment/interviews'
+  window.location.href = '/workspace/enterprise/interview'
 }
 
 // ─── Identity Gate ───
@@ -274,12 +311,19 @@ const loading = ref(true)
 const jobs = ref<any[]>([])
 const candidates = ref<any[]>([])
 const error = ref('')
+// Phase 7: 区分 loading/success/empty/error 状态
+const jobsLoadError = ref('')
+const candidatesLoadError = ref('')
 
 // ─── Talent Agent ───
 const talentResults = ref<Record<string, any>>({})
 const analyzingId = ref<string | null>(null)
 const explainingId = ref<string | null>(null)
 const generatingInterviewId = ref<string | null>(null)
+
+// ─── AI 匹配 ───
+const matchingJobId = ref<string | null>(null)
+const matchResults = ref<Record<string, any>>({})
 
 // ─── Stats ───
 const stats = computed(() => {
@@ -399,6 +443,33 @@ function clearTalentResult(candidateId: string) {
   delete talentResults.value[candidateId]
 }
 
+// ─── AI 匹配 ───
+async function handleStartMatch(jobId: string) {
+  matchingJobId.value = jobId
+  try {
+    const token = getAuthToken() || ''
+    const workspaceId = localStorage.getItem('workspace_id') || localStorage.getItem('enterprise_id') || ''
+    const res = await fetch('/api/enterprise/match', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ workspaceId, jobId }),
+    })
+    if (res.ok) {
+      const json = await res.json()
+      matchResults.value[jobId] = json
+      // 刷新数据以显示最新匹配数
+      await refresh()
+    }
+  } catch (e: any) {
+    console.error('AI 匹配失败:', e)
+  } finally {
+    matchingJobId.value = null
+  }
+}
+
 function formatTalentResult(result: any): string {
   if (!result?.content) return ''
   // Simple markdown to HTML conversion
@@ -434,11 +505,14 @@ function formatDate(dateStr: string): string {
 }
 
 // ─── Data Loading ───
+// Phase 7: 区分 loading/success/empty/error 状态
 async function refresh() {
   loading.value = true
   error.value = ''
+  jobsLoadError.value = ''
+  candidatesLoadError.value = ''
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/postings', {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -449,7 +523,9 @@ async function refresh() {
       // No enterprise identity
       jobs.value = []
     } else {
-      throw new Error(`API Error: ${res.status}`)
+      // Phase 7: 不伪装为空，记录错误
+      jobsLoadError.value = `招聘数据加载失败 (HTTP ${res.status})`
+      jobs.value = []
     }
 
     // Load candidates
@@ -458,8 +534,9 @@ async function refresh() {
       if (candRes.success) {
         candidates.value = candRes.candidates
       }
-    } catch (e) {
-      // Non-critical: candidates optional
+    } catch (e: any) {
+      // Phase 7: 候选人加载失败不静默
+      candidatesLoadError.value = '候选人数据加载失败'
       candidates.value = []
     }
   } catch (e: any) {
@@ -572,6 +649,23 @@ onMounted(async () => {
   transform: translateY(-1px);
 }
 
+.rh-enterprise-btn {
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.rh-enterprise-btn:hover {
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+  transform: translateY(-1px);
+}
+
 /* ─── Cockpit Stat Card Zero State ─── */
 .stat-card {
   position: relative;
@@ -677,6 +771,45 @@ onMounted(async () => {
   }
 }
 
+/* ─── Task Error State (Phase 7) ─── */
+.task-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px;
+  text-align: center;
+  background: #0d1220;
+  border: 1px solid #3a2a1a;
+  border-radius: 12px;
+}
+
+.task-error-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.task-error h3 {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  color: #f59e0b;
+}
+
+.task-error-btn {
+  padding: 10px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  color: #f59e0b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.task-error-btn:hover {
+  background: rgba(245, 158, 11, 0.25);
+}
+
 /* ─── Task Empty State ─── */
 .task-empty {
   display: flex;
@@ -707,19 +840,39 @@ onMounted(async () => {
   max-width: 400px;
 }
 
+.task-empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+  max-width: 280px;
+}
+
 .task-empty-btn {
   padding: 12px 28px;
   font-size: 0.95rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   color: #fff;
   cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.1s;
+  transition: all 0.15s;
+  width: 100%;
 }
 
 .task-empty-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.task-empty-btn--primary {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  border: none;
+}
+
+.task-empty-btn--primary:hover {
   box-shadow: 0 4px 20px rgba(96, 165, 250, 0.35);
   transform: translateY(-1px);
 }
@@ -1013,6 +1166,19 @@ onMounted(async () => {
 }
 .job-action-btn.close:hover {
   background: rgba(239, 68, 68, 0.25);
+}
+
+.job-action-btn.match {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+.job-action-btn.match:hover {
+  background: rgba(34, 197, 94, 0.25);
+}
+.job-action-btn.match:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ─── Candidate List ─── */

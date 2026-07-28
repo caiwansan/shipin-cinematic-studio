@@ -63,6 +63,21 @@
             🎨 风格DNA
           </button>
         </div>
+        <div class="hdz-ws-sidebar-section">
+          <div class="hdz-ws-sidebar-title">规划</div>
+          <button class="hdz-ws-sidebar-btn" :class="{ active: tab === 'masterplan' }" @click="tab = 'masterplan'">
+            <span class="hdz-sidebar-icon">📖</span>
+            <span class="hdz-sidebar-label">总纲</span>
+          </button>
+          <button class="hdz-ws-sidebar-btn" :class="{ active: tab === 'characterlife' }" @click="tab = 'characterlife'">
+            <span class="hdz-sidebar-icon">👤</span>
+            <span class="hdz-sidebar-label">角色</span>
+          </button>
+          <button class="hdz-ws-sidebar-btn" :class="{ active: tab === 'timeline' }" @click="tab = 'timeline'">
+            <span class="hdz-sidebar-icon">⏳</span>
+            <span class="hdz-sidebar-label">时间线</span>
+          </button>
+        </div>
 
         <!-- 左栏底部卡片 -->
         <div class="hdz-ws-sidebar-bottom">
@@ -852,13 +867,16 @@
             <div v-for="m in memoryTypes" :key="m.key" class="hdz-memory-card">
               <div class="hdz-memory-icon">{{ m.icon }}</div>
               <div class="hdz-memory-name">{{ m.label }}</div>
-              <div class="hdz-memory-status" :class="memoryStatus(m.key) ? 'hdz-mem--ready' : 'hdz-mem--empty'">
-                {{ memoryStatus(m.key) ? '✅ 已记录' : '⏳ 待生成' }}
+              <div class="hdz-memory-status" :class="memoryTypeSet.has(m.key) ? 'hdz-mem--ready' : 'hdz-mem--empty'">
+                {{ memoryTypeSet.has(m.key) ? '✅ 已记录' : '⏳ 待生成' }}
               </div>
             </div>
           </div>
           <div class="hdz-memory-refresh">
-            <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="refreshMemory">🔄 刷新记忆状态</button>
+            <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="refreshMemory" :disabled="memoryLoading">
+              {{ memoryLoading ? '⏳ 刷新中...' : '🔄 刷新记忆状态' }}
+            </button>
+            <span v-if="memoryMsg" class="hdz-memory-msg" :class="memoryMsg.startsWith('✅') ? 'hdz-memory-msg--ok' : 'hdz-memory-msg--err'">{{ memoryMsg }}</span>
           </div>
         </div>
 
@@ -1030,6 +1048,263 @@
           </div>
         </div>
 
+        <!-- 📖 总纲中心 -->
+        <div v-if="tab === 'masterplan'" class="hdz-ws-panel hdz-master-plan">
+          <div class="hdz-panel-header">
+            <span>📖 总纲中心</span>
+            <div class="hdz-panel-header-actions">
+              <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="loadMasterPlan" :disabled="masterPlanLoading">
+                {{ masterPlanLoading ? '⏳ 加载中...' : '🔄 刷新' }}
+              </button>
+              <button class="hdz-btn hdz-btn-primary hdz-btn-xs" @click="generateMasterPlan" :disabled="masterPlanLoading">
+                {{ masterPlanLoading ? '⏳ 生成中...' : '✨ 重新生成' }}
+              </button>
+            </div>
+          </div>
+          <div v-if="masterPlanLoading && !masterPlan" class="hdz-panel-empty">
+            <p>⏳ 正在加载总规划...</p>
+          </div>
+          <div v-else-if="!masterPlan" class="hdz-panel-empty">
+            <p>📋 还没有总规划</p>
+            <p class="hdz-chat-empty-hint">点击「重新生成」按钮创建小说总规划</p>
+          </div>
+          <div v-else class="hdz-mp-content">
+            <!-- 基本信息 -->
+            <div class="hdz-mp-section">
+              <div class="hdz-mp-section-title">📚 基本信息</div>
+              <div class="hdz-mp-info-grid">
+                <div class="hdz-mp-info-item">
+                  <span class="hdz-mp-info-label">书名</span>
+                  <span class="hdz-mp-info-value">{{ masterPlan.title || '未命名' }}</span>
+                </div>
+                <div class="hdz-mp-info-item">
+                  <span class="hdz-mp-info-label">类型</span>
+                  <span class="hdz-mp-info-value">{{ masterPlan.genre || '未设定' }}</span>
+                </div>
+                <div class="hdz-mp-info-item">
+                  <span class="hdz-mp-info-label">总篇幅</span>
+                  <span class="hdz-mp-info-value">{{ masterPlan.totalWords || '未设定' }}</span>
+                </div>
+              </div>
+            </div>
+            <!-- 世界观设定 -->
+            <div class="hdz-mp-section" v-if="masterPlan.worldbuilding">
+              <div class="hdz-mp-section-title">🌍 世界观设定</div>
+              <div class="hdz-mp-worldbuilding">
+                <div v-for="(val, key) in (typeof masterPlan.worldbuilding === 'object' ? masterPlan.worldbuilding : {})" :key="key" class="hdz-mp-wb-item">
+                  <span class="hdz-mp-wb-label">{{ key }}</span>
+                  <span class="hdz-mp-wb-value">{{ val }}</span>
+                </div>
+                <p v-if="typeof masterPlan.worldbuilding === 'string'" class="hdz-mp-text">{{ masterPlan.worldbuilding }}</p>
+              </div>
+            </div>
+            <!-- 三幕结构 -->
+            <div class="hdz-mp-section" v-if="masterPlan.threeActStructure">
+              <div class="hdz-mp-section-title">🎭 三幕结构</div>
+              <div class="hdz-mp-acts">
+                <div class="hdz-mp-act" v-if="masterPlan.threeActStructure.act1">
+                  <div class="hdz-mp-act-header">
+                    <span class="hdz-mp-act-no">第一幕</span>
+                    <span class="hdz-mp-act-name">{{ masterPlan.threeActStructure.act1.name || '开端' }}</span>
+                  </div>
+                  <p class="hdz-mp-act-desc">{{ masterPlan.threeActStructure.act1.description || masterPlan.threeActStructure.act1 }}</p>
+                </div>
+                <div class="hdz-mp-act" v-if="masterPlan.threeActStructure.act2">
+                  <div class="hdz-mp-act-header">
+                    <span class="hdz-mp-act-no">第二幕</span>
+                    <span class="hdz-mp-act-name">{{ masterPlan.threeActStructure.act2.name || '发展' }}</span>
+                  </div>
+                  <p class="hdz-mp-act-desc">{{ masterPlan.threeActStructure.act2.description || masterPlan.threeActStructure.act2 }}</p>
+                </div>
+                <div class="hdz-mp-act" v-if="masterPlan.threeActStructure.act3">
+                  <div class="hdz-mp-act-header">
+                    <span class="hdz-mp-act-no">第三幕</span>
+                    <span class="hdz-mp-act-name">{{ masterPlan.threeActStructure.act3.name || '结局' }}</span>
+                  </div>
+                  <p class="hdz-mp-act-desc">{{ masterPlan.threeActStructure.act3.description || masterPlan.threeActStructure.act3 }}</p>
+                </div>
+              </div>
+            </div>
+            <!-- 卷规划 -->
+            <div class="hdz-mp-section" v-if="masterPlan.volumes && masterPlan.volumes.length > 0">
+              <div class="hdz-mp-section-title">📦 卷规划</div>
+              <div class="hdz-mp-volumes">
+                <div v-for="(vol, idx) in masterPlan.volumes" :key="idx" class="hdz-mp-volume">
+                  <div class="hdz-mp-volume-header">
+                    <span class="hdz-mp-volume-no">{{ vol.name || '第' + (idx + 1) + '卷' }}</span>
+                    <span class="hdz-mp-volume-range">{{ vol.chapterRange || '' }}</span>
+                  </div>
+                  <p class="hdz-mp-volume-desc">{{ vol.description || '' }}</p>
+                </div>
+              </div>
+            </div>
+            <!-- 角色成长弧线 -->
+            <div class="hdz-mp-section" v-if="masterPlan.characterArcs && masterPlan.characterArcs.length > 0">
+              <div class="hdz-mp-section-title">📈 角色成长弧线</div>
+              <div class="hdz-mp-arcs">
+                <div v-for="(arc, idx) in masterPlan.characterArcs" :key="idx" class="hdz-mp-arc">
+                  <span class="hdz-mp-arc-name">{{ arc.characterName || arc.name || '角色' }}</span>
+                  <span class="hdz-mp-arc-desc">{{ arc.description || arc }}</span>
+                </div>
+              </div>
+            </div>
+            <!-- 伏笔系统 -->
+            <div class="hdz-mp-section" v-if="masterPlan.foreshadowing && masterPlan.foreshadowing.length > 0">
+              <div class="hdz-mp-section-title">🎣 伏笔系统</div>
+              <div class="hdz-mp-foreshadowing">
+                <div v-for="(fs, idx) in masterPlan.foreshadowing" :key="idx" class="hdz-mp-fs-item">
+                  <span class="hdz-mp-fs-icon">{{ fs.type === 'payoff' ? '🎯' : '🎣' }}</span>
+                  <div class="hdz-mp-fs-content">
+                    <span class="hdz-mp-fs-title">{{ fs.title || fs.description || '伏笔' }}</span>
+                    <span v-if="fs.description && fs.title" class="hdz-mp-fs-desc">{{ fs.description }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 👤 人物生命面板 -->
+        <div v-if="tab === 'characterlife'" class="hdz-ws-panel hdz-character-life">
+          <div class="hdz-panel-header">
+            <span>👤 人物生命面板</span>
+            <div class="hdz-panel-header-actions">
+              <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="loadCharacterProfiles">
+                🔄 刷新
+              </button>
+            </div>
+          </div>
+          <div v-if="characterProfiles.length === 0" class="hdz-panel-empty">
+            <p>👤 暂无角色动态数据</p>
+            <p class="hdz-chat-empty-hint">角色状态将在此实时展示</p>
+          </div>
+          <div v-else class="hdz-cl-grid">
+            <div v-for="profile in characterProfiles" :key="profile.id || profile.name" class="hdz-cl-card">
+              <div class="hdz-cl-header">
+                <div class="hdz-cl-avatar">{{ profile.avatar || '👤' }}</div>
+                <div class="hdz-cl-info">
+                  <div class="hdz-cl-name">{{ profile.name || '未命名' }}</div>
+                  <span class="hdz-cl-role-badge" :class="`hdz-cl-role--${profile.role || 'supporting'}`">{{ profile.roleLabel || roleLabel(profile.role) || '配角' }}</span>
+                </div>
+                <button class="hdz-cl-expand-btn" @click="toggleClExpand(profile.id || profile.name)">
+                  {{ expandedCl.has(profile.id || profile.name) ? '▲' : '▼' }}
+                </button>
+              </div>
+              <!-- 当前状态 -->
+              <div class="hdz-cl-state" v-if="profile.state">
+                <div class="hdz-cl-state-item" v-if="profile.state.health">
+                  <span class="hdz-cl-state-icon">❤️</span>
+                  <span class="hdz-cl-state-label">健康</span>
+                  <span class="hdz-cl-state-value">{{ profile.state.health }}</span>
+                </div>
+                <div class="hdz-cl-state-item" v-if="profile.state.injury">
+                  <span class="hdz-cl-state-icon">🩸</span>
+                  <span class="hdz-cl-state-label">伤势</span>
+                  <span class="hdz-cl-state-value">{{ profile.state.injury }}</span>
+                </div>
+                <div class="hdz-cl-state-item" v-if="profile.state.ability">
+                  <span class="hdz-cl-state-icon">⚡</span>
+                  <span class="hdz-cl-state-label">能力</span>
+                  <span class="hdz-cl-state-value">{{ profile.state.ability }}</span>
+                </div>
+                <div class="hdz-cl-state-item" v-if="profile.state.mental">
+                  <span class="hdz-cl-state-icon">🧠</span>
+                  <span class="hdz-cl-state-label">心理</span>
+                  <span class="hdz-cl-state-value">{{ profile.state.mental }}</span>
+                </div>
+                <div class="hdz-cl-state-item" v-if="profile.state.location">
+                  <span class="hdz-cl-state-icon">📍</span>
+                  <span class="hdz-cl-state-label">位置</span>
+                  <span class="hdz-cl-state-value">{{ profile.state.location }}</span>
+                </div>
+                <div class="hdz-cl-state-item" v-if="profile.state.items">
+                  <span class="hdz-cl-state-icon">🎒</span>
+                  <span class="hdz-cl-state-label">物品</span>
+                  <span class="hdz-cl-state-value">{{ profile.state.items }}</span>
+                </div>
+              </div>
+              <!-- 展开：状态时间线 -->
+              <div v-if="expandedCl.has(profile.id || profile.name)" class="hdz-cl-timeline">
+                <div class="hdz-cl-timeline-title">📋 状态变更记录</div>
+                <div v-if="profile.stateHistory && profile.stateHistory.length > 0" class="hdz-cl-timeline-list">
+                  <div v-for="(record, ri) in profile.stateHistory" :key="ri" class="hdz-cl-timeline-item">
+                    <span class="hdz-cl-tl-time">{{ record.time || record.chapter || '未知' }}</span>
+                    <span class="hdz-cl-tl-change">{{ record.change || record.description || '' }}</span>
+                  </div>
+                </div>
+                <p v-else class="hdz-cl-timeline-empty">暂无状态变更记录</p>
+                <!-- 添加状态变更表单 -->
+                <div class="hdz-cl-add-form">
+                  <div class="hdz-cl-add-title">➕ 添加状态变更</div>
+                  <div class="hdz-cl-add-row">
+                    <select v-model="clForm.type" class="hdz-input hdz-input-sm">
+                      <option value="health">健康</option>
+                      <option value="injury">伤势</option>
+                      <option value="ability">能力</option>
+                      <option value="mental">心理</option>
+                      <option value="location">位置</option>
+                      <option value="items">物品</option>
+                    </select>
+                    <input v-model="clForm.value" placeholder="新状态值" class="hdz-input hdz-input-sm" />
+                    <button class="hdz-btn hdz-btn-primary hdz-btn-xs" @click="addStateChange(profile)">添加</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⏳ 剧情时间线 -->
+        <div v-if="tab === 'timeline'" class="hdz-ws-panel hdz-timeline">
+          <div class="hdz-panel-header">
+            <span>⏳ 剧情时间线</span>
+            <div class="hdz-panel-header-actions">
+              <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="loadStoryEvents">
+                🔄 刷新
+              </button>
+            </div>
+          </div>
+          <div v-if="storyEvents.length === 0" class="hdz-panel-empty">
+            <p>⏳ 暂无剧情事件</p>
+            <p class="hdz-chat-empty-hint">故事事件将在此按时间顺序展示</p>
+          </div>
+          <div v-else class="hdz-tl-content">
+            <div v-for="(group, gi) in groupedEvents" :key="gi" class="hdz-tl-chapter-group">
+              <div class="hdz-tl-chapter-title">📖 {{ group.chapter || '未知章节' }}</div>
+              <div class="hdz-tl-events">
+                <div v-for="(event, ei) in group.events" :key="ei" class="hdz-tl-event" @click="toggleTlEvent(event.id || ei)">
+                  <div class="hdz-tl-event-line">
+                    <div class="hdz-tl-event-dot"></div>
+                    <div v-if="ei < group.events.length - 1" class="hdz-tl-event-connector"></div>
+                  </div>
+                  <div class="hdz-tl-event-card">
+                    <div class="hdz-tl-event-header">
+                      <span class="hdz-tl-event-icon">{{ eventIcon(event.type) }}</span>
+                      <span class="hdz-tl-event-title">{{ event.title || '未命名事件' }}</span>
+                      <span class="hdz-tl-event-toggle">{{ expandedTl.has(event.id || ei) ? '▼' : '▶' }}</span>
+                    </div>
+                    <p class="hdz-tl-event-desc">{{ event.description || '' }}</p>
+                    <div v-if="expandedTl.has(event.id || ei)" class="hdz-tl-event-detail">
+                      <div v-if="event.characters && event.characters.length > 0" class="hdz-tl-event-row">
+                        <span class="hdz-tl-event-label">👥 参与角色</span>
+                        <span class="hdz-tl-event-value">{{ event.characters.join('、') }}</span>
+                      </div>
+                      <div v-if="event.impact" class="hdz-tl-event-row">
+                        <span class="hdz-tl-event-label">💥 影响</span>
+                        <span class="hdz-tl-event-value">{{ event.impact }}</span>
+                      </div>
+                      <div v-if="event.timestamp" class="hdz-tl-event-row">
+                        <span class="hdz-tl-event-label">🕐 时间</span>
+                        <span class="hdz-tl-event-value">{{ event.timestamp }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 📚 图书馆管理员 -->
         <LibraryReaderPanel
           v-if="tab === 'librarian'"
@@ -1194,6 +1469,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { nextTick, onMounted } from 'vue'
 const router = useRouter()
 const route = useRoute()
@@ -1271,7 +1547,7 @@ async function onFileSelected(e: Event) {
     const form = new FormData()
     form.append('file', file)
 
-    const token = (() => { try { return localStorage.getItem('auth_token') || '' } catch { return '' } })()
+    const token = (() => { try { return getAuthToken() || '' } catch { return '' } })()
     const res = await $fetch(`/api/hdz/upload/${projectId.value}`, {
       method: 'POST',
       body: form,
@@ -2258,6 +2534,8 @@ function memoryStatus(key: string) {
   return memories.value.some(m => m.type === key)
 }
 
+const memoryTypeSet = computed(() => new Set(memories.value.map((m: any) => m.type)))
+
 async function loadProject() {
   try {
     console.time('loadProject')
@@ -2506,11 +2784,23 @@ function executeStep(action: string) {
   }
 }
 
+const memoryLoading = ref(false)
+const memoryMsg = ref('')
 async function refreshMemory() {
+  memoryLoading.value = true
+  memoryMsg.value = ''
   try {
     const res: any = await $api.get(`/api/hdz/memory/${projectId.value}`)
     memories.value = res?.data?.data || []
-  } catch {}
+    const types = [...new Set(memories.value.map((m: any) => m.type))]
+    memoryMsg.value = `✅ 已刷新，共 ${memories.value.length} 条记忆，覆盖 ${types.length} 种类型`
+  } catch (e: any) {
+    console.error('[MemoryRefresh] 失败:', e)
+    memoryMsg.value = `❌ 刷新失败：${e?.message || '网络错误'}`
+  } finally {
+    memoryLoading.value = false
+    setTimeout(() => { memoryMsg.value = '' }, 3000)
+  }
 }
 
 function loadChapter() {
@@ -3079,9 +3369,139 @@ async function playScreenplayTts() {
   }
 }
 
+// ─── 总纲中心 ──────────────────────────────────
+const masterPlan = ref<any>(null)
+const masterPlanLoading = ref(false)
+
+async function loadMasterPlan() {
+  masterPlanLoading.value = true
+  try {
+    const res: any = await $api.get(`/api/hdz/projects/${projectId.value}/master-plan`)
+    masterPlan.value = res?.data?.masterPlan || res?.data?.data || null
+  } catch (e) {
+    console.error('[MasterPlan] 加载失败:', e)
+  } finally {
+    masterPlanLoading.value = false
+  }
+}
+
+async function generateMasterPlan() {
+  masterPlanLoading.value = true
+  try {
+    const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/generate`, {
+      userInput: '请生成一份完整的小说总规划',
+    })
+    if (res?.success || res?.data?.success) {
+      masterPlan.value = res.data?.masterPlan || res.data?.data?.masterPlan || null
+    }
+  } catch (e) {
+    console.error('[MasterPlan] 生成失败:', e)
+  } finally {
+    masterPlanLoading.value = false
+  }
+}
+
+// ─── 人物生命面板 ──────────────────────────────────
+const characterProfiles = ref<any[]>([])
+const expandedCl = ref(new Set<string>())
+const clForm = ref({ type: 'health', value: '' })
+
+async function loadCharacterProfiles() {
+  try {
+    const res: any = await $api.get(`/api/hdz/projects/${projectId.value}/character-profiles`)
+    characterProfiles.value = res?.data?.characterProfiles || res?.data?.data || []
+  } catch (e) {
+    console.error('[CharacterProfiles] 加载失败:', e)
+  }
+}
+
+function toggleClExpand(id: string) {
+  const s = new Set(expandedCl.value)
+  if (s.has(id)) s.delete(id); else s.add(id)
+  expandedCl.value = s
+}
+
+function addStateChange(profile: any) {
+  if (!clForm.value.value.trim()) return
+  const profileIdx = characterProfiles.value.findIndex((p: any) => (p.id || p.name) === (profile.id || profile.name))
+  if (profileIdx < 0) return
+  const p = characterProfiles.value[profileIdx]
+  if (!p.stateHistory) p.stateHistory = []
+  p.stateHistory.unshift({
+    time: '现在',
+    type: clForm.value.type,
+    change: `${clForm.value.type}: ${clForm.value.value}`,
+  })
+  if (!p.state) p.state = {}
+  p.state[clForm.value.type] = clForm.value.value
+  clForm.value.value = ''
+}
+
+// ─── 剧情时间线 ──────────────────────────────────
+const storyEvents = ref<any[]>([])
+const expandedTl = ref(new Set<string | number>())
+
+async function loadStoryEvents() {
+  try {
+    const res: any = await $api.get(`/api/hdz/projects/${projectId.value}/story-events`)
+    storyEvents.value = res?.data?.storyEvents || res?.data?.data || []
+  } catch (e) {
+    console.error('[StoryEvents] 加载失败:', e)
+  }
+}
+
+function toggleTlEvent(id: string | number) {
+  const s = new Set(expandedTl.value)
+  if (s.has(id)) s.delete(id); else s.add(id)
+  expandedTl.value = s
+}
+
+function eventIcon(type: string): string {
+  const map: Record<string, string> = {
+    conflict: '⚔️',
+    revelation: '💡',
+    decision: '🤔',
+    action: '🏃',
+    dialogue: '💬',
+    battle: '⚔️',
+    romance: '❤️',
+    mystery: '🔍',
+    death: '💀',
+    birth: '🌱',
+    journey: '🛤️',
+    meeting: '🤝',
+    separation: '👋',
+    other: '📌',
+  }
+  return map[type] || '📌'
+}
+
+const groupedEvents = computed(() => {
+  const groups: Record<string, { chapter: string; events: any[] }> = {}
+  for (const ev of storyEvents.value) {
+    const ch = ev.chapter || ev.chapterTitle || '未知章节'
+    if (!groups[ch]) groups[ch] = { chapter: ch, events: [] }
+    groups[ch].events.push(ev)
+  }
+  return Object.values(groups)
+})
+
 onMounted(() => {
   checkWritingTasks()
   loadScreenplays()
+})
+
+// ─── tab 切换时加载数据 ──────────────────────────
+watch(tab, (val) => {
+  if (val === 'screenplay') {
+    loadScreenplays()
+  } else if (val === 'masterplan') {
+    loadMasterPlan()
+  } else if (val === 'characterlife') {
+    loadCharacterProfiles()
+  } else if (val === 'timeline') {
+    loadStoryEvents()
+  }
 })
 
 // ---- 大纲分页 ----
@@ -3641,7 +4061,10 @@ async function showLibraryReader() {
 .hdz-memory-status { font-size: 0.7rem; }
 .hdz-mem--ready { color: #2e7d32; }
 .hdz-mem--empty { color: #aaa; }
-.hdz-memory-refresh { margin-top: 16px; text-align: center; }
+.hdz-memory-refresh { margin-top: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.hdz-memory-msg { font-size: 0.75rem; padding: 4px 10px; border-radius: 4px; }
+.hdz-memory-msg--ok { color: #16a34a; background: rgba(22,163,74,0.08); }
+.hdz-memory-msg--err { color: #dc2626; background: rgba(220,38,38,0.08); }
 
 /* Style */
 .hdz-style-area { max-width: 600px; }
@@ -4584,5 +5007,461 @@ async function showLibraryReader() {
   color: #666;
   padding: 0 8px;
   white-space: nowrap;
+}
+
+/* ===== 总纲中心 ===== */
+.hdz-master-plan { min-height: 60vh; }
+.hdz-mp-content { display: flex; flex-direction: column; gap: 20px; }
+.hdz-mp-section {
+  padding: 16px 20px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.hdz-mp-section-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.hdz-mp-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.hdz-mp-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hdz-mp-info-label {
+  font-size: 0.7rem;
+  color: #999;
+  font-weight: 500;
+}
+.hdz-mp-info-value {
+  font-size: 0.9rem;
+  color: #333;
+  font-weight: 500;
+}
+.hdz-mp-worldbuilding {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hdz-mp-wb-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hdz-mp-wb-label {
+  font-size: 0.72rem;
+  color: #999;
+  font-weight: 500;
+}
+.hdz-mp-wb-value {
+  font-size: 0.85rem;
+  color: #444;
+  line-height: 1.6;
+}
+.hdz-mp-text {
+  font-size: 0.85rem;
+  color: #444;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.hdz-mp-acts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hdz-mp-act {
+  padding: 12px 16px;
+  background: rgba(168,130,255,0.04);
+  border-radius: 8px;
+  border-left: 3px solid rgba(168,130,255,0.3);
+}
+.hdz-mp-act-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.hdz-mp-act-no {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #7a5f9a;
+  padding: 2px 8px;
+  background: rgba(168,130,255,0.1);
+  border-radius: 4px;
+}
+.hdz-mp-act-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+}
+.hdz-mp-act-desc {
+  font-size: 0.82rem;
+  color: #666;
+  line-height: 1.6;
+}
+.hdz-mp-volumes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hdz-mp-volume {
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.02);
+  border-radius: 6px;
+}
+.hdz-mp-volume-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.hdz-mp-volume-no {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+}
+.hdz-mp-volume-range {
+  font-size: 0.7rem;
+  color: #999;
+}
+.hdz-mp-volume-desc {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.6;
+}
+.hdz-mp-arcs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hdz-mp-arc {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.02);
+  border-radius: 6px;
+}
+.hdz-mp-arc-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  min-width: 80px;
+}
+.hdz-mp-arc-desc {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.6;
+  flex: 1;
+}
+.hdz-mp-foreshadowing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hdz-mp-fs-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.02);
+  border-radius: 6px;
+}
+.hdz-mp-fs-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.hdz-mp-fs-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hdz-mp-fs-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+}
+.hdz-mp-fs-desc {
+  font-size: 0.78rem;
+  color: #888;
+  line-height: 1.5;
+}
+
+/* ===== 人物生命面板 ===== */
+.hdz-character-life { min-height: 60vh; }
+.hdz-cl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+.hdz-cl-card {
+  padding: 16px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.06);
+  transition: all 0.2s;
+}
+.hdz-cl-card:hover {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(168,130,255,0.15);
+}
+.hdz-cl-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.hdz-cl-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: rgba(168,130,255,0.08);
+  flex-shrink: 0;
+}
+.hdz-cl-info {
+  flex: 1;
+  min-width: 0;
+}
+.hdz-cl-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+}
+.hdz-cl-role-badge {
+  font-size: 0.65rem;
+  padding: 1px 8px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.04);
+  color: #888;
+}
+.hdz-cl-role--protagonist { background: rgba(168,130,255,0.12); color: #6b5a9f; }
+.hdz-cl-role--antagonist { background: rgba(200,60,60,0.12); color: #c0392b; }
+.hdz-cl-role--supporting { background: rgba(76,175,80,0.12); color: #2e7d32; }
+.hdz-cl-role--minor { background: rgba(0,0,0,0.04); color: #888; }
+.hdz-cl-expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #aaa;
+  transition: all 0.15s;
+}
+.hdz-cl-expand-btn:hover { color: #666; background: rgba(0,0,0,0.04); }
+.hdz-cl-state {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  padding: 10px;
+  background: rgba(0,0,0,0.02);
+  border-radius: 8px;
+}
+.hdz-cl-state-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 6px;
+}
+.hdz-cl-state-icon { font-size: 1.1rem; }
+.hdz-cl-state-label { font-size: 0.65rem; color: #999; }
+.hdz-cl-state-value { font-size: 0.78rem; color: #333; font-weight: 500; text-align: center; }
+.hdz-cl-timeline {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.hdz-cl-timeline-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 8px;
+}
+.hdz-cl-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.hdz-cl-timeline-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.02);
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+.hdz-cl-tl-time {
+  color: #7a5f9a;
+  font-weight: 500;
+  min-width: 50px;
+  flex-shrink: 0;
+}
+.hdz-cl-tl-change { color: #666; }
+.hdz-cl-timeline-empty {
+  font-size: 0.78rem;
+  color: #aaa;
+  text-align: center;
+  padding: 12px 0;
+}
+.hdz-cl-add-form {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(168,130,255,0.04);
+  border-radius: 6px;
+}
+.hdz-cl-add-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 6px;
+}
+.hdz-cl-add-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ===== 剧情时间线 ===== */
+.hdz-timeline { min-height: 60vh; }
+.hdz-tl-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 8px;
+}
+.hdz-tl-chapter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hdz-tl-chapter-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  padding: 6px 12px;
+  background: rgba(168,130,255,0.06);
+  border-radius: 6px;
+  border-left: 3px solid rgba(168,130,255,0.3);
+}
+.hdz-tl-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-left: 16px;
+  padding-left: 20px;
+  border-left: 2px solid rgba(0,0,0,0.08);
+}
+.hdz-tl-event {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.hdz-tl-event-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: -31px;
+  flex-shrink: 0;
+}
+.hdz-tl-event-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(168,130,255,0.5);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px rgba(168,130,255,0.2);
+}
+.hdz-tl-event-connector {
+  width: 2px;
+  flex: 1;
+  background: rgba(0,0,0,0.06);
+}
+.hdz-tl-event-card {
+  flex: 1;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.06);
+  transition: all 0.15s;
+}
+.hdz-tl-event-card:hover {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(168,130,255,0.15);
+}
+.hdz-tl-event-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.hdz-tl-event-icon { font-size: 1rem; }
+.hdz-tl-event-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+.hdz-tl-event-toggle {
+  font-size: 0.65rem;
+  color: #aaa;
+}
+.hdz-tl-event-desc {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.6;
+}
+.hdz-tl-event-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hdz-tl-event-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.hdz-tl-event-label {
+  font-size: 0.72rem;
+  color: #999;
+  font-weight: 500;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+.hdz-tl-event-value {
+  font-size: 0.8rem;
+  color: #444;
+  line-height: 1.5;
+}
+
+/* ===== 侧边栏图标 ===== */
+.hdz-sidebar-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.hdz-sidebar-label {
+  flex: 1;
 }
 </style>

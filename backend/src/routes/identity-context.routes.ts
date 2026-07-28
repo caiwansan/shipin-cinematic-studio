@@ -4,12 +4,14 @@
  * Sprint-08: 统一身份上下文服务
  * GET /api/identity/context → { user, workspace, enterprise, membership, subscription }
  *
- * 唯一合法获取当前用户身份/企业/工作空间上下文的入口。
- * 所有 Tenant 判断都来自数据库，不依赖 localStorage。
+ * Sprint-Enterprise-Identity-Hardening-01 Phase 3:
+ * 使用 EnterpriseContextService 作为唯一解析入口。
+ * 所有 organizationId:userId 回退已修复为通过 OrgMember 关联查询。
  */
 
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
 
 export default async function identityContextRoutes(fastify: FastifyInstance) {
 
@@ -45,110 +47,35 @@ export default async function identityContextRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: '用户不存在' })
       }
 
-      // 3. Find enterprise profile
-      // 优先级: EnterpriseMember (最直接的 User → Enterprise 链接) > onboard- 组织 > 旧模型 > 迁移模型
-      let enterpriseProfile: any = null
-      let jobProfile: any = null
-      let membershipInfo: any = null
+      // 3. 使用统一 EnterpriseContextService 解析企业上下文
+      const ctx = await resolveCurrentEnterprise(userId)
 
-      // 3a. 首选: 通过 EnterpriseMember 查找 (最直接的 User → Enterprise 链接)
-      const entMember = await prisma.enterpriseMember.findFirst({
-        where: { userId, status: 'ACTIVE' },
-        orderBy: { createdAt: 'desc' },  // 取最新的
-      })
-      if (entMember) {
-        const jcp = await prisma.jobCompanyProfile.findUnique({
-          where: { id: entMember.enterpriseId },
+      // 4. Get subscription info via org membership (not userId-as-orgId)
+      // Find user's organization, then look up subscription by org ID
+      let orgId: string | null = null
+      let subscription: any = null
+
+      if (ctx && (ctx as any).enterpriseId) {
+        // Use organizationId from the resolved context
+        orgId = (ctx as any).enterpriseId
+      } else {
+        // Fallback: find first org membership
+        const memberShip = await prisma.orgMember.findFirst({
+          where: { userId },
+          select: { organizationId: true },
         })
-        if (jcp) {
-          enterpriseProfile = await prisma.enterpriseProfile.findUnique({
-            where: { id: jcp.enterpriseId },
-          })
-          jobProfile = jcp
-          membershipInfo = {
-            role: entMember.role,
-            isAdmin: entMember.role === 'OWNER',
-            source: 'enterprise_member',
-          }
-        }
+        orgId = memberShip?.organizationId || null
       }
 
-      // 3b. Fallback: 通过 onboarding 创建的 Organization (slug 以 onboard- 开头)
-      if (!enterpriseProfile) {
-        const onboardOrg = await prisma.organization.findFirst({
-          where: { ownerId: userId, slug: { startsWith: 'onboard-' } },
-          orderBy: { createdAt: 'desc' },
+      if (orgId) {
+        subscription = await prisma.enterpriseSubscription.findFirst({
+          where: { organizationId: orgId },
+          include: { plan: true },
         })
-        if (onboardOrg) {
-          enterpriseProfile = await prisma.enterpriseProfile.findFirst({
-            where: { organizationId: onboardOrg.id },
-          })
-          if (enterpriseProfile) {
-            jobProfile = await prisma.jobCompanyProfile.findUnique({
-              where: { enterpriseId: enterpriseProfile.id },
-            })
-            membershipInfo = { role: 'owner', isAdmin: true, source: 'onboarding' }
-          }
-        }
       }
-
-      // 3c. Fallback: 旧模型 (organizationId = userId)
-      if (!enterpriseProfile) {
-        enterpriseProfile = await prisma.enterpriseProfile.findFirst({
-          where: { organizationId: userId },
-        })
-        if (enterpriseProfile) {
-          jobProfile = await prisma.jobCompanyProfile.findUnique({
-            where: { enterpriseId: enterpriseProfile.id },
-          })
-          membershipInfo = { role: 'owner', isAdmin: true, source: 'legacy' }
-        }
-      }
-
-      // 3d. Fallback: 迁移模型 (govUser → Organization)
-      if (!enterpriseProfile) {
-        const govUser = await prisma.govUser.findFirst({
-          where: { email: user.email },
-          select: { tenantId: true },
-        })
-        if (govUser?.tenantId) {
-          const slugHash = govUser.tenantId.replace(/-/g, '').slice(0, 20)
-          const org = await prisma.organization.findFirst({
-            where: { slug: `migrated-${slugHash}` },
-          })
-          if (org) {
-            enterpriseProfile = await prisma.enterpriseProfile.findFirst({
-              where: { organizationId: org.id },
-            })
-            if (enterpriseProfile) {
-              jobProfile = await prisma.jobCompanyProfile.findUnique({
-                where: { enterpriseId: enterpriseProfile.id },
-              })
-              membershipInfo = { role: 'owner', isAdmin: true, source: 'migrated' }
-            }
-          }
-        }
-      }
-
-      // 3e. Fetch workspace if enterprise exists
-      let workspace: any = null
-      if (enterpriseProfile && jobProfile) {
-        const ws = await prisma.enterpriseJobWorkspace.findFirst({
-          where: { enterpriseId: jobProfile.id },
-        })
-        workspace = ws
-          ? { id: ws.id, name: ws.name, plan: ws.plan, status: ws.status }
-          : null
-      }
-
-      // 4. Get subscription info
-      const subscription = await prisma.enterpriseSubscription.findFirst({
-        where: { organizationId: userId },
-        include: { plan: true },
-      })
 
       // 5. Build context
-      if (!enterpriseProfile) {
+      if (!ctx) {
         return {
           success: true,
           data: {
@@ -191,26 +118,22 @@ export default async function identityContextRoutes(fastify: FastifyInstance) {
           },
           hasEnterprise: true,
           enterprise: {
-            id: jobProfile?.id || enterpriseProfile.id,
-            name: enterpriseProfile.businessSummary || enterpriseProfile.industry || '我的企业',
-            industry: enterpriseProfile.industry,
-            onboardingStep: enterpriseProfile.onboardingStep,
-            onboardingDone: enterpriseProfile.onboardingDone,
+            id: ctx.enterpriseId,
+            name: ctx.enterpriseProfile?.businessSummary || ctx.enterpriseProfile?.industry || '我的企业',
+            industry: ctx.enterpriseProfile?.industry || null,
+            onboardingStep: ctx.enterpriseProfile?.onboardingStep || 0,
+            onboardingDone: ctx.enterpriseProfile?.onboardingDone || false,
           },
-          workspace: workspace ? {
-            id: workspace.id,
-            name: workspace.name,
-            plan: workspace.plan,
-            status: workspace.status,
+          workspace: ctx.workspace ? {
+            id: ctx.workspace.id,
+            name: ctx.workspace.name,
+            plan: ctx.workspace.plan,
+            status: ctx.workspace.status,
           } : null,
-          membership: membershipInfo ? {
-            role: membershipInfo.role,
-            isAdmin: membershipInfo.isAdmin,
-            source: membershipInfo.source,
-          } : {
-            role: 'owner',
-            isAdmin: true,
-            source: 'default',
+          membership: {
+            role: ctx.role,
+            isAdmin: ctx.role === 'OWNER' || ctx.role === 'owner',
+            source: ctx.source,
           },
           subscription: subscription ? {
             id: subscription.id,
@@ -246,29 +169,50 @@ export default async function identityContextRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: '令牌中无用户标识' })
       }
 
-      // Find all enterprise profiles for this user
-      const enterpriseProfiles = await prisma.enterpriseProfile.findMany({
-        where: { organizationId: userId },
+      // Find user's organization memberships
+      const orgMemberships = await prisma.orgMember.findMany({
+        where: { userId },
+        select: { organizationId: true },
       })
 
-      const workspaces: any[] = []
-      for (const ep of enterpriseProfiles) {
-        const ws = await prisma.enterpriseJobWorkspace.findFirst({
-          where: { enterpriseId: ep.id },
-        })
-        if (ws) {
-          workspaces.push({
-            id: ws.id,
-            name: ws.name,
-            enterpriseId: ep.id,
-            enterpriseName: ep.businessSummary || ep.industry || '我的企业',
-            plan: ws.plan,
-            status: ws.status,
-          })
-        }
+      const orgIds = orgMemberships.map(m => m.organizationId)
+      if (orgIds.length === 0) {
+        return { success: true, data: [] }
       }
 
-      return { success: true, data: workspaces }
+      // Find enterprise profiles for those organizations
+      const enterpriseProfiles = await prisma.enterpriseProfile.findMany({
+        where: { organizationId: { in: orgIds } },
+        select: {
+          id: true,
+          organizationId: true,
+          businessSummary: true,
+          industry: true,
+        },
+      })
+
+      // Find workspaces for those enterprise profiles
+      const epIds = enterpriseProfiles.map(ep => ep.id)
+      const workspaces = await prisma.enterpriseJobWorkspace.findMany({
+        where: { enterpriseId: { in: epIds } },
+      })
+
+      // Build workspace list with enterprise context
+      const epMap = new Map(enterpriseProfiles.map(ep => [ep.id, ep]))
+      const result = workspaces.map(ws => {
+        const ep = epMap.get(ws.enterpriseId)
+        return {
+          id: ws.id,
+          name: ws.name,
+          enterpriseId: ws.enterpriseId,
+          enterpriseName: ep?.businessSummary || ep?.industry || '我的企业',
+          organizationId: ep?.organizationId,
+          plan: ws.plan,
+          status: ws.status,
+        }
+      })
+
+      return { success: true, data: result }
     } catch (e: any) {
       return reply.status(500).send({ error: '获取工作空间列表失败', detail: e.message })
     }
@@ -295,29 +239,44 @@ export default async function identityContextRoutes(fastify: FastifyInstance) {
       }
 
       // Verify workspace exists
-      const workspace = await prisma.enterpriseJobWorkspace.findFirst({
+      const workspace = await prisma.enterpriseJobWorkspace.findUnique({
         where: { id: workspaceId },
       })
 
       if (!workspace) {
-        return reply.status(403).send({ error: '无权访问该工作空间' })
+        return reply.status(404).send({ error: '工作空间不存在' })
       }
 
-      // Check if user has access (workspace belongs to user's enterprise)
-      const enterpriseProfile = await prisma.enterpriseProfile.findFirst({
-        where: {
-          id: workspace.enterpriseId,
-          organizationId: userId,
+      // Find the enterprise profile for this workspace
+      const enterpriseProfile = await prisma.enterpriseProfile.findUnique({
+        where: { id: workspace.enterpriseId },
+        select: {
+          id: true,
+          organizationId: true,
+          businessSummary: true,
+          industry: true,
         },
       })
 
       if (!enterpriseProfile) {
+        return reply.status(404).send({ error: '企业资料不存在' })
+      }
+
+      // Verify user has OrgMember access to this enterprise's organization
+      const membership = await prisma.orgMember.findFirst({
+        where: {
+          userId,
+          organizationId: enterpriseProfile.organizationId,
+        },
+      })
+
+      if (!membership) {
         return reply.status(403).send({ error: '无权访问该工作空间' })
       }
 
-      // Get subscription info
+      // Get subscription via org membership (not userId-as-orgId)
       const subscription = await prisma.enterpriseSubscription.findFirst({
-        where: { organizationId: userId },
+        where: { organizationId: enterpriseProfile.organizationId },
         include: { plan: true },
       })
 
@@ -335,6 +294,7 @@ export default async function identityContextRoutes(fastify: FastifyInstance) {
             name: enterpriseProfile.businessSummary || enterpriseProfile.industry || '我的企业',
             industry: enterpriseProfile.industry,
           },
+          organizationId: enterpriseProfile.organizationId,
           subscription: subscription ? {
             id: subscription.id,
             status: subscription.status,

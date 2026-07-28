@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * composables/useLibraryReader.ts — 图书馆管理员逻辑（多级金字塔版）
  *
@@ -99,7 +100,7 @@ export function useLibraryReader(projectId: () => string | undefined) {
   }
 
   function getToken(): string {
-    try { return localStorage.getItem('auth_token') || '' } catch { return '' }
+    try { return getAuthToken() || '' } catch { return '' }
   }
 
   function levelLabel(level: number): string {

@@ -1,4 +1,8 @@
 /**
+ * @deprecated — TASK-04 RECRUITMENT-PROD-READY-GATE 2026-07-28
+ *
+ * ⚠️ 此文件已确认零运行时引用（0 call sites），将在后续 sprint 删除。
+ *
  * job-api.ts — 昆仑镜 AI 求职招聘工作台 API Client
  *
  * 审计: JOB-WORKSPACE-BOUNDARY-AUDIT 2026-07-26 — Phase 2 拆分完成

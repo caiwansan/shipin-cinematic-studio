@@ -9,36 +9,7 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { jobUnderstandingService, JobUnderstandingError } from '../services/matching/services/job-understanding.service.js'
-import { getEnterpriseContext } from '../repositories/recruitment/enterprise-member.repository.js'
-
-// ─── Helper: resolve enterpriseId from JWT userId ───
-// Returns same ID format as getEnterpriseContext (JobCompanyProfile.id for legacy, Org.id for new)
-async function resolveEnterpriseId(userId: string): Promise<string | null> {
-  const ctx = await getEnterpriseContext(userId)
-  return ctx?.enterpriseId || null
-}
-
-// ─── Helper: resolve ALL possible enterpriseIds for querying ───
-// Legacy data uses JobCompanyProfile.id, new data uses EnterpriseProfile.id
-async function resolveAllEnterpriseIds(userId: string): Promise<string[]> {
-  const ids = new Set<string>()
-  const ctx = await getEnterpriseContext(userId)
-  if (ctx?.enterpriseId) {
-    ids.add(ctx.enterpriseId)
-  }
-  // Also check if there's an EnterpriseProfile linked via JobCompanyProfile
-  const entMember = await prisma.enterpriseMember.findFirst({
-    where: { userId, status: 'ACTIVE' },
-    orderBy: { createdAt: 'asc' },
-  })
-  if (entMember) {
-    const jcp = await prisma.jobCompanyProfile.findUnique({ where: { id: entMember.enterpriseId } })
-    if (jcp?.enterpriseId) {
-      ids.add(jcp.enterpriseId)
-    }
-  }
-  return Array.from(ids)
-}
+import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
 
 export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) => {
 
@@ -59,10 +30,11 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
   fastify.post('/api/enterprise/jobs/generate', async (request, reply) => {
     try {
       const userId = (request as any).user?.id || (request as any).userId
-      const enterpriseId = await resolveEnterpriseId(userId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'No enterprise identity found' })
+      const context = await resolveCurrentEnterprise(userId)
+      if (!context) {
+        return reply.status(403).send({ success: false, message: 'Enterprise context required' })
       }
+      const enterpriseId = context.enterpriseId
 
       const body = request.body as {
         title?: string
@@ -103,10 +75,11 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
   fastify.post('/api/enterprise/jobs/preview', async (request, reply) => {
     try {
       const userId = (request as any).user?.id || (request as any).userId
-      const enterpriseId = await resolveEnterpriseId(userId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'No enterprise identity found' })
+      const context = await resolveCurrentEnterprise(userId)
+      if (!context) {
+        return reply.status(403).send({ success: false, message: 'Enterprise context required' })
       }
+      const enterpriseId = context.enterpriseId
 
       const body = request.body as {
         title?: string
@@ -140,27 +113,27 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
     try {
       const { id: jobId } = request.params as { id: string }
       const userId = (request as any).user?.id || (request as any).userId
-      const enterpriseIds = await resolveAllEnterpriseIds(userId)
-      if (enterpriseIds.length === 0) {
-        return reply.status(400).send({ error: 'No enterprise identity found' })
+      const context = await resolveCurrentEnterprise(userId)
+      if (!context) {
+        return reply.status(403).send({ success: false, message: 'Enterprise context required' })
       }
+      const enterpriseId = context.enterpriseId
 
-      // Verify job ownership (check all possible IDs)
+      // Verify job ownership
       const job = await prisma.jobPosting.findFirst({
-        where: { id: jobId, enterpriseId: { in: enterpriseIds } },
+        where: { id: jobId, enterpriseId },
       })
       if (!job) {
         return reply.status(404).send({ error: 'Job not found' })
       }
 
-      // Get match results from DB (check all enterprise IDs)
-      const enterpriseIdsOr = enterpriseIds
+      // Get match results from DB
       const matches = await prisma.talentMatchResult.findMany({
         where: {
           jobRequirementId: {
             in: (
               await prisma.jobRequirementProfile.findMany({
-                where: { enterpriseId: { in: enterpriseIdsOr } },
+                where: { enterpriseId },
                 select: { id: true },
               })
             ).map((r) => r.id),
@@ -170,12 +143,16 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
         take: 20,
       })
 
-      // Get candidate details
+      // Get candidate details — Sprint-SSOT-CLEANUP-01: JobCandidate → CareerProfile
       const candidateIds = matches.map((m) => m.candidateId)
-      const candidates = await prisma.jobCandidate.findMany({
+      const candidates = await prisma.careerProfile.findMany({
         where: { id: { in: candidateIds } },
-        include: {
-          user: { select: { id: true, username: true, email: true } },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          headline: true,
+          userId: true,
         },
       })
 
@@ -186,8 +163,8 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
         return {
           id: m.id,
           candidateId: m.candidateId,
-          candidateName: candidate?.user?.username || candidate?.user?.email || '未知候选人',
-          candidateTitle: candidate?.experience || '',
+          candidateName: candidate?.fullName || candidate?.email || '未知候选人',
+          candidateTitle: candidate?.headline || '',
           score: m.score,
           rank: m.rank,
           breakdown: m.breakdown,
@@ -217,14 +194,15 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
     try {
       const { id: jobId } = request.params as { id: string }
       const userId = (request as any).user?.id || (request as any).userId
-      const enterpriseIds = await resolveAllEnterpriseIds(userId)
-      if (enterpriseIds.length === 0) {
-        return reply.status(400).send({ error: 'No enterprise identity found' })
+      const context = await resolveCurrentEnterprise(userId)
+      if (!context) {
+        return reply.status(403).send({ success: false, message: 'Enterprise context required' })
       }
+      const enterpriseId = context.enterpriseId
 
       // Verify job ownership
       const job = await prisma.jobPosting.findFirst({
-        where: { id: jobId, enterpriseId: { in: enterpriseIds } },
+        where: { id: jobId, enterpriseId },
       })
       if (!job) {
         return reply.status(404).send({ error: 'Job not found' })
@@ -232,12 +210,11 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
 
       // Find or create JobRequirementProfile for this job
       let requirement = await prisma.jobRequirementProfile.findFirst({
-        where: { enterpriseId: { in: enterpriseIds }, jobTitle: job.title },
+        where: { enterpriseId, jobTitle: job.title },
       })
 
       if (!requirement) {
         // Auto-generate requirement from job posting using LLM
-        const enterpriseId = enterpriseIds[0] // Primary ID for LLM config
         const extracted = await jobUnderstandingService.extractAndSave({
           enterpriseId,
           jobTitle: job.title,
@@ -248,7 +225,7 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
           language: 'zh',
         })
         requirement = await prisma.jobRequirementProfile.findFirst({
-          where: { enterpriseId: { in: enterpriseIds }, jobTitle: job.title },
+          where: { enterpriseId, jobTitle: job.title },
         })
       }
 
@@ -256,11 +233,18 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
         return reply.status(500).send({ error: 'Failed to create job requirement profile' })
       }
 
-      // Get all candidates (JobCandidate has userId, not enterpriseId)
-      // In the future, filter by enterprise membership
-      const candidates = await prisma.jobCandidate.findMany({
-        include: {
-          user: { select: { id: true, username: true, email: true } },
+      // Get all candidates — Sprint-SSOT-CLEANUP-01: JobCandidate → CareerProfile
+      // CareerProfile is SSOT; CandidateSkill is in relation table
+      const candidates = await prisma.careerProfile.findMany({
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          headline: true,
+          skills: {
+            select: { name: true },
+          },
+          userId: true,
         },
       })
 
@@ -278,6 +262,7 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
       const results = candidates.map((candidate) => {
         const candidateSkills = (candidate.skills || []).map((s: any) => {
           if (typeof s === 'string') return s.toLowerCase()
+          if (s?.name) return s.name.toLowerCase()
           return (s.name || s.skillName || '').toLowerCase()
         })
         const matched = requiredSkills.filter((s: any) => {
@@ -333,14 +318,15 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
     try {
       const { id: jobId } = request.params as { id: string }
       const userId = (request as any).user?.id || (request as any).userId
-      const enterpriseIds = await resolveAllEnterpriseIds(userId)
-      if (enterpriseIds.length === 0) {
-        return reply.status(400).send({ error: 'No enterprise identity found' })
+      const context = await resolveCurrentEnterprise(userId)
+      if (!context) {
+        return reply.status(403).send({ success: false, message: 'Enterprise context required' })
       }
+      const enterpriseId = context.enterpriseId
 
       // Verify job ownership
       const job = await prisma.jobPosting.findFirst({
-        where: { id: jobId, enterpriseId: { in: enterpriseIds } },
+        where: { id: jobId, enterpriseId },
       })
       if (!job) {
         return reply.status(404).send({ error: 'Job not found' })

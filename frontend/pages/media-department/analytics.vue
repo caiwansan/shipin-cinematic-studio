@@ -58,6 +58,7 @@ import { KunlunMediaApi } from '~/composables/enterprise/useMediaApi'
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 
@@ -67,7 +68,7 @@ const showRegister = ref(false)
 const hasOrganization = ref(false)
 
 function getToken(): string {
-  try { return localStorage.getItem('accessToken') || '' } catch { return '' }
+  try { return getAuthToken() || '' } catch { return '' }
 }
 
 onMounted(() => {

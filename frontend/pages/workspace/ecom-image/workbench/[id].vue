@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 definePageMeta({ middleware: 'auth' })
 
 import { ref, onMounted, computed } from 'vue'
@@ -61,7 +62,7 @@ async function uploadFile(file: File) {
 
   uploading.value = true
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const formData = new FormData()
     formData.append('file', file)
 
@@ -88,7 +89,7 @@ async function uploadFile(file: File) {
 
 async function loadProjectImages() {
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const res = await fetch(`/api/ecom/projects/${projectId.value}/images`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -113,7 +114,7 @@ async function saveProject() {
   saving.value = true
   saveSuccess.value = false
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const res = await fetch(`/api/ecom/projects/${projectId.value}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -198,7 +199,7 @@ const vipCardStyle = computed(() => {
 async function loadProject() {
   loading.value = true
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const res = await fetch(`/api/ecom/projects/${projectId.value}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -218,7 +219,7 @@ async function loadProject() {
 
 async function loadPlanInfo() {
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     if (!token) return
     const res = await fetch('/api/member/profile', {
       headers: { Authorization: `Bearer ${token}` },

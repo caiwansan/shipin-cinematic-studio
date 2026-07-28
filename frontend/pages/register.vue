@@ -78,6 +78,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted } from 'vue'
 
 const email = ref('')
@@ -116,7 +117,7 @@ function startOAuth(authUrl: string, onSuccess: (token: string) => void, onError
       onError('登录超时，请重试')
       return
     }
-    const token = localStorage.getItem('accessToken')
+    const token = getAuthToken()
     if (token) {
       clearInterval(oauthTimer!)
       oauthTimer = null
@@ -137,7 +138,7 @@ function qqLogin() {
       const authUrl = data.data?.authUrl || data.authUrl
       if (authUrl) {
         startOAuth(authUrl, (token) => {
-          localStorage.setItem('token', token)
+          setAuthToken(token)
           success.value = '注册成功！正在跳转...'
           setTimeout(() => navigateTo('/workbench/console'), 1000)
         })
@@ -167,7 +168,7 @@ async function handleRegister() {
     })
     const data = await res.json()
     if (data.accessToken) {
-      localStorage.setItem('token', data.accessToken)
+      setAuthToken(data.accessToken)
       success.value = '注册成功！正在跳转...'
       setTimeout(() => navigateTo('/workbench/console'), 1000)
     } else {

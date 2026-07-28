@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * Media Department · API Client for Kunlun /api/v1
  * 
@@ -13,7 +14,7 @@ export interface ApiResult<T> {
 }
 
 function getToken(): string {
-  try { return localStorage.getItem('accessToken') || '' } catch { return '' }
+  try { return getAuthToken() || '' } catch { return '' }
 }
 
 function getOrgId(): string {

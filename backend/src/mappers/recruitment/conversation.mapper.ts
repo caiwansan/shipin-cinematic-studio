@@ -5,8 +5,9 @@
  * DP-4: Mapper 是唯一允许跨 Domain 组装数据的地方。
  *
  * 数据路径（Repository 已执行查询，Mapper 只做字段映射）：
- *   Conversation.candidateId → JobCandidate → profileJson.name → candidateName
- *   JobCandidate.userId → User.email → candidateEmail
+ *   Conversation.candidateId → CareerProfile → fullName → candidateName
+ *   CareerProfile.userId → User.email → candidateEmail
+ *   (Sprint-SSOT-CLEANUP-01: 不再依赖 JobCandidate)
  *
  * 注意：candidateId 可能为 null → candidateName/candidateEmail 返回 null。
  *       这是正确行为，不代表 Bug。

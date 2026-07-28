@@ -119,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted } from 'vue'
 
 interface EnterprisePlan {
@@ -148,7 +149,7 @@ const loading = ref(true)
 onMounted(async () => {
   try {
     const res = await fetch('/api/enterprise/plans', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      headers: { Authorization: `Bearer ${getAuthToken() || ''}` },
     })
     const data = await res.json()
     if (data.code === 0) {

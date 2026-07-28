@@ -1,3 +1,4 @@
+import { getAuthToken, setAuthToken, clearAuthToken } from '~/utils/auth/token'
 /**
  * candidate-api.ts — 求职者工作台 API Client
  *
@@ -39,7 +40,7 @@ async function request(path: string, options: ApiOptions = {}) {
 
   if (res.status === 401) {
     if (!window.location.pathname.includes('/login')) {
-      localStorage.removeItem('auth_token')
+      clearAuthToken()
       window.location.href = '/login'
     }
     throw new Error('未登录或登录已过期')

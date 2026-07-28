@@ -34,7 +34,7 @@ export async function buildEnterpriseRuntimeContext(
   // 查询该用户是否有 enterprise 项目绑定
   const project = await prisma.hdzProject.findUnique({
     where: { id: projectId },
-    select: { userId: true, metadata: true },
+    select: { userId: true },
   })
   if (!project) return null
 

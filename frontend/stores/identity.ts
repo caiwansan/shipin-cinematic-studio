@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * stores/identity.ts — Identity Context Store (Pinia)
  *
@@ -101,7 +102,7 @@ export const useIdentityStore = defineStore('identity', {
       this.error = null
 
       try {
-        const token = localStorage.getItem('token') || ''
+        const token = getAuthToken() || ''
         const res = await fetch('/api/identity/context', {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -143,7 +144,7 @@ export const useIdentityStore = defineStore('identity', {
      */
     async fetchWorkspaces() {
       try {
-        const token = localStorage.getItem('token') || ''
+        const token = getAuthToken() || ''
         const res = await fetch('/api/identity/workspaces', {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -165,7 +166,7 @@ export const useIdentityStore = defineStore('identity', {
       this.error = null
 
       try {
-        const token = localStorage.getItem('token') || ''
+        const token = getAuthToken() || ''
         const res = await fetch('/api/identity/workspace/switch', {
           method: 'POST',
           headers: {

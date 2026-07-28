@@ -63,8 +63,6 @@ model User {
   messagesReceived      UserMessage[]          @relation("messages_received")
   ownedProjects         Project[]              @relation("ProjectOwner")
   ecomProjects          EcomProject[]
-  jobCandidates JobCandidate[]
-  enterpriseMemberships EnterpriseMember[]
   careerProfile CareerProfile?
 }
 
@@ -1564,9 +1562,11 @@ model PaymentSecret {
 model PaymentOrder {
   id             String    @id @default(uuid()) @db.Uuid
   userId         String    @db.Uuid
+  organizationId String?   @db.Uuid @map("organization_id")
   orderNo        String    @unique
   type           String    @default("credit")
   amount         Float
+  currency       String    @default("CNY")
   coins          Int
   method         String
   status         String    @default("pending")
@@ -1577,6 +1577,7 @@ model PaymentOrder {
   outTradeNo     String?
   rawNotify      String?
   remark         String?
+  metadata       Json?
   payTime        DateTime?
   confirmAdminId Int?
   confirmTime    DateTime?
@@ -1584,8 +1585,10 @@ model PaymentOrder {
   updatedAt      DateTime  @updatedAt
 
   @@index([userId])
+  @@index([organizationId])
   @@index([orderNo])
   @@index([status])
+  @@index([type])
   @@index([createdAt])
   @@map("PaymentOrder")
 }
@@ -1655,6 +1658,7 @@ model AgentExecution {
   createdAt  DateTime @default(now()) @map("created_at")
   agent      AgentDef @relation(fields: [agentId], references: [id])
 
+  // @@deprecated "Sprint 12: Agent execution chain consolidated to EnterpriseAgentInstance → EnterpriseAgentTask → AgentAuditTrail → UsageLog → Billing. AgentExecution retained for historical data only — no new writes."
   @@index([runId])
   @@index([workflowId])
   @@map("AgentExecution")
@@ -1751,6 +1755,7 @@ model AgentExecutionLog {
   status      String   @default("pending")
   createdAt   DateTime @default(now()) @map("created_at")
 
+  // @@deprecated "Sprint 12: Agent execution chain consolidated to EnterpriseAgentInstance → EnterpriseAgentTask → AgentAuditTrail → UsageLog → Billing. AgentExecutionLog retained for historical data only — no new writes."
   @@index([executionId])
   @@index([agentId])
   @@map("AgentExecutionLog")
@@ -2653,6 +2658,7 @@ model Job {
 model UsageLog {
   id         String   @id @default(uuid()) @db.Uuid
   userId     String   @db.Uuid
+  tenantId   String?  @db.Uuid @map("tenant_id") // Sprint 12: 保持 organizationId (已是 UUID)
   projectId  String?  @db.Uuid
   taskId     String?
   cost       Float    @default(0)
@@ -2663,8 +2669,10 @@ model UsageLog {
   createdAt  DateTime @default(now())
 
   @@index([userId])
+  @@index([tenantId])
   @@index([createdAt])
   @@index([taskType])
+  @@index([tenantId, createdAt]) // Sprint 12 Phase 6: organizationId + createdAt 复合索引
   @@map("usage_logs")
 }
 
@@ -2852,6 +2860,12 @@ model Organization {
   profile       EnterpriseProfile?
   aiProviders   AIProviderConfig[]
   subscription  EnterpriseSubscription?
+  entitlements  EnterpriseEntitlement[]
+  // Sprint 12: Tenant Identity Consolidation — reverse relations
+  agentInstances     EnterpriseAgentInstance[]
+  agentProfiles      EnterpriseAgentProfile[]
+  auditTrails        AgentAuditTrail[]
+  enterpriseAgentTasks EnterpriseAgentTask[]
 
   @@map("Organization")
 }
@@ -2901,7 +2915,8 @@ model EnterprisePlan {
   name              String   @unique // 套餐标识（管理员配置）
   displayName       String   @map("display_name") // 显示名称
   description       String? // 套餐说明
-  price             Int      @default(0) // 价格（分），管理员配置
+  price             Int      @default(0) // 月付价格（分），管理员配置
+  yearlyPrice       Int      @default(0) @map("yearly_price") // 年付价格（分），管理员配置
   originalPrice     Int      @default(0) @map("original_price") // 原价（分）
   currency          String   @default("CNY") // CNY | USD
   billingCycle      String   @default("monthly") @map("billing_cycle") // monthly | yearly
@@ -2935,15 +2950,49 @@ model EnterpriseSubscription {
   startAt         DateTime @default(now()) @map("start_at")
   expireAt    DateTime @map("expire_at")
   autoRenew       Boolean  @default(true) @map("auto_renew")
+  // Snapshot fields for fast subscription resolution (avoid join)
+  snapshotName        String?  @map("snapshot_name")
+  snapshotPrice       Int?     @map("snapshot_price") // 快照价格（分）
+  snapshotCycle       String?  @map("snapshot_cycle") // monthly | yearly
+  snapshotMaxEmployees Int?    @map("snapshot_max_employees")
+  snapshotMaxChannels  Int?    @map("snapshot_max_channels")
+  snapshotMaxMembers   Int?    @map("snapshot_max_members")
+  snapshotFeatures     Json?   @map("snapshot_features")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan            EnterprisePlan @relation(fields: [planId], references: [id])
+  entitlement     EnterpriseEntitlement?
 
   @@index([status])
   @@index([expireAt])
   @@map("enterprise_subscription")
+}
+
+model EnterpriseEntitlement {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  subscriptionId  String   @unique @map("subscription_id") @db.Uuid
+  maxAgents       Int      @default(1) @map("max_agents")
+  maxChannels     Int      @default(1) @map("max_channels")
+  maxMembers      Int      @default(3) @map("max_members")
+  storageLimit    Int      @default(5) @map("storage_limit_gb")
+  features        Json     @default("{}")
+  status          String   @default("active") // active | suspended | expired
+  effectiveFrom   DateTime @default(now()) @map("effective_from")
+  effectiveUntil  DateTime? @map("effective_until")
+  overrideReason  String?  @map("override_reason")
+  overrideBy      String?  @map("override_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription    EnterpriseSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("enterprise_entitlement")
 }
 
 model OrgMember {
@@ -3407,6 +3456,11 @@ model HdzProject {
   worldStates         WorldState[]
   writerAlignmentMetrics WriterAlignmentMetric[]
   plotDagEdges        PlotDagEdge[]
+  characterStates     HdzCharacterState[]
+  planRevisions       HdzPlanRevision[]
+  storyEvents         StoryEvent[]
+  masterPlan          Json?     @map("master_plan")  // 增强版 Master Plan（三幕结构+卷规划+角色弧线+伏笔系统）
+  masterPlanVersion   Int       @default(0) @map("master_plan_version")  // 总规划版本号（每次更新自动递增）
 
   @@index([userId])
   @@map("hdz_projects")
@@ -3461,6 +3515,7 @@ model HdzCharacter {
   updatedAt  DateTime @updatedAt
 
   project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  characterStates HdzCharacterState[]
 
   @@index([projectId])
   @@map("hdz_characters")
@@ -3582,6 +3637,67 @@ model HdzPublishLog {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// HDZ-NOVEL-INTELLIGENCE-V2: 角色动态状态 + 大纲修订历史 + 剧情事件
+// ═══════════════════════════════════════════════════════════════════════════
+
+model HdzCharacterState {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid    @map("project_id")
+  characterId     String   @db.Uuid    @map("character_id")
+  chapterNo       Int      @default(0) @map("chapter_no")
+  stateType       String               @map("state_type")  // HEALTH / INJURY / RELATIONSHIP / POWER / LOCATION / ITEM / MENTAL / IDENTITY
+  event           String
+  description     String?  @db.Text
+  severity        String   @default("normal")  // low / normal / high / critical
+  recoveryChapter Int?     @map("recovery_chapter")  // 预计恢复章节
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt  @map("updated_at")
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character HdzCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, characterId])
+  @@index([projectId, chapterNo])
+  @@map("hdz_character_states")
+}
+
+model HdzPlanRevision {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @db.Uuid    @map("project_id")
+  version      Int
+  reason       String?  @db.Text
+  planBefore   Json?               @map("plan_before")
+  planAfter    Json                @map("plan_after")
+  blueprint    Json?               @map("blueprint")  // Story Blueprint（AI 分析生成的结构化故事蓝图）
+  diffSummary  String?  @db.Text   @map("diff_summary")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, version])
+  @@map("hdz_plan_revisions")
+}
+
+model StoryEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid    @map("project_id")
+  chapterNo   Int                  @map("chapter_no")
+  eventType   String               @map("event_type")  // battle / dialogue / revelation / travel / transformation / death / other
+  title       String
+  description String   @db.Text
+  participants String[] @default([])           // 参与角色ID列表
+  impacts     Json     @default("[]")          // [{characterId, stateType, change, description}]
+  location    String?
+  timestamp   DateTime @default(now())         // 剧情内时间戳
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, chapterNo])
+  @@map("story_events")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // HDZ Schema Reconcile — Phase X 基础设施模型（于 2026-06-26 补齐）
 // 6 个模型在代码中被引用但 Prisma Schema 缺失，属于架构完整性修复。
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3649,11 +3765,11 @@ model WorldState {
 
 model WriterAlignmentMetric {
   id                String   @id @default(uuid()) @db.Uuid
-  projectId         String   @db.Uuid
-  chapterId         String?  @db.Uuid          // 可选关联章节
-  scoreJson         Json     @default("{}")   // { overall_score, character, plot, style, pacing, dialogue... }
-  shadowStateDelta  Json?                       // Writer Shadow 状态差异
-  createdAt         DateTime @default(now())
+  projectId         String   @db.Uuid    @map("project_id")
+  chapterId         String?  @db.Uuid    @map("chapter_id")  // 可选关联章节
+  scoreJson         Json     @default("{}") @map("score_json")  // { overall_score, character, plot, style, pacing, dialogue... }
+  shadowStateDelta  Json?               @map("shadow_state_delta")  // Writer Shadow 状态差异
+  createdAt         DateTime @default(now()) @map("created_at")
 
   project HdzProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -6590,7 +6706,7 @@ model EnterpriseLlmConfig {
 model EnterpriseAgentProfile {
   id              String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
   tenantId        String   @map("tenant_id") @db.Text
-  organizationId  String?  @map("organization_id") @db.Text
+  organizationId  String?  @map("organization_id") @db.Uuid // Sprint 12: FK → Organization.id (UUID)
   name            String   @db.VarChar(100)
   avatarUrl       String?  @map("avatar_url")
   description     String?
@@ -6617,11 +6733,13 @@ model EnterpriseAgentProfile {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   modelBindings   AgentModelBinding[]
   auditTrails     AgentAuditTrail[]
   schedules       AgentSchedule[]
   goals           AgentGoal[]
 
+  @@index([organizationId])
   @@map("enterprise_agent_profile")
 }
 
@@ -6632,6 +6750,7 @@ model EnterpriseAgentProfile {
 model EnterpriseAgentInstance {
   id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
   tenantId          String   @map("tenant_id") @db.Text
+  organizationId    String?  @map("organization_id") @db.Uuid // Sprint 12: FK → Organization.id (UUID)
   employeeId        String   @unique @map("employee_id") @db.Text // EnterpriseAgentProfile.id
   agentId           String   @unique @map("agent_id") @db.Text // runtime agent identifier: agent_<tenant>_<shortId>
   runtime           String   @default("openclaw") @db.VarChar(50)
@@ -6647,6 +6766,12 @@ model EnterpriseAgentInstance {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([lifecycleState])
+  @@index([createdAt])
+  @@index([organizationId, lifecycleState])
   @@map("enterprise_agent_instance")
 }
 
@@ -6697,6 +6822,7 @@ model EmployeeModelBinding {
 model EnterpriseAgentTask {
   id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
   tenantId          String   @map("tenant_id") @db.Text
+  organizationId    String?  @map("organization_id") @db.Uuid // Sprint 12: FK → Organization.id (UUID)
   agentInstanceId   String   @map("agent_instance_id") @db.Text // EnterpriseAgentInstance.id
   taskType          String   @map("task_type") @db.VarChar(50)
   inputSummary      String?  @map("input_summary") @db.Text
@@ -6709,8 +6835,10 @@ model EnterpriseAgentTask {
   startedAt         DateTime @default(now()) @map("started_at")
   completedAt       DateTime? @map("completed_at")
 
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
   @@index([agentInstanceId, startedAt(sort: Desc)])
-  @@index([tenantId, startedAt(sort: Desc)])
+  @@index([organizationId, startedAt(sort: Desc)])
   @@index([taskType])
   @@map("enterprise_agent_task")
 }
@@ -6835,6 +6963,7 @@ model ModelRoutingPolicy {
 model AgentAuditTrail {
   id              String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
   tenantId        String   @map("tenant_id") @db.Text
+  organizationId  String?  @map("organization_id") @db.Uuid // Sprint 12: FK → Organization.id (UUID)
   agentId         String?  @map("agent_id") @db.Text
   taskId         String?  @map("task_id") @db.Text
   action          String   @db.VarChar(50)
@@ -6855,7 +6984,10 @@ model AgentAuditTrail {
   createdAt      DateTime @default(now()) @map("created_at")
 
   agent           EnterpriseAgentProfile? @relation(fields: [agentId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
+  @@index([organizationId])
+  @@index([agentId, createdAt])
   @@map("agent_audit_trail")
 }
 
@@ -7469,26 +7601,8 @@ model JobCompanyProfile {
 
   @@map("job_company_profile")
   jobPostings JobPosting[]
-  members EnterpriseMember[]
 }
 
-model EnterpriseMember {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
-  enterpriseId String   @map("enterprise_id") @db.Uuid
-  role         String   @default("OWNER") // OWNER | HR | RECRUITER | VIEWER
-  status       String   @default("ACTIVE") // ACTIVE | INACTIVE | PENDING
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enterprise   JobCompanyProfile @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, enterpriseId])
-  @@index([userId])
-  @@index([enterpriseId])
-  @@map("enterprise_member")
-}
 
 model EnterpriseJobWorkspace {
   id           String   @id @default(uuid()) @db.Uuid
@@ -7508,6 +7622,10 @@ model EnterpriseJobWorkspace {
   candidateMatches CandidateMatch[]
   recruitmentConversations RecruitmentConversation[]
   recruitmentCampaigns RecruitmentCampaign[]
+  automationConfig RecruitmentAutomationConfig?
+  // Sprint 10 — AI Recruitment Director
+  recruitmentPlans RecruitmentPlan[]
+  hiringKnowledges HiringKnowledge[]
 }
 
 model EnterpriseOnboardingState {
@@ -7527,6 +7645,31 @@ model EnterpriseOnboardingState {
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@map("enterprise_onboarding_state")
+}
+
+model RecruitmentAutomationConfig {
+  id                      String   @id @default(uuid()) @db.Uuid
+  workspaceId             String   @unique @map("workspace_id") @db.Uuid
+  enterpriseId            String   @map("enterprise_id") @db.Uuid
+
+  // ── 自动化开关 ──
+  autoJdGeneration        Boolean  @default(false) @map("auto_jd_generation")
+  autoTalentSearch        Boolean  @default(false) @map("auto_talent_search")
+  autoMatchFiltering      Boolean  @default(false) @map("auto_match_filtering")
+  autoInterviewScheduling Boolean  @default(false) @map("auto_interview_scheduling")
+
+  // ── 自动化规则 ──
+  matchThreshold          Int      @default(70) @map("match_threshold")
+  notifyOnMatch           Boolean  @default(true) @map("notify_on_match")
+  notifyOnInterview       Boolean  @default(true) @map("notify_on_interview")
+
+  // ── 时间戳 ──
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  workspace               EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+
+  @@map("recruitment_automation_config")
 }
 
 model EnterpriseAgentWorkforce {
@@ -7646,6 +7789,10 @@ model RecruitmentPipeline {
   candidateNotes CandidateNote[]
   interviewSessions InterviewSession[]
   conversation RecruitmentConversation?
+  @@index([workspaceId])
+  @@index([jobId])
+  @@index([stage])
+  @@index([workspaceId, stage])
   @@map("recruitment_pipeline")
 }
 
@@ -7660,6 +7807,8 @@ model PipelineEvent {
   createdAt  DateTime @default(now()) @map("created_at")
 
   pipeline    RecruitmentPipeline @relation(fields: [pipelineId], references: [id])
+  @@index([pipelineId])
+  @@index([pipelineId, createdAt])
   @@map("pipeline_event")
 }
 
@@ -7689,6 +7838,9 @@ model JobPosting {
   channelMappings      RecruitmentChannelMapping[]
   recruitmentConversations RecruitmentConversation[]
   recruitmentCampaigns RecruitmentCampaign[]
+  @@index([enterpriseId])
+  @@index([enterpriseId, status])
+  @@index([status])
   @@map("job_posting")
 }
 
@@ -7761,51 +7913,6 @@ model CandidateNote {
   @@map("candidate_note")
 }
 
-model JobCandidate {
-  id                String   @id @default(uuid()) @db.Uuid
-  userId            String   @map("userId") @db.Uuid
-  education         String?
-  skills            String[]
-  experience        String?
-  city              String?
-  salaryExpectation String?  @map("salaryExpectation")
-  careerGoal        String?  @map("careerGoal")
-  profileJson       Json?    @map("profileJson")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  user        User             @relation(fields: [userId], references: [id])
-  matches     CandidateMatch[]
-  @@map("job_candidate")
-}
-
-model TalentProfile {
-  id             String   @id @default(uuid()) @db.Uuid
-  name           String
-  email          String?
-  phone          String?
-  education      String?
-  skills         String[]
-  experience     String?
-  experienceYears Int     @map("experience_years")
-  city           String?
-  salaryMin      Int?     @map("salary_min")
-  salaryMax      Int?     @map("salary_max")
-  careerLevel    String?  @map("career_level")
-  strengths      String[]
-  risks          String[]
-  careerGoal     String?  @map("career_goal")
-  projects       String?
-  sourceType     String   @map("source_type")
-  sourceId       String?  @map("source_id") @db.Uuid
-  matchCount     Int      @default(0) @map("match_count")
-  lastMatchedAt  DateTime? @map("last_matched_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  @@map("talent_profile")
-}
-
 model CandidateMatch {
   id              String   @id @default(uuid()) @db.Uuid
   workspaceId     String   @map("workspace_id") @db.Uuid
@@ -7820,8 +7927,13 @@ model CandidateMatch {
 
   workspace   EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
   job         JobPosting           @relation(fields: [jobId], references: [id])
-  candidate   JobCandidate         @relation(fields: [candidateId], references: [id])
+  // Sprint-SSOT-SCHEMA-CLEANUP: JobCandidate removed, candidateId kept as historical ID reference
+  // candidate   CareerProfile  @relation(fields: [candidateId], references: [id])  — 待 Identity Consolidation 时启用
   interviewRecords InterviewRecord[]
+  @@index([workspaceId])
+  @@index([jobId])
+  @@index([candidateId])
+  @@index([workspaceId, jobId])
   @@map("candidate_match")
 }
 
@@ -8655,4 +8767,133 @@ model BatchJob {
   @@index([jobRequirementId])
   @@index([status])
   @@map("batch_job")
+}
+
+/// PromptRuntimeLogger — Phase 4-A 最小运行时日志
+model PromptRuntimeLog {
+  id            String   @id @default(uuid()) @map("id") @db.Uuid
+  promptName    String   @map("prompt_name")
+  version       String   @default("v1")
+  routingMode   String   @default("default") @map("routing_mode")
+  contextHash   String?  @map("context_hash")
+  latencyMs     Int      @map("latency_ms")
+  success       Boolean  @default(true)
+  responseChars Int      @default(0) @map("response_chars")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([promptName])
+  @@index([createdAt])
+  @@map("prompt_runtime_log")
+}
+
+// ============================================================
+// Sprint 10 — AI Recruitment Director (AI 招聘主管)
+// ============================================================
+
+/// RecruitmentPlan — AI 招聘主管创建的招聘计划
+/// 一个计划 = 一个完整的招聘目标拆解 + 任务编排
+model RecruitmentPlan {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  enterpriseId    String   @map("enterprise_id") @db.Uuid
+
+  // ── 招聘目标 ──
+  goal            String
+  positionTitle   String   @map("position_title")
+  headcount       Int      @default(1)
+  salaryRange     String?  @map("salary_range")
+  location        String?
+  description     String?
+
+  // ── 计划状态 ──
+  status          String   @default("planning")
+  /// planning → executing → reviewing → completed | paused | failed
+
+  // ── 执行摘要 ──
+  summary         String?
+  totalSubtasks   Int      @default(0) @map("total_subtasks")
+  completedSubtasks Int    @default(0) @map("completed_subtasks")
+
+  // ── 推荐结果 ──
+  recommendedCandidates Json? @map("recommended_candidates")
+
+  // ── 时间戳 ──
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  executedAt      DateTime? @map("executed_at")
+  completedAt     DateTime? @map("completed_at")
+
+  // ── Relations ──
+  workspace       EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+  tasks           RecruitmentPlanTask[]
+
+  @@index([workspaceId, status])
+  @@index([enterpriseId])
+  @@map("recruitment_plan")
+}
+
+/// RecruitmentPlanTask — 招聘计划的子任务
+/// 每个子任务对应一个 AI Agent 的工作
+model RecruitmentPlanTask {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  planId          String   @map("plan_id") @db.Uuid
+
+  // ── 任务定义 ──
+  agentType       String   @map("agent_type")
+  taskName        String   @map("task_name")
+  taskDescription String?  @map("task_description")
+  sortOrder       Int      @default(0) @map("sort_order")
+
+  // ── 任务状态 ──
+  status          String   @default("pending")
+  /// pending → running → completed | failed | skipped
+
+  // ── 执行结果 ──
+  result          Json?
+  errorMessage    String?  @map("error_message")
+
+  // ── 时间戳 ──
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  // ── Relations ──
+  plan            RecruitmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, status])
+  @@index([planId, sortOrder])
+  @@map("recruitment_plan_task")
+}
+
+/// HiringKnowledge — 企业招聘知识资产
+/// 每次招聘完成后自动沉淀，让 AI 越用越懂企业
+model HiringKnowledge {
+  id              String   @id @default(uuid()) @map("id") @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  enterpriseId    String   @map("enterprise_id") @db.Uuid
+
+  // ── 知识类型 ──
+  knowledgeType   String   @map("knowledge_type")
+  /// candidate_profile | interview_standard | hiring_preference | success_pattern
+
+  // ── 知识内容 ──
+  title           String
+  content         String
+  metadata        Json?
+
+  // ── 来源 ──
+  sourceType      String   @map("source_type")
+  sourceId        String?  @map("source_id")
+
+  // ── 时间戳 ──
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ──
+  workspace       EnterpriseJobWorkspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId, knowledgeType])
+  @@index([enterpriseId])
+  @@map("hiring_knowledge")
 }

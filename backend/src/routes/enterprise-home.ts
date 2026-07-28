@@ -31,7 +31,7 @@ export async function enterpriseHomeRoutes(app: FastifyInstance) {
         return reply.status(401).send({ error: '未授权', message: 'token 无效' })
       }
 
-      // 通过 EnterpriseMember 关联获取企业上下文
+      // 通过 OrgMember 关联获取企业上下文
       const context = await getEnterpriseContext(userId)
 
       if (!context) {

@@ -254,15 +254,16 @@ import { ref, reactive } from 'vue'
 import { extractRequirement, createPosting } from '~/studio-v2/api/recruitment-api'
 
 // ─── Navigation ───
+// Sprint 07 Week 1: 统一入口 — 返回企业工作台
 function goBack() {
-  window.location.href = '/workspace/recruitment'
+  window.location.href = '/workspace/enterprise'
 }
 
 const createdJobId = ref('')
 
 function goToJobDetail() {
-  // 岗位详情页尚未建设，返回招聘工作台列表
-  window.location.href = '/workspace/recruitment'
+  // 岗位详情页尚未建设，返回企业工作台
+  window.location.href = '/workspace/enterprise'
 }
 
 // ─── State ───

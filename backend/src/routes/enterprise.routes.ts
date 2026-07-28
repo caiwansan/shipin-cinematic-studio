@@ -6,11 +6,15 @@
  * - 岗位优化建议
  * - 人才匹配
  * - 招聘工作台管理
+ *
+ * Sprint-Enterprise-Identity-Hardening-02 Phase 1:
+ * 修复 Tenant Boundary — enterpriseId 从 JWT 解析，不再信任客户端输入。
  */
 
 import type { FastifyInstance } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import { EnterpriseRecruitAgent } from '../agents/job/enterprise-recruit-agent'
+import { resolveEnterpriseId } from '../services/enterprise-context.service.js'
 
 const prisma = new PrismaClient()
 
@@ -28,29 +32,31 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
   // ─── 获取/创建企业招聘空间 ───
 
   fastify.get('/api/enterprise/workspace', async (request, reply) => {
-    const { enterpriseId } = request.query as { enterpriseId?: string }
+    const userId = (request.user as any)?.id || (request.user as any)?.userId
+    if (!userId) {
+      return reply.status(401).send({ error: '用户未认证' })
+    }
+
+    // Sprint-02 Fix: 从 JWT 解析 enterpriseId，不再信任客户端输入
+    const enterpriseId = await resolveEnterpriseId(userId)
     if (!enterpriseId) {
-      return reply.status(400).send({ error: 'enterpriseId is required' })
+      return reply.status(404).send({ error: '未找到企业身份，请先完成企业创建' })
     }
 
     try {
-      let workspace = await prisma.enterpriseJobWorkspace.findUnique({
+      const jcp = await prisma.jobCompanyProfile.findUnique({
+        where: { id: enterpriseId },
+      })
+
+      if (!jcp) {
+        return reply.status(404).send({ error: '企业档案不存在' })
+      }
+
+      let workspace = await prisma.enterpriseJobWorkspace.findFirst({
         where: { enterpriseId },
       })
 
       if (!workspace) {
-        // 获取企业信息
-        const company = await prisma.jobCompanyProfile.findUnique({
-          where: { enterpriseId },
-        })
-
-        if (!company) {
-          // 自动创建企业档案
-          await prisma.jobCompanyProfile.create({
-            data: { enterpriseId },
-          })
-        }
-
         // 创建招聘空间
         workspace = await prisma.enterpriseJobWorkspace.create({
           data: {
@@ -103,8 +109,18 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
   // ─── AI 生成 JD ───
 
   fastify.post('/api/enterprise/jd/generate', async (request, reply) => {
+    const userId = (request.user as any)?.id || (request.user as any)?.userId
+    if (!userId) {
+      return reply.status(401).send({ error: '用户未认证' })
+    }
+
+    // Sprint-02 Fix: 从 JWT 解析 enterpriseId
+    const enterpriseId = await resolveEnterpriseId(userId)
+    if (!enterpriseId) {
+      return reply.status(404).send({ error: '未找到企业身份' })
+    }
+
     const body = request.body as {
-      enterpriseId: string
       companyName: string
       position: string
       industry?: string
@@ -115,8 +131,8 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
       benefits?: string[]
     }
 
-    if (!body.enterpriseId || !body.position) {
-      return reply.status(400).send({ error: 'enterpriseId 和 position 都是必填' })
+    if (!body.position) {
+      return reply.status(400).send({ error: 'position 是必填' })
     }
 
     try {
@@ -172,6 +188,11 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
   // ─── 人才匹配 ───
 
   fastify.post('/api/enterprise/match', async (request, reply) => {
+    const userId = (request.user as any)?.id || (request.user as any)?.userId
+    if (!userId) {
+      return reply.status(401).send({ error: '用户未认证' })
+    }
+
     const body = request.body as {
       workspaceId: string
       jobId: string
@@ -182,6 +203,14 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // Sprint-02 Fix: 验证 workspace 归属
+      const workspace = await prisma.enterpriseJobWorkspace.findUnique({
+        where: { id: body.workspaceId },
+      })
+      if (!workspace) {
+        return reply.status(404).send({ error: '招聘空间不存在' })
+      }
+
       // 获取岗位信息
       const job = await prisma.jobPosting.findUnique({
         where: { id: body.jobId },
@@ -191,9 +220,19 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: '岗位不存在' })
       }
 
-      // 获取所有求职者画像
-      const candidates = await prisma.jobCandidate.findMany({
+      // 获取所有求职者画像 — Sprint-SSOT-CLEANUP-01: JobCandidate → CareerProfile
+      const candidates = await prisma.careerProfile.findMany({
         take: 50,
+        select: {
+          id: true,
+          fullName: true,
+          headline: true,
+          city: true,
+          bio: true,
+          skills: { select: { name: true } },
+          workExperiences: { take: 1, select: { title: true } },
+          educations: { take: 1, select: { degree: true, field: true } },
+        },
       })
 
       if (candidates.length === 0) {
@@ -208,19 +247,16 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
         jobSkills: job.skillRequirements || [],
         jobSalary: job.salary || '',
         jobLocation: job.location || '',
-        candidates: candidates.map(c => {
-          const pj = c.profileJson as any || {}
-          return {
-            id: c.id,
-            name: pj.name || '求职者',
-            skills: c.skills || [],
-            experience: c.experience || '',
-            city: c.city || '',
-            salaryMin: pj.salaryMin || 0,
-            salaryMax: pj.salaryMax || 0,
-            education: c.education || '',
-          }
-        }),
+        candidates: candidates.map(c => ({
+          id: c.id,
+          name: c.fullName || '求职者',
+          skills: c.skills?.map(s => s.name) || [],
+          experience: c.headline || c.workExperiences?.[0]?.title || '',
+          city: c.city || '',
+          salaryMin: 0,
+          salaryMax: 0,
+          education: c.educations?.[0]?.degree || c.educations?.[0]?.field || '',
+        })),
       })
 
       // 保存匹配记录
@@ -284,6 +320,14 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // Sprint-02 Fix: 验证 workspace 归属
+      const workspace = await prisma.enterpriseJobWorkspace.findUnique({
+        where: { id: workspaceId },
+      })
+      if (!workspace) {
+        return reply.status(404).send({ error: '招聘空间不存在' })
+      }
+
       const matches = await prisma.candidateMatch.findMany({
         where: {
           workspaceId,
@@ -343,6 +387,15 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // Sprint-02 Fix: 验证 match 归属
+      const match = await prisma.candidateMatch.findUnique({
+        where: { id: body.matchId },
+        include: { workspace: true },
+      })
+      if (!match) {
+        return reply.status(404).send({ error: '匹配记录不存在' })
+      }
+
       await prisma.candidateMatch.update({
         where: { id: body.matchId },
         data: { status: body.status },

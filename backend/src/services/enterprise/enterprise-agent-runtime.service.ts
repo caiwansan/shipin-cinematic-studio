@@ -478,6 +478,7 @@ export class EnterpriseAgentRuntimeService {
         await prisma.usageLog.create({
           data: {
             userId,
+            tenantId,
             taskId,
             cost,
             taskType: `enterprise_agent_${taskType}`,

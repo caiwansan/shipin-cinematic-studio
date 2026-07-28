@@ -87,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted } from 'vue'
 import EmployeeIdentity from './EmployeeIdentity.vue'
 import EmployeeRole from './EmployeeRole.vue'
@@ -184,7 +185,7 @@ async function fetchProfile() {
   error.value = null
 
   try {
-    const token = localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch(`/api/enterprise/agent-profiles/${props.agentId}/profile`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

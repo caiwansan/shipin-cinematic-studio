@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * /workspace/music — 独立音乐创作工作台
  * 引用昆仑镜用户体系 + 大模型设置体系
@@ -35,7 +36,7 @@ const userName = ref('')
 
 onMounted(() => {
   try {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
+    const token = getAuthToken() || getAuthToken()
     if (token) {
       isLoggedIn.value = true
       const payload = JSON.parse(atob(token.split('.')[1]))

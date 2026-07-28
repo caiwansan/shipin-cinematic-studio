@@ -82,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, reactive } from 'vue'
 
 defineProps<{
@@ -113,7 +114,7 @@ async function handleSubmit() {
   error.value = ''
 
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/identity/organization', {
       method: 'POST',
       headers: {

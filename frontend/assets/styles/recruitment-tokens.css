@@ -68,25 +68,39 @@
   --rec-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --rec-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
   --rec-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --rec-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.06);
+
+  /* ── Product UI Tokens (TASK-UX-01) ── */
+  --product-radius-card: 10px;
+  --product-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --product-shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --product-gradient-ai: linear-gradient(135deg, rgba(37, 99, 235, 0.04), rgba(99, 102, 241, 0.02));
+  --product-gradient-ai-hover: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(99, 102, 241, 0.04));
+  --product-gradient-primary: linear-gradient(135deg, #2563EB, #3B82F6);
+  --product-spacing-section: 24px;
+  --product-spacing-card-gap: 16px;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Sprint-07A.3: 全局 select/option 白字黑底规则
+   TASK-UX-01: 统一轻量/浅色主题 select 样式
    ═══════════════════════════════════════════════════════════ */
 select {
-  background-color: #0B1020 !important;
-  color: rgba(255, 255, 255, 0.7) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: var(--rec-bg-secondary, #fff);
+  color: var(--rec-text-primary, #1a1a1a);
+  border-color: var(--rec-border-primary, #e5e7eb);
+  border-radius: var(--rec-radius-md, 6px);
+  padding: 6px 10px;
+  font-size: var(--rec-text-md, 14px);
 }
 
 select option {
-  background-color: #0B1020 !important;
-  color: rgba(255, 255, 255, 0.8) !important;
+  background-color: var(--rec-bg-secondary, #fff);
+  color: var(--rec-text-primary, #1a1a1a);
 }
 
 select option:hover,
 select option:focus,
 select option:checked {
-  background-color: #1A2240 !important;
-  color: #fff !important;
+  background-color: var(--rec-brand-light, #eff6ff);
+  color: var(--rec-brand, #2563eb);
 }

@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * Enterprise Subscription Guard — GA-03
  * 检查用户是否有活跃的企业订阅
@@ -11,7 +12,7 @@ export function useEnterpriseSubscription() {
     loading.value = true
     try {
       const res = await fetch('/api/enterprise/subscription/status', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: { Authorization: `Bearer ${getAuthToken() || ''}` },
       })
       const data = await res.json()
       if (data.code === 0) {

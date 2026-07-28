@@ -11,13 +11,21 @@
  * - 模型配置：EnterpriseLlmConfig（企业 AI 员工）
  * - 数据权限：只读本企业候选人
  * - 审计：记录所有 Agent 行为
+ *
+ * Observation Sprint Step 1-B-1:
+ * Identity 解析必须经过 resolveCurrentEnterprise(OrgMember SSOT)
+ * 禁止直接查询 prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
  */
 
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { talentAgentService } from '../services/enterprise/talent-agent.service.js'
+import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
 
 export async function registerTalentAgentRoutes(app: FastifyInstance) {
+
+  // Sprint 13: Security P0 — JWT auth for all Agent routes
+  app.addHook('preHandler', app.authenticate)
 
   // ── POST /api/enterprise/agents/talent/analyze ──
   // 候选人深度分析
@@ -31,10 +39,10 @@ export async function registerTalentAgentRoutes(app: FastifyInstance) {
     }
 
     try {
-      // 1. 解析企业ID
-      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
-      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
-      const tenantId = ep.organizationId
+      // 1. 解析企业ID — Sprint Observation: 必须经过 resolveCurrentEnterprise
+      const ctx = await resolveCurrentEnterprise(userId)
+      if (!ctx?.enterpriseProfile?.organizationId) return reply.status(403).send({ error: 'No enterprise identity' })
+      const tenantId = ctx.enterpriseProfile.organizationId
 
       // 2. 确保 Talent Agent 存在
       const agent = await talentAgentService.ensureTalentAgent(tenantId)
@@ -62,9 +70,9 @@ export async function registerTalentAgentRoutes(app: FastifyInstance) {
     }
 
     try {
-      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
-      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
-      const tenantId = ep.organizationId
+      const ctx = await resolveCurrentEnterprise(userId)
+      if (!ctx?.enterpriseProfile?.organizationId) return reply.status(403).send({ error: 'No enterprise identity' })
+      const tenantId = ctx.enterpriseProfile.organizationId
 
       const agent = await talentAgentService.ensureTalentAgent(tenantId)
       if (!agent) return reply.status(500).send({ error: 'Failed to create talent agent' })
@@ -90,9 +98,9 @@ export async function registerTalentAgentRoutes(app: FastifyInstance) {
     }
 
     try {
-      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
-      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
-      const tenantId = ep.organizationId
+      const ctx = await resolveCurrentEnterprise(userId)
+      if (!ctx?.enterpriseProfile?.organizationId) return reply.status(403).send({ error: 'No enterprise identity' })
+      const tenantId = ctx.enterpriseProfile.organizationId
 
       const agent = await talentAgentService.ensureTalentAgent(tenantId)
       if (!agent) return reply.status(500).send({ error: 'Failed to create talent agent' })
@@ -115,9 +123,9 @@ export async function registerTalentAgentRoutes(app: FastifyInstance) {
     if (!userId) return reply.status(401).send({ error: 'Unauthorized' })
 
     try {
-      const ep = await prisma.enterpriseProfile.findFirst({ where: { organizationId: userId } })
-      if (!ep) return reply.status(400).send({ error: 'No enterprise identity' })
-      const tenantId = ep.organizationId
+      const ctx = await resolveCurrentEnterprise(userId)
+      if (!ctx?.enterpriseProfile?.organizationId) return reply.status(403).send({ error: 'No enterprise identity' })
+      const tenantId = ctx.enterpriseProfile.organizationId
 
       const agent = await prisma.enterpriseAgentProfile.findFirst({
         where: { tenantId, agentType: 'talent_agent' },

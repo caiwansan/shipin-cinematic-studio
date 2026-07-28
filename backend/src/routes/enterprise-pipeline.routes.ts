@@ -1,14 +1,22 @@
 /**
  * enterprise-pipeline.routes.ts — 招聘 Pipeline MVP API
  * Phase 5-A3: Kanban + Timeline + AI Actions + Dashboard Sync
+ *
+ * Sprint 07 Week 3: 修复 Tenant Boundary — workspaceId 归属验证
  */
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { InterviewAgent } from '../agents/job/interview-agent.js'
+import { requireEnterpriseWorkspaceContext } from '../services/enterprise-context.service.js'
 
 // ─── 有效的 Pipeline 阶段 ───
 const VALID_STAGES = ['discovered', 'screening', 'interview', 'offer', 'hired', 'rejected']
 const KANBAN_STAGES = ['discovered', 'screening', 'interview', 'offer', 'hired']
+
+/**
+ * Sprint 1B-5: 使用标准 tenant boundary guard 替代自制 verifyWorkspaceOwnership
+ * requireEnterpriseWorkspaceContext 同时验证 user → OrgMember → organization → enterpriseJobWorkspace
+ */
 
 export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
 
@@ -25,6 +33,13 @@ export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
   fastify.get('/api/pipeline/kanban', async (request, reply) => {
     const { workspaceId } = request.query as { workspaceId?: string }
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId required' })
+
+    // Sprint 1B-5: Tenant Boundary — 标准 workspace guard
+    const userId = (request.user as any)?.id || (request.user as any)?.userId
+    if (userId && workspaceId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace not owned by current enterprise' })
+    }
 
     const pipelines = await prisma.recruitmentPipeline.findMany({
       where: { workspaceId },
@@ -75,6 +90,13 @@ export async function enterprisePipelineRoutes(fastify: FastifyInstance) {
     }
     if (!body.workspaceId || !body.candidateName || !body.jobId) {
       return reply.status(400).send({ error: 'workspaceId, candidateName, jobId required' })
+    }
+
+    // Sprint 1B-5: Tenant Boundary — 标准 workspace guard
+    const userId = (request.user as any)?.id || (request.user as any)?.userId
+    if (userId && body.workspaceId) {
+      const wsc = await requireEnterpriseWorkspaceContext(userId, body.workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Forbidden: workspace not owned by current enterprise' })
     }
 
     const pipeline = await prisma.recruitmentPipeline.create({

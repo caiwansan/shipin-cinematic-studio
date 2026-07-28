@@ -9,7 +9,9 @@ import type { FastifyInstance } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import { CareerAgentService, checkUserBYOK } from '../services/enterprise/workflow/career-agent.service'
 import { enterpriseAgentRuntime } from '../services/enterprise/enterprise-agent-runtime.service'
+import { entitlementService } from '../services/enterprise/enterprise-entitlement.service.js'
 import { hermesProfileService } from '../services/enterprise/hermes-profile.service'
+import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
 
 export async function careerActivationRoutes(fastify: FastifyInstance) {
   const prisma = new PrismaClient()
@@ -48,6 +50,16 @@ export async function careerActivationRoutes(fastify: FastifyInstance) {
       let created = false
 
       if (!agent) {
+        // Sprint-03: Entitlement 检查 — 创建 Career Agent 前验证套餐限额
+        const check = await entitlementService.checkAgentCapability(userId)
+        if (!check.allowed) {
+          return reply.code(403).send({
+            error: 'AGENT_LIMIT_REACHED',
+            message: check.reason,
+            current: check.current,
+            limit: check.limit,
+          })
+        }
         const result = await careerAgentService.createAndDeploy({
           userId,
           userName: (request as any).user?.username || '用户',
@@ -66,10 +78,14 @@ export async function careerActivationRoutes(fastify: FastifyInstance) {
         return reply.code(500).send({ error: 'INSTANCE_NOT_FOUND', message: 'Career Agent Instance 不存在' })
       }
 
+      // Sprint 1B-5: 解析企业身份作为 tenantId
+      const enterprise = await resolveCurrentEnterprise(userId)
+      const tenantId = enterprise?.id || userId
+
       // Step 3: 创建 Task 记录
       const task = await (prisma as any).enterpriseAgentTask.create({
         data: {
-          tenantId: userId,
+          tenantId,
           agentInstanceId: instance.id,
           taskType: 'career_activation',
           inputSummary: request.body?.instruction || '职业助理初始化：分析用户背景并提供求职建议',
@@ -85,8 +101,8 @@ export async function careerActivationRoutes(fastify: FastifyInstance) {
       const result = await enterpriseAgentRuntime.executeTask({
         taskId: task.id,
         profileId: agent.profileId,
-        tenantId: userId,
-        organizationId: userId,
+        tenantId,
+        organizationId: tenantId,
         userId,
         taskType: 'career_activation',
         instruction,
@@ -151,6 +167,10 @@ export async function careerActivationRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // Sprint 1B-5: 解析企业身份
+      const enterprise = await resolveCurrentEnterprise(userId)
+      const tenantId = enterprise?.id || userId
+
       const agent = await careerAgentService.getCareerAgent(userId)
       if (!agent) {
         return reply.send({ hasAgent: false, productionReady: false })
@@ -161,11 +181,11 @@ export async function careerActivationRoutes(fastify: FastifyInstance) {
       })
 
       const tasks = await (prisma as any).enterpriseAgentTask.count({
-        where: { tenantId: userId },
+        where: { tenantId },
       })
 
       const outcomes = await (prisma as any).enterpriseOutcome.count({
-        where: { tenantId: userId },
+        where: { tenantId },
       })
 
       return reply.send({

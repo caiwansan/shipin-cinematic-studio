@@ -248,6 +248,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, reactive, onMounted, computed } from 'vue'
 
 // ─── Types ───
@@ -363,7 +364,7 @@ function statusText(status: string): string {
 }
 
 async function apiFetch(path: string, options: any = {}) {
-  const token = localStorage.getItem('auth_token') || ''
+  const token = getAuthToken() || ''
   const orgId = localStorage.getItem('organization_id') || ''
   const res = await fetch(path, {
     ...options,

@@ -140,6 +140,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 // EP-01: 所有数字来自真实 API
 // DP-UI-03: Conversation = CRM，不是聊天机器人
 // Schema 现实：RecruitmentConversation 无消息子表，中间面板展示元数据
@@ -187,7 +188,7 @@ function formatDate(dateStr: string): string {
 async function loadData() {
   loading.value = true
   try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
+    const token = getAuthToken() || ''
     const headers: Record<string, string> = {}
     if (token) headers['Authorization'] = `Bearer ${token}`
     const res = await fetch('/api/admin/recruitment/conversations', { headers })

@@ -60,6 +60,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -88,7 +89,7 @@ async function createOrder(planId: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        Authorization: `Bearer ${getAuthToken() || ''}`,
       },
       body: JSON.stringify({ planId }),
     })

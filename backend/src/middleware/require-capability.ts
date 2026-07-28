@@ -29,7 +29,7 @@ export class CapabilityDeniedError extends Error {
 
 /**
  * 从 request 获取 tenantId
- * 优先从 JWT payload 获取，其次从 EnterpriseMember 关联获取
+ * 优先从 JWT payload 获取，其次从 OrgMember 关联获取
  */
 async function resolveTenantId(request: FastifyRequest): Promise<string | null> {
   // 1. 尝试从 JWT payload 直接获取
@@ -37,7 +37,7 @@ async function resolveTenantId(request: FastifyRequest): Promise<string | null> 
   if (user?.tenantId) return user.tenantId;
   if (user?.enterpriseId) return user.enterpriseId;
 
-  // 2. 通过 EnterpriseMember 关联获取
+  // 2. 通过 OrgMember 关联获取
   if (user?.id) {
     const ctx = await getEnterpriseContext(user.id);
     if (ctx?.enterpriseId) return ctx.enterpriseId;

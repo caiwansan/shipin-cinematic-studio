@@ -125,6 +125,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { setToken, setUser } from '~/utils/token-cache'
 
@@ -206,7 +207,7 @@ function startOAuth(authUrl: string, onSuccess: (token: string, user: any) => vo
       onError('登录超时，请重试')
       return
     }
-    const token = localStorage.getItem('accessToken')
+    const token = getAuthToken()
     if (token) {
       clearInterval(oauthTimer!)
       oauthTimer = null

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { requireEnterpriseWorkspaceContext } from '../services/enterprise-context.service.js'
 
 export const interviewRoutes = async (fastify: FastifyInstance) => {
   // ─── GET /enterprise/interviews — 面试列表 ───
@@ -7,9 +8,15 @@ export const interviewRoutes = async (fastify: FastifyInstance) => {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     try {
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as any
+
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = workspaceId ? await requireEnterpriseWorkspaceContext(userId, workspaceId) : null
+      if (workspaceId && !wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+
       const sessions = await prisma.interviewSession.findMany({
-        where: workspaceId ? { workspaceId } : {},
+        where: wsc ? { workspaceId: wsc.workspace.id } : {},
         include: {
           job: true,
           pipeline: true,
@@ -34,9 +41,15 @@ export const interviewRoutes = async (fastify: FastifyInstance) => {
   }, async (request, reply) => {
     try {
       const { id } = request.params as any
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as any
+
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = workspaceId ? await requireEnterpriseWorkspaceContext(userId, workspaceId) : null
+      if (workspaceId && !wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+
       const session = await prisma.interviewSession.findFirst({
-        where: { id, ...(workspaceId ? { workspaceId } : {}) },
+        where: { id, ...(wsc ? { workspaceId: wsc.workspace.id } : {}) },
         include: {
           job: true,
           pipeline: true,
@@ -57,19 +70,17 @@ export const interviewRoutes = async (fastify: FastifyInstance) => {
   // ─── POST /enterprise/interviews — 创建面试 ───
   fastify.post('/enterprise/interviews', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId, jobId, pipelineId, candidateName, title, interviewerId } = request.body as any
 
       if (!workspaceId || !jobId || !candidateName) {
         return reply.status(400).send({ error: 'workspaceId, jobId, candidateName 都是必填' })
       }
 
-      // 校验 workspace 归属
-      const workspace = await prisma.enterpriseJobWorkspace.findFirst({
-        where: { id: workspaceId },
-      })
-      if (!workspace) {
-        return reply.status(404).send({ error: 'Workspace not found' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const workspace = wsc.workspace
 
       // 校验岗位存在
       const job = await prisma.jobPosting.findFirst({
@@ -103,14 +114,19 @@ export const interviewRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/enterprise/interviews/:id/evaluate', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const { id } = request.params as any
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId, overallScore, technicalScore, communicationScore, cultureScore, strengths, risks, recommendation, summary, nextSteps } = request.body as any
 
       if (!workspaceId) {
         return reply.status(400).send({ error: 'workspaceId is required' })
       }
 
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+
       const session = await prisma.interviewSession.findFirst({
-        where: { id, ...(workspaceId ? { workspaceId } : {}) },
+        where: { id, workspaceId: wsc.workspace.id },
       })
       if (!session) {
         return reply.status(404).send({ error: 'Interview not found' })
@@ -161,10 +177,15 @@ export const interviewRoutes = async (fastify: FastifyInstance) => {
   fastify.delete('/enterprise/interviews/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const { id } = request.params as any
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as any
 
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = workspaceId ? await requireEnterpriseWorkspaceContext(userId, workspaceId) : null
+      if (workspaceId && !wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+
       const session = await prisma.interviewSession.findFirst({
-        where: { id, ...(workspaceId ? { workspaceId } : {}) },
+        where: { id, ...(wsc ? { workspaceId: wsc.workspace.id } : {}) },
       })
       if (!session) {
         return reply.status(404).send({ error: 'Interview not found' })

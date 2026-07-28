@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 // ============================================================
 // Goal Service — API calls to backend
 // ============================================================
@@ -15,7 +16,7 @@ function apiBase(): string {
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   try {
-    const token = window.localStorage.getItem('auth_token') || ''
+    const token = window.getAuthToken() || ''
     if (token) headers['Authorization'] = `Bearer ${token}`
   } catch { /* ignore */ }
   return headers

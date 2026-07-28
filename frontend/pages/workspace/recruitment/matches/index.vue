@@ -6,7 +6,7 @@
     <!-- Header -->
     <div class="matches-header">
       <div class="flex items-center gap-3">
-        <button @click="navigateTo('/workspace/recruitment')" class="text-gray-400 hover:text-white text-sm cursor-pointer bg-transparent border-none">← 返回</button>
+        <button @click="navigateTo('/workspace/enterprise')" class="text-gray-400 hover:text-white text-sm cursor-pointer bg-transparent border-none">← 返回</button>
         <h1 class="text-lg font-semibold text-white/90">匹配结果</h1>
       </div>
     </div>
@@ -64,7 +64,10 @@
         <div v-if="!jobMatches.length" class="empty-state">
           <div class="empty-icon">🔍</div>
           <div class="empty-text">该岗位暂无匹配候选人</div>
-          <div class="empty-hint">创建岗位后系统会自动匹配候选人</div>
+          <div class="empty-hint">让 AI 猎聘顾问为您寻找匹配的人才</div>
+          <button class="empty-btn" @click="startAiMatch">
+            🤖 启动 AI 人才搜索
+          </button>
         </div>
 
         <!-- Match Cards -->
@@ -136,6 +139,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 // P5-RECRUITMENT-BETA-02: 企业招聘匹配结果页
 // 数据来源：CandidateMatch + JobPosting + JobCandidate
 // 加入Pipeline：POST /api/pipeline
@@ -147,7 +151,7 @@ const matches = ref<any[]>([])
 const selectedJobId = ref('')
 const toast = ref<{ message: string; type: string } | null>(null)
 
-const token = computed(() => localStorage.getItem('token') || '')
+const token = computed(() => getAuthToken() || '')
 const workspaceId = computed(() => localStorage.getItem('workspace_id') || localStorage.getItem('enterprise_id') || '')
 
 const jobMatches = computed(() => {
@@ -232,6 +236,28 @@ async function fetchMatchesFromAdmin() {
     }))
   } catch {
     // 静默失败
+  }
+}
+
+async function startAiMatch() {
+  if (!selectedJobId.value || !workspaceId.value) return
+  try {
+    const res = await fetch('/api/enterprise/match', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`,
+      },
+      body: JSON.stringify({ workspaceId: workspaceId.value, jobId: selectedJobId.value }),
+    })
+    if (res.ok) {
+      showToast('AI 匹配已启动，请稍后刷新', 'success')
+      await fetchMatches()
+    } else {
+      showToast('启动失败，请重试', 'error')
+    }
+  } catch {
+    showToast('网络错误', 'error')
   }
 }
 
@@ -499,6 +525,24 @@ onMounted(fetchData)
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.25);
   margin-top: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.empty-btn {
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.empty-btn:hover {
+  box-shadow: 0 4px 16px rgba(96, 165, 250, 0.3);
+  transform: translateY(-1px);
 }
 
 /* Toast */

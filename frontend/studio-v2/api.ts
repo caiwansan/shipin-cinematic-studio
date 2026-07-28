@@ -1,3 +1,4 @@
+import { getAuthToken, setAuthToken, clearAuthToken } from '~/utils/auth/token'
 /**
  * 昆仑镜统一 API Client
  * 所有工作台通过此模块调用后端 API，方便统一维护路由路径
@@ -34,7 +35,7 @@ async function request(path: string, options: ApiOptions = {}) {
   if (res.status === 401) {
     // 清除 token 并重定向（如果不在登录页）
     if (!window.location.pathname.includes('/login')) {
-      localStorage.removeItem('auth_token')
+      clearAuthToken()
       window.location.href = '/login'
     }
     throw new Error('未登录或登录已过期')

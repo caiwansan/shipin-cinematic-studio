@@ -16,6 +16,8 @@
 
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { entitlementService } from '../services/enterprise/enterprise-entitlement.service.js'
+import { requireEnterpriseWorkspaceContext } from '../services/enterprise-context.service.js'
 
 // ─── AI 员工类型定义 ───
 const RECRUITMENT_AGENT_TYPES = {
@@ -117,6 +119,12 @@ async function syncEmployeesToPersistence(workspaceId: string, enterpriseId: str
 
     let profileId: string
     if (!existingProfile) {
+      // Sprint-03: Entitlement 检查 — 创建 Agent 前验证套餐限额
+      const check = await entitlementService.checkAgentCapability(enterpriseId)
+      if (!check.allowed) {
+        console.warn(`[RecruitmentDept] Agent 创建跳过: ${check.reason} (${check.current}/${check.limit})`)
+        continue
+      }
       const def = RECRUITMENT_AGENT_TYPES[emp.agentType as AgentTypeCode]
       const profile = await prisma.enterpriseAgentProfile.create({
         data: {
@@ -191,11 +199,13 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
    */
   fastify.post('/api/enterprise/recruitment-department/sync-employees', async (request, reply) => {
     try {
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.body as any
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ success: false, error: 'Invalid workspaceId' })
-      }
+
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ success: false, message: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
 
       // Ensure workforce exists first
       await ensureWorkforceExists(workspaceId, enterpriseId)
@@ -220,12 +230,13 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
   // ─── GET /api/enterprise/recruitment-department — AI 招聘部门首页 ───
   fastify.get('/api/enterprise/recruitment-department', async (request, reply) => {
     try {
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
 
       const wsId = workspaceId || (await resolveWorkspaceId(enterpriseId))
       if (!wsId) {
@@ -384,12 +395,13 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/api/enterprise/recruitment-department/employees/:id/activate', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
 
       const employee = await prisma.enterpriseAgentWorkforce.findFirst({
         where: { id, workspaceId: workspaceId || undefined },
@@ -439,12 +451,13 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/api/enterprise/recruitment-department/employees/:id/pause', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId, reason } = request.query as { workspaceId?: string; reason?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
 
       const employee = await prisma.enterpriseAgentWorkforce.findFirst({
         where: { id, workspaceId: workspaceId || undefined },
@@ -480,12 +493,13 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/api/enterprise/recruitment-department/employees/:id/resume', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
 
       const employee = await prisma.enterpriseAgentWorkforce.findFirst({
         where: { id, workspaceId: workspaceId || undefined },
@@ -522,12 +536,13 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
   fastify.get('/api/enterprise/recruitment-department/employees/:id/settings', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
 
       const employee = await prisma.enterpriseAgentWorkforce.findFirst({
         where: { id, workspaceId: workspaceId || undefined },
@@ -596,6 +611,7 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
   fastify.put('/api/enterprise/recruitment-department/employees/:id/settings', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as { workspaceId?: string }
       const body = request.body as {
         providerConfigId?: string
@@ -605,10 +621,10 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
         enabled?: boolean
       }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
 
       const employee = await prisma.enterpriseAgentWorkforce.findFirst({
         where: { id, workspaceId: workspaceId || undefined },
@@ -681,12 +697,13 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/api/enterprise/recruitment-department/employees/:id/test-connection', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
+      const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
-      }
+      // Observation Sprint Step 1-B-2: workspace tenant boundary guard
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
 
       const employee = await prisma.enterpriseAgentWorkforce.findFirst({
         where: { id, workspaceId: workspaceId || undefined },
@@ -760,6 +777,109 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
       return reply.status(500).send({ error: 'Connection test failed' })
     }
   })
+
+  // ─── GET /api/enterprise/recruitment/agents — 招聘专用 AI 员工列表 ───
+  /**
+   * 返回当前企业的招聘 Agent（marketing / recruiter / interview）
+   * 数据源：EnterpriseAgentInstance + profile 表
+   * 不返回非招聘类型的 Agent
+   */
+  fastify.get('/api/enterprise/recruitment/agents', async (request, reply) => {
+    try {
+      const userId = (request as any).user?.id || (request as any).userId
+      const { workspaceId } = request.query as { workspaceId?: string }
+
+      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
+      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
+      const enterpriseId = wsc.enterpriseId
+
+      const tenantId = enterpriseId
+      const recruitmentTypes = ['recruiter', 'marketing', 'interview']
+
+      // 查询当前企业下的招聘类型 Agent 实例
+      const instances = await prisma.enterpriseAgentInstance.findMany({
+        where: {
+          tenantId,
+          profile: { agentType: { in: recruitmentTypes } },
+        },
+        include: {
+          profile: { select: { name: true, agentType: true, description: true, capabilities: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+
+      // 如果没有招聘 Agent，尝试从 workforce 创建默认的 3 个
+      if (instances.length === 0) {
+        const wsId = workspaceId || (await resolveWorkspaceId(enterpriseId))
+        if (wsId) {
+          await ensureWorkforceExists(wsId, enterpriseId)
+          // 重查
+          const retryInstances = await prisma.enterpriseAgentInstance.findMany({
+            where: {
+              tenantId,
+              profile: { agentType: { in: recruitmentTypes } },
+            },
+            include: {
+              profile: { select: { name: true, agentType: true, description: true, capabilities: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+          })
+
+          return reply.send({
+            data: retryInstances.map(inst => ({
+              id: inst.id,
+              type: inst.profile?.agentType || 'recruiter',
+              name: inst.profile?.name || 'AI 招聘员工',
+              shortName: getShortName(inst.profile?.agentType || 'recruiter'),
+              status: inst.lifecycleState === 'ACTIVE' ? 'active' : 'paused',
+              capabilities: parseCapabilities(inst.profile?.capabilities),
+              usage: 0,
+              lastActive: inst.lastRecoveredAt || inst.updatedAt?.toISOString() || null,
+              createdAt: inst.createdAt?.toISOString() || new Date().toISOString(),
+            })),
+          })
+        }
+      }
+
+      return reply.send({
+        data: instances.map(inst => ({
+          id: inst.id,
+          type: inst.profile?.agentType || 'recruiter',
+          name: inst.profile?.name || 'AI 招聘员工',
+          shortName: getShortName(inst.profile?.agentType || 'recruiter'),
+          status: inst.lifecycleState === 'ACTIVE' ? 'active' : 'paused',
+          capabilities: parseCapabilities(inst.profile?.capabilities),
+          usage: 0,
+          lastActive: inst.lastRecoveredAt || inst.updatedAt?.toISOString() || null,
+          createdAt: inst.createdAt?.toISOString() || new Date().toISOString(),
+        })),
+      })
+    } catch (error: any) {
+      request.log.error(`[recruitment-department] agents: ${error.message}`)
+      return reply.status(500).send({ error: 'Failed to fetch agents', message: error.message })
+    }
+  })
+}
+
+// ─── Helper: 获取招聘 Agent 的中文短名 ───
+function getShortName(agentType: string): string {
+  const map: Record<string, string> = {
+    recruiter: 'AI 招聘官',
+    marketing: '招聘宣传官',
+    interview: 'AI 面试官',
+  }
+  return map[agentType] || 'AI 招聘员工'
+}
+
+// ─── Helper: 解析 capabilities JSON ───
+function parseCapabilities(cap: unknown): string[] {
+  if (!cap) return []
+  if (Array.isArray(cap)) return cap
+  if (typeof cap === 'string') {
+    try { const parsed = JSON.parse(cap); return Array.isArray(parsed) ? parsed : [] }
+    catch { return [] }
+  }
+  return []
 }
 
 function getDefaultBaseUrl(provider: string): string {

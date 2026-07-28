@@ -1,3 +1,4 @@
+import { getAuthToken } from '~/utils/auth/token'
 /**
  * useEnterpriseDashboard — CEO Dashboard data fetching
  * Phase 3.3 — P0-1: Connect dashboard to real backend API
@@ -15,7 +16,7 @@ export function useEnterpriseDashboard() {
     loading.value = true
     error.value = null
     try {
-      const token = localStorage.getItem('auth_token') || ''
+      const token = getAuthToken() || ''
       const res = await fetch(`${API_BASE}/${tenantId}/dashboard`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -34,7 +35,7 @@ export function useEnterpriseDashboard() {
 
   async function fetchAIOverview(tenantId: string) {
     try {
-      const token = localStorage.getItem('auth_token') || ''
+      const token = getAuthToken() || ''
       const res = await fetch(`${API_BASE}/${tenantId}/ai-department/overview`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })

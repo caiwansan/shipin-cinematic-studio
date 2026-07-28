@@ -33,6 +33,10 @@ export interface TodayMetrics {
   newResumes: number
   offers: number
   hires: number
+  // Sprint 07 Week 1: 今日任务数据
+  pendingCandidates?: number
+  pendingJobs?: number
+  pendingResumes?: number
 }
 
 export interface DepartmentHealth {
@@ -150,6 +154,10 @@ export function mapEnterpriseHome(data: EnterpriseHomeRawData): EnterpriseHomeDT
       newResumes: data.todayResumes,
       offers: data.todayOffers,
       hires: data.todayHires,
+      // Sprint 07 Week 1: 今日任务数据
+      pendingCandidates: data.pendingCandidates || 0,
+      pendingJobs: data.pendingJobs || 0,
+      pendingResumes: data.pendingResumes || 0,
     },
     funnel: buildFunnel(data),
     needsAttention: buildNeedsAttention(data),

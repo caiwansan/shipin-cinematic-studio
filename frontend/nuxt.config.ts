@@ -32,8 +32,11 @@ export default defineNuxtConfig({
     },
     routeRules: {
       '/login': { redirect: '/' },
-      
-      
+
+      // 📍 SSOT Route Redirect Phase 1 — unified in middleware/enterprise-redirect.global.ts
+      // FRONTEND-RECRUITMENT-ENTRY-CONSOLIDATION-01 SubTask 1: Nuxt config redirects removed,
+      // all legacy path redirects consolidated into a single middleware.
+
       // 🛡️ 全局安全响应头部
       '/**': {
         headers: {

@@ -78,24 +78,39 @@ export class TalentAgentService {
   ): Promise<TalentAnalysisResult> {
     const startTime = Date.now()
 
-    // 1. 获取候选人数据
-    const candidate = await this.prisma.jobCandidate.findUnique({
+    // 1. 获取候选人数据 — Sprint-SSOT-CLEANUP-01: CareerProfile SSOT
+    const careerProfile = await this.prisma.careerProfile.findUnique({
       where: { id: candidateId },
-      include: {
-        matches: {
-          include: { job: { select: { title: true } } },
-          orderBy: { matchScore: 'desc' },
-          take: 3,
-        },
+      select: {
+        id: true,
+        candidateId: true,
+        fullName: true,
+        headline: true,
+        bio: true,
+        city: true,
+        email: true,
+        phone: true,
+        careerDirection: true,
+        skills: { select: { name: true } },
+        workExperiences: { orderBy: { startDate: 'desc' } },
+        educations: { orderBy: { startDate: 'desc' }, take: 1, select: { degree: true, field: true } },
       },
     })
 
-    if (!candidate) {
+    if (!careerProfile) {
       return this.errorResult('CANDIDATE_NOT_FOUND', startTime)
     }
 
+    // 通过 CareerProfile.candidateId（旧 JobCandidate.id）查询 CandidateMatch
+    const candidateMatches = await this.prisma.candidateMatch.findMany({
+      where: { candidateId: careerProfile.candidateId },
+      include: { job: { select: { title: true } } },
+      orderBy: { matchScore: 'desc' },
+      take: 3,
+    })
+
     // 2. 验证候选人属于本企业（通过 JobPosting → enterpriseId）
-    const jobIds = candidate.matches.map(m => m.jobId)
+    const jobIds = candidateMatches.map(m => m.jobId)
     if (jobIds.length === 0) {
       return this.errorResult('NO_MATCHES_FOR_TENANT', startTime)
     }
@@ -110,14 +125,22 @@ export class TalentAgentService {
     }
 
     // 3. 构建 prompt
+    const skills = careerProfile.skills?.map(s => s.name).join(', ') || '未提供'
+    const experience = careerProfile.workExperiences?.[0]
+      ? `${careerProfile.workExperiences[0].title} @ ${careerProfile.workExperiences[0].company || '未提供'}`
+      : (careerProfile.headline || '未提供')
+    const education = careerProfile.educations?.[0]
+      ? `${careerProfile.educations[0].degree || ''} ${careerProfile.educations[0].field || ''}`.trim() || '未提供'
+      : '未提供'
+
     const candidateData = {
-      education: candidate.education || '未提供',
-      skills: candidate.skills?.join(', ') || '未提供',
-      experience: candidate.experience || '未提供',
-      city: candidate.city || '未提供',
-      salaryExpectation: candidate.salaryExpectation || '未提供',
-      careerGoal: candidate.careerGoal || '未提供',
-      topMatches: candidate.matches.slice(0, 3).map(m => ({
+      name: careerProfile.fullName || '求职者',
+      education,
+      skills,
+      experience,
+      city: careerProfile.city || '未提供',
+      careerGoal: careerProfile.careerDirection || careerProfile.bio || '未提供',
+      topMatches: candidateMatches.slice(0, 3).map(m => ({
         job: m.job.title,
         score: m.matchScore,
         status: m.status,
@@ -127,11 +150,11 @@ export class TalentAgentService {
     const prompt = `请分析以下候选人，给出专业评估报告：
 
 ## 候选人信息
+- 姓名：${candidateData.name}
 - 学历：${candidateData.education}
 - 技能：${candidateData.skills}
 - 经验：${candidateData.experience}
 - 城市：${candidateData.city}
-- 期望薪资：${candidateData.salaryExpectation}
 - 求职目标：${candidateData.careerGoal}
 
 ## 匹配记录

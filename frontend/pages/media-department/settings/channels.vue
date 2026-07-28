@@ -147,6 +147,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted, computed } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 
@@ -169,7 +170,7 @@ const newChannel = ref({
 })
 
 function getToken(): string {
-  try { return localStorage.getItem('accessToken') || '' } catch { return '' }
+  try { return getAuthToken() || '' } catch { return '' }
 }
 
 function platformIcon(platform: string): string {

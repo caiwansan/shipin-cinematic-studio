@@ -48,7 +48,7 @@ export { isFeatureEnabled, setFeatureFlagOverride, clearFeatureFlagOverride, get
 export { PermissionService, getCurrentUserTier, SubscriberTier, CapabilityId } from '../utils/geoCapability';
 export { listProviders, getProvider, listModels, verifyProvider, connectProvider, getProviderStatus, sendFreEvent, ProviderMetadata, VerifyRequest, VerifyResponse, ConnectRequest, ProviderStatus, TelemetryEvent } from '../utils/provider-api';
 export { default as storageGateway, get, set, remove, getAuthToken, setAuthToken, getProviderMap, setProviderMap, storageDiagnostics, STORAGE_KEYS } from '../utils/storage-gateway';
-export { default as tokenCache, getToken, setToken, getUser, setUser, clearAuth, getAdminToken, isAuthenticated } from '../utils/token-cache';
+export { default as tokenCache, getToken, setToken, clearAuth, isAuthenticated, getUser, setUser, getAdminToken } from '../utils/token-cache';
 export { useAuthStore } from '../stores/auth';
 export { useEnterpriseAgentStore, EnterpriseAgent, AgentModelBinding, CreateAgentPayload, BindModelPayload } from '../stores/enterprise-agent';
 export { useCommandCenterStore, ActionStage } from '../stores/enterprise-command-center.store';

@@ -46,6 +46,7 @@
     "svg-captcha": "^1.4.0",
     "tencentcloud-sdk-nodejs-sms": "^4.1.239",
     "tsconfig-paths": "^4.2.0",
+    "uuid": "^14.0.1",
     "zod": "^3.23.0"
   },
   "devDependencies": {

@@ -86,52 +86,17 @@ export async function talentRoutes(fastify: FastifyInstance) {
         candidates
       )
 
-      // 保存推荐记录
-      const savedRecommendations = []
-      for (const result of results) {
-        // 查找或创建人才画像
-        let talent = await prisma.talentProfile.findFirst({
-          where: { name: result.name },
-        })
-
-        if (!talent) {
-          talent = await prisma.talentProfile.create({
-            data: {
-              name: result.name,
-              education: result.talent.education !== '未知' ? result.talent.education : null,
-              skills: result.talent.skills,
-              experience: result.talent.experience,
-              city: result.talent.city !== '未知' ? result.talent.city : null,
-              careerLevel: result.talent.careerLevel !== '未知' ? result.talent.careerLevel : null,
-              strengths: result.talent.strengths,
-              risks: result.risks,
-              sourceType: 'search',
-            },
-          })
-        }
-
-        const rec = await prisma.talentRecommendation.create({
-          data: {
-            taskId: task.id,
-            talentId: talent.id,
-            matchScore: result.matchScore,
-            matchBreakdown: result.matchBreakdown as any,
-            recommendReason: result.recommendReason,
-            risks: result.risks,
-          },
-        })
-
-        savedRecommendations.push({
-          id: rec.id,
-          talentId: talent.id,
-          name: result.name,
-          matchScore: result.matchScore,
-          matchBreakdown: result.matchBreakdown,
-          recommendReason: result.recommendReason,
-          risks: result.risks,
-          talent: result.talent,
-        })
-      }
+      // 保存推荐记录 — Sprint-SSOT-CLEANUP-01: 不再写入 TalentProfile
+      // TalentProfile 已废弃，搜索结果直接返回不落库旧模型
+      const savedRecommendations = results.map((result, i) => ({
+        id: `idx-${task.id}-${i}`,
+        name: result.name,
+        matchScore: result.matchScore,
+        matchBreakdown: result.matchBreakdown,
+        recommendReason: result.recommendReason,
+        risks: result.risks,
+        talent: result.talent,
+      }))
 
       // 更新任务状态
       await prisma.talentSearchTask.update({
@@ -201,17 +166,18 @@ export async function talentRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── 获取人才画像 ───
+  // ─── 获取人才画像 — Sprint-SSOT-CLEANUP-01: TalentProfile → CareerProfile ───
 
   fastify.get('/api/enterprise/talent/profile/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
 
     try {
-      const profile = await prisma.talentProfile.findUnique({
+      const profile = await prisma.careerProfile.findUnique({
         where: { id },
         include: {
-          relationships: { orderBy: { updatedAt: 'desc' }, take: 5 },
-          recommendations: { orderBy: { createdAt: 'desc' }, take: 5 },
+          educations: { orderBy: { startDate: 'desc' }, take: 5 },
+          workExperiences: { orderBy: { startDate: 'desc' }, take: 5 },
+          skills: { include: { skill: { select: { name: true, category: true } } } },
         },
       })
 
@@ -333,7 +299,7 @@ export async function talentRoutes(fastify: FastifyInstance) {
 
     try {
       const [totalTalents, totalRelationships, stageCounts, recentSearches] = await Promise.all([
-        prisma.talentProfile.count(),
+        prisma.careerProfile.count(),
         prisma.talentRelationship.count({ where: { workspaceId } }),
         prisma.talentRelationship.groupBy({
           by: ['stage'],
@@ -398,25 +364,34 @@ export async function talentRoutes(fastify: FastifyInstance) {
 async function gatherCandidatePool(enterpriseId: string) {
   const candidates: any[] = []
 
-  // 1. 从求职者画像获取
-  const jobCandidates = await prisma.jobCandidate.findMany({
+  // 1. 从求职者画像获取 — Sprint-SSOT-CLEANUP-01: JobCandidate → CareerProfile
+  const careerProfiles = await prisma.careerProfile.findMany({
     take: 100,
+    select: {
+      id: true,
+      fullName: true,
+      headline: true,
+      city: true,
+      bio: true,
+      skills: { select: { name: true } },
+      workExperiences: { select: { title: true, company: true } },
+      educations: { select: { degree: true, field: true } },
+    },
   })
 
-  for (const jc of jobCandidates) {
-    const profileJson = jc.profileJson as any || {}
+  for (const cp of careerProfiles) {
     candidates.push({
-      id: jc.id,
-      name: profileJson.name || '求职者',
-      skills: jc.skills || [],
-      experience: jc.experience || '',
-      experienceYears: profileJson.experienceYears || 0,
-      city: jc.city || '',
-      salaryMin: profileJson.salaryMin || 0,
-      salaryMax: profileJson.salaryMax || 0,
-      education: jc.education || '',
-      careerLevel: profileJson.careerLevel || '',
-      strengths: profileJson.strengths || [],
+      id: cp.id,
+      name: cp.fullName || '求职者',
+      skills: cp.skills?.map(s => s.name) || [],
+      experience: cp.workExperiences?.[0]?.title || cp.headline || '',
+      experienceYears: 0,
+      city: cp.city || '',
+      salaryMin: 0,
+      salaryMax: 0,
+      education: cp.educations?.[0]?.degree || cp.educations?.[0]?.field || '',
+      careerLevel: '',
+      strengths: [],
       sourceType: 'candidate',
     })
   }
@@ -443,24 +418,38 @@ async function gatherCandidatePool(enterpriseId: string) {
     })
   }
 
-  // 3. 从人才画像库获取
-  const talentProfiles = await prisma.talentProfile.findMany({
+  // 3. 从 CareerProfile 补充（原 TalentProfile 源）— Sprint-SSOT-CLEANUP-01
+  const extraProfiles = await prisma.careerProfile.findMany({
     take: 100,
+    orderBy: { lastActiveAt: 'desc' },
+    select: {
+      id: true,
+      fullName: true,
+      headline: true,
+      bio: true,
+      city: true,
+      yearsExperience: true,
+      currentLevel: true,
+      careerDirection: true,
+      skills: { select: { name: true } },
+      workExperiences: { take: 1, select: { title: true, company: true } },
+      educations: { take: 1, select: { degree: true, field: true } },
+    },
   })
 
-  for (const tp of talentProfiles) {
+  for (const cp of extraProfiles) {
     candidates.push({
-      id: tp.id,
-      name: tp.name,
-      skills: tp.skills || [],
-      experience: tp.experience || '',
-      experienceYears: tp.experienceYears || 0,
-      city: tp.city || '',
-      salaryMin: tp.salaryMin || 0,
-      salaryMax: tp.salaryMax || 0,
-      education: tp.education || '',
-      careerLevel: tp.careerLevel || '',
-      strengths: tp.strengths || [],
+      id: cp.id,
+      name: cp.fullName,
+      skills: cp.skills?.map(s => s.name) || [],
+      experience: cp.workExperiences?.[0]?.title || cp.headline || '',
+      experienceYears: cp.yearsExperience || 0,
+      city: cp.city || '',
+      salaryMin: 0,
+      salaryMax: 0,
+      education: cp.educations?.[0]?.degree || cp.educations?.[0]?.field || '',
+      careerLevel: cp.currentLevel || '',
+      strengths: [],
       sourceType: 'talent',
     })
   }

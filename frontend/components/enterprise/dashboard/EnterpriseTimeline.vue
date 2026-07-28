@@ -99,6 +99,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted, computed } from 'vue'
 
 // ─── Types ───────────────────────────────────────────────
@@ -217,7 +218,7 @@ async function fetchTimeline() {
   error.value = null
 
   try {
-    const token = localStorage.getItem('auth_token') || ''
+    const token = getAuthToken() || ''
     const res = await fetch('/api/enterprise/timeline', {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

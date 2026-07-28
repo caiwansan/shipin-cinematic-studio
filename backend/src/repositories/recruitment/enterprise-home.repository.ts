@@ -43,6 +43,10 @@ export interface EnterpriseHomeRawData {
   recentInterviews: Array<{ id: string; status: string; createdAt: Date }>
   activeInstances: number
   pausedInstances: number
+  // Sprint 07 Week 1: 今日任务数据
+  pendingCandidates: number
+  pendingJobs: number
+  pendingResumes: number
 }
 
 export const enterpriseHomeRepository = {
@@ -81,6 +85,9 @@ export const enterpriseHomeRepository = {
       recentInterviews,
       activeInstances,
       pausedInstances,
+      pendingCandidates,
+      pendingJobs,
+      pendingResumes,
     ] = await Promise.all([
       // 今日沟通（有 enterpriseId）
       prisma.recruitmentConversation.count({
@@ -180,6 +187,22 @@ export const enterpriseHomeRepository = {
       prisma.enterpriseAgentInstance.count({
         where: { tenantId, lifecycleState: 'PAUSED' },
       }),
+      // Sprint 07 Week 1: 待分析候选人（pending 状态的匹配）
+      workspaceId
+        ? prisma.candidateMatch.count({
+            where: { workspaceId, status: 'pending' },
+          })
+        : 0,
+      // Sprint 07 Week 1: 待优化 JD 的岗位（草稿状态）
+      prisma.jobPosting.count({
+        where: { enterpriseId, status: 'draft' },
+      }),
+      // Sprint 07 Week 1: 待筛选简历（pending 状态的匹配）
+      workspaceId
+        ? prisma.candidateMatch.count({
+            where: { workspaceId, status: 'pending' },
+          })
+        : 0,
     ])
 
     return {
@@ -203,6 +226,9 @@ export const enterpriseHomeRepository = {
       recentInterviews,
       activeInstances,
       pausedInstances,
+      pendingCandidates,
+      pendingJobs,
+      pendingResumes,
     }
   },
 }

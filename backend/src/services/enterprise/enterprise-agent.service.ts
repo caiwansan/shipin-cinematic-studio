@@ -3,6 +3,7 @@
  * 企业 AI 员工管理
  */
 import { prisma } from '../../utils/index.js'
+import { entitlementService } from './enterprise-entitlement.service.js'
 
 export interface CreateAgentInput {
   tenantId: string
@@ -163,6 +164,12 @@ export class EnterpriseAgentService {
     const templates = this.getDefaults()
     const created = []
     for (const tpl of templates) {
+      // Sprint-03: Entitlement 检查 — 每个 Agent 创建前验证套餐限额
+      const check = await entitlementService.checkAgentCapability(organizationId)
+      if (!check.allowed) {
+        console.warn(`[AgentService] 默认部门创建中断: ${check.reason} (${check.current}/${check.limit})`)
+        break
+      }
       const agent = await this.create({ ...tpl, tenantId, organizationId })
       created.push(agent)
     }

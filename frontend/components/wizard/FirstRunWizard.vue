@@ -257,6 +257,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import type { ProviderMetadata, VerifyResponse } from '~/utils/provider-api'
 import { listProviders, verifyProvider, connectProvider, sendFreEvent } from '~/utils/provider-api'
@@ -410,7 +411,7 @@ async function handleFirstGeneration() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+        'Authorization': `Bearer ${getAuthToken() || ''}`,
       },
       body: JSON.stringify({
         taskType: 'llm',

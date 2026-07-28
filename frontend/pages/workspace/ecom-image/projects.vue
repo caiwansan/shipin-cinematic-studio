@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 definePageMeta({ middleware: 'auth' })
 
 import { ref, onMounted } from 'vue'
@@ -14,7 +15,7 @@ const creating = ref(false)
 async function loadProjects() {
   loading.value = true
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const res = await fetch('/api/ecom/projects', {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -33,7 +34,7 @@ async function createProject() {
   if (!newProjectName.value.trim()) return
   creating.value = true
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getAuthToken()
     const res = await fetch('/api/ecom/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
