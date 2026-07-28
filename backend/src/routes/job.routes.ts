@@ -58,16 +58,16 @@ export default async function jobRoutes(fastify: FastifyInstance) {
               bio: true,
               headline: true,
               city: true,
-              skills: { select: { name: true } },
+              skills: { select: { skill: { select: { name: true } } } },
               workExperiences: { take: 1, select: { title: true, company: true } },
-              educations: { take: 1, select: { degree: true, field: true } },
+              educations: { take: 1, select: { degree: true, major: true } },
             },
           })
           if (saved) {
             existingProfile = {
               name: saved.fullName || '',
-              education: saved.educations?.[0]?.degree || saved.educations?.[0]?.field || '',
-              skills: saved.skills?.map(s => s.name) || [],
+              education: saved.educations?.[0]?.degree || saved.educations?.[0]?.major || '',
+              skills: saved.skills?.map(s => s.skill?.name) || [],
               experience: saved.workExperiences?.[0]?.title || saved.headline || '',
               city: saved.city || '',
               salaryMin: 0,
@@ -173,8 +173,8 @@ export default async function jobRoutes(fastify: FastifyInstance) {
       if (saved) {
         const profile = {
           name: saved.fullName || '',
-          education: saved.educations?.[0]?.degree || saved.educations?.[0]?.field || '',
-          skills: saved.skills?.map(s => s.name) || [],
+          education: saved.educations?.[0]?.degree || saved.educations?.[0]?.major || '',
+          skills: saved.skills?.map(s => s.skill?.name) || [],
           experience: saved.workExperiences?.[0]?.title || saved.headline || '',
           city: saved.city || '',
           salaryMin: 0,
