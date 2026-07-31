@@ -11,6 +11,7 @@
       :isOnboarded="isOnboarded"
       @start-onboarding="showOnboarding = true"
       @go-home="handleGoHome"
+      @go-billing="navigateTo('/workspace/enterprise/billing')"
     />
 
     <!-- Workspace Header: 当前模块标题 + 状态 -->

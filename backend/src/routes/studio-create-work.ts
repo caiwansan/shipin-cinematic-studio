@@ -305,9 +305,9 @@ async function analyzeCreative(params: {
 }> {
   const { creativeInput, title, genre, visualStyle, aspectRatio, targetDuration, userId } = params
 
-  // 构建分析 prompt（与 deep-analyze 一致，从 DB 读取）
+  // 构建分析 prompt（与 deep-analyze 一致，从 DB 读取；SSOT Phase 4：缺失即抛错，无 fallback）
   const aigcPrompt = await getDbPromptSafe('aigc-prompt')
-  const specPrompt = `${aigcPrompt || '请分析以下创意，输出制作方案 JSON：'}\n\n` +
+  const specPrompt = `${aigcPrompt}\n\n` +
     `故事标题: ${title}\n` +
     `故事体裁: ${genre}\n` +
     `视觉风格: ${visualStyle}\n` +
@@ -316,7 +316,7 @@ async function analyzeCreative(params: {
     `创意内容:\n${creativeInput.slice(0, 8000)}`
 
   const gatewayResponse = await narrativeGateway.execute({
-    systemPrompt: aigcPrompt || '你是 AI 影视导演，分析用户创意并输出制作方案。',
+    systemPrompt: aigcPrompt,
     userMessage: specPrompt,
     userId,
     maxTokens: 8192,
@@ -693,11 +693,10 @@ function inferEpisodes(projectType: string): number {
 }
 
 async function getDbPromptSafe(name: string): Promise<string> {
-  try {
-    const dbTemplate = await prisma.promptTemplate.findUnique({ where: { name } })
-    if (dbTemplate?.content && typeof dbTemplate.content === 'object' && 'prompt' in (dbTemplate.content as any)) {
-      return (dbTemplate.content as any).prompt as string
-    }
-  } catch {}
-  return ''
+  // ⭐ SSOT（Phase 4）: 禁止 fallback 随机 prompt。DB 缺失必须抛错，迫使 seed 补齐。
+  const dbTemplate = await prisma.promptTemplate.findUnique({ where: { name } })
+  if (dbTemplate?.content && typeof dbTemplate.content === 'object' && 'prompt' in (dbTemplate.content as any)) {
+    return (dbTemplate.content as any).prompt as string
+  }
+  throw new Error(`[StudioCreateWork] PromptTemplate.${name} 在数据库中不存在或内容为空`)
 }

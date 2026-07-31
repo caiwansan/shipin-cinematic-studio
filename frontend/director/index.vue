@@ -54,12 +54,25 @@
       @start-auto="startAutoRun"
       @stop-auto="stopAutoRun"
       @export="handleExport"
+      @start-production="handleStartProduction"
       @reset="handleReset"
       @stop="handleStop"
       @update:tick-interval="tickInterval = $event"
     />
 
     <!-- 快速故事模板区 -->
+    <!-- 制作结果提示 -->
+    <div v-if="productionResult" class="production-result" :class="{ success: !productionResult.error, fail: productionResult.error }">
+      <template v-if="productionResult.error">
+        ❌ 制作失败: {{ productionResult.error }}
+      </template>
+      <template v-else-if="productionResult.data">
+        🎬 已提交 {{ productionResult.data.summary.queued }} 个任务
+        <span v-if="productionResult.data.summary.failed"> ({{ productionResult.data.summary.failed }} 失败)</span>
+        <button class="close-btn" @click="productionResult = null">✕</button>
+      </template>
+    </div>
+
     <section class="story-templates" v-if="!director.state.sessionKey && !director.state.scenes.length">
       <p class="template-label">选择预设故事快速体验</p>
       <div class="template-list">
@@ -215,6 +228,52 @@ async function handleExport() {
   if (data) exportData.value = data.projection
 }
 
+const productionResult = ref<any>(null)
+
+async function handleStartProduction() {
+  // 从 director store 获取当前场景
+  const scenes = director.state.scenes
+  if (!scenes.length) {
+    productionResult.value = { error: '没有场景可制作' }
+    return
+  }
+
+  // 构建执行计划
+  const plan = {
+    projectId: `director-${Date.now()}`,
+    source: 'kunlun-director' as const,
+    scenes: scenes.map((s: any) => ({
+      sceneId: s.id,
+      sceneName: s.description?.slice(0, 30),
+      tasks: {
+        imageTasks: s.prompt
+          ? [{ prompt: s.prompt, order: 0 }]
+          : [{ prompt: s.description || `场景 ${s.id}`, order: 0 }],
+        videoTasks: [{ duration: 4, motion: '平稳', order: 0 }],
+        audioTasks: [],
+      },
+    })),
+    metadata: {
+      createdBy: 'director-workbench',
+      version: '1.0.0',
+      createdAt: Date.now(),
+    },
+  }
+
+  try {
+    const res = await fetch('/api/director/execution/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan }),
+    })
+    const json = await res.json()
+    productionResult.value = json
+    console.log('[start-production]', json)
+  } catch (e: any) {
+    productionResult.value = { error: e.message }
+  }
+}
+
 async function handleReset() {
   stopAutoRun()
   await director.stopStory()
@@ -281,6 +340,28 @@ onUnmounted(() => {
 }
 
 /* 模板区 */
+.production-result {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.production-result.success { background: #064e3b; color: #4ade80; border: 1px solid #065f46; }
+.production-result.fail { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+.close-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.close-btn:hover { opacity: 1; }
+
 .story-templates { padding: 24px 0; text-align: center; }
 .template-label { color: #666; font-size: 0.85rem; margin-bottom: 12px; }
 .template-list { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }

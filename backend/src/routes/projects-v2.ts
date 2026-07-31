@@ -1,5 +1,6 @@
 import type { ApiResponse } from '../contracts/api/base.js';
 // ─── Project Routes — 火麒麟 AI Production Studio Project API ───
+// @deprecated — Reality Recovery Phase6: 前后端 0 生产引用（遗留路由，保留治理）
 // POST /api/v1/projects — 创建项目
 // GET /api/v1/projects — 项目列表
 // GET /api/v1/projects/:id — 项目详情
@@ -8,6 +9,7 @@ import type { ApiResponse } from '../contracts/api/base.js';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { projectService } from '../services/project.service.js'
 import { prisma } from '../utils/index.js'
+import { verifyProjectOwner } from '../services/director/project-ownership.service.js'
 
 // ─── Clear AIGC spec data for a project (preserves Project, CharacterImage, etc.) ───
 async function clearProjectAigcData(projectId: string) {
@@ -86,10 +88,11 @@ function startSimulatedProgress(projectId: string) {
 
 export default async function (app: FastifyInstance) {
   // ─── POST /api/v1/projects — 创建项目 ──────────
-  app.post('/api/v1/projects', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/api/v1/projects', { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = request.body as any
-      const userId = (request as any).user?.id || 'default'
+      // ⭐ Phase 6 安全隔离: userId 只从认证身份取
+      const userId = (request as any).user?.id
 
       const project = await projectService.create({
         name: body.name,
@@ -115,17 +118,16 @@ export default async function (app: FastifyInstance) {
   })
 
   // ─── GET /api/v1/projects — 项目列表 ──────────
-  app.get('/api/v1/projects', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/api/v1/projects', { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const query = request.query as any
-      const userId = (request as any).user?.id || 'default'
+      // ⭐ Phase 6 安全隔离: 强制只返回当前用户项目（禁止 query.userId 越权过滤）
+      const userId = (request as any).user?.id
 
       let projects = await projectService.findAll()
 
       // Filter by user if needed
-      if (query.userId) {
-        projects = projects.filter((p: any) => p.userId === query.userId)
-      }
+      projects = projects.filter((p: any) => p.userId === userId)
 
       // Filter by type
       if (query.type) {
@@ -157,9 +159,14 @@ export default async function (app: FastifyInstance) {
   })
 
   // ─── GET /api/v1/projects/:id — 项目详情 ──────────
-  app.get('/api/v1/projects/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/api/v1/projects/:id', { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as any
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.code(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
       const project = await projectService.findById(id)
 
       if (!project) {
@@ -173,7 +180,7 @@ export default async function (app: FastifyInstance) {
   })
 
   // ─── GET /api/v1/projects/:id/stream — SSE ──────────
-  app.get('/api/v1/projects/:id/stream', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/api/v1/projects/:id/stream', { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as any
 
     reply.raw.writeHead(200, {
@@ -221,10 +228,15 @@ export default async function (app: FastifyInstance) {
   })
 
   // ─── PUT /api/v1/projects/:id — 更新项目 ──────────
-  app.put('/api/v1/projects/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.put('/api/v1/projects/:id', { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as any
       const body = request.body as any
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.code(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
       const project = await projectService.update(id, body)
       reply.send({ success: true, data: project })
     } catch (err: any) {
@@ -233,9 +245,14 @@ export default async function (app: FastifyInstance) {
   })
 
   // ─── DELETE /api/v1/projects/:id ──────────
-  app.delete('/api/v1/projects/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.delete('/api/v1/projects/:id', { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as any
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.code(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
       await projectService.delete(id)
       reply.send({ success: true, message: '项目已删除' })
     } catch (err: any) {
@@ -244,9 +261,14 @@ export default async function (app: FastifyInstance) {
   })
 
   // ─── DELETE /api/v1/projects/:id/clear — 清空剧本数据但保留项目和已生成的文件 ──────────
-  app.delete('/api/v1/projects/:id/clear', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.delete('/api/v1/projects/:id/clear', { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as any
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.code(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
       await clearProjectAigcData(id)
       reply.send({ success: true, message: '剧本数据已清空，已生成的图片/视频已保留' })
     } catch (err: any) {

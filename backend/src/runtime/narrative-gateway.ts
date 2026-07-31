@@ -153,6 +153,8 @@ export class LLMRouter {
       volcengine: 'VOLCENGINE_API_KEY',
       bailian: 'ALIYUN_API_KEY',
       aliyun: 'ALIYUN_API_KEY',
+      longcat: 'LONGCAT_API_KEY',
+      zhipu: 'ZHIPU_API_KEY',
     }
     const envVar = envVarMap[provider?.name || ''] || 'DEEPSEEK_API_KEY'
     return !!process.env[envVar]

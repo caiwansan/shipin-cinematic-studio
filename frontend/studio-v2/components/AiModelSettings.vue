@@ -2,7 +2,7 @@
   AiModelSettings.vue — 统一 AI 模型设置组件
   Sprint-07A.2-AI-03: 统一个人模型设置中心
 
-  功能：管理所有能力的 LLM 配置（hdz/career/ppt/music/novel）
+  功能：管理独立能力的 LLM 配置（career_agent/music）
   数据：UserModelConfigV2.capabilityLlmConfigs (JSONB)
   API：/api/capability/llm/config/:capability
 -->
@@ -103,14 +103,11 @@ import { getAuthToken } from '~/utils/auth/token'
 import { ref, reactive, onMounted } from 'vue'
 
 const capabilities = [
-  { key: 'hdz', icon: '🎬', label: '短剧创作', desc: 'AI短剧策划、剧本、分镜' },
   { key: 'career_agent', icon: '🎯', label: '职业助理', desc: 'AI职业助理、简历优化、岗位推荐' },
-  { key: 'ppt', icon: '📊', label: 'PPT制作', desc: 'AI演示文稿、商业汇报' },
   { key: 'music', icon: '🎵', label: '音乐创作', desc: 'AI音乐创作、作曲编曲' },
-  { key: 'novel', icon: '📖', label: '小说创作', desc: 'AI小说生成、世界观' },
 ]
 
-const activeCap = ref('career')
+const activeCap = ref('career_agent')
 const allConfigs = ref<Record<string, any>>({})
 const editing = reactive<Record<string, boolean>>({})
 const saving = reactive<Record<string, boolean>>({})

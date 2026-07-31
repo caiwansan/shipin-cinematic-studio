@@ -1,11 +1,23 @@
 import type { ApiResponse } from '../contracts/api/base.js';
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { verifyProjectOwner } from '../services/director/project-ownership.service.js'
+import {
+  loadStoryboardDisplay,
+  loadProjectCharacters,
+  getEmptyProjectWarning,
+} from '../services/storyboard/storyboard-display-adapter.js'
 
 export default async function aigcSpecDbRoutes(fastify: FastifyInstance) {
   // POST /api/aigc-spec/:projectId/save — 保存完整 AIGC 规格表（由灵感页调用）
   const saveHandler = async (request: any, reply: any) => {
     const { projectId } = request.params as any
+
+    // ⭐ Phase 6 安全隔离: 归属校验（防越权写入他人项目规格）
+    const ownerCheck = await verifyProjectOwner(projectId, (request as any).user?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
 
     // 校验 projectId 合法性 — 防止前端传 [object Object]
     if (typeof projectId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
@@ -264,14 +276,24 @@ export default async function aigcSpecDbRoutes(fastify: FastifyInstance) {
   }
 
   // GET /api/aigc-spec/:projectId/load — 加载完整规格表
+  // 使用 StoryboardDisplayAdapter 统一分镜展示数据
   const loadHandler = async (request: any, reply: any) => {
     const { projectId } = request.params as any
 
-    const [characters, scenes, voices, segments, frames, production, effects, actions, cameras, emotions, props, propSpecs] = await Promise.all([
+    // ⭐ Phase 6 安全隔离: 归属校验（防越权读取他人项目规格）
+    const ownerCheck = await verifyProjectOwner(projectId, (request as any).user?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
+
+    // ⭐ 使用 adapter 加载展示数据（含空数据产品化）
+    const displaySegments = await loadStoryboardDisplay(projectId)
+    const characterNames = await loadProjectCharacters(projectId)
+
+    const [characters, scenes, voices, frames, production, effects, actions, cameras, emotions, props, propSpecs] = await Promise.all([
       prisma.aiCharacterSpec.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }),
       prisma.aiSceneSpec.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }),
       prisma.aiVoiceConfig.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }),
-      prisma.aiVideoSegment.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }),
       prisma.aiFrameDesign.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }),
       prisma.aiVideoProduction.findUnique({ where: { projectId } }),
       prisma.aiEffectSpec.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }),
@@ -293,7 +315,13 @@ export default async function aigcSpecDbRoutes(fastify: FastifyInstance) {
       characterSpecs: characters,
       sceneSpecs: scenes,
       voiceConfigs: voices,
-      videoSegments: segments.map(s => ({ ...s, associatedScenes: JSON.parse(s.associatedScenes || '[]') })),
+      // ⭐ 替换：adapter 产生的 display segments 作为 videoSegments
+      videoSegments: displaySegments,
+      // ⭐ 新增场景来源标识，前端可根据此字段调整 UI
+      displaySource: displaySegments.length > 0
+        ? displaySegments[0].source
+        : 'empty',
+      characterNames,
       frameDesign,
       videoProduction: production || null,
       effectSpecs: effects,

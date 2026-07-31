@@ -14,6 +14,7 @@ import { hdzProjectRepository } from './repositories/hdz-project.repository.js'
 import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
 import { hdzStyleDnaRepository } from './repositories/hdz-style-dna.repository.js'
 import { decryptKey } from '../crypto.service.js'
+import { prisma } from '../../utils/index.js'
 import { incrementDailyUsage } from '../usage-quota.service.js'
 
 // ─── 类型定义（与 orchestrator 共享） ───
@@ -38,12 +39,21 @@ export interface LLMConfig {
   apiKey: string
   baseUrl?: string
   maxTokens?: number
+  // ★ 02-B Task 4：Usage Ledger 业务元数据（由 orchestrator/调用方附加）
+  userId?: string
+  taskType?: string
+  projectId?: string
+  taskId?: string
 }
 
 /**
  * 从 UserModelConfigV2 读取 LLM 配置（BYOK）
+ * meta 可选：附加 Usage Ledger 元数据（taskType/projectId/taskId）
  */
-export async function getUserLLMConfig(userId: string): Promise<LLMConfig | null> {
+export async function getUserLLMConfig(
+  userId: string,
+  meta?: { taskType?: string; projectId?: string; taskId?: string },
+): Promise<LLMConfig | null> {
   const v2 = await userModelConfigV2Repository.findUnique({ userId })
   if (!v2 || !v2.llmEnabled || !v2.llmApiKey || !v2.llmApiKey.trim()) return null
 
@@ -65,6 +75,11 @@ export async function getUserLLMConfig(userId: string): Promise<LLMConfig | null
     modelName: v2.llmModel || 'doubao-seed-2-1-pro-260628',
     apiKey,
     baseUrl: v2.llmBaseUrl || undefined,  // 只用 llmBaseUrl，忽略过时的 baseUrl 字段
+    // ★ 02-B Task 4：附加 Usage Ledger 元数据
+    userId,
+    taskType: meta?.taskType,
+    projectId: meta?.projectId,
+    taskId: meta?.taskId,
   }
 }
 
@@ -105,7 +120,7 @@ export async function callLLM(
         'Authorization': `Bearer ${llmCfg.apiKey}`,
       },
       body: bodyStr,
-      signal: AbortSignal.timeout(120000), // 2 分钟超时
+      signal: AbortSignal.timeout(240000), // 4 分钟超时（glm-4-flash 批量 JSON 生成较慢）
     })
   } catch (fetchErr: any) {
     console.error(`[callLLM] ❌ fetch failed: ${fetchErr.cause ? JSON.stringify(fetchErr.cause) : fetchErr.message}`)
@@ -119,7 +134,42 @@ export async function callLLM(
 
   const data: any = await resp.json()
   console.log(`[callLLM] ✅ ${llmCfg.provider}/${llmCfg.modelName} done, tokens=${data?.usage?.total_tokens || '?'}`)
+
+  // ★ 02-B Task 4：LLM Usage Ledger——每次调用写明细（provider/model/tokens/cost/agentType）
+  try {
+    const totalTokens = Number(data?.usage?.total_tokens || data?.usage?.completion_tokens || 0)
+    await prisma.usageLog.create({
+      data: {
+        userId: llmCfg.userId || '',
+        projectId: llmCfg.projectId || undefined,
+        taskId: llmCfg.taskId || undefined,
+        taskType: llmCfg.taskType || 'hdz_generic',
+        provider: llmCfg.provider,
+        tokens: String(totalTokens),
+        cost: estimateLlmCost(llmCfg.provider, totalTokens),
+        isPlatform: false, // BYOK 用户自带 Key，平台不承担成本
+      },
+    })
+  } catch (usageErr: any) {
+    console.warn(`[UsageLedger] 记账失败（不影响生成）: ${usageErr.message}`)
+  }
+
   return data?.choices?.[0]?.message?.content || ''
+}
+
+/** 估算成本（¥，按 token 量粗算——仅用于台账展示，非计费依据） */
+function estimateLlmCost(provider: string, tokens: number): number {
+  // 近似单价：¥/1M tokens（输入+输出混合粗估）
+  const rates: Record<string, number> = {
+    deepseek: 2,      // deepseek-v4 系列约 ¥2/1M
+    volcengine: 8,    // 豆包 seed 系列
+    aliyun: 8,        // qwen 系列
+    openai: 15,       // gpt-4o 级别
+    zhipu: 5,
+    moonshot: 12,
+  }
+  const rate = rates[provider] || 5
+  return Math.round((tokens / 1_000_000) * rate * 10000) / 10000
 }
 
 /**

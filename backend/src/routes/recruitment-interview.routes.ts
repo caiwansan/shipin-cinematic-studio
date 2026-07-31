@@ -18,8 +18,10 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { PrismaClient } from '@prisma/client'
-import { InterviewAgent, JobContext, ResumeContext } from '../agents/job/interview-agent.js'
+import { InterviewAgent, JobContext, ResumeContext, InterviewAgentContext } from '../agents/job/interview-agent.js'
+import { extractJSONObject } from '../agents/job/enterprise-recruit-agent.js'
 import { requireEnterpriseWorkspaceContext } from '../services/enterprise-context.service.js'
+import { requireEnterpriseCapability } from '../middleware/require-enterprise-capability.js'
 
 const prisma = new PrismaClient()
 const interviewAgent = new InterviewAgent()
@@ -90,6 +92,15 @@ function buildResumeContext(candidateName: string, resume?: any): ResumeContext 
 // ─── Routes ───
 
 export default async function recruitmentInterviewRoutes(fastify: FastifyInstance) {
+  // Sprint-RECRUITMENT-REALITY-03: 补全局 JWT 认证（原缺失导致 Capability Gate 永远 401）
+  // 与 enterprise.routes.ts 一致：所有面试端点必须先通过 JWT 验证
+  fastify.addHook('onRequest', async (request, reply) => {
+    try {
+      await request.jwtVerify()
+    } catch {
+      reply.status(401).send({ error: 'Unauthorized' })
+    }
+  })
 
   /**
    * GET /api/enterprise/recruitment-interview
@@ -205,7 +216,7 @@ export default async function recruitmentInterviewRoutes(fastify: FastifyInstanc
    * 调用 InterviewAgent.generateInterviewPlan()
    * 生成后状态: preparing → question_ready
    */
-  fastify.post('/:id/generate-questions', async (req: FastifyRequest, reply: FastifyReply) => {
+  fastify.post('/:id/generate-questions', { preHandler: requireEnterpriseCapability('AI_INTERVIEW') }, async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as any
     const userId = (req as any).user?.id || (req as any).userId
     const workspaceId = getWorkspaceId(req)
@@ -231,8 +242,12 @@ export default async function recruitmentInterviewRoutes(fastify: FastifyInstanc
     const jobContext = buildJobContext(session.job)
     const resumeContext = buildResumeContext(session.candidateName)
 
-    // Generate interview plan using template engine
-    const plan = interviewAgent.generateInterviewPlan(jobContext, resumeContext)
+    // Sprint-RECRUITMENT-REALITY-02 Task 02: LLM 动态生成（删除 Math.random 模板）
+    const agentCtx: InterviewAgentContext = {
+      userId: String(userId || ''),
+      tenantId: String(wsc?.enterpriseId || (req as any).user?.tenantId || (req as any).user?.enterpriseId || ''),
+    }
+    const { plan, aiSource } = await interviewAgent.generateInterviewPlanWithLLM(jobContext, resumeContext, agentCtx)
 
     // Delete old questions if regenerating
     await prisma.interviewQuestion.deleteMany({ where: { sessionId: id } })
@@ -342,8 +357,9 @@ export default async function recruitmentInterviewRoutes(fastify: FastifyInstanc
 
   /**
    * POST /api/enterprise/recruitment-interview/:id/submit-answers
-   * 批量提交答案 + 评分（每题一个 score）
-   * Body: { answers: [{ questionId, answer, score }] }
+   * 批量提交答案（不含评分 — Sprint-RECRUITMENT-REALITY-02 Task 01）
+   * Body: { answers: [{ questionId, answer }] }
+   * 🔴 不再接受前端 score：评分由 evaluate 阶段 LLM 产生（防止前端写分）
    * 状态: in_progress → evaluating
    */
   fastify.post('/:id/submit-answers', async (req: FastifyRequest, reply: FastifyReply) => {
@@ -362,14 +378,13 @@ export default async function recruitmentInterviewRoutes(fastify: FastifyInstanc
       return reply.status(409).send({ success: false, message: `Cannot submit in status: ${session.status}` })
     }
 
-    // Update all questions with answers + scores
+    // Sprint-RECRUITMENT-REALITY-02: 只保存回答，忽略前端提交的 score（评分由 AI 评估产生）
     await Promise.all(
       answers.map((a: any) =>
         prisma.interviewQuestion.update({
           where: { id: a.questionId },
           data: {
             answer: a.answer || null,
-            score: typeof a.score === 'number' ? Math.min(100, Math.max(0, a.score)) : null,
           },
         })
       )
@@ -390,7 +405,7 @@ export default async function recruitmentInterviewRoutes(fastify: FastifyInstanc
    * 调用 InterviewAgent.generateEvaluation()
    * 状态: evaluating → completed
    */
-  fastify.post('/:id/evaluate', async (req: FastifyRequest, reply: FastifyReply) => {
+  fastify.post('/:id/evaluate', { preHandler: requireEnterpriseCapability('AI_INTERVIEW_SUMMARY') }, async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as any
 
     const session = await prisma.interviewSession.findFirst({
@@ -411,6 +426,7 @@ export default async function recruitmentInterviewRoutes(fastify: FastifyInstanc
 
     // Build evaluation input from questions
     const questions = session.questions.map((q: any) => ({
+      id: q.id,
       category: q.category,
       question: q.question,
       score: q.score || 0,
@@ -419,13 +435,36 @@ export default async function recruitmentInterviewRoutes(fastify: FastifyInstanc
 
     const evaluationInput = {
       jobTitle: session.job.title || '',
+      jobRequirements: Array.isArray(session.job.requirements) ? session.job.requirements : [],
       questions,
       resumeStrengths: [],
       resumeRisks: [],
     }
 
-    // Generate evaluation using template engine
-    const result = interviewAgent.generateEvaluation(evaluationInput)
+    // Sprint-RECRUITMENT-REALITY-02 Task 01: LLM 评估（评分来源 = AI，非前端）
+    const userId = (req as any).user?.id || (req as any).userId
+    const agentCtx: InterviewAgentContext = {
+      userId: String(userId || ''),
+      tenantId: String((req as any).user?.tenantId || (req as any).user?.enterpriseId || ''),
+    }
+    const result = await interviewAgent.generateEvaluationWithLLM(evaluationInput, agentCtx)
+
+    // Sprint-RECRUITMENT-REALITY-02: LLM 逐题评分回写 InterviewQuestion.score
+    if (result.questionScores && result.questionScores.length > 0) {
+      const idToScore = new Map(result.questionScores.map(qs => [qs.questionId, qs.score]))
+      await Promise.all(
+        session.questions.map(q => {
+          const score = idToScore.get(q.id)
+          if (typeof score === 'number') {
+            return prisma.interviewQuestion.update({
+              where: { id: q.id },
+              data: { score: Math.min(100, Math.max(0, Math.round(score))) },
+            })
+          }
+          return null
+        }).filter(Boolean)
+      )
+    }
 
     // Upsert evaluation
     const evaluation = await prisma.interviewEvaluation.upsert({

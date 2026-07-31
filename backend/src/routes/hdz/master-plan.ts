@@ -15,6 +15,7 @@ import { getUserLLMConfig } from '../../services/hdz/llm.client.js'
 import { modelRouter } from '../../services/enterprise/model-router.service.js'
 import { buildEnterpriseRuntimeContext } from '../../services/enterprise/enterprise-runtime.context.js'
 import { callLLM } from '../../services/hdz/llm.client.js'
+import { computePlanDiff } from '../../services/hdz/plan-diff.service.js'
 
 const MASTER_PLAN_PROMPT = `你是一位网文总规划师。根据用户提供的创作意图，生成一份完整的「小说总规划」。
 
@@ -93,6 +94,7 @@ export default async function masterPlanRoutes(app: FastifyInstance) {
     if (project.userId !== user.id) return reply.status(403).send({ success: false, error: '无权访问' })
 
     const newVersion = (project.masterPlanVersion || 0) + 1
+    const diff = computePlanDiff(project.masterPlan as any, masterPlan as any)
 
     // 记录修订历史
     await prisma.hdzPlanRevision.create({
@@ -102,7 +104,7 @@ export default async function masterPlanRoutes(app: FastifyInstance) {
         reason: reason || null,
         planBefore: project.masterPlan as any,
         planAfter: masterPlan as any,
-        diffSummary: null, // TODO: AI 生成变更摘要
+        diffSummary: diff.diffSummary,
       },
     })
 
@@ -228,18 +230,32 @@ ${userInput || '无具体输入'}
         return reply.status(500).send({ success: false, error: 'AI 生成失败，无法解析 JSON 格式' })
       }
 
-      // 保存
+      // 保存（新生成总纲默认为 draft 状态）——记录修订历史（覆盖旧总纲，可回滚）
       const newVersion = (project.masterPlanVersion || 0) + 1
+      const savedPlan = { ...masterPlan, status: masterPlan.status || 'draft', generatedAt: new Date().toISOString() }
+      const diff = computePlanDiff(project.masterPlan as any, savedPlan as any)
+      if ((project.masterPlan as any) && JSON.stringify(project.masterPlan) !== JSON.stringify(savedPlan)) {
+        await prisma.hdzPlanRevision.create({
+          data: {
+            projectId,
+            version: newVersion,
+            reason: '重新生成总纲（覆盖旧版）',
+            planBefore: project.masterPlan as any,
+            planAfter: savedPlan as any,
+            diffSummary: diff.diffSummary,
+          },
+        })
+      }
       await prisma.hdzProject.update({
         where: { id: projectId },
-        data: { masterPlan: masterPlan as any, masterPlanVersion: newVersion },
+        data: { masterPlan: savedPlan as any, masterPlanVersion: newVersion },
       })
 
       const finalCheck = qualityCheck(masterPlan)
       return {
         success: true,
         data: {
-          masterPlan,
+          masterPlan: savedPlan,
           version: newVersion,
           quality: {
             passed: finalCheck.ok,
@@ -251,6 +267,261 @@ ${userInput || '无具体输入'}
       }
     } catch (err: any) {
       return reply.status(500).send({ success: false, error: `生成失败: ${err.message}` })
+    }
+  })
+
+  // ─── 总纲状态机：draft → confirmed → locked ───
+
+  // 确认总纲（draft → confirmed）：作者认可后 writer 严格遵循
+  app.post('/api/hdz/projects/:projectId/master-plan/confirm', async (request, reply) => {
+    const user = request.user as any
+    const { projectId } = request.params as any
+
+    const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
+
+    const mp = (project.masterPlan as any) || {}
+    if (mp.status === 'locked') {
+      return reply.status(400).send({ success: false, error: '总纲已锁定，如需修改请先解锁' })
+    }
+    if (!mp.title && !mp.worldDirection && !mp.volumes) {
+      return reply.status(400).send({ success: false, error: '请先生成总纲再确认' })
+    }
+
+    const newVersion = (project.masterPlanVersion || 0) + 1
+    const updatedPlan = { ...mp, status: 'confirmed', confirmedAt: new Date().toISOString() }
+    const diff = computePlanDiff(project.masterPlan as any, updatedPlan as any)
+
+    await prisma.hdzPlanRevision.create({
+      data: {
+        projectId,
+        version: newVersion,
+        reason: '作者确认总纲（draft → confirmed）',
+        planBefore: project.masterPlan as any,
+        planAfter: updatedPlan as any,
+        diffSummary: diff.diffSummary,
+      },
+    })
+
+    await prisma.hdzProject.update({
+      where: { id: projectId },
+      data: { masterPlan: updatedPlan as any, masterPlanVersion: newVersion },
+    })
+
+    return { success: true, data: { masterPlan: updatedPlan, version: newVersion } }
+  })
+
+  // 锁定总纲（confirmed → locked）：锁定后 writer 强制遵循，不可修改
+  app.post('/api/hdz/projects/:projectId/master-plan/lock', async (request, reply) => {
+    const user = request.user as any
+    const { projectId } = request.params as any
+
+    const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
+
+    const mp = (project.masterPlan as any) || {}
+    if (mp.status !== 'confirmed') {
+      return reply.status(400).send({ success: false, error: '只有已确认（confirmed）的总纲才能锁定' })
+    }
+
+    const newVersion = (project.masterPlanVersion || 0) + 1
+    const updatedPlan = { ...mp, status: 'locked', lockedAt: new Date().toISOString() }
+    const diff = computePlanDiff(project.masterPlan as any, updatedPlan as any)
+
+    await prisma.hdzPlanRevision.create({
+      data: {
+        projectId,
+        version: newVersion,
+        reason: '作者锁定总纲（confirmed → locked），后续创作强制遵循',
+        planBefore: project.masterPlan as any,
+        planAfter: updatedPlan as any,
+        diffSummary: diff.diffSummary,
+      },
+    })
+
+    await prisma.hdzProject.update({
+      where: { id: projectId },
+      data: { masterPlan: updatedPlan as any, masterPlanVersion: newVersion },
+    })
+
+    return { success: true, data: { masterPlan: updatedPlan, version: newVersion } }
+  })
+
+  // 解锁总纲（locked → confirmed）：作者主动解锁后才能修改
+  app.post('/api/hdz/projects/:projectId/master-plan/unlock', async (request, reply) => {
+    const user = request.user as any
+    const { projectId } = request.params as any
+
+    const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
+
+    const mp = (project.masterPlan as any) || {}
+    if (mp.status !== 'locked') {
+      return reply.status(400).send({ success: false, error: '总纲未锁定，无需解锁' })
+    }
+
+    const newVersion = (project.masterPlanVersion || 0) + 1
+    const updatedPlan = { ...mp, status: 'confirmed', lockedAt: undefined }
+    const diff = computePlanDiff(project.masterPlan as any, updatedPlan as any)
+
+    await prisma.hdzPlanRevision.create({
+      data: {
+        projectId,
+        version: newVersion,
+        reason: '作者解锁总纲（locked → confirmed）',
+        planBefore: project.masterPlan as any,
+        planAfter: updatedPlan as any,
+        diffSummary: diff.diffSummary,
+      },
+    })
+
+    await prisma.hdzProject.update({
+      where: { id: projectId },
+      data: { masterPlan: updatedPlan as any, masterPlanVersion: newVersion },
+    })
+
+    return { success: true, data: { masterPlan: updatedPlan, version: newVersion } }
+  })
+
+  // ─── 版本治理：回滚 + 影响分析 ───
+
+  // 影响分析：对比当前总纲与指定版本，估算受影响章节
+  app.get('/api/hdz/projects/:projectId/master-plan/impact', async (request, reply) => {
+    const user = request.user as any
+    const { projectId } = request.params as any
+    const { version } = request.query as any
+
+    const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
+    if (!version) {
+      return reply.status(400).send({ success: false, error: '缺少 version 参数' })
+    }
+
+    const target = await prisma.hdzPlanRevision.findFirst({
+      where: { projectId, version: Number(version) },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (!target) {
+      return reply.status(404).send({ success: false, error: '版本不存在' })
+    }
+
+    const diff = computePlanDiff(target.planAfter as any, project.masterPlan as any)
+    return {
+      success: true,
+      data: {
+        fromVersion: Number(version),
+        currentVersion: project.masterPlanVersion || 0,
+        diff: diff.diffSummary,
+        impact: diff.impact,
+        changed: diff.changed,
+      },
+    }
+  })
+
+  // 回滚到指定版本：locked 状态禁止；回滚生成新修订记录（Git 式，可再回滚）
+  app.post('/api/hdz/projects/:projectId/master-plan/rollback', async (request, reply) => {
+    const user = request.user as any
+    const { projectId } = request.params as any
+    const { version } = request.body as any
+
+    const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
+    if (!version) {
+      return reply.status(400).send({ success: false, error: '缺少 version 参数' })
+    }
+
+    const mp = (project.masterPlan as any) || {}
+    if (mp.status === 'locked') {
+      return reply.status(400).send({ success: false, error: '总纲已锁定，请先解锁再回滚' })
+    }
+
+    const target = await prisma.hdzPlanRevision.findFirst({
+      where: { projectId, version: Number(version) },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (!target) {
+      return reply.status(404).send({ success: false, error: '目标版本不存在' })
+    }
+
+    const targetPlan = target.planAfter as any
+    const newVersion = (project.masterPlanVersion || 0) + 1
+    const diff = computePlanDiff(project.masterPlan as any, targetPlan as any)
+
+    // 回滚目标：还原到目标版本内容，状态保持当前（回滚不改变状态机）
+    const restoredPlan = { ...(targetPlan || {}), status: mp.status || targetPlan?.status || 'draft' }
+
+    await prisma.hdzPlanRevision.create({
+      data: {
+        projectId,
+        version: newVersion,
+        reason: `回滚到 V${Number(version)}（由用户发起）`,
+        planBefore: project.masterPlan as any,
+        planAfter: restoredPlan as any,
+        diffSummary: diff.diffSummary,
+      },
+    })
+
+    await prisma.hdzProject.update({
+      where: { id: projectId },
+      data: { masterPlan: restoredPlan as any, masterPlanVersion: newVersion },
+    })
+
+    // ★ 02-B Task 2：Rollback 影响自动治理——受影响章节标记 needs_rewrite（旧世界不残留）
+    let markedChapterCount = 0
+    try {
+      const ranges: string[] = diff.impact?.affectedChapterRanges || []
+      const chapterNos = new Set<number>()
+      for (const r of ranges) {
+        if (String(r).includes('全部章节')) {
+          // 世界观/禁则变更 → 全部已生成章节受影响
+          const all = await prisma.hdzChapter.findMany({ where: { projectId, content: { not: null } }, select: { chapterNo: true } })
+          all.forEach(c => chapterNos.add(c.chapterNo))
+          continue
+        }
+        const m = String(r).match(/(\d{1,5})\s*[-~至]\s*(\d{1,5})/)
+        if (m) {
+          const [a, b] = [parseInt(m[1], 10), parseInt(m[2], 10)]
+          for (let n = Math.min(a, b); n <= Math.max(a, b); n++) chapterNos.add(n)
+        }
+      }
+      if (chapterNos.size > 0) {
+        const affected = await prisma.hdzChapter.findMany({
+          where: { projectId, chapterNo: { in: [...chapterNos] }, content: { not: null } },
+          select: { id: true },
+        })
+        if (affected.length > 0) {
+          await prisma.hdzChapter.updateMany({
+            where: { id: { in: affected.map(c => c.id) } },
+            data: { status: 'needs_rewrite' },
+          })
+          markedChapterCount = affected.length
+        }
+      }
+      console.log(`[MasterPlan/Rollback] V${newVersion}: 标记 ${markedChapterCount} 章 needs_rewrite（受影响区间 ${ranges.join(', ') || '无'}）`)
+    } catch (markErr: any) {
+      console.warn(`[MasterPlan/Rollback] 章节标记失败（不影响回滚本身）: ${markErr.message}`)
+    }
+
+    return {
+      success: true,
+      data: {
+        masterPlan: restoredPlan,
+        version: newVersion,
+        rolledBackTo: Number(version),
+        diff: diff.diffSummary,
+        impact: diff.impact,
+        needsRewrite: markedChapterCount, // 02-B：受影响章节已标记待重写
+      },
     }
   })
 }

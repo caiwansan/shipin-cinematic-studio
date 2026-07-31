@@ -9,6 +9,7 @@ import { scheduler } from '../services/scheduler.service.js'
 import { rfvl, generateTraceId } from '../runtime/rfvl-injector.js'
 import { resolveProviderFromUserConfig, taskTypeToCapability } from '../runtime-provider-resolver.js'
 import { checkDailyQuota, incrementDailyUsage } from '../services/usage-quota.service.js'
+import { verifyProjectOwner } from '../services/director/project-ownership.service.js'
 
 /**
  * AI 任务 API — 将 AI 生成请求统一化为任务队列
@@ -22,7 +23,24 @@ import { checkDailyQuota, incrementDailyUsage } from '../services/usage-quota.se
  */
 
 export default async function aiTaskRoutes(fastify: FastifyInstance) {
-  
+
+  // ⭐ Phase 6 安全隔离: 并发任务数 Gate（最小安全 Gate，防批量刷队列）
+  // 每个项目同时 queued/processing 的任务数上限；projectId 已归属校验 → 等价于按用户限并发
+  const MAX_CONCURRENT_TASKS = 20
+  async function enforceConcurrencyGate(projectId: string, reply: any): Promise<boolean> {
+    const activeCount = await prisma.videoTask.count({
+      where: { projectId, status: { in: ['queued', 'processing'] } },
+    })
+    if (activeCount >= MAX_CONCURRENT_TASKS) {
+      reply.status(429).send({
+        success: false,
+        error: `并发任务数已达上限（${MAX_CONCURRENT_TASKS}），请等待现有任务完成后再提交`,
+      })
+      return false
+    }
+    return true
+  }
+
   // POST /api/tasks/ai-generate — 创建 AI 生成任务
   fastify.post('/api/tasks/ai-generate', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const user = request.user as any
@@ -57,6 +75,10 @@ export default async function aiTaskRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ success: false, error: `不支持的 taskType: ${taskType}，支持: ${validTypes.join(', ')}` })
     }
 
+    // ⭐ Phase 6 安全隔离: 并发任务数 Gate
+    const gateOk = await enforceConcurrencyGate(projectId, reply)
+    if (!gateOk) return
+
     // 清除旧的 volcengine provider_state（安全护栏缓存），防止遗留的 invalid_key 阻断
     taskCleanupProviderState(user?.id)
     let project: any
@@ -65,7 +87,13 @@ export default async function aiTaskRoutes(fastify: FastifyInstance) {
     } catch (_e) {
       // projectId 不是有效 UUID 格式（如 'draft'），当作不存在处理
     }
-    if (!project) {
+    if (project) {
+      // ⭐ Phase 6 安全隔离: 已有项目必须归属校验（防任务挂到他人项目）
+      const ownerCheck = await verifyProjectOwner(projectId, user.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+    } else {
       // 用于创建临时项目/草稿项目的实际 ID
       const actualId = projectId.startsWith('00000000-') || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)
         ? projectId
@@ -95,6 +123,28 @@ export default async function aiTaskRoutes(fastify: FastifyInstance) {
         }),
       },
     })
+
+    // ⭐ TaskLog: 永久保存 promptSource 来源追踪信息
+    if (input?.promptSource) {
+      try {
+        await prisma.taskLog.create({
+          data: {
+            taskId: task.id,
+            level: 'info',
+            message: `任务来源: ${input.promptSource}`,
+            metadata: {
+              promptSource: input.promptSource,
+              preparedAt: input.preparedAt || null,
+              preparedBy: input.preparedBy || null,
+              eventType: 'task_created',
+            },
+          },
+        })
+      } catch (logErr) {
+        // TaskLog 写入失败不应阻塞主流程
+        console.warn(`[ai-tasks] TaskLog 写入失败: ${logErr}`)
+      }
+    }
 
     // === Capability Routing（Router 只做这件事） ===
     // taskType → capability 分类
@@ -184,6 +234,12 @@ export default async function aiTaskRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ success: false, error: '任务不存在' })
     }
 
+    // ⭐ Phase 6 安全隔离: 任务归属校验（防越权查询他人任务）
+    const ownerCheck = await verifyProjectOwner(task.projectId, (request as any).user?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
+
     // 如果是完成状态，尝试获取结果
     let result = null
     if (task.status === 'completed' || task.status === 'failed') {
@@ -205,23 +261,42 @@ export default async function aiTaskRoutes(fastify: FastifyInstance) {
 
     // 先查 videoTask（图片/视频等任务）
     const task = await prisma.videoTask.findUnique({ where: { id } })
-    if (task && task.status === 'completed') {
-      // 从 error 字段提取 output（Worker 写入）
-      try {
-        const errorData = JSON.parse(task.error || '{}')
-        const url = errorData.output?.url || errorData.url || errorData.image_urls?.[0]
-        if (url) {
-          return { success: true, data: { url } } satisfies ApiResponse<unknown>;
+    if (task) {
+      // ⭐ Phase 6 安全隔离: 任务归属校验
+      const ownerCheck = await verifyProjectOwner(task.projectId, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+      if (task.status === 'completed') {
+        // 从 error 字段提取 output（Worker 写入）
+        try {
+          const errorData = JSON.parse(task.error || '{}')
+          const url = errorData.output?.url || errorData.url || errorData.image_urls?.[0]
+          if (url) {
+            return { success: true, data: { url } } satisfies ApiResponse<unknown>;
 
-        }
-      } catch {}
-      return { success: true, data: { status: 'completed', url: null } } satisfies ApiResponse<unknown>;
+          }
+        } catch {}
+        return { success: true, data: { status: 'completed', url: null } } satisfies ApiResponse<unknown>;
 
+      }
     }
 
     // 再查 taskQueue（统一队列）
     const queueTask = await prisma.taskQueue.findUnique({ where: { id } })
     if (queueTask) {
+      // ⭐ Phase 6 安全隔离: 队列任务归属校验（payload 中带 projectId）
+      let queueProjectId: string | null = null
+      try {
+        const payload = JSON.parse(typeof queueTask.payload === 'string' ? queueTask.payload : '{}')
+        queueProjectId = payload.projectId || queueTask.projectId || null
+      } catch {}
+      if (queueProjectId) {
+        const ownerCheck = await verifyProjectOwner(queueProjectId, (request as any).user?.id)
+        if (!ownerCheck.ok) {
+          return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+        }
+      }
       if (queueTask.status === 'completed') {
         let url = null
         try {
@@ -245,6 +320,23 @@ export default async function aiTaskRoutes(fastify: FastifyInstance) {
 
     if (!projectId || !Array.isArray(tasks) || tasks.length === 0) {
       return reply.status(400).send({ success: false, error: '缺少 projectId 或 tasks 为空' })
+    }
+
+    // ⭐ Phase 6 安全隔离: 归属校验（防批量任务挂到他人项目）
+    const ownerCheck = await verifyProjectOwner(projectId, user?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
+
+    // ⭐ Phase 6 安全隔离: 并发任务数 Gate（batch 也要限制，含本次提交数量）
+    const activeCount = await prisma.videoTask.count({
+      where: { projectId, status: { in: ['queued', 'processing'] } },
+    })
+    if (activeCount + tasks.length > 20) {
+      return reply.status(429).send({
+        success: false,
+        error: `并发任务数已达上限（20），本次 ${tasks.length} 个任务将超出限制（当前活跃 ${activeCount}）`,
+      })
     }
 
     const created: any[] = []

@@ -12,6 +12,7 @@
 
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { resolveEnterpriseId as resolveUserEnterpriseId } from '../services/enterprise-context.service.js'
 
 // ─── 行业基准常量（用于对比） ───
 const INDUSTRY_BENCHMARKS = {
@@ -41,6 +42,32 @@ async function resolveWorkspaceId(enterpriseId: string): Promise<string | null> 
   return workspace?.id || null
 }
 
+// ─── 空数据响应（前端 expects 全字段） ───
+function emptyResponse() {
+  return {
+    success: true,
+    data: {
+      efficiency: {
+        avgHireDays: 0, industryAvgHireDays: INDUSTRY_BENCHMARKS.avgHireDays,
+        hireDaysReduction: 0, aiProcessedCandidates: 0,
+        monthlyProcessedCandidates: 0, savedScreeningHours: 0,
+        savedScreeningMinutes: 0,
+      },
+      costValue: {
+        aiCostMonthly: 0, aiCostYearly: 0, manualCostTotal: 0,
+        manualScreeningCost: 0, manualInterviewCost: 0, manualRecruitmentCost: 0,
+        savings: 0, roi: 0,
+      },
+      funnel: {
+        totalJobs: 0, activeJobs: 0, totalMatches: 0, highQualityMatches: 0,
+        totalInterviews: 0, completedInterviews: 0, conversionRate: 0,
+      },
+      monthlyTrend: [],
+      benchmarks: INDUSTRY_BENCHMARKS,
+    },
+  }
+}
+
 export const recruitmentAnalyticsRoutes = async (fastify: FastifyInstance) => {
 
   // ─── JWT Auth for all routes ───
@@ -55,16 +82,42 @@ export const recruitmentAnalyticsRoutes = async (fastify: FastifyInstance) => {
   // ─── GET /api/enterprise/recruitment-analytics/roi — ROI Dashboard 主接口 ───
   fastify.get('/api/enterprise/recruitment-analytics/roi', async (request, reply) => {
     try {
-      const { workspaceId } = request.query as { workspaceId?: string }
+      const userId = (request as any).user?.id || (request as any).userId
+      let { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
+      // 自动解析 workspaceId（与 capability 端点对齐）
+      if (!workspaceId && userId) {
+        // 策略1: EnterpriseProfile → JobCompanyProfile → workspace
+        const profile = await prisma.enterpriseProfile.findFirst({
+          where: { organizationId: userId },
+          select: { id: true },
+        })
+        if (profile?.id) workspaceId = await resolveWorkspaceId(profile.id) || undefined
+
+        // 策略2: OrgMember → Organization → EnterpriseProfile → workspace
+        if (!workspaceId) {
+          const member = await prisma.orgMember.findFirst({
+            where: { userId },
+            include: { organization: true },
+          })
+          if (member?.organization) {
+            const ep2 = await prisma.enterpriseProfile.findFirst({
+              where: { organizationId: member.organization.id },
+              select: { id: true },
+            })
+            if (ep2?.id) workspaceId = await resolveWorkspaceId(ep2.id) || undefined
+          }
+        }
       }
 
-      const wsId = workspaceId || (await resolveWorkspaceId(enterpriseId))
+      const enterpriseId = workspaceId ? await resolveEnterpriseId(workspaceId) : null
+      if (!enterpriseId) {
+        return reply.status(200).send(emptyResponse())
+      }
+
+      const wsId = workspaceId
       if (!wsId) {
-        return reply.status(400).send({ error: 'Workspace not found' })
+        return reply.status(200).send(emptyResponse())
       }
 
       // ─── 1. 招聘效率指标 ───
@@ -281,17 +334,66 @@ export const recruitmentAnalyticsRoutes = async (fastify: FastifyInstance) => {
   // ─── GET /api/enterprise/recruitment-analytics/capability — AI 员工能力中心数据 ───
   fastify.get('/api/enterprise/recruitment-analytics/capability', async (request, reply) => {
     try {
-      const { workspaceId } = request.query as { workspaceId?: string }
+      const userId = (request as any).user?.id || (request as any).userId
+      let { workspaceId } = request.query as { workspaceId?: string }
 
-      const enterpriseId = await resolveEnterpriseId(workspaceId)
-      if (!enterpriseId) {
-        return reply.status(400).send({ error: 'Invalid workspaceId' })
+      // 没有 workspaceId 时从 JWT 自动解析
+      if (!workspaceId && userId) {
+        // 策略1: EnterpriseProfile → JobCompanyProfile → workspace
+        const profile = await prisma.enterpriseProfile.findFirst({
+          where: { organizationId: userId },
+          select: { id: true },
+        })
+        if (profile?.id) workspaceId = await resolveWorkspaceId(profile.id) || undefined
+
+        // 策略2: 从 OrgMember 找到 org → EnterpriseProfile → workspace
+        if (!workspaceId) {
+          const member = await prisma.orgMember.findFirst({
+            where: { userId },
+            include: { organization: true },
+          })
+          if (member?.organization) {
+            const ep2 = await prisma.enterpriseProfile.findFirst({
+              where: { organizationId: member.organization.id },
+              select: { id: true },
+            })
+            if (ep2?.id) workspaceId = await resolveWorkspaceId(ep2.id) || undefined
+
+            // 策略3: EnterpriseProfile 不存在时，直接使用 OrgMember 的 organizationId
+            if (!workspaceId) {
+              // 用 orgId 直接查询 AgentProfile
+              const orgId = member.organization.id || member.organizationId
+              if (orgId) {
+                // 标记为 orgId 直查模式
+                ;(request as any)._resolutionOrgId = orgId
+              }
+            }
+          }
+        }
       }
 
-      const wsId = workspaceId || (await resolveWorkspaceId(enterpriseId))
-      if (!wsId) {
-        return reply.status(400).send({ error: 'Workspace not found' })
+      const wsId = workspaceId
+
+      // ─── Fallback: 如果 workspace 解析失败，直接从 Org + AgentProfile 加载 ───
+      const resolutionOrgId = (request as any)._resolutionOrgId as string | undefined
+
+      if (!wsId && !resolutionOrgId) {
+        return reply.status(200).send({
+          success: true,
+          data: {
+            agents: [],
+            summary: {
+              totalMonthlyTasks: 0,
+              totalAnalyzedCandidates: 0,
+              totalInterviews: 0,
+              completedInterviews: 0,
+              taskCompletionRate: 0,
+            },
+          },
+        })
       }
+
+      const enterpriseId = wsId ? (await resolveEnterpriseId(wsId)) : ''
 
       const now = new Date()
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -302,17 +404,57 @@ export const recruitmentAnalyticsRoutes = async (fastify: FastifyInstance) => {
         orderBy: { sortOrder: 'asc' },
       })
 
+      // ─── Fallback: Workforce 为空时，直接从 AgentProfile + CapabilityBinding 查询 ───
+      let agentProfiles: any[] = workforce
+      if (workforce.length === 0 && resolutionOrgId) {
+        agentProfiles = await prisma.enterpriseAgentProfile.findMany({
+          where: {
+            organizationId: resolutionOrgId,
+            status: 'active',
+          },
+          orderBy: { createdAt: 'asc' },
+        })
+      }
+
       const agentCapabilities = await Promise.all(
-        workforce.map(async (emp) => {
-          const def = getAgentDef(emp.agentType)
+        (agentProfiles as any[]).map(async (emp: any) => {
+          // wf: workforce fields, ap: agent profile fields
+          const isWorkforce = !!(emp as any).workspaceId
+          const agentType = isWorkforce ? (emp as any).agentType : (emp as any).agentType
+
+          // 如果是 AgentProfile 模式，查询能力绑定
+          let capabilityCodes: string[] = []
+          let defShortName = ''
+          let defDescription = ''
+          let defCapabilities: string[] = []
+
+          if (!isWorkforce) {
+            const bindings = await prisma.employeeCapabilityBinding.findMany({
+              where: {
+                employeeId: (emp as any).id,
+                status: 'active',
+              },
+              select: { capabilityCode: true },
+            })
+            capabilityCodes = bindings.map(b => b.capabilityCode)
+            defShortName = (emp as any).name || ''
+            defDescription = (emp as any).description || ''
+          } else {
+            const def = getAgentDef(agentType)
+            defShortName = def.shortName
+            defDescription = def.description
+            defCapabilities = def.capabilities
+          }
 
           // 本月完成任务数（基于 UsageLog）
-          const monthlyTasks = await prisma.usageLog.count({
-            where: {
-              tenantId: enterpriseId,
-              createdAt: { gte: thirtyDaysAgo },
-            },
-          })
+          const monthlyTasks = enterpriseId
+            ? await prisma.usageLog.count({
+                where: {
+                  tenantId: enterpriseId,
+                  createdAt: { gte: thirtyDaysAgo },
+                },
+              })
+            : 0
 
           // 分析候选人数（基于 CandidateMatch）
           const analyzedCandidates = await prisma.candidateMatch.count({
@@ -329,65 +471,72 @@ export const recruitmentAnalyticsRoutes = async (fastify: FastifyInstance) => {
 
           // 本月使用量趋势（按周）
           const weeklyUsage: Array<{ week: string; count: number }> = []
-          for (let i = 3; i >= 0; i--) {
-            const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000)
-            weekStart.setHours(0, 0, 0, 0)
-            const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+          if (enterpriseId) {
+            for (let i = 3; i >= 0; i--) {
+              const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000)
+              weekStart.setHours(0, 0, 0, 0)
+              const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-            const count = await prisma.usageLog.count({
-              where: {
-                tenantId: enterpriseId,
-                createdAt: { gte: weekStart, lt: weekEnd },
-              },
-            })
+              const count = await prisma.usageLog.count({
+                where: {
+                  tenantId: enterpriseId,
+                  createdAt: { gte: weekStart, lt: weekEnd },
+                },
+              })
 
-            weeklyUsage.push({
-              week: `${weekStart.getMonth() + 1}/${weekStart.getDate()}`,
-              count,
-            })
+              weeklyUsage.push({
+                week: `${weekStart.getMonth() + 1}/${weekStart.getDate()}`,
+                count,
+              })
+            }
           }
 
+          const profileName = isWorkforce ? (emp as any).displayName : (emp as any).name
           return {
-            id: emp.id,
-            agentType: emp.agentType,
-            name: emp.displayName,
-            shortName: def.shortName,
-            description: def.description,
-            capabilities: def.capabilities,
-            status: emp.status,
+            id: (emp as any).id,
+            agentType,
+            name: profileName,
+            shortName: defShortName,
+            description: defDescription,
+            capabilities: isWorkforce ? defCapabilities : capabilityCodes,
+            status: isWorkforce ? (emp as any).status : (emp as any).status,
             monthlyTasks,
             analyzedCandidates,
             interviewsEvaluated,
             weeklyUsage,
-            monthlyCalls: emp.monthlyCalls,
-            monthlyTokens: emp.monthlyTokens,
-            monthlyCost: emp.monthlyCost,
+            monthlyCalls: isWorkforce ? (emp as any).monthlyCalls : 0,
+            monthlyTokens: isWorkforce ? (emp as any).monthlyTokens : 0,
+            monthlyCost: isWorkforce ? (emp as any).monthlyCost : 0,
           }
         })
       )
 
       // ─── 整体成长趋势 ───
-      const totalMonthlyTasks = await prisma.usageLog.count({
-        where: {
-          tenantId: enterpriseId,
-          createdAt: { gte: thirtyDaysAgo },
-        },
-      })
+      const totalMonthlyTasks = enterpriseId
+        ? await prisma.usageLog.count({
+            where: {
+              tenantId: enterpriseId,
+              createdAt: { gte: thirtyDaysAgo },
+            },
+          })
+        : 0
 
-      const totalAnalyzedCandidates = await prisma.candidateMatch.count({
-        where: { workspaceId: wsId },
-      })
+      const totalAnalyzedCandidates = wsId
+        ? await prisma.candidateMatch.count({ where: { workspaceId: wsId } })
+        : 0
 
-      const totalInterviews = await prisma.interviewSession.count({
-        where: { workspaceId: wsId },
-      })
+      const totalInterviews = wsId
+        ? await prisma.interviewSession.count({ where: { workspaceId: wsId } })
+        : 0
 
-      const completedInterviews = await prisma.interviewSession.count({
-        where: {
-          workspaceId: wsId,
-          status: { in: ['completed', 'decision_made'] },
-        },
-      })
+      const completedInterviews = wsId
+        ? await prisma.interviewSession.count({
+            where: {
+              workspaceId: wsId,
+              status: { in: ['completed', 'decision_made'] },
+            },
+          })
+        : 0
 
       const taskCompletionRate = totalInterviews > 0
         ? Math.round((completedInterviews / totalInterviews) * 100)

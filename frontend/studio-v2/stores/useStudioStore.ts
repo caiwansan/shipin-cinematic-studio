@@ -321,8 +321,12 @@ export function useStudioStore() {
             projectDesc: snapshot.projectDesc,
             script: snapshot.script,
             executionResults: {
-              // ⭐ 保留 executionResults 中非前端管理的字段（AI分析结果）
-              segments: snapshot.segments,
+              // ⭐ SSOT 契约（SHORTDRAMA-DATA-SSOT）：
+              //    AI 分析事实 → ai_video_segments 表（后端 artifact-sync 写入）
+              //    用户编辑事实 → executionResults.userEdits（此处写入，刷新后 loadFromServer 合并）
+              userEdits: {
+                segments: snapshot.segments,
+              },
               workspaceScenes: snapshot.scenes,
               videoStyle: snapshot.videoStyle,
               aspectRatio: snapshot.aspectRatio,
@@ -521,6 +525,60 @@ export function useStudioStore() {
             narrativePurpose: seg.narrativePurpose || '',
             fullText: seg.script || seg.visualContent || seg.fullText || '',
           })
+        }
+      }
+
+      // ⭐ SSOT 契约（SHORTDRAMA-DATA-SSOT）:
+      //    用户编辑事实 executionResults.userEdits.segments 覆盖 AI 表数据（按 id/segmentId 匹配）
+      const userEdits = p.executionResults?.userEdits?.segments
+      if (Array.isArray(userEdits) && userEdits.length > 0) {
+        for (const edit of userEdits) {
+          const editId = edit.id || edit.segmentId
+          const idx = beats.findIndex(b => b.id === editId)
+          if (idx >= 0) {
+            // 合并用户编辑到 AI 段落（用户修改优先，但保留 AI 基础字段）
+            beats[idx] = {
+              ...beats[idx],
+              ...edit,
+              id: beats[idx].id,
+              index: beats[idx].index,
+            }
+          } else {
+            // 表数据不存在但用户编辑过（如 AI 重分析后表被重建）→ 直接恢复用户编辑段落
+            beats.push({
+              id: editId || `seg_${Date.now()}`,
+              index: edit.index ?? beats.length,
+              title: edit.title || `段落 ${beats.length + 1}`,
+              subject: edit.subject || '',
+              action: edit.action || '',
+              emotion: edit.emotion || 'calm',
+              intensity: edit.intensity ?? 0.5,
+              summary: edit.summary || edit.title || '',
+              duration: edit.duration || 10,
+              scenes: edit.scenes || [],
+              masterBeat: edit.masterBeat || edit.emotionArc || '',
+              narrativePurpose: edit.narrativePurpose || '',
+              fullText: edit.fullText || '',
+              videoUrl: edit.videoUrl || '',
+            })
+          }
+        }
+      }
+
+      // ⭐ 从 aiVideoSegments 回填视频/帧 URL（worker 完成后写入表，刷新后必须恢复）
+      if (p.aiVideoSegments?.length) {
+        const segUrlMap = new Map<string, any>()
+        for (const seg of p.aiVideoSegments) {
+          segUrlMap.set(seg.segmentId, seg)
+        }
+        for (const b of beats) {
+          const segRow = segUrlMap.get(b.id)
+          if (segRow) {
+            if (segRow.videoUrl) b.videoUrl = segRow.videoUrl
+            if (segRow.firstFrameUrl) b.firstFrameUrl = segRow.firstFrameUrl
+            if (segRow.midFrameUrl) b.midFrameUrl = segRow.midFrameUrl
+            if (segRow.lastFrameUrl) b.lastFrameUrl = segRow.lastFrameUrl
+          }
         }
       }
 
@@ -896,9 +954,29 @@ export function useStudioStore() {
         }))
       }
 
-      // ⭐ 从 executionResults 恢复流水线完成阶段
-      if (er.pipelineCompletedStages?.length) {
-        const completedIds = new Set(er.pipelineCompletedStages)
+      // ⭐ SSOT（SHORTDRAMA-DATA-SSOT）: 阶段状态唯一事实源 = 后端 pipeline_stages 表
+      //    前端只读 stage，不自行维护完成状态（Phase 3 统一）
+      const serverStages = p.pipelineStages || []
+      if (serverStages.length > 0) {
+        const stageStatusMap = new Map<string, string>()
+        for (const st of serverStages) {
+          stageStatusMap.set(st.stageKey, st.status)
+        }
+        for (const stage of state.pipeline.stages) {
+          const st = stageStatusMap.get(stage.id)
+          if (st === 'done' || st === 'completed') {
+            stage.status = 'completed'
+          } else if (st === 'running') {
+            stage.status = 'running'
+          } else if (st === 'error') {
+            stage.status = 'error'
+          } else {
+            stage.status = 'idle'
+          }
+        }
+      } else {
+        // ⭐ fallback: 旧项目无 pipeline_stages，从 executionResults 恢复
+        const completedIds = new Set(er.pipelineCompletedStages || [])
         for (const stage of state.pipeline.stages) {
           if (completedIds.has(stage.id)) {
             stage.status = 'completed'
@@ -1031,12 +1109,15 @@ export function useStudioStore() {
       if (savedRatio) state.workspace.narrative.aspectRatio = savedRatio
       if (savedLocked !== undefined) state.workspace.narrative.styleLocked = savedLocked === true
 
-      // ─── 恢复流水线阶段状态 ───
-      const completedStages: string[] = (p.executionResults as any)?.pipelineCompletedStages || []
-      if (completedStages.length > 0) {
-        for (const stage of state.pipeline.stages) {
-          if (completedStages.includes(stage.id)) {
-            stage.status = 'completed'
+      // ─── 恢复流水线阶段状态（仅当后端 pipeline_stages 表无数据时兜底，避免覆盖 SSOT） ───
+      const serverStagesArr: any[] = (p as any).pipelineStages || []
+      if (serverStagesArr.length === 0) {
+        const completedStages: string[] = (p.executionResults as any)?.pipelineCompletedStages || []
+        if (completedStages.length > 0) {
+          for (const stage of state.pipeline.stages) {
+            if (completedStages.includes(stage.id)) {
+              stage.status = 'completed'
+            }
           }
         }
       }

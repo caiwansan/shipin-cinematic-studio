@@ -20,6 +20,8 @@ import { prisma } from '../../utils/index.js'
 export interface EnterpriseHomeQuery {
   enterpriseId: string
   today: Date
+  /** AI Agent 实例的 tenantId（userId，非 organizationId） */
+  agentTenantId?: string
 }
 
 export interface EnterpriseHomeRawData {
@@ -51,7 +53,7 @@ export interface EnterpriseHomeRawData {
 
 export const enterpriseHomeRepository = {
   async fetchHomeData(query: EnterpriseHomeQuery): Promise<EnterpriseHomeRawData> {
-    const { enterpriseId, today } = query
+    const { enterpriseId, today, agentTenantId } = query
 
     // 先获取当前企业的 workspace 和 tenantId
     const workspace = await prisma.enterpriseJobWorkspace.findUnique({
@@ -61,8 +63,9 @@ export const enterpriseHomeRepository = {
 
     const workspaceId = workspace?.id || null
 
-    // tenantId = EnterpriseAgentInstance.tenantId = JobCompanyProfile.id = enterpriseId
-    const tenantId = enterpriseId
+    // tenantId = EnterpriseAgentInstance.tenantId = userId（非 organizationId）
+    // 由调用方传入 agentTenantId，保持与 agent-profiles 一致
+    const tenantId = agentTenantId || enterpriseId
 
     const [
       todayConversations,

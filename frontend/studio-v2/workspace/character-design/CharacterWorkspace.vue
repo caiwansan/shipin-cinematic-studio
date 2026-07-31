@@ -117,32 +117,12 @@
             🎨 {{ refImageUrl ? '🖼️ 图生图' : '生成角色图' }}
           </button>
           <button class="btn-action" @click="regenerateChar(selectedId)">♻️ 换装建议</button>
-          <!-- P0: 32 内置音色选择器（替代 AI 音色生成） -->
-          <div class="voice-design-row">
-            <button class="btn-action voice-btn" :disabled="voiceDesigning" @click="voiceGridExpanded = !voiceGridExpanded">
-              🎤 {{ voiceGridExpanded ? '收起音色面板' : (selectedVoice ? '✅ 已选音色' : '选择音色') }}
-            </button>
-            <span v-if="selectedVoice" class="voice-result-tag">
+          <!-- 音色引用：只读展示剧本分析页角色维度配置的音色文件 -->
+          <div v-if="selectedVoice" class="voice-design-row">
+            <span class="voice-result-tag">
               🎵 {{ getVoiceProfile(selectedVoice)?.name || selectedVoice }}
               <button class="voice-preview-btn" @click="previewVoice(selectedVoice)">▶ 试听</button>
             </span>
-          </div>
-          <!-- ⭐ 32 音色卡片网格 -->
-          <div v-if="voiceGridExpanded" class="voice-grid">
-            <div
-              v-for="vp in VOICE_LIBRARY"
-              :key="vp.id"
-              class="voice-card"
-              :class="{ 'voice-card-selected': selectedVoice === vp.id }"
-              @click="selectVoice(vp.id)"
-            >
-              <div class="voice-card-icon">{{ vp.gender === 'female' ? '♀' : vp.gender === 'male' ? '♂' : '⚤' }}</div>
-              <div class="voice-card-name">{{ vp.name }}</div>
-              <div class="voice-card-desc">{{ vp.description }}</div>
-              <div class="voice-card-tags">
-                <span v-for="tag in vp.tags.slice(0, 3)" :key="tag" class="voice-tag">{{ tag }}</span>
-              </div>
-            </div>
           </div>
         </div>
         <!-- 隐藏 file input -->
@@ -177,8 +157,7 @@ import { ref, computed, reactive, watch, watchEffect } from 'vue'
 import { useCharacterRuntime } from './useCharacterRuntime'
 import { useStudioStore } from '~/studio-v2/stores/useStudioStore'
 import { useStyleLock } from '~/studio-v2/composables/useStyleLock'
-import { VOICE_LIBRARY, getVoiceProfile } from '~/studio-v2/kernel/voice-library'
-import type { VoiceProfile } from '~/studio-v2/kernel/voice-library'
+import { getVoiceProfile } from '~/studio-v2/kernel/voice-library'
 
 const { characters, count } = useCharacterRuntime()
 const store = useStudioStore()
@@ -217,31 +196,24 @@ const charImages = reactive<Record<string, string>>({})
 const charLoading = reactive<Record<string, boolean>>({})
 const optimizing = reactive<Record<string, boolean>>({})
 const previewUrl = ref<string | null>(null)
-// ⭐ 32 内置音色选择（替代 AI 音色生成）
-const voiceGridExpanded = ref(false)
-const selectedVoice = computed({
-  get: () => {
-    const ch = selectedChar.value
-    return ch?.voiceProfileId || ch?.voiceType || ''
-  },
-  set: (val: string) => {
-    if (selectedId.value) {
-      updateCharacter(selectedId.value, { voiceProfileId: val, voiceType: val })
-    }
-  },
+// ⭐ 音色只读引用：数据源为剧本分析页角色维度配置的音色文件（voiceType）
+const selectedVoice = computed(() => {
+  const ch = selectedChar.value
+  return ch?.voiceType || ch?.voiceProfileId || ''
 })
 const voiceAudioRef = ref<HTMLAudioElement | null>(null)
 
-function selectVoice(vpId: string) {
-  selectedVoice.value = vpId
-  voiceGridExpanded.value = false
-}
+// ⭐ AI 音色设计状态（从 narrative.voices 恢复时使用）const voiceResult = reactive<Record<string, string>>({})
+const voicePreview = reactive<Record<string, string>>({})
+const voicePlaying = reactive<Record<string, boolean>>({})
+const voiceDesigning = ref(false)
+const voicePrompt = ref('')
+const voicePromptExpanded = ref(false)
 
 function previewVoice(vpId: string) {
   const vp = getVoiceProfile(vpId)
   if (!vp) return
   // 用 Web Speech API 预览音色（pitch/speed 控制）
-  if (voiceAudioRef.value) voiceAudioRef.value.pause()
   const utterance = new SpeechSynthesisUtterance(`你好，我是${vp.name}音色。这是试听效果。`)
   utterance.rate = vp.speed
   utterance.pitch = vp.pitch

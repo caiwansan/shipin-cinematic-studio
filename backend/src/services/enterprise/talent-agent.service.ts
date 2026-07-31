@@ -200,7 +200,6 @@ ${candidateData.topMatches.map(m => `- ${m.job}：匹配度 ${m.score}%（${m.st
     const match = await this.prisma.candidateMatch.findUnique({
       where: { id: matchId },
       include: {
-        candidate: true,
         job: { select: { title: true, requirements: true } },
       },
     })
@@ -219,6 +218,20 @@ ${candidateData.topMatches.map(m => `- ${m.job}：匹配度 ${m.score}%（${m.st
       return this.errorResult('MATCH_NOT_IN_TENANT', startTime)
     }
 
+    // Sprint-SSOT-SCHEMA-CLEANUP 修复: 候选人为 profileId，按需补查
+    const profile = await this.prisma.careerProfile.findUnique({
+      where: { id: match.candidateId },
+      select: {
+        fullName: true,
+        headline: true,
+        city: true,
+        industry: true,
+        careerDirection: true,
+        yearsExperience: true,
+        educations: { take: 1, select: { degree: true } },
+      },
+    })
+
     // 3. 构建 prompt
     const prompt = `请解释以下候选人的匹配分数：
 
@@ -226,12 +239,12 @@ ${candidateData.topMatches.map(m => `- ${m.job}：匹配度 ${m.score}%（${m.st
 - 岗位要求：${match.job.requirements || '未填写'}
 
 ## 候选人
-- 学历：${match.candidate.education || '未提供'}
-- 技能：${match.candidate.skills?.join(', ') || '未提供'}
-- 经验：${match.candidate.experience || '未提供'}
-- 城市：${match.candidate.city || '未提供'}
-- 期望薪资：${match.candidate.salaryExpectation || '未提供'}
-- 求职目标：${match.candidate.careerGoal || '未提供'}
+- 学历：${profile?.educations?.[0]?.degree || '未提供'}
+- 技能：未提供（需候选人补充）
+- 经验：${profile?.yearsExperience ? profile.yearsExperience + '年' : '未提供'}
+- 城市：${profile?.city || '未提供'}
+- 行业：${profile?.industry || '未提供'}
+- 求职方向：${profile?.careerDirection || '未提供'}
 
 ## 匹配分数：${match.matchScore}%
 匹配状态：${match.status}
@@ -288,26 +301,65 @@ ${candidateData.topMatches.map(m => `- ${m.job}：匹配度 ${m.score}%（${m.st
       where: { jobId },
       orderBy: { matchScore: 'desc' },
       take: limit,
-      include: {
-        candidate: true,
-      },
     })
 
     if (matches.length === 0) {
       return this.errorResult('NO_MATCHES_FOR_JOB', startTime)
     }
 
+    // Sprint-SSOT-SCHEMA-CLEANUP 修复: CareerProfile 关系（JobCandidate 已移除）
+    // 按 candidateId 批量查询 profile + 技能
+    const profileIds = matches.map(m => m.candidateId)
+    const [profiles, skills] = await Promise.all([
+      this.prisma.careerProfile.findMany({
+        where: { id: { in: profileIds } },
+        select: {
+          id: true,
+          fullName: true,
+          headline: true,
+          city: true,
+          industry: true,
+          careerDirection: true,
+          yearsExperience: true,
+          educations: { take: 1, select: { degree: true } },
+        },
+      }),
+      this.prisma.candidateSkill.findMany({
+        where: { profileId: { in: profileIds } },
+        select: { profileId: true, skillId: true },
+      }),
+    ])
+    const profileMap = new Map(profiles.map(p => [p.id, p]))
+    const skillNames = new Map<string, string[]>()
+    if (skills.length > 0) {
+      const skillRows = await this.prisma.skill.findMany({
+        where: { id: { in: [...new Set(skills.map(s => s.skillId))] } },
+        select: { id: true, name: true },
+      })
+      const skillNameMap = new Map(skillRows.map(s => [s.id, s.name]))
+      for (const s of skills) {
+        const name = skillNameMap.get(s.skillId)
+        if (!name) continue
+        const arr = skillNames.get(s.profileId) || []
+        arr.push(name)
+        skillNames.set(s.profileId, arr)
+      }
+    }
+
     // 3. 构建 prompt
-    const candidatesText = matches.map((m, i) => `
+    const candidatesText = matches.map((m, i) => {
+      const p = profileMap.get(m.candidateId)
+      return `
 ### 候选人 ${i + 1}（匹配度 ${m.matchScore}%）
-- 学历：${m.candidate.education || '未提供'}
-- 技能：${m.candidate.skills?.join(', ') || '未提供'}
-- 经验：${m.candidate.experience || '未提供'}
-- 城市：${m.candidate.city || '未提供'}
-- 期望薪资：${m.candidate.salaryExpectation || '未提供'}
-- 求职目标：${m.candidate.careerGoal || '未提供'}
+- 学历：${p?.educations?.[0]?.degree || '未提供'}
+- 技能：${(skillNames.get(m.candidateId) || []).join(', ') || '未提供'}
+- 经验：${p?.yearsExperience ? p.yearsExperience + '年' : '未提供'}
+- 城市：${p?.city || '未提供'}
+- 行业：${p?.industry || '未提供'}
+- 求职方向：${p?.careerDirection || '未提供'}
 - 匹配状态：${m.status}
-`).join('\n')
+`
+    }).join('\n')
 
     const prompt = `请根据以下岗位要求，对候选人进行排序推荐：
 

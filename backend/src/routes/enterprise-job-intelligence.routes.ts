@@ -10,6 +10,7 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { jobUnderstandingService, JobUnderstandingError } from '../services/matching/services/job-understanding.service.js'
 import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
+import { requireEnterpriseCapability } from '../middleware/require-enterprise-capability.js'
 
 export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) => {
 
@@ -189,8 +190,8 @@ export const enterpriseJobIntelligenceRoutes = async (fastify: FastifyInstance) 
     }
   })
 
-  // ─── POST /api/enterprise/jobs/:id/match ─ 执行匹配 ───
-  fastify.post('/api/enterprise/jobs/:id/match', async (request, reply) => {
+  // ─── POST /api/enterprise/jobs/:id/match ─ 执行匹配（Capability Gate: AI_RESUME_MATCH） ───
+  fastify.post('/api/enterprise/jobs/:id/match', { preHandler: requireEnterpriseCapability('AI_RESUME_MATCH') }, async (request, reply) => {
     try {
       const { id: jobId } = request.params as { id: string }
       const userId = (request as any).user?.id || (request as any).userId

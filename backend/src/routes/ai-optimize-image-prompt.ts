@@ -8,6 +8,7 @@
 
 import { FastifyInstance } from 'fastify'
 import { narrativeGateway } from '../runtime/narrative-gateway.js'
+import { getPrompt } from '../runtime/prompt/PromptRegistry.js'
 
 function extractUserId(request: any): string | null {
   try {
@@ -33,7 +34,13 @@ export default async function aiOptimizeImagePromptRoutes(app: FastifyInstance) 
     }
 
     const start = Date.now()
-    const systemPrompt = '你是一位专业的 AI 图像生成提示词工程师。将用户输入的原始描述，优化为结构化的中文图生图提示词。要求：1. 清晰描述主体、背景、光影、色调、构图  2. 每个元素用逗号分隔  3. 保留广告视觉风格  4. 输出简洁有效，不超过 200 字  5. **所有输出必须用中文**，不要使用英文描述'
+    // ⭐ SSOT（Phase 4）: system prompt 从 PromptTemplate 表读取，禁止硬编码
+    let systemPrompt: string
+    try {
+      systemPrompt = await getPrompt('image-prompt-optimizer')
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: `提示词模板缺失: ${err.message}` })
+    }
     const userPrompt = `原始描述：${prompt}\n${negativePrompt ? `需避免的元素：${negativePrompt}\n` : ''}${hasRefImage ? '（已有参考图，请生成与参考图风格一致的提示词）\n' : ''}\n请输出优化后的中文图生图提示词。只输出 JSON：{"optimizedPrompt": "..."}`
 
     try {

@@ -48,6 +48,11 @@ export interface SegmentRuntime {
   negativePrompt?: string
   fullText?: string
   backgroundMusic?: string  // 背景音乐/音效描述
+  // ⭐ SSOT: 视频/帧 URL（worker 完成后写 ai_video_segments 表，loadFromServer 回填）
+  videoUrl?: string
+  firstFrameUrl?: string
+  midFrameUrl?: string
+  lastFrameUrl?: string
 }
 
 export function createEmptySegment(seed?: Partial<SegmentRuntime>): SegmentRuntime {

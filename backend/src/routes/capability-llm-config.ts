@@ -7,7 +7,7 @@
  * GET  /api/capability/llm/config — 读取所有能力的 LLM 配置
  *
  * 数据模型：UserModelConfigV2.capabilityLlmConfigs (JSONB)
- * 能力：hdz | career | ppt | music | novel
+ * 能力：music
  */
 
 import type { FastifyInstance } from 'fastify'
@@ -23,7 +23,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   zhipu: '智谱',
 }
 
-const ALLOWED_CAPABILITIES = ['hdz', 'career_agent', 'ppt', 'music', 'novel']
+const ALLOWED_CAPABILITIES = ['music']
 const ALLOWED_PROVIDERS = ['deepseek', 'openai', 'volcengine', 'aliyun', 'qwen', 'moonshot', 'zhipu']
 
 interface CapabilityLlmConfig {

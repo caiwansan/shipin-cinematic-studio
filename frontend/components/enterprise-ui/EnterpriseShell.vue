@@ -1,6 +1,6 @@
 <!-- EnterpriseShell — 企业数字部门外壳 (Workspace 模式) -->
-<!-- 左侧导航固定 + 右侧工作区动态切换 -->
-<!-- 点击导航只切换模块 — 不跳转页面 -->
+<!-- Sprint-13: 左侧导航固定 + 底部用户卡片 + 模型设置 + 套餐管理 -->
+<!-- 右侧工作区动态切换，点击导航只切换模块 — 不跳转页面 -->
 <template>
   <div class="enterprise-shell" :class="{ 'shell-collapsed': collapsed }">
     <!-- 左侧导航 — 固定 -->
@@ -12,6 +12,16 @@
           @navigate="handleModuleChange"
         />
       </slot>
+
+      <!-- 底部用户卡片：身份 + 模型设置 + 套餐入口 -->
+      <WorkspaceUserCard
+        :username="userName"
+        :display-name="displayName"
+        :org-name="orgName"
+        :plan-name="planName"
+        @open-model-settings="$emit('open-model-settings')"
+        @open-billing="$emit('open-billing')"
+      />
     </aside>
 
     <!-- 右侧工作区 — slot 内容动态切换 -->
@@ -25,22 +35,33 @@
 
 <script setup lang="ts">
 import EnterpriseSidebar from './navigation/EnterpriseSidebar.vue'
+import WorkspaceUserCard from '../workspace/shared/WorkspaceUserCard.vue'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   collapsed?: boolean
   activeModule?: string
+  userName?: string
+  displayName?: string
+  orgName?: string
+  planName?: string
 }>(), {
   activeModule: 'dashboard',
+  userName: '用户',
+  displayName: '',
+  orgName: '',
+  planName: '',
 })
 
 const emit = defineEmits<{
   'module-change': [module: string]
+  'open-model-settings': []
+  'open-billing': []
 }>()
 
-// 10 个一级导航 — 昆仑镜企业数字部门 (CTO Frozen)
-// FRONTEND-RECRUITMENT-ENTRY-CONSOLIDATION-01 SubTask 3:
-// 'recruitment' 导航不再使用 SPA 模块切换，而是跳转到 SSOT 独立页面
+// 12 个一级导航 — 昆仑镜企业数字部门 (CTO Frozen)
+// Sprint-13: recruitment 导航跳转到 /workspace/enterprise/
 const navItems = [
+  { id: 'home', label: '首页', icon: '🔝', path: 'home', isExternal: true },
   { id: 'dashboard', label: '企业驾驶舱', icon: '🏠', path: 'dashboard' },
   { id: 'intelligence', label: '智能洞察', icon: '🧠', path: 'intelligence' },
   { id: 'decisions', label: '决策中心', icon: '💡', path: 'decisions' },
@@ -55,7 +76,10 @@ const navItems = [
 ]
 
 function handleModuleChange(pathOrModule: string) {
-  // FRONTEND-RECRUITMENT-ENTRY-CONSOLIDATION-01: recruitment → full page navigation to SSOT
+  if (pathOrModule === 'home') {
+    window.location.href = '/'
+    return
+  }
   if (pathOrModule === 'recruitment') {
     window.location.href = '/workspace/enterprise/'
     return
@@ -93,6 +117,6 @@ function handleModuleChange(pathOrModule: string) {
 .shell-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-xl);
+  padding: 32px;
 }
 </style>

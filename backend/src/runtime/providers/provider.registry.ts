@@ -36,6 +36,13 @@ function init() {
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     models: [],
   }))
+  // 龙猫（LongCat）— OpenAI 兼容接口
+  registerProvider(new OpenAIProvider({
+    name: 'longcat',
+    apiKey: '',
+    baseUrl: 'https://api.longcat.chat/openai/v1',
+    models: [],
+  }))
 }
 
 /**
@@ -46,6 +53,7 @@ export function refreshProviderApiKeys(): void {
   const envMap: Record<string, { keyEnv: string; modelEnv: string }> = {
     volcengine: { keyEnv: 'VOLCENGINE_API_KEY', modelEnv: 'VOLCENGINE_LLM_MODEL' },
     bailian: { keyEnv: 'ALIYUN_API_KEY', modelEnv: 'ALIYUN_LLM_MODEL' },
+    longcat: { keyEnv: 'LONGCAT_API_KEY', modelEnv: 'LONGCAT_LLM_MODEL' },
     siliconflow: { keyEnv: 'DEEPSEEK_API_KEY', modelEnv: 'DEEPSEEK_LLM_MODEL' },
     deepseek: { keyEnv: 'DEEPSEEK_API_KEY', modelEnv: 'DEEPSEEK_LLM_MODEL' },
   }

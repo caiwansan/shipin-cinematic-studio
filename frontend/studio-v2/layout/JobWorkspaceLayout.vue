@@ -1,75 +1,15 @@
 <template>
   <div class="job-workspace-layout">
-    <!-- Sprint-07A.2: AI 职业助理（折叠摘要，~80px） -->
-    <div class="career-agent-dashboard">
-      <div v-if="careerAgentLoading" class="ca-loading">
-        <span>加载中...</span>
-      </div>
-      <div v-else-if="careerAgentError && !hasCareerAgent" class="ca-error">
-        <span>⚠️ {{ careerAgentError }}</span>
-        <button @click="loadCareerAgentStatus" class="ca-retry-btn">重试</button>
-      </div>
-      <!-- 未创建：单行摘要 -->
-      <div v-else-if="!hasCareerAgent" class="ca-compact">
-        <span class="ca-compact-icon">🤖</span>
-        <span class="ca-compact-text">我的AI职业助理</span>
-        <span class="ca-compact-source">个人模型</span>
-        <button class="ca-create-btn ca-create-btn-sm" @click="handleCreateAgent" :disabled="careerAgentCreating">
-          {{ careerAgentCreating ? '创建中...' : '+ 创建' }}
-        </button>
-        <button class="ca-settings-link" title="配置模型" @click="showModelSettings = true">⚙️ 模型设置</button>
-      </div>
-      <!-- 已创建：单行摘要 + 展开 -->
-      <div v-else class="ca-compact">
-        <span class="ca-compact-icon">🤖</span>
-        <span class="ca-compact-text">{{ careerAgent?.name || 'AI 职业助理' }}</span>
-        <span class="ca-compact-source">个人模型</span>
-        <span class="ca-compact-status" :class="careerAgentStatus?.status">{{ getStatusText(careerAgentStatus?.status) }}</span>
-        <button class="ca-toggle-btn" @click="caExpanded = !caExpanded">
-          {{ caExpanded ? '收起' : '查看' }}
-        </button>
-        <button class="ca-settings-link" title="配置模型" @click="showModelSettings = true">⚙️</button>
-      </div>
-      <!-- 展开详情 -->
-      <div v-if="caExpanded && hasCareerAgent" class="ca-expanded">
-        <div class="ca-expanded-row">
-          <span class="ca-section-label">能力</span>
-          <div class="ca-tags">
-            <span v-for="tool in careerAgentCapabilities" :key="tool" class="ca-tag">✓ {{ tool }}</span>
-          </div>
-        </div>
-        <div class="ca-expanded-row">
-          <span class="ca-section-label">快捷任务</span>
-          <div class="ca-quick-actions">
-            <button class="ca-action-btn" @click="handleExecuteWorkflow('resume_analyze')">📊 分析简历</button>
-            <button class="ca-action-btn" @click="handleExecuteWorkflow('job_search')">🔍 推荐岗位</button>
-            <button class="ca-action-btn" @click="handleExecuteWorkflow('interview_prepare')">🎯 准备面试</button>
-            <button class="ca-action-btn" @click="handleExecuteWorkflow('career_plan')">📋 职业规划</button>
-          </div>
-        </div>
-        <div v-if="careerAgentStatus?.recentTasks?.length" class="ca-recent-tasks">
-          <span class="ca-section-label">最近任务</span>
-          <div class="ca-task-list">
-            <div v-for="task in careerAgentStatus.recentTasks" :key="task.id" class="ca-task-item">
-              <span class="ca-task-status" :class="task.status">{{ getTaskStatusText(task.status) }}</span>
-              <span class="ca-task-type">{{ task.taskType }}</span>
-              <span class="ca-task-date">{{ formatTaskDate(task.startedAt) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 主体：左栏聊天 + 右栏推荐 -->
+    <!-- 主体：左栏求职顾问 + 右栏镜心 + 推荐 -->
     <div class="job-workspace-main">
-      <!-- 左栏：AI 求职顾问聊天 -->
+      <!-- 左栏：🧠 求职顾问聊天 -->
       <div class="job-workspace-content">
         <div class="job-chat-panel">
           <!-- 聊天头部 -->
           <div class="job-chat-header">
             <div class="chat-title-row">
-              <h3>🤖 AI 求职顾问</h3>
-              <span class="chat-badge chat-badge-platform">昆仑镜 AI 服务 · 平台提供</span>
+              <h3>🧠 求职顾问</h3>
+              <span class="chat-badge chat-badge-platform">公共职业咨询 AI · 所有登录用户可用</span>
             </div>
             <div class="chat-header-right">
               <div class="chat-capabilities">
@@ -126,6 +66,78 @@
 
       <!-- 右栏：岗位推荐 -->
       <div class="job-recommend-panel">
+        <!-- 🪞 镜心 · AI职业伙伴（Agent 摘要卡片）-->
+        <div class="mirror-card">
+          <div class="mirror-card-header">
+            <span class="mirror-icon">🪞</span>
+            <span class="mirror-title">镜心 · AI 职业伙伴</span>
+            <span class="mirror-badge" v-if="careerAgentStatus?.hasActiveSubscription">已订阅</span>
+          </div>
+          <p class="mirror-desc">认识自己 · 规划方向 · 发现机会 · 提升竞争力</p>
+
+          <!-- 加载中 -->
+          <div v-if="careerAgentLoading" class="mirror-loading">加载中...</div>
+
+          <!-- 未订阅：显示开通引导 -->
+          <div v-else-if="showPurchaseCard" class="mirror-purchase">
+            <div class="mirror-price">
+              <span class="mirror-price-amount">¥9.9</span>
+              <span class="mirror-price-cycle">/月</span>
+            </div>
+            <button class="mirror-purchase-btn" @click="handlePurchase">立即开通</button>
+          </div>
+
+          <!-- 已订阅未创建 Agent：显示创建按钮 -->
+          <div v-else-if="!hasCareerAgent" class="mirror-create">
+            <button class="ca-create-btn" @click="handleCreateAgent" :disabled="careerAgentCreating">
+              {{ careerAgentCreating ? '创建中...' : '+ 创建我的镜心助理' }}
+            </button>
+          </div>
+
+          <!-- Sprint-10 Step 4A: 首次使用 → 先授权，后任务 -->
+          <div v-else-if="isFirstRun" class="mirror-firstrun">
+            <div v-if="showAuthTaskButton" class="mirror-auth-section">
+              <p class="mirror-firstrun-intro">我是你的职业 AI 助理</p>
+              <p class="mirror-auth-desc">第一步：授权我持续关注匹配你方向的岗位机会</p>
+              <button class="mirror-auth-btn" @click="handleAuthorizeJobWatch" :disabled="authorizingJobWatch">
+                {{ authorizingJobWatch ? '授权中...' : '🔍 授权关注岗位机会' }}
+              </button>
+              <button class="mirror-auth-skip" @click="showAuthTaskButton = false">暂不授权，先聊聊</button>
+            </div>
+            <div v-else>
+              <p class="mirror-firstrun-intro">欢迎回来，我可以帮你：</p>
+              <div class="mirror-actions">
+                <button class="ca-firstrun-btn" @click="handleFirstRunTask('profile_extraction')">📊 分析我的职业优势</button>
+                <button class="ca-firstrun-btn" @click="handleFirstRunTask('resume_optimize')">📝 优化我的简历</button>
+                <button class="ca-firstrun-btn" @click="handleFirstRunTask('career_planning')">🎯 规划职业方向</button>
+                <button class="ca-firstrun-btn" @click="handleFirstRunTask('interview_coach')">🗣️ 准备面试</button>
+              </div>
+              <button class="ca-firstrun-start" @click="handleFirstRunTask('profile_extraction')">开始第一次职业分析 →</button>
+            </div>
+          </div>
+
+          <!-- 已创建：状态 + 快捷操作 -->
+          <div v-else class="mirror-active">
+            <div class="mirror-status">
+              <span class="ca-compact-status" :class="careerAgentStatus?.status">{{ getStatusText(careerAgentStatus?.status) }}</span>
+              <span class="mirror-agent-name">{{ careerAgent?.name || '镜心 · AI 职业伙伴' }}</span>
+            </div>
+            <div class="mirror-model">
+              <span class="mirror-label">模型</span>
+              <ModelSettingsLauncher capability="llm" />
+            </div>
+            <div class="mirror-quick">
+              <span class="mirror-label">快捷任务</span>
+              <div class="mirror-quick-actions">
+                <button class="ca-action-btn" @click="handleExecuteWorkflow('resume_analyze')">📊 分析简历</button>
+                <button class="ca-action-btn" @click="handleExecuteWorkflow('job_search')">🔍 推荐岗位</button>
+                <button class="ca-action-btn" @click="handleExecuteWorkflow('interview_prepare')">🎯 准备面试</button>
+                <button class="ca-action-btn" @click="handleExecuteWorkflow('career_plan')">📋 职业规划</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 推荐标题 -->
         <div class="job-recommend-header">
           <h4>🎯 推荐岗位 <span v-if="recommendations.length > 0" class="badge">{{ recommendations.length }}</span></h4>
@@ -401,8 +413,7 @@
     </div>
   </div>
 
-  <!-- AI 职业助理模型设置弹窗（复用全局 ModelSettingsModal） -->
-  <ModelSettingsModal :visible="showModelSettings" @close="showModelSettings = false" filterCapability="career_agent" />
+
 </template>
 
 <script setup lang="ts">
@@ -419,8 +430,8 @@ import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { getPipelineStages } from '~/studio-v2/config/workspace-config'
 import { chatWithCareerAgent, getJobRecommendations, submitJobFeedback, getCareerProfileCenter } from '~/studio-v2/api/job/candidate-api'
-import { getCareerAgentStatus, activateAndExecuteCareerAgent, type CareerAgentStatus } from '~/studio-v2/api/job/career-agent-api'
-import ModelSettingsModal from '~/components/director/ModelSettingsModal.vue'
+import { getCareerAgentStatus, activateAndExecuteCareerAgent, executeCareerWorkflow, toBackendWorkflowType, type CareerAgentStatus, type CareerWorkflowResult } from '~/studio-v2/api/job/career-agent-api'
+import ModelSettingsLauncher from '~/components/ai-model/ModelSettingsLauncher.vue'
 
 const activeStageId = ref<string>('job-career')
 const caExpanded = ref(false)
@@ -428,7 +439,7 @@ const chatInput = ref('')
 const isLoading = ref(false)
 const messages = ref<Array<{ role: 'user' | 'assistant'; content: string }>>([])
 const messagesRef = ref<HTMLElement | null>(null)
-const welcomeMessage = ref('你好！我是你的 AI 职业顾问 👋\n\n我会通过几个问题了解你的情况，帮你找到最合适的工作机会。\n\n先告诉我，你希望我怎么称呼你？')
+const welcomeMessage = ref('你好！我是求职顾问 🧠\n\n我会通过几个问题了解你的情况，帮你发现最适合的职业机会。\n\n先告诉我，你希望我怎么称呼你？')
 
 // ─── Sprint-03C: Career Agent 真实状态 ───
 const careerAgentStatus = ref<CareerAgentStatus | null>(null)
@@ -439,6 +450,48 @@ const careerAgentError = ref('')
 const careerAgent = computed(() => careerAgentStatus.value?.agent || null)
 const hasCareerAgent = computed(() => careerAgentStatus.value?.hasAgent || false)
 const careerAgentCapabilities = computed(() => careerAgent.value?.tools || [])
+
+// Sprint-09C-2: 首次使用判断
+const isFirstRun = computed(() => {
+  return hasCareerAgent.value && (careerAgentStatus.value?.stats?.totalTasks || 0) === 0
+})
+
+// Sprint-09C-2: 已完成任务价值摘要
+const careerTaskSummary = computed(() => {
+  const stats = careerAgentStatus.value?.stats
+  if (!stats || stats.totalTasks === 0) return null
+  const items: Array<{ label: string }> = []
+  if (stats.completedTasks > 0) {
+    items.push({ label: `完成 ${stats.completedTasks} 个职业分析任务` })
+  }
+  const tasks = careerAgentStatus.value?.recentTasks || []
+  const types = new Set(tasks.filter(t => t.status === 'completed').map(t => t.taskType))
+  if (types.has('profile_extraction') || types.has('career_planning') || types.has('profile_analysis')) {
+    items.push({ label: '完成职业画像分析' })
+  }
+  if (types.has('resume_optimize') || types.has('resume_analyze')) {
+    items.push({ label: '完成简历分析' })
+  }
+  if (types.has('interview_coach') || types.has('interview_prepare')) {
+    items.push({ label: '完成面试准备指导' })
+  }
+  if (items.length >= 3) {
+    items.push({ label: '发现多个职业发展匹配方向（查看详情）' })
+  }
+  return items.length > 0 ? items : null
+})
+
+// ─── Sprint-09C-1: 购买流程 ───
+const showPurchaseCard = ref(false)
+const showAuthTaskButton = ref(false)
+const authorizingJobWatch = ref(false)
+const purchasing = ref(false)
+const purchaseError = ref('')
+const purchaseOrderNo = ref('')
+const selectedMethod = ref('alipay')
+const purchaseMethod = ref('')
+const purchasePaymentUrl = ref('')
+const purchaseQrCode = ref('')
 
 // 聊天历史持久化
 function saveChatHistory() {
@@ -469,7 +522,7 @@ function clearChat() {
 
 // Phase 1.6: 职业档案中心
 const showProfileCenter = ref(false)
-const showModelSettings = ref(false)
+
 const profileCenter = ref<any>(null)
 
 // 职业画像
@@ -635,6 +688,14 @@ async function loadCareerAgentStatus() {
   try {
     const status = await getCareerAgentStatus()
     careerAgentStatus.value = status
+    // F1: 支付完成后自动从购买卡片切换到创建状态
+    if (status.hasActiveSubscription && !status.hasAgent) {
+      showPurchaseCard.value = false
+    }
+    // Task 01: 未订阅用户自动显示购买引导
+    if (!status.hasActiveSubscription && !status.hasAgent) {
+      showPurchaseCard.value = true
+    }
   } catch (err: any) {
     careerAgentError.value = err.message || '加载 Career Agent 状态失败'
     careerAgentStatus.value = { hasAgent: false, status: 'error', stats: { totalTasks: 0, completedTasks: 0, failedTasks: 0 }, recentTasks: [], message: err.message }
@@ -643,26 +704,173 @@ async function loadCareerAgentStatus() {
   }
 }
 
+// Sprint-10 Step 4A Task 02: 基于身份构建欢迎消息（Confirmed Facts Only）
+function buildWelcomeMessage(identity: { hasProfile: boolean; name?: string; experience?: string; direction?: string; skills?: string[] }): string {
+  if (!identity.hasProfile) {
+    return `🪞 你好，我是你的职业 AI 助理。
+
+我已经准备就绪，可以帮你关注职业机会、分析岗位匹配、规划发展方向。
+
+让我们开始吧 — 点击下方按钮授权我为你关注岗位？`
+  }
+  const lines: string[] = ['🪞 ' + identity.name + '你好，我是你的职业 AI 助理。']
+  lines.push('')
+  lines.push('我已经了解你的职业背景：')
+  if (identity.experience) lines.push('- ' + identity.experience)
+  if (identity.direction) lines.push('- ' + identity.direction + ' 方向')
+  if (identity.skills && identity.skills.length > 0) {
+    lines.push('- 核心能力: ' + identity.skills.slice(0, 4).join(' / '))
+  }
+  lines.push('')
+  lines.push('我可以帮你：')
+  lines.push('1. 持续关注匹配你方向的机会')
+  lines.push('2. 分析岗位与你的匹配度')
+  lines.push('3. 规划成长路线，准备面试')
+  lines.push('')
+  lines.push('是否授权我开始关注 ' + (identity.direction || '你方向') + ' 的岗位机会？')
+  return lines.join('\n')
+}
+
 async function handleCreateAgent() {
   careerAgentCreating.value = true
   careerAgentError.value = ''
+  showPurchaseCard.value = false
   try {
     const result = await activateAndExecuteCareerAgent({
       goal: '帮助用户进行求职规划、简历分析、岗位匹配',
     })
-    // 重新加载状态
+    // Sprint-10 Step 4A Task 02: 身份感知欢迎消息
+    const identity = result.identity || { hasProfile: false }
+    const welcomeMsg = buildWelcomeMessage(identity)
+    messages.value.push({ role: 'assistant', content: welcomeMsg })
+
+    // 重新加载状态（触发 firstRun state）
     await loadCareerAgentStatus()
-    // 添加系统消息
-    if (result.execution?.output) {
-      messages.value.push({ role: 'assistant', content: `🤖 ${result.message}\n\n${result.execution.output.slice(0, 200)}` })
-    } else if (result.execution?.status === 'failed') {
-      messages.value.push({ role: 'assistant', content: `🤖 AI 职业助理已创建，但首次任务执行遇到问题。\n\n这通常是因为 LLM API Key 未配置。掌柜正在修复中。` })
-    }
+
+    // 标记需要展示授权任务按钮（Task 03）
+    showAuthTaskButton.value = true
   } catch (err: any) {
-    careerAgentError.value = err.message || '创建 Career Agent 失败'
+    // Sprint-09C-1: 权益引导 → 购买卡片
+    if (err.action === 'purchase_career_agent') {
+      showPurchaseCard.value = true
+      careerAgentError.value = ''
+    } else if (err.code === 'EXECUTION_FAILED' || err.retryable) {
+      // Sprint-09C-3-2 Task 02: 平台模型异常 → 友好提示
+      const userMsg = err.message || '镜心暂时繁忙，AI模型服务暂时不可用'
+      messages.value.push({
+        role: 'assistant',
+        content: `${userMsg}
+
+[重新分析] 点击发送按钮重新尝试`,
+      })
+      careerAgentError.value = ''
+    } else {
+      careerAgentError.value = err.message || '创建 Career Agent 失败'
+    }
   } finally {
     careerAgentCreating.value = false
   }
+}
+
+// Sprint-10 Step 4A Task 03: 用户授权关注岗位（最小自治任务）
+async function handleAuthorizeJobWatch() {
+  if (authorizingJobWatch.value) return
+  authorizingJobWatch.value = true
+  try {
+    const { getToken } = await import('~/utils/token-cache')
+    const token = getToken()
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }
+    // Step 1: 创建任务
+    const createRes = await fetch('/api/career/agent/task', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        taskType: 'job_watch',
+        instruction: '帮我关注 AI Agent 方向的岗位机会',
+      }),
+    })
+    if (!createRes.ok) throw new Error('创建任务失败')
+    const createData = await createRes.json()
+    const taskId = createData.data?.taskId
+    if (!taskId) throw new Error('未获取到任务 ID')
+
+    // Step 2: 执行任务
+    const execRes = await fetch(`/api/career/agent/task/${taskId}/execute`, {
+      method: 'POST',
+      headers,
+    })
+    if (!execRes.ok) throw new Error('执行任务失败')
+    const execData = await execRes.json()
+
+    // Step 3: 通知用户
+    if (execData.data?.status === 'completed') {
+      messages.value.push({
+        role: 'assistant',
+        content: `✅ 已授权关注 AI Agent 方向的岗位机会。
+
+我会持续关注匹配的岗位，下次你回来时可以查看进展。`,
+      })
+      showAuthTaskButton.value = false
+    } else {
+      messages.value.push({
+        role: 'assistant',
+        content: `任务已完成，但结果有待确认。你可以继续向我提问。`,
+      })
+    }
+  } catch (err: any) {
+    messages.value.push({
+      role: 'assistant',
+      content: `授权关注岗位时遇到问题：${err.message}
+
+你可以在聊天中直接告诉我你的方向，我来帮你分析。`,
+    })
+  } finally {
+    authorizingJobWatch.value = false
+  }
+}
+// Sprint-09C-1 Task 01: 发起镜心购买
+async function handlePurchase() {
+  purchasing.value = true
+  purchaseError.value = ''
+  try {
+    const { getToken } = await import('~/utils/token-cache')
+    const token = getToken()
+    const res = await fetch('/api/payment/career/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ method: selectedMethod.value }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: '创建订单失败' }))
+      throw new Error(err.error || err.message)
+    }
+    const data = await res.json()
+    purchaseOrderNo.value = data.orderNo
+    purchaseMethod.value = data.method || ''
+    purchasePaymentUrl.value = data.paymentUrl || ''
+    purchaseQrCode.value = data.qrCode || ''
+
+    // 支付宝支付：自动打开支付页面
+    if (data.method === 'alipay' && data.paymentUrl) {
+      window.open(data.paymentUrl, '_blank')
+    }
+  } catch (err: any) {
+    purchaseError.value = err.message || '创建订单失败，请稍后重试'
+  } finally {
+    purchasing.value = false
+  }
+}
+
+// Sprint-09C-2.1: 首次引导任务
+async function handleFirstRunTask(workflowType: string) {
+  // 执行任务（无特殊处理，直接复用 handleExecuteWorkflow）
+  await handleExecuteWorkflow(workflowType)
 }
 
 async function handleExecuteWorkflow(workflowType: string) {
@@ -670,7 +878,73 @@ async function handleExecuteWorkflow(workflowType: string) {
     await handleCreateAgent()
     return
   }
-  messages.value.push({ role: 'assistant', content: `🤖 正在执行任务: ${workflowType}...\n\n（LLM API Key 待配置，任务将创建但可能无法完成。掌柜正在修复中。）` })
+
+  // 映射前端按钮类型 → 后端 Workflow 类型
+  const backendType = toBackendWorkflowType(workflowType)
+
+  // 第一行：加载提示（后面会被替换）
+  const loadingIdx = messages.value.length
+  messages.value.push({ role: 'assistant', content: `🪞 镜心正在分析你的职业优势...` })
+  await scrollToBottom()
+
+  try {
+    const result = await executeCareerWorkflow(backendType)
+
+    // 替换加载消息为结果
+    if (result.status === 'failed') {
+      messages.value[loadingIdx] = {
+        role: 'assistant',
+        content: `🪞 镜心这次没有完成分析。\n\n服务暂时不可用，请稍后重新尝试。`,
+      }
+    } else {
+      // 组装用户语言展示
+      const displayLines: string[] = []
+      displayLines.push('🪞 镜心职业分析完成')
+      displayLines.push('')
+
+      // 核心发现
+      if (result.output?.findings?.length) {
+        displayLines.push('我发现：')
+        for (const finding of result.output.findings.slice(0, 4)) {
+          displayLines.push(`  ${finding.type === 'opportunity' ? '📈' : finding.type === 'warning' ? '⚠️' : '💡'} ${finding.content}`)
+        }
+        displayLines.push('')
+      }
+
+      // 建议行动（取前3条）
+      if (result.output?.actions?.length) {
+        displayLines.push('下一步可以这样做：')
+        for (const action of result.output.actions.slice(0, 3)) {
+          displayLines.push(`  • ${action.action} — ${action.target}`)
+        }
+        displayLines.push('')
+      }
+
+      // 执行摘要（steps 简要）
+      if (result.steps?.length) {
+        const done = result.steps.filter(s => s.result === 'success').length
+        const total = result.steps.length
+        displayLines.push(`分析覆盖 ${total} 个方向（已完成 ${done}/${total}）`)
+      }
+
+      messages.value[loadingIdx] = {
+        role: 'assistant',
+        content: displayLines.join('\n'),
+      }
+    }
+
+    // 刷新状态，更新 stats
+    await loadCareerAgentStatus()
+  } catch (err: any) {
+    // Sprint-09C-3-2 风格：友好错误
+    messages.value[loadingIdx] = {
+      role: 'assistant',
+      content: `🪞 镜心这次没有完成分析。\n\n服务暂时不可用，请稍后重新尝试。`,
+    }
+    await loadCareerAgentStatus()
+  }
+
+  await scrollToBottom()
 }
 
 onMounted(async () => {
@@ -684,7 +958,7 @@ onMounted(async () => {
     try {
       const res = await fetch('/api/job/welcome?userId=' + userId)
       const data = await res.json()
-      const welcome = data.welcome || '你好！我是你的 AI 职业顾问 👋\n\n我会通过几个问题了解你的情况，帮你找到最合适的工作机会。\n\n先告诉我，你希望我怎么称呼你？'
+      const welcome = data.welcome || '你好！我是镜心，你的 AI 职业伙伴 🪞\n\n我会通过几个问题了解你的情况，帮你发现最适合的职业机会。\n\n先告诉我，你希望我怎么称呼你？'
       messages.value.push({ role: 'assistant', content: welcome })
       welcomeMessage.value = welcome
     } catch {
@@ -694,6 +968,13 @@ onMounted(async () => {
 
   // Sprint-03C: 加载 Career Agent 真实状态
   await loadCareerAgentStatus()
+
+  // F1: 监听页面可见性变化 — 用户从支付宝/微信返回后自动检查支付状态
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && showPurchaseCard.value) {
+      loadCareerAgentStatus()
+    }
+  })
 
   // 监听消息变化，自动保存到 localStorage
   watch(messages, () => {
@@ -727,13 +1008,6 @@ onMounted(async () => {
 }
 
 /* ─── Sprint-07A.2: Career Agent Dashboard（折叠摘要） ─── */
-.career-agent-dashboard {
-  flex-shrink: 0;
-  background: linear-gradient(135deg, #0d1117 0%, #111827 100%);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  padding: 6px 16px;
-}
-
 .ca-loading, .ca-error {
   display: flex;
   align-items: center;
@@ -1177,6 +1451,186 @@ onMounted(async () => {
   flex: 1;
   overflow-y: auto;
   padding: 12px;
+}
+
+/* 🪞 镜心 · AI职业伙伴 卡片 */
+.mirror-card {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.mirror-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mirror-icon {
+  font-size: 1.3rem;
+}
+
+.mirror-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+}
+
+.mirror-badge {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(74,222,128,0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74,222,128,0.25);
+  margin-left: auto;
+}
+
+.mirror-desc {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.4);
+  margin: 0 0 12px;
+}
+
+.mirror-loading {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.4);
+  padding: 8px 0;
+}
+
+.mirror-purchase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.mirror-price-amount {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #c9a86c;
+}
+
+.mirror-price-cycle {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.mirror-purchase-btn {
+  padding: 8px 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #C9A86C, #E2C88A);
+  color: #08131F;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mirror-purchase-btn:hover {
+  box-shadow: 0 4px 12px rgba(201,168,108,0.3);
+}
+
+.mirror-create {
+  padding: 8px 0;
+}
+
+.mirror-firstrun {
+  padding: 4px 0;
+}
+
+.mirror-firstrun-intro {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  margin: 0 0 8px;
+}
+
+/* Sprint-10 Step 4A: 授权关注按钮 */
+.mirror-auth-section {
+  text-align: center;
+  padding: 8px 0;
+}
+.mirror-auth-desc {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  margin: 0 0 10px;
+}
+.mirror-auth-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mirror-auth-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.mirror-auth-btn:disabled { opacity: 0.5; cursor: wait; }
+.mirror-auth-skip {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 12px;
+  background: transparent;
+  color: rgba(255,255,255,0.4);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.mirror-auth-skip:hover { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.3); }
+
+.mirror-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  }
+
+.mirror-active {
+  padding: 4px 0;
+}
+
+.mirror-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mirror-agent-name {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.8);
+}
+
+.mirror-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mirror-label {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.4);
+  flex-shrink: 0;
+  width: 50px;
+}
+
+.mirror-quick {
+  padding: 4px 0;
+}
+
+.mirror-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 /* 右栏推荐面板 */
@@ -1837,5 +2291,339 @@ onMounted(async () => {
   .rec-actions {
     flex-direction: column;
   }
+}
+
+/* ─── Sprint-09C-1: 购买卡片 ─── */
+.ca-purchase {
+  padding: 8px 0;
+}
+
+.ca-purchase-card {
+  background: linear-gradient(135deg, #1a1a3e 0%, #0d1117 100%);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.ca-purchase-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ca-purchase-icon {
+  font-size: 1.3rem;
+}
+
+.ca-purchase-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.ca-purchase-desc {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.ca-purchase-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+
+.ca-purchase-capabilities span {
+  font-size: 0.78rem;
+  color: #a5b4fc;
+}
+
+.ca-purchase-methods {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.ca-method-btn {
+  padding: 4px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ca-method-btn.active {
+  border-color: #6366f1;
+  background: #eef2ff;
+  color: #6366f1;
+  font-weight: 500;
+}
+
+.ca-method-btn:hover {
+  border-color: #a5b4fc;
+}
+
+.ca-purchase-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.ca-price-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.ca-price-cycle {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.ca-purchase-btn {
+  width: 100%;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.ca-purchase-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.ca-purchase-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ca-purchase-retry {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #6366f1;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.ca-purchase-error {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #ef4444;
+}
+
+.ca-purchase-success {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #22c55e;
+  line-height: 1.5;
+}
+
+.ca-purchase-payment {
+  margin-top: 12px;
+  text-align: center;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.ca-payment-header {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+
+.ca-payment-order {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+.ca-payment-btn-alipay {
+  display: inline-block;
+  padding: 10px 24px;
+  background: #1677ff;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  text-decoration: none;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.ca-payment-btn-alipay:hover {
+  background: #4096ff;
+}
+
+.ca-payment-qrcode {
+  width: 160px;
+  height: 160px;
+  display: block;
+  margin: 0 auto 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.ca-payment-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.ca-check-status-btn {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: #6366f1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Sprint-09C-2.1: 首次引导卡片 */
+.ca-firstrun {
+  padding: 12px 16px;
+}
+
+.ca-firstrun-card {
+  background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+  border: 1px solid #312e81;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.ca-firstrun-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ca-firstrun-icon {
+  font-size: 1.6rem;
+}
+
+.ca-firstrun-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e0e7ff;
+}
+
+.ca-firstrun-intro {
+  font-size: 0.9rem;
+  color: #a5b4fc;
+  margin-bottom: 14px;
+}
+
+.ca-firstrun-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.ca-firstrun-btn {
+  padding: 8px 16px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  color: #c7d2fe;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.ca-firstrun-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: #6366f1;
+  color: #e0e7ff;
+}
+
+.ca-firstrun-start {
+  display: inline-block;
+  padding: 10px 24px;
+  background: #6366f1;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ca-firstrun-start:hover {
+  background: #4f46e5;
+}
+
+/* Sprint-09C-2.2: 价值卡片 */
+.ca-value-card {
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 8px 12px;
+}
+
+.ca-value-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ca-value-icon {
+  font-size: 1rem;
+}
+
+.ca-value-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #86efac;
+}
+
+.ca-value-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ca-value-item {
+  font-size: 0.82rem;
+  color: #bbf7d0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ca-value-check {
+  font-size: 0.78rem;
+}
+
+.ca-value-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
 }
 </style>

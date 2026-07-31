@@ -15,32 +15,10 @@
           <span class="cap-icon">🎯</span>
           <div>
             <span class="cap-name">AI 职业助理</span>
-            <span class="cap-desc">个人求职助手，简历分析、岗位匹配、面试准备</span>
+            <span class="cap-desc">个人求职助手（使用全局语言模型配置）</span>
           </div>
         </div>
-        <ModelSettingsLauncher capability="career_agent" label="职业助理" />
-      </div>
-
-      <div class="cap-card">
-        <div class="cap-info">
-          <span class="cap-icon">🎬</span>
-          <div>
-            <span class="cap-name">短剧工作台</span>
-            <span class="cap-desc">AI 短剧制作、导演、分镜</span>
-          </div>
-        </div>
-        <ModelSettingsLauncher capability="hdz" label="短剧" />
-      </div>
-
-      <div class="cap-card">
-        <div class="cap-info">
-          <span class="cap-icon">📊</span>
-          <div>
-            <span class="cap-name">PPT 生成</span>
-            <span class="cap-desc">AI 演示文稿制作</span>
-          </div>
-        </div>
-        <ModelSettingsLauncher capability="ppt" label="PPT" />
+        <div class="cap-hint">使用全局模型</div>
       </div>
 
       <div class="cap-card">
@@ -52,17 +30,6 @@
           </div>
         </div>
         <ModelSettingsLauncher capability="music" label="音乐" />
-      </div>
-
-      <div class="cap-card">
-        <div class="cap-info">
-          <span class="cap-icon">📖</span>
-          <div>
-            <span class="cap-name">小说创作</span>
-            <span class="cap-desc">AI 长篇小说创作</span>
-          </div>
-        </div>
-        <ModelSettingsLauncher capability="novel" label="小说" />
       </div>
 
       <div class="cap-card">

@@ -210,6 +210,74 @@ export default async function hdzChatRoutes(app: FastifyInstance) {
       historyMessages,
     }
 
+    // ═══ Task-04.2 统一写正文入口：对话写作指令 → 同一 Writer pipeline（与按钮同链）═══
+    // 「写第10章 / 写正文 / 续写 / 开始写」都走 writerService，保证与按钮结果一致
+    const writeIntent = /(?:写|生成|续写|重写)(?:第)?\s*(\d{1,4})\s*章|(?:写|生成)(?:正文|章节)|(?:开始写|继续写|接着写)/.exec(message.trim())
+    if (writeIntent) {
+      try {
+        let targetChapter = writeIntent[1] ? parseInt(writeIntent[1], 10) : null
+        if (!targetChapter) {
+          const lastCh = await prisma.hdzChapter.findFirst({
+            where: { projectId },
+            orderBy: { chapterNo: 'desc' },
+            select: { chapterNo: true },
+          })
+          targetChapter = (lastCh?.chapterNo || 0) + 1
+        }
+
+        // 检查目标章大纲是否存在（writer 依赖大纲）
+        const target = await prisma.hdzChapter.findUnique({
+          where: { projectId_chapterNo: { projectId, chapterNo: targetChapter } },
+        })
+        if (!target || !target.outline) {
+          const resp = `第${targetChapter}章还没有大纲。请先告诉文曲星这章要写什么（或点击「生成大纲」），我来帮你规划后再写正文。`
+          historyMessages.push({ role: 'assistant', content: resp, timestamp: Date.now() })
+          await prisma.hdzSession.update({ where: { id: session.id }, data: { messages: historyMessages as any } })
+          return { success: true, data: { type: 'need_outline', chapterNo: targetChapter, response: resp } }
+        }
+
+        // 创建 writer 任务 + 同步执行（与按钮「写正文」完全同一 pipeline）
+        const task = await prisma.hdzAgentTask.create({
+          data: {
+            projectId,
+            agentType: 'writer',
+            status: 'running',
+            input: { chapterNo: targetChapter, mode: 'single', userInput: message.trim() },
+          },
+        })
+        const { writerService } = await import('../../services/hdz/writer.service.js')
+        await writerService.execute(
+          {
+            userId: project.userId,
+            projectId,
+            taskId: task.id,
+            agentType: 'writer',
+            mode: 'single',
+            chapterNo: targetChapter,
+            userInput: message.trim(),
+          },
+          userCfg,
+        )
+
+        const updated = await prisma.hdzChapter.findUnique({
+          where: { projectId_chapterNo: { projectId, chapterNo: targetChapter } },
+        })
+        const wc = updated?.wordCount || 0
+        const contentPreview = (updated?.content || '').slice(0, 400)
+        const resp = `✅ 第${targetChapter}章「${updated?.title || ''}」已写完（${wc} 字），已自动更新人物/世界状态。\n\n${contentPreview}${(updated?.content || '').length > 400 ? '\n……（完整正文请在「手稿」查看）' : ''}`
+
+        historyMessages.push({ role: 'assistant', content: resp, timestamp: Date.now() })
+        await prisma.hdzSession.update({ where: { id: session.id }, data: { messages: historyMessages as any } })
+        return { success: true, data: { type: 'chapter_written', chapterNo: targetChapter, wordCount: wc, chapterTitle: updated?.title, response: resp } }
+      } catch (writeErr: any) {
+        console.error(`[HDZ/Chat] 写作指令执行失败:`, writeErr?.message)
+        return {
+          success: false,
+          error: `写作失败：${writeErr?.message || '未知错误'}（可尝试直接在「写正文」按钮操作）`,
+        }
+      }
+    }
+
     try {
       const response = await worldbuilderService.execute(ctx, userCfg)
       
@@ -404,8 +472,8 @@ async function autoSaveBatchCards(projectId: string, response: string): Promise<
                 name: fName,
                 type: f.type || 'other',
                 description: f.description || '',
-                leaderNames: f.leaderNames || [],
-                memberNames: f.memberNames || [],
+                leaderIds: f.leaderIds || f.leaderNames || [],
+                memberIds: f.memberIds || f.memberNames || [],
                 properties: f.properties || {},
               },
             })

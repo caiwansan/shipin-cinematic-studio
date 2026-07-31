@@ -217,6 +217,15 @@ ${chapterText.substring(0, 8000)}
     if (!project) return reply.status(404).send({ success: false, error: '项目不存在' })
     if (project.userId !== user.id) return reply.status(403).send({ success: false, error: '无权访问' })
 
+    // 资源级归属校验：事件必须属于当前项目（防跨项目删除）
+    const event = await prisma.storyEvent.findUnique({
+      where: { id: eventId },
+      select: { projectId: true },
+    })
+    if (!event || event.projectId !== projectId) {
+      return reply.status(404).send({ success: false, error: '事件不存在' })
+    }
+
     await prisma.storyEvent.delete({ where: { id: eventId } })
     return { success: true }
   })

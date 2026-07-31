@@ -1051,22 +1051,70 @@
         <!-- 📖 总纲中心 -->
         <div v-if="tab === 'masterplan'" class="hdz-ws-panel hdz-master-plan">
           <div class="hdz-panel-header">
-            <span>📖 总纲中心</span>
+            <span>📖 总纲中心 <span class="hdz-mp-status" :class="masterPlanStatus()">{{ masterPlanStatusLabel() }}</span></span>
             <div class="hdz-panel-header-actions">
+              <button v-if="masterPlanStatus() === 'none'" class="hdz-btn hdz-btn-primary hdz-btn-xs" @click="showPlanWizard = true">
+                🎬 文曲星规划总纲
+              </button>
+              <template v-else>
+                <button v-if="masterPlanStatus() === 'draft'" class="hdz-btn hdz-btn-success hdz-btn-xs" @click="confirmMasterPlan" :disabled="masterPlanLoading">
+                  ✅ 确认总纲
+                </button>
+                <button v-if="masterPlanStatus() === 'confirmed'" class="hdz-btn hdz-btn-warning hdz-btn-xs" @click="lockMasterPlan" :disabled="masterPlanLoading">
+                  🔒 锁定总纲
+                </button>
+                <button v-if="masterPlanStatus() === 'locked'" class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="unlockMasterPlan" :disabled="masterPlanLoading">
+                  🔓 解锁
+                </button>
+              </template>
               <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="loadMasterPlan" :disabled="masterPlanLoading">
                 {{ masterPlanLoading ? '⏳ 加载中...' : '🔄 刷新' }}
               </button>
-              <button class="hdz-btn hdz-btn-primary hdz-btn-xs" @click="generateMasterPlan" :disabled="masterPlanLoading">
-                {{ masterPlanLoading ? '⏳ 生成中...' : '✨ 重新生成' }}
+              <button v-if="masterPlanStatus() !== 'locked'" class="hdz-btn hdz-btn-primary hdz-btn-xs" @click="showPlanWizard = true" :disabled="masterPlanLoading">
+                ✨ 生成/重写总纲
               </button>
             </div>
           </div>
+
+          <!-- 文曲星小说规划向导 -->
+          <div v-if="showPlanWizard" class="hdz-plan-wizard">
+            <div class="hdz-plan-wizard-title">🎬 文曲星小说规划（创建小说宇宙）</div>
+            <div class="hdz-plan-wizard-grid">
+              <label class="hdz-plan-wizard-field">
+                <span>小说类型</span>
+                <input v-model="planWizard.genre" class="hdz-input" placeholder="玄幻/都市/科幻..." />
+              </label>
+              <label class="hdz-plan-wizard-field">
+                <span>目标字数（万字）</span>
+                <input v-model.number="planWizard.targetWords" type="number" class="hdz-input" placeholder="1000000" />
+              </label>
+              <label class="hdz-plan-wizard-field">
+                <span>总章节数</span>
+                <input v-model.number="planWizard.totalChapter" type="number" class="hdz-input" placeholder="1000" />
+              </label>
+              <label class="hdz-plan-wizard-field">
+                <span>卷数</span>
+                <input v-model.number="planWizard.volumeCount" type="number" class="hdz-input" placeholder="5" />
+              </label>
+            </div>
+            <label class="hdz-plan-wizard-field hdz-plan-wizard-idea">
+              <span>故事创意（主角定位 / 核心冲突 / 最终目标 / 世界规则）</span>
+              <textarea v-model="planWizard.idea" class="hdz-input hdz-textarea" rows="3" placeholder="例：少年林玄在青枫镇觉醒玄枢族血脉，立志修复枯竭的九州灵脉，阻止太古邪魔复苏..." />
+            </label>
+            <div class="hdz-plan-wizard-actions">
+              <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="showPlanWizard = false">取消</button>
+              <button class="hdz-btn hdz-btn-primary hdz-btn-xs" @click="runPlanWizard" :disabled="planGenerating">
+                {{ planGenerating ? '⏳ AI 生成中（约 1-2 分钟）...' : '🚀 生成小说总纲 V1（≥3000字）' }}
+              </button>
+            </div>
+          </div>
+
           <div v-if="masterPlanLoading && !masterPlan" class="hdz-panel-empty">
             <p>⏳ 正在加载总规划...</p>
           </div>
           <div v-else-if="!masterPlan" class="hdz-panel-empty">
             <p>📋 还没有总规划</p>
-            <p class="hdz-chat-empty-hint">点击「重新生成」按钮创建小说总规划</p>
+            <p class="hdz-chat-empty-hint">点击「🎬 文曲星规划总纲」，通过对话确定字数/卷数/主线后生成 3000 字以上总纲</p>
           </div>
           <div v-else class="hdz-mp-content">
             <!-- 基本信息 -->
@@ -2891,7 +2939,7 @@ async function sendChat() {
     const payload: any = { projectId: projectId.value, message: text }
     if (currentSessionId.value) payload.sessionId = currentSessionId.value
     // 使用长超时防止 LLM 响应慢导致超时
-    const res = await $api.post('/api/hdz/chat/send', payload, { timeout: 180000 })
+    const res = await $api.post('/api/hdz/chat/send', payload, { timeout: 300000 })
     const body = res?.data
     if (body?.success && body?.data?.response) {
       messages.value[messages.value.length - 1] = { role: 'assistant', content: body.data.response }
@@ -2924,7 +2972,7 @@ async function sendChat() {
             }
           }
         } catch {}
-        if (waited >= 180000) {
+        if (waited >= 300000) {
           messages.value[messages.value.length - 1] = { role: 'assistant', content: `❌ 请求超时，请刷新页面重试` }
           clearInterval(interval)
         }
@@ -3332,11 +3380,22 @@ async function exportScreenplayPdf() {
   const qs = taskId ? '' : `?chapterNo=${sp.chapterNo}`
   const url = `/api/hdz/agent/screenplay/${projectId.value}/pdf/${taskId || 'by-chapter'}${qs}`
   try {
-    // 直接用浏览器下载（后端已放行，无需 token）
+    // 带 Bearer 下载（后端已全路由鉴权，<a> 直跳不再可用）
+    const token = getAuthToken()
+    const resp = await fetch(url, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    })
+    if (!resp.ok) {
+      const errBody = await resp.json().catch(() => null)
+      throw new Error(errBody?.error || `下载失败 (${resp.status})`)
+    }
+    const blob = await resp.blob()
+    const blobUrl = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
+    a.href = blobUrl
     a.download = `第${sp.chapterNo}章_${sp.chapterTitle || '剧本'}.pdf`
     a.click()
+    URL.revokeObjectURL(blobUrl)
     messages.value.push({ role: 'assistant', content: `📄 正在下载 PDF...` })
   } catch (err: any) {
     messages.value.push({ role: 'assistant', content: `⚠️ 导出失败：${err.message}` })
@@ -3372,12 +3431,26 @@ async function playScreenplayTts() {
 // ─── 总纲中心 ──────────────────────────────────
 const masterPlan = ref<any>(null)
 const masterPlanLoading = ref(false)
+// 文曲星小说规划向导
+const showPlanWizard = ref(false)
+const planWizard = ref({ genre: '玄幻', targetWords: 1000000, totalChapter: 1000, volumeCount: 5, idea: '' })
+const planGenerating = ref(false)
+
+function masterPlanStatus(): string {
+  if (!masterPlan.value) return 'none'
+  return masterPlan.value.status || 'draft'
+}
+
+function masterPlanStatusLabel(): string {
+  const s = masterPlanStatus()
+  return s === 'locked' ? '🔒 已锁定' : s === 'confirmed' ? '✅ 已确认' : s === 'draft' ? '📝 草稿' : '—'
+}
 
 async function loadMasterPlan() {
   masterPlanLoading.value = true
   try {
     const res: any = await $api.get(`/api/hdz/projects/${projectId.value}/master-plan`)
-    masterPlan.value = res?.data?.masterPlan || res?.data?.data || null
+    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || null
   } catch (e) {
     console.error('[MasterPlan] 加载失败:', e)
   } finally {
@@ -3385,19 +3458,69 @@ async function loadMasterPlan() {
   }
 }
 
-async function generateMasterPlan() {
+async function generateMasterPlan(userInput?: string) {
   masterPlanLoading.value = true
   try {
     const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/generate`, {
-      userInput: '请生成一份完整的小说总规划',
+      userInput: userInput || '请生成一份完整的小说总规划',
+      totalChapter: planWizard.value.totalChapter,
+      volumeCount: planWizard.value.volumeCount,
+      genre: planWizard.value.genre,
     })
-    if (res?.success || res?.data?.success) {
-      masterPlan.value = res.data?.masterPlan || res.data?.data?.masterPlan || null
-    }
+    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || null
   } catch (e) {
     console.error('[MasterPlan] 生成失败:', e)
   } finally {
     masterPlanLoading.value = false
+  }
+}
+
+async function runPlanWizard() {
+  if (!planWizard.value.idea.trim()) {
+    messages.value.push({ role: 'assistant', content: '⚠️ 请先描述你的小说创意（主线/主角/世界）' })
+    return
+  }
+  planGenerating.value = true
+  try {
+    const idea = `小说类型：${planWizard.value.genre}；目标字数：${planWizard.value.targetWords}；总章节：${planWizard.value.totalChapter}；卷数：${planWizard.value.volumeCount}。创作意图：${planWizard.value.idea}`
+    await generateMasterPlan(idea)
+    showPlanWizard.value = false
+    messages.value.push({ role: 'assistant', content: `🎬 小说总纲已生成（${(masterPlan.value?.title || '未命名')}）！请查看总纲中心，确认后点击「✅ 确认总纲」锁定创作方向。` })
+  } finally {
+    planGenerating.value = false
+  }
+}
+
+async function confirmMasterPlan() {
+  try {
+    const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/confirm`)
+    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || masterPlan.value
+    messages.value.push({ role: 'assistant', content: '✅ 总纲已确认！writer 将严格遵循此总纲创作。' })
+  } catch (e: any) {
+    console.error('[MasterPlan] 确认失败:', e)
+    messages.value.push({ role: 'assistant', content: `⚠️ 确认失败：${e?.message || '未知错误'}` })
+  }
+}
+
+async function lockMasterPlan() {
+  try {
+    const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/lock`)
+    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || masterPlan.value
+    messages.value.push({ role: 'assistant', content: '🔒 总纲已锁定！后续创作将强制遵循，不可再修改（可解锁）。' })
+  } catch (e: any) {
+    console.error('[MasterPlan] 锁定失败:', e)
+    messages.value.push({ role: 'assistant', content: `⚠️ 锁定失败：${e?.message || '未知错误'}` })
+  }
+}
+
+async function unlockMasterPlan() {
+  try {
+    const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/unlock`)
+    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || masterPlan.value
+    messages.value.push({ role: 'assistant', content: '🔓 总纲已解锁，可修改后重新确认。' })
+  } catch (e: any) {
+    console.error('[MasterPlan] 解锁失败:', e)
+    messages.value.push({ role: 'assistant', content: `⚠️ 解锁失败：${e?.message || '未知错误'}` })
   }
 }
 
@@ -4700,6 +4823,75 @@ async function showLibraryReader() {
 .hdz-faction-member--leader:hover {
   background: rgba(255,193,7,0.16);
   border-color: rgba(255,193,7,0.3);
+}
+
+/* ─── 总纲中心：状态徽章 + 文曲星规划向导 ─── */
+.hdz-mp-status {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.hdz-mp-status.none { background: rgba(150,150,150,0.1); color: #888; }
+.hdz-mp-status.draft { background: rgba(255,193,7,0.1); color: #b8860b; border: 1px solid rgba(255,193,7,0.2); }
+.hdz-mp-status.confirmed { background: rgba(76,175,80,0.1); color: #2e7d32; border: 1px solid rgba(76,175,80,0.25); }
+.hdz-mp-status.locked { background: rgba(33,150,243,0.1); color: #1565c0; border: 1px solid rgba(33,150,243,0.25); }
+
+.hdz-plan-wizard {
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(168,130,255,0.07), rgba(90,160,255,0.05));
+  border: 1px solid rgba(168,130,255,0.18);
+}
+.hdz-plan-wizard-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  color: #8b7bd8;
+}
+.hdz-plan-wizard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 768px) {
+  .hdz-plan-wizard-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.hdz-plan-wizard-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #888;
+}
+.hdz-plan-wizard-idea { grid-column: 1 / -1; }
+.hdz-plan-wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.hdz-btn-success {
+  background: rgba(76,175,80,0.12);
+  border: 1px solid rgba(76,175,80,0.3);
+  color: #2e7d32;
+}
+.hdz-btn-success:hover { background: rgba(76,175,80,0.2); }
+.hdz-btn-warning {
+  background: rgba(255,152,0,0.12);
+  border: 1px solid rgba(255,152,0,0.3);
+  color: #b26a00;
+}
+.hdz-btn-warning:hover { background: rgba(255,152,0,0.2); }
+.hdz-textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
 }
 </style>
 

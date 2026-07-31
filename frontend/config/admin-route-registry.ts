@@ -60,7 +60,7 @@ export const ADMIN_ROUTE_REGISTRY: AdminRouteEntry[] = [
   { route: '/admin/aigc/agents', owner: 'platform', status: 'active', note: 'Agent管理' },
   { route: '/admin/aigc/market', owner: 'platform', status: 'active', note: '市场代理管理' },
   { route: '/admin/aigc/styles', owner: 'platform', status: 'active', note: '风格库（AI资源管理）' },
-  { route: '/admin/aigc/runtime', owner: 'platform', status: 'active', note: 'Runtime监控（Hermes/Worker执行监控）' },
+  { route: '/admin/aigc/runtime', owner: 'platform', status: 'deprecated', note: 'Runtime监控（Hermes/Worker执行监控）：API 从未挂载（credential-lifecycle 路由群 0 注册）+ platform_provider_config 表不存在（Hybrid Runtime 从未落地），功能已被数据罗盘第八层 AI 基础设施取代', replacement: '/admin/dashboard' },
   { route: '/admin/aigc/vip-orders', owner: 'platform', status: 'active', note: 'VIP订单（商业中心）' },
   { route: '/admin/aigc/mall', owner: 'workspace', workspace: 'mall', status: 'active', note: '商城管理' },
   { route: '/admin/aigc/legal', owner: 'workspace', workspace: 'legal', status: 'active', note: '法律工作台管理' },

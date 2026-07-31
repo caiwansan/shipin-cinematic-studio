@@ -118,6 +118,10 @@ export async function extractEventsFromChapter(
   const userId = project.userId
   const llmCfg = await getUserLLMConfig(userId)
   if (!llmCfg) throw new Error('请先配置大模型 API Key（LLM）')
+  // ★ 02-B Task 4：附加 Usage Ledger 元数据（event-extractor 独立调用链，不经过 orchestrator）
+  llmCfg.userId = userId
+  llmCfg.taskType = 'hdz_event_extractor'
+  llmCfg.projectId = projectId
 
   // 获取项目角色列表（用于将角色名映射为 ID）
   const characters = await prisma.hdzCharacter.findMany({
@@ -375,6 +379,22 @@ export async function processChapterEvents(
             changes,
           )
           totalStatesCreated += savedRecords.length
+
+          // 5.5 心理档案更新：聚合该章 MENTAL 事件进 CharacterMindState（Task 3）
+          const mentalStates = savedRecords.filter((r: any) => r.stateType === 'MENTAL')
+          if (mentalStates.length > 0) {
+            try {
+              const { updateMindStateFromEvents } = await import('./character-mind.service.js')
+              await updateMindStateFromEvents(
+                projectId,
+                character.id,
+                chapterNo,
+                mentalStates.map((r: any) => ({ event: r.event, description: r.description })),
+              )
+            } catch (mindErr: any) {
+              console.warn(`[processChapterEvents] 心理档案更新失败: ${mindErr.message}`)
+            }
+          }
         }
       } catch (err: any) {
         // 单个角色推演失败不影响其他角色

@@ -17,6 +17,7 @@ import { eventLogRepository } from './repositories/event-log.repository.js'
 import { getWorldState, getEntityState, type StateDelta, type EntityState } from './world-state.service.js'
 import { getEntityById } from './entity-registry.service.js'
 import { emitEvent } from './event-log.service.js'
+import { prisma } from '../../utils/index.js'
 
 // ─── 类型定义 ───
 
@@ -341,6 +342,204 @@ class ConsistencyVerifier {
     }
 
     return { ok, warnings }
+  }
+
+  /**
+   * 章节文本级一致性校验（Task 4：不依赖 state_delta，直接查正文 vs StoryContext）
+   *
+   * 规则（确定性，无 LLM 成本）：
+   * 1. 死亡角色仍在行动（identity 含死亡/殒命，但正文出现角色行动/对话）
+   * 2. 已失去/损坏物品仍在正常使用（items 含失去/丢弃/损坏，但正文出现使用描述）
+   *
+   * 输出：warnings + score（100 - 每条警告扣 10）+ ok
+   */
+  async verifyChapterText(
+    projectId: string,
+    chapterNo: number,
+    chapterText: string,
+  ): Promise<{ warnings: string[]; score: number; ok: boolean }> {
+    const warnings: string[] = []
+    const text = chapterText || ''
+    if (!text) return { warnings, score: 100, ok: true }
+
+    try {
+      const { buildStoryContext } = await import('./story-context-builder.service.js')
+      const ctx = await buildStoryContext(projectId, chapterNo)
+
+      // ── 1. 死亡角色仍在行动 ──
+      const ACTION_WORDS = /(说|道|怒|笑|冲|杀|走|去|来|看|出手|攻击|战斗|离开|前往|质问|冷笑|点头)/
+      for (const char of ctx.characters) {
+        const identities = char.currentState.identity || []
+        const isDead = identities.some(i => /死亡|殒命|陨落|身亡|战死/.test(i))
+        if (!isDead) continue
+        const name = char.name
+        if (!name || name.length < 2) continue
+        // 死亡角色名出现在正文 + 伴随行动/对话词 → 警告
+        const nameIdx = text.indexOf(name)
+        if (nameIdx >= 0) {
+          const around = text.slice(Math.max(0, nameIdx - 30), Math.min(text.length, nameIdx + name.length + 30))
+          if (ACTION_WORDS.test(around) && !/回忆|回想|遗像|坟|遗物|梦里|梦中|生前/.test(around)) {
+            warnings.push(`⚠️ 角色「${name}」已在第${ctx.currentChapterNo || chapterNo}章前死亡（${identities.join('、')}），但本章正文仍在行动/说话，请核查（除非是回忆/梦境/闪回并明确标注）`)
+          }
+        }
+      }
+
+      // ── 2. 已失去/损坏物品仍在用（直接查 ITEM 状态记录——当前持有列表会过滤失去的物品）──
+      try {
+        const lostItemStates = await prisma.hdzCharacterState.findMany({
+          where: { projectId, stateType: 'ITEM', event: { in: ['失去', '丢弃', '损坏', '被毁', '遗失', '破碎'] } },
+        })
+        const charNames = new Map(ctx.characters.map(c => [c.id, c.name]))
+        for (const s of lostItemStates) {
+          const itemName = String(s.description || s.event || '').replace(/（.*?）|\(.*?\)/g, '').trim()
+          if (!itemName || itemName.length < 2) continue
+          if (!text.includes(itemName)) continue
+          const useIdx = text.indexOf(itemName)
+          const around = text.slice(Math.max(0, useIdx - 20), Math.min(text.length, useIdx + itemName.length + 20))
+          if (!/回忆|想起|曾经|过去|遗物|碎片|残骸/.test(around)) {
+            warnings.push(`⚠️ 角色「${charNames.get(s.characterId) || s.characterId}」的物品「${itemName}」已${s.event}（第${s.chapterNo}章），但本章正文仍在使用，请核查`)
+          }
+        }
+      } catch (itemErr: any) {
+        console.warn(`[ConsistencyVerifier/Text] 物品校验失败: ${itemErr.message}`)
+      }
+
+      // ── 3. 一致性警告（来自 story-context-builder 的规则检测）──
+      for (const w of ctx.consistencyWarnings || []) {
+        warnings.push(`ℹ️ ${w}`)
+      }
+    } catch (err: any) {
+      console.warn(`[ConsistencyVerifier/Text] ch${chapterNo} 校验失败: ${err.message}`)
+    }
+
+    // 去重
+    const unique = [...new Set(warnings)]
+    const score = Math.max(0, 100 - unique.length * 10)
+    console.log(`[ConsistencyVerifier/Text] ch${chapterNo}: warnings=${unique.length}, score=${score}, ok=${unique.length === 0}`)
+
+    try {
+      await eventLogRepository.create({
+        data: {
+          entityType: 'chapter',
+          entityId: `${projectId}:${chapterNo}`,
+          eventType: 'CHAPTER_TEXT_VERIFIED',
+          payload: { warnings: unique, score, source: 'text_verifier' },
+        },
+      })
+    } catch {
+      // 非关键失败
+    }
+
+    return { warnings: unique, score, ok: unique.length === 0 }
+  }
+
+  /**
+   * 章节生成前 Context Gate（02-B Task 1）——主动防错：在错误产生前拦截
+   *
+   * 确定性检查（无 LLM 成本）：
+   * G1 章节合法性 —— 章节号 >= 1、不重复生成（已有正文且非 rewrite）
+   * G2 前置审批门 —— 前置章未审核 → warn；前置章审核发现 critical/major 问题 → FAIL（已知错误不传播）
+   * G3 上下文可构建 —— buildStoryContext 成功且有最小数据（角色/世界观），否则 FAIL（先规划再写）
+   * G4 时间线单调 —— 不跳章（目标章节 <= 最大章节+1），否则 warn
+   *
+   * 输出：gates[] + score（100 - fail*25 - warn*5）+ ok
+   */
+  async verifyBeforeGeneration(
+    projectId: string,
+    chapterNo: number,
+    opts?: { isRewrite?: boolean },
+  ): Promise<{ ok: boolean; score: number; gates: CheckResult[]; warnings: string[] }> {
+    const gates: CheckResult[] = []
+    const warnings: string[] = []
+    let score = 100
+
+    // ── G1 章节合法性 ──
+    if (!Number.isInteger(chapterNo) || chapterNo < 1) {
+      gates.push({ check: '章节合法性', status: 'fail', detail: `章节号非法: ${chapterNo}` })
+      score -= 25
+    } else {
+      const existing = await prisma.hdzChapter.findFirst({ where: { projectId, chapterNo } })
+      if (existing?.content && !opts?.isRewrite) {
+        gates.push({ check: '章节合法性', status: 'fail', detail: `第${chapterNo}章已有正文（${existing.wordCount || 0}字），非 rewrite 模式禁止覆盖` })
+        score -= 25
+      } else {
+        gates.push({ check: '章节合法性', status: 'pass', detail: `第${chapterNo}章可生成` })
+      }
+    }
+
+    // ── G2 前置审批门 ──
+    const prevNo = chapterNo - 1
+    if (prevNo >= 1) {
+      const prev = await prisma.hdzChapter.findFirst({ where: { projectId, chapterNo: prevNo } })
+      if (prev) {
+        const prevNotes: any[] = (prev.reviewNotes as any[]) || []
+        const hasCritical = prevNotes.some(n => ['critical', 'major'].includes((n.severity || '').toLowerCase()))
+        if (prev.status !== 'reviewed' && prev.status !== 'final') {
+          if (hasCritical) {
+            gates.push({ check: '前置审批门', status: 'fail', detail: `第${prevNo}章审核存在 ${prevNotes.filter(n => ['critical','major'].includes((n.severity||'').toLowerCase())).length} 条 critical/major 问题且未通过审批，禁止继续生成（错误不传播）` })
+            score -= 25
+          } else {
+            gates.push({ check: '前置审批门', status: 'warn', detail: `第${prevNo}章状态=${prev.status} 尚未审核通过，继续生成可能放大未审问题` })
+            score -= 5
+          }
+        } else {
+          gates.push({ check: '前置审批门', status: 'pass', detail: `第${prevNo}章已审核通过` })
+        }
+      } else {
+        gates.push({ check: '前置审批门', status: 'warn', detail: `第${prevNo}章不存在（跳章或章节未创建）` })
+        score -= 5
+      }
+    } else {
+      gates.push({ check: '前置审批门', status: 'pass', detail: '第一章无前置' })
+    }
+
+    // ── G3 上下文可构建 ──
+    try {
+      const { buildStoryContext } = await import('./story-context-builder.service.js')
+      const ctx = await buildStoryContext(projectId, chapterNo)
+      if (!ctx.characters || ctx.characters.length === 0) {
+        gates.push({ check: '上下文完整性', status: 'fail', detail: 'StoryContext 无角色数据——先生成总纲/角色设定再写正文' })
+        score -= 25
+      } else if (!ctx.worldState || Object.keys(ctx.worldState).length === 0) {
+        gates.push({ check: '上下文完整性', status: 'warn', detail: 'StoryContext 世界状态为空，生成可能缺乏背景约束' })
+        score -= 5
+      } else {
+        gates.push({ check: '上下文完整性', status: 'pass', detail: `StoryContext 就绪（角色 ${ctx.characters.length} 个，世界状态 ${Object.keys(ctx.worldState).length} 项）` })
+      }
+    } catch (err: any) {
+      gates.push({ check: '上下文完整性', status: 'fail', detail: `StoryContext 构建失败: ${err.message}` })
+      score -= 25
+    }
+
+    // ── G4 时间线单调 ──
+    const maxRow = await prisma.hdzChapter.aggregate({ where: { projectId }, _max: { chapterNo: true } })
+    const maxNo = maxRow._max.chapterNo ?? 0
+    if (chapterNo > maxNo + 1) {
+      gates.push({ check: '时间线单调', status: 'warn', detail: `目标第${chapterNo}章，但最大已到第${maxNo}章——跳章生成，请确认章节大纲` })
+      score -= 5
+    } else {
+      gates.push({ check: '时间线单调', status: 'pass', detail: `时间线连续（最大第${maxNo}章）` })
+    }
+
+    const ok = score >= 70 && !gates.some(g => g.status === 'fail')
+    for (const g of gates) if (g.status !== 'pass') warnings.push(`[${g.check}] ${g.detail}`)
+
+    console.log(`[ConsistencyVerifier/Gate] ch${chapterNo}: score=${score}, ok=${ok}, gates=${gates.map(g => g.status).join('/')}`)
+
+    try {
+      await eventLogRepository.create({
+        data: {
+          entityType: 'chapter',
+          entityId: `${projectId}:${chapterNo}`,
+          eventType: 'PRE_GENERATION_GATE',
+          payload: { score, ok, gates, source: 'context_gate' },
+        },
+      })
+    } catch {
+      // 非关键失败
+    }
+
+    return { ok, score, gates, warnings }
   }
 }
 

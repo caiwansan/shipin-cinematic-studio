@@ -98,9 +98,33 @@ export default async function enterpriseSubscriptionRoutes(app: FastifyInstance)
 
       if (!sub) return toApiResponse({ success: true, data: null })
 
+      // Resolve planTier from plan.code (Sprint-RECRUITMENT-REALITY-02-B Task 02)
+      // plan.code: BASIC | PRO | ENTERPRISE | TRIAL | FREE — 取代 displayName 字符串猜测
+      // displayName 猜测仅作为旧数据（无 code）的 fallback
+      function resolveTier(name: string): string {
+        const n = name.toLowerCase()
+        if (n.includes('enterprise') || n.includes('企业')) return 'enterprise'
+        if (n.includes('professional') || n.includes('专业') || n.includes('pro') || n.includes('人事')) return 'professional'
+        if (n.includes('basic') || n.includes('基础')) return 'basic'
+        if (n.includes('trial') || n.includes('试用')) return 'trial'
+        return 'free'
+      }
+
+      const planCode = (sub.plan as any)?.code || ''
+      const planName = sub.plan?.displayName || sub.snapshotName || ''
+      // 1. 优先 plan.code（结构化数据）；2. 兜底 displayName 猜测（旧数据兼容）
+      const planTier = planCode
+        ? planCode.toLowerCase()
+        : resolveTier(planName)
+
       return toApiResponse({
         success: true,
         data: {
+          planTier,
+          planName,
+          name: planName,
+          status: sub.status,
+          maxEmployees: sub.plan?.maxEmployees ?? sub.snapshotMaxEmployees ?? 0,
           plan: {
             name: sub.snapshotName,
             displayName: sub.snapshotName,
@@ -288,6 +312,16 @@ export default async function enterpriseSubscriptionRoutes(app: FastifyInstance)
       if (subscription) {
         const { entitlementService } = await import('../services/enterprise/enterprise-entitlement.service.js')
         await entitlementService.createFromSubscription(orgId, subscription.id)
+
+        // Sprint-14 Task 04L: 订阅激活后自动 provision AI 员工
+        try {
+          const { enterpriseEmployeeProvisionService } = await import('../services/enterprise/enterprise-employee-provision.service.js')
+          await enterpriseEmployeeProvisionService.provisionEmployeesForPlan(orgId, subscription.planId)
+          console.log(`[Provision] AI employees provisioned for org=${orgId}, plan=${subscription.planId}`)
+        } catch (provisionErr: any) {
+          console.error(`[Provision] Failed to provision employees for org=${orgId}:`, provisionErr.message)
+          // 不阻止订阅激活，provision 失败要记录但不抛
+        }
       }
 
       // TTFV: 记录支付成功 + 订阅激活（从订单和订阅快照获取信息）

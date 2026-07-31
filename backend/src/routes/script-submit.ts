@@ -3,44 +3,23 @@ import { FastifyInstance } from 'fastify'
 import { aigcOrchestrator } from '../agents/aigc-orchestrator.js'
 import { prisma } from '../utils/index.js'
 import { schemaGuard } from '../runtime/schema-validator/execution-results-guard.js'
+import { verifyProjectOwner } from '../services/director/project-ownership.service.js'
 
 export default async function scriptSubmitRoutes(app: FastifyInstance) {
   /**
-   * 从请求中解析用户 ID：优先从 JWT token 解析，其次从 body 读
+   * 从请求中解析用户 ID
+   * ⭐ Phase 6 安全隔离:
+   *   - 只从 authenticate 后的可信身份 (request.user.id) 取
+   *   - 禁止 base64 decode JWT（无签名验证）
+   *   - 禁止 body.userId 覆盖认证身份
+   *   - 禁止 projectId 反查 owner 充当身份（防跨项目冒充）
    */
-  async function resolveUserId(request: any, body: any): Promise<string> {
-    // 第1优先级：JWT token 解析后的 userId
-    const fromToken = (request as any).userId || (request.user as any)?.id
-    if (fromToken && fromToken !== 'anonymous') return fromToken
-    // 第2优先级：尝试手动解析 JWT token（没有 preHandler authenticate 时）
-    if (request.headers?.authorization) {
-      try {
-        const token = request.headers.authorization.replace('Bearer ', '')
-        const parts = token.split('.')
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
-          if (payload.id || payload.sub) {
-            return payload.id || payload.sub
-          }
-        }
-      } catch {}
+  async function resolveUserId(request: any): Promise<string> {
+    const fromAuth = (request.user as any)?.id
+    if (!fromAuth || fromAuth === 'anonymous') {
+      throw new Error('未认证：请登录后操作')
     }
-    // 第3优先级：从 body 取
-    const fromBody = body?.userId
-    if (fromBody && fromBody !== 'anonymous') return fromBody
-    // 第4优先级：从 projectId 反查项目所有者
-    if (body?.projectId) {
-      try {
-        const project = await prisma.project.findUnique({ where: { id: body.projectId }, select: { userId: true } })
-        if (project?.userId) {
-          console.log(`[resolveUserId] ⭐ 从 projectId 反查 userId: ${project.userId.substring(0, 12)}`)
-          return project.userId
-        }
-      } catch {}
-    }
-    const resolved = 'anonymous'
-    console.log(`[resolveUserId] ⚠️ 无法解析 userId，返回: ${resolved}, hasAuth: ${!!request.headers?.authorization}`)
-    return resolved
+    return fromAuth
   }
 
   async function saveProject(userId: string, body: any, resultData: any): Promise<string> {
@@ -53,6 +32,11 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
     const execData = { ...(resultData || {}), rawScript: fullScript }
 
     if (body.projectId) {
+      // ⭐ Phase 6 安全隔离: 更新已有项目前必须归属校验（防越权覆盖他人项目）
+      const ownerCheck = await verifyProjectOwner(body.projectId, userId)
+      if (!ownerCheck.ok) {
+        throw new Error(ownerCheck.error)
+      }
       // 更新已有项目
       await prisma.project.update({
         where: { id: body.projectId },
@@ -82,7 +66,7 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
   }
 
   // ─── 提交剧本，启动多 Agent 全流程 ───
-  app.post('/api/script/submit', async (request, reply) => {
+  app.post('/api/script/submit', { preHandler: [app.authenticate] }, async (request, reply) => {
     const body = request.body as {
       text: string
       title?: string
@@ -98,7 +82,7 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
     }
 
     try {
-      const userId = await resolveUserId(request, body)
+      const userId = await resolveUserId(request)
 
       // ⭐ 第一步：全流程 AI 分析
       const result = await aigcOrchestrator.generate({
@@ -121,6 +105,11 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
       // ⭐ 第二步：如果有 projectId，自动持久化六维数据到 executionResults + artifact sync
       if (body.projectId && result.data) {
         try {
+          // ⭐ Phase 6 安全隔离: 归属校验（防写他人项目 executionResults）
+          const ownerCheck = await verifyProjectOwner(body.projectId, userId)
+          if (!ownerCheck.ok) {
+            return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+          }
           const project = await prisma.project.findUnique({
             where: { id: body.projectId },
             select: { executionResults: true },
@@ -139,8 +128,16 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
             merged.analyzeV2Data = existing.analyzeV2Data
           }
 
-          // ⭐ 全量提交时清除旧的导演编辑缓存（segments），确保前端重载从最新 videoSegments 重建
-          delete merged.segments
+          // ⭐ SSOT（SHORTDRAMA-DATA-SSOT）: 用户编辑事实 = executionResults.userEdits
+          //    重新分析时保留用户编辑（不再 delete merged.segments 丢弃），
+          //    只清空 AI 生成的 segments 快照，用户编辑层原样保留
+          const userSegments = existing.userEdits?.segments
+          if (Array.isArray(userSegments) && userSegments.length > 0) {
+            // 保留用户编辑：AI 重分析不清除用户创作
+            console.log(`[ScriptSubmit] ✅ 保留 ${userSegments.length} 段用户编辑（userEdits）`)
+          } else {
+            delete merged.segments
+          }
           // ⭐ P4-2 P0: Schema Validation Guard
           // 在写入 executionResults 前验证 AigcSpecOutput 结构完整性
           const guardResult = schemaGuard(merged, 'script-submit', body.projectId)
@@ -199,7 +196,8 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
   })
 
   // ─── V1 兼容接口：/api/v1/script/parse → 同 submit ───
-  app.post('/api/v1/script/parse', async (request, reply) => {
+  // ⭐ Phase 6 安全隔离: 加认证，userId 禁止伪造
+  app.post('/api/v1/script/parse', { preHandler: [app.authenticate] }, async (request, reply) => {
     const body = request.body as {
       title?: string
       script?: string
@@ -214,7 +212,7 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
     }
 
     try {
-      const userId = await resolveUserId(request, body)
+      const userId = await resolveUserId(request)
 
       // 全量模式：跑剧情总指挥 + 所有 Designer Agent
       const result = await aigcOrchestrator.generate({
@@ -269,7 +267,7 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
   })
 
   // ─── 重新生成单项（已有分项的精细化调整） ───
-  app.post('/api/script/regenerate', async (request, reply) => {
+  app.post('/api/script/regenerate', { preHandler: [app.authenticate] }, async (request, reply) => {
     const body = request.body as {
       text: string
       section: 'character' | 'scene' | 'storyboard' | 'voice' | 'video' | 'props'
@@ -283,10 +281,15 @@ export default async function scriptSubmitRoutes(app: FastifyInstance) {
     }
 
     try {
-      const userId = await resolveUserId(request, body)
+      const userId = await resolveUserId(request)
 
       // ⭐ 如果前端没传 text，尝试从 projectId 反查已保存的剧本
       if (!body.text?.trim() && body.projectId) {
+        // ⭐ Phase 6 安全隔离: 反查前必须归属校验（防越权读取他人剧本）
+        const ownerCheck = await verifyProjectOwner(body.projectId, userId)
+        if (!ownerCheck.ok) {
+          return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+        }
         try {
           const project = await prisma.project.findUnique({
             where: { id: body.projectId },

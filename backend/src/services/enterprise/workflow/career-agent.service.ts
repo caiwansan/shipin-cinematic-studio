@@ -62,6 +62,12 @@ export class CareerAgentService {
     '薪资分析',
   ]
 
+  // Career Agent 套餐 code
+  private static readonly CAREER_AGENT_PLAN_CODE = 'career_agent'
+
+  // Career Agent 权益能力 code
+  private static readonly CAREER_AGENT_PROVISION_CAP = 'CAREER_AGENT_PROVISION'
+
   constructor(private prisma: PrismaClient) {
     this.lifecycle = new AgentLifecycleService(prisma)
     this.memoryService = new MemoryNamespaceService()
@@ -97,13 +103,84 @@ export class CareerAgentService {
   }
 
   /**
+   * 验证用户是否拥有创建职业助理的权益
+   * Sprint-09B-3A Task 02-B: Subscription → Capability → Provision Gate
+   */
+  async checkProvisionEntitlement(userId: string): Promise<{ allowed: boolean; reason?: string }> {
+    // 解析用户 identity
+    const { tenantId, source } = await this.resolveOrg(userId)
+
+    // 企业用户走已有 enterprise entitlement（不在此处校验）
+    if (source === 'org_member') {
+      return { allowed: true }
+    }
+
+    // 个人用户：检查 Tenant 是否存在（没有 Tenant 意味着未曾购买）
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } })
+    if (!tenant) {
+      return {
+        allowed: false,
+        reason: '需要开通镜心职业助理（¥9.9/月）',
+      }
+    }
+
+    // 查找 career_agent 套餐
+    const plan = await this.prisma.subscriptionPlan.findUnique({
+      where: { code: CareerAgentService.CAREER_AGENT_PLAN_CODE },
+    })
+    if (!plan) {
+      return {
+        allowed: false,
+        reason: '镜心职业助理套餐未配置',
+      }
+    }
+
+    // 检查激活订阅
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        tenantId,
+        planId: plan.id,
+        status: 'active',
+      },
+    })
+    if (!subscription) {
+      return {
+        allowed: false,
+        reason: '需要开通镜心职业助理（¥9.9/月）',
+      }
+    }
+
+    // 检查 CapabilityGrant
+    const grant = await this.prisma.capabilityGrant.findFirst({
+      where: {
+        planId: plan.id,
+        capability: CareerAgentService.CAREER_AGENT_PROVISION_CAP,
+      },
+    })
+    if (!grant) {
+      return {
+        allowed: false,
+        reason: '套餐不包含创建职业助理权限',
+      }
+    }
+
+    return { allowed: true }
+  }
+
+  /**
    * 创建并部署个人 AI 职业助理
    */
   async createAndDeploy(req: CreateCareerAgentRequest): Promise<CareerAgentInfo> {
     const p = this.prisma as any
     const userId = req.userId
 
-    // ─── Step 0: 检查是否已存在 ─────────────────────────
+    // ─── Step 0: 权益门控 ──────────────────
+    const entitlement = await this.checkProvisionEntitlement(userId)
+    if (!entitlement.allowed) {
+      throw new Error(entitlement.reason || '无权限创建职业助理')
+    }
+
+    // ─── Step 0b: 检查是否已存在 ────────────────────────
     const existing = await this.getCareerAgent(userId)
     if (existing) {
       return existing

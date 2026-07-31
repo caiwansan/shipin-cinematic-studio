@@ -65,7 +65,7 @@
           </div>
         </div>
         <button
-          v-if="agent.status === 'active'"
+          v-if="agent.status === 'active' && !props.readonly"
           class="ai-member-report-btn"
           @click="$emit('view-agent', agent.id)"
         >
@@ -77,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const props = withDefaults(defineProps<{
   agents: Array<{
     id: string
     name: string
@@ -87,7 +87,10 @@ defineProps<{
     stats?: { completedToday?: number; discovered?: number; pending?: number }
   }>
   loading: boolean
-}>()
+  readonly?: boolean
+}>(), {
+  readonly: false
+})
 
 defineEmits<{
   (e: 'create-job'): void

@@ -43,7 +43,7 @@ export const navCategories: NavCategory[] = [
       { label: 'AI新媒体运营部门', icon: '📱', to: '/media-department', desc: 'AI新媒体运营团队、账号管理、内容生产' },
       { label: '电商图片', icon: '🖼️', to: '/workspace/ecom-image', desc: '商品图、营销视觉、电商素材' },
       { label: '广告制作', icon: '📢', to: '/workspace/ad-create' },
-      { label: '求职管家', icon: '🎯', to: '/workspace/job', badge: '⭐新', desc: 'AI职业顾问、简历优化、岗位推荐、面试助手' },
+      { label: '🪞 镜心 · AI 职业伙伴', icon: '🪞', to: '/workspace/job', badge: '⭐新', desc: '认识自己 · 规划方向 · 发现机会 · 提升竞争力' },
       { label: '企业招聘', icon: '🏢', to: '/workspace/recruitment', desc: 'AI岗位解析、人才智能匹配、招聘决策辅助' },
     ],
   },

@@ -1,16 +1,17 @@
 <!--
   ModelSettingsLauncher.vue — 统一模型设置按钮入口
   Sprint-07A.4: 所有工作台复用此入口打开 ModelSettingsModal
+  Sprint-09A-01: career_agent 移除独立能力卡片，使用全局 LLM 设置
 
   职责：仅按钮入口，不实现配置逻辑
-  使用：<ModelSettingsLauncher capability="careeragent" />
+  使用：<ModelSettingsLauncher capability="hdz" />
 
   capability 映射：
-    careeragent → AI 职业助理
     hdz         → 短剧工作台
     ppt         → PPT 生成
     music       → 音乐创作
     novel       → 小说创作
+    llm         → 通用语言模型
 -->
 <template>
   <button class="ms-launcher" @click="showModal = true" :title="`配置 ${label} 模型`">
@@ -37,7 +38,6 @@ const showModal = ref(false)
 const label = computed(() => {
   if (props.label) return props.label
   const map: Record<string, string> = {
-    career_agent: 'AI 职业助理',
     hdz: '短剧工作台',
     ppt: 'PPT 生成',
     music: '音乐创作',

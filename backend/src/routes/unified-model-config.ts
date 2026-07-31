@@ -76,19 +76,7 @@ export default async function unifiedModelConfigRoutes(fastify: FastifyInstance)
           videoBaseUrl: config.videoBaseUrl,
           ttsBaseUrl: config.ttsBaseUrl,
           musicBaseUrl: config.musicBaseUrl,
-          // JSONB 能力
-          careerAgentProvider: config.capabilityLlmConfigs?.career_agent?.provider || '',
-          careerAgentModel: config.capabilityLlmConfigs?.career_agent?.model || '',
-          hasCareerAgentApiKey: hasApiKeyForProvider(config, 'career_agent'),
-          hdzProvider: config.capabilityLlmConfigs?.hdz?.provider || '',
-          hdzModel: config.capabilityLlmConfigs?.hdz?.model || '',
-          hasHdzApiKey: hasApiKeyForProvider(config, 'hdz'),
-          pptProvider: config.capabilityLlmConfigs?.ppt?.provider || '',
-          pptModel: config.capabilityLlmConfigs?.ppt?.model || '',
-          hasPptApiKey: hasApiKeyForProvider(config, 'ppt'),
-          novelProvider: config.capabilityLlmConfigs?.novel?.provider || '',
-          novelModel: config.capabilityLlmConfigs?.novel?.model || '',
-          hasNovelApiKey: hasApiKeyForProvider(config, 'novel'),
+
         },
       })
     } catch (e: any) {
@@ -144,27 +132,7 @@ export default async function unifiedModelConfigRoutes(fastify: FastifyInstance)
           videoBaseUrl: config.videoBaseUrl,
           ttsBaseUrl: config.ttsBaseUrl,
           musicBaseUrl: config.musicBaseUrl,
-          // JSONB 能力（career_agent, hdz, ppt, novel)
-          careerAgentProvider: config.capabilityLlmConfigs?.career_agent?.provider || '',
-          careerAgentModel: config.capabilityLlmConfigs?.career_agent?.model || '',
-          careerAgentBaseUrl: config.capabilityLlmConfigs?.career_agent?.baseUrl || '',
-          careerAgentEnabled: config.capabilityLlmConfigs?.career_agent?.enabled ?? true,
-          hasCareerAgentApiKey: hasApiKeyForProvider(config, 'career_agent'),
-          hdzProvider: config.capabilityLlmConfigs?.hdz?.provider || '',
-          hdzModel: config.capabilityLlmConfigs?.hdz?.model || '',
-          hdzBaseUrl: config.capabilityLlmConfigs?.hdz?.baseUrl || '',
-          hdzEnabled: config.capabilityLlmConfigs?.hdz?.enabled ?? true,
-          hasHdzApiKey: hasApiKeyForProvider(config, 'hdz'),
-          pptProvider: config.capabilityLlmConfigs?.ppt?.provider || '',
-          pptModel: config.capabilityLlmConfigs?.ppt?.model || '',
-          pptBaseUrl: config.capabilityLlmConfigs?.ppt?.baseUrl || '',
-          pptEnabled: config.capabilityLlmConfigs?.ppt?.enabled ?? true,
-          hasPptApiKey: hasApiKeyForProvider(config, 'ppt'),
-          novelProvider: config.capabilityLlmConfigs?.novel?.provider || '',
-          novelModel: config.capabilityLlmConfigs?.novel?.model || '',
-          novelBaseUrl: config.capabilityLlmConfigs?.novel?.baseUrl || '',
-          novelEnabled: config.capabilityLlmConfigs?.novel?.enabled ?? true,
-          hasNovelApiKey: hasApiKeyForProvider(config, 'novel'),
+
         },
       })
     } catch (e: any) {

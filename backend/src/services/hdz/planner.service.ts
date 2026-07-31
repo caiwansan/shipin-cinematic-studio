@@ -24,8 +24,8 @@ class PlannerService {
       await this.setOutput(ctx.taskId, { message: '章节数已满，无需规划' })
       return
     }
-    // 单次最多生成 10 章，避免 LLM 输出截断
-    const batchSize = Math.min(remainingChapters, 10)
+    // 单次最多生成 15 章（glm-4-flash 长 JSON 输出易卡；15 章 ~3k tokens 稳定）
+    const batchSize = Math.min(remainingChapters, 15)
     const endChapter = existingChapters + batchSize
 
     // ★ 读取已有章节摘要作为续写上下文（精简版）

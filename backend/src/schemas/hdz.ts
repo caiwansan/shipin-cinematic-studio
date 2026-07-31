@@ -41,7 +41,7 @@ export const hdzUpdateProjectSchema = z.object({
 
 // ─── 章节 ───
 
-const HdzChapterStatus = z.enum(['outline', 'draft', 'reviewed', 'final'])
+const HdzChapterStatus = z.enum(['outline', 'draft', 'reviewed', 'final', 'needs_rewrite'])
 
 export const hdzUpdateChapterSchema = z.object({
   title: z.string().max(200).optional(),

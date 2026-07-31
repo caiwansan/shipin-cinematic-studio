@@ -8,7 +8,7 @@
         <span class="ew-plan-badge">{{ plan }}</span>
       </div>
       <div class="ew-header-right">
-        <NuxtLink to="/workspace/job" class="ew-btn ew-btn-job">💼 求职工作台</NuxtLink>
+        <NuxtLink to="/workspace/job" class="ew-btn ew-btn-job">🪞 镜心</NuxtLink>
       </div>
     </header>
 

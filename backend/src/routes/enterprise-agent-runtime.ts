@@ -10,6 +10,19 @@ import { enterpriseAgentRuntime } from '../services/enterprise/enterprise-agent-
 import { entitlementService } from '../services/enterprise/enterprise-entitlement.service.js';
 import { prisma } from '../utils/index.js';
 
+/**
+ * Sprint-RECRUITMENT-REALITY-02-B Task 03: agentType → businessType 统一映射
+ * 招聘域三个 AI 员工（recruiter/interview/talent_analyst）统一为 'recruitment'，
+ * 与 career_agent 对齐：一个业务域一个 businessType，防止模型配置串业务。
+ */
+const RECRUITMENT_AGENT_TYPES = ['recruiter', 'interview', 'talent_analyst', 'recruitment_consultant', 'jd_optimizer', 'talent_searcher'];
+
+export function agentTypeToBusinessType(agentType: string): string {
+  if (agentType === 'career_advisor' || agentType === 'career_agent') return 'career_agent';
+  if (RECRUITMENT_AGENT_TYPES.includes(agentType)) return 'recruitment';
+  return agentType;
+}
+
 export async function registerEnterpriseAgentRuntimeRoutes(app: FastifyInstance) {
   
   // 认证
@@ -71,6 +84,145 @@ export async function registerEnterpriseAgentRuntimeRoutes(app: FastifyInstance)
   });
 
   /**
+   * POST /api/enterprise/agent-runtime/provision
+   * 开通 AI 员工：创建 EnterpriseAgentProfile + 激活 Runtime Instance
+   */
+  app.post('/agent-runtime/provision', async (request, reply) => {
+    try {
+      const user = request.user as any;
+      const userId = user?.id;
+
+      // Identity Debt: provision 用 Organization.id 写 organization_id
+      // 但 GET list (enterprise-agent-profiles.ts resolveOrgId) 查询 tenant_id
+      // resolveOrgId 优先级: user.tenantId(JWT) > getOrganizationIdForUser > userId
+      // 所以 write 时的 tenantId 必须使用完全相同的解析逻辑
+      let orgId: string | null = null;
+      let governanceOrgId: string | null = null;
+
+      if (userId) {
+        // [organization_id] 从 OrgMember 获取 Organization.id
+        const member = await prisma.orgMember.findFirst({
+          where: { userId },
+          select: { organizationId: true },
+        });
+        if (member?.organizationId) {
+          orgId = member.organizationId;
+        }
+
+        // [tenant_id] 与 resolveOrgId 完全对齐:
+        // path 1: JWT tenantId（优先）
+        if (user?.tenantId && user.tenantId !== userId) {
+          governanceOrgId = user.tenantId;
+        }
+        // path 2: getOrganizationIdForUser（DB 查询）
+        if (!governanceOrgId) {
+          try {
+            governanceOrgId = await getOrganizationIdForUser(userId);
+          } catch {}
+        }
+        // path 3: userId fallback
+        if (!governanceOrgId) {
+          governanceOrgId = userId;
+        }
+      }
+
+      if (!orgId) {
+        return reply.status(400).send({ code: 400, message: 'ORGANIZATION_NOT_FOUND' });
+      }
+      // final fallback: orgId = Organization.id
+      if (!governanceOrgId) {
+        governanceOrgId = orgId;
+      }
+
+      const body = request.body as {
+        agentType: string;
+        shortName: string;
+        name: string;
+      };
+
+      if (!body.agentType || !body.shortName) {
+        return reply.status(400).send({ code: 400, message: 'MISSING_REQUIRED_FIELDS' });
+      }
+
+      // 检查是否已存在同名 Profile
+      const existing = await prisma.enterpriseAgentProfile.findFirst({
+        where: { organizationId: orgId, name: body.name || body.shortName }
+      });
+      if (existing) {
+        // 已存在 → 修正 tenantId 对齐 + 直接激活
+        if (existing.tenantId !== governanceOrgId) {
+          await prisma.enterpriseAgentProfile.update({
+            where: { id: existing.id },
+            data: { tenantId: governanceOrgId },
+          });
+          existing.tenantId = governanceOrgId;
+        }
+        const result = await enterpriseAgentRuntime.createAndActivateAgent({
+          profileId: existing.id,
+          tenantId: existing.tenantId,
+          organizationId: orgId,
+          name: existing.name,
+          role: existing.role,
+          agentType: existing.agentType,
+          userId: user?.id,
+        });
+        if (!result.success) {
+          return reply.status(422).send({ code: 422, message: result.error });
+        }
+        return reply.send({ code: 0, data: { agentId: result.agentId, profileId: existing.id, runtimeStatus: result.runtimeStatus } });
+      }
+
+      // 创建新的 Profile
+      const tenantId = governanceOrgId
+      const role = body.agentType === 'talent_analyst' ? '人才分析师'
+        : body.agentType === 'recruiter' ? '招聘经理'
+        : body.agentType === 'interview' ? '面试官'
+        : 'AI 员工'
+
+      const profile = await prisma.enterpriseAgentProfile.create({
+        data: {
+          organization: { connect: { id: orgId } },
+          tenantId,
+          name: body.name || body.shortName,
+          role,
+          agentType: body.agentType,
+          description: `AI ${role} — ${body.shortName}`,
+          status: 'active',
+        }
+      });
+
+      // 激活 Runtime
+      const result = await enterpriseAgentRuntime.createAndActivateAgent({
+        profileId: profile.id,
+        tenantId,
+        organizationId: orgId,
+        name: profile.name,
+        role: profile.role,
+        agentType: profile.agentType,
+        userId: user?.id,
+      });
+
+      if (!result.success) {
+        // 创建成功但激活失败 — 返回部分成功
+        return reply.status(422).send({ code: 422, message: result.error, data: { profileId: profile.id } });
+      }
+
+      return reply.send({
+        code: 0,
+        data: {
+          agentId: result.agentId,
+          profileId: profile.id,
+          runtimeStatus: result.runtimeStatus,
+        }
+      });
+
+    } catch (error: any) {
+      console.error('[AgentRuntime] provision route error:', error.message);
+      return reply.status(500).send({ code: 500, message: 'INTERNAL_ERROR', detail: error.message });
+    }
+  });
+
+  /**
    * POST /api/enterprise/agent-tasks
    * 创建并执行任务（同步返回结果）
    */
@@ -120,6 +272,12 @@ export async function registerEnterpriseAgentRuntimeRoutes(app: FastifyInstance)
         }
       });
 
+      // Sprint-09E-04.5B + Sprint-RECRUITMENT-REALITY-02-B Task 03: businessType 统一映射
+      // career_advisor → 'career_agent'（用户 BYOK 身份隔离）
+      // recruiter / interview / talent_analyst 等招聘域 → 'recruitment'（业务域统一标识）
+      // 其它 agentType → 保留原始类型
+      const careerAgentBizType = agentTypeToBusinessType(profile.agentType)
+
       // 执行（真实 LLM 调用）
       const result = await enterpriseAgentRuntime.executeTask({
         taskId: task.id,
@@ -129,6 +287,7 @@ export async function registerEnterpriseAgentRuntimeRoutes(app: FastifyInstance)
         userId: user?.id,
         taskType: body.taskType || 'general',
         instruction: body.instruction,
+        businessType: careerAgentBizType,
       });
 
       if (!result.success) {

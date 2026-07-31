@@ -166,8 +166,10 @@ export default async function narrativeLLMRoutes(app: FastifyInstance) {
 
     try {
       // ⭐ 通过 NarrativeGateway 统一执行 LLM 调用
+      // ⭐ SSOT（Phase 4）: system prompt 从 PromptTemplate 表读取（narrative-analyzer），禁止硬编码
+      const analyzerPrompt = await getDbPrompt('narrative-analyzer')
       const gatewayResponse = await narrativeGateway.execute({
-        systemPrompt: NARRATIVE_SYSTEM_PROMPT,
+        systemPrompt: analyzerPrompt,
         userMessage: `请分析以下故事文本，严格按照 JSON schema 输出：\n\n${text.slice(0, 8000)}`,
         userId,
         maxTokens: 4096,
@@ -624,14 +626,8 @@ ${script.slice(0, 8000)}
         // ⭐ 风格关键词从 StyleProfile 动态读取（禁止硬编码）
         const profile = await StyleProfileService.getByName(visualStyle)
         const styleSuffix = profile?.styleTokens || '写实真人照片级，不卡通，电影级画质'
-        const systemPrompt = `你是一个专业的角色视觉设计师。根据角色描述，生成高质量的 AI 图片生成 prompt。
-
-规则：
-1. 返回 JSON：{ "imagePrompt": "中文 prompt（描述角色外貌、服装、气质、光线、构图、艺术风格）", "negativePrompt": "负面提示词" }
-2. imagePrompt 用中文描述，包含：角色外貌特征、服装细节、气质表情、光线氛围、镜头构图、艺术风格
-3. 长度 100-200 个中文字
-4. 不要包含不相关的背景故事描述
-5. 中文 prompt 必须追加风格后缀，风格后缀由下方调用者提供：单人，仅此一人，全身定妆照，静态站姿，以及对应的视觉风格描述`
+        // ⭐ SSOT（Phase 4）: system prompt 从 PromptTemplate 表读取（character-visual-prompt），禁止硬编码
+        const systemPrompt = await getDbPrompt('character-visual-prompt')
 
         const userPrompt = `角色名: ${characterName || ''}
 描述: ${description || ''}
@@ -684,9 +680,10 @@ ${script.slice(0, 8000)}
 
 请生成详细的场景图片生成 prompt（JSON 格式），包含环境、光线、色调、氛围。`
 
-        // ⭐ 通过 NarrativeGateway 统一执行 LLM 调用
+        // ⭐ SSOT（Phase 4）: system prompt 从 PromptTemplate 表读取（scene-visual-prompt），禁止硬编码
+        const sceneSystemPrompt = await getDbPrompt('scene-visual-prompt')
         const gatewayResponse = await narrativeGateway.execute({
-          systemPrompt: '你是一个专业的场景设计师。根据场景描述生成高质量的 AI 图片生成 prompt。返回 JSON：{ "imagePrompt": "中文 prompt，必须包含：环境描述、光线、色调、氛围、构图", "negativePrompt": "负面提示词" }。场景图中禁止出现任何人、动物、角色。imagePrompt 末尾必须追加：空场景，无人物，无角色，自然环境，仅场景本身',
+          systemPrompt: sceneSystemPrompt,
           userMessage: userPrompt,
           userId,
           maxTokens: 1024,

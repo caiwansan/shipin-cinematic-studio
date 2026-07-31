@@ -1,4 +1,5 @@
 import type { ApiResponse } from '../contracts/api/base.js';
+import { CareerAgentService } from '../services/enterprise/workflow/career-agent.service.js';
 
 /**
  * 遮盖密钥中间部分，仅用于 UI 显示，不用于实际解密/签名。
@@ -296,6 +297,122 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       payeeName: config.name,}) satisfies ApiResponse<unknown>;
   })
 
+  // ============================================================
+  // 用户 - 镜心职业助理购买
+  // ============================================================
+
+  // POST /api/payment/career/checkout — 创建镜心订阅订单（含支付链接/二维码）
+  fastify.post('/api/payment/career/checkout', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { id: userId } = request.user as any
+    const { method } = request.body as any
+
+    const validMethod = method === 'wechat' ? 'wechat' : 'alipay'
+
+    // 检查是否已有活跃订阅
+    const plan = await prisma.subscriptionPlan.findUnique({ where: { code: 'career_agent' } })
+    if (!plan) {
+      return reply.status(500).send({ error: '镜心职业助理套餐未配置' })
+    }
+
+    const existingSub = await prisma.subscription.findFirst({
+      where: { tenantId: userId, planId: plan.id, status: 'active' },
+    })
+    if (existingSub) {
+      return reply.status(400).send({ error: '您已拥有活跃的镜心订阅' })
+    }
+
+    // 创建支付订单
+    const amount = plan.price || 9.9
+    const orderNo = generateOrderNo()
+    const order = await prisma.paymentOrder.create({
+      data: {
+        userId,
+        orderNo,
+        type: 'subscription',
+        amount,
+        coins: Math.floor(amount * 100),
+        method: validMethod,
+        status: 'pending',
+        planType: 'career_agent',
+        remark: `镜心职业助理 ¥${amount}/月`,
+      },
+    })
+
+    // Sprint-09C-1.6 Task 01: 调用支付宝/微信支付生成支付链接
+    let paymentUrl: string | null = null
+    let qrCode: string | null = null
+    let expiresAt: string | null = null
+
+    if (validMethod === 'alipay') {
+      try {
+        const secret = await prisma.paymentSecret.findUnique({ where: { channel: 'alipay' } })
+        if (secret && secret.enabled) {
+          const config = typeof secret.config === 'string' ? JSON.parse(secret.config) : secret.config
+          if (config.appId && config.privateKey) {
+            // 确保私钥为 PEM 格式（Node crypto.createSign 需要 PEM 头）
+            let privateKey = config.privateKey
+            if (privateKey && !privateKey.includes('-----BEGIN')) {
+              privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`
+            }
+            const { AlipayProvider } = await import('../payment/providers/alipay/index.js')
+            const provider = new AlipayProvider({
+              appId: config.appId,
+              privateKey,
+              alipayPublicKey: config.publicKey || config.alipayPublicKey || '',
+              gateway: 'https://openapi.alipay.com/gateway.do',
+              notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
+              returnUrl: 'https://aigc.fushtn.com/workspace/job',
+            })
+            const result = await provider.createOrder({
+              outTradeNo: orderNo,
+              description: '镜心职业助理 ¥9.9/月',
+              amount,
+              notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
+              returnUrl: 'https://aigc.fushtn.com/workspace/job',
+            })
+            paymentUrl = result.payUrl || null
+            qrCode = result.qrCode || null
+          }
+        }
+      } catch (err: any) {
+        console.error('[career/checkout] 支付宝支付链接生成失败:', err.message)
+        // 不阻断 — 降级返回普通订单
+      }
+    } else if (validMethod === 'wechat') {
+      try {
+        const secret = await prisma.paymentSecret.findUnique({ where: { channel: 'wechat' } })
+        if (secret && secret.enabled) {
+          const config = typeof secret.config === 'string' ? JSON.parse(secret.config) : secret.config
+          if (config.appId && config.mchId && config.apiV3Key && config.keyPem) {
+            const { createWxpayNativeQrCode } = await import('../services/wxpay.service.js')
+            const result = await createWxpayNativeQrCode({
+              outTradeNo: orderNo,
+              description: '镜心职业助理 ¥9.9/月',
+              totalAmount: amount,
+              notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
+            })
+            qrCode = result.codeUrl || null
+          }
+        }
+      } catch (err: any) {
+        console.error('[career/checkout] 微信支付链接生成失败:', err.message)
+        // 不阻断 — 降级返回普通订单
+      }
+    }
+
+    return toApiResponse({
+      orderId: order.id,
+      orderNo: order.orderNo,
+      amount: order.amount,
+      status: order.status,
+      planType: order.planType,
+      method: validMethod,
+      paymentUrl,
+      qrCode,
+      expiresAt,
+    }) satisfies ApiResponse<unknown>;
+  })
+
   // POST /api/admin/payment/confirm — 管理员确认到账
   fastify.post('/api/admin/payment/confirm',  async (request, reply) => {
     const auth = request.headers.authorization
@@ -321,11 +438,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       data: { status: 'paid', payTime: now, confirmAdminId: adminId, confirmTime: now },
     })
 
-    // 加积分
-    // 同步到 Membership.credits（User.coins 已废弃）
-    await prisma.membership.update({
+    // 加积分 — 确保 membership 记录存在
+    await prisma.membership.upsert({
       where: { userId: order.userId },
-      data: { credits: { increment: order.coins } },
+      create: { userId: order.userId, credits: order.coins },
+      update: { credits: { increment: order.coins } },
     }).catch(() => {})
 
     // 记流水
@@ -337,13 +454,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         remark: `充值 ${order.coins} 积分 (¥${order.amount}，${order.method === 'wechat' ? '微信' : '支付宝'})`,
         relatedId: order.id,
       },
-    })
-
-    // 更新会员积分
-    await prisma.membership.update({
-      where: { userId: order.userId },
-      data: { credits: { increment: order.coins } },
-    })
+    }).catch(() => {})
 
     // ⭐ 如果是会员购买订单（planType=member），同时更新 memberTier
     if (order.planType === 'member') {
@@ -370,6 +481,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       } catch (e: any) {
         console.warn('[Payment/Confirm] 同步会员升级失败:', e.message)
       }
+    }
+
+    // Sprint-09B-3A Task 03-B: 管理员确认镜心职业助理到账
+    if (order.planType === 'career_agent') {
+      await handleCareerSubscriptionFromPayment(order, '', now)
     }
 
     return toApiResponse({success: true, orderNo: order.orderNo, coins: order.coins}) satisfies ApiResponse<unknown>;
@@ -827,6 +943,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       if (parsed.outTradeNo?.startsWith('ENT')) {
         await handleEnterpriseSubscriptionOrder(parsed.outTradeNo, parsed.tradeNo, parsed.paidAt || new Date())
       }
+
+      // Sprint-09B-3A Task 03-B: 处理镜心职业助理订阅
+      if (payOrder?.planType === 'career_agent') {
+        await handleCareerSubscriptionFromPayment(payOrder, parsed.tradeNo, parsed.paidAt || new Date())
+      }
     } catch (err: any) {
       console.error('[alipay/notify] 处理失败:', err.message)
     }
@@ -869,6 +990,15 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       console.log('[wxpay/notify] 回调:', outTradeNo, transactionId, tradeState)
 
       if (tradeState === 'SUCCESS') {
+        // 通用：更新 paymentOrder 状态
+        const payOrder = await prisma.paymentOrder.findFirst({ where: { orderNo: outTradeNo } })
+        if (payOrder && payOrder.status === 'pending') {
+          await prisma.paymentOrder.update({
+            where: { id: payOrder.id },
+            data: { status: 'paid', payTime: new Date() },
+          })
+        }
+
         if (outTradeNo?.startsWith('VIP')) {
           await handleVipRechargeOrder(outTradeNo, transactionId || '', new Date())
         }
@@ -877,6 +1007,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         }
         if (outTradeNo?.startsWith('ENT')) {
           await handleEnterpriseSubscriptionOrder(outTradeNo, transactionId || '', new Date())
+        }
+
+        // Sprint-09B-3A Task 03-B: 处理镜心职业助理订阅
+        if (payOrder?.planType === 'career_agent') {
+          await handleCareerSubscriptionFromPayment(payOrder, transactionId || '', new Date())
         }
       }
 
@@ -1101,5 +1236,150 @@ async function handleEnterpriseSubscriptionOrder(orderNo: string, tradeNo: strin
     console.log(`[enterprise-subscription] 订阅已激活: order=${orderNo}, org=${order.organizationId}`)
   } catch (err: any) {
     console.error('[enterprise-subscription] 处理失败:', err.message)
+  }
+}
+
+/**
+ * 处理镜心职业助理订阅回调 — Sprint-09B-3A Task 03-B
+ * 支付成功 → 创建个人 Tenant → 创建 Subscription(active) → CapabilityGrant 自动生效
+ */
+/* Sprint-10 T01: 辅助函数 — 安全合并 subscription metadata */
+function mergeSubscriptionMetadata(existing: string | null, updates: Record<string, any>): string {
+  let base: Record<string, any> = {}
+  if (existing) {
+    try { base = JSON.parse(existing) } catch { /* ignore */ }
+  }
+  return JSON.stringify({ ...base, ...updates })
+}
+
+/**
+ * Sprint-10 T01: 设置 subscription provisioning 状态
+ * write-committed: 状态写入后再继续下一步
+ */
+async function setProvisioningStatus(
+  subId: string,
+  status: 'pending' | 'provisioning' | 'active' | 'failed',
+  extra: Record<string, any> = {},
+): Promise<void> {
+  const sub = await prisma.subscription.findUnique({ where: { id: subId } })
+  if (!sub) return
+  await prisma.subscription.update({
+    where: { id: subId },
+    data: {
+      metadata: mergeSubscriptionMetadata(sub.metadata, {
+        provisioningStatus: status,
+        provisioningUpdatedAt: new Date().toISOString(),
+        ...extra,
+      }),
+    },
+  })
+}
+
+async function handleCareerSubscriptionFromPayment(payOrder: any, tradeNo: string, payTime: Date) {
+  const plan = await prisma.subscriptionPlan.findUnique({ where: { code: 'career_agent' } })
+  if (!plan) {
+    console.error('[career-sub] career_agent 套餐未配置')
+    return
+  }
+
+  const userId = payOrder.userId
+  const now = new Date()
+
+  // 1. 确保个人 Tenant 存在
+  let tenant = await prisma.tenant.findUnique({ where: { id: userId } })
+  if (!tenant) {
+    tenant = await prisma.tenant.create({
+      data: {
+        id: userId,
+        name: `Personal: ${userId.slice(0, 8)}`,
+        type: 'personal',
+        status: 'active',
+      },
+    })
+    console.log(`[career-sub] 个人 Tenant 已创建: userId=${userId.slice(0, 8)}`)
+  }
+
+  // 2. 检查已有订阅：active → 跳过，非 active → 续期
+  const existingSub = await prisma.subscription.findFirst({
+    where: { tenantId: userId, planId: plan.id },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  let sub: any = null
+
+  if (existingSub) {
+    if (existingSub.status === 'active') {
+      console.log(`[career-sub] 订阅已激活，跳过: userId=${userId.slice(0, 8)}`)
+      return
+    }
+    // 续期过期/取消的订阅
+    sub = await prisma.subscription.update({
+      where: { id: existingSub.id },
+      data: {
+        status: 'active',
+        startDate: now,
+        endDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        metadata: mergeSubscriptionMetadata(existingSub.metadata, {
+          provisioningStatus: 'pending',
+          provisioningUpdatedAt: now.toISOString(),
+        }),
+      },
+    })
+    console.log(`[career-sub] 续期成功: userId=${userId.slice(0, 8)}`)
+  } else {
+    // 3. 新订阅 — 先以 pending 创建
+    sub = await prisma.subscription.create({
+      data: {
+        tenantId: userId,
+        planId: plan.id,
+        status: 'active',
+        startDate: now,
+        endDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        autoRenew: false,
+        metadata: JSON.stringify({
+          source: 'payment',
+          orderNo: payOrder.orderNo,
+          tradeNo,
+          amount: payOrder.amount,
+          paidAt: payTime.toISOString(),
+          provisioningStatus: 'pending',
+          provisioningUpdatedAt: now.toISOString(),
+        }),
+      },
+    })
+    console.log(`[career-sub] 新订阅创建: userId=${userId.slice(0, 8)}, subId=${sub.id.slice(0, 8)}`)
+  }
+
+  // 4. Provisioning: pending → provisioning
+  await setProvisioningStatus(sub.id, 'provisioning')
+
+  // 5. 创建 Career Agent Instance
+  try {
+    const agentService = new CareerAgentService(prisma)
+    const hasAgent = await agentService.hasCareerAgent(userId)
+    if (!hasAgent) {
+      const newAgent = await agentService.createAndDeploy({ userId })
+      if (newAgent && newAgent.status === 'active') {
+        await setProvisioningStatus(sub.id, 'active', {
+          provisionedAt: new Date().toISOString(),
+          profileId: newAgent.profileId,
+        })
+        console.log(`[career-sub] Career Agent 已创建: userId=${userId.slice(0, 8)}, profileId=${newAgent.profileId.slice(0, 8)}`)
+      } else {
+        throw new Error(`createAndDeploy 返回非 active 状态: ${newAgent?.status || 'null'}`)
+      }
+    } else {
+      // 已有 Agent → 确认正常
+      await setProvisioningStatus(sub.id, 'active', { provisionedVia: 'pre_existing' })
+      console.log(`[career-sub] Career Agent 已存在，跳过创建: userId=${userId.slice(0, 8)}`)
+    }
+  } catch (agentErr: any) {
+    // Sprint-10 T01: provisioning 失败 = 显式状态，非静默
+    const errMsg = agentErr.message || '未知错误'
+    console.error(`[career-sub] Career Agent 创建失败: userId=${userId.slice(0, 8)}, error=${errMsg}`)
+    await setProvisioningStatus(sub.id, 'failed', {
+      provisioningError: errMsg,
+      provisioningFailedAt: new Date().toISOString(),
+    })
   }
 }

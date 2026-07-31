@@ -22,6 +22,9 @@ async function main() {
       continue;
     }
 
+    // 1. Determine price by plan code
+    const planPrice: number | null = planCode === 'career_agent' ? 9.9 : null;
+
     // 1. Upsert SubscriptionPlan
     const plan = await prisma.subscriptionPlan.upsert({
       where: { code: planCode },
@@ -29,12 +32,13 @@ async function main() {
         name: meta.name,
         description: meta.description,
         capabilities: JSON.stringify(capabilities),
+        price: planPrice,
       },
       create: {
         code: planCode,
         name: meta.name,
         description: meta.description,
-        price: null, // 价格留待后续冻结
+        price: planPrice,
         currency: 'CNY',
         billingCycle: 'monthly',
         capabilities: JSON.stringify(capabilities),

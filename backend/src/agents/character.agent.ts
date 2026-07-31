@@ -1,4 +1,9 @@
 /**
+ * @deprecated
+ * Reality Recovery Phase5
+ * Production path unused — 全仓 import = 0。
+ * 保留：历史参考，勿删除。
+ *
  * agent_character — 角色提取 Agent
  *
  * 职责：从剧本中提取角色信息（名字、年龄、性别、外貌、性格、服装）

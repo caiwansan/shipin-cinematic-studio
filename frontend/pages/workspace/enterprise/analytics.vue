@@ -13,6 +13,7 @@
         <p class="page-subtitle">量化 AI 招聘价值，清晰看到投资回报</p>
       </div>
       <div class="header-right">
+        <button @click="goBack" class="back-btn">← 返回工作台</button>
         <button @click="refresh" class="refresh-btn" :disabled="loading">
           🔄 刷新
         </button>
@@ -279,7 +280,8 @@ const maxInterviews = computed(() => {
 })
 
 // ─── Helpers ───
-function formatNumber(num: number): string {
+function formatNumber(num: number | undefined | null): string {
+  if (num == null || isNaN(num)) return '0'
   return num.toLocaleString('zh-CN')
 }
 
@@ -288,6 +290,10 @@ function getAiCostPercent(): number {
   const { aiCostYearly, manualCostTotal } = data.value.costValue
   if (manualCostTotal === 0) return 100
   return Math.min(100, Math.round((aiCostYearly / manualCostTotal) * 100))
+}
+
+function goBack() {
+  navigateTo('/workspace/enterprise/')
 }
 
 function getTrendHeight(value: number, max: number): number {
@@ -372,6 +378,22 @@ onUnmounted(() => {
   font-size: 14px;
   color: #6b7280;
   margin: 4px 0 0;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 8px;
+}
+
+.back-btn:hover {
+  background: #e9ecef;
+  border-color: #d1d5db;
 }
 
 .refresh-btn {

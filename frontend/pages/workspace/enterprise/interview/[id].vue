@@ -406,7 +406,7 @@ async function submitAllAnswers() {
     const answersPayload = questions.value.map(q => ({
       questionId: q.id,
       answer: answers.value[q.id] || q.answer || '',
-      score: 70, // Default score, will be overridden by AI evaluation
+      // Sprint-RECRUITMENT-REALITY-02: 不再提交 score — 评分由 AI 评估阶段产生
     }))
 
     const res = await fetch(`/api/enterprise/recruitment-interview/${sessionId}/submit-answers`, {

@@ -93,6 +93,18 @@ async function loadPromptTemplate(templateName: string): Promise<string | null> 
   }
 }
 
+/**
+ * ⭐ SSOT（Phase 4）: 严格读取 PromptTemplate，缺失即抛错（禁止硬编码 fallback）。
+ * 生产链所有 prompt 必须存在 DB，否则视为部署错误。
+ */
+async function loadPromptTemplateStrict(templateName: string): Promise<string> {
+  const prompt = await loadPromptTemplate(templateName)
+  if (!prompt) {
+    throw new Error(`[AigcOrchestrator] PromptTemplate.${templateName} 在数据库中不存在或内容为空（SSOT 禁止硬编码 fallback）`)
+  }
+  return prompt
+}
+
 async function callAgentLLM(
   systemPrompt: string,
   storyText: string,
@@ -384,6 +396,9 @@ export class AigcSpecOrchestrator {
     success: boolean
     data?: AigcSpecOutput
     error?: string
+    /** SSOT（Phase 4 / Task 4.4）: 失败契约字段 */
+    errorCode?: string
+    userMessage?: string
     meta?: { latencyMs: number; agentStats: Record<string, any> }
   }> {
     const start = Date.now()
@@ -515,12 +530,8 @@ export class AigcSpecOrchestrator {
           console.warn(`[AigcOrchestrator] ⚠️ Storyboard RuntimePromptBuilder failed (${err.message}), using legacy storyText`)
         }
         console.log(`[AigcOrchestrator] 🏃 storyboard section optimize: text length=${sectionStoryText?.length||0}, extraPrompt length=${extraPrompt?.length||0}`)
-        // ⭐ 从 DB 读取分镜优化模板，不硬编码
-        let storyboardSystemPrompt = '你是一个 AI 分镜提示词优化专家。根据剧本故事和分镜规格，为每个分镜段落生成独立的文生图提示词。'
-        try {
-          const dbPrompt = await loadPromptTemplate('storyboard-optimizer')
-          if (dbPrompt) storyboardSystemPrompt = dbPrompt
-        } catch {}
+        // ⭐ 从 DB 读取分镜优化模板（SSOT Phase 4：缺失即抛错，禁止硬编码 fallback）
+        const storyboardSystemPrompt = await loadPromptTemplateStrict('storyboard-optimizer')
         const raw = await callAgentLLM(
           storyboardSystemPrompt,
           sectionStoryText,
@@ -565,12 +576,8 @@ export class AigcSpecOrchestrator {
       // ⭐ 场景 section：不走 runAgent（场景设计师），直接用 scene-optimizer 模板调 LLM
       if (agentIdx === 2) {
         console.log(`[AigcOrchestrator] 🏃 scene section optimize: text length=${sectionStoryText?.length||0}, extraPrompt length=${extraPrompt?.length||0}`)
-        // 从 DB 读取场景优化模板
-        let sceneSystemPrompt = '你是一个专业的AI场景图提示词优化专家。根据提供的场景视觉描述，为每个场景生成优化后的文生图提示词。'
-        try {
-          const dbPrompt = await loadPromptTemplate('scene-optimizer')
-          if (dbPrompt) sceneSystemPrompt = dbPrompt
-        } catch {}
+        // 从 DB 读取场景优化模板（SSOT Phase 4：缺失即抛错，禁止硬编码 fallback）
+        const sceneSystemPrompt = await loadPromptTemplateStrict('scene-optimizer')
         const raw = await callAgentLLM(
           sceneSystemPrompt,
           sectionStoryText,
@@ -611,15 +618,15 @@ export class AigcSpecOrchestrator {
         console.log(`[AigcOrchestrator] 🏃 ${section} section: running agent ${agentDef.name}`)
         const raw = await runAgent(agentDef, sectionStoryText, contextJson, 1, styleSuffix, userId)
         if (!raw.success) {
-          // 道具/声音/非关键 Agent 失败时宽容处理
-          if (agentIdx === 4 || agentIdx === 6) {
-            console.warn(`[AigcOrchestrator] ${agentDef.name} 失败，返回空数组: ${raw.error}`)
-            const output: any = {}
-            if (agentIdx === 6) output.propSpecs = []
-            if (agentIdx === 4) output.voiceConfigs = []
-            return { success: true, data: output, meta: { latencyMs: Date.now() - start, agentStats: { [agentDef.name]: { success: false, error: raw.error } } } }
+          // ⭐ SSOT（Phase 4 / Task 4.4）: 禁止 success:true + 空数组。
+          //    任何 Agent 失败都必须返回失败契约，由前端展示 userMessage，不静默降级。
+          return {
+            success: false,
+            errorCode: `${agentDef.name}_GENERATION_FAILED`,
+            error: `${agentDef.name} 生成失败: ${raw.error || 'LLM 调用失败'}`,
+            userMessage: `${agentDef.name} 生成失败，请重试。${raw.error ? `（${raw.error}）` : ''}`,
+            meta: { latencyMs: Date.now() - start, agentStats: { [agentDef.name]: { success: false, error: raw.error } } },
           }
-          return { success: false, error: `${agentDef.name} 失败: ${raw.error}`, meta: { latencyMs: Date.now() - start, agentStats: {} } }
         }
         const output: any = {}
         if (agentIdx === 6) {

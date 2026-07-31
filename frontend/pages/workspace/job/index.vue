@@ -4,7 +4,7 @@
     <header class="top-nav">
       <div class="nav-left">
         <button class="back-btn" @click="goHome">← 返回首页</button>
-        <span class="page-title">🎯 求职管家</span>
+        <span class="page-title">🧠 求职管家</span>
       </div>
       <div class="nav-right">
         <span v-if="userName" class="user-name">{{ userName }}</span>

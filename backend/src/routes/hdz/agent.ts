@@ -9,10 +9,8 @@ import { hdzOrchestrator } from '../../services/hdz/orchestrator.service.js'
 import { reviewerService } from '../../services/hdz/reviewer.service.js'
 
 export default async function hdzAgentRoutes(app: FastifyInstance) {
-  // 全局认证拦截，但排除 PDF 下载路由（前端 <a> 直接跳转不带 token）
+  // 全局认证拦截：所有 /api/hdz/agent/* 必须登录（含 PDF 下载，前端已改 fetch blob 带 Bearer）
   app.addHook('preHandler', async (request, reply) => {
-    const url = request.url
-    if (url.includes('/pdf/')) return  // 放行 PDF 下载（handler 内自行校验）
     return app.authenticate(request, reply)
   })
 
@@ -81,6 +79,40 @@ export default async function hdzAgentRoutes(app: FastifyInstance) {
     })
 
     return { success: true, data: task }
+  })
+
+  // ★ 02-B Task 3：批量入队生产——一次创建 N 章 Writer 任务，由生产队列后台消费（不阻塞 HTTP）
+  app.post('/api/hdz/agent/batch-write', async (request, reply) => {
+    const user = request.user as any
+    const { projectId, from, to, mode } = request.body as any
+
+    const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
+    const start = Number(from)
+    const end = Number(to)
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
+      return reply.status(400).send({ success: false, error: 'from/to 必须为合法章节区间（如 from=1, to=100）' })
+    }
+    if (end - start + 1 > 200) {
+      return reply.status(400).send({ success: false, error: '单次批量最多 200 章' })
+    }
+
+    const finalMode = mode || 'single'
+    const tasks = []
+    for (let n = start; n <= end; n++) {
+      const task = await prisma.hdzAgentTask.create({
+        data: { projectId, agentType: 'writer', status: 'queued', input: { chapterNo: n, mode: finalMode } },
+      })
+      tasks.push(task.id)
+      // 入队即生产（幂等；Sweeper 也会兜底）
+      const { enqueueHdzTask } = await import('../../services/hdz/production-queue.service.js')
+      enqueueHdzTask(task.id).catch((e: any) => console.warn(`[HDZ] enqueue ${task.id} 失败: ${e.message}`))
+    }
+
+    console.log(`[HDZ/Batch] 入队 ${tasks.length} 章（${start}-${end}, mode=${finalMode}）→ 生产队列后台消费`)
+    return { success: true, data: { queued: tasks.length, range: [start, end], taskIds: tasks.slice(0, 5) } }
   })
 
   // POST /api/hdz/agent/review — 直接调用 Reviewer（审核特定章节）
@@ -255,9 +287,12 @@ export default async function hdzAgentRoutes(app: FastifyInstance) {
 
   // POST /api/hdz/agent/screenplay — 小说章节转剧本
   app.post('/api/hdz/agent/screenplay', async (request, reply) => {
+    const user = request.user as any
     const { projectId, chapterNos, cinematicStyle } = request.body as any
     const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
-    if (!project) return { success: false, error: '项目不存在' }
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
 
     const { convertToScreenplay, saveScreenplayTask } = await import('../../services/hdz/screenwriter.service.js')
     try {
@@ -280,19 +315,29 @@ export default async function hdzAgentRoutes(app: FastifyInstance) {
     }
   })
 
-  // GET /api/hdz/agent/screenplay/:projectId — 获取项目所有剧本
+  // GET /api/hdz/agent/screenplay/:projectId — 获取项目所有剧本（归属校验）
   app.get('/api/hdz/agent/screenplay/:projectId', async (request, reply) => {
+    const user = request.user as any
     const { projectId } = request.params as any
+    const project = await prisma.hdzProject.findUnique({ where: { id: projectId }, select: { userId: true } })
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
     const { getProjectScreenplays } = await import('../../services/hdz/screenwriter.service.js')
     const tasks = await getProjectScreenplays(projectId)
     return { success: true, data: tasks }
   })
 
-  // GET /api/hdz/agent/screenplay/:projectId/pdf/:taskId — 导出剧本 PDF
-  // ⚠️ 已跳过全局 preHandler 认证，无 token 也可下载
+  // GET /api/hdz/agent/screenplay/:projectId/pdf/:taskId — 导出剧本 PDF（归属校验）
   app.get('/api/hdz/agent/screenplay/:projectId/pdf/:taskId', async (request, reply) => {
+    const user = request.user as any
     const { projectId, taskId } = request.params as any
     const qChapterNo = (request.query as any)?.chapterNo
+
+    const project = await prisma.hdzProject.findUnique({ where: { id: projectId }, select: { userId: true } })
+    if (!project || project.userId !== user.id) {
+      return reply.status(404).send({ success: false, error: '项目不存在' })
+    }
 
     let task: any = null
     const { getProjectScreenplays } = await import('../../services/hdz/screenwriter.service.js')

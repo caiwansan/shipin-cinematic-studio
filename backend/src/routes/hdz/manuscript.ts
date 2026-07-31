@@ -89,6 +89,15 @@ export default async function hdzManuscriptRoutes(app: FastifyInstance) {
 
     const wordCount = body.content ? body.content.replace(/\s/g, '').length : undefined
 
+    // 资源级归属校验：章节必须属于当前项目（防跨项目改写）
+    const chapter = await prisma.hdzChapter.findUnique({
+      where: { id: chapterId },
+      select: { projectId: true },
+    })
+    if (!chapter || chapter.projectId !== projectId) {
+      return reply.status(404).send({ success: false, error: '章节不存在' })
+    }
+
     const updated = await prisma.hdzChapter.update({
       where: { id: chapterId },
       data: {

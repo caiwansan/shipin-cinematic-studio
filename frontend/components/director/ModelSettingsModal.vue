@@ -289,18 +289,6 @@ const modelCards = reactive<ModelCard[]>([
   { key:"music", icon:"🎵", label:"音乐模型（生成配乐）", enabled:false, provider:"", modelName:"",
     enabledField:"musicEnabled", modelField:"musicModel",
     apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
-  { key:"career_agent", icon:"🎯", label:"AI 职业助理", enabled:true, provider:"", modelName:"",
-    enabledField:"careerAgentEnabled", modelField:"careerAgentModel",
-    apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
-  { key:"hdz", icon:"🎬", label:"短剧工作台", enabled:true, provider:"", modelName:"",
-    enabledField:"hdzEnabled", modelField:"hdzModel",
-    apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
-  { key:"ppt", icon:"📊", label:"PPT 生成", enabled:true, provider:"", modelName:"",
-    enabledField:"pptEnabled", modelField:"pptModel",
-    apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
-  { key:"novel", icon:"📖", label:"小说创作", enabled:true, provider:"", modelName:"",
-    enabledField:"novelEnabled", modelField:"novelModel",
-    apiKeyInput:"", keyConfigured:false, editingKey:true, showKey:false, baseUrlInput:"" },
 ])
 
 /** 根据 filterCapability 过滤卡片（工作台模式 vs 全局设置模式） */
@@ -341,10 +329,7 @@ async function loadUnifiedConfig() {
       tts: { provider: 'ttsProvider', model: 'ttsModel', enabled: 'ttsEnabled', baseUrl: 'ttsBaseUrl', hasKey: 'hasTtsApiKey' },
       music: { provider: 'musicProvider', model: 'musicModel', enabled: 'musicEnabled', baseUrl: 'musicBaseUrl', hasKey: 'hasMusicApiKey' },
       visionUnderstand: { provider: 'visionUnderstandProvider', model: 'visionUnderstandModel', enabled: 'visionUnderstandEnabled', baseUrl: 'visionUnderstandBaseUrl', hasKey: 'hasVisionUnderstandApiKey' },
-      career_agent: { provider: 'careerAgentProvider', model: 'careerAgentModel', enabled: 'careerAgentEnabled', baseUrl: 'careerAgentBaseUrl', hasKey: 'hasCareerAgentApiKey' },
-      hdz: { provider: 'hdzProvider', model: 'hdzModel', enabled: 'hdzEnabled', baseUrl: 'hdzBaseUrl', hasKey: 'hasHdzApiKey' },
-      ppt: { provider: 'pptProvider', model: 'pptModel', enabled: 'pptEnabled', baseUrl: 'pptBaseUrl', hasKey: 'hasPptApiKey' },
-      novel: { provider: 'novelProvider', model: 'novelModel', enabled: 'novelEnabled', baseUrl: 'novelBaseUrl', hasKey: 'hasNovelApiKey' },
+
     }
 
     for (const card of modelCards) {
@@ -404,18 +389,12 @@ function getModelsForCard(card: ModelCard): any[] {
 
   // Capability → Model Type 映射
   // 后端模型类型是通用的：llm/image/video/tts/vision
-  // 前端能力是业务性的：career_agent/hdz/ppt/novel 都使用 llm 模型
   const CAPABILITY_MODEL_TYPE: Record<string, string> = {
     llm: 'llm',
     image: 'image',
     video: 'video',
     tts: 'tts',
     visionUnderstand: 'vision',
-    // 所有 LLM 能力类工作台都使用 llm 模型列表
-    career_agent: 'llm',
-    hdz: 'llm',
-    ppt: 'llm',
-    novel: 'llm',
   }
 
   const modelType = CAPABILITY_MODEL_TYPE[card.key] || card.key
@@ -515,8 +494,6 @@ async function handleSaveAll() {
       const hasKeyMap: Record<string, string> = {
         llm: 'hasLlmApiKey', image: 'hasImageApiKey', video: 'hasVideoApiKey',
         tts: 'hasTtsApiKey', music: 'hasMusicApiKey', visionUnderstand: 'hasVisionUnderstandApiKey',
-        career_agent: 'hasCareerAgentApiKey', hdz: 'hasHdzApiKey',
-        ppt: 'hasPptApiKey', novel: 'hasNovelApiKey',
       }
       for (const card of modelCards) {
         const hf = hasKeyMap[card.key]

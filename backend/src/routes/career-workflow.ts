@@ -37,6 +37,16 @@ export async function careerWorkflowRoutes(fastify: FastifyInstance) {
     const { goal, resumeId } = request.body as any
 
     try {
+      // Sprint-09B-3A Task 02-B: 权益门控
+      const entitlement = await careerAgentService.checkProvisionEntitlement(userId)
+      if (!entitlement.allowed) {
+        return reply.code(403).send({
+          error: 'ENTITLEMENT_REQUIRED',
+          message: entitlement.reason,
+          action: 'purchase_career_agent',
+        })
+      }
+
       // 检查是否已存在
       const exists = await careerAgentService.hasCareerAgent(userId)
       if (exists) {
@@ -53,6 +63,34 @@ export async function careerWorkflowRoutes(fastify: FastifyInstance) {
         goal,
         resumeId,
       })
+
+      // Sprint-10 T01: 同步 subscription provisioning 状态
+      try {
+        const plan = await prisma.subscriptionPlan.findUnique({ where: { code: 'career_agent' } })
+        if (plan) {
+          const sub = await prisma.subscription.findFirst({
+            where: { tenantId: userId, planId: plan.id, status: 'active' },
+            orderBy: { createdAt: 'desc' },
+          })
+          if (sub) {
+            let meta: Record<string, any> = {}
+            try { meta = JSON.parse(sub.metadata || '{}') } catch {}
+            await prisma.subscription.update({
+              where: { id: sub.id },
+              data: {
+                metadata: JSON.stringify({
+                  ...meta,
+                  provisioningStatus: 'active',
+                  provisionedVia: 'api_create',
+                  provisioningUpdatedAt: new Date().toISOString(),
+                }),
+              },
+            })
+          }
+        }
+      } catch (syncErr: any) {
+        console.warn(`[career-workflow] 同步 provisioning 状态失败: ${syncErr.message}`)
+      }
 
       return reply.send({
         message: 'AI 职业助理创建成功',
@@ -76,10 +114,40 @@ export async function careerWorkflowRoutes(fastify: FastifyInstance) {
     try {
       const agent = await careerAgentService.getCareerAgent(userId)
       if (!agent) {
+        // Sprint-10 T01: 查询 provisioning 状态
+        const plan = await prisma.subscriptionPlan.findUnique({ where: { code: 'career_agent' } })
+        const subscription = plan ? await prisma.subscription.findFirst({
+          where: { tenantId: userId, planId: plan.id, status: 'active' },
+        }) : null
+
+        // 检查 provisioning 状态
+        let provisioningStatus: string | undefined
+        let provisioningError: string | undefined
+        if (subscription?.metadata) {
+          try {
+            const meta = JSON.parse(subscription.metadata)
+            provisioningStatus = meta.provisioningStatus
+            provisioningError = meta.provisioningError
+          } catch {}
+        }
+
+        let message = '尚未创建 AI 职业助理'
+        if (provisioningStatus === 'failed') {
+          message = provisioningError ? `Agent 创建失败: ${provisioningError}，请重试` : 'Agent 创建失败，请重试'
+        } else if (subscription && !provisioningStatus) {
+          message = '订阅已激活，请创建 AI 职业助理'
+        } else if (provisioningStatus === 'provisioning' || provisioningStatus === 'pending') {
+          message = 'Agent 正在创建中，请稍候'
+        }
+
         return reply.send({
           hasAgent: false,
-          status: 'not_created',
-          message: '尚未创建 AI 职业助理',
+          status: provisioningStatus === 'failed' ? 'provisioning_failed' : 'not_created',
+          hasActiveSubscription: !!subscription,
+          subscriptionStatus: subscription?.status || null,
+          provisioningStatus,      // 'pending' | 'provisioning' | 'failed' | undefined
+          provisioningError,        // 失败原因
+          message,
           stats: { totalTasks: 0, completedTasks: 0, failedTasks: 0 },
           recentTasks: [],
         })

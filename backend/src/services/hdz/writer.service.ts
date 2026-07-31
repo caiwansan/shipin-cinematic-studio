@@ -257,6 +257,21 @@ class WriterService {
     const recentEvents = await getTimeline(ctx.projectId)
     const recentStoryEvents = recentEvents.slice(-10) // 最近10个事件
 
+    // ★ 小说智能内核上下文（HDZ-NOVEL-INTELLIGENCE-01 复活：总纲/卷规划/世界状态/一致性）
+    let storyContextStr = ''
+    try {
+      const { buildStoryContext, formatStoryContextForLLM } = await import('./story-context-builder.service.js')
+      const storyContext = await buildStoryContext(ctx.projectId, chapterNo)
+      if (storyContext) {
+        storyContextStr = formatStoryContextForLLM(storyContext)
+        if (storyContext.consistencyWarnings.length > 0) {
+          console.warn(`[HDZ/Writer] ⚠️ 一致性警告 ${storyContext.consistencyWarnings.length} 条 (ch${chapterNo})`)
+        }
+      }
+    } catch (ctxErr: any) {
+      console.error(`[HDZ/Writer] StoryContext 构建失败（降级继续）: ${ctxErr.message}`)
+    }
+
     const systemPrompt = await getAgentPrompt('hdz-writer', {
       '$TITLE': project.title,
       '$GENRE': project.genre || '未指定',
@@ -270,6 +285,7 @@ class WriterService {
       '$CHAPTER_SUMMARIES': chapterSummariesStr,
       '$FULL_OUTLINE': fullOutlineStr,
       '$STYLE_REFERENCE': styleRef,
+      '$STORY_CONTEXT': storyContextStr || '（暂无小说总纲，请先完成总纲规划）',
     })
 
     // ★ 三大锁定注入
@@ -488,21 +504,21 @@ ${contract.forbidden.map(n => `  • ${n}`).join('\n')}
     // ★ Phase X — 7-Truths 记忆系统全面更新
     await this.updateAllMemoryDimensions(chapter, text, llmCfg)
 
-    // ★ V2: 事件提取 + 角色状态自动更新
+    // ★ V2: 事件提取 + 角色状态自动更新（异步执行，不阻塞写作主流程）
     try {
       const { processChapterEvents } = await import('./event-extractor.service.js')
       const project = await prisma.hdzProject.findUnique({ where: { id: ctx.projectId }, select: { userId: true } })
       if (project) {
-        const { events, statesCreated } = await processChapterEvents(
-          ctx.projectId,
-          chapterNo,
-          text,
-          project.userId
-        )
-        console.log(`[HDZ/Writer] ch${chapterNo}: extracted ${events.length} events, ${statesCreated} state changes`)
+        setImmediate(() => {
+          processChapterEvents(ctx.projectId, chapterNo, text, project.userId)
+            .then(({ events, statesCreated }) => {
+              console.log(`[HDZ/Writer] ch${chapterNo}: extracted ${events.length} events, ${statesCreated} state changes`)
+            })
+            .catch((e: any) => console.warn(`[HDZ/Writer] ch${chapterNo}: async event extraction failed: ${e?.message}`))
+        })
       }
     } catch (e: any) {
-      console.warn(`[HDZ/Writer] ch${chapterNo}: event extraction failed: ${e?.message}`)
+      console.warn(`[HDZ/Writer] ch${chapterNo}: event extraction setup failed: ${e?.message}`)
     }
 
     // ★ Phase Y.1 — Narrative Reader Runtime 异步阅读（待 Y.1 重构完成后恢复）

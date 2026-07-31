@@ -305,7 +305,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (!dbUser) {
       return reply.status(404).send({ error: '用户不存在' })
     }
-        // BigInt 序列化修复
+    // BigInt 序列化修复
     const serialized: any = JSON.parse(JSON.stringify(dbUser, (k, v) => typeof v === 'bigint' ? Number(v) : v))
     // ⭐ 统一会员等级：以 Membership.tier 为真相源，自动同步 User.memberTier
     const memTier = serialized.membership?.tier
@@ -328,6 +328,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
     } catch {}
     serialized.coins = serialized.membership?.credits ?? 0
     serialized.phone = maskPhone(serialized.phone)
+    // displayName: 优先使用会话中的 displayName，否则 fallback 到 username
+    // 允许用户通过 PATCH /api/user/profile 更新 displayName（存储在 username 字段）
+    serialized.displayName = serialized.username
     return toApiResponse({user: serialized}) satisfies ApiResponse<unknown>;
   })
 
@@ -346,7 +349,26 @@ export default async function authRoutes(fastify: FastifyInstance) {
       select: { id: true, email: true, username: true, memberTier: true, memberExpiresAt: true, createdAt: true, membership: { select: { credits: true } } },
     })
     if (!user) return reply.status(404).send({ success: false, error: '用户不存在' })
-    return toApiResponse({success: true, data: user}) satisfies ApiResponse<unknown>;
+    return toApiResponse({success: true, data: { ...user, displayName: user.username }}) satisfies ApiResponse<unknown>;
+  })
+
+  // PATCH /api/user/profile — 更新用户显示名
+  fastify.patch('/api/user/profile', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = (request as any).user?.id
+    if (!userId) return reply.status(401).send({ success: false, error: '未授权' })
+    const { displayName } = request.body as any
+    if (!displayName || typeof displayName !== 'string' || displayName.trim().length === 0) {
+      return reply.status(400).send({ success: false, error: '请输入有效显示名' })
+    }
+    if (displayName.trim().length > 50) {
+      return reply.status(400).send({ success: false, error: '显示名不能超过50个字符' })
+    }
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { username: displayName.trim() },
+      select: { id: true, username: true, email: true },
+    })
+    return toApiResponse({success: true, data: { ...updated, displayName: updated.username }}) satisfies ApiResponse<unknown>;
   })
 
   // POST /api/auth/logout — 退出登录（清除 cookie）

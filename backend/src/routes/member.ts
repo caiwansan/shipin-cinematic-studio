@@ -1018,7 +1018,9 @@ fastify.put('/api/admin/members/:id', { preHandler: [requireAdmin] }, async (req
   if (email !== undefined) updateData.email = email
   if (marketAgentId !== undefined) updateData.marketAgentId = marketAgentId || null
   if (tier !== undefined) {
-    updateData.memberTier = tier
+    // 空字符串 → 统一为 'free'（防止 DB 中出现 memberTier='' 的游离数据）
+    const normalizedTier = tier === '' ? 'free' : tier
+    updateData.memberTier = normalizedTier
     // 从 MemberPlan 查找对应 storageLimit
     const plan = await prisma.memberPlan.findFirst({ where: { level: tier } })
     const storageLimitBytes = plan?.storageLimit
@@ -1028,8 +1030,8 @@ fastify.put('/api/admin/members/:id', { preHandler: [requireAdmin] }, async (req
     const existing = await prisma.membership.findUnique({ where: { userId: id } })
     await prisma.membership.upsert({
       where: { userId: id },
-      update: { tier, storageLimit: storageLimitBytes, expiresAt: memberExpiresAt ? new Date(memberExpiresAt) : existing?.expiresAt || null },
-      create: { userId: id, tier, storageLimit: storageLimitBytes, expiresAt: memberExpiresAt ? new Date(memberExpiresAt) : null },
+      update: { tier: normalizedTier, storageLimit: storageLimitBytes, expiresAt: memberExpiresAt ? new Date(memberExpiresAt) : existing?.expiresAt || null },
+      create: { userId: id, tier: normalizedTier, storageLimit: storageLimitBytes, expiresAt: memberExpiresAt ? new Date(memberExpiresAt) : null },
     })
   }
   if (password) {

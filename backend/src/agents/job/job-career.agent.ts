@@ -14,6 +14,9 @@
 
 // ─── 类型定义 ───
 
+// ⚠️ DEPRECATED — Sprint-RECRUITMENT-REALITY-04 T04 审计确认：全仓 0 外部引用（死代码）
+// 保留原因：Phase5 治理原则（不删除文件，只标记），清理前需掌柜批准
+
 export interface CandidateProfile {
   name?: string
   education: string

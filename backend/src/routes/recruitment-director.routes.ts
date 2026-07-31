@@ -163,16 +163,21 @@ async function executeSubTask(
   plan: any,
   workspaceId: string,
   enterpriseId: string,
+  userId?: string,
 ): Promise<{ success: boolean; result?: any; error?: string }> {
   try {
     switch (task.agentType) {
       case 'jd_optimizer': {
         const agent = new EnterpriseRecruitAgent()
-        const jdResult = agent.generateJD({
+        // Sprint-RECRUITMENT-REALITY-02 Task 03: LLM 真实生成
+        const jdResult = await agent.generateJDWithLLM({
           companyName: plan.workspace?.name || '企业',
           position: plan.positionTitle,
           salaryRange: plan.salaryRange,
           location: plan.location,
+        }, {
+          userId: String(userId || ''),
+          tenantId: String(enterpriseId),
         })
         return {
           success: true,
@@ -181,6 +186,7 @@ async function executeSubTask(
             qualityScore: jdResult.qualityScore,
             improvements: jdResult.improvements,
             optimizedTitle: jdResult.title,
+            aiSource: jdResult.aiSource,
           },
         }
       }
@@ -739,6 +745,7 @@ export const recruitmentDirectorRoutes = async (fastify: FastifyInstance) => {
           plan,
           plan.workspaceId,
           plan.enterpriseId,
+          userId,
         )
 
         results.push({ taskId: task.id, ...result })

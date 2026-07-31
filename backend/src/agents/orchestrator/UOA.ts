@@ -1,4 +1,9 @@
 /**
+ * @deprecated
+ * Reality Recovery Phase5
+ * Production path unused — index.ts 仅启动时 import，execute() 全仓 0 调用。
+ * 保留：未完成未来层（执行权威层设计），待掌柜决策启用或移除。
+ *
  * agents/orchestrator/UOA.ts
  *
  * Unified Orchestrator Agent v1

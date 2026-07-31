@@ -15,6 +15,8 @@ import { writerService } from './writer.service.js'
 import { reviewerService, getReviewPassScore } from './reviewer.service.js'
 import { characterService } from './character.service.js'
 import { directorService } from './director.service.js'
+import { consistencyVerifier } from './consistency-verifier.service.js'
+import { recordHdzFailure, recordHdzSuccess } from './circuit-breaker.service.js'
 import { emitEvent } from './event-log.service.js'
 import { modelRouter } from '../enterprise/model-router.service.js'
 import { agentAuditService } from '../enterprise/agent-audit.service.js'
@@ -92,13 +94,37 @@ class HdzOrchestrator {
         userInput: (task.input as any)?.userInput,
       }
 
+      // ★ 02-B Task 4：附加 Usage Ledger 业务元数据（agentType/projectId/taskId）→ callLLM 统一记账
+      if (userCfg) {
+        userCfg.userId = project.userId
+        userCfg.taskType = `hdz_${task.agentType}`
+        userCfg.projectId = task.projectId
+        userCfg.taskId = taskId
+      }
+
       switch (task.agentType) {
         case 'planner':
           await plannerService.execute(ctx, userCfg)
           break
-        case 'writer':
+        case 'writer': {
+          // ★ 02-B Task 1：生成前 Context Gate——主动防错，在错误产生前拦截
+          // rewrite 模式跳过（重写是修复动作，且 G2 前置门会误伤）
+          const writerInput = (task.input as any) || {}
+          if (writerInput.mode !== 'rewrite') {
+            const gate = await consistencyVerifier.verifyBeforeGeneration(task.projectId, writerInput.chapterNo || 1)
+            if (!gate.ok) {
+              await prisma.hdzAgentTask.update({
+                where: { id: taskId },
+                data: { status: 'blocked', output: { gate: { score: gate.score, gates: gate.gates, warnings: gate.warnings } } },
+              })
+              console.log(`[HDZ/Gate] ch${writerInput.chapterNo}: BLOCKED 生成（score=${gate.score}）— ${gate.warnings.join('; ')}`)
+              break
+            }
+            console.log(`[HDZ/Gate] ch${writerInput.chapterNo}: PASS（score=${gate.score}）→ 放行生成`)
+          }
           await writerService.execute(ctx, userCfg)
           break
+        }
         case 'reviewer':
           await reviewerService.execute(ctx, userCfg)
           break
@@ -129,6 +155,8 @@ class HdzOrchestrator {
           })
         })
         console.log(`[HDZ] Task ${taskId}: completed`)
+        // ★ 熔断保护：成功重置失败计数
+        await recordHdzSuccess(task.projectId).catch(() => {})
       }
 
       // ★ Enterprise Audit Trail — 记录 Agent 执行日志
@@ -157,8 +185,8 @@ class HdzOrchestrator {
         // ⚠️ 用 input.mode 而非 output.mode：Prisma JsonValue 反序列化 output.mode 可能返回 undefined
         const rewriteMode = (task.input as any)?.mode === 'rewrite'
         if (rewriteMode) console.log(`[HDZ] Task ${taskId}: rewrite mode detected, checking input.mode=${(task.input as any)?.mode}, output.mode=${(updated.output as any)?.mode}`)
-        if (task.agentType === 'writer' && rewriteMode) {
-          // Writer 完成后自动触发 Reviewer 审核
+        if (task.agentType === 'writer') {
+          // Writer 完成后自动触发 Reviewer 审核（rewrite 与普通模式一致——百万字流水线需要自动质量门）
           const writerChapterNo = (updated.input as any)?.chapterNo || 1
           const existingReviewer = await prisma.hdzAgentTask.findFirst({
             where: {
@@ -181,16 +209,13 @@ class HdzOrchestrator {
             this.executeTask(reviewTask.id).catch(err => console.error(`[HDZ] Review task ${reviewTask.id} failed:`, err))
           }
         } else if (task.agentType === 'reviewer') {
-          // Reviewer 完成后自动触发重写飞轮
-          // 如果 reviewer 设为 waiting_approval（未通过），自动改为 completed 以触发飞轮
+          // Reviewer 完成后：合格（completed）→ 自动标 reviewed；
+          // 不合格（waiting_approval）→ 保持等待用户审批，禁止自动短路（质量飞轮修复）
           if (updated.status === 'waiting_approval') {
-            await prisma.hdzAgentTask.update({
-              where: { id: taskId },
-              data: { status: 'completed', completedAt: new Date() },
-            })
-            updated.status = 'completed'
+            console.log(`[HDZ] Reviewer ch${(updated.input as any)?.chapterNo || 1} 未达标 → 保持 waiting_approval，等待用户审批`)
+          } else {
+            this.continueChain(updated).catch(err => console.error(`[HDZ] Review chain ${taskId} failed:`, err))
           }
-          this.continueChain(updated).catch(err => console.error(`[HDZ] Review chain ${taskId} failed:`, err))
         }
       }
     } catch (err: any) {
@@ -212,6 +237,8 @@ class HdzOrchestrator {
         } catch { /* ignore */ }
       }
       await this.failTask(taskId, err.message)
+      // ★ 熔断保护：连续失败 3 次 → 暂停该项目生产
+      await recordHdzFailure(task.projectId, task.agentType).catch(() => {})
     }
   }
 
@@ -331,15 +358,37 @@ class HdzOrchestrator {
     }
 
     if (completedTask.agentType === 'reviewer') {
-      // ★ Reviewer 完成审核 → 只标记状态，不自动续写/重写
-      //   审批弹窗中「通过」仅标记 reviewed，「拒绝」才触发重写
+      // ★ Reviewer 审批处理：
+      //   - 自动路径（合格 completed）→ 标记 reviewed
+      //   - 用户审批「通过」（handleApproval approved）→ 标记 reviewed（source: user_approved，真实）
+      //   - 用户审批「拒绝」（handleApproval rejected）→ 触发 writer 重写（带批评意见）
       const currentChapterNo = (completedTask.input as any)?.chapterNo || 1
       const reviewResult = completedTask.output as any
       const score = reviewResult?.score ?? 0
       const passScore = getReviewPassScore()
 
+      if (isRejected) {
+        // ★ 用户拒绝 → 退回重写，带上用户批评意见
+        const apiNote = approvalNote || '用户对本章不满意，请重写'
+        const nextTask = await prisma.hdzAgentTask.create({
+          data: {
+            projectId: completedTask.projectId,
+            agentType: 'writer',
+            status: 'queued',
+            input: {
+              mode: 'rewrite',
+              chapterNo: currentChapterNo,
+              userInput: `【⚠️ 用户拒绝 — 评审意见】\n${apiNote}\n\n请深刻吸取教训，从头重写本章。严格要求：\n1. 字数必须达到 3500 字（±200）\n2. 每句话都要符合指定的大师风格\n3. 这是重写任务，不是润色任务——用全新的文字重新创作\n4. 目标 95 分以上，达不到不要提交`,
+            },
+          },
+        })
+        console.log(`[HDZ] Reviewer rejected by user → rewrite ch${currentChapterNo} (task=${nextTask.id})`)
+        this.executeTask(nextTask.id).catch(err => console.error(`[HDZ] User-rejected rewrite ${nextTask.id} failed:`, err))
+        return
+      }
+
       if (score >= passScore) {
-        // ★ 合格 → 标记 reviewed
+        // ★ 自动合格 → 标记 reviewed
         await prisma.$transaction(async (tx) => {
           await tx.hdzChapter.update({
             where: { projectId_chapterNo: { projectId: completedTask.projectId, chapterNo: currentChapterNo } },
@@ -355,7 +404,7 @@ class HdzOrchestrator {
         })
         console.log(`[HDZ] Reviewer ch${currentChapterNo} PASS (${score}) → marked reviewed`)
       } else {
-        // ★ 不足 passScore 分 → 标记为 waiting_approval，等用户审批决定是否重写
+        // ★ 用户审批「通过」了一个未达标章节 → 用户行使最终决定权，标记 reviewed（真实 user_approved）
         await prisma.$transaction(async (tx) => {
           await tx.hdzChapter.update({
             where: { projectId_chapterNo: { projectId: completedTask.projectId, chapterNo: currentChapterNo } },
@@ -365,11 +414,11 @@ class HdzOrchestrator {
             data: {
               entityType: 'chapter', entityId: `${completedTask.projectId}:${currentChapterNo}`,
               eventType: 'CHAPTER_STATUS_CHANGED',
-              payload: { status: 'reviewed', source: 'user_approved', score },
+              payload: { status: 'reviewed', source: 'user_approved', score, note: approvalNote || '' },
             },
           })
         })
-        console.log(`[HDZ] Reviewer ch${currentChapterNo} SCORE ${score} (<${passScore}) → user approved, marked reviewed`)
+        console.log(`[HDZ] User approved ch${currentChapterNo} (score ${score} < ${passScore}) → marked reviewed (real user approval)`)
       }
       return
     }

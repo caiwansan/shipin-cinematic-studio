@@ -1,4 +1,8 @@
 /**
+ * @deprecated
+ * Reality Recovery Phase5
+ * Production path unused — 仅被 UOA.ts 内部 import，UOA 本身无业务调用，随 UOA 失活。
+ *
  * agents/orchestrator/shadow/UOAShadow.ts
  *
  * UOA Shadow Learning Layer

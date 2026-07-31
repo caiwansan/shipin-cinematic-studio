@@ -123,12 +123,6 @@
                   <span class="dim-row-main"><strong>{{ c.name }}</strong></span>
                   <span class="dim-row-tags">{{ c.gender || '-' }} · {{ c.age || '-' }} · {{ c.role || '-' }}</span>
                   <span class="dim-row-desc">{{ c.description || c.clothing || '-' }}</span>
-                  <span class="dim-row-voice">
-                    <button class="voice-picker-btn" @click.stop="showVoicePicker(c)" title="选择音色">
-                      🎙️ {{ c.voiceType || '选择音色' }}
-                    </button>
-                    <button v-if="c.voiceType" class="voice-play-btn" @click.stop="previewVoice(c.voiceType)" title="试听">▶</button>
-                  </span>
                 </div>
               </div>
               <div v-else class="dim-cards-empty">暂无数据，请提交拆解</div>
@@ -220,6 +214,12 @@
                   <span class="dim-row-tags">{{ v.voiceType || '-' }}</span>
                   <span class="dim-row-desc">音高 {{ v.pitch || '-' }} · 语速 {{ v.speed || '-' }}</span>
                   <span class="dim-row-extra" v-if="v.description">{{ v.description }}</span>
+                  <span class="dim-row-voice">
+                    <button class="voice-picker-btn" @click.stop="showVoicePicker(v)" title="选择音色">
+                      🎙️ {{ v.voiceType || '选择音色' }}
+                    </button>
+                    <button v-if="v.voiceType" class="voice-play-btn" @click.stop="previewVoice(v.voiceType)" title="试听">▶</button>
+                  </span>
                 </div>
               </div>
               <div v-else class="dim-cards-empty">暂无数据，请提交拆解</div>
@@ -292,8 +292,18 @@ function showVoicePicker(char: any) {
 
 async function selectVoice(v: any) {
   if (!voicePickerTarget.value) return
-  voicePickerTarget.value.voiceType = v.id
-  voicePickerTarget.value.voice = v.id
+  const target = voicePickerTarget.value
+  target.voiceType = v.id
+  target.voice = v.id
+  // 同步角色维度同名角色的音色（角色设定页引用的数据源）
+  const charName = target.characterName || target.name
+  if (charName && n.value?.characters) {
+    const ch = n.value.characters.find((c: any) => c.name === charName)
+    if (ch) {
+      ch.voiceType = v.id
+      ch.voice = v.id
+    }
+  }
   // Update store
   await saveToServer()
   voicePickerTarget.value = null

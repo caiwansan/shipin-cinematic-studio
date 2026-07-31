@@ -18,6 +18,7 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { entitlementService } from '../services/enterprise/enterprise-entitlement.service.js'
 import { requireEnterpriseWorkspaceContext } from '../services/enterprise-context.service.js'
+import { getEnterpriseContext } from '../repositories/recruitment/enterprise-member.repository.js'
 
 // ─── AI 员工类型定义 ───
 const RECRUITMENT_AGENT_TYPES = {
@@ -789,23 +790,32 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
       const userId = (request as any).user?.id || (request as any).userId
       const { workspaceId } = request.query as { workspaceId?: string }
 
-      const wsc = await requireEnterpriseWorkspaceContext(userId, workspaceId)
-      if (!wsc) return reply.status(403).send({ error: 'Workspace access denied' })
-      const enterpriseId = wsc.enterpriseId
+      // 从 JWT 解析企业身份
+      const ctx = await getEnterpriseContext(userId)
+      if (!ctx) return reply.status(403).send({ error: 'No enterprise identity' })
+      const enterpriseId = ctx.enterpriseId
 
-      const tenantId = enterpriseId
+      const tenantId = userId  // EnterpriseAgentInstance.tenantId = userId in current data model
       const recruitmentTypes = ['recruiter', 'marketing', 'interview']
 
-      // 查询当前企业下的招聘类型 Agent 实例
-      const instances = await prisma.enterpriseAgentInstance.findMany({
-        where: {
-          tenantId,
-          profile: { agentType: { in: recruitmentTypes } },
-        },
-        include: {
-          profile: { select: { name: true, agentType: true, description: true, capabilities: true } },
-        },
+      // 查询先 enterpriseAgentInstance（无 profile 关系，手动关联）
+      const allInstances = await prisma.enterpriseAgentInstance.findMany({
+        where: { tenantId },
         orderBy: { createdAt: 'asc' },
+      })
+
+      // 批量获取对应 profile
+      const employeeIds = allInstances.map((i) => i.employeeId)
+      const profiles = employeeIds.length > 0 ? await prisma.enterpriseAgentProfile.findMany({
+        where: { id: { in: employeeIds } },
+        select: { id: true, name: true, agentType: true, description: true, capabilities: true },
+      }) : []
+      const profileMap = new Map(profiles.map((p) => [p.id, p]))
+
+      // 过滤为招聘类型的 agent
+      let instances = allInstances.filter((i) => {
+        const p = profileMap.get(i.employeeId)
+        return p && recruitmentTypes.includes(p.agentType)
       })
 
       // 如果没有招聘 Agent，尝试从 workforce 创建默认的 3 个
@@ -814,25 +824,29 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
         if (wsId) {
           await ensureWorkforceExists(wsId, enterpriseId)
           // 重查
-          const retryInstances = await prisma.enterpriseAgentInstance.findMany({
-            where: {
-              tenantId,
-              profile: { agentType: { in: recruitmentTypes } },
-            },
-            include: {
-              profile: { select: { name: true, agentType: true, description: true, capabilities: true } },
-            },
+          const retryRaw = await prisma.enterpriseAgentInstance.findMany({
+            where: { tenantId },
             orderBy: { createdAt: 'asc' },
+          })
+          const retryProfiles = retryRaw.length > 0 ? await prisma.enterpriseAgentProfile.findMany({
+            where: { id: { in: retryRaw.map((i) => i.employeeId) } },
+            select: { id: true, name: true, agentType: true, description: true, capabilities: true },
+          }) : []
+          const retryProfileMap = new Map(retryProfiles.map((p) => [p.id, p]))
+
+          instances = retryRaw.filter((i) => {
+            const p = retryProfileMap.get(i.employeeId)
+            return p && recruitmentTypes.includes(p.agentType)
           })
 
           return reply.send({
-            data: retryInstances.map(inst => ({
+            data: instances.map((inst) => ({
               id: inst.id,
-              type: inst.profile?.agentType || 'recruiter',
-              name: inst.profile?.name || 'AI 招聘员工',
-              shortName: getShortName(inst.profile?.agentType || 'recruiter'),
+              type: profileMap.get(inst.employeeId)?.agentType || 'recruiter',
+              name: profileMap.get(inst.employeeId)?.name || 'AI 招聘员工',
+              shortName: getShortName(profileMap.get(inst.employeeId)?.agentType || 'recruiter'),
               status: inst.lifecycleState === 'ACTIVE' ? 'active' : 'paused',
-              capabilities: parseCapabilities(inst.profile?.capabilities),
+              capabilities: parseCapabilities(profileMap.get(inst.employeeId)?.capabilities),
               usage: 0,
               lastActive: inst.lastRecoveredAt || inst.updatedAt?.toISOString() || null,
               createdAt: inst.createdAt?.toISOString() || new Date().toISOString(),
@@ -842,13 +856,13 @@ export const recruitmentDepartmentRoutes = async (fastify: FastifyInstance) => {
       }
 
       return reply.send({
-        data: instances.map(inst => ({
+        data: instances.map((inst) => ({
           id: inst.id,
-          type: inst.profile?.agentType || 'recruiter',
-          name: inst.profile?.name || 'AI 招聘员工',
-          shortName: getShortName(inst.profile?.agentType || 'recruiter'),
+          type: profileMap.get(inst.employeeId)?.agentType || 'recruiter',
+          name: profileMap.get(inst.employeeId)?.name || 'AI 招聘员工',
+          shortName: getShortName(profileMap.get(inst.employeeId)?.agentType || 'recruiter'),
           status: inst.lifecycleState === 'ACTIVE' ? 'active' : 'paused',
-          capabilities: parseCapabilities(inst.profile?.capabilities),
+          capabilities: parseCapabilities(profileMap.get(inst.employeeId)?.capabilities),
           usage: 0,
           lastActive: inst.lastRecoveredAt || inst.updatedAt?.toISOString() || null,
           createdAt: inst.createdAt?.toISOString() || new Date().toISOString(),

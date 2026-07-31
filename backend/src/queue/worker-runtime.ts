@@ -93,6 +93,19 @@ async function callProvider(
           }
         }
       }
+      // ⭐ 修复多参考图: 合并前端统一传入的 referenceImages（角色+场景+道具多张参考图）
+      // 分镜卡片显式勾选的多张参考图必须全部引用，不能只留自动匹配到的第一张
+      const explicitRefs = payload.input?.referenceImages
+      if (Array.isArray(explicitRefs)) {
+        for (const ref of explicitRefs) {
+          const url = typeof ref === 'string' ? ref
+            : (ref && typeof ref === 'object' && (ref as any).url) ? (ref as any).url
+            : ''
+          if (url && typeof url === 'string' && !frameRefs.includes(url)) {
+            frameRefs.push(url)
+          }
+        }
+      }
 
       // ⭐ 自动匹配：根据 narrative 文本锁定角色图和场景图（按剧情需要）
       try {

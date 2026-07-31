@@ -202,7 +202,9 @@ class PlanGuard {
 
   private resolveTier(membership: any, user: any): string | null {
     // 优先级: Membership.tier > User.memberTier
-    const tier = membership?.tier || user?.memberTier || 'free'
+    // 空字符串 '' 和 null/undefined 一律视为 'free'
+    const rawTier = membership?.tier || user?.memberTier || 'free'
+    const tier = rawTier === '' ? 'free' : rawTier
 
     // 检查过期
     const expiresAt = membership?.expiresAt || user?.memberExpiresAt

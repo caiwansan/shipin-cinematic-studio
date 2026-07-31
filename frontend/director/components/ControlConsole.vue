@@ -26,6 +26,10 @@
         📤 导出
       </button>
 
+      <button class="ctrl-btn primary" @click="$emit('start-production')" :disabled="!running">
+        🎬 开始制作
+      </button>
+
       <button class="ctrl-btn danger" @click="$emit('reset')">
         ⏮ 重置
       </button>
@@ -68,6 +72,7 @@ defineEmits<{
   export: []
   reset: []
   stop: []
+  'start-production': []
   'update:tickInterval': [v: number]
 }>()
 

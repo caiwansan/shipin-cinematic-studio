@@ -81,10 +81,15 @@ export interface TalentRadarConfig {
 
 // ─── 人才猎聘 Agent ───
 
+import { matchSimpleCandidates } from '../../services/matching/simple-match.adapter.js'
+
 export class TalentSearchAgent {
 
   /**
-   * 搜索人才 — 核心匹配引擎
+   * 搜索人才 — 统一匹配引擎
+   * Sprint-RECRUITMENT-REALITY-02 Task 04:
+   * 删除私有权重（0.30/0.20/0.15/0.15/0.10/0.10），统一走 TalentMatchingEngine（0.40/0.30/0.15/0.15）
+   * 搜索条件（skills/city/experienceYears）作为引擎输入，分数与岗位匹配同源
    */
   searchTalents(input: TalentSearchInput, candidates: any[]): TalentMatchResult[] {
     const {
@@ -98,108 +103,72 @@ export class TalentSearchAgent {
       limit = 10,
     } = input
 
-    const results: TalentMatchResult[] = []
-
-    for (const candidate of candidates) {
-      const candidateSkills = (candidate.skills || []).map((s: string) => s.toLowerCase())
-      const searchSkills = skills.map(s => s.toLowerCase())
-
-      // 技能匹配
-      const matchedSkills = searchSkills.filter(s =>
-        candidateSkills.some((cs: string) => cs.includes(s) || s.includes(cs))
-      )
-      const skillsScore = searchSkills.length > 0
-        ? Math.round((matchedSkills.length / searchSkills.length) * 100)
-        : 50
-
-      // 经验匹配
-      const candidateExp = candidate.experienceYears || 0
-      let expScore = 50
-      if (experienceYears) {
-        if (candidateExp >= experienceYears) expScore = 100
-        else if (candidateExp >= experienceYears - 1) expScore = 80
-        else if (candidateExp >= experienceYears - 2) expScore = 60
-        else expScore = 30
-      } else {
-        expScore = candidateExp > 0 ? 80 : 40
-      }
-
-      // 城市匹配
-      const cityScore = !city || city === '不限' || candidate.city === city ? 100 : 20
-
-      // 薪资匹配
-      let salaryScore = 50
-      const cMin = candidate.salaryMin || 0
-      const cMax = candidate.salaryMax || 999
-      if (cMin <= salaryMax && cMax >= salaryMin) {
-        salaryScore = 100
-      } else if (cMax < salaryMin) {
-        salaryScore = 70
-      } else {
-        salaryScore = 30
-      }
-
-      // 学历匹配
-      const eduScore = this.matchEducation(education, candidate.education)
-
-      // 级别匹配
-      const levelScore = this.matchLevel(careerLevel, candidate.careerLevel)
-
-      // 综合评分（加权）
-      const matchScore = Math.round(
-        skillsScore * 0.30 +
-        expScore * 0.20 +
-        cityScore * 0.15 +
-        salaryScore * 0.15 +
-        eduScore * 0.10 +
-        levelScore * 0.10
-      )
-
-      // 推荐原因
-      const reasons: string[] = []
-      if (skillsScore >= 70) reasons.push(`核心技能匹配（${matchedSkills.length}/${searchSkills.length}）`)
-      if (cityScore === 100 && city) reasons.push(`城市匹配（${city}）`)
-      if (salaryScore === 100) reasons.push('薪资期望匹配')
-      if (expScore >= 80) reasons.push(`经验丰富（${candidateExp}年）`)
-      if (eduScore >= 90) reasons.push(`学历匹配（${candidate.education}）`)
-      if (levelScore >= 80) reasons.push(`级别匹配（${candidate.careerLevel}）`)
-
-      // 风险点
-      const risks: string[] = []
-      if (skillsScore < 50) risks.push('核心技能不足')
-      if (cityScore < 50) risks.push(`城市不匹配（候选人：${candidate.city || '未知'}）`)
-      if (salaryScore < 50) risks.push('薪资期望超出预算')
-      if (expScore < 50) risks.push('经验不足')
-      if (candidate.careerLevel === 'Lead' && careerLevel === 'Junior') risks.push('级别过高')
-
-      results.push({
-        talentId: candidate.id,
-        name: candidate.name,
-        matchScore,
-        matchBreakdown: {
-          skills: skillsScore,
-          experience: expScore,
-          city: cityScore,
-          salary: salaryScore,
-          education: eduScore,
-          level: levelScore,
-        },
-        recommendReason: reasons.length > 0 ? reasons.join('；') : '综合匹配度一般',
-        risks,
-        talent: {
-          education: candidate.education || '未知',
-          skills: candidate.skills || [],
-          experience: candidate.experience || '',
-          city: candidate.city || '未知',
-          careerLevel: candidate.careerLevel || '未知',
-          strengths: candidate.strengths || [],
-        },
-      })
-    }
+    const results = matchSimpleCandidates(
+      candidates.map(c => ({
+        id: c.id,
+        name: c.name,
+        skills: c.skills || [],
+        experience: c.experience || '',
+        experienceYears: c.experienceYears || 0,
+        city: c.city || '',
+        education: c.education || '',
+        careerGoal: c.careerGoal || '',
+      })),
+      {
+        jobId: input.workspaceId,
+        jobSkills: skills,
+        experienceMin: experienceYears || 0,
+        location: city || undefined,
+      },
+    )
 
     return results
-      .sort((a, b) => b.matchScore - a.matchScore)
       .slice(0, limit)
+      .map(r => {
+        const nameMap = new Map(candidates.map(c => [c.id, c.name]))
+        const candidate = candidates.find(c => c.id === r.candidateId) || {}
+
+        // 从证据生成可读推荐原因（确定性，LLM 不参与）
+        const dimLabels: Record<string, string> = { skill: '核心技能', experience: '经验', education: '学历', career: '方向/城市' }
+        const reasons: string[] = []
+        const risks: string[] = []
+        for (const [dim, label] of Object.entries(dimLabels)) {
+          const score = r.breakdown[dim as keyof typeof r.breakdown] || 0
+          if (score >= 80) reasons.push(`${label}匹配（${score}分）`)
+          else if (score < 50) risks.push(`${label}不足（${score}分）`)
+        }
+        if (careerLevel && candidate.careerLevel === 'Lead' && careerLevel === 'Junior') risks.push('级别过高')
+        if (reasons.length === 0) reasons.push('综合匹配度一般')
+
+        // 薪资过滤提示（不参与评分，仅展示）
+        const cMin = candidate.salaryMin || 0
+        const cMax = candidate.salaryMax || 999
+        if (cMax < salaryMin) risks.push('薪资期望超出预算')
+
+        return {
+          talentId: r.candidateId,
+          name: nameMap.get(r.candidateId) || '求职者',
+          matchScore: r.score,
+          matchBreakdown: {
+            skills: r.breakdown.skill,
+            experience: r.breakdown.experience,
+            city: r.breakdown.career,
+            salary: r.breakdown.career,
+            education: r.breakdown.education,
+            level: r.breakdown.career,
+          },
+          recommendReason: reasons.join('；'),
+          risks,
+          talent: {
+            education: candidate.education || '未知',
+            skills: candidate.skills || [],
+            experience: candidate.experience || '',
+            city: candidate.city || '未知',
+            careerLevel: candidate.careerLevel || '未知',
+            strengths: candidate.strengths || [],
+          },
+        }
+      })
   }
 
   /**

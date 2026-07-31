@@ -29,6 +29,7 @@ export interface StoryContext {
   characters: CharacterCurrentProfile[]
   worldState: WorldStateContext | null
   consistencyWarnings: string[]
+  currentChapterNo?: number
 }
 
 export interface MasterPlanContext {
@@ -73,6 +74,7 @@ export interface CharacterCurrentProfile {
   relations: Array<{ target: string; type: string; description: string }>
   currentState: CharacterStateSummary
   restrictions: string[]  // 禁止行为
+  mindState?: any        // 心理档案快照（CharacterMindState，Task 3）
 }
 
 export interface CharacterStateSummary {
@@ -138,6 +140,7 @@ export async function buildStoryContext(
     characters,
     worldState,
     consistencyWarnings,
+    currentChapterNo: chapterNo,
   }
 }
 
@@ -193,6 +196,8 @@ async function buildCharacterCurrentProfiles(projectId: string): Promise<Charact
     where: { projectId },
     orderBy: { chapterNo: 'asc' },
   })
+  const mindStates = await prisma.characterMindState.findMany({ where: { projectId } })
+  const mindMap = new Map(mindStates.map(m => [m.characterId, m]))
 
   return characters.map(char => {
     const charStates = states.filter(s => s.characterId === char.id)
@@ -270,6 +275,7 @@ async function buildCharacterCurrentProfiles(projectId: string): Promise<Charact
       relations: Array.isArray(char.relations) ? (char.relations as any) : [],
       currentState: stateSummary,
       restrictions,
+      mindState: mindMap.get(char.id) || null,
     }
   })
 }
@@ -349,10 +355,12 @@ export function formatStoryContextForLLM(ctx: StoryContext): string {
   // Master Plan
   if (ctx.masterPlan) {
     const mp = ctx.masterPlan
+    const statusLabel = mp.status === 'locked' ? '🔒 已锁定（绝对遵循）' : mp.status === 'confirmed' ? '✅ 已确认（作者认可）' : '📝 草稿（作者尚未确认，需谨慎）'
     parts.push(`【📖 小说总规划（作者创作意图 — 最高优先级）】
 书名：${mp.title}
 类型：${mp.genre}
 总篇幅：${mp.totalChapter}章 / ${mp.volumeCount}卷 / ${mp.targetWords}万字
+状态：${statusLabel}
 世界观方向：${mp.worldDirection || '未指定'}
 结局方向：${mp.endingDirection || '未指定'}`)
 
@@ -361,7 +369,21 @@ export function formatStoryContextForLLM(ctx: StoryContext): string {
     }
 
     if (mp.foreshadowing.length > 0) {
-      parts.push(`\n**🔮 伏笔规划：**\n${mp.foreshadowing.map(f => `- 第${f.chapter}章：${f.event} → 兑现${f.payoff}`).join('\n')}`)
+      // Phase 5 分层裁剪：只保留与当前章相关的伏笔（已回收的省略，防止 token 膨胀）
+      const nowCh = ctx.currentChapterNo || 0
+      const active = mp.foreshadowing.filter((f: any) => {
+        if (nowCh <= 0) return true
+        // 尝试解析兑现章号（支持 "890" / "第890章" / "第890章：..."）
+        const payoffStr = typeof f.payoff === 'string' ? f.payoff : ''
+        const m = payoffStr.match(/(\d{1,5})/)
+        const payoffCh = m ? parseInt(m[1], 10) : 0
+        // 已回收（兑现章早于当前章 100+ 章）→ 省略；其余保留
+        if (payoffCh > 0 && payoffCh < nowCh - 100) return false
+        return true
+      })
+      if (active.length > 0) {
+        parts.push(`\n**🔮 伏笔规划（活跃 ${active.length}/${mp.foreshadowing.length} 条）：**\n${active.slice(0, 15).map(f => `- 第${f.chapter}章：${f.event} → 兑现${f.payoff}`).join('\n')}`)
+      }
     }
   }
 
@@ -392,12 +414,68 @@ export function formatStoryContextForLLM(ctx: StoryContext): string {
 
       let charBlock = `**${char.name}**（${char.role === 'protagonist' ? '主角' : char.role === 'antagonist' ? '反派' : char.role === 'supporting' ? '配角' : '龙套'}）`
       if (char.personality) charBlock += `\n  性格：${char.personality}`
+      // 心理档案（CharacterMindState，Task 3）：欲望/恐惧/信念/创伤/道德底线/漂移警告
+      if (char.mindState) {
+        const m = char.mindState
+        const mindParts: string[] = []
+        if (m.desire) mindParts.push(`欲望/执念：${m.desire}`)
+        if (m.fear) mindParts.push(`恐惧：${m.fear}`)
+        if (m.belief) mindParts.push(`信念：${m.belief}`)
+        if (m.trauma) mindParts.push(`创伤：${m.trauma}`)
+        if (m.moralBoundary) mindParts.push(`道德底线：${m.moralBoundary}`)
+        if (m.personalityDrift) mindParts.push(`⚠️ 漂移警告：${m.personalityDrift}`)
+        if (mindParts.length > 0) charBlock += `\n  🧠 心理档案：${mindParts.join('；')}`
+      }
       if (stateParts.length > 0) charBlock += `\n  ${stateParts.join('\n  ')}`
       if (char.restrictions.length > 0) {
         charBlock += `\n  ⛔ 行为限制：${char.restrictions.join('；')}`
       }
 
       parts.push(charBlock)
+    }
+  }
+
+  // 世界状态（world_state / location_state / timeline / pending_hooks）
+  if (ctx.worldState) {
+    const ws = ctx.worldState
+    const wsParts: string[] = []
+
+    const latestWorld = ws.worldState[0] as any
+    if (latestWorld) {
+      const worldDesc = typeof latestWorld.summary === 'string' ? latestWorld.summary
+        : typeof latestWorld.content === 'string' ? latestWorld.content
+        : JSON.stringify(latestWorld).slice(0, 800)
+      if (worldDesc) wsParts.push(`**世界观现状：**${worldDesc}`)
+    }
+
+    if (ws.locationStates.length > 0) {
+      const locLines = ws.locationStates.slice(0, 8).map((l: any) => {
+        const name = l.name || l.location || l.key || '未知地点'
+        const desc = typeof l.summary === 'string' ? l.summary : typeof l.description === 'string' ? l.description : ''
+        return desc ? `- ${name}：${desc.slice(0, 200)}` : `- ${name}`
+      })
+      if (locLines.length > 0) wsParts.push(`**地点状态：**\n${locLines.join('\n')}`)
+    }
+
+    if (ws.timeline.length > 0) {
+      const tlLines = ws.timeline.slice(0, 8).map((t: any) => {
+        const ch = t.chapterNo || t.chapter || '?'
+        const desc = typeof t.summary === 'string' ? t.summary : typeof t.content === 'string' ? t.content : ''
+        return desc ? `- 第${ch}章：${desc.slice(0, 200)}` : `- 第${ch}章`
+      })
+      if (tlLines.length > 0) wsParts.push(`**时间线：**\n${tlLines.join('\n')}`)
+    }
+
+    if (ws.pendingHooks.length > 0) {
+      const hookLines = ws.pendingHooks.slice(0, 6).map((h: any) => {
+        const desc = typeof h.summary === 'string' ? h.summary : typeof h.content === 'string' ? h.content : JSON.stringify(h).slice(0, 150)
+        return `- ${desc}`
+      })
+      if (hookLines.length > 0) wsParts.push(`**🔗 未回收伏笔（写作时不得提前泄露/遗忘）：**\n${hookLines.join('\n')}`)
+    }
+
+    if (wsParts.length > 0) {
+      parts.push(`\n【🌍 世界状态（写作必须与此一致）：】\n${wsParts.join('\n')}`)
     }
   }
 

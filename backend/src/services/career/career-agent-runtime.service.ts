@@ -1,16 +1,21 @@
 /**
  * services/career/career-agent-runtime.service.ts
- * Sprint-06A: Career Agent BYOK Runtime
+ * @deprecated Sprint-09E-04.5B
+ *   此 Runtime 已被 enterpriseAgentRuntime + businessType 隔离取代。
+ *   Career Agent 不再有独立的 Runtime，统一走 enterpriseAgentRuntime.executeTask()
+ *   传入 businessType='career_agent' 实现身份隔离。
  *
- * 核心职责：
- *   个人 AI 职业助理执行 — 走 UserModelConfigV2 BYOK，不碰 EnterpriseLlmConfig
+ *   仍然保留此文件，因为系统中有 import 引用。
+ *   后续清理 import 后可删除。
  *
- * 调用链：
+ * Sprint-06A: Career Agent BYOK Runtime（已废弃）
+ *
+ * 历史调用链：
  *   Career Agent Task → careerAgentRuntime.executeTask()
  *     → resolveRuntimeConfig(userId) → UserModelConfigV2
  *     → executeViaGateway() → DeepSeek/OpenAI/通义/豆包
  *
- * 与企业端的区别：
+ * 与企业端的区别（已废弃）：
  *   - 企业端走 EnterpriseLlmConfig（tenantId）
  *   - Career Agent 走 UserModelConfigV2（userId）— BYOK
  */

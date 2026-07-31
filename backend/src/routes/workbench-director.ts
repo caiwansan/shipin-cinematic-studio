@@ -1,5 +1,9 @@
 /**
  * routes/workbench-director.ts
+ * @deprecated 未注册到 app，不可进入生产路径。
+ * 使用 routes/director-v2.ts 和 routes/director-execution.route.ts 替代。
+ * （2026-07-31 Task 01.5 Reality Verification 确认）
+ * （Phase5 Runtime Boundary Cleanup：/api/workbench/* 运行时实测 404，前端 6 处调用全部落空）
  *
  * 🎬 昆仑镜叙事导演工作台 — 产品化 API 层
  *
@@ -19,8 +23,7 @@ import { compileBlueprint } from '../director-runtime/director-to-blueprint-comp
 import { matchDirector } from '../director-registry/index.js'
 import { freezeBlueprint } from '../production-loop/blueprint-freeze.js'
 import { JobStateMachine } from '../production-loop/job-state-machine.js'
-import { RenderExecutor } from '../production-loop/render-executor.js'
-import { LocalMockRenderer } from '../production-loop/render-adapter.js'
+import { RealTaskRenderer } from '../production-loop/real-task-adapter.js'
 import { RenderJob } from '../production-loop/job-types.js'
 import { DAGBuilder } from '../production-loop/dag-builder.js'
 import { ReplayEngine } from '../production-loop/replay-engine.js'
@@ -41,7 +44,7 @@ function traceId(): string {
 // ── Mock Job Store（已接入 production-loop） ──
 export const mockJobs = new Map<string, RenderJob>()
 const stateMachine = new JobStateMachine()
-const executor = new RenderExecutor(new LocalMockRenderer())
+const realRenderer = new RealTaskRenderer()
 const dagBuilder = new DAGBuilder()
 const replayEngine = new ReplayEngine()
 const obsMapper = new ObservatoryMapper()
@@ -143,23 +146,23 @@ export default async function workbenchRoutes(app: FastifyInstance) {
       mockJobs.set(job.id, job)
       mockJobs.set(job.traceId, job)
 
-      // 3. pure transition → DISPATCHED
+      // 3. 通过真实 Task Adapter 提交到 BullMQ
+      const result = await realRenderer.render({ traceId: tid, blueprint: frozen })
+
+      // 4. 更新 job 状态
       const dispatched = stateMachine.transition(job, 'DISPATCHED')
-      mockJobs.set(job.id, dispatched)
-      mockJobs.set(job.traceId, dispatched)
+      const done = stateMachine.transition(dispatched, result.meta?.taskIds?.length ? 'DONE' : 'FAILED')
+      done.result = result
+      mockJobs.set(job.id, done)
+      mockJobs.set(job.traceId, done)
 
-      // 4. tick 执行（唯一副作用入口）
-      const executed = await executor.tick(dispatched)
-      mockJobs.set(job.id, executed)
-      mockJobs.set(job.traceId, executed)
-
-      req.log.info(`[${tid}] render done: state=${executed.state}`)
+      req.log.info(`[${tid}] render done: ${result.meta?.taskCount || 0} real tasks queued`)
 
       return {
-        jobId: executed.id,
-        traceId: executed.traceId,
-        state: executed.state,
-        result: executed.result ?? null,
+        jobId: done.id,
+        traceId: done.traceId,
+        state: done.state,
+        result: result,
       }
     } catch (e) {
       req.log.error(`[${tid}] render 失败: ${(e as Error).message}`)
@@ -205,19 +208,21 @@ export default async function workbenchRoutes(app: FastifyInstance) {
     const updated = stateMachine.transition(existing, 'DISPATCHED')
     mockJobs.set(id, updated)
 
-    // 重新执行
-    const executed = await executor.tick(updated)
-    mockJobs.set(id, executed)
-    mockJobs.set(executed.traceId, executed)
+    // 重新执行（通过真实 Task Adapter 再次提交）
+    const retryResult = await realRenderer.render({ traceId: tid, blueprint: existing.blueprint })
+    const reDone = stateMachine.transition(updated, retryResult.meta?.taskIds?.length ? 'DONE' : 'FAILED')
+    reDone.result = retryResult
+    mockJobs.set(id, reDone)
+    mockJobs.set(reDone.traceId, reDone)
 
-    req.log.info(`[${tid}] 重试任务 ${id}: state=${executed.state}`)
+    req.log.info(`[${tid}] 重试任务 ${id}: ${retryResult.meta?.taskCount || 0} real tasks re-queued`)
 
     return {
       traceId: tid,
       success: true,
       message: `任务 ${id} 已重新执行`,
-      state: executed.state,
-      result: executed.result ?? null,
+      state: reDone.state,
+      result: retryResult,
     }
   })
 

@@ -1,3 +1,9 @@
+<!--
+  @deprecated
+  Reality Recovery Phase5
+  Production path unused — 调用 /api/workbench/*（后端未注册，404）。
+  保留：未完成未来层（叙事导演工作台），勿删除。
+-->
 <template>
   <div class="min-h-screen bg-[#0a0a0f] text-gray-200 flex flex-col">
     <!-- 标题栏 -->

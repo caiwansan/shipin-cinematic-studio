@@ -28,7 +28,9 @@ export interface TierLookup {
  *   3. 'free' (default)
  */
 export function getEffectiveTier(lookup: TierLookup): MemberTier {
-  return lookup?.membership?.tier || lookup?.memberTier || 'free'
+  // 空字符串 '' 与 null/undefined 一样视为 'free'
+  const raw = lookup?.membership?.tier || lookup?.memberTier || 'free'
+  return raw === '' ? 'free' : raw
 }
 
 /**

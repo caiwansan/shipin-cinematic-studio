@@ -21,11 +21,15 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { talentAgentService } from '../services/enterprise/talent-agent.service.js'
 import { resolveCurrentEnterprise } from '../services/enterprise-context.service.js'
+import { requireEnterpriseCapability } from '../middleware/require-enterprise-capability.js'
 
 export async function registerTalentAgentRoutes(app: FastifyInstance) {
 
   // Sprint 13: Security P0 — JWT auth for all Agent routes
   app.addHook('preHandler', app.authenticate)
+
+  // Capability Gate: AI 猎聘能力（analyze/search/explain 均属 AI_CANDIDATE_RECOMMEND）
+  app.addHook('preHandler', requireEnterpriseCapability('AI_CANDIDATE_RECOMMEND'))
 
   // ── POST /api/enterprise/agents/talent/analyze ──
   // 候选人深度分析

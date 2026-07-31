@@ -73,19 +73,15 @@ export default async function storyboardRoutes(fastify: FastifyInstance) {
 
     const charInfo = characters.map(c => `- ${c.name}: ${c.description || '无描述'}`).join('\n')
 
-    const systemPrompt = `你是一个专业的影视分镜师。根据用户的场景描述，生成 3~6 个分镜头。
-
-每个分镜必须包含以下字段：
-- shotIndex: 序号（从0开始）
-- sceneDescription: 该镜头的场景描述（中文，50字以内）
-- cameraAngle: 镜头角度（全景/中景/近景/特写/俯拍/仰拍/过肩镜头）
-- movement: 运镜方式（固定镜头/缓慢推进/缓慢拉远/平移/跟拍/摇镜头/推轨）
-- lens: 焦段（35mm/50mm/85mm/24-70mm/16-35mm/70-200mm）
-- duration: 时长秒数（3-8）
-- prompt: 该镜头的英文 prompt（用于 AI 绘画/视频生成，包含主体、场景、光线、氛围等详细描述，30-80词）
-
-${charInfo ? `角色信息：\n${charInfo}\n` : ''}
-请以 JSON 数组格式返回，不要其他文字。`
+    // ⭐ SSOT（Phase 4）: system prompt 从 PromptTemplate 表读取（storyboard-shot-generator，{charInfo} 占位符）
+    const { getPrompt } = await import('../runtime/prompt/PromptRegistry.js')
+    let systemPrompt: string
+    try {
+      systemPrompt = await getPrompt('storyboard-shot-generator')
+      systemPrompt = systemPrompt.replace('{charInfo}', charInfo ? `角色信息：\n${charInfo}\n` : '')
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: `提示词模板缺失: ${err.message}` })
+    }
 
     try {
       // ⭐ 统一通过 narrativeGateway 调用 LLM（唯一配置源 = UserModelConfigV2）

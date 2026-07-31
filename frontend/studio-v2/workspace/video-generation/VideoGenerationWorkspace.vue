@@ -512,7 +512,7 @@ import { useStudioStore } from '~/studio-v2/stores/useStudioStore'
 import { useSegmentRuntime } from '~/studio-v2/workspace/director/useSegmentRuntime'
 import type { SegmentRuntime } from '~/studio-v2/types/runtime/index'
 
-const { state, projectId, goToStage, setActiveSegment } = useStudioStore()
+const { state, projectId, goToStage, setActiveSegment, updateSegment } = useStudioStore()
 const { segments } = useSegmentRuntime()
 
 // ─── Token helper ───
@@ -822,6 +822,16 @@ async function saveSegmentEditState(idx: number) {
         propImageUrls: segmentPropImages[idx + '_first'] || [],
         videoUrl: generatedVideos.value[idx] || '',
       }),
+    })
+
+    // ⭐ SSOT 契约（SHORTDRAMA-DATA-SSOT）: 同步回写 store segments，
+    //    使 FinalRender 等下游直接读 store 也能拿到最新视频/帧 URL（刷新后由 loadFromServer 从表回填）
+    const segId = seg.id || seg.segmentId || String(idx)
+    updateSegment(segId, {
+      videoUrl: generatedVideos.value[idx] || '',
+      firstFrameUrl: segmentFirstFrameUrls.value[idx] || '',
+      midFrameUrl: segmentMidFrameUrls.value[idx] || '',
+      lastFrameUrl: segmentLastFrameUrls.value[idx] || '',
     })
   } catch (err) {
     console.warn('[segment-state] 保存失败:', err)
@@ -2501,8 +2511,8 @@ onUnmounted(() => {
 })
 
 function useToken() {
-  // 从存储中获取 token
-  return localStorage.getItem('access_token') || ''
+  // ⭐ SSOT: 统一使用 auth_token（与全项目一致），修复 access_token 键不匹配导致的 401
+  return localStorage.getItem('auth_token') || ''
 }
 </script>
 

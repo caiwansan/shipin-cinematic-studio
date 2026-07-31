@@ -89,28 +89,7 @@ function onAssetSelected(asset: any) {
 
 onMounted(async () => {
   // [TEMP DISABLE] Model config wizard — temporary disabled for direct workspace access
-  // FRE v1: 检测用户是否已配置 Provider
-  // try {
-  //   const token = localStorage.getItem('auth_token')
-  //   if (token) {
-  //     const res = await fetch('/api/providers/status', {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     })
-  //     if (res.ok) {
-  //       const data = await res.json()
-  //       if (!data.configured) {
-  //         showWizard.value = true
-  //       }
-  //     } else {
-  //       showWizard.value = true
-  //     }
-  //   } else {
-  //     // 未登录用户不弹 Wizard
-  //   }
-  // } catch {
-  //   showWizard.value = true
-  // }
-  return
+  // （原 FRE v1 provider 检测逻辑已临时禁用，保留项目加载与事件监听）
 
   function onWizardComplete() {
     showWizard.value = false

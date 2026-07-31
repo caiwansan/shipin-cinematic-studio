@@ -1,3 +1,9 @@
+<!--
+  @deprecated
+  Reality Recovery Phase5
+  Production path unused — 依赖 /api/repair、/api/trace/:id、/api/replay（后端 gateway 层未注册，404）。
+  保留：旧调试台，勿删除。
+-->
 <template>
   <NuxtLayout name="workbench">
     <div class="space-y-6 max-w-6xl">
@@ -73,7 +79,7 @@ import { useSSEStream } from '~/composables/useSSEStream'
 import { ref, watch } from 'vue'
 
 const store = useWorkbenchStore()
-const sse = useSSEStream()
+const sse = useSSEStream(false)
 const repairIssue = ref('')
 
 const repairPipeline = ref([

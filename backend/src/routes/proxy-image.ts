@@ -26,12 +26,16 @@ export default async function proxyImageRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: '无效的 URL' })
     }
 
-    // SSRF 防护：精确域名匹配，禁止内网
-    const ALLOWED_HOSTS = ['tos-cn-beijing.volces.com', 'volces.com']
-    if (!ALLOWED_HOSTS.includes(parsedUrl.hostname)) {
+    // SSRF 防护：后缀匹配火山 TOS 域名，禁止内网
+    const hostname = parsedUrl.hostname
+    const ALLOWED_HOST_SUFFIXES = ['.tos-cn-beijing.volces.com', '.volces.com']
+    const EXACT_ALLOWED = ['tos-cn-beijing.volces.com', 'volces.com']
+    const isAllowed = EXACT_ALLOWED.includes(hostname) || ALLOWED_HOST_SUFFIXES.some(suffix => hostname.endsWith(suffix))
+    console.log('[proxy-image] 🎯 hostname=%s isAllowed=%s decodedUrl=%s', hostname, isAllowed, decodedUrl.slice(0, 120))
+    if (!isAllowed) {
       return reply.status(403).send({ error: '只允许代理火山 TOS 图片' })
     }
-    if (parsedUrl.hostname === '127.0.0.1' || parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '0.0.0.0') {
+    if (hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '0.0.0.0') {
       return reply.status(403).send({ error: '禁止代理内网地址' })
     }
 
@@ -54,7 +58,10 @@ export default async function proxyImageRoutes(app: FastifyInstance) {
       })
 
       if (response.statusCode !== 200) {
-        return reply.status(response.statusCode).send({ error: '代理请求失败' })
+        // TOS 签名过期/防盗链 → 302 跳转原 URL，让浏览器自己尝试
+        // 浏览器可能因缓存 Referer 或其他机制成功加载
+        console.warn('[proxy-image] ⚠️  TOS 上游返回 %s，fallback 到重定向: %s', response.statusCode, decodedUrl.substring(0, 80))
+        return reply.redirect(decodedUrl)
       }
 
       // 设置 CORS 和缓存
@@ -65,8 +72,9 @@ export default async function proxyImageRoutes(app: FastifyInstance) {
         .header('Content-Length', response.data.length)
         .send(response.data)
     } catch (err: any) {
-      console.error('[proxy-image] 代理失败:', err.message)
-      return reply.status(502).send({ error: '代理请求失败: ' + err.message })
+      console.error('[proxy-image] ⚠️ 代理异常，fallback 到重定向:', err.message)
+      // 代理异常也回退到重定向
+      return reply.redirect(decodedUrl)
     }
   })
 }

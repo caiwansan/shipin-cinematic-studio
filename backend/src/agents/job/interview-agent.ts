@@ -2,12 +2,19 @@
  * interview-agent.ts — AI 面试助手 Agent
  *
  * Phase 2-P2: 企业招聘面试能力
- * - 面试方案生成
- * - 面试评价报告
+ * - 面试方案生成（LLM 动态生成，模板兜底）
+ * - 面试评价报告（LLM 评估，公式兜底）
  * - 招聘流程增强
+ *
+ * Sprint-RECRUITMENT-REALITY-02:
+ * - generateInterviewPlanWithLLM: 基于 JD+岗位要求+简历 动态生成题目（删除 Math.random 模板）
+ * - generateEvaluationWithLLM: 基于回答内容 LLM 评分（删除前端 score 依赖）
+ * - 旧模板方法保留为 fallback，LLM 失败时兜底并标记 aiSource=fallback
  */
 
 // ─── 类型定义 ───
+
+import { extractJSONObject } from './enterprise-recruit-agent.js'
 
 export interface JobContext {
   title: string
@@ -46,7 +53,9 @@ export interface InterviewPlan {
 
 export interface InterviewEvaluationInput {
   jobTitle: string
+  jobRequirements?: string[]
   questions: {
+    id?: string
     category: string
     question: string
     score: number
@@ -54,6 +63,12 @@ export interface InterviewEvaluationInput {
   }[]
   resumeStrengths: string[]
   resumeRisks: string[]
+}
+
+export interface QuestionScore {
+  questionId: string
+  score: number
+  comment: string
 }
 
 export interface InterviewEvaluationResult {
@@ -66,6 +81,8 @@ export interface InterviewEvaluationResult {
   recommendation: string
   summary: string
   nextSteps: string[]
+  questionScores?: QuestionScore[]
+  aiSource?: 'llm' | 'fallback'
 }
 
 // ─── 面试题库模板 ───
@@ -133,12 +150,228 @@ const BEHAVIORAL_TEMPLATES = [
   '你为什么想离开当前/上一家公司？',
 ]
 
+export interface InterviewAgentContext {
+  userId: string
+  tenantId: string
+}
+
 // ─── InterviewAgent ───
 
 export class InterviewAgent {
 
   /**
-   * 生成面试方案
+   * 生成面试方案 — LLM 动态生成（Task 02）
+   * 输入 JD + 岗位要求 + 候选人简历 + 企业偏好 → LLM 动态出题
+   * 解析失败降级模板（记录 aiSource=fallback）
+   */
+  async generateInterviewPlanWithLLM(
+    job: JobContext,
+    resume: ResumeContext,
+    ctx: InterviewAgentContext,
+  ): Promise<{ plan: InterviewPlan; aiSource: 'llm' | 'fallback' }> {
+    const prompt = `你是一位资深技术面试官，请为以下候选人生成一份个性化面试方案。
+
+## 岗位信息
+- 岗位：${job.title}
+- 级别：${job.level}
+- 技能要求：${job.skills.join('、') || '未提供'}
+- 薪资：${job.salary || '未提供'}
+- 地点：${job.location || '不限'}
+- 任职要求：${job.requirements.join('；') || '未提供'}
+
+## 候选人简历
+- 姓名：${resume.name}
+- 技能：${resume.skills.join('、') || '未提供'}
+- 经验年限：${resume.experienceYears}年
+- 学历：${resume.education || '未提供'}
+- 城市：${resume.city || '未提供'}
+- 职业目标：${resume.careerGoal || '未提供'}
+- 项目经历：${resume.projects || '未提供'}
+
+## 要求
+请针对该候选人**个性化出题**（不要用泛泛的模板问题）：
+1. 技术问题：基于岗位技能要求，结合候选人简历中的项目/技能深入追问（如候选人做过支付系统，就问高并发数据一致性）
+2. 项目问题：围绕候选人简历中的项目经历展开
+3. 行为问题：考察沟通协作/抗压/成长性
+4. 深挖问题：针对简历中的风险点（如技能缺失、经验不足）验证
+
+请严格输出以下 JSON（不要输出其他任何文字，不要用 markdown 代码块包裹）：
+{
+  "title": "面试方案标题",
+  "questions": [
+    {
+      "category": "technical 或 project 或 behavioral 或 deep",
+      "question": "具体面试问题（必须结合简历/JD，个性化）",
+      "expectedAnswer": "期望的回答要点",
+      "followUp": "追问问题（可选）"
+    }
+  ],
+  "focusAreas": ["重点考察领域，2-4条"],
+  "riskAreas": ["风险关注点，1-3条"]
+}
+
+题目数量：技术 2-3 题、项目 1-2 题、行为 1 题、深挖 1 题，总计 5-7 题。`
+
+    try {
+      const result = await this.executeAgentLLM(prompt, ctx)
+      const parsed = extractJSONObject(result.content)
+      if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+        console.warn('[InterviewAgent] LLM plan parse failed, falling back to template')
+        return { plan: this.generateInterviewPlan(job, resume), aiSource: 'fallback' }
+      }
+
+      const questions = parsed.questions
+        .filter((q: any) => q && typeof q.question === 'string' && q.question.trim())
+        .slice(0, 8)
+        .map((q: any) => ({
+          category: ['technical', 'project', 'behavioral', 'deep'].includes(q.category) ? q.category : 'technical',
+          question: q.question.trim(),
+          expectedAnswer: q.expectedAnswer || '',
+          followUp: q.followUp || undefined,
+        }))
+
+      if (questions.length === 0) {
+        return { plan: this.generateInterviewPlan(job, resume), aiSource: 'fallback' }
+      }
+
+      const plan: InterviewPlan = {
+        title: parsed.title || `${job.title} - ${resume.name} 面试方案`,
+        totalQuestions: questions.length,
+        estimatedDuration: questions.length * 5 + 10,
+        questions,
+        focusAreas: Array.isArray(parsed.focusAreas) ? parsed.focusAreas.slice(0, 4) : [],
+        riskAreas: Array.isArray(parsed.riskAreas) ? parsed.riskAreas.slice(0, 3) : [],
+      }
+      return { plan, aiSource: 'llm' }
+    } catch (e: any) {
+      console.warn(`[InterviewAgent] LLM plan failed (${e.message}), falling back to template`)
+      return { plan: this.generateInterviewPlan(job, resume), aiSource: 'fallback' }
+    }
+  }
+
+  /**
+   * 生成面试评价报告 — LLM 评估（Task 01）
+   * 输入题目+候选人回答+岗位要求 → LLM 逐题评分 + 综合评估
+   * 解析失败降级公式（记录 aiSource=fallback）
+   */
+  async generateEvaluationWithLLM(
+    input: InterviewEvaluationInput,
+    ctx: InterviewAgentContext,
+  ): Promise<InterviewEvaluationResult> {
+    // 健壮性：resumeStrengths / resumeRisks 可缺省（调用方可能不传）
+    const strengths = input.resumeStrengths || []
+    const risks = input.resumeRisks || []
+    const qaText = input.questions.map(q => {
+      const answer = q.answer && q.answer.trim() ? q.answer.trim() : '（未回答）'
+      return `题目[id=${q.id || 'unknown'}] [${q.category}]：${q.question}\n回答：${answer.slice(0, 500)}`
+    }).join('\n\n')
+
+    const prompt = `你是一位严格的资深面试官，请根据候选人的实际回答进行专业评估。
+
+## 岗位
+${input.jobTitle}
+岗位要求：${input.jobRequirements?.join('；') || '未提供'}
+
+## 面试问答记录
+${qaText || '（无问答记录）'}
+
+## 评估要求
+根据回答的实际质量评分（不是平均分，而是基于回答内容判断）：
+- 回答具体、有深度、有量化结果 → 高分（85+）
+- 回答一般、泛泛而谈 → 中分（60-80）
+- 回答空洞、答非所问或未回答 → 低分（<60）
+
+请严格输出以下 JSON（不要输出其他任何文字，不要用 markdown 代码块包裹）：
+{
+  "overallScore": 0-100 整数,
+  "technicalScore": 0-100 整数,
+  "communicationScore": 0-100 整数,
+  "cultureScore": 0-100 整数,
+  "strengths": ["优势，2-4条"],
+  "risks": ["风险点，1-3条"],
+  "recommendation": "强烈推荐录用 或 建议进入下一轮面试 或 可以考虑，但需进一步评估 或 不建议录用",
+  "summary": "综合评价（2-3句话）",
+  "nextSteps": ["下一步建议，1-3条"],
+  "questionScores": [
+    {"questionId": "对应题目的 id（必须使用上面问答记录中 [id=xxx] 的真实 id，不能自己编）", "score": 0-100 整数, "comment": "该题评价"}
+  ]
+}`
+
+    try {
+      const result = await this.executeAgentLLM(prompt, ctx)
+      const parsed = extractJSONObject(result.content)
+      if (!parsed) {
+        console.warn('[InterviewAgent] LLM evaluation parse failed, falling back to formula')
+        return { ...this.generateEvaluation(input), aiSource: 'fallback' }
+      }
+
+      const num = (v: any, fb: number) => {
+        const n = typeof v === 'number' ? Math.round(v) : NaN
+        return Number.isNaN(n) ? fb : Math.min(100, Math.max(0, n))
+      }
+      const strArr = (v: any, fb: string[]) => Array.isArray(v) && v.length > 0 ? v.map(String) : fb
+
+      const questionScores: QuestionScore[] = Array.isArray(parsed.questionScores)
+        ? parsed.questionScores
+            .filter((qs: any) => qs && qs.questionId)
+            .map((qs: any) => ({
+              questionId: String(qs.questionId),
+              score: num(qs.score, 70),
+              comment: qs.comment || '',
+            }))
+        : []
+
+      return {
+        overallScore: num(parsed.overallScore, this.generateEvaluation(input).overallScore),
+        technicalScore: num(parsed.technicalScore, 70),
+        communicationScore: num(parsed.communicationScore, 70),
+        cultureScore: num(parsed.cultureScore, 70),
+        strengths: strArr(parsed.strengths, ['基础能力达标']),
+        risks: strArr(parsed.risks, ['暂无明显风险']),
+        recommendation: typeof parsed.recommendation === 'string' ? parsed.recommendation : '可以考虑，但需进一步评估',
+        summary: typeof parsed.summary === 'string' ? parsed.summary : `${input.jobTitle}候选人面试评估完成`,
+        nextSteps: strArr(parsed.nextSteps, ['安排下一轮面试']),
+        questionScores,
+        aiSource: 'llm' as const,
+      }
+    } catch (e: any) {
+      console.warn(`[InterviewAgent] LLM evaluation failed (${e.message}), falling back to formula`)
+      return { ...this.generateEvaluation(input), aiSource: 'fallback' }
+    }
+  }
+
+  /**
+   * 执行 LLM（executeViaGateway + 企业 LLM 配置，与 talent-agent 一致）
+   */
+  private async executeAgentLLM(prompt: string, ctx: InterviewAgentContext): Promise<{ content: string }> {
+    const { executeViaGateway } = await import('../../runtime/runtime-gateway.js')
+    const { prisma } = await import('../../utils/index.js')
+
+    const enterpriseLlm = await prisma.enterpriseLlmConfig.findFirst({
+      where: { tenantId: ctx.tenantId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
+    })
+
+    if (!enterpriseLlm) {
+      throw new Error('ENTERPRISE_LLM_NOT_CONFIGURED')
+    }
+
+    const result = await executeViaGateway('llm', {
+      prompt,
+      maxTokens: 2048,
+      temperature: 0.7,
+    }, {
+      userId: ctx.userId,
+      tenantId: ctx.tenantId,
+      provider: enterpriseLlm.provider,
+      model: enterpriseLlm.modelName,
+    })
+
+    return { content: result.content || '' }
+  }
+
+  /**
+   * 生成面试方案（模板引擎，保留为 fallback）
+   * @deprecated Sprint-RECRUITMENT-REALITY-02 — 仅 LLM 不可用时兜底
    */
   generateInterviewPlan(job: JobContext, resume: ResumeContext): InterviewPlan {
     const questions: InterviewQuestionSet[] = []
@@ -211,10 +444,11 @@ export class InterviewAgent {
   }
 
   /**
-   * 生成面试评价报告
+   * 生成面试评价报告（公式引擎，保留为 fallback）
+   * @deprecated Sprint-RECRUITMENT-REALITY-02 — 仅 LLM 不可用时兜底
    */
   generateEvaluation(input: InterviewEvaluationInput): InterviewEvaluationResult {
-    const { jobTitle, questions, resumeStrengths, resumeRisks } = input
+    const { jobTitle, questions, resumeStrengths = [], resumeRisks = [] } = input
 
     // 计算各维度分数
     const techQuestions = questions.filter(q => q.category === 'technical')

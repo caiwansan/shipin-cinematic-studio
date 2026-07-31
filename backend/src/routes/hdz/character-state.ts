@@ -124,6 +124,10 @@ export default async function characterStateRoutes(app: FastifyInstance) {
     ])
 
     if (!character) return reply.status(404).send({ success: false, error: '角色不存在' })
+    // 资源级归属校验：角色必须属于当前项目（防跨项目泄露角色设定）
+    if (character.projectId !== projectId) {
+      return reply.status(404).send({ success: false, error: '角色不存在' })
+    }
 
     return { success: true, data: { character, states } }
   })
@@ -139,6 +143,15 @@ export default async function characterStateRoutes(app: FastifyInstance) {
     })
     if (!project) return reply.status(404).send({ success: false, error: '项目不存在' })
     if (project.userId !== user.id) return reply.status(403).send({ success: false, error: '无权访问' })
+
+    // 资源级归属校验：状态记录必须属于当前项目（防跨项目删除）
+    const state = await prisma.hdzCharacterState.findUnique({
+      where: { id: stateId },
+      select: { projectId: true },
+    })
+    if (!state || state.projectId !== projectId) {
+      return reply.status(404).send({ success: false, error: '状态不存在' })
+    }
 
     await prisma.hdzCharacterState.delete({ where: { id: stateId } })
     return { success: true }

@@ -14,13 +14,13 @@
       </div>
       <div class="cdp-header-actions">
         <button class="cdp-action-btn cdp-action-btn--primary" @click="startInterview" :disabled="!candidate">
-          🎤 安排面试
+          安排面试
         </button>
         <button class="cdp-action-btn cdp-action-btn--success" @click="advanceToOffer" :disabled="!candidate">
-          📨 推进到 Offer
+          推进到 Offer
         </button>
         <button class="cdp-action-btn cdp-action-btn--danger" @click="rejectCandidate" :disabled="!candidate">
-          ❌ 建议拒绝
+          建议拒绝
         </button>
       </div>
     </div>
@@ -33,7 +33,7 @@
 
     <!-- Error -->
     <div v-else-if="error" class="cdp-error">
-      <span>⚠️ {{ error }}</span>
+      <span>{{ error }}</span>
       <button @click="loadData" class="cdp-retry-btn">重试</button>
     </div>
 
@@ -44,7 +44,7 @@
         <div class="cdp-col cdp-col--main">
           <!-- Basic Info Card -->
           <section class="cdp-card">
-            <h2 class="cdp-card-title">👤 基础信息</h2>
+            <h2 class="cdp-card-title">基础信息</h2>
             <div class="cdp-info-grid">
               <div class="cdp-info-item">
                 <span class="cdp-info-label">姓名</span>
@@ -90,7 +90,7 @@
 
             <!-- Resume -->
             <div v-if="candidate.resume" class="cdp-resume">
-              <h3 class="cdp-sub-title">📄 简历信息</h3>
+              <h3 class="cdp-sub-title">简历信息</h3>
               <div class="cdp-resume-info">
                 <span>文件名：{{ candidate.resume.fileName || '—' }}</span>
                 <span>上传时间：{{ formatDate(candidate.resume.uploadedAt) }}</span>
@@ -124,7 +124,7 @@
 
           <!-- AI Match Analysis -->
           <section class="cdp-card">
-            <h2 class="cdp-card-title">🤖 AI 匹配分析</h2>
+            <h2 class="cdp-card-title">AI 匹配分析</h2>
             <div v-if="matchData" class="cdp-match">
               <!-- Overall Score -->
               <div class="cdp-match-header">
@@ -184,19 +184,57 @@
 
               <!-- AI Analysis Text -->
               <div v-if="matchData.aiAnalysis" class="cdp-ai-analysis">
-                <h3 class="cdp-sub-title">📝 AI 分析</h3>
+                <h3 class="cdp-sub-title">AI 分析</h3>
                 <p class="cdp-ai-text">{{ matchData.aiAnalysis }}</p>
               </div>
             </div>
             <div v-else class="cdp-no-match">
               <p>暂无匹配数据，请先执行 AI 匹配分析</p>
-              <button class="cdp-action-btn cdp-action-btn--primary" @click="runMatch">🤖 执行匹配分析</button>
+              <button class="cdp-action-btn cdp-action-btn--primary" @click="runMatch">执行匹配分析</button>
+            </div>
+
+            <!-- Sprint 5-4: AI 招聘建议 决策增强 -->
+            <div v-if="matchData" class="cdp-ai-decision">
+              <div class="cdp-decision-header">
+                <span class="cdp-decision-label">推荐等级</span>
+                <span class="cdp-decision-grade" :class="'cdp-grade-' + recommendation.level.toLowerCase()">{{ recommendation.level }}</span>
+              </div>
+
+              <div class="cdp-decision-detail">
+                <div class="cdp-decision-column cdp-decision-pros">
+                  <span class="cdp-decision-col-label">优势</span>
+                  <div v-if="recommendation.strengths.length > 0" class="cdp-decision-items">
+                    <div v-for="(s, i) in recommendation.strengths" :key="i" class="cdp-decision-item cdp-decision-item--pro">
+                      <span class="cdp-decision-icon">✓</span>
+                      <span>{{ s }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="cdp-decision-empty">暂无突出优势</div>
+                </div>
+
+                <div class="cdp-decision-column cdp-decision-risks">
+                  <span class="cdp-decision-col-label">风险</span>
+                  <div v-if="recommendation.risks.length > 0" class="cdp-decision-items">
+                    <div v-for="(r, i) in recommendation.risks" :key="i" class="cdp-decision-item cdp-decision-item--risk">
+                      <span class="cdp-decision-icon">⚠</span>
+                      <span>{{ r }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="cdp-decision-empty">未发现明显风险</div>
+                </div>
+              </div>
+
+              <div class="cdp-decision-action">
+                <span class="cdp-decision-action-label">下一步</span>
+                <span class="cdp-decision-action-text">{{ recommendation.nextStep }}</span>
+                <button class="cdp-action-btn cdp-action-btn--primary cdp-btn-sm" @click="startInterview">安排面试</button>
+              </div>
             </div>
           </section>
 
           <!-- Interview History -->
           <section class="cdp-card" v-if="candidate.interviews?.length">
-            <h2 class="cdp-card-title">🎤 面试记录 ({{ candidate.interviews.length }})</h2>
+            <h2 class="cdp-card-title">面试记录 ({{ candidate.interviews.length }})</h2>
             <div class="cdp-interview-list">
               <div v-for="iv in candidate.interviews" :key="iv.id" class="cdp-interview-item" @click="goToInterview(iv.id)">
                 <div class="cdp-interview-info">
@@ -216,7 +254,7 @@
         <div class="cdp-col cdp-col--side">
           <!-- Pipeline Timeline -->
           <section class="cdp-card">
-            <h2 class="cdp-card-title">📋 Pipeline 历史</h2>
+            <h2 class="cdp-card-title">Pipeline 历史</h2>
             <div v-if="timelineData" class="cdp-timeline">
               <div v-for="event in timelineData.events" :key="event.id" class="cdp-timeline-item">
                 <div class="cdp-timeline-marker">
@@ -243,7 +281,7 @@
 
           <!-- Notes -->
           <section class="cdp-card">
-            <h2 class="cdp-card-title">📝 备注 ({{ notes.length }})</h2>
+            <h2 class="cdp-card-title">备注 ({{ notes.length }})</h2>
             <div class="cdp-notes">
               <div v-for="note in notes" :key="note.id" class="cdp-note-item">
                 <p class="cdp-note-content">{{ note.content }}</p>
@@ -291,6 +329,49 @@ const breakdown = computed(() => {
     education: mb.education ?? 0,
     career: mb.career ?? mb.city ?? 0,
   }
+})
+
+/* ── Sprint 5-4: AI 招聘建议 ── */
+const recommendation = computed(() => {
+  const score = matchData.value?.matchScore || 0
+  const mb = matchData.value?.matchBreakdown
+  const aiAnalysis = matchData.value?.aiAnalysis || ''
+
+  let level = 'C'
+  if (score >= 80) level = 'A'
+  else if (score >= 60) level = 'B'
+
+  const strengths: string[] = []
+  const risks: string[] = []
+
+  if (mb) {
+    if ((mb.skills || 0) >= 70) strengths.push('技能匹配')
+    if ((mb.experience || 0) >= 70) strengths.push('项目经验')
+    if ((mb.education || 0) >= 70) strengths.push('教育背景')
+    if ((mb.career || 0) >= 70) strengths.push('职业规划')
+
+    if ((mb.skills || 0) < 40) risks.push('技能匹配度较低')
+    if ((mb.experience || 0) < 40) risks.push('经验匹配不足')
+    if ((mb.education || 0) < 40) risks.push('教育背景有差距')
+  }
+
+  // Parse aiAnalysis for additional pros/cons
+  if (aiAnalysis) {
+    const lower = aiAnalysis.toLowerCase()
+    if (lower.includes('薪资') || lower.includes('salary') || lower.includes('预算')) risks.push('薪资可能超预算')
+    if (lower.includes('location') || lower.includes('location') || lower.includes('城市')) risks.push('工作地点可能不匹配')
+    if (lower.includes('突出') || lower.includes('优秀') || lower.includes('strong')) strengths.push('综合能力突出')
+  }
+
+  // Next step based on stage
+  let nextStep = '安排面试'
+  const stage = candidate.value?.stage || ''
+  if (stage === 'screening' || stage === 'discovered') nextStep = '安排面试'
+  else if (stage === 'interview') nextStep = '评估面试结果'
+  else if (stage === 'offer') nextStep = '发送 Offer'
+  else if (stage === 'hired') nextStep = '准备入职' 
+
+  return { level, strengths, risks, nextStep }
 })
 
 // ─── Data Loading ───
@@ -465,10 +546,10 @@ function interviewStatusClass(status: string): string {
 
 function timelineIcon(type: string): string {
   const map: Record<string, string> = {
-    stage_change: '→', ai_score: '🤖', ai_interview: '🎤',
-    ai_invite: '📨', ai_offer: '📋', note: '📝',
+    stage_change: '→', ai_score: 'AI', ai_interview: 'IV',
+    ai_invite: 'IN', ai_offer: 'OF', note: '·',
   }
-  return map[type] || '●'
+  return map[type] || '·'
 }
 
 function timelineIconClass(type: string): string {
@@ -526,28 +607,28 @@ onMounted(() => {
 
 .cdp-back-btn {
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--color-border-primary, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
   cursor: pointer;
   font-size: 0.85rem;
 }
 
 .cdp-back-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.08));
 }
 
 .cdp-title {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-primary, #E2E8F0);
   margin: 0;
 }
 
 .cdp-subtitle {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted, #64748B);
   margin: 2px 0 0;
 }
 
@@ -566,36 +647,37 @@ onMounted(() => {
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.15s;
+  font-family: var(--font-family, inherit);
 }
 
 .cdp-action-btn--primary {
-  background: rgba(96, 165, 250, 0.15);
-  color: #60a5fa;
-  border-color: rgba(96, 165, 250, 0.3);
+  background: var(--color-decision-glow, rgba(96, 165, 250, 0.15));
+  color: var(--color-decision, #818CF8);
+  border-color: var(--color-decision-glow, rgba(96, 165, 250, 0.3));
 }
 
 .cdp-action-btn--primary:hover {
-  background: rgba(96, 165, 250, 0.25);
+  background: rgba(99, 102, 241, 0.25);
 }
 
 .cdp-action-btn--success {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 .cdp-action-btn--success:hover {
-  background: rgba(74, 222, 128, 0.25);
+  background: rgba(16, 185, 129, 0.25);
 }
 
 .cdp-action-btn--danger {
-  background: rgba(248, 113, 113, 0.15);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .cdp-action-btn--danger:hover {
-  background: rgba(248, 113, 113, 0.25);
+  background: rgba(239, 68, 68, 0.25);
 }
 
 .cdp-action-btn:disabled {
@@ -615,14 +697,14 @@ onMounted(() => {
   justify-content: center;
   gap: 12px;
   padding: 60px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted, #64748B);
 }
 
 .cdp-spinner {
   width: 24px;
   height: 24px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #60a5fa;
+  border: 3px solid var(--color-border-primary, rgba(255, 255, 255, 0.1));
+  border-top-color: var(--color-decision, #818CF8);
   border-radius: 50%;
   animation: cdp-spin 0.8s linear infinite;
 }
@@ -633,11 +715,12 @@ onMounted(() => {
 
 .cdp-retry-btn {
   padding: 4px 12px;
-  background: rgba(96, 165, 250, 0.15);
-  border: 1px solid rgba(96, 165, 250, 0.3);
+  background: var(--color-decision-glow, rgba(96, 165, 250, 0.15));
+  border: 1px solid var(--color-decision-glow, rgba(96, 165, 250, 0.3));
   border-radius: 6px;
-  color: #60a5fa;
+  color: var(--color-decision, #818CF8);
   cursor: pointer;
+  font-family: var(--font-family, inherit);
 }
 
 /* Grid Layout */
@@ -655,8 +738,8 @@ onMounted(() => {
 
 /* Cards */
 .cdp-card {
-  background: #0d1220;
-  border: 1px solid #1a2240;
+  background: var(--color-bg-elevated, #111827);
+  border: 1px solid var(--color-border-primary, #1E293B);
   border-radius: 12px;
   padding: 20px;
 }
@@ -664,14 +747,14 @@ onMounted(() => {
 .cdp-card-title {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-primary, #E2E8F0);
   margin: 0 0 16px;
 }
 
 .cdp-sub-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary, #94A3B8);
   margin: 16px 0 8px;
 }
 
@@ -690,13 +773,13 @@ onMounted(() => {
 
 .cdp-info-label {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-muted, #64748B);
   font-weight: 500;
 }
 
 .cdp-info-value {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-primary, #E2E8F0);
 }
 
 /* Stage Badge */
@@ -719,7 +802,7 @@ onMounted(() => {
 .cdp-tags {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--color-border-primary, #1E293B);
 }
 
 .cdp-tags-label {
@@ -751,14 +834,14 @@ onMounted(() => {
 .cdp-resume {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--color-border-primary, #1E293B);
 }
 
 .cdp-resume-info {
   display: flex;
   gap: 16px;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-muted, #64748B);
   margin-bottom: 8px;
 }
 
@@ -854,9 +937,9 @@ onMounted(() => {
 .cdp-ai-text {
   font-size: 0.82rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.6);
-  background: rgba(96, 165, 250, 0.05);
-  border: 1px solid rgba(96, 165, 250, 0.1);
+  color: var(--color-text-secondary, #94A3B8);
+  background: var(--color-bg-primary, #0D1328);
+  border: 1px solid var(--color-border-primary, #1E293B);
   border-radius: 8px;
   padding: 12px;
   margin: 0;
@@ -872,6 +955,144 @@ onMounted(() => {
   margin: 0 0 12px;
 }
 
+/* ─── Sprint 5-4: AI 招聘建议 ─── */
+.cdp-ai-decision {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--color-bg-elevated, #111827);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cdp-decision-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cdp-decision-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #94A3B8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cdp-decision-grade {
+  font-size: 28px;
+  font-weight: 800;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  line-height: 1;
+}
+
+.cdp-grade-A {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+}
+
+.cdp-grade-B {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+}
+
+.cdp-grade-C {
+  background: rgba(239, 68, 68, 0.12);
+  color: #F87171;
+}
+
+.cdp-decision-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cdp-decision-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cdp-decision-col-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748B);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cdp-decision-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cdp-decision-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #94A3B8);
+  line-height: 1.3;
+}
+
+.cdp-decision-item--pro {
+  color: #34D399;
+}
+
+.cdp-decision-item--risk {
+  color: #FBBF24;
+}
+
+.cdp-decision-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.cdp-decision-empty {
+  font-size: 12px;
+  color: var(--color-text-muted, #475569);
+  font-style: italic;
+}
+
+.cdp-decision-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-primary, #1E293B);
+}
+
+.cdp-decision-action-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748B);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.cdp-decision-action-text {
+  font-size: 13px;
+  color: var(--color-text-primary, #E2E8F0);
+  font-weight: 500;
+  flex: 1;
+}
+
+.cdp-btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
 /* Interview List */
 .cdp-interview-list {
   display: flex;
@@ -881,16 +1102,16 @@ onMounted(() => {
 
 .cdp-interview-item {
   padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-primary, #0D1328);
+  border: 1px solid var(--color-border-primary, #1E293B);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .cdp-interview-item:hover {
-  border-color: rgba(96, 165, 250, 0.3);
-  background: rgba(96, 165, 250, 0.04);
+  border-color: var(--color-decision, #6366F1);
+  background: rgba(99, 102, 241, 0.04);
 }
 
 .cdp-interview-info {
@@ -903,7 +1124,7 @@ onMounted(() => {
 .cdp-interview-title {
   font-size: 0.85rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-primary, #E2E8F0);
 }
 
 .cdp-interview-status {
@@ -924,7 +1145,7 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-muted, #64748B);
 }
 
 .cdp-interview-score {
@@ -953,7 +1174,7 @@ onMounted(() => {
   top: 28px;
   bottom: -8px;
   width: 1px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-border-primary, rgba(255, 255, 255, 0.06));
 }
 
 .cdp-timeline-marker {
@@ -974,7 +1195,7 @@ onMounted(() => {
 .cdp-timeline-icon--ai_interview { color: #fbbf24; }
 .cdp-timeline-icon--ai_invite { color: #34d399; }
 .cdp-timeline-icon--ai_offer { color: #4ade80; }
-.cdp-timeline-icon--note { color: rgba(255, 255, 255, 0.4); }
+.cdp-timeline-icon--note { color: var(--color-text-muted, #64748B); }
 
 .cdp-timeline-content {
   flex: 1;
@@ -982,12 +1203,12 @@ onMounted(() => {
 
 .cdp-timeline-text {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary, #94A3B8);
 }
 
 .cdp-timeline-arrow {
   margin: 0 4px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-muted, #64748B);
 }
 
 .cdp-timeline-meta {
@@ -995,13 +1216,13 @@ onMounted(() => {
   gap: 8px;
   margin-top: 2px;
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--color-text-muted, #64748B);
 }
 
 .cdp-no-timeline {
   text-align: center;
   padding: 20px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-muted, #64748B);
   font-size: 0.82rem;
 }
 
@@ -1015,26 +1236,26 @@ onMounted(() => {
 
 .cdp-note-item {
   padding: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--color-bg-primary, #0D1328);
+  border: 1px solid var(--color-border-primary, #1E293B);
   border-radius: 8px;
 }
 
 .cdp-note-content {
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary, #94A3B8);
   margin: 0 0 4px;
 }
 
 .cdp-note-time {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-muted, #64748B);
 }
 
 .cdp-no-notes {
   text-align: center;
   padding: 12px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-muted, #64748B);
   font-size: 0.8rem;
 }
 
@@ -1046,10 +1267,10 @@ onMounted(() => {
 
 .cdp-note-textarea {
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-primary, #0D1328);
+  border: 1px solid var(--color-border-primary, #1E293B);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-primary, #E2E8F0);
   font-size: 0.82rem;
   resize: vertical;
   outline: none;
@@ -1057,7 +1278,8 @@ onMounted(() => {
 }
 
 .cdp-note-textarea:focus {
-  border-color: rgba(96, 165, 250, 0.4);
+  border-color: var(--color-decision, #6366F1);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
 }
 
 /* Responsive */

@@ -1,40 +1,50 @@
 /* ═══════════════════════════════════════════════════════════
-   Recruitment Design Tokens v1.0 — UX-03 Frozen
-   现代企业 SaaS 风格：灰白、留白、卡片+数据+状态
-   禁止荧光、渐变、发光、赛博风
+   Recruitment Design Tokens v1.1 — Enterprise Workspace 约束版
+   ═══════════════════════════════════════════════════════════
+
+   ⚠️ 重要：此文件不再是独立主题源。
+   它位于 Enterprise Workspace（深色昆仑镜）内部，
+   仅提供 `--rec-*` 命名空间变量供 index.vue 等旧代码引用。
+
+   - 全局 `:root` 变量的颜色已被 enterprise-tokens.css 接管。
+   - `--rec-*` 变量的默认值已调整为深色主题，与 enterprise-tokens.css 视觉一致。
+   - 不再设置任何全局 HTML 元素覆盖（如 select），
+     enterprise-tokens.css 已提供统一规则。
+
+   如需修改颜色，请先查看 enterprise-tokens.css。
    ═══════════════════════════════════════════════════════════ */
 
 :root {
   /* ── Background ── */
-  --rec-bg-primary: #FAFAFA;
-  --rec-bg-secondary: #FFFFFF;
-  --rec-bg-tertiary: #F5F5F5;
-  --rec-bg-hover: #F0F0F0;
+  --rec-bg-primary: #070B16;
+  --rec-bg-secondary: #0D1328;
+  --rec-bg-tertiary: #111827;
+  --rec-bg-hover: #1A2240;
 
   /* ── Text ── */
-  --rec-text-primary: #1A1A1A;
-  --rec-text-secondary: #6B7280;
-  --rec-text-muted: #9CA3AF;
-  --rec-text-disabled: #D1D5DB;
+  --rec-text-primary: #F1F5F9;
+  --rec-text-secondary: #94A3B8;
+  --rec-text-muted: #64748B;
+  --rec-text-disabled: #475569;
 
   /* ── Brand ── */
-  --rec-brand: #2563EB;
-  --rec-brand-light: #EFF6FF;
-  --rec-brand-dark: #1D4ED8;
+  --rec-brand: #3B82F6;
+  --rec-brand-light: rgba(59, 130, 246, 0.12);
+  --rec-brand-dark: #2563EB;
 
   /* ── Status ── */
   --rec-success: #10B981;
-  --rec-success-light: #ECFDF5;
+  --rec-success-light: rgba(16, 185, 129, 0.12);
   --rec-warning: #F59E0B;
-  --rec-warning-light: #FFFBEB;
+  --rec-warning-light: rgba(245, 158, 11, 0.12);
   --rec-danger: #EF4444;
-  --rec-danger-light: #FEF2F2;
-  --rec-neutral: #6B7280;
-  --rec-neutral-light: #F3F4F6;
+  --rec-danger-light: rgba(239, 68, 68, 0.12);
+  --rec-neutral: #64748B;
+  --rec-neutral-light: rgba(100, 116, 139, 0.12);
 
   /* ── Border ── */
-  --rec-border-primary: #E5E7EB;
-  --rec-border-secondary: #F3F4F6;
+  --rec-border-primary: #1E293B;
+  --rec-border-secondary: #334155;
 
   /* ── Spacing ── */
   --rec-space-1: 4px;
@@ -65,42 +75,18 @@
   --rec-radius-xl: 12px;
 
   /* ── Shadow ── */
-  --rec-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --rec-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --rec-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --rec-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --rec-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --rec-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --rec-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --rec-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.5);
 
   /* ── Product UI Tokens (TASK-UX-01) ── */
   --product-radius-card: 10px;
-  --product-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --product-shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --product-gradient-ai: linear-gradient(135deg, rgba(37, 99, 235, 0.04), rgba(99, 102, 241, 0.02));
-  --product-gradient-ai-hover: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(99, 102, 241, 0.04));
+  --product-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --product-shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --product-gradient-ai: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(99, 102, 241, 0.04));
+  --product-gradient-ai-hover: linear-gradient(135deg, rgba(59, 130, 246, 0.10), rgba(99, 102, 241, 0.08));
   --product-gradient-primary: linear-gradient(135deg, #2563EB, #3B82F6);
   --product-spacing-section: 24px;
   --product-spacing-card-gap: 16px;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   TASK-UX-01: 统一轻量/浅色主题 select 样式
-   ═══════════════════════════════════════════════════════════ */
-select {
-  background-color: var(--rec-bg-secondary, #fff);
-  color: var(--rec-text-primary, #1a1a1a);
-  border-color: var(--rec-border-primary, #e5e7eb);
-  border-radius: var(--rec-radius-md, 6px);
-  padding: 6px 10px;
-  font-size: var(--rec-text-md, 14px);
-}
-
-select option {
-  background-color: var(--rec-bg-secondary, #fff);
-  color: var(--rec-text-primary, #1a1a1a);
-}
-
-select option:hover,
-select option:focus,
-select option:checked {
-  background-color: var(--rec-brand-light, #eff6ff);
-  color: var(--rec-brand, #2563eb);
 }

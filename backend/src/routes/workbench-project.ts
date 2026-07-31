@@ -2,6 +2,7 @@ import type { ApiResponse } from '../contracts/api/base.js';
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { cosService } from '../services/cos-service.js'
+import { verifyProjectOwner } from '../services/director/project-ownership.service.js'
 import { randomUUID } from 'crypto'
 import fs from 'fs'
 import path from 'path'
@@ -47,7 +48,8 @@ export default async function (app: FastifyInstance) {
       })
 
       // ⭐ 初始化 pipeline stages（确保新项目创建就注册所有 stage）
-      const stageKeys = ['script-analysis', 'character', 'scene', 'storyboard', 'voice', 'video-generation', 'music-generation', 'final-render']
+      // ⚠️ SSOT: key 必须与 shared/pipeline-definition.ts 一致（宪法规定）
+      const stageKeys = ['script-analysis', 'character-design', 'scene-design', 'storyboard', 'video-generation', 'music-generation', 'final-render', 'voice-generation']
       const now = new Date()
       await prisma.pipelineStage.createMany({
         data: stageKeys.map(stageKey => ({
@@ -103,6 +105,12 @@ export default async function (app: FastifyInstance) {
       const rawId = (request.params as any).id
       const id = rawId.split(':')[0]  // Strip Nuxt array index artifact (:1)
 
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+
       const project = await prisma.project.findUnique({
         where: { id },
         include: {
@@ -117,12 +125,26 @@ export default async function (app: FastifyInstance) {
           sceneImages: { orderBy: { sortOrder: 'asc' } },
           storyboardImages: { orderBy: { sortOrder: 'asc' } },
           propImages: { orderBy: { sortOrder: 'asc' } },
+          // ⭐ SSOT（SHORTDRAMA-DATA-SSOT）: 阶段状态唯一事实源 = pipeline_stages 表
+          pipelineStages: true,
         },
       })
 
       if (!project) {
         return reply.status(404).send({ success: false, error: '项目未找到' })
       }
+
+      // ⭐ legacy key 兼容：旧项目可能用 character/scene/voice 初始化，映射到宪法 key
+      const LEGACY_STAGE_MAP: Record<string, string> = {
+        character: 'character-design',
+        scene: 'scene-design',
+        voice: 'voice-generation',
+      }
+      const normalizedStages = (project.pipelineStages || []).map((st: any) => {
+        const mapped = LEGACY_STAGE_MAP[st.stageKey]
+        return mapped ? { ...st, stageKey: mapped } : st
+      })
+      ;(project as any).pipelineStages = normalizedStages
 
       reply.send({ success: true, data: project })
     } catch (err: any) {
@@ -136,6 +158,12 @@ export default async function (app: FastifyInstance) {
     try {
       const { id } = request.params as any
       const body = request.body as any
+
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
 
       const updateData: any = {}
 
@@ -172,6 +200,13 @@ export default async function (app: FastifyInstance) {
       const { id } = request.params as any
       const body = request.body as any
       const user = (request as any).user
+
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, user?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+
       console.log(`[save-image] project=${id} propName=${body.propName} sourceUrl=${body.sourceUrl?.slice(0,60)}`)
 
       if (!body.sourceUrl) {
@@ -292,6 +327,12 @@ export default async function (app: FastifyInstance) {
       const body = request.body as any
       const user = (request as any).user
 
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, user?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+
       if (!body.sourceUrl || !body.segmentId) {
         return reply.status(400).send({ success: false, error: 'sourceUrl 和 segmentId 不能为空' })
       }
@@ -318,6 +359,13 @@ export default async function (app: FastifyInstance) {
     try {
       const rawId = (request.params as any).id
       const id = rawId.split(':')[0]  // Strip Nuxt array index artifact
+
+      // ⭐ Phase 6 安全隔离: 归属校验（防越权删除他人项目）
+      const ownerCheck = await verifyProjectOwner(id, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+
       // 注意：characterImage/sceneImage 有 onDelete: Cascade，删除 project 时会自动级联删除
       // 但 COS 上的文件原封不动，只是数据库记录被清理
       await prisma.$transaction([
@@ -404,6 +452,13 @@ export default async function (app: FastifyInstance) {
   app.post('/api/v2/workbench/project/:id/clear-analysis', { preHandler: [app.authenticate] }, async (request, reply) => {
     try {
       const { id } = request.params as any
+
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(id, (request as any).user?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+
       console.log(`[clear-analysis] 🧹 清除项目 ${id} 所有 AI 分析缓存`)
 
       // ⭐ Phase A: clear-analysis 不再依赖 executionResults
@@ -443,13 +498,35 @@ export default async function (app: FastifyInstance) {
   })
 
   // ─── 本地文件代理 ───
-  app.get('/api/v2/workbench/local-file/:filename', async (request, reply) => {
+  // @deprecated — Reality Recovery Phase6 安全加固
+  //   前端 studio-v2 生产链 0 直连引用（production reference = 0）
+  //   仅作为 upload-reference 的 COS 上传失败 fallback 读取路径
+  //   加固：authenticate + basename 校验 + UUID 白名单 + 固定目录 + 防穿越
+  app.get('/api/v2/workbench/local-file/:filename', { preHandler: [app.authenticate] }, async (request, reply) => {
     const { filename } = request.params as any
-    const filePath = path.join('/root/shipin-cinematic-studio/backend/public/uploads', filename)
+
+    // 1. basename 校验：拒绝任何路径分隔符（防 ../ 穿越）
+    const safeName = path.basename(String(filename || ''))
+    if (safeName !== filename) {
+      return reply.status(400).send({ error: '非法文件名' })
+    }
+
+    // 2. 固定格式白名单：仅允许服务端 randomUUID 生成的文件名（upload-reference fallback）
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|jpeg|gif|webp)$/i.test(safeName)) {
+      return reply.status(400).send({ error: '非法文件名' })
+    }
+
+    // 3. 固定目录 + 双重防穿越（解析后必须仍在 uploadsDir 内）
+    const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads')
+    const filePath = path.join(uploadsDir, safeName)
+    if (!filePath.startsWith(uploadsDir + path.sep)) {
+      return reply.status(400).send({ error: '非法路径' })
+    }
+
     if (!fs.existsSync(filePath)) {
       return reply.status(404).send({ error: '文件不存在' })
     }
-    const ext = filename.split('.').pop()?.toLowerCase() || 'png'
+    const ext = safeName.split('.').pop()?.toLowerCase() || 'png'
     const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' }
     reply.type(mimeMap[ext] || 'application/octet-stream')
     return reply.send(fs.createReadStream(filePath))

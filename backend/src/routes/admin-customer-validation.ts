@@ -30,9 +30,9 @@ export default async function adminCustomerValidationRoutes(app: FastifyInstance
     const activeEmployees = await prisma.enterpriseAgentProfile.count({ where: { status: 'active' } })
 
     // Outcome 统计
-    const totalOutcomes = await prisma.outcomeRecord.count()
-    const verifiedOutcomes = await prisma.outcomeRecord.count({ where: { status: 'VERIFIED' } })
-    const outcomes7d = await prisma.outcomeRecord.count({ where: { createdAt: { gte: sevenDaysAgo } } })
+    const totalOutcomes = await prisma.enterpriseOutcome.count()
+    const verifiedOutcomes = await prisma.enterpriseOutcome.count({ where: { status: 'VERIFIED' } })
+    const outcomes7d = await prisma.enterpriseOutcome.count({ where: { createdAt: { gte: sevenDaysAgo } } })
 
     // 收入统计（分）
     const totalRevenue = await prisma.paymentOrder.aggregate({
@@ -77,10 +77,10 @@ export default async function adminCustomerValidationRoutes(app: FastifyInstance
 
     // 7日活跃（简化：最近7天有 Outcome 的企业数）
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const recentOutcomes = await prisma.outcomeRecord.findMany({
+    const recentOutcomes = await prisma.enterpriseOutcome.findMany({
       where: { createdAt: { gte: sevenDaysAgo } },
-      select: { organizationId: true },
-      distinct: ['organizationId'],
+      select: { tenantId: true },
+      distinct: ['tenantId'],
     })
     stages[5].count = recentOutcomes.length
 
@@ -95,40 +95,36 @@ export default async function adminCustomerValidationRoutes(app: FastifyInstance
 
   // ── AI 员工价值排行 ──
   app.get('/api/admin/enterprise/validation/employee-ranking', { preHandler: [requireAdmin] }, async () => {
-    // EnterpriseAgentProfile 没有 outcomes 关联，通过 OutcomeRecord 手动统计
-    const employees = await prisma.enterpriseAgentProfile.findMany({
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        organizationId: true,
-        status: true,
-        createdAt: true,
-      },
-      take: 50,
+    // 适配：EnterpriseOutcome 以 tenantId (组织) 为粒度，非 agentId
+    // 展示组织级别的 Outcome 排名
+    const outcomeAggs = await prisma.enterpriseOutcome.groupBy({
+      by: ['tenantId'],
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 20,
     })
 
-    // 批量统计每个员工的 Outcome 数
-    const outcomeCounts = await prisma.outcomeRecord.groupBy({
-      by: ['agentId'],
+    const orgIds = [...new Set(outcomeAggs.map((o) => o.tenantId))]
+    const orgs = await prisma.govOrganization.findMany({
+      where: { tenantId: { in: orgIds } },
+      select: { tenantId: true, name: true },
+    })
+    const orgNameMap = new Map(orgs.map((o) => [o.tenantId, o.name]))
+
+    // 各组织下 AI 员工数
+    const agentCounts = await prisma.enterpriseAgentProfile.groupBy({
+      by: ['organizationId'],
       _count: { id: true },
     })
-    const outcomeMap = new Map(outcomeCounts.map((o) => [o.agentId, o._count.id]))
+    const agentCountMap = new Map(agentCounts.map((a) => [a.organizationId, a._count.id]))
 
-    const ranking = employees
-      .map((e) => ({
-        rank: 0,
-        id: e.id,
-        name: e.name,
-        role: e.role,
-        organizationId: e.organizationId,
-        status: e.status,
-        outcomeCount: outcomeMap.get(e.id) || 0,
-        createdAt: e.createdAt,
-      }))
-      .sort((a, b) => b.outcomeCount - a.outcomeCount)
-      .slice(0, 20)
-      .map((e, i) => ({ ...e, rank: i + 1 }))
+    const ranking = outcomeAggs.map((o, i) => ({
+      rank: i + 1,
+      tenantId: o.tenantId,
+      organizationName: orgNameMap.get(o.tenantId) || o.tenantId,
+      outcomeCount: o._count.id,
+      employeeCount: 0, // 无法直接跨表关联 tenantId→organizationId
+    }))
 
     return toApiResponse({ ranking })
   })
@@ -183,31 +179,30 @@ export default async function adminCustomerValidationRoutes(app: FastifyInstance
   // ── 转化案例 ──
   app.get('/api/admin/enterprise/validation/case-studies', { preHandler: [requireAdmin] }, async () => {
     // 找出有 VERIFIED Outcome 的企业作为潜在案例
-    const verifiedOutcomes = await prisma.outcomeRecord.findMany({
+    const verifiedOutcomes = await prisma.enterpriseOutcome.findMany({
       where: { status: 'VERIFIED' },
       select: {
-        organizationId: true,
-        description: true,
-        type: true,
+        tenantId: true,
+        summary: true,
+        outcomeType: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 10,
     })
 
-    const orgIds = [...new Set(verifiedOutcomes.map((o) => o.organizationId))]
+    const orgIds = [...new Set(verifiedOutcomes.map((o) => o.tenantId))]
     const orgs = await prisma.govOrganization.findMany({
-      where: { id: { in: orgIds } },
-      select: { id: true, name: true },
+      where: { tenantId: { in: orgIds } },
+      select: { tenantId: true, name: true },
     })
-    const orgMap = new Map(orgs.map((o) => [o.id, o.name]))
-
+    const orgMap = new Map(orgs.map((o) => [o.tenantId, o.name]))
     const cases = verifiedOutcomes.map((o, i) => ({
       id: `case-${i + 1}`,
-      organizationId: o.organizationId,
-      organizationName: orgMap.get(o.organizationId) || 'Unknown',
-      outcomeType: o.type,
-      description: o.description,
+      tenantId: o.tenantId,
+      organizationName: orgMap.get(o.tenantId) || 'Unknown',
+      outcomeType: o.outcomeType,
+      description: o.summary,
       createdAt: o.createdAt,
       status: 'draft',
     }))
@@ -228,7 +223,7 @@ export default async function adminCustomerValidationRoutes(app: FastifyInstance
 
       const enterprises = await prisma.govOrganization.count({ where: { createdAt: { gte: startOfDay, lt: endOfDay } } })
       const subscriptions = await prisma.enterpriseSubscription.count({ where: { createdAt: { gte: startOfDay, lt: endOfDay } } })
-      const outcomes = await prisma.outcomeRecord.count({ where: { createdAt: { gte: startOfDay, lt: endOfDay } } })
+      const outcomes = await prisma.enterpriseOutcome.count({ where: { createdAt: { gte: startOfDay, lt: endOfDay } } })
 
       trends.push({
         date: startOfDay.toISOString().slice(0, 10),

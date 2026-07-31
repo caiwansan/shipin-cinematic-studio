@@ -25,13 +25,17 @@
       <button v-if="!isOnboarded" class="btn-onboarding" @click="$emit('start-onboarding')">
         🚀 初始化企业
       </button>
-      <button class="btn-icon" @click="$emit('open-settings')">⚙️</button>
+      <button class="btn-billing" @click="$emit('go-billing')">
+        📦 套餐与订阅
+      </button>
+      <button class="btn-icon" @click="$emit('open-settings')" title="设置">⚙️</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { resolvePlanInfo } from '~/composables/enterprise/useEnterprisePlan'
 
 const props = defineProps<{
   orgName: string
@@ -44,17 +48,17 @@ defineEmits<{
   'start-onboarding': []
   'open-settings': []
   'go-home': []
+  'go-billing': []
 }>()
 
 const orgInitial = computed(() => props.orgName?.charAt(0) || '企')
 
+/**
+ * planLabel 从 Commerce Authority (TIER_MAP) 读取，
+ * 不在此组件内定义任何 labels 映射。
+ */
 const planLabel = computed(() => {
-  const labels: Record<string, string> = {
-    free: '免费版',
-    pro: '专业版',
-    enterprise: '企业版',
-  }
-  return labels[props.plan || 'free'] || '免费版'
+  return resolvePlanInfo({ tier: props.plan || 'free' }).label
 })
 </script>
 
@@ -132,6 +136,9 @@ const planLabel = computed(() => {
 }
 
 .plan-free { background: var(--color-bg-hover); color: var(--color-text-muted); }
+.plan-trial { background: var(--color-bg-hover); color: var(--color-text-muted); }
+.plan-basic { background: rgba(59, 130, 246, 0.12); color: var(--color-decision); }
+.plan-professional { background: var(--color-intelligence-glow); color: var(--color-intelligence); }
 .plan-pro { background: var(--color-intelligence-glow); color: var(--color-intelligence); }
 .plan-enterprise { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
 
@@ -168,6 +175,24 @@ const planLabel = computed(() => {
 }
 
 .btn-onboarding:hover { opacity: 0.85; }
+
+.btn-billing {
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-intelligence-glow);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: var(--radius-md);
+  color: var(--color-intelligence);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.btn-billing:hover {
+  background: var(--color-intelligence);
+  color: #000;
+  border-color: var(--color-intelligence);
+}
 
 .btn-icon {
   width: 36px;

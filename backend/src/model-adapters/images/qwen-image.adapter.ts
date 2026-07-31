@@ -41,7 +41,7 @@ export const qwenImageAdapter: ModelAdapter = {
     const prompt = input.prompt || ''
     const n = input.n || 1
     const size = input.size || '1024x1024'
-    const hasImage = !!(input.imageUrl)  // 有 imageUrl 就当作图生图
+    const hasImage = !!(input.imageUrl) || (Array.isArray(input.referenceImages) && input.referenceImages.length > 0)  // 有参考图就当作图生图
 
     console.log(`[QwenImage] model=${model}, size=${size}, hasImage=${hasImage}`)
 
@@ -50,9 +50,16 @@ export const qwenImageAdapter: ModelAdapter = {
     if (input.negativePrompt) body.negative_prompt = input.negativePrompt
 
     if (hasImage) {
-      let imgUrl = input.imageUrl
-      if (imgUrl?.startsWith('/')) imgUrl = (process.env.IMAGE_BASE_URL || 'https://aigc.fushtn.com') + imgUrl
-      body.image = imgUrl
+      // ⭐ 多参考图: 优先用 referenceImages 数组（全部引用），兼容单张 imageUrl
+      const rawRefs: any[] = Array.isArray(input.referenceImages) && input.referenceImages.length > 0
+        ? input.referenceImages
+        : (input.imageUrl ? [input.imageUrl] : [])
+      const refs = rawRefs.map(r => {
+        let u = typeof r === 'string' ? r : (r && typeof r === 'object' && (r as any).url) ? (r as any).url : ''
+        if (u?.startsWith('/')) u = (process.env.IMAGE_BASE_URL || 'https://aigc.fushtn.com') + u
+        return u
+      }).filter(Boolean)
+      body.image = refs.length === 1 ? refs[0] : refs
     }
 
     const res = await fetch(COMPAT_ENDPOINT, {

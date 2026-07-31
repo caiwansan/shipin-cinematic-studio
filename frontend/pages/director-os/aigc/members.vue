@@ -82,7 +82,7 @@
               当前等级：<span class="text-white/70">{{ tierLabel(editUser.memberTier) || '普通用户' }}</span>
             </div>
             <select v-model="editNewTier" class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50">
-              <option value="">普通用户（无会员）</option>
+              <option value="free">普通用户（免费 / 体验版）</option>
               <option v-for="mp in planOptions" :key="mp.level" :value="mp.level">{{ mp.name }}</option>
             </select>
             <div class="text-xs text-gray-400 mt-3 mb-1">市场代理</div>

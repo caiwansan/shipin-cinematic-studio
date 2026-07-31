@@ -35,7 +35,12 @@ async function request(path: string, options: ApiOptions = {}) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || err.message || `API Error: ${res.status}`)
+    // 保留 action 字段（如 purchase_career_agent），供前端引导商业转化
+    const apiError: any = new Error(err.message || err.error || `API Error: ${res.status}`)
+    apiError.code = err.error
+    apiError.action = err.action
+    apiError.original = err
+    throw apiError
   }
 
   return res.json()
@@ -45,6 +50,8 @@ async function request(path: string, options: ApiOptions = {}) {
 
 export interface CareerAgentStatus {
   hasAgent: boolean
+  hasActiveSubscription?: boolean
+  subscriptionStatus?: string | null
   status: 'not_created' | 'active' | 'paused' | 'running' | 'error'
   agent?: {
     profileId: string
@@ -95,6 +102,83 @@ export interface CareerAgentActivateResult {
     outcomeId?: string
     actionId?: string
   }
+  // Sprint-10 Step 4A Task 02: 激活时返回的用户身份摘要
+  identity?: {
+    hasProfile: boolean
+    name?: string
+    experience?: string
+    direction?: string
+    skills?: string[]
+  }
+}
+
+// ─── Career Workflow 类型 ───
+
+export type CareerWorkflowType =
+  | 'job_change'
+  | 'skill_gap'
+  | 'interview_prep'
+  | 'salary_negotiation'
+  | 'career_profile_analysis'
+
+export interface CareerWorkflowStep {
+  stepNumber: number
+  action: string
+  tool?: string
+  result: 'success' | 'failed' | 'skipped'
+  summary: string
+  sources: string[]
+}
+
+export interface CareerWorkflowOutput {
+  summary: string
+  findings: Array<{
+    type: 'info' | 'opportunity' | 'warning'
+    content: string
+    sources: string[]
+  }>
+  actions: Array<{
+    action: string
+    target: string
+    priority: string
+    reason: string
+    sources: string[]
+  }>
+  plan: Array<{
+    step: number
+    action: string
+    detail: string
+    timeframe: string
+  }>
+}
+
+export interface CareerWorkflowResult {
+  workflowType: CareerWorkflowType
+  status: 'completed' | 'partial' | 'failed'
+  generatedAt: string
+  steps: CareerWorkflowStep[]
+  output: CareerWorkflowOutput
+  metadata: {
+    model: string
+    tokensUsed: number
+    durationMs: number
+    provider: string
+    toolsUsed: string[]
+  }
+}
+
+// ─── 前端按钮类型 → 后端 Workflow 类型映射 ───
+// 不新增后端类型，复用已有 Workflow
+// Sprint-09D-01 Task 04: profile_extraction → career_profile_analysis（纯画像分析，不搜索岗位）
+const WORKFLOW_TYPE_MAP: Record<string, CareerWorkflowType> = {
+  profile_extraction: 'career_profile_analysis',
+  resume_optimize: 'skill_gap',
+  career_planning: 'job_change',
+  interview_coach: 'interview_prep',
+}
+
+export function toBackendWorkflowType(btnType: string): CareerWorkflowType {
+  return WORKFLOW_TYPE_MAP[btnType] || 'job_change'
 }
 
 // ─── API Functions ───
@@ -116,6 +200,17 @@ export async function activateAndExecuteCareerAgent(params?: {
   return request('/agent/activate-and-execute', {
     method: 'POST',
     body: params || {},
+  })
+}
+
+/**
+ * 执行 Career Workflow（Sprint-09D-01 Task 02）
+ * 调用已有后端 POST /api/career/workflow/execute
+ */
+export async function executeCareerWorkflow(workflowType: CareerWorkflowType, params?: Record<string, any>): Promise<CareerWorkflowResult> {
+  return request('/workflow/execute', {
+    method: 'POST',
+    body: { workflowType, params: params || {} },
   })
 }
 

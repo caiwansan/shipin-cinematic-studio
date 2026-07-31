@@ -153,6 +153,18 @@ class WorldbuilderService {
 写作风格：${styleDna?.sourceText ? '已有风格参考（' + styleDna.sourceText.length + ' 字）' : '（未设定）'}
 目标字数：${project.wordTarget ? project.wordTarget.toLocaleString() : '未设定'}`)
 
+    // [小说总纲与状态] — HDZ-NOVEL-INTELLIGENCE-01：注入总纲/卷规划/世界状态/一致性警告
+    // 文曲星与 Writer 共享同一小说宇宙，回答必须基于总纲
+    try {
+      const { buildStoryContext, formatStoryContextForLLM } = await import('./story-context-builder.service.js')
+      const storyCtx = await buildStoryContext(ctx.projectId, ctx.chapterNo || 1)
+      if (storyCtx && (storyCtx.masterPlan || storyCtx.worldState || storyCtx.consistencyWarnings.length > 0)) {
+        sections.push(`[小说总纲与状态]\n${formatStoryContextForLLM(storyCtx)}`)
+      }
+    } catch (e: any) {
+      console.warn(`[Worldbuilder] StoryContext 注入失败（对话继续）: ${e?.message}`)
+    }
+
     // [已有角色] — 完整详情，保证文曲星知道每个角色的设定
     if (characters.length > 0) {
       const charLines = characters.map(c => {

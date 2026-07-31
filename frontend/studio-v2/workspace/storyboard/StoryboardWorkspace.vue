@@ -32,7 +32,7 @@
     <!-- 空态 -->
     <div v-else-if="segments.length === 0" class="sb-empty">
       <div class="sb-empty-icon">📋</div>
-      <div class="sb-empty-text">暂无段落数据，请先完成导演脚本</div>
+      <div class="sb-empty-text">⚠️ 尚未生成分镜数据，请先完成剧本分析</div>
     </div>
 
     <!-- 三列卡片网格 -->
@@ -59,7 +59,7 @@
         <div class="sb-card-text">
           <details class="sb-details">
             <summary class="sb-details-summary">🎬 画面描述</summary>
-            <p class="sb-full-text sb-visual-desc">{{ prompts[segIdx] || seg.fullText || '暂无详细画面描述' }}</p>
+            <p class="sb-full-text sb-visual-desc">{{ seg.visualDescription || prompts[segIdx] || '⚠️ 尚未生成画面描述' }}</p>
             <div v-if="seg.shotPattern || seg.emotion" class="sb-shot-tags">
               <span v-if="seg.shotPattern" class="sb-tag">📷 {{ seg.shotPattern }}</span>
               <span v-if="seg.emotion" class="sb-tag">🎭 {{ seg.emotion }}</span>
@@ -654,19 +654,10 @@ async function loadSpecData() {
     if (data.videoSegments) {
       localSegments.value = data.videoSegments
       // 初始化提示词
+      // ⭐ SSOT: 后端 adapter 已统一 visualDescription 字段
       for (let i = 0; i < data.videoSegments.length; i++) {
         const seg = data.videoSegments[i]
-        // ⭐ 优先使用 imagePrompt，否则从 seg 数据构建
-        if (seg.imagePrompt) {
-          prompts.value[i] = seg.imagePrompt
-        } else {
-          const parts: string[] = []
-          if (seg.shotPattern) parts.push(`拍摄模式：${seg.shotPattern}`)
-          if (seg.emotion) parts.push(`情绪基调：${seg.emotion}`)
-          if (seg.narrative || seg.fullText) parts.push(`画面描述：${seg.narrative || seg.fullText}`)
-          if (seg.dialogue) parts.push(`对话：${seg.dialogue}`)
-          prompts.value[i] = parts.length > 0 ? parts.join('，') : ''
-        }
+        prompts.value[i] = seg.visualDescription || ''
         negativePrompts.value[i] = seg.negativePrompt || ''
       }
     } else {
@@ -701,23 +692,9 @@ function initPrompts() {
   for (let i = 0; i < segments.value.length; i++) {
     const seg = segments.value[i]
     if (prompts.value[i] === undefined) {
-      // ⭐ 优先使用 imagePrompt，否则从剧本叙事内容构建画面描述
-      const existingPrompt = (seg as any).imagePrompt || ''
-      if (existingPrompt) {
-        prompts.value[i] = existingPrompt
-      } else {
-        // 从 narrativePurpose / fullText 构建画面描述（数据来源：剧本）
-        const narrative = seg.narrativePurpose || seg.fullText || seg.narrative || ''
-        const dialogue = seg.dialogue || ''
-        const shotPattern = seg.shotPattern || ''
-        const emotion = seg.emotion || ''
-        const parts: string[] = []
-        if (shotPattern) parts.push(`拍摄模式：${shotPattern}`)
-        if (emotion) parts.push(`情绪基调：${emotion}`)
-        if (narrative) parts.push(`画面描述：${narrative}`)
-        if (dialogue) parts.push(`对话：${dialogue}`)
-        prompts.value[i] = parts.length > 0 ? parts.join('，') : ''
-      }
+      // ⭐ SSOT: 优先使用后端 adapter 统一提供的 visualDescription
+      const vd = seg.visualDescription || (seg as any).fullText || (seg as any).narrativePurpose || ''
+      prompts.value[i] = vd
     }
     if (negativePrompts.value[i] === undefined) {
       negativePrompts.value[i] = (seg as any).negativePrompt || ''
@@ -751,9 +728,8 @@ async function loadFromStoryboardOnly(projectId: string) {
         .map((img: any, idx: number) => ({
           segmentId: img.segmentId || `seg_${idx}`,
           title: img.title || `分镜 ${img.segmentId || idx + 1}`,
-          imagePrompt: img.description || img.imagePrompt || '',
-          fullText: img.fullText || img.narrativePurpose || img.description || '',
-          narrativePurpose: img.narrativePurpose || img.fullText || img.description || '',
+          // ⭐ SSOT: visualDescription 统一字段
+          visualDescription: img.visualDescription || img.description || img.fullText || '',
           shotPattern: img.shotPattern || '',
           emotionArc: img.emotionArc || '',
           sortOrder: img.sortOrder || idx,

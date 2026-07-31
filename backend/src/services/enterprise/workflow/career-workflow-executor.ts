@@ -30,10 +30,11 @@ import { MemoryNamespaceService } from '../memory-namespace.service'
 // ─── 类型定义 ───────────────────────────────────────────
 
 export type CareerWorkflowType =
-  | 'job_change'           // 换工作：简历分析→岗位搜索→匹配→行动计划
-  | 'skill_gap'            // 技能差距分析
-  | 'interview_prep'       // 面试准备
-  | 'salary_negotiation'   // 薪资谈判
+  | 'job_change'                // 换工作：简历分析→岗位搜索→匹配→行动计划
+  | 'skill_gap'                 // 技能差距分析
+  | 'interview_prep'            // 面试准备
+  | 'salary_negotiation'        // 薪资谈判
+  | 'career_profile_analysis'   // 职业优势分析（不搜索岗位，只基于用户画像做洞察）
 
 export interface CareerWorkflowRequest {
   workflowType: CareerWorkflowType
@@ -167,6 +168,9 @@ export class CareerWorkflowExecutor {
           break
         case 'salary_negotiation':
           workflowOutput = await this.runSalaryNegotiation(toolCtx, req, availableTools, steps, toolsUsed)
+          break
+        case 'career_profile_analysis':
+          workflowOutput = await this.runCareerProfileAnalysis(toolCtx, req, steps, toolsUsed)
           break
         default:
           throw new Error(`Unknown career workflow type: ${req.workflowType}`)
@@ -547,6 +551,85 @@ export class CareerWorkflowExecutor {
     }
   }
 
+  /**
+   * career_profile_analysis — 职业优势分析
+   * Sprint-09D-01 Task 04: 基于用户画像做洞察，不搜索岗位
+   *
+   * 步骤：读取 CareerProfile → LLM 分析优势 → 输出结构化建议
+   *
+   * 与企业端 job_change 的区别：
+   *   - 不调用 resume_analyze（企业端 Resume 模型）
+   *   - 不调用 job_search / job_match
+   *   - 直接基于 CareerProfile 数据做语义分析
+   *   - 第一次任务失败（无 LLM key）时返回结构化占位
+   */
+  private async runCareerProfileAnalysis(
+    ctx: CareerToolContext,
+    req: CareerWorkflowRequest,
+    steps: CareerWorkflowStep[],
+    toolsUsed: string[],
+  ): Promise<CareerWorkflowOutput> {
+    // Step 1: 读取用户 CareerProfile
+    let profileData: any = null
+    try {
+      profileData = await (this.prisma as any).careerProfile.findFirst({
+        where: { userId: req.userId },
+        include: {
+          workExperiences: { orderBy: { startDate: 'desc' }, take: 3 },
+          skills: { select: { skillName: true, proficiencyLevel: true }, take: 15 },
+          educations: { orderBy: { startDate: 'desc' }, take: 2 },
+        },
+      })
+    } catch {
+      // 表不存在或读取失败 — 降级
+    }
+    steps.push({
+      stepNumber: 1,
+      action: '读取职业画像',
+      result: profileData ? 'success' : 'failed',
+      summary: profileData
+        ? `找到 ${profileData.fullName || '用户'} 的职业画像，${profileData.skills?.length || 0} 项技能`
+        : '暂未找到职业画像数据，将基于已有信息分析',
+      sources: profileData ? ['CareerProfile'] : [],
+    })
+
+    // Step 2: LLM 优势分析（走 Gateway → BYOK）
+    const prompt = this.buildProfileAnalysisPrompt(profileData, req.params)
+    const llmAgentId = await this.resolveAgentProfileId(req.agentId, req.tenantId)
+
+    let llmOutput: string
+    let llmSuccess = false
+    try {
+      const llmResult = await this.executor.execute(llmAgentId, prompt, {
+        organizationId: req.tenantId,
+        actorId: req.userId,
+        permissionScope: ['agent:execute', 'career:profile_analysis'],
+        userId: req.userId,
+      })
+      llmOutput = llmResult.output
+      llmSuccess = true
+      toolsUsed.push('career_profile_analysis')
+    } catch (err: any) {
+      llmOutput = profileData
+        ? this.buildFallbackAnalysis(profileData)
+        : this.buildAnonymousFallback()
+    }
+    steps.push({
+      stepNumber: 2,
+      action: 'AI 优势分析',
+      result: llmSuccess ? 'success' : 'failed',
+      summary: llmSuccess ? '分析完成' : '使用结构化模板生成建议',
+      sources: [],
+    })
+
+    return {
+      summary: this.parseProfileSummary(llmOutput),
+      findings: this.extractFindings(llmOutput, profileData),
+      actions: this.extractActions(llmOutput),
+      plan: this.extractPlan(llmOutput),
+    }
+  }
+
   // ─── Agent Profile 解析 ────────────────────────────────
 
   /**
@@ -682,7 +765,194 @@ ${(salary?.recommendations || []).map((r: string) => `- ${r}`).join('\n') || '�
 直接输出文字，不要 JSON。`
   }
 
-  // ─── 辅助方法 ─────────────────────────────────────────
+  // ─── Career Profile Analysis 辅助方法 ────────────────
+
+  /**
+   * 构建 LLM prompt — 不做岗位搜索，只基于画像做洞察
+   */
+  private buildProfileAnalysisPrompt(profile: any, params?: Record<string, any>): string {
+    const skills = profile?.skills?.map((s: any) => s.skillName).join(', ') || params?.skills?.join(', ') || ''
+    const experiences = profile?.workExperiences?.map((w: any) =>
+      `${w.title} @ ${w.company} (${w.startDate?.toISOString?.()?.slice(0, 7) || ''} - ${w.endDate?.toISOString?.()?.slice(0, 7) || '至今'})`
+    ).join('\n') || params?.experience || ''
+    const education = profile?.educations?.map((e: any) =>
+      `${e.degree} - ${e.major} @ ${e.school}`
+    ).join('\n') || ''
+
+    return `你是镜心，用户的 AI 职业伙伴。
+
+请根据以下用户信息进行职业优势分析。
+
+## 用户信息
+- 姓名: ${profile?.fullName || params?.fullName || '用户'}
+- 职位方向: ${profile?.careerDirection || params?.careerGoal || params?.currentRole || ''}
+- 所在城市: ${profile?.city || params?.city || ''}
+- 经验年限: ${profile?.yearsExperience || params?.yearsExperience || ''} 年
+- 当前级别: ${profile?.currentLevel || ''}
+- 行业: ${profile?.industry || ''}
+- 期望薪资: ${params?.expectedSalary || params?.salary || ''}
+
+## 技能
+${skills || '暂未记录'}
+
+## 工作经历
+${experiences || '暂未记录'}
+
+## 教育背景
+${education || '暂未记录'}
+
+请生成一份职业优势分析，格式要求：
+
+=== 核心优势 ===
+列出 2-3 条最突出的个人优势，每行一条，以 "🎯" 开头
+
+=== 适合方向 ===
+列出 2-3 个适合的职业方向或岗位类型，每行一条
+
+=== 下一步建议 ===
+列出 2-3 条具体可执行的行动建议
+
+直接输出文字，不要 JSON。`
+  }
+
+  /**
+   * 降级分析 — 有 CareerProfile 但 LLM 不可用时
+   */
+  private buildFallbackAnalysis(profile: any): string {
+    const skills = profile?.skills?.map((s: any) => s.skillName).join(', ') || ''
+    return [
+      '=== 核心优势 ===',
+      `🎯 ${skills ? '核心技能: ' + skills : '具备基础职业素养'}`,
+      profile?.yearsExperience ? `🎯 ${profile.yearsExperience} 年行业经验` : '',
+      profile?.careerDirection ? `🎯 明确职业方向: ${profile.careerDirection}` : '',
+      '',
+      '=== 适合方向 ===',
+      profile?.careerDirection ? `🎯 ${profile.careerDirection} 相关岗位` : '🎯 垂直领域岗位',
+      profile?.industry ? `🎯 ${profile.industry} 行业机会` : '',
+      '',
+      '=== 下一步建议 ===',
+      '🎯 完善简历，突出核心技能和项目经验',
+      '🎯 持续关注目标行业的最新动态和招聘需求',
+      '🎯 建立行业人脉，拓展职业机会',
+    ].filter(Boolean).join('\n')
+  }
+
+  /**
+   * 降级分析 — 无 CareerProfile 且 LLM 不可用时
+   */
+  private buildAnonymousFallback(): string {
+    return [
+      '=== 核心优势 ===',
+      '🎯 你的职业背景和技能组合具有发展潜力',
+      '🎯 建议完善个人资料以获取更精准的分析',
+      '',
+      '=== 适合方向 ===',
+      '🎯 在个人资料中补充职业方向和目标',
+      '🎯 系统将根据你的画像匹配适合的岗位',
+      '',
+      '=== 下一步建议 ===',
+      '🎯 完成职业画像，让镜心更了解你',
+      '🎯 补充技能和经验信息',
+      '🎯 关注行业趋势，发现适合的机会',
+    ].join('\n')
+  }
+
+  /**
+   * 从 LLM 输出中提取摘要（第一段非标签行）
+   */
+  private parseProfileSummary(output: string): string {
+    return output
+      .replace(/===.*===/g, '')
+      .replace(/🎯.*/g, '')
+      .split('\n')
+      .filter(l => l.trim())
+      .slice(0, 3)
+      .join(' ')
+      .trim()
+      .slice(0, 200)
+  }
+
+  /**
+   * 从 LLM 输出中提取发现项
+   */
+  private extractFindings(output: string, profile: any): CareerWorkflowOutput['findings'] {
+    const findings: CareerWorkflowOutput['findings'] = []
+
+    // 解析 === 核心优势 === 后的内容
+    const coreSection = output.match(/=== 核心优势 ===([\s\S]*?)(?:===|$)/)
+    if (coreSection) {
+      const lines = coreSection[1].split('\n').filter(l => l.trim() && l.includes('🎯'))
+      lines.slice(0, 3).forEach(l => {
+        findings.push({
+          type: 'opportunity',
+          content: l.replace(/🎯\s*/, '').trim(),
+          sources: ['CareerProfile'],
+        })
+      })
+    }
+
+    // 解析 === 适合方向 === 后的内容
+    const directionSection = output.match(/=== 适合方向 ===([\s\S]*?)(?:===|$)/)
+    if (directionSection) {
+      const lines = directionSection[1].split('\n').filter(l => l.trim() && l.includes('🎯'))
+      lines.slice(0, 2).forEach(l => {
+        findings.push({
+          type: 'info',
+          content: l.replace(/🎯\s*/, '').trim(),
+          sources: ['CareerProfile'],
+        })
+      })
+    }
+
+    return findings
+  }
+
+  /**
+   * 从 LLM 输出中提取行动建议
+   */
+  private extractActions(output: string): CareerWorkflowOutput['actions'] {
+    const actions: CareerWorkflowOutput['actions'] = []
+
+    const actionSection = output.match(/=== 下一步建议 ===([\s\S]*?)$/)
+    if (actionSection) {
+      const lines = actionSection[1].split('\n').filter(l => l.trim() && l.includes('🎯'))
+      lines.slice(0, 3).forEach(l => {
+        actions.push({
+          action: '建议',
+          target: l.replace(/🎯\s*/, '').trim(),
+          priority: 'medium',
+          reason: l.replace(/🎯\s*/, '').trim(),
+          sources: ['CareerProfile'],
+        })
+      })
+    }
+
+    return actions
+  }
+
+  /**
+   * 从 LLM 输出中提取执行计划
+   */
+  private extractPlan(output: string): CareerWorkflowOutput['plan'] {
+    const plan: CareerWorkflowOutput['plan'] = []
+
+    const actionSection = output.match(/=== 下一步建议 ===([\s\S]*?)$/)
+    if (actionSection) {
+      const lines = actionSection[1].split('\n').filter(l => l.trim() && l.includes('🎯'))
+      lines.slice(0, 3).forEach((l, i) => {
+        plan.push({
+          step: i + 1,
+          action: '执行',
+          detail: l.replace(/🎯\s*/, '').trim(),
+          timeframe: '1-2 周',
+        })
+      })
+    }
+
+    return plan
+  }
+
+  // ─── 原有辅助方法 ────────────────────────────────────────
 
   private parseLLMSummary(output: string): string {
     return output

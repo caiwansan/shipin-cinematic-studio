@@ -1,3 +1,9 @@
+<!--
+  @deprecated
+  Reality Recovery Phase5
+  Production path unused — 依赖 /api/repair、/api/trace/:id、/api/replay（后端 gateway 层未注册，404）。
+  保留：旧调试台，勿删除。
+-->
 <template>
   <NuxtLayout name="workbench">
     <div class="space-y-6 max-w-6xl">
@@ -117,7 +123,7 @@ const dagOptions = [
 ]
 
 // 连接真实 SSE 事件流
-const sse = useSSEStream()
+const sse = useSSEStream(false)
 
 // 页面挂载时启动健康轮询
 onMounted(() => {

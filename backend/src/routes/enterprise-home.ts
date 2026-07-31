@@ -13,6 +13,7 @@
  */
 
 import type { FastifyInstance } from 'fastify'
+import { prisma } from '../utils/index.js'
 import { enterpriseHomeRepository } from '../repositories/recruitment/enterprise-home.repository.js'
 import { mapEnterpriseHome } from '../mappers/recruitment/enterprise-home.mapper.js'
 import { getEnterpriseContext } from '../repositories/recruitment/enterprise-member.repository.js'
@@ -51,14 +52,32 @@ export async function enterpriseHomeRoutes(app: FastifyInstance) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
 
+      // 获取企业真实名称
+      let enterpriseName: string | null = null
+      try {
+        const org = await prisma.organization.findUnique({
+          where: { id: context.enterpriseId },
+          select: { name: true },
+        })
+        enterpriseName = org?.name || null
+      } catch {
+        // 非致命，继续返回
+      }
+
       const rawData = await enterpriseHomeRepository.fetchHomeData({
         enterpriseId: context.enterpriseId,
         today,
+        // AI Agent 实例使用 userId 作为 tenantId
+        agentTenantId: userId,
       })
 
       const dto = mapEnterpriseHome(rawData)
 
-      return reply.send({ hasEnterprise: true, ...dto })
+      return reply.send({
+        hasEnterprise: true,
+        enterpriseName,
+        ...dto,
+      })
     } catch (error: any) {
       request.log.error({ err: error }, 'Failed to fetch enterprise home')
       return reply.status(500).send({

@@ -21,6 +21,12 @@
     <!-- Advertisement (广告短视频创作) -->
     <AdvertisementWorkspace v-else-if="workspaceId === 'voice-generation'" />
 
+    <!-- Final Render (合成输出) -->
+    <FinalRenderWorkspace v-else-if="workspaceId === 'final-render'" />
+
+    <!-- Dubbing Render (配音合成) -->
+    <DubbingRenderWorkspace v-else-if="workspaceId === 'dubbing-render'" />
+
     <!-- 后续阶段占位 -->
     <div v-else class="placeholder-workspace">
       <div class="placeholder-icon">{{ placeholderIcon }}</div>
@@ -39,6 +45,8 @@ import StoryboardWorkspace from '~/studio-v2/workspace/storyboard/StoryboardWork
 import VideoGenerationWorkspace from '~/studio-v2/workspace/video-generation/VideoGenerationWorkspace.vue'
 import MusicGenerationWorkspace from '~/studio-v2/workspace/music-generation/MusicGenerationWorkspace.vue'
 import AdvertisementWorkspace from '~/studio-v2/workspace/advertisement/AdvertisementWorkspace.vue'
+import FinalRenderWorkspace from '~/studio-v2/workspace/final-render/FinalRenderWorkspace.vue'
+import DubbingRenderWorkspace from '~/studio-v2/workspace/dubbing-render/DubbingRenderWorkspace.vue'
 
 const props = defineProps<{
   workspaceId: WorkspaceId
@@ -49,6 +57,7 @@ const stageTitles: Record<string, string> = {
   'voice-generation': '广告创作',
   'music-generation': '音乐生成',
   'final-render': '合成输出',
+  'dubbing-render': '配音合成',
 }
 
 const stageDescriptions: Record<string, string> = {

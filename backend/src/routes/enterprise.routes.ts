@@ -15,6 +15,7 @@ import type { FastifyInstance } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import { EnterpriseRecruitAgent } from '../agents/job/enterprise-recruit-agent'
 import { resolveEnterpriseId } from '../services/enterprise-context.service.js'
+import { requireEnterpriseCapability } from '../middleware/require-enterprise-capability.js'
 
 const prisma = new PrismaClient()
 
@@ -106,9 +107,9 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── AI 生成 JD ───
+  // ─── AI 生成 JD（Capability Gate: AI_JD_GENERATE） ───
 
-  fastify.post('/api/enterprise/jd/generate', async (request, reply) => {
+  fastify.post('/api/enterprise/jd/generate', { preHandler: requireEnterpriseCapability('AI_JD_GENERATE') }, async (request, reply) => {
     const userId = (request.user as any)?.id || (request.user as any)?.userId
     if (!userId) {
       return reply.status(401).send({ error: '用户未认证' })
@@ -137,7 +138,8 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
 
     try {
       const agent = new EnterpriseRecruitAgent()
-      const result = agent.generateJD({
+      // Sprint-RECRUITMENT-REALITY-02 Task 03: LLM 真实生成（模板仅在 LLM 不可用时兜底）
+      const result = await agent.generateJDWithLLM({
         companyName: body.companyName || '贵公司',
         position: body.position,
         industry: body.industry,
@@ -146,17 +148,20 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
         location: body.location,
         requirements: body.requirements,
         benefits: body.benefits,
+      }, {
+        userId: String(userId),
+        tenantId: String(enterpriseId),
       })
 
-      return { success: true, jd: result }
+      return { success: true, jd: result, aiSource: result.aiSource }
     } catch (e: any) {
       return reply.status(500).send({ error: 'JD 生成失败', detail: e.message })
     }
   })
 
-  // ─── 岗位优化建议 ───
+  // ─── 岗位优化建议（Capability Gate: AI_JD_GENERATE） ───
 
-  fastify.post('/api/enterprise/jd/optimize', async (request, reply) => {
+  fastify.post('/api/enterprise/jd/optimize', { preHandler: requireEnterpriseCapability('AI_JD_GENERATE') }, async (request, reply) => {
     const body = request.body as {
       title: string
       description: string
@@ -187,7 +192,9 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
 
   // ─── 人才匹配 ───
 
-  fastify.post('/api/enterprise/match', async (request, reply) => {
+  // ─── 人才匹配（Capability Gate: AI_RESUME_MATCH） ───
+
+  fastify.post('/api/enterprise/match', { preHandler: requireEnterpriseCapability('AI_RESUME_MATCH') }, async (request, reply) => {
     const userId = (request.user as any)?.id || (request.user as any)?.userId
     if (!userId) {
       return reply.status(401).send({ error: '用户未认证' })
@@ -334,15 +341,6 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
           ...(jobId ? { jobId } : {}),
         },
         include: {
-          candidate: {
-            select: {
-              profileJson: true,
-              skills: true,
-              education: true,
-              experience: true,
-              city: true,
-            },
-          },
           job: {
             select: {
               title: true,
@@ -355,13 +353,20 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
         take: 20,
       })
 
+      // Sprint-SSOT-SCHEMA-CLEANUP 修复: candidate 关系已移除，按 candidateId 补查 profile
+      const profileIds = [...new Set(matches.map(m => m.candidateId))]
+      const profiles = profileIds.length > 0
+        ? await prisma.careerProfile.findMany({ where: { id: { in: profileIds } }, select: { id: true, fullName: true, headline: true, city: true } })
+        : []
+      const profileMap = new Map(profiles.map(p => [p.id, p]))
+
       return {
         matches: matches.map(m => ({
           id: m.id,
           jobId: m.jobId,
           jobTitle: m.job?.title || '',
           candidateId: m.candidateId,
-          candidateName: (m.candidate?.profileJson as any)?.name || '求职者',
+          candidateName: profileMap.get(m.candidateId)?.fullName || '求职者',
           matchScore: m.matchScore,
           matchBreakdown: m.matchBreakdown,
           status: m.status,
@@ -376,7 +381,9 @@ export async function enterpriseRoutes(fastify: FastifyInstance) {
 
   // ─── 更新匹配状态 ───
 
-  fastify.post('/api/enterprise/matches/status', async (request, reply) => {
+  // ─── 匹配结果状态（Capability Gate: AI_CANDIDATE_RECOMMEND） ───
+
+  fastify.post('/api/enterprise/matches/status', { preHandler: requireEnterpriseCapability('AI_CANDIDATE_RECOMMEND') }, async (request, reply) => {
     const body = request.body as {
       matchId: string
       status: 'pending' | 'contacted' | 'rejected' | 'hired'

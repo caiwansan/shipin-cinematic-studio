@@ -12,6 +12,7 @@ import type { RuntimePayload } from '../runtime/runtime-payload.js'
 import { getProviderStateService } from '../runtime/provider-state/index.js'
 import { safetyGate, onSuccess, onFailure } from '../execution-safety/index.js'
 import { traceService } from '../execution-trace/index.js'
+import { normalizeProviderError } from '../services/provider-error-normalizer.js'
 
 export class ModelAdapterRegistry {
   private adapters: Map<string, ModelAdapter> = new Map()
@@ -186,7 +187,12 @@ export class ModelAdapterRegistry {
         })
         // Provider State: 纯记录（fire-and-forget）
         getProviderStateService().markFailure(userId, provider, execErr, apiKey, newState.failureCount, newState.circuitOpenedAt).catch(() => {})
-        throw execErr
+
+        // ⭐ 错误规范化：Provider 原始错误 → 用户可理解的产品化错误
+        const normalized = normalizeProviderError(execErr, provider)
+        const normalizedErr = new Error(`${normalized.code}: ${normalized.message}`)
+        console.error(`[ModelAdapter] ❌ adapter ${adapter.name} 失败: ${normalized.raw?.slice(0, 200) || execErr.message}`)
+        throw normalizedErr
       }
 
       // Safety Layer: 成功后重置

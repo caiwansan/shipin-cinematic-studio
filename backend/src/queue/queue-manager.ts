@@ -252,6 +252,31 @@ export function createWorker(
           }
         }
 
+        // ⭐ SSOT（SHORTDRAMA-DATA-SSOT Phase 3）: Worker 完成任务 → 写 pipeline_stages
+        //    前端只读 stage，不自行维护完成状态
+        try {
+          const stageKey = TASK_TYPE_TO_STAGE[payload.taskType]
+          if (stageKey && payload.projectId) {
+            await prisma.pipelineStage.upsert({
+              where: { projectId_stageKey: { projectId: payload.projectId, stageKey } },
+              create: {
+                projectId: payload.projectId,
+                stageKey,
+                status: 'done',
+                outputData: { lastTaskId: payload.taskId, completedAt: new Date().toISOString() },
+                completedAt: new Date(),
+              },
+              update: {
+                status: 'done',
+                outputData: { lastTaskId: payload.taskId, completedAt: new Date().toISOString() },
+                completedAt: new Date(),
+              },
+            }).catch((e: any) => console.warn(`[QueueManager] ⚠️ stage 写入失败: ${e.message}`))
+          }
+        } catch (e: any) {
+          console.warn(`[QueueManager] ⚠️ stage upsert 异常: ${e.message}`)
+        }
+
         taskEventEmitter.emit('task:progress', {
           taskId: payload.taskId,
           projectId: payload.projectId,
@@ -269,6 +294,30 @@ export function createWorker(
             where: { id: payload.taskId },
             data: { status: 'failed', error: err.message },
           }).catch(() => {})
+        }
+
+        // ⭐ SSOT（SHORTDRAMA-DATA-SSOT Phase 3）: 任务失败 → stage 写 error（前端可展示用户语言）
+        try {
+          const stageKey = TASK_TYPE_TO_STAGE[payload.taskType]
+          if (stageKey && payload.projectId) {
+            await prisma.pipelineStage.upsert({
+              where: { projectId_stageKey: { projectId: payload.projectId, stageKey } },
+              create: {
+                projectId: payload.projectId,
+                stageKey,
+                status: 'error',
+                error: String(err?.message || 'AI 生成失败').slice(0, 500),
+                outputData: { lastTaskId: payload.taskId, failedAt: new Date().toISOString() },
+              },
+              update: {
+                status: 'error',
+                error: String(err?.message || 'AI 生成失败').slice(0, 500),
+                outputData: { lastTaskId: payload.taskId, failedAt: new Date().toISOString() },
+              },
+            }).catch((e: any) => console.warn(`[QueueManager] ⚠️ stage error 写入失败: ${e.message}`))
+          }
+        } catch (e: any) {
+          console.warn(`[QueueManager] ⚠️ stage error upsert 异常: ${e.message}`)
         }
 
         taskEventEmitter.emit('task:progress', {
@@ -362,6 +411,17 @@ export async function getQueueStats() {
 // ======== 工具函数 ========
 function safeParseJSON(s: string): any {
   try { return JSON.parse(s) } catch { return {} }
+}
+
+// ⭐ SSOT（SHORTDRAMA-DATA-SSOT Phase 3）: taskType → pipeline stage key 映射
+//    与 shared/pipeline-definition.ts 的 stage id 保持一致（宪法规定）
+const TASK_TYPE_TO_STAGE: Record<string, string> = {
+  video: 'video-generation',
+  image: 'storyboard',
+  frame: 'storyboard',
+  tts: 'voice-generation',
+  llm: 'script-analysis',
+  export: 'final-render',
 }
 
 // ======== 兼容旧接口 ========

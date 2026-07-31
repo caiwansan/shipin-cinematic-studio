@@ -99,7 +99,7 @@ const AD_STAGES: PipelineStageDef[] = [
 // ══════════════════════════════════════════════════════════
 
 const JOB_STAGES: PipelineStageDef[] = [
-  { key: 'job-career', label: '💼 AI求职助手', description: '聊天式求职，生成职业画像' },
+  { key: 'job-career', label: '🪞 镜心 · AI 职业伙伴', description: '认识自己 · 规划方向 · 发现机会 · 提升竞争力' },
   { key: 'job-match', label: '🎯 岗位匹配', description: '智能推荐匹配岗位' },
   { key: 'job-enterprise', label: '🏢 企业招聘', description: '企业发布岗位、简历筛选' },
 ]

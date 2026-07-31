@@ -1,3 +1,9 @@
+<!--
+  @deprecated
+  Reality Recovery Phase5
+  Production path unused — 全仓 0 import，调用 /api/workbench/*（后端未注册，404）。
+  保留：未完成未来层，勿删除。
+-->
 <template>
   <div class="mock-runner">
     <div class="runner-header">

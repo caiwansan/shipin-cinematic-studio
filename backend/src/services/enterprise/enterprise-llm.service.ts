@@ -107,7 +107,14 @@ export class EnterpriseLlmService {
     const data: any = {}
     if (input.provider !== undefined) data.provider = input.provider
     if (input.modelName !== undefined) data.modelName = input.modelName
-    if (input.apiKey !== undefined) data.encryptedApiKey = encryptKey(input.apiKey)
+    if (input.apiKey !== undefined) {
+      data.encryptedApiKey = encryptKey(input.apiKey)
+      // Sprint-05 T01: 重新配置 key 后重置健康状态 → untested（待重新检测验证）
+      data.healthStatus = 'untested'
+      data.healthError = null
+      data.healthLatencyMs = null
+      data.lastHealthCheckAt = null
+    }
     if (input.baseUrl !== undefined) data.baseUrl = input.baseUrl
     if (input.maxTokensPerDay !== undefined) data.maxTokensPerDay = input.maxTokensPerDay
     if (input.maxRequestsPerMinute !== undefined) data.maxRequestsPerMinute = input.maxRequestsPerMinute

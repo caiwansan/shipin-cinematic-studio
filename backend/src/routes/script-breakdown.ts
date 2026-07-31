@@ -66,32 +66,41 @@ function toResponse(record: any): TaskResponse {
 export default async function scriptBreakdownRoutes(app: FastifyInstance) {
 
   // GET /api/v1/script-breakdown/:id — 查询任务
-  app.get('/api/v1/script-breakdown/:id', async (request, reply) => {
+  // @deprecated — Reality Recovery Phase6: 前端 0 生产引用（现行链 = /api/script/submit）
+  app.get('/api/v1/script-breakdown/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
     const record = await prisma.scriptBreakdown.findUnique({ where: { id } })
     if (!record) {
       reply.status(404).send({ success: false, error: '任务不存在' })
       return
     }
+    // ⭐ Phase 6 安全隔离: 归属校验
+    if (record.userId !== (request as any).user?.id) {
+      return reply.status(403).send({ success: false, error: '无权访问该任务' })
+    }
     return { success: true, data: toResponse(record) }
   })
 
   // GET /api/v1/script-breakdown — 列表
-  app.get('/api/v1/script-breakdown', async (request, reply) => {
+  // @deprecated — Reality Recovery Phase6: 前端 0 生产引用
+  app.get('/api/v1/script-breakdown', { preHandler: [app.authenticate] }, async (request, reply) => {
     const query = request.query as any
     const limit = Math.min(parseInt(query.limit || '20'), 100)
     const offset = parseInt(query.offset || '0')
+    // ⭐ Phase 6 安全隔离: 只返回当前用户的任务
     const records = await prisma.scriptBreakdown.findMany({
+      where: { userId: (request as any).user?.id },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
     })
-    const total = await prisma.scriptBreakdown.count()
+    const total = await prisma.scriptBreakdown.count({ where: { userId: (request as any).user?.id } })
     return { success: true, data: records.map(toResponse), total }
   })
 
   // POST /api/v1/script-breakdown — 创建新任务
-  app.post('/api/v1/script-breakdown', async (request, reply) => {
+  // @deprecated — Reality Recovery Phase6: 前端 0 生产引用
+  app.post('/api/v1/script-breakdown', { preHandler: [app.authenticate] }, async (request, reply) => {
     const input = request.body as CreateTaskInput
     if (!input.script?.trim()) {
       reply.status(400).send({ success: false, error: '剧本全文不能为空' })
@@ -101,8 +110,8 @@ export default async function scriptBreakdownRoutes(app: FastifyInstance) {
     const title = input.title || '未命名项目'
     const targetDuration = input.targetDuration || 60
     const segmentDuration = input.segmentDuration || 10
-    const userId = input.userId || 
-      (request.headers?.['x-user-id'] as string) || ''
+    // ⭐ Phase 6 安全隔离: userId 只从认证身份取，禁止 body.userId / x-user-id 伪造
+    const userId = (request as any).user?.id || ''
 
     const fixedPrompt = await getAnalyzeV2Prompt()
     const record = await prisma.scriptBreakdown.create({
@@ -121,12 +130,17 @@ export default async function scriptBreakdownRoutes(app: FastifyInstance) {
   })
 
   // POST /api/v1/script-breakdown/:id/submit — 提交 AI 拆解
-  app.post('/api/v1/script-breakdown/:id/submit', async (request, reply) => {
+  // @deprecated — Reality Recovery Phase6: 前端 0 生产引用
+  app.post('/api/v1/script-breakdown/:id/submit', { preHandler: [app.authenticate] }, async (request, reply) => {
     const { id } = request.params as any
     const record = await prisma.scriptBreakdown.findUnique({ where: { id } })
     if (!record) {
       reply.status(404).send({ success: false, error: '任务不存在' })
       return
+    }
+    // ⭐ Phase 6 安全隔离: 归属校验
+    if (record.userId !== (request as any).user?.id) {
+      return reply.status(403).send({ success: false, error: '无权操作该任务' })
     }
     if (record.status === 2) {
       reply.status(400).send({ success: false, error: '任务已完成' })

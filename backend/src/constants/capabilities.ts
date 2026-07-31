@@ -57,6 +57,9 @@ export const AI_JOB_RECOMMEND = 'AI_JOB_RECOMMEND';
 export const AI_SALARY_ANALYSIS = 'AI_SALARY_ANALYSIS';
 export const AI_OFFER_ANALYSIS = 'AI_OFFER_ANALYSIS';
 
+// ── 求职者域：Agent 权益 ──
+export const CAREER_AGENT_PROVISION = 'CAREER_AGENT_PROVISION';
+
 /**
  * 全部 Capability 集合
  */
@@ -91,6 +94,7 @@ export const ALL_CAPABILITIES = {
   JOB_SEARCH,
   AI_RESUME_OPTIMIZE,
   AI_RESUME_REWRITE,
+  CAREER_AGENT_PROVISION,
   AI_CAREER_COACH,
   AI_INTERVIEW_PRACTICE,
   AI_JOB_RECOMMEND,
@@ -188,6 +192,7 @@ export const PLAN_CAPABILITY_MATRIX: Record<string, Capability[]> = {
     API_ACCESS,
   ],
   career_agent: [
+    CAREER_AGENT_PROVISION,
     PROFILE_BUILD, RESUME_UPLOAD, RESUME_MANAGE,
     JOB_APPLY, JOB_VIEW, JOB_SEARCH,
     AI_RESUME_OPTIMIZE, AI_RESUME_REWRITE,
@@ -217,7 +222,7 @@ export const PLAN_METADATA: Record<string, { name: string; description: string }
     description: '企业治理：API 访问、高级权限、无限额度',
   },
   career_agent: {
-    name: 'Career Agent',
-    description: 'AI 求职助手：简历优化、模拟面试、职业规划',
+    name: '镜心职业助理',
+    description: '你的 AI 职业伙伴。认识自己、规划方向、寻找机会、提升竞争力。',
   },
 };

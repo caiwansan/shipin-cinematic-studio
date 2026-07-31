@@ -11,6 +11,7 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { resolveEnterpriseId } from '../services/enterprise-context.service.js'
+import { requireEnterpriseCapability } from '../middleware/require-enterprise-capability.js'
 
 // ─── Helper: resolve workspaceId → enterpriseId (legacy) ───
 async function resolveEnterpriseIdFromWorkspace(workspaceId?: string): Promise<string | null> {
@@ -81,6 +82,15 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
         : []
       const countMap = new Map(candidateCounts.map(c => [c.jobId, c._count.id]))
 
+      const channelCounts = jobIds.length > 0
+        ? await prisma.recruitmentChannelMapping.groupBy({
+            by: ['jobId'],
+            where: { jobId: { in: jobIds } },
+            _count: { id: true },
+          })
+        : []
+      const channelCountMap = new Map(channelCounts.map(c => [c.jobId, c._count.id]))
+
       const jobsWithCount = jobs.map(job => ({
         id: job.id,
         title: job.title,
@@ -97,6 +107,7 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
         candidateCount: countMap.get(job.id) || 0,
+        channelCount: channelCountMap.get(job.id) || 0,
       }))
 
       return reply.status(200).send({ success: true, data: jobsWithCount, total: jobsWithCount.length })
@@ -110,13 +121,9 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
   fastify.get('/api/enterprise/postings/:id', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
-      const { workspaceId } = request.query as { workspaceId?: string }
 
       const userId = (request as any).user?.id || (request as any).userId
-      let enterpriseId = await resolveEnterpriseIdFromWorkspace(workspaceId)
-      if (!enterpriseId && userId) {
-        enterpriseId = await resolveEnterpriseId(userId)
-      }
+      const enterpriseId = await resolveEnterpriseId(userId)
       if (!enterpriseId) {
         return reply.status(400).send({ error: 'No enterprise identity found' })
       }
@@ -128,7 +135,7 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
       if (!job) return reply.status(404).send({ error: 'Job not found' })
 
       // 获取关联数据
-      const [candidateCount, recentCandidates] = await Promise.all([
+      const [candidateCount, recentCandidates, channelMappings] = await Promise.all([
         prisma.recruitmentPipeline.count({ where: { jobId: id } }),
         prisma.recruitmentPipeline.findMany({
           where: { jobId: id },
@@ -139,6 +146,12 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
             candidateName: true,
             stage: true,
             screeningScore: true,
+          },
+        }),
+        prisma.recruitmentChannelMapping.findMany({
+          where: { jobId: id },
+          include: {
+            channel: { select: { id: true, name: true, type: true } },
           },
         }),
       ])
@@ -164,6 +177,15 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
           updatedAt: job.updatedAt,
           candidateCount,
           recentCandidates,
+          channelCount: channelMappings.length,
+          channels: channelMappings.map(m => ({
+            id: m.id,
+            channelId: m.channelId,
+            channel: m.channel,
+            status: m.status,
+            channelJobId: m.channelJobId,
+            createdAt: m.createdAt,
+          })),
         },
       })
     } catch (error: any) {
@@ -172,8 +194,74 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
     }
   })
 
-  // ─── GET /api/enterprise/candidates — 企业候选人列表 ───
-  fastify.get('/api/enterprise/candidates', async (request, reply) => {
+  // ─── GET /api/enterprise/channels — 可用的招聘发布渠道 ───
+  fastify.get('/api/enterprise/channels', async (request, reply) => {
+    try {
+      const channels = await prisma.recruitmentChannel.findMany({
+        where: { enabled: true },
+        orderBy: { sortOrder: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          description: true,
+        },
+      })
+      return reply.send({ success: true, data: channels })
+    } catch (error: any) {
+      request.log.error(`[job-posting] channels: ${error.message}`)
+      return reply.send({ success: true, data: [] })
+    }
+  })
+
+  // ─── POST /api/enterprise/postings/:id/channels — 发布职位到渠道 ───
+  fastify.post('/api/enterprise/postings/:id/channels', async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string }
+      const { channelIds } = request.body as { channelIds: string[] }
+
+      const userId = (request as any).user?.id || (request as any).userId
+      const enterpriseId = await resolveEnterpriseId(userId)
+      if (!enterpriseId) {
+        return reply.status(400).send({ error: 'No enterprise identity found' })
+      }
+
+      const job = await prisma.jobPosting.findFirst({
+        where: { id, enterpriseId },
+      })
+      if (!job) return reply.status(404).send({ error: 'Job not found' })
+
+      if (!channelIds?.length) {
+        return reply.status(400).send({ error: 'channelIds is required' })
+      }
+
+      // 批量创建映射（无复合唯一约束，逐条查询+upsert）
+      const mappings = []
+      for (const channelId of channelIds) {
+        const existing = await prisma.recruitmentChannelMapping.findFirst({
+          where: { jobId: id, channelId },
+        })
+        if (existing) {
+          mappings.push(await prisma.recruitmentChannelMapping.update({
+            where: { id: existing.id },
+            data: { status: 'published' },
+          }))
+        } else {
+          mappings.push(await prisma.recruitmentChannelMapping.create({
+            data: { jobId: id, channelId, status: 'published' },
+          }))
+        }
+      }
+
+      return reply.send({ success: true, data: mappings })
+    } catch (error: any) {
+      request.log.error(`[job-posting] publish channels: ${error.message}`)
+      return reply.status(500).send({ error: 'Publish failed', detail: error.message })
+    }
+  })
+
+  // ─── GET /api/enterprise/candidates — 企业候选人列表（Capability Gate: CANDIDATE_SEARCH） ───
+  fastify.get('/api/enterprise/candidates', { preHandler: requireEnterpriseCapability('CANDIDATE_SEARCH') }, async (request, reply) => {
     try {
       const userId = (request as any).user?.id || (request as any).userId
       if (!userId) {
@@ -197,44 +285,55 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
       }
 
       // 2. 获取所有匹配记录（按 matchScore 降序）
+      // ⚠️ candidate 关系已在 schema 中注释（待 Identity Consolidation），不能 include
       const matches = await prisma.candidateMatch.findMany({
         where: { jobId: { in: jobIds } },
         orderBy: { matchScore: 'desc' },
         include: {
-          candidate: {
-            select: {
-              id: true,
-              userId: true,
-              education: true,
-              skills: true,
-              experience: true,
-              city: true,
-              salaryExpectation: true,
-              careerGoal: true,
-            },
-          },
           job: {
             select: { id: true, title: true },
           },
         },
       })
 
-      // 3. 聚合同一候选人的最高匹配分
+      // 3. 从 CareerProfile 独立查询候选人信息
+      const candidateIds = [...new Set(matches.map(m => m.candidateId).filter(Boolean))]
+      const profiles = candidateIds.length > 0
+        ? await prisma.careerProfile.findMany({
+            where: { id: { in: candidateIds } },
+            select: {
+              id: true,
+              fullName: true,
+              headline: true,
+              city: true,
+              bio: true,
+              skills: { select: { name: true } },
+              workExperiences: { take: 1, select: { title: true } },
+              educations: { take: 1, select: { degree: true, field: true } },
+            },
+          })
+        : []
+      const profileMap = new Map(profiles.map(p => [p.id, p]))
+
+      // 4. 聚合同一候选人的最高匹配分
       const candidateMap = new Map<string, any>()
       for (const m of matches) {
-        if (!m.candidate) continue
-        const cid = m.candidate.id
+        const profile = profileMap.get(m.candidateId)
+        const cid = m.candidateId
         const existing = candidateMap.get(cid)
         if (!existing || m.matchScore > existing.matchScore) {
           candidateMap.set(cid, {
-            id: m.candidate.id,
-            education: m.candidate.education,
-            skills: m.candidate.skills,
-            experience: m.candidate.experience,
-            city: m.candidate.city,
-            salaryExpectation: m.candidate.salaryExpectation,
-            careerGoal: m.candidate.careerGoal,
+            id: cid,
+            fullName: profile?.fullName || '候选人',
+            education: profile?.educations?.[0]?.degree || profile?.educations?.[0]?.field || null,
+            skills: profile?.skills?.map(s => s.name) || [],
+            experience: profile?.headline || profile?.workExperiences?.[0]?.title || '',
+            city: profile?.city || '',
+            bio: profile?.bio || '',
             matchScore: m.matchScore,
+            matchBreakdown: m.matchBreakdown,
+            aiAnalysis: m.aiAnalysis,
+            matchId: m.id,
             jobId: m.job.id,
             jobTitle: m.job.title,
             matchStatus: m.status,
@@ -243,8 +342,14 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
         }
       }
 
-      const candidates = Array.from(candidateMap.values())
-      return reply.send({ success: true, candidates, total: candidates.length })
+      const allCandidates = Array.from(candidateMap.values())
+      const total = allCandidates.length
+      const { page = '1', pageSize = '20' } = request.query as { page?: string; pageSize?: string }
+      const pageNum = Math.max(1, parseInt(page, 10) || 1)
+      const limit = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 20))
+      const offset = (pageNum - 1) * limit
+      const candidates = allCandidates.slice(offset, offset + limit)
+      return reply.send({ success: true, candidates, total, page: pageNum, pageSize: limit })
     } catch (error: any) {
       request.log.error(`[job-posting] candidates: ${error.message}`)
       return reply.status(500).send({ error: 'Failed to fetch candidates' })

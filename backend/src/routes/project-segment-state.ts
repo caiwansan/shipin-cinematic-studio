@@ -10,6 +10,7 @@
 
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { verifyProjectOwner } from '../services/director/project-ownership.service.js'
 
 function extractUserId(request: any): string | null {
   try {
@@ -29,6 +30,12 @@ export default async function projectSegmentStateRoutes(app: FastifyInstance) {
     const projectId = (request.params as any).projectId
     if (!projectId) {
       return reply.status(400).send({ success: false, error: '缺少 projectId' })
+    }
+
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request as any).user?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
     }
 
     try {
@@ -98,6 +105,12 @@ export default async function projectSegmentStateRoutes(app: FastifyInstance) {
     const { projectId, segmentId } = body
     if (!projectId || !segmentId) {
       return reply.status(400).send({ success: false, error: '缺少 projectId 或 segmentId' })
+    }
+
+    // ⭐ Phase 6 安全隔离: 归属校验（防越权写入他人项目段状态）
+    const ownerCheck = await verifyProjectOwner(projectId, (request as any).user?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
     }
 
     try {

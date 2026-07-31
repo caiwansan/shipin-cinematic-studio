@@ -18,6 +18,16 @@
 
 import { prisma } from '../../utils/index.js';
 import { agentAuditService } from './agent-audit.service.js';
+import { employeeCapabilityService } from './employee-capability.service.js';
+
+// Sprint-10 Step 3A: Runtime Hardening Gates
+import { MemoryAccessGate, ToolPermissionRuntimeGate } from '../../agent-runtime/gates/index.js';
+
+// Sprint-08G: 企业 AI 员工不再强依赖 EnterpriseLlmConfig
+// 模型配置统一走 UserModelConfigV2 BYOK 链路
+// resolveRuntimeConfig 优先级: 输入层 > 企业配置(如有) > 平台配置 > 用户 BYOK > 系统默认
+const MODEL_SOURCE_ENTERPRISE = 'enterprise_config' as const;
+const MODEL_SOURCE_USER = 'user_config' as const;
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -33,6 +43,7 @@ export interface CreateAndActivateAgentParams {
 
 export interface ExecuteTaskResult {
   success: boolean;
+  taskId: string;
   output: string;
   tokenInput: number;
   tokenOutput: number;
@@ -49,6 +60,14 @@ export interface AgentActivationResult {
   runtimeStatus?: string;
   error?: string;
 }
+
+// ─── Sprint-09A-10: TaskType → CapabilityCode mapping ──
+// executeTask() 在执行前会检查 profile 是否绑定了所需的 capability
+const TASK_CAPABILITY_MAP: Record<string, string> = {
+  profile_extraction: 'career_agent',
+  generate_reply: 'career_agent',
+  general: 'career_agent',
+};
 
 // ─── Prompt Template Registry (轻量版) ──────────────────
 
@@ -230,8 +249,16 @@ const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
 请以专业、客观、有洞察力的角度回复。`,
 };
 
+// AgentType → Prompt 映射别名（招聘员工使用已注册的面试/猎聘提示词）
+const AGENT_TYPE_ALIASES: Record<string, string> = {
+  recruiter: 'talent_agent',         // Alice → 招聘顾问
+  interview: 'interview_agent',      // Bob → 面试专家
+  talent_analyst: 'talent_agent',    // Carol → 人才分析师
+};
+
 function getSystemPrompt(agentType: string): string {
-  return AGENT_SYSTEM_PROMPTS[agentType] || AGENT_SYSTEM_PROMPTS.default;
+  const resolvedType = AGENT_TYPE_ALIASES[agentType] || agentType;
+  return AGENT_SYSTEM_PROMPTS[resolvedType] || AGENT_SYSTEM_PROMPTS.default;
 }
 
 // ─── Runtime Bridge Service ─────────────────────────────
@@ -266,18 +293,10 @@ export class EnterpriseAgentRuntimeService {
         };
       }
 
-      // 3. Sprint-06A: 验证企业 LLM 配置（直接查 EnterpriseLlmConfig，不通过 ModelRouter）
-      const enterpriseLlmConfig = await prisma.enterpriseLlmConfig.findFirst({
-        where: { tenantId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
-      });
-
-      if (!enterpriseLlmConfig) {
-        return { 
-          success: false, 
-          error: 'NO_ENTERPRISE_LLM_CONFIG',
-          runtimeStatus: 'draft'
-        };
-      }
+      // 3. Sprint-08G: 不再需要 EnterpriseLlmConfig 才能激活
+      // 模型配置在 executeTask 时通过 resolveRuntimeConfig 解析
+      // 优先级: EnterpriseLlmConfig(如有) > UserModelConfigV2 > 系统默认
+      // 即使没有企业级配置，Agent 也可以激活（运行时 fallback 到用户 BYOK）
 
       // 4. 创建或更新 EnterpriseAgentInstance
       const agentId = `agent_${tenantId.slice(0, 8)}_${profileId.slice(0, 8)}`;
@@ -325,7 +344,7 @@ export class EnterpriseAgentRuntimeService {
         resource: 'enterprise_agent_instance',
         resourceId: instance.id,
         inputSummary: `Activated agent: ${name} (${agentType})`,
-        outputSummary: `LLM: ${enterpriseLlmConfig.provider}/${enterpriseLlmConfig.modelName}`,
+        outputSummary: `Agent activated — model configured at runtime`,  // Sprint-08G: 模型配置在 executeTask 时解析，不再绑定到激活
       });
 
       return { 
@@ -344,6 +363,75 @@ export class EnterpriseAgentRuntimeService {
    * Step 2: 执行任务（真 LLM 调用）
    * 完整链路：任务 → ModelRouter → callLLM → 存储结果 → Outcome
    */
+  /**
+   * Sprint-09A-10: Capability Gate
+   * 在 executeTask 执行前检查 profile 是否拥有所需的 capability
+   * 未绑定时自动绑定，绑定失败则拒绝执行
+   */
+  async checkCapabilityGate(organizationId: string, profileId: string, taskType: string): Promise<{ allowed: boolean; reason?: string }> {
+    const capabilityCode = TASK_CAPABILITY_MAP[taskType];
+    if (!capabilityCode) {
+      // Unknown task type — allow (not all task types need gating)
+      return { allowed: true };
+    }
+
+    // 1. 检查是否已有 binding
+    const hasCap = await employeeCapabilityService.hasCapability(profileId, capabilityCode);
+    if (hasCap) {
+      return { allowed: true };
+    }
+
+    // 2. 确保 capability 定义存在（不存在则创建）
+    const existingDef = await employeeCapabilityService.getCapability(capabilityCode);
+    if (!existingDef) {
+      try {
+        await employeeCapabilityService.createCapability({
+          code: capabilityCode,
+          name: capabilityCode === 'career_agent' ? 'AI 职业顾问' : capabilityCode,
+          category: 'agent',
+          description: 'Career conversation AI agent capability',
+        });
+      } catch (createErr: any) {
+        // 可能并发创建冲突，忽略
+        console.warn('[CapabilityGate] createCapability warn:', createErr.message);
+      }
+    }
+
+    // 3. 尝试自动绑定
+    try {
+      const bound = await employeeCapabilityService.bindCapability({
+        tenantId: organizationId,
+        employeeId: profileId,
+        capabilityCode,
+        grantedBy: 'auto_bind',
+        skipEntitlementCheck: false,
+      });
+      if (bound) {
+        // Audit: capability bound successfully
+        await agentAuditService.log({
+          tenantId: organizationId,
+          agentId: profileId,
+          action: 'capability.bound',
+          resource: 'employee_capability_binding',
+          metadata: { capability: capabilityCode, source: 'runtime_gate_auto_bind', taskType },
+        });
+        return { allowed: true };
+      }
+    } catch (bindErr: any) {
+      console.warn('[CapabilityGate] auto-bind failed:', bindErr.message);
+      // Audit: capability bind failed
+      await agentAuditService.log({
+        tenantId: organizationId,
+        agentId: profileId,
+        action: 'capability.bind_failed',
+        resource: 'employee_capability_binding',
+        metadata: { capability: capabilityCode, error: bindErr.message, taskType },
+      }).catch(() => {});
+    }
+
+    return { allowed: false, reason: `Capability denied: ${capabilityCode} — 当前套餐不包含此能力` };
+  }
+
   async executeTask(params: {
     taskId: string;
     profileId: string;
@@ -352,17 +440,41 @@ export class EnterpriseAgentRuntimeService {
     userId: string;
     taskType: string;
     instruction: string;
+    /** Sprint-09B-2B: 调用方可通过 businessType 指定平台模型兜底 */
+    businessType?: string;
   }): Promise<ExecuteTaskResult> {
-    const { taskId, profileId, tenantId, organizationId, userId, taskType, instruction } = params;
+    const { taskId, profileId, tenantId, organizationId, userId, taskType, instruction, businessType } = params;
     const startTime = Date.now();
 
     try {
+      // 0. Sprint-09A-10: Capability Gate — 执行前检查
+      if (organizationId) {
+        const gateResult = await this.checkCapabilityGate(organizationId, profileId, taskType);
+        if (!gateResult.allowed) {
+          return this.errorResult(gateResult.reason || 'CAPABILITY_DENIED', startTime, taskId);
+        }
+
+        // Sprint-05 T03: Quota 执行前检查（观察模式 — 超额仅告警，不硬阻断）
+        const { checkQuota } = await import('./quota.service.js');
+        const quota = await checkQuota(organizationId, taskType);
+        if (quota.exhausted) {
+          console.warn(`[AgentRuntime] ⚠️ Quota 超额（观察模式放行）: org=${organizationId.slice(0, 8)} cap=${quota.capability} used=${quota.used}/${quota.limit}`);
+          await agentAuditService.log({
+            tenantId, agentId: profileId, taskId,
+            action: 'execution.quota_exceeded_warning',
+            resource: 'enterprise_entitlement',
+            resourceId: organizationId,
+            metadata: { capability: quota.capability, used: quota.used, limit: quota.limit, mode: 'observe_only' },
+          }).catch(() => {});
+        }
+      }
+
       // 1. 获取 Agent Profile
       const profile = await prisma.enterpriseAgentProfile.findUnique({
         where: { id: profileId }
       });
       if (!profile) {
-        return this.errorResult('AGENT_PROFILE_NOT_FOUND', startTime);
+        return this.errorResult('AGENT_PROFILE_NOT_FOUND', startTime, taskId);
       }
 
       // Timeline: Task Created
@@ -379,7 +491,7 @@ export class EnterpriseAgentRuntimeService {
         where: { employeeId: profileId }
       });
       if (!instance || instance.runtimeStatus !== 'active') {
-        return this.errorResult('AGENT_NOT_ACTIVATED', startTime);
+        return this.errorResult('AGENT_NOT_ACTIVATED', startTime, taskId);
       }
 
       // Hardening-01: Lifecycle State Machine — 紧急停止检查
@@ -391,15 +503,15 @@ export class EnterpriseAgentRuntimeService {
           resourceId: instance.id,
           metadata: { reason: 'emergency_stop_active', lifecycleState: instance.lifecycleState },
         });
-        return this.errorResult('EMERGENCY_STOP_ACTIVE', startTime);
+        return this.errorResult('EMERGENCY_STOP_ACTIVE', startTime, taskId);
       }
 
       // Hardening-01: PAUSED/STOPPED 状态也阻止执行
       if (instance.lifecycleState === 'PAUSED') {
-        return this.errorResult('AGENT_PAUSED', startTime);
+        return this.errorResult('AGENT_PAUSED', startTime, taskId);
       }
       if (instance.lifecycleState === 'STOPPED') {
-        return this.errorResult('AGENT_STOPPED', startTime);
+        return this.errorResult('AGENT_STOPPED', startTime, taskId);
       }
 
       // Timeline: Agent Assigned
@@ -411,49 +523,143 @@ export class EnterpriseAgentRuntimeService {
         metadata: { agentName: profile.name, agentType: profile.agentType },
       });
 
-      // 3. Sprint-06A: 验证企业 LLM 配置（不直接调用 ModelRouter 取 Key）
-      const enterpriseLlm = await prisma.enterpriseLlmConfig.findFirst({
-        where: { tenantId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
+      // Sprint-10 Step 3A: Memory Access Gate — 强制 validateAccess()
+      // 在读取 HermesProfileBinding 后立即验证 memory namespace 归属权
+      const binding = await (prisma as any).hermesProfileBinding.findUnique({
+        where: { agentInstanceId: instance.id }
       });
-      if (!enterpriseLlm) {
-        return this.errorResult('NO_ENTERPRISE_LLM_CONFIG', startTime);
+
+      if (binding) {
+        // T1: Memory Access Gate — 验证 namespace 租户隔离
+        const memGate = await MemoryAccessGate.validate({
+          tenantId,
+          organizationId,
+          agentInstanceId: instance.id,
+          profileId,
+          taskId,
+          hermesAgentId: binding.hermesAgentId,
+          memoryNamespace: binding.memoryNamespace,
+        });
+        if (!memGate.allowed) {
+          return this.errorResult(`MEMORY_ACCESS_DENIED: ${memGate.reason}`, startTime, taskId);
+        }
+
+        // T2: ToolPermissionRuntimeGate — 统一工具权限校验
+        let allowedTools: string[] = [];
+        if (binding.toolAllowList && binding.toolAllowList !== '[]' && binding.toolAllowList !== '') {
+          allowedTools = JSON.parse(binding.toolAllowList);
+        }
+
+        const toolGate = await ToolPermissionRuntimeGate.check({
+          taskType,
+          profileId,
+          agentInstanceId: instance.id,
+          tenantId,
+          taskId,
+          toolAllowList: allowedTools,
+        });
+        if (!toolGate.allowed) {
+          return this.errorResult(`TOOL_PERMISSION_DENIED: ${taskType} — ${toolGate.reason}`, startTime, taskId);
+        }
+
+        // 记录 binding 身份到 audit trail
+        await agentAuditService.log({
+          tenantId, agentId: profileId, taskId,
+          action: 'identity.bound',
+          resource: 'hermes_profile_binding',
+          resourceId: binding.id,
+          metadata: {
+            hermesAgentId: binding.hermesAgentId,
+            memoryNamespace: binding.memoryNamespace,
+            identityProvider: binding.identityProvider,
+            toolCount: allowedTools.length,
+            memoryAccessGate: memGate.code,
+            toolPermissionGate: toolGate.code,
+          },
+        });
+        console.log(`[AgentRuntime] ✅ Gates passed: identity=${binding.hermesAgentId?.slice(0, 8)} ns=${binding.memoryNamespace} mem=${memGate.code} tool=${toolGate.code}`);
+      } else {
+        console.warn(`[AgentRuntime] HermesProfileBinding 缺失: instanceId=${instance.id.slice(0, 8)}, profileId=${profileId.slice(0, 8)} — legacy 兼容`);
+        // 不阻断 — legacy 兼容
       }
 
-      // 4. Sprint-06A: 构建 System Prompt（不再构建 llmConfig）
+      // 3. Sprint-08G: 模型配置不再强依赖 EnterpriseLlmConfig
+      // 企业 AI 员工统一走 UserModelConfigV2 BYOK 链路
+      // 尝试读取 EnterpriseLlmConfig（兼容旧数据），不存在则 fallback
+      let enterpriseLlm = await prisma.enterpriseLlmConfig.findFirst({
+        where: { tenantId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
+      });
+
+      // Sprint-05 T01: Model Health Gate — AI 员工启动前健康检查
+      // unhealthy (failed/decrypt_error/disabled) → 阻断 + 明确提示，不允许静默使用平台/用户 key
+      if (enterpriseLlm) {
+        const hs = enterpriseLlm.healthStatus;
+        if (hs === 'failed' || hs === 'decrypt_error' || hs === 'disabled') {
+          const reason =
+            hs === 'decrypt_error'
+              ? '模型密钥解密失败（CRYPTO_ENCRYPTION_KEY 变更或数据损坏）'
+              : hs === 'failed'
+                ? '模型密钥已失效（认证失败/余额不足/模型不存在）'
+                : '模型配置已停用';
+          const detail = enterpriseLlm.healthError ? ` — ${enterpriseLlm.healthError}` : '';
+          await agentAuditService.log({
+            tenantId, agentId: profileId, taskId,
+            action: 'execution.blocked_model_health',
+            resource: 'enterprise_llm_config',
+            resourceId: enterpriseLlm.id,
+            metadata: { healthStatus: hs, error: enterpriseLlm.healthError || '', provider: enterpriseLlm.provider, model: enterpriseLlm.modelName },
+          });
+          return this.errorResult(`MODEL_HEALTH_BLOCKED: ${reason}${detail} — 请在企业工作台重新配置模型密钥后重试`, startTime, taskId);
+        }
+      }
+
+      // 4. Sprint-08G: 构建 System Prompt
       const systemPrompt = getSystemPrompt(profile.agentType);
 
       // Timeline: Runtime Started
+      const modelSource = enterpriseLlm ? MODEL_SOURCE_ENTERPRISE : MODEL_SOURCE_USER;
+      const modelLabel = enterpriseLlm ? `${enterpriseLlm.provider}/${enterpriseLlm.modelName}` : 'UserModelConfigV2 BYOK';
       await agentAuditService.log({
         tenantId, agentId: profileId, taskId,
         action: 'runtime.started',
         resource: 'runtime_bridge',
         resourceId: instance.id,
-        metadata: { provider: enterpriseLlm.provider, model: enterpriseLlm.modelName },
+        metadata: { modelSource, modelLabel },
       });
 
-      // 5. Sprint-06A: 通过 executeViaGateway 统一调用 LLM
-      // tenantId 触发 resolveRuntimeConfig 企业配置层，不再直接 callLLM()
+      // 5. Sprint-08G: 通过 executeViaGateway 统一调用 LLM
+      // 不再强制注入 provider/model，让 resolveRuntimeConfig 自然解析
+      // 优先级: 输入层 > EnterpriseLlmConfig(如有) > 平台配置 > UserModelConfigV2 > 系统默认
       // Timeline: LLM Request Sent
       await agentAuditService.log({
         tenantId, agentId: profileId, taskId,
         action: 'llm.request_sent',
         resource: 'llm',
-        resourceId: enterpriseLlm.id,
-        metadata: { provider: enterpriseLlm.provider, model: enterpriseLlm.modelName, systemPromptLen: systemPrompt.length, instructionLen: instruction.length },
+        resourceId: enterpriseLlm?.id || instance.id,
+        metadata: { modelSource, modelLabel, systemPromptLen: systemPrompt.length, instructionLen: instruction.length },
       });
 
       const { executeViaGateway } = await import('../../runtime/runtime-gateway.js');
+      // Sprint-08G: 只传 userId + tenantId，不传 provider/model
+      // Sprint-09B-2B: businessType 从调用方透传，默认 recruitment
+      // Sprint-10 T03: 传入 agentInstanceId + memoryNamespace 用于 context 链路追踪
+      const bt = businessType || 'recruitment';
+      const gatewayCtx: Record<string, any> = {
+        userId,
+        tenantId,
+        businessType: bt,
+      };
+      if (binding) {
+        gatewayCtx.agentInstanceId = instance.id;
+        gatewayCtx.hermesAgentId = binding.hermesAgentId;
+        gatewayCtx.memoryNamespace = binding.memoryNamespace;
+      }
       const result = await executeViaGateway('llm', {
         systemPrompt,
         prompt: instruction,
         maxTokens: 4096,
         temperature: 0.7,
-      }, {
-        userId,
-        tenantId,
-        provider: enterpriseLlm.provider,
-        model: enterpriseLlm.modelName,
-      });
+      }, gatewayCtx);
 
       const output = result.content || '';
       const gatewayTotalTokens = result.totalTokens || 0;
@@ -464,14 +670,15 @@ export class EnterpriseAgentRuntimeService {
         tenantId, agentId: profileId, taskId,
         action: 'llm.response_received',
         resource: 'llm',
-        resourceId: enterpriseLlm.id,
-        metadata: { provider: enterpriseLlm.provider, model: enterpriseLlm.modelName, outputLen: output.length },
+        resourceId: enterpriseLlm?.id || instance.id,
+        metadata: { modelSource, outputLen: output.length },
       });
 
       // 7. 估算 Token 用量（Sprint-06A: 优先使用 Gateway 返回的 totalTokens）
       const tokenInput = gatewayTotalTokens > 0 ? Math.ceil(gatewayTotalTokens * 0.6) : Math.ceil((systemPrompt.length + instruction.length) / 4);
       const tokenOutput = gatewayTotalTokens > 0 ? Math.ceil(gatewayTotalTokens * 0.4) : Math.ceil(output.length / 4);
-      const cost = this.estimateCost(enterpriseLlm.provider, tokenInput, tokenOutput);
+      const providerForCost = enterpriseLlm?.provider || 'volcengine';
+      const cost = this.estimateCost(providerForCost, tokenInput, tokenOutput);
 
       // Sprint-06A: 写入 usage_logs（统一 Token 统计）
       try {
@@ -482,19 +689,25 @@ export class EnterpriseAgentRuntimeService {
             taskId,
             cost,
             taskType: `enterprise_agent_${taskType}`,
-            provider: enterpriseLlm.provider,
+            provider: enterpriseLlm?.provider || 'user_byok',
             tokens: JSON.stringify({
               input: tokenInput,
               output: tokenOutput,
               total: tokenInput + tokenOutput,
-              source: 'enterprise_config',
-              businessType: 'recruitment',
+              source: enterpriseLlm ? 'enterprise_config' : 'user_config',
+              businessType: bt,
               tenantId,
             }),
             isPlatform: false,
           },
-        });
+        })
       } catch { /* usageLog 表可能不存在于所有部署环境 */ }
+
+      // Sprint-05 T03: Quota 消费链（观察模式）— 成功任务实时累加配额（fire-and-forget）
+      if (organizationId) {
+        const { recordUsage } = await import('./quota.service.js');
+        recordUsage(organizationId, taskType, 'success').catch(() => {});
+      }
 
       // 8. 更新任务状态
       await prisma.enterpriseAgentTask.update({
@@ -546,7 +759,7 @@ export class EnterpriseAgentRuntimeService {
         action: 'task_executed',
         resource: 'enterprise_agent_task',
         resourceId: taskId,
-        llmConfigId: enterpriseLlm.id,
+        llmConfigId: enterpriseLlm?.id || undefined,
         tokenUsage: tokenInput + tokenOutput,
         cost,
         durationMs,
@@ -555,17 +768,48 @@ export class EnterpriseAgentRuntimeService {
       });
 
       // BETA-06.1: 创建 Action + Outcome（Golden Case 验证）
-      const action = await prisma.enterpriseAction.create({
-        data: {
-          tenantId,
-          decisionId: `dec_${taskId.slice(0, 8)}`,
-          title: `AI员工任务: ${instruction.slice(0, 50)}`,
-          description: output.slice(0, 200),
-          status: 'completed',
-          ownerType: 'agent',
-          ownerId: profileId,
-        },
-      })
+      // 先创建 EnterpriseRecommendation（满足 FK 约束）
+      let action
+      try {
+        const decisionId = `dec_${taskId.slice(0, 8)}`
+        // Check if recommendation exists
+        let rec = await prisma.enterpriseRecommendation.findUnique({ where: { id: decisionId } })
+        if (!rec) {
+          rec = await prisma.enterpriseRecommendation.create({
+            data: {
+              id: decisionId,
+              tenantId,
+              category: 'agent_execution',
+              title: `AI员工任务: ${instruction.slice(0, 50)}`,
+              status: 'completed',
+              priority: 2,
+            },
+          })
+        }
+        action = await prisma.enterpriseAction.create({
+          data: {
+            tenantId,
+            decisionId,
+            title: `AI员工任务: ${instruction.slice(0, 50)}`,
+            description: output.slice(0, 200),
+            status: 'completed',
+            ownerType: 'agent',
+            ownerId: profileId,
+          },
+        })
+      } catch (actionErr: any) {
+        console.error('[AgentRuntime] Action/Recommendation creation failed:', actionErr.message)
+        // Non-critical: skip action/outcome creation but keep task completed
+        return {
+          success: true,
+          taskId,
+          output,
+          tokenInput,
+          tokenOutput,
+          cost,
+          durationMs,
+        }
+      }
 
       const outcome = await prisma.enterpriseOutcome.create({
         data: {
@@ -583,8 +827,8 @@ export class EnterpriseAgentRuntimeService {
             tokenOutput,
             cost,
             durationMs,
-            provider: enterpriseLlm.provider,
-            model: enterpriseLlm.modelName,
+            provider: enterpriseLlm?.provider || 'user_byok',
+            model: enterpriseLlm?.modelName || 'user_config',
           }]),
           occurredAt: new Date(),
           verifiedAt: new Date(),
@@ -616,6 +860,7 @@ export class EnterpriseAgentRuntimeService {
 
       return {
         success: true,
+        taskId,
         output,
         tokenInput,
         tokenOutput,
@@ -639,7 +884,7 @@ export class EnterpriseAgentRuntimeService {
         }
       }).catch(() => {/* ignore if task not found */});
 
-      return this.errorResult(error.message, startTime);
+      return this.errorResult(error.message, startTime, taskId);
     }
   }
 
@@ -856,7 +1101,7 @@ export class EnterpriseAgentRuntimeService {
     if (allInstances.length > 0) {
       await agentAuditService.log({
         tenantId: allInstances[0]?.tenantId || 'system',
-        agentId: null,
+        agentId: undefined,
         action: 'system.startup_recovery',
         resource: 'enterprise_agent_runtime',
         resourceId: 'startup',
@@ -883,9 +1128,10 @@ export class EnterpriseAgentRuntimeService {
 
   // ─── Helpers ────────────────────────────────────────
 
-  private errorResult(error: string, startTime: number): ExecuteTaskResult {
+  private errorResult(error: string, startTime: number, taskId?: string): ExecuteTaskResult {
     return {
       success: false,
+      taskId: taskId || '',
       output: '',
       tokenInput: 0,
       tokenOutput: 0,

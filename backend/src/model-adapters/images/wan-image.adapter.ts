@@ -61,9 +61,21 @@ export const wanImageAdapter: ModelAdapter = {
     const prompt = input.prompt || ''
     const n = input.n || 1
     const size = input.size || '1024x1024'
-    const hasImage = !!(input.imageUrl)  // 有 imageUrl 就当作图生图（不依赖 mode 字段）
+    const hasImage = !!(input.imageUrl) || (Array.isArray(input.referenceImages) && input.referenceImages.length > 0)  // 有参考图就当作图生图
 
     console.log(`[WanImage] model=${model}, size=${size}, hasImage=${hasImage}`)
+
+    // ⭐ 多参考图收集（全部引用，兼容单张 imageUrl）
+    const collectRefs = (): string[] => {
+      const rawRefs: any[] = Array.isArray(input.referenceImages) && input.referenceImages.length > 0
+        ? input.referenceImages
+        : (input.imageUrl ? [input.imageUrl] : [])
+      return rawRefs.map(r => {
+        let u = typeof r === 'string' ? r : (r && typeof r === 'object' && (r as any).url) ? (r as any).url : ''
+        if (u?.startsWith('/')) u = (process.env.IMAGE_BASE_URL || 'https://aigc.fushtn.com') + u
+        return u
+      }).filter(Boolean)
+    }
 
     // ---- 判断模型走哪个端点 ----
     const isWanV2 = model.startsWith('wan2.7-image')  // V2 多模态端点
@@ -89,9 +101,11 @@ export const wanImageAdapter: ModelAdapter = {
         body.parameters.negative_prompt = input.negativePrompt
       }
       if (hasImage) {
-        let imgUrl = input.imageUrl
-        if (imgUrl?.startsWith('/')) imgUrl = (process.env.IMAGE_BASE_URL || 'https://aigc.fushtn.com') + imgUrl
-        body.input.messages[0].content.push({ type: 'image_url', image_url: { url: imgUrl } })
+        // ⭐ 多参考图: V2 多模态端点 content 可挂多张 image_url（全部引用）
+        const refs = collectRefs()
+        for (const refUrl of refs) {
+          body.input.messages[0].content.push({ type: 'image_url', image_url: { url: refUrl } })
+        }
       }
 
       console.log(`[WanImage] → V2 端点`)
@@ -115,9 +129,9 @@ export const wanImageAdapter: ModelAdapter = {
         body.parameters.negative_prompt = input.negativePrompt
       }
       if (hasImage) {
-        let imgUrl = input.imageUrl
-        if (imgUrl?.startsWith('/')) imgUrl = (process.env.IMAGE_BASE_URL || 'https://aigc.fushtn.com') + imgUrl
-        body.input.img_url = imgUrl
+        // ⭐ 多参考图: text2image 原生端点 img_url 支持数组（多图参考）
+        const refs = collectRefs()
+        body.input.img_url = refs.length === 1 ? refs[0] : refs
       }
 
       console.log(`[WanImage] → text2image 原生端点`)
@@ -135,9 +149,9 @@ export const wanImageAdapter: ModelAdapter = {
       const body: any = { model, prompt, n, size: normalizeSize(size) }
       if (input.negativePrompt) body.negative_prompt = input.negativePrompt
       if (hasImage) {
-        let imgUrl = input.imageUrl
-        if (imgUrl?.startsWith('/')) imgUrl = (process.env.IMAGE_BASE_URL || 'https://aigc.fushtn.com') + imgUrl
-        body.image = imgUrl
+        // ⭐ 多参考图: 兼容模式 image 支持数组（多图参考）
+        const refs = collectRefs()
+        body.image = refs.length === 1 ? refs[0] : refs
       }
 
       console.log(`[WanImage] → 兼容模式端点 (qwen-image 系列)`)

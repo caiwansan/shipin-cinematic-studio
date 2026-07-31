@@ -250,9 +250,14 @@ export const candidateCardProjectionService = {
       });
     }
 
-    // 4. 计算投影值
-    const yearsExperience = calculateYearsExperience(workExperiences);
-    const currentRole = extractCurrentRole(workExperiences);
+    // 4. Sprint-10D T05: 仅复制，不计算
+    // 直接从 CareerProfile 读取 SSOT 字段，不通过 workExperience 自算
+    const yearsExperience = profile.yearsExperience || 0;
+    const currentRole = {
+      company: profile.headline ? null : (workExperiences[0]?.company || null),
+      title: (workExperiences[0]?.title || null),
+      city: (workExperiences[0]?.location || null),
+    };
     const skillTags = extractSkillTags(candidateSkills);
 
     // 5. 自动同步计算值到 Card（仅更新计算字段，不覆盖用户自定义字段）
@@ -308,7 +313,8 @@ export const candidateCardProjectionService = {
   async generateSummary(profileId: string): Promise<CardSummary> {
     const { profile, workExperiences, educations, candidateSkills } = await this.projectCard(profileId);
 
-    const totalYears = calculateYearsExperience(workExperiences);
+    // Sprint-10D T05: 从 Profile 读取 SSOT 值，不通过 workExperience 自算
+    const totalYears = profile.yearsExperience || calculateYearsExperience(workExperiences);
     const currentRole = extractCurrentRole(workExperiences);
     const educationLevel = extractHighestEducation(educations);
 

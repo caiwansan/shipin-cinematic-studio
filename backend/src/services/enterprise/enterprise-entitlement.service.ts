@@ -10,6 +10,31 @@
 
 import { prisma } from '../../utils/index.js'
 
+// Sprint-14 Task 04K Step 2: 兼容解析 capabilityCodes
+// 旧格式: ["resume_analysis", "candidate_scoring"]
+// 新格式: { employees: [{ role, displayName }], capabilities: ["..."] }
+function parseCapabilityCodes(raw: unknown): { employees: Array<{ role: string; displayName: string }>; capabilities: string[] } {
+  if (!raw) {
+    return { employees: [], capabilities: [] }
+  }
+
+  // 新格式: 对象
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    const obj = raw as Record<string, unknown>
+    return {
+      employees: Array.isArray(obj.employees) ? obj.employees as Array<{ role: string; displayName: string }> : [],
+      capabilities: Array.isArray(obj.capabilities) ? obj.capabilities as string[] : [],
+    }
+  }
+
+  // 旧格式: 数组
+  if (Array.isArray(raw)) {
+    return { employees: [], capabilities: raw as string[] }
+  }
+
+  return { employees: [], capabilities: [] }
+}
+
 export interface EntitlementCheck {
   allowed: boolean
   reason?: string
@@ -69,6 +94,7 @@ export const entitlementService = {
         used: 0,
         remaining: entitlement.storageLimit,
       },
+      capabilityCodes: parseCapabilityCodes(entitlement.capabilityCodes).capabilities,
       features: (entitlement.features as Record<string, boolean>) || {},
       effectiveFrom: entitlement.effectiveFrom,
       effectiveUntil: entitlement.effectiveUntil,
@@ -96,13 +122,17 @@ export const entitlementService = {
     const features = overrides?.features ||
       (plan?.features as Record<string, boolean>) || {}
 
-    // Upsert Entitlement
+    // Sprint-14 Task 04K Step 2: 兼容解析 capabilityCodes 新旧格式
+    const parsed = parseCapabilityCodes(plan?.capabilityCodes)
+
+    // Upsert Entitlement — 存储能力列表（不存 employees，那是 provisioning 的职责）
     const entitlement = await prisma.enterpriseEntitlement.upsert({
       where: { subscriptionId },
       update: {
         maxAgents: overrides?.maxAgents ?? plan?.maxEmployees ?? 1,
         maxChannels: overrides?.maxChannels ?? plan?.maxChannels ?? 1,
         features: features as any,
+        capabilityCodes: parsed.capabilities,
         status: 'active',
         overrideReason: null,
       },
@@ -112,6 +142,7 @@ export const entitlementService = {
         maxAgents: overrides?.maxAgents ?? plan?.maxEmployees ?? 1,
         maxChannels: overrides?.maxChannels ?? plan?.maxChannels ?? 1,
         features: features as any,
+        capabilityCodes: parsed.capabilities,
         status: 'active',
       },
     })

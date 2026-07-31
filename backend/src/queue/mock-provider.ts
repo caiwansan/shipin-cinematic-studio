@@ -1,4 +1,9 @@
 /**
+ * @deprecated
+ * Reality Recovery Phase5
+ * Production path unused — mockProviderCall 全仓 0 引用，Worker 从未调用。
+ * 保留：测试可能依赖，勿删除。
+ *
  * queue/mock-provider.ts — Worker 内部的 Mock Provider
  *
  * 当真实 provider 不可用时，提供模拟响应

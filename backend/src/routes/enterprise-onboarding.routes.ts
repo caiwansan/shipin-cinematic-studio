@@ -635,6 +635,42 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
 
     const planConfig = PLANS[body.plan]
 
+    // Step 1: 解析 organizationId（通过 JCP→EnterpriseProfile 映射）
+    const jcpRecord4 = await prisma.jobCompanyProfile.findUnique({
+      where: { id: workspace.enterpriseId },
+      select: { enterpriseId: true },
+    })
+    const enterpriseProfile4 = jcpRecord4?.enterpriseId
+      ? await prisma.enterpriseProfile.findUnique({
+          where: { id: jcpRecord4.enterpriseId },
+          select: { organizationId: true },
+        })
+      : null
+    const organizationId = enterpriseProfile4?.organizationId || workspace.enterpriseId
+
+    // P0-Fix: 如果已有订阅，直接完成 onboarding 状态，无需重复创建
+    const existingSub4 = await prisma.enterpriseSubscription.findUnique({
+      where: { organizationId },
+    })
+    if (existingSub4) {
+      console.log('[ONBOARDING_STEP4] 已有订阅，自动完成 onboarding', { organizationId, subId: existingSub4.id })
+      await prisma.enterpriseOnboardingState.updateMany({
+        where: { enterpriseId: body.enterpriseId },
+        data: {
+          currentStep: 5,
+          stepPlanDone: true,
+          stepDashboardDone: true,
+        },
+      })
+      return {
+        success: true,
+        skipped: true,
+        message: '已有活跃套餐，跳过选择',
+        plan: { id: existingSub4.planId },
+        nextStep: 5,
+      }
+    }
+
     try {
       // 更新 Workspace 套餐
       await prisma.enterpriseJobWorkspace.update({
@@ -648,53 +684,37 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
         data: { subscriptionPlan: body.plan },
       })
 
-      // Sprint-03: 创建 Subscription + Entitlement
-      // 1. 查找或创建 EnterprisePlan
+      // Sprint-RECRUITMENT-REALITY-03 T02: 套餐 SSOT — 禁止运行时自动创建套餐
+      // 套餐只能由 Admin 后台创建；onboarding 只做查找引用，找不到则明确报错
       let plan = await prisma.enterprisePlan.findFirst({
         where: { name: body.plan },
       })
       if (!plan) {
-        const planDefaults: Record<string, any> = {
-          starter: { maxEmployees: 2, maxChannels: 1, maxMembers: 3, price: 999 },
-          professional: { maxEmployees: 5, maxChannels: 3, maxMembers: 10, price: 2999 },
-          enterprise: { maxEmployees: 20, maxChannels: 10, maxMembers: 50, price: 9999 },
-        }
-        const defaults = planDefaults[body.plan] || planDefaults.starter
-        plan = await prisma.enterprisePlan.create({
-          data: {
-            name: body.plan,
-            displayName: planConfig.name,
-            description: planConfig.features.join(', '),
-            price: planConfig.price,
-            billingCycle: planConfig.interval,
-            maxEmployees: defaults.maxEmployees,
-            maxChannels: defaults.maxChannels,
-            maxMembers: defaults.maxMembers,
-            features: JSON.stringify(planConfig.features),
-          },
+        return reply.status(400).send({
+          error: `套餐 "${body.plan}" 不存在`,
+          message: '请管理员先在后台创建该套餐（Admin → 套餐管理），onboarding 不再自动创建套餐',
         })
       }
 
-      // Sprint-04 Fix: 获取正确的 organizationId
-      // workspace.enterpriseId 是 JobCompanyProfile ID，需要通过 EnterpriseProfile 映射到 Organization ID
-      const jcpRecord = await prisma.jobCompanyProfile.findUnique({
-        where: { id: workspace.enterpriseId },
-        select: { enterpriseId: true },
-      })
-      const enterpriseProfile = jcpRecord?.enterpriseId
-        ? await prisma.enterpriseProfile.findUnique({
-            where: { id: jcpRecord.enterpriseId },
-            select: { organizationId: true },
-          })
-        : null
-      const organizationId = enterpriseProfile?.organizationId || workspace.enterpriseId
-
-      // 2. 创建 EnterpriseSubscription（含 snapshot 字段加速查询）
+      // 2. 创建/更新 EnterpriseSubscription（upsert 处理 unique constraint on organization_id）
       const now = new Date()
       const expireAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30天
-      const subscription = await prisma.enterpriseSubscription.create({
-        data: {
+      const subscription = await prisma.enterpriseSubscription.upsert({
+        where: { organizationId },
+        create: {
           organizationId,
+          planId: plan.id,
+          status: 'active',
+          startAt: now,
+          expireAt,
+          autoRenew: true,
+          snapshotName: plan.displayName,
+          snapshotMaxEmployees: plan.maxEmployees,
+          snapshotMaxChannels: plan.maxChannels,
+          snapshotMaxMembers: plan.maxMembers,
+          snapshotFeatures: plan.features,
+        },
+        update: {
           planId: plan.id,
           status: 'active',
           startAt: now,
@@ -708,18 +728,35 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
         },
       })
 
-      // 3. 创建 EnterpriseEntitlement
-      await prisma.enterpriseEntitlement.create({
-        data: {
-          organizationId,
-          subscriptionId: subscription.id,
-          maxAgents: plan.maxEmployees,
-          maxChannels: plan.maxChannels,
-          features: plan.features,
-          status: 'active',
-          effectiveFrom: now,
-        },
+      // 3. 创建/更新 EnterpriseEntitlement
+      const existingEnt = await prisma.enterpriseEntitlement.findFirst({
+        where: { organizationId },
       })
+      if (existingEnt) {
+        await prisma.enterpriseEntitlement.update({
+          where: { id: existingEnt.id },
+          data: {
+            subscriptionId: subscription.id,
+            maxAgents: plan.maxEmployees,
+            maxChannels: plan.maxChannels,
+            features: plan.features,
+            status: 'active',
+            effectiveFrom: now,
+          },
+        })
+      } else {
+        await prisma.enterpriseEntitlement.create({
+          data: {
+            organizationId,
+            subscriptionId: subscription.id,
+            maxAgents: plan.maxEmployees,
+            maxChannels: plan.maxChannels,
+            features: plan.features,
+            status: 'active',
+            effectiveFrom: now,
+          },
+        })
+      }
 
       // 更新 Onboarding 状态
       await prisma.enterpriseOnboardingState.updateMany({
@@ -741,7 +778,14 @@ export async function enterpriseOnboardingRoutes(fastify: FastifyInstance) {
         nextStep: 5,
       }
     } catch (e: any) {
-      return reply.status(500).send({ error: '选择套餐失败', detail: e.message })
+      console.error('[ONBOARDING_STEP4_ERROR]', {
+        message: e.message,
+        code: e.code,
+        meta: e.meta,
+        stack: e.stack,
+        body: { enterpriseId: body.enterpriseId, workspaceId: body.workspaceId, plan: body.plan },
+      })
+      return reply.status(500).send({ error: '选择套餐失败', detail: e.message, code: e.code })
     }
   })
 

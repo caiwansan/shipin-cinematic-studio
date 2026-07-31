@@ -30,13 +30,13 @@ export function getReviewPassScore(): number {
 }
 
 export class HdzReviewerService {
-  async execute(ctx: any): Promise<any> {
+  async execute(ctx: any, passedCfg?: any): Promise<any> {
     const { projectId, chapterId, chapterNo } = ctx
     console.log(`[HDZ/Reviewer] 开始审校: project=${projectId}, chapter=${chapterNo}`)
 
-    const chapter = await prisma.hdzChapter.findFirst({
-      where: chapterId ? { id: chapterId } : { projectId_chapterNo: { projectId, chapterNo } },
-    })
+    const chapter = chapterId
+      ? await prisma.hdzChapter.findUnique({ where: { id: chapterId } })
+      : await prisma.hdzChapter.findFirst({ where: { projectId, chapterNo } })
     if (!chapter || !chapter.content) throw new Error('章节不存在或内容为空')
 
     const project = await prisma.hdzProject.findUnique({ where: { id: projectId } })
@@ -49,19 +49,39 @@ export class HdzReviewerService {
     const content = chapter.content
 
     const systemPrompt = await getAgentPrompt('hdz-reviewer', {
-      TITLE: title,
-      GENRE: genre,
-      CHAPTER_NO: String(chapterNo),
-      CHAPTER_TITLE: chapterTitle,
+      '$TITLE': title,
+      '$GENRE': genre,
+      '$CHAPTER_NO': String(chapterNo),
+      '$CHAPTER_TITLE': chapterTitle,
     })
 
     const userMsg = `## 正文内容\n\n${content.slice(0, 20000)}`
 
-    const userCfg = await getUserLLMConfig(project.userId)
+    // ★ Task 4：章节文本级一致性预检（规则引擎，无 LLM 成本）→ 警告注入审校 prompt
+    let consistencyWarnings: string[] = []
+    let consistencyScore = 100
+    try {
+      const { consistencyVerifier } = await import('./consistency-verifier.service.js')
+      const v = await consistencyVerifier.verifyChapterText(projectId, chapterNo, content)
+      consistencyWarnings = v.warnings
+      consistencyScore = v.score
+      if (consistencyWarnings.length > 0) {
+        console.log(`[HDZ/Reviewer] ch${chapterNo}: 一致性预检 ${consistencyWarnings.length} 条警告`)
+      }
+    } catch (e: any) {
+      console.warn(`[HDZ/Reviewer] ch${chapterNo}: 一致性预检失败: ${e?.message}`)
+    }
+
+    const finalUserMsg = consistencyWarnings.length > 0
+      ? `## ⚠️ 一致性预检警告（请逐条核查正文是否违反，并在 issues 中标注核实结果）\n${consistencyWarnings.join('\n')}\n\n${userMsg}`
+      : userMsg
+
+    // ★ 02-B Task 4：优先用 orchestrator 传入的 cfg（带 Usage Ledger 元数据），否则自行加载
+    const userCfg = passedCfg || (await getUserLLMConfig(project.userId))
     if (!userCfg) throw new Error('用户未配置大模型，请先在大模型设置中配置')
     console.log(`[HDZ/Reviewer] ch${chapterNo}: LLM ${userCfg.provider}/${userCfg.modelName}`)
 
-    const text = await callLLM(userCfg, systemPrompt, userMsg, {
+    const text = await callLLM(userCfg, systemPrompt, finalUserMsg, {
       temperature: 0.3,
       maxTokens: 4096,
     })
@@ -126,6 +146,8 @@ export class HdzReviewerService {
       chapterNo,
       chapterId: chapter.id,
       reviewedAt: new Date().toISOString(),
+      consistencyWarnings,
+      consistencyScore,
     }
 
     const newStatus: string = isPass ? 'reviewed' : 'draft'
