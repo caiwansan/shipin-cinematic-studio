@@ -175,6 +175,7 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
   })
 
   // PATCH /api/admin/recruitment/subscriptions/:id/status — 手动变更订阅状态
+  // pending → active = 管理员确认收款「通过生效」：激活订阅 + 标记订单已支付 + 部署 AI 员工
   app.patch('/api/admin/recruitment/subscriptions/:id/status', { preHandler: [requireAdmin] }, async (request, reply) => {
     const { id } = request.params as any
     const { status, reason } = request.body as any
@@ -185,6 +186,75 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
     const sub = await prisma.enterpriseSubscription.findUnique({ where: { id } })
     if (!sub) return reply.status(404).send({ success: false, message: '订阅不存在' })
 
+    const adminId = (request.user as any)?.id || (request.user as any)?.userId || 'unknown'
+
+    // ── 通过生效（pending → active）：确认收款 → 订阅激活 → 部署 AI 员工 ──
+    if (status === 'active' && sub.status === 'pending') {
+      const now = new Date()
+      const periodDays = Math.max(1, Math.ceil(((sub.expireAt?.getTime() || now.getTime()) - now.getTime()) / (24 * 60 * 60 * 1000)))
+
+      await prisma.$transaction(async (tx) => {
+        // 1. 激活订阅（保留原快照与到期时间，startAt 补记）
+        await tx.enterpriseSubscription.update({
+          where: { id: sub.id },
+          data: {
+            status: 'active',
+            startAt: sub.startAt || now,
+            ...(sub.expireAt && sub.expireAt.getTime() <= now.getTime()
+              ? { expireAt: new Date(now.getTime() + periodDays * 24 * 60 * 60 * 1000) }
+              : {}),
+          },
+        })
+
+        // 2. 关联支付订单 → 标记已支付（管理员确认收款）
+        if (sub.orderId) {
+          await tx.paymentOrder.update({
+            where: { id: sub.orderId },
+            data: {
+              status: 'paid',
+              payTime: now,
+              confirmTime: now,
+            },
+          })
+        }
+
+        // 3. 审计
+        await tx.agentAuditTrail.create({
+          data: {
+            tenantId: sub.organizationId,
+            action: 'admin.enterprise.CONFIRM_SUBSCRIPTION_PAYMENT',
+            resource: 'enterprise_subscription',
+            metadata: JSON.stringify({
+              adminId,
+              subscriptionId: sub.id,
+              orderId: sub.orderId,
+              organizationId: sub.organizationId,
+              planName: sub.snapshotName,
+              before: { status: 'pending' },
+              after: { status: 'active' },
+              reason: reason || '管理员确认收款，订阅通过生效',
+              timestamp: new Date().toISOString(),
+            }),
+          },
+        })
+      })
+
+      // 4. 同步 Entitlement（能力授权）
+      const { entitlementService } = await import('../services/enterprise/enterprise-entitlement.service.js')
+      await entitlementService.createFromSubscription(sub.organizationId, sub.id)
+
+      // 5. 部署 AI 员工（按套餐编制 provision，与人工开通对齐）
+      try {
+        const { enterpriseEmployeeProvisionService } = await import('../services/enterprise/enterprise-employee-provision.service.js')
+        await enterpriseEmployeeProvisionService.provisionEmployeesForPlan(sub.organizationId, sub.planId)
+      } catch (err: any) {
+        console.error('[admin-recruitment] provisionEmployeesForPlan failed:', err.message)
+      }
+
+      return { success: true, message: '✅ 已确认收款，订阅通过生效，AI 员工已部署' }
+    }
+
+    // ── 常规状态变更（暂停/恢复/取消/过期）──
     await prisma.enterpriseSubscription.update({
       where: { id },
       data: { status },

@@ -137,6 +137,7 @@
       <div class="filter-row">
         <select v-model="statusFilter" @change="fetchSubscriptions" class="filter-select">
           <option value="">全部状态</option>
+          <option value="pending">待支付</option>
           <option value="active">活跃</option>
           <option value="paused">已暂停</option>
           <option value="cancelled">已取消</option>
@@ -180,7 +181,11 @@
               </td>
               <td>{{ formatDate(sub.expireAt) }}</td>
               <td class="actions-cell">
-                <template v-if="sub.status === 'active'">
+                <template v-if="sub.status === 'pending'">
+                  <button class="btn-approve" @click="handleApprove(sub)">✅ 通过生效</button>
+                  <button class="btn-cancel-sm" @click="handleReject(sub)">拒绝</button>
+                </template>
+                <template v-else-if="sub.status === 'active'">
                   <button class="btn-pause" @click="handlePause(sub)">暂停</button>
                   <button class="btn-plan" @click="openChangePlan(sub)">变更套餐</button>
                 </template>
@@ -513,7 +518,7 @@ function statusLabel(status: string): string {
 }
 
 function statusClass(status: string): string {
-  const map: any = { active: 'active', paused: 'paused', cancelled: 'cancelled', expired: 'expired' }
+  const map: any = { active: 'active', paused: 'paused', cancelled: 'cancelled', expired: 'expired', pending: 'pending' }
   return map[status] || 'inactive'
 }
 
@@ -528,6 +533,16 @@ function daysLeftText(expireAt: string): string {
   if (days < 0) return `已过期 ${Math.abs(days)} 天`
   if (days === 0) return '今天到期'
   return `${days} 天后到期`
+}
+
+async function handleApprove(sub: any) {
+  if (!confirm(`确认已收到「${sub.organization?.name || sub.organizationId}」的付款？\n将通过生效并部署 AI 员工（${sub.snapshotName || ''}）`)) return
+  await updateStatus(sub.id, 'active')
+}
+
+async function handleReject(sub: any) {
+  if (!confirm(`确定拒绝「${sub.organization?.name || sub.organizationId}」的待支付订阅？订阅将标记为已取消。`)) return
+  await updateStatus(sub.id, 'cancelled')
 }
 
 async function handlePause(sub: any) {
@@ -643,6 +658,7 @@ async function viewDetail(sub: any) {
 
 .badge { display: inline-block; padding: 2px 8px; background: rgba(59,130,246,0.1); color: #60a5fa; border-radius: 10px; font-size: 12px; font-weight: 500; }
 .status-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.status-badge.pending { background: rgba(59,130,246,0.12); color: #60a5fa; }
 .status-badge.active { background: rgba(34,197,94,0.1); color: #22c55e; }
 .status-badge.paused { background: rgba(245,158,11,0.1); color: #f59e0b; }
 .status-badge.cancelled { background: rgba(239,68,68,0.1); color: #ef4444; }
@@ -658,6 +674,7 @@ async function viewDetail(sub: any) {
 .btn-cancel { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
 .btn-pause { background: rgba(245,158,11,0.15); color: #f59e0b; }
 .btn-resume { background: rgba(34,197,94,0.15); color: #22c55e; }
+.btn-approve { background: rgba(34,197,94,0.2); color: #22c55e; border-color: rgba(34,197,94,0.4); font-weight: 600; }
 .btn-cancel-sm { background: rgba(239,68,68,0.15); color: #ef4444; }
 .btn-plan { background: rgba(59,130,246,0.15); color: #60a5fa; }
 
