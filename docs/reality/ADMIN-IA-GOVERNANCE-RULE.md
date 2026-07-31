@@ -152,7 +152,36 @@ Admin Layout
 
 ---
 
-## 五、执行检查
+## 五、UI Reality Gate G8（用户视觉验证，强制）
+
+> 来源：ADMIN-IA-REALITY-04-B-FIX（掌柜纠偏）—— 报告完成 ≠ 用户可见。
+> 后台类任务验收必须以下为准：**浏览器里用户真正看到的页面**。
+
+**验收前必须全部通过：**
+
+1. ✅ **登录链路走通**：从登录页登录 → 落在正确落地页（本次修复：登录成功 → /admin/dashboard，禁止旧落地页）
+2. ✅ **打开实际入口**：按掌柜操作路径（后台管理 → 数据罗盘）进入
+3. ✅ **页面组件真实渲染**：浏览器 evaluate 检查页面文本含关键模块标题 + 真实数据（非 loading/空白/残缺）
+4. ✅ **截图存档**：整页截图保存到 docs/reality/，作为验收证据
+5. ✅ **九层/模块与需求一致**：逐层核对
+
+**部署链检查（每次 build 后）：**
+
+```
+nuxt build → patch-manifest → asset-sync(_nuxt → nginx root) → pm2 restart nuxt-frontend
+→ 浏览器强刷（Ctrl+F5）验证资源 hash 更新
+```
+
+**已知坑（写入记忆）：**
+
+- Nuxt3 组件默认 pathPrefix 命名（components/admin/dashboard/KpiOverview.vue = AdminDashboardKpiOverview），模板用短名必须显式 import，否则自定义组件零渲染（SSR 壳正常但内容空）
+- 登录落地页被旧页面劫持时，用户永远看不到新页面——登录跳转是后台验收第一检查项
+
+**任何后台任务，未完成 G8 不得标 PASS。**
+
+---
+
+## 六、执行检查
 
 | 检查项 | 标准 |
 |--------|------|
@@ -161,6 +190,7 @@ Admin Layout
 | 页面外壳 | 必须 Admin Layout |
 | 路由登记 | 无孤儿页面 |
 | 数据口径 | DB 真实聚合，零 mock，脏数据排除 |
+| **G8 视觉验证** | **登录链路 + 实际入口 + 组件渲染 + 截图存档** |
 
 ---
 
