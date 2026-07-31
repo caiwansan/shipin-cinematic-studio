@@ -162,6 +162,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'admin-aigc' })
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAdminToken } from '~/utils/token-cache'

@@ -74,6 +74,7 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'admin-aigc' })
 const route = useRoute()
 
 const plan = ref(null)

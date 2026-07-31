@@ -2,103 +2,102 @@
 <!-- 位置：/admin/recruitment/jobs.vue -->
 <!-- 职责：全平台岗位列表 — 搜索/筛选/详情/状态操作 -->
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-lg font-semibold text-white/90">📋 岗位池</h1>
-        <p class="text-xs text-gray-500 mt-1">平台岗位池 · 各企业岗位状态与 AI 匹配覆盖率</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <button @click="fetchData" class="px-3 py-1.5 bg-blue-600/20 text-blue-400 rounded-lg text-xs hover:bg-blue-600/30 transition cursor-pointer border-none">
-          🔄 刷新
-        </button>
-      </div>
-    </div>
+  <RecruitmentPageShell>
+    <template #title>岗位池</template>
+    <template #subtitle>平台岗位池 · 各企业岗位状态与 AI 匹配覆盖率</template>
+    <template #actions>
+      <button @click="fetchData" class="rec-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v6h-6"/></svg>
+        刷新
+      </button>
+    </template>
 
-    <!-- Search & Filters -->
-    <div class="flex items-center gap-3 flex-wrap">
-      <div class="relative flex-1 min-w-[200px]">
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">🔍</span>
+    <template #filters>
+      <div class="rec-search-wrap">
+        <svg class="rec-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input
           v-model="searchKey"
           @keyup.enter="page = 1; fetchData()"
           placeholder="搜索岗位名称、部门、地点..."
-          class="w-full bg-[#0D1328] border border-[#1A2240] rounded-lg text-xs text-gray-300 pl-8 pr-3 py-2 focus:outline-none focus:border-blue-500/40"
+          class="rec-input"
         />
       </div>
-      <select v-model="filterStatus" @change="page = 1; fetchData()" class="bg-[#0D1328] border border-[#1A2240] rounded-lg text-xs text-gray-400 px-3 py-2">
+      <select v-model="filterStatus" @change="page = 1; fetchData()" class="rec-select">
         <option value="">全部状态</option>
         <option value="published">已发布</option>
         <option value="draft">草稿</option>
         <option value="paused">已暂停</option>
         <option value="closed">已关闭</option>
       </select>
-      <select v-model="filterEnterprise" @change="page = 1; fetchData()" class="bg-[#0D1328] border border-[#1A2240] rounded-lg text-xs text-gray-400 px-3 py-2">
+      <select v-model="filterEnterprise" @change="page = 1; fetchData()" class="rec-select">
         <option value="">全部企业</option>
         <option v-for="ent in enterprises" :key="ent.id" :value="ent.id">{{ ent.name }}</option>
       </select>
-    </div>
+    </template>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-16 text-gray-500 text-sm">
-      <div class="animate-spin w-5 h-5 border-2 border-gray-600 border-t-blue-400 rounded-full mr-2"></div>
-      加载中...
+    <div v-if="loading" class="rec-loading">
+      <div class="rec-spinner"></div>
+      <span>加载中...</span>
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="bg-red-900/20 border border-red-800/30 rounded-xl p-4 text-red-400 text-xs">
-      ⚠️ {{ error }} <button @click="fetchData" class="ml-2 underline cursor-pointer">重试</button>
+    <div v-else-if="error" class="rec-error-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <span>{{ error }}</span>
+      <button @click="fetchData" class="rec-btn-link">重试</button>
     </div>
 
     <template v-else>
       <!-- Table -->
-      <div class="overflow-x-auto rounded-xl border border-[#1A2240]">
-        <table class="w-full text-xs border-collapse">
+      <div class="rec-table-wrap">
+        <table class="rec-table">
           <thead>
-            <tr class="bg-[#0D1328]">
-              <th class="text-left py-3 px-4 text-gray-500 font-medium">岗位名称</th>
-              <th class="text-left py-3 px-4 text-gray-500 font-medium">所属企业</th>
-              <th class="text-left py-3 px-4 text-gray-500 font-medium">部门</th>
-              <th class="text-left py-3 px-4 text-gray-500 font-medium">地点</th>
-              <th class="text-center py-3 px-4 text-gray-500 font-medium">状态</th>
-              <th class="text-center py-3 px-4 text-gray-500 font-medium">候选人</th>
-              <th class="text-center py-3 px-4 text-gray-500 font-medium">匹配率</th>
-              <th class="text-left py-3 px-4 text-gray-500 font-medium">创建时间</th>
-              <th class="text-center py-3 px-4 text-gray-500 font-medium">操作</th>
+            <tr>
+              <th class="text-left">岗位名称</th>
+              <th class="text-left">所属企业</th>
+              <th class="text-left">部门</th>
+              <th class="text-left">地点</th>
+              <th class="text-center">状态</th>
+              <th class="text-center">候选人</th>
+              <th class="text-center">匹配率</th>
+              <th class="text-left">创建时间</th>
+              <th class="text-center">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="list.length === 0">
-              <td colspan="9" class="py-12 text-center text-gray-600">
-                <div class="text-2xl mb-2">📋</div>
-                暂无岗位数据
+              <td colspan="9" class="rec-empty-row">
+                <div class="rec-empty">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                  <div>暂无岗位数据</div>
+                </div>
               </td>
             </tr>
-            <tr v-for="job in list" :key="job.id" class="border-t border-[#1A2240]/50 hover:bg-white/[0.02] transition">
-              <td class="py-3 px-4">
-                <div class="text-white/80 font-medium">{{ job.title }}</div>
-                <div v-if="job.requiredSkills?.length" class="text-gray-600 text-[10px] mt-0.5">
+            <tr v-for="job in list" :key="job.id" class="rec-table-row">
+              <td class="rec-td">
+                <div class="rec-td-title">{{ job.title }}</div>
+                <div v-if="job.requiredSkills?.length" class="rec-td-sub">
                   {{ job.requiredSkills.slice(0, 3).join(', ') }}
                 </div>
               </td>
-              <td class="py-3 px-4 text-gray-400">{{ job.enterprise?.name || '—' }}</td>
-              <td class="py-3 px-4 text-gray-400">{{ job.department || '—' }}</td>
-              <td class="py-3 px-4 text-gray-400">{{ job.location || '—' }}</td>
-              <td class="py-3 px-4 text-center">
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium" :class="statusClass(job.status)">{{ statusLabel(job.status) }}</span>
+              <td class="rec-td rec-td-muted">{{ job.enterprise?.name || '—' }}</td>
+              <td class="rec-td rec-td-muted">{{ job.department || '—' }}</td>
+              <td class="rec-td rec-td-muted">{{ job.location || '—' }}</td>
+              <td class="rec-td text-center">
+                <RecruitmentBadge :variant="statusBadgeVariant(job.status)">{{ statusLabel(job.status) }}</RecruitmentBadge>
               </td>
-              <td class="py-3 px-4 text-center text-gray-400">{{ job._count?.candidates || 0 }}</td>
-              <td class="py-3 px-4 text-center">
-                <span :class="matchRateClass(job.matchRate)">{{ job.matchRate || 0 }}%</span>
+              <td class="rec-td text-center rec-td-muted">{{ job._count?.candidates || 0 }}</td>
+              <td class="rec-td text-center">
+                <span :class="scoreClass(job.matchRate)">{{ job.matchRate || 0 }}%</span>
               </td>
-              <td class="py-3 px-4 text-gray-500">{{ formatTime(job.createdAt) }}</td>
-              <td class="py-3 px-4 text-center">
-                <div class="flex items-center justify-center gap-1">
-                  <button @click="openDetail(job)" class="px-2 py-1 rounded text-[10px] bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 cursor-pointer border-none" title="查看详情">详情</button>
-                  <button v-if="job.status === 'published'" @click="updateStatus(job, 'paused')" class="px-2 py-1 rounded text-[10px] bg-yellow-600/10 text-yellow-400 hover:bg-yellow-600/20 cursor-pointer border-none" title="暂停">暂停</button>
-                  <button v-if="job.status === 'paused'" @click="updateStatus(job, 'published')" class="px-2 py-1 rounded text-[10px] bg-green-600/10 text-green-400 hover:bg-green-600/20 cursor-pointer border-none" title="恢复">恢复</button>
-                  <button v-if="job.status !== 'closed'" @click="updateStatus(job, 'closed')" class="px-2 py-1 rounded text-[10px] bg-red-600/10 text-red-400 hover:bg-red-600/20 cursor-pointer border-none" title="关闭">关闭</button>
+              <td class="rec-td rec-td-muted">{{ formatTime(job.createdAt) }}</td>
+              <td class="rec-td text-center">
+                <div class="rec-action-group">
+                  <button @click="openDetail(job)" class="rec-btn-sm rec-btn-primary" title="查看详情">详情</button>
+                  <button v-if="job.status === 'published'" @click="updateStatus(job, 'paused')" class="rec-btn-sm rec-btn-warning" title="暂停">暂停</button>
+                  <button v-if="job.status === 'paused'" @click="updateStatus(job, 'published')" class="rec-btn-sm rec-btn-success" title="恢复">恢复</button>
+                  <button v-if="job.status !== 'closed'" @click="updateStatus(job, 'closed')" class="rec-btn-sm rec-btn-danger" title="关闭">关闭</button>
                 </div>
               </td>
             </tr>
@@ -107,89 +106,93 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="flex items-center justify-between text-xs text-gray-500">
-        <span>共 {{ total }} 条 · 第 {{ page }}/{{ totalPages }} 页</span>
-        <div class="flex gap-2">
-          <button @click="page--; fetchData()" :disabled="page <= 1" class="px-3 py-1.5 bg-[#0D1328] border border-[#1A2240] rounded-lg disabled:opacity-30 cursor-pointer hover:bg-white/5">上一页</button>
-          <button @click="page++; fetchData()" :disabled="page >= totalPages" class="px-3 py-1.5 bg-[#0D1328] border border-[#1A2240] rounded-lg disabled:opacity-30 cursor-pointer hover:bg-white/5">下一页</button>
+      <div v-if="totalPages > 1" class="rec-pagination">
+        <span class="rec-page-info">共 {{ total }} 条 · 第 {{ page }}/{{ totalPages }} 页</span>
+        <div class="rec-page-actions">
+          <button @click="page--; fetchData()" :disabled="page <= 1" class="rec-btn-page">上一页</button>
+          <button @click="page++; fetchData()" :disabled="page >= totalPages" class="rec-btn-page">下一页</button>
         </div>
       </div>
     </template>
 
     <!-- Detail Modal -->
     <Teleport to="body">
-      <div v-if="detailJob" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" @click.self="detailJob = null">
-        <div class="bg-[#0D1328] border border-[#1A2240] rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 mx-4">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-base font-semibold text-white/90">岗位详情</h2>
-            <button @click="detailJob = null" class="text-gray-500 hover:text-white text-lg cursor-pointer bg-transparent border-none">✕</button>
+      <div v-if="detailJob" class="rec-modal-overlay" @click.self="detailJob = null">
+        <div class="rec-modal">
+          <div class="rec-modal-header">
+            <h2 class="rec-modal-title">岗位详情</h2>
+            <button @click="detailJob = null" class="rec-modal-close">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
           </div>
           <template v-if="detailJob">
-            <div class="space-y-4 text-xs">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <div class="text-gray-500 mb-1">岗位名称</div>
-                  <div class="text-white/80 font-medium">{{ detailJob.title }}</div>
+            <div class="rec-modal-body">
+              <div class="rec-detail-grid">
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">岗位名称</span>
+                  <span class="rec-detail-value">{{ detailJob.title }}</span>
                 </div>
-                <div>
-                  <div class="text-gray-500 mb-1">所属企业</div>
-                  <div class="text-white/80">{{ detailJob.enterprise?.name || '—' }}</div>
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">所属企业</span>
+                  <span class="rec-detail-value">{{ detailJob.enterprise?.name || '—' }}</span>
                 </div>
-                <div>
-                  <div class="text-gray-500 mb-1">部门</div>
-                  <div class="text-white/80">{{ detailJob.department || '—' }}</div>
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">部门</span>
+                  <span class="rec-detail-value">{{ detailJob.department || '—' }}</span>
                 </div>
-                <div>
-                  <div class="text-gray-500 mb-1">工作地点</div>
-                  <div class="text-white/80">{{ detailJob.location || '—' }}</div>
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">工作地点</span>
+                  <span class="rec-detail-value">{{ detailJob.location || '—' }}</span>
                 </div>
-                <div>
-                  <div class="text-gray-500 mb-1">状态</div>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-medium" :class="statusClass(detailJob.status)">{{ statusLabel(detailJob.status) }}</span>
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">状态</span>
+                  <RecruitmentBadge :variant="statusBadgeVariant(detailJob.status)">{{ statusLabel(detailJob.status) }}</RecruitmentBadge>
                 </div>
-                <div>
-                  <div class="text-gray-500 mb-1">匹配率</div>
-                  <div :class="matchRateClass(detailJob.matchRate)">{{ detailJob.matchRate || 0 }}%</div>
-                </div>
-              </div>
-              <div v-if="detailJob.description">
-                <div class="text-gray-500 mb-1">岗位描述</div>
-                <div class="text-white/70 leading-relaxed bg-black/20 rounded-lg p-3">{{ detailJob.description }}</div>
-              </div>
-              <div v-if="detailJob.requiredSkills?.length">
-                <div class="text-gray-500 mb-1">技能要求</div>
-                <div class="flex flex-wrap gap-1">
-                  <span v-for="s in detailJob.requiredSkills" :key="s" class="px-2 py-0.5 rounded-full bg-blue-600/10 text-blue-400 text-[10px]">{{ s }}</span>
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">匹配率</span>
+                  <span :class="scoreClass(detailJob.matchRate)">{{ detailJob.matchRate || 0 }}%</span>
                 </div>
               </div>
-              <div class="grid grid-cols-3 gap-4">
-                <div>
-                  <div class="text-gray-500 mb-1">候选人</div>
-                  <div class="text-white/80 font-medium">{{ detailJob._count?.candidates || 0 }}</div>
+              <div v-if="detailJob.description" class="rec-detail-section">
+                <span class="rec-detail-label">岗位描述</span>
+                <div class="rec-detail-block">{{ detailJob.description }}</div>
+              </div>
+              <div v-if="detailJob.requiredSkills?.length" class="rec-detail-section">
+                <span class="rec-detail-label">技能要求</span>
+                <div class="rec-tag-group">
+                  <span v-for="s in detailJob.requiredSkills" :key="s" class="rec-tag rec-tag-blue">{{ s }}</span>
                 </div>
-                <div>
-                  <div class="text-gray-500 mb-1">面试数</div>
-                  <div class="text-white/80 font-medium">{{ detailJob._count?.interviews || 0 }}</div>
+              </div>
+              <div class="rec-detail-stats">
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">候选人</span>
+                  <span class="rec-detail-value">{{ detailJob._count?.candidates || 0 }}</span>
                 </div>
-                <div>
-                  <div class="text-gray-500 mb-1">创建时间</div>
-                  <div class="text-white/80">{{ formatTime(detailJob.createdAt) }}</div>
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">面试数</span>
+                  <span class="rec-detail-value">{{ detailJob._count?.interviews || 0 }}</span>
+                </div>
+                <div class="rec-detail-field">
+                  <span class="rec-detail-label">创建时间</span>
+                  <span class="rec-detail-value">{{ formatTime(detailJob.createdAt) }}</span>
                 </div>
               </div>
             </div>
           </template>
-          <div class="flex justify-end gap-2 mt-6">
-            <button v-if="detailJob?.status === 'published'" @click="updateStatus(detailJob, 'paused'); detailJob = null" class="px-4 py-2 rounded-lg text-xs bg-yellow-600/10 text-yellow-400 hover:bg-yellow-600/20 cursor-pointer border-none">暂停招聘</button>
-            <button v-if="detailJob?.status === 'paused'" @click="updateStatus(detailJob, 'published'); detailJob = null" class="px-4 py-2 rounded-lg text-xs bg-green-600/10 text-green-400 hover:bg-green-600/20 cursor-pointer border-none">恢复招聘</button>
-            <button @click="detailJob = null" class="px-4 py-2 rounded-lg text-xs bg-white/5 text-gray-400 hover:bg-white/10 cursor-pointer border-none">关闭</button>
+          <div class="rec-modal-footer">
+            <button v-if="detailJob?.status === 'published'" @click="updateStatus(detailJob, 'paused'); detailJob = null" class="rec-btn-sm rec-btn-warning">暂停招聘</button>
+            <button v-if="detailJob?.status === 'paused'" @click="updateStatus(detailJob, 'published'); detailJob = null" class="rec-btn-sm rec-btn-success">恢复招聘</button>
+            <button @click="detailJob = null" class="rec-btn-ghost">关闭</button>
           </div>
         </div>
       </div>
     </Teleport>
-  </div>
+  </RecruitmentPageShell>
 </template>
 
 <script setup lang="ts">
+import RecruitmentPageShell from '~/components/enterprise/recruitment/ui/RecruitmentPageShell.vue'
+import RecruitmentBadge from '~/components/enterprise/recruitment/ui/RecruitmentBadge.vue'
 definePageMeta({ layout: 'admin-aigc' })
 import { ref, onMounted } from 'vue'
 
@@ -211,20 +214,15 @@ function statusLabel(status: string) {
   return map[status] || status
 }
 
-function statusClass(status: string) {
-  const map: Record<string, string> = {
-    published: 'bg-green-500/10 text-green-400',
-    draft: 'bg-gray-500/10 text-gray-400',
-    paused: 'bg-yellow-500/10 text-yellow-400',
-    closed: 'bg-red-500/10 text-red-400',
-  }
-  return map[status] || 'bg-gray-500/10 text-gray-400'
+function statusBadgeVariant(status: string) {
+  const map: Record<string, string> = { published: 'success', draft: 'neutral', paused: 'warning', closed: 'danger' }
+  return map[status] || 'neutral'
 }
 
-function matchRateClass(rate: number) {
-  if (rate >= 70) return 'text-green-400'
-  if (rate >= 40) return 'text-yellow-400'
-  return 'text-red-400'
+function scoreClass(rate: number) {
+  if (rate >= 70) return 'rec-score-high'
+  if (rate >= 40) return 'rec-score-mid'
+  return 'rec-score-low'
 }
 
 function formatTime(t: string) {
@@ -293,3 +291,136 @@ onMounted(() => {
   fetchData()
 })
 </script>
+
+<style scoped>
+/* ── Shared Button ── */
+.rec-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--color-border-primary, #1E293B);
+  background: var(--color-bg-elevated, #111827);
+  color: var(--color-text-secondary, #94A3B8);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rec-btn:hover { background: var(--color-bg-hover, #1A2240); color: var(--color-text-primary, #F1F5F9); border-color: var(--color-border-secondary, #334155); }
+
+/* ── Filter Inputs ── */
+.rec-search-wrap { position: relative; flex: 1; min-width: 200px; }
+.rec-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted, #64748B); }
+.rec-input {
+  width: 100%;
+  background: var(--color-bg-secondary, #0D1328);
+  border: 1px solid var(--color-border-primary, #1E293B);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 13px;
+  color: var(--color-text-secondary, #94A3B8);
+  padding: 8px 12px 8px 36px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.rec-input:focus { border-color: var(--color-decision, #3B82F6); }
+.rec-input::placeholder { color: var(--color-text-disabled, #475569); }
+
+.rec-select {
+  background: var(--color-bg-secondary, #0D1328);
+  border: 1px solid var(--color-border-primary, #1E293B);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 13px;
+  color: var(--color-text-secondary, #94A3B8);
+  padding: 8px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.rec-select:focus { border-color: var(--color-decision, #3B82F6); }
+
+/* ── Loading ── */
+.rec-loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 48px; color: var(--color-text-muted, #64748B); font-size: 14px; }
+.rec-spinner { width: 20px; height: 20px; border: 2px solid var(--color-border-primary); border-top-color: var(--color-decision); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Error ── */
+.rec-error-banner { display: flex; align-items: center; gap: 8px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.2); border-radius: var(--radius-md); padding: 12px 16px; color: var(--color-danger); font-size: 13px; }
+.rec-btn-link { background: none; border: none; color: inherit; text-decoration: underline; cursor: pointer; margin-left: 8px; font-size: inherit; padding: 0; }
+
+/* ── Table ── */
+.rec-table-wrap { overflow-x: auto; border: 1px solid var(--color-border-primary, #1E293B); border-radius: var(--radius-lg, 12px); }
+.rec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rec-table thead { background: var(--color-bg-secondary, #0D1328); }
+.rec-table th { padding: 12px 16px; font-weight: 500; color: var(--color-text-muted, #64748B); font-size: 12px; white-space: nowrap; }
+.rec-table th.text-center { text-align: center; }
+.rec-table th.text-left { text-align: left; }
+.rec-table-row { border-top: 1px solid var(--color-border-primary, #1E293B); transition: background 0.1s; }
+.rec-table-row:hover { background: var(--color-bg-hover, #1A2240); }
+.rec-td { padding: 12px 16px; vertical-align: middle; }
+.rec-td-title { font-weight: 500; color: var(--color-text-primary, #F1F5F9); }
+.rec-td-sub { color: var(--color-text-muted, #64748B); font-size: 11px; margin-top: 2px; }
+.rec-td-muted { color: var(--color-text-secondary, #94A3B8); }
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+
+/* ── Score colors ── */
+.rec-score-high { color: var(--color-execution, #10B981); font-weight: 500; }
+.rec-score-mid { color: var(--color-warning, #F59E0B); font-weight: 500; }
+.rec-score-low { color: var(--color-danger, #EF4444); font-weight: 500; }
+
+/* ── Action buttons ── */
+.rec-action-group { display: flex; justify-content: center; gap: 4px; }
+.rec-btn-sm { padding: 4px 10px; border-radius: var(--radius-sm, 6px); font-size: 11px; cursor: pointer; border: none; transition: all 0.1s; font-weight: 500; }
+.rec-btn-primary { background: var(--color-decision-glow, rgba(59,130,246,0.15)); color: var(--color-decision, #3B82F6); }
+.rec-btn-primary:hover { background: var(--color-decision-glow); }
+.rec-btn-warning { background: rgba(245,158,11,0.12); color: var(--color-warning, #F59E0B); }
+.rec-btn-warning:hover { background: rgba(245,158,11,0.2); }
+.rec-btn-success { background: var(--color-execution-glow, rgba(16,185,129,0.15)); color: var(--color-execution, #10B981); }
+.rec-btn-success:hover { background: var(--color-execution-glow); }
+.rec-btn-danger { background: rgba(239,68,68,0.12); color: var(--color-danger, #EF4444); }
+.rec-btn-danger:hover { background: rgba(239,68,68,0.2); }
+
+/* ── Pagination ── */
+.rec-pagination { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--color-text-muted, #64748B); }
+.rec-page-info { font-size: 12px; }
+.rec-page-actions { display: flex; gap: 8px; }
+.rec-btn-page { padding: 8px 16px; background: var(--color-bg-elevated, #111827); border: 1px solid var(--color-border-primary, #1E293B); border-radius: var(--radius-sm, 6px); color: var(--color-text-secondary, #94A3B8); font-size: 12px; cursor: pointer; transition: all 0.1s; }
+.rec-btn-page:hover:not(:disabled) { background: var(--color-bg-hover, #1A2240); color: var(--color-text-primary); }
+.rec-btn-page:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── Empty state ── */
+.rec-empty-row { padding: 48px 0; }
+.rec-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--color-text-muted, #64748B); font-size: 14px; padding: 48px; }
+
+/* ── Modal ── */
+.rec-modal-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+.rec-modal { background: var(--color-bg-secondary, #0D1328); border: 1px solid var(--color-border-primary, #1E293B); border-radius: var(--radius-xl, 16px); width: 100%; max-width: 640px; max-height: 80vh; overflow-y: auto; padding: 24px; margin: 16px; }
+.rec-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.rec-modal-title { font-size: 16px; font-weight: 600; color: var(--color-text-primary, #F1F5F9); margin: 0; }
+.rec-modal-close { background: none; border: none; color: var(--color-text-muted, #64748B); cursor: pointer; padding: 4px; border-radius: 4px; }
+.rec-modal-close:hover { color: var(--color-text-primary); background: var(--color-bg-hover); }
+
+.rec-modal-body { display: flex; flex-direction: column; gap: 16px; }
+.rec-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rec-detail-field { display: flex; flex-direction: column; gap: 4px; }
+.rec-detail-label { font-size: 12px; color: var(--color-text-muted, #64748B); }
+.rec-detail-value { font-size: 14px; color: var(--color-text-primary, #F1F5F9); font-weight: 500; }
+
+.rec-detail-section { display: flex; flex-direction: column; gap: 8px; }
+.rec-detail-block { color: var(--color-text-secondary, #94A3B8); font-size: 13px; line-height: 1.6; background: rgba(0,0,0,0.2); border-radius: var(--radius-md); padding: 12px; }
+
+.rec-tag-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.rec-tag { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.rec-tag-blue { background: var(--color-decision-glow, rgba(59,130,246,0.15)); color: var(--color-decision, #3B82F6); }
+
+.rec-detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-top: 12px; border-top: 1px solid var(--color-border-primary, #1E293B); }
+
+.rec-modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.rec-btn-ghost { padding: 8px 16px; border-radius: var(--radius-sm); border: none; background: rgba(255,255,255,0.05); color: var(--color-text-secondary, #94A3B8); font-size: 12px; cursor: pointer; }
+.rec-btn-ghost:hover { background: rgba(255,255,255,0.1); color: var(--color-text-primary); }
+
+@media (max-width: 768px) {
+  .rec-detail-grid { grid-template-columns: 1fr; }
+  .rec-detail-stats { grid-template-columns: 1fr; }
+}
+</style>

@@ -135,6 +135,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'admin-aigc' })
 import { ref, onMounted } from 'vue'
 
 const route = useRoute()

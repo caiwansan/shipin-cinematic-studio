@@ -191,6 +191,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'admin-aigc' })
 import { getAuthToken } from '~/utils/auth/token'
 const route = useRoute()
 const loading = ref(false)

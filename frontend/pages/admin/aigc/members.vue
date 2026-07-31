@@ -80,7 +80,7 @@
               当前等级：<span class="text-white/70">{{ tierLabel(editUser.memberTier) || '普通用户' }}</span>
             </div>
             <select v-model="editNewTier" class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50">
-              <option value="">普通用户（免费 / 无会员）</option>
+              <option value="free">普通用户（免费 / 体验版）</option>
               <option value="basic">基础版（29元/月）</option>
               <option value="pro">本地版（199元）</option>
               <option value="enterprise">年卡（299元/年）</option>

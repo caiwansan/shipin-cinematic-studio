@@ -137,6 +137,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'admin-aigc' })
 import { ref, reactive, onMounted } from 'vue'
 
 interface Enterprise {

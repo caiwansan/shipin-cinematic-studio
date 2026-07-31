@@ -122,6 +122,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'admin-aigc' })
 import { getAuthToken } from '~/utils/auth/token'
 const loading = ref(false)
 const error = ref('')

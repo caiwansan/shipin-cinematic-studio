@@ -136,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'admin-aigc' })
 import { ref, reactive, onMounted } from 'vue'
 
 const tab = ref<'site' | 'seo'>('site')
