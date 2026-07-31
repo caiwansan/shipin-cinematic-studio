@@ -13,6 +13,7 @@ model AiStageModelConfig {
   provider  String   @default("bailian")
   model     String   @default("wan2.7-t2v")
   size      String   @default("1024x1024")
+  baseUrl   String   @default("") // Sprint-ADMIN-IA-REALITY-03 T02: 平台默认模型自定义端点
   params    Json     @default("{}")
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
@@ -942,6 +943,7 @@ model AiModel {
   provider        String
   modelType       String
   taskTypes       String[]
+  capabilities    String[]        @default([]) // T02: 能力白名单 TEXT/IMAGE/VIDEO/AUDIO/EMBEDDING
   status          String           @default("active")
   deprecateAt     DateTime?
   costPerRequest  Float            @default(0)
@@ -966,6 +968,22 @@ model AiModel {
 
   @@index([modelType, status])
   @@map("AiModel")
+}
+
+// Sprint-ADMIN-IA-REALITY-03 T02: AiProvider — 平台 Provider 注册表
+// 统一管理 Provider 的 endpoint / 凭据状态 / 启用开关，禁止 workspace 自建 Provider
+// 注意：旧 ModelProvider（provider/label/modelName）是供应商模型同步缓存表，职责不同，保留不动
+model AiProvider {
+  id               String   @id @default(uuid()) @db.Uuid
+  providerCode     String   @unique // deepseek / openai / volcengine ...
+  name             String
+  endpoint         String   @default("")
+  credentialStatus String   @default("untested") // untested | ok | failed | decrypt_error | disabled
+  enabled          Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("ai_provider")
 }
 
 model AiFallbackRule {
@@ -4860,6 +4878,40 @@ model ResourceContract {
   healthRecords  ResourceHealth[]
   capabilityMatrix ResourceCapabilityMatrix[]
   costRecords    ResourceCost[]
+}
+
+// ProviderRegistry — 模型能力注册表（DB 表 provider_registry，Prisma 模型补齐）
+// Sprint-ADMIN-IA-REALITY-03 T02: credential-resolver 依赖此模型，补齐消除 (prisma as any) 运行时 undefined
+model ProviderRegistry {
+  id          String   @id @default(uuid()) @db.Uuid
+  capability  String
+  vendor      String
+  modelFamily String?  @map("model_family")
+  baseUrl     String?  @map("base_url")
+  status      String   @default("active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("provider_registry")
+}
+
+// CredentialVault — 凭据保险库（DB 表 credential_vault，Prisma 模型补齐）
+// Sprint-ADMIN-IA-REALITY-03 T02: credential-resolver / vault-service 依赖此模型
+model CredentialVault {
+  id               String   @id @default(uuid()) @db.Uuid
+  ownerType        String   @map("owner_type")
+  ownerId          String   @map("owner_id") @db.Uuid
+  capability       String
+  encryptedPayload String   @map("encrypted_payload")
+  metadata         Json?
+  status           String   @default("active")
+  expiresAt        DateTime? @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdBy        String?  @map("created_by") @db.Uuid
+
+  @@index([capability, status])
+  @@index([ownerType, ownerId])
+  @@map("credential_vault")
 }
 
 model ResourceCredential {

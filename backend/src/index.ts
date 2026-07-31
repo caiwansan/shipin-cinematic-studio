@@ -65,6 +65,11 @@ let agentScheduleRoutes: any = undefined
 let agentMemoryRoutes: any = undefined
 let agentToolRoutes: any = undefined
 import adminCustomerServiceRoutes from './routes/admin-customer-service.js'
+import adminSubscriptionV2Routes from './routes/admin-subscription-v2.js'
+import adminLlmHealthRoutes from './routes/admin-llm-health.routes.js'
+import adminAgentActivityRoutes from './routes/admin-agent-activity.routes.js'
+import adminQuotaRoutes from './routes/admin-quota.routes.js'
+import adminCustomerValidationRoutes from './routes/admin-customer-validation.js'
 
 // Legal routes
 import legalConfigRoutes from './routes/legal/legal-config.route.js'
@@ -84,6 +89,9 @@ import modelRoutes from './routes/models.js'
 import styleProfileRoutes from './routes/style-profiles.js'
 import adminModelRoutes from './routes/admin-models.js'
 import adminModelV2Routes from './routes/admin-models-v2.js'
+import adminAiProviderRoutes from './routes/admin-ai-provider.routes.js'
+import adminPlatformDefaultModelsRoutes from './routes/admin-platform-default-models.routes.js'
+import adminUsageStatsRoutes from './routes/admin-usage-stats.routes.js'
 import voiceRoutes from './routes/voice.js'
 import { initializeRuntimeSafety, timerRegistry, getLifecycleStatus } from './services/lifecycle-manager.js'
 // character routes loaded dynamically below
@@ -102,6 +110,12 @@ import narrativeLLMRoutes from './routes/narrative-llm.js'
 import aigcSpecDbRoutes from './routes/aigc-spec-db.js'
 import tasksTelemetryRoutes from './routes/tasks-telemetry.js'
 import directorV2Routes from './routes/director-v2.js'
+import directorExecutionRoutes from './routes/director-execution.route.js'
+import directorSpecExecutionRoutes from './routes/director-spec-execution.route.js'
+import directorAssetQualityRoutes from './routes/director-asset-quality.route.js'
+import directorDecisionRoutes from './routes/director-decision.route.js'
+import { careerConfirmationRoutes } from './routes/career-confirmation.routes.js'
+import careerIdentityRoutes from './routes/career-identity.routes.js'
 import unifiedModelConfigRoutes from './routes/unified-model-config.js'
 import administrativeRegionRoutes from './routes/regions.js'
 import balanceRoutes from './routes/balance.route.js'
@@ -218,6 +232,20 @@ async function main() {
   })
 
   await app.register(jwt, { secret: env.JWT_SECRET })
+
+  // 全局钩子：如果请求没有 Authorization header 但 Cookie 中有 auth_token，自动补上
+  app.addHook('onRequest', async (request) => {
+    if (!request.headers.authorization) {
+      const cookieHeader = request.headers.cookie
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)auth_token=([^;]*)/)
+        if (match && match[1]) {
+          request.headers.authorization = `Bearer ${match[1]}`
+        }
+      }
+    }
+  })
+
   await app.register(authPlugin)
   await app.register(runtimeContextPlugin)
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } })
@@ -256,6 +284,9 @@ async function main() {
   // Director Simulation Layer (导演预演层)
   // Job routes (AI 求职招聘工作台)
   await app.register(jobRoutes)
+  await app.register(careerConfirmationRoutes)
+  await app.register(careerIdentityRoutes)
+  await app.register((await import('./routes/career-planning-api.js')).careerPlanningRoutes)
   // autograph registration removed — code pruned (2026-05-21)
 
   // ExecutionGraph routes (Graph Runtime 前端客户端 API)
@@ -317,6 +348,10 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/agent-daily-report.js')).agentDailyReportRoutes)
   // P4.2.5.2 — WeCom Real SDK Callback (IMP-01.1)
   await app.register((await import('./enterprise/channel/wecom-callback.controller.js')).registerWeComCallbackRoutes, { prefix: '/api/enterprise/wecom' })
+  // Enterprise Report（招聘报告 MVP）
+  await app.register((await import('./routes/enterprise-report.js')).enterpriseReportRoutes)
+  // Agent Activity（AI 员工工作日志 — Sprint 8）
+  await app.register((await import('./routes/enterprise-agent-activity.js')).default)
   // Agent Schedule（定时任务 + 目标追踪）
   await app.register((await import('./routes/agent-schedule.js')).agentScheduleRoutes)
   // Enterprise Channel Gateway（渠道管理 + 内容发布 + 互动）
@@ -327,6 +362,8 @@ await app.register(projectV2Routes)
   // Enterprise AI 员工实例管理 (media-department)
   // Phase 1: 路由前缀统一为 /api/enterprise，与 enterprise domain 保持一致
   await app.register((await import('./routes/enterprise-agents.js')).default, { prefix: '/api/enterprise' })
+  // TASK-AI-WORKFORCE-PRODUCT-01: Employee Profile View Layer
+  await app.register((await import('./routes/employee-profile.js')).employeeProfileRoutes, { prefix: '/api/enterprise/agent-profiles' })
   // Enterprise Sprint 2 — Knowledge Hub + Approval Center (v2.0, 含6项修正)
   await app.register((await import('./routes/enterprise-knowledge.js')).registerEnterpriseKnowledgeRoutes, { prefix: '/api/enterprise/knowledge' })
   await app.register((await import('./routes/enterprise-approval.js')).registerEnterpriseApprovalRoutes, { prefix: '/api/enterprise/approvals' })
@@ -339,16 +376,35 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise-foundation.js')).enterpriseFoundationRoutes, { prefix: '/api' })
   // Sprint 4.2.8 — Enterprise Billing (订阅中心 + 套餐管理)
   await app.register((await import('./routes/enterprise-billing.js')).enterpriseBillingRoutes, { prefix: '/api' })
+  // Enterprise Subscription Billing — 企业订阅支付路由（替代旧的 enterprise-subscription.ts）
+  await app.register((await import('./routes/enterprise-subscription-billing.js')).default)
+  // BETA-08.1: Subscription & Entitlement API
+  await app.register((await import('./routes/subscription.js')).registerSubscriptionRoutes)
+  // Sprint-09.7: Commerce Control Plane (SSOT for plan/subscription admin)
+  await app.register((await import('./routes/admin-commerce.js')).default)
+  // Sprint-11C.5: Admin Capability Commerce Authority
+  await app.register((await import('./routes/admin-capabilities.js')).default, { prefix: '/api/admin/commerce' })
+  // TASK-AI-WORKFORCE-PRODUCT-01: Provider Credential Management
+  await app.register((await import('./routes/provider-management.js')).default)
   // Sprint 4.2.8 Step 5 — Agent Identity Layer
   await app.register((await import('./routes/agent-identity.js')).registerAgentIdentityRoutes, { prefix: '/api/enterprise/agent-identity' })
   // Sprint-08 — Identity Context (统一身份上下文)
   await app.register((await import('./routes/identity-context.routes.js')).default)
   // BETA-06.1 — Enterprise Agent Runtime (激活/执行/生命周期)
   await app.register((await import('./routes/enterprise-agent-runtime.js')).registerEnterpriseAgentRuntimeRoutes, { prefix: '/api/enterprise' })
+  // Sprint-11C.1 — Enterprise Capability Authority
+  await app.register((await import('./routes/enterprise-capability.routes.js')).enterpriseCapabilityRoutes, { prefix: '/api/enterprise' })
+  await app.register((await import('./routes/marketplace.js')).marketplaceRoutes, { prefix: '/api/enterprise/marketplace' })
   // Phase 5-A1 — Enterprise AI Recruitment Onboarding
   await app.register((await import('./routes/enterprise-onboarding.routes.js')).enterpriseOnboardingRoutes, { prefix: '/api' })
   // Enterprise Home — 企业招聘中心首页 (CTO Directive: Domain Separation)
   await app.register(enterpriseHomeRoutes)
+  // Sprint-09 — Hermes Profile Binding (Identity Layer)
+  await app.register((await import('./routes/hermes-profile.js')).hermesProfileRoutes, { prefix: '/api/enterprise/hermes-profiles' })
+  // Sprint-09 — Enterprise Timeline (View Layer)
+  await app.register((await import('./routes/enterprise-timeline.js')).enterpriseTimelineRoutes, { prefix: '/api/enterprise' })
+  // Sprint-09 — Enterprise Outcome (Outcome Truth Layer)
+  await app.register((await import('./routes/enterprise-outcome.js')).enterpriseOutcomeRoutes, { prefix: '/api/enterprise/outcomes' })
   // Phase 5-B1 — Resume Center (skeleton: read-only + maintenance gates)
   await app.register((await import('./routes/resume.routes.js')).resumeRoutes, { prefix: '/api' })
   // Phase 5-B2 — Pipeline Center (skeleton: read-only + maintenance gates)
@@ -374,6 +430,8 @@ await app.register(projectV2Routes)
   // KM-AI-JOB-AGENT-08 — AI 职业助理 Career Workflow
   await app.register((await import('./routes/career-workflow.js')).careerWorkflowRoutes)
   await app.register((await import('./routes/career-activation.js')).careerActivationRoutes)
+  // Sprint-10 Step 3B — Career Agent Autonomous Task
+  await app.register((await import('./routes/career-agent-task.routes.js')).careerAgentTaskRoutes)
   await app.register((await import('./routes/career-llm-config.js')).careerLlmConfigRoutes)
   // Sprint-07A.2-AI-03: 统一能力级 LLM 配置
   await app.register((await import('./routes/capability-llm-config.js')).capabilityLlmConfigRoutes)
@@ -390,6 +448,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/hiring-intelligence.routes.js')).hiringIntelligenceRoutes)
   // Phase 5-B7 — Enterprise Recruitment (workspace + JD generate + match)
   await app.register((await import('./routes/enterprise.routes.js')).enterpriseRoutes)
+  // Enterprise Governance (audit trail, code governance)
+  await app.register((await import('./routes/governance.js')).governanceRoutes, { prefix: '/api/enterprise/governance' })
   ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
 
   // 注册渠道适配器
@@ -428,6 +488,14 @@ await app.register(projectV2Routes)
 
   // Director V2 routes (Director OS observability layer, /api/v2/director/*)
   await app.register(directorV2Routes)
+
+  // Director Execution routes (/api/director/execution/*) — 昆仑镜 → 火麒麟 执行计划
+  await app.register(directorExecutionRoutes)
+  await app.register(directorSpecExecutionRoutes)
+
+  // Director Asset Quality routes (/api/director/assets/:assetId/quality) — AI导演质量观察
+  await app.register(directorAssetQualityRoutes)
+  await app.register(directorDecisionRoutes)
 
   // Desktop Runtime routes（跨平台桌面运行时）
   // REMOVED: desktopRuntimeRoutes
@@ -473,6 +541,9 @@ await app.register(projectV2Routes)
   // Admin model routes (管理员 API Key 管理)
   await app.register(adminModelRoutes)
   await app.register(adminModelV2Routes)
+  await app.register(adminAiProviderRoutes)
+  await app.register(adminPlatformDefaultModelsRoutes)
+  await app.register(adminUsageStatsRoutes)
 
   // Admin Image Prompt Templates (提示词模板管理)
   await app.register(adminImagePromptRoutes)
@@ -493,6 +564,15 @@ await app.register(projectV2Routes)
   await app.register(adminMarketAgentRoutes)
   await app.register(adminRecruitmentRoutes)
   await app.register(adminRevenueDashboardRoutes)
+
+  // Admin Subscription V2 (pause/resume/cancel/change-plan + stats)
+  await app.register(adminSubscriptionV2Routes)
+  await app.register(adminLlmHealthRoutes)
+  await app.register(adminAgentActivityRoutes)
+  await app.register(adminQuotaRoutes)
+
+  // Admin Customer Validation Dashboard
+  await app.register(adminCustomerValidationRoutes)
 
   // Candidate Domain routes (P3)
   const { default: candidateProfileRoutes } = await import('./services/candidate/routes/candidate-profile.routes.js')
@@ -1257,6 +1337,13 @@ await app.register(projectV2Routes)
 
   try {
     registerRuntimeGuard(app)
+    // ★ 02-B Task 3：混沌珠生产队列（常驻 Worker + DB Sweeper）——后台化百万字生产
+    try {
+      const { startHdzProductionQueue } = await import('./services/hdz/production-queue.service.js')
+      startHdzProductionQueue()
+    } catch (qErr) {
+      console.warn('[HDZ/Queue] 生产队列启动失败（不影响主服务）:', (qErr as Error).message)
+    }
     await app.listen({ port: env.PORT, host: '0.0.0.0' })
     console.log(`🚀 API Server running at http://localhost:${env.PORT}`)
   } catch (err) {

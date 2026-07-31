@@ -54,9 +54,9 @@ export interface ResolvedRuntimeConfig {
   retry: number
   /** 配置来源追踪 */
   source: {
-    model: 'input' | 'enterprise_config' | 'platform_config' | 'user_config' | 'stage_config' | 'provider_registry' | 'env_default'
-    apiKey: 'enterprise_config' | 'user_config' | 'platform_config' | 'env' | 'none'
-    baseUrl: 'enterprise_config' | 'user_config' | 'provider_registry' | 'env_default'
+    model: 'input' | 'enterprise_config' | 'platform_config' | 'user_config' | 'user_capability_config' | 'stage_config' | 'provider_registry' | 'env_default'
+    apiKey: 'enterprise_config' | 'user_config' | 'user_capability_config' | 'platform_config' | 'env' | 'none'
+    baseUrl: 'enterprise_config' | 'user_config' | 'user_capability_config' | 'platform_config' | 'provider_registry' | 'env_default'
   }
 }
 
@@ -69,6 +69,7 @@ const PROVIDER_BASE_URLS: Record<string, string> = {
   openai: 'https://api.openai.com/v1',
   siliconflow: 'https://api.siliconflow.cn/v1',
   volcengine: 'https://ark.cn-beijing.volces.com/api/v3',
+  longcat: 'https://api.longcat.chat/openai/v1',
 }
 
 // ─── Capability → 环境变量 Key ──────────────────────────────────────
@@ -151,95 +152,51 @@ export async function resolveRuntimeConfig(
         orderBy: { createdAt: 'asc' },
       })
       if (enterpriseConfig && enterpriseConfig.encryptedApiKey) {
-        const apiKey = decryptKey(enterpriseConfig.encryptedApiKey)
-        if (apiKey) {
-          return buildConfig({
-            userId,
-            executionId,
-            provider: enterpriseConfig.provider,
-            model: enterpriseConfig.modelName,
-            baseUrl: enterpriseConfig.baseUrl || PROVIDER_BASE_URLS[enterpriseConfig.provider] || '',
-            apiKey,
-            source: {
-              model: 'enterprise_config',
-              apiKey: 'enterprise_config',
-              baseUrl: enterpriseConfig.baseUrl ? 'enterprise_config' : 'provider_registry',
+        try {
+          const apiKey = decryptKey(enterpriseConfig.encryptedApiKey)
+          if (apiKey) {
+            return buildConfig({
+              userId,
+              executionId,
+              provider: enterpriseConfig.provider,
+              model: enterpriseConfig.modelName,
+              baseUrl: enterpriseConfig.baseUrl || PROVIDER_BASE_URLS[enterpriseConfig.provider] || '',
+              apiKey,
+              source: {
+                model: 'enterprise_config',
+                apiKey: 'enterprise_config',
+                baseUrl: enterpriseConfig.baseUrl ? 'enterprise_config' : 'provider_registry',
+              },
+            })
+          }
+        } catch (decryptErr) {
+          // Sprint-RECRUITMENT-REALITY-04 T01: 解密失败 → 标记健康状态
+          // Sprint-05 T01: 升级为阻断 —— 企业 AI 员工不允许静默 fallback 到平台/用户 key（身份隔离）
+          // 必须显式失败并提示重新配置，否则企业会误以为员工在工作，实际用的是别人的 key
+          console.warn(`[resolveRuntimeConfig] EnterpriseLlmConfig key 解密失败 (config=${enterpriseConfig.id.slice(0, 8)})`)
+          await prisma.enterpriseLlmConfig.update({
+            where: { id: enterpriseConfig.id },
+            data: {
+              healthStatus: 'decrypt_error',
+              lastHealthCheckAt: new Date(),
+              healthError: '运行时解密失败：CRYPTO_ENCRYPTION_KEY 变更或数据损坏，需重新配置 key',
             },
-          })
+          }).catch(() => {}) // fire-and-forget 标记
+          throw new Error(
+            `[EnterpriseLLM] 模型密钥解密失败，AI 员工暂不可用。请在企业工作台重新配置模型密钥 (config=${enterpriseConfig.id.slice(0, 8)})`
+          )
         }
       }
     } catch (e) {
+      // Sprint-05 T01: 解密失败必须阻断（不允许静默 fallback 到平台/用户 key）
+      // 仅吞 DB 读取层错误；企业密钥错误继续冒泡给调用方
+      if (e instanceof Error && e.message.startsWith('[EnterpriseLLM]')) throw e
       console.warn(`[resolveRuntimeConfig] EnterpriseLlmConfig 读取失败:`, e)
     }
   }
 
-  // ── 3. 平台配置层（admin-global-config + businessType）──
-  // Sprint-07A.2: 平台 AI 能力走这里，API Key 优先从 apiKey 表读取
-  if (input?.businessType && capability === 'llm') {
-    try {
-      const platformModel = await getRouteConfig(
-        `route:admin-global-config:${input.businessType}`,
-        'llm_model',
-        ''
-      )
-      const platformProvider = await getRouteConfig(
-        `route:admin-global-config:${input.businessType}`,
-        'llm_provider',
-        'deepseek'
-      )
-      if (platformModel) {
-        // Sprint-07A.2: 优先从 apiKey 表读取管理员配置的 Key
-        let apiKey = ''
-        try {
-          const apiKeyRow = await prisma.apiKey.findUnique({
-            where: { provider: `business_type_${input.businessType}` }
-          })
-          if (apiKeyRow?.keyValue) {
-            apiKey = apiKeyRow.keyValue
-          }
-        } catch { /* apiKey 表不存在时忽略 */ }
-
-        // Fallback: 环境变量
-        if (!apiKey) {
-          const envKey = envKeyForProvider(platformProvider)
-          apiKey = process.env[envKey] || ''
-        }
-
-        // Base URL（优先从 routeConfig 读取）
-        let baseUrl = ''
-        try {
-          baseUrl = await getRouteConfig(
-            `route:admin-global-config:${input.businessType}`,
-            'llm_base_url',
-            ''
-          )
-        } catch { /* 忽略 */ }
-        if (!baseUrl) {
-          baseUrl = PROVIDER_BASE_URLS[platformProvider as string] || ''
-        }
-
-        if (apiKey) {
-          return buildConfig({
-            userId,
-            executionId,
-            provider: platformProvider,
-            model: platformModel as string,
-            baseUrl,
-            apiKey,
-            source: {
-              model: 'platform_config',
-              apiKey: 'platform_config',
-              baseUrl: baseUrl ? 'platform_config' : 'provider_registry',
-            },
-          })
-        }
-      }
-    } catch (e) {
-      console.warn(`[resolveRuntimeConfig] Platform config 读取失败 (businessType=${input.businessType}):`, e)
-    }
-  }
-
-  // ── 4. 用户配置层（V2 单行配置） ──
+  // ── 3. 用户配置层（V2 单行配置） ──
+  // Sprint-ADMIN-IA-REALITY-03 T02: 用户 BYOK 优先于平台配置层（掌柜冻结：用户 BYOK → 企业 → 平台默认）
   if (userId && userId !== 'anonymous') {
     try {
       const v2 = await loadFullConfigV2(userId)
@@ -247,9 +204,12 @@ export async function resolveRuntimeConfig(
         // Sprint-07A.2-AI-03: LLM 能力级覆盖（capabilityLlmConfigs）
         if (capability === 'llm' && v2.capabilityLlmConfigs) {
           const capConfigs = v2.capabilityLlmConfigs as Record<string, any>
-          // Sprint-07A.3: 从 input.businessType 或默认 'career_agent' 读取能力级配置
-          const capType = input?.businessType || 'career_agent'
-          const capConfig = capConfigs[capType]
+          // Sprint-07A.3: 从 input.businessType 读取能力级 JSONB 配置（hdz/ppt/novel）
+          // Sprint-09A-01: career_agent 不再使用独立能力级配置，统一使用全局 LLM 设置
+          const capType = input?.businessType
+          // career_agent 跳过 JSONB 能力配置，直接使用全局 UserModelConfigV2.llm*
+          if (capType === 'career_agent') { /* skip — use global LLM config */ }
+          const capConfig = capType && capType !== 'career_agent' ? capConfigs[capType] : undefined
           if (capConfig?.provider && capConfig?.model && capConfig?.apiKey) {
             return buildConfig({
               userId,
@@ -306,6 +266,77 @@ export async function resolveRuntimeConfig(
     }
   }
 
+  // ── 4. 平台配置层（admin-global-config + businessType）──
+  // Sprint-07A.2: 平台 AI 能力走这里，API Key 优先从 apiKey 表读取
+  // Sprint-09E-04.5B: Career Agent 跳过平台配置层
+  //   身份隔离：Career Agent 是用户的 AI 员工，不是平台共享能力
+  //   解析顺序优先用户 BYOK（UserModelConfigV2），平台配置仅作兜底
+  if (input?.businessType === 'career_agent') {
+    /* Career Agent: 跳过平台配置层，走用户 BYOK */
+  } else if (input?.businessType && capability === 'llm') {
+    try {
+      const platformModel = await getRouteConfig(
+        `route:admin-global-config:${input.businessType}`,
+        'llm_model',
+        ''
+      )
+      const platformProvider = await getRouteConfig(
+        `route:admin-global-config:${input.businessType}`,
+        'llm_provider',
+        'deepseek'
+      )
+      if (platformModel) {
+        // Sprint-07A.2: 优先从 apiKey 表读取管理员配置的 Key
+        let apiKey = ''
+        try {
+          const apiKeyRow = await prisma.apiKey.findUnique({
+            where: { provider: `business_type_${input.businessType}` }
+          })
+          if (apiKeyRow?.keyValue) {
+            apiKey = apiKeyRow.keyValue
+          }
+        } catch { /* apiKey 表不存在时忽略 */ }
+
+        // Fallback: 环境变量
+        if (!apiKey) {
+          const envKey = envKeyForProvider(platformProvider)
+          apiKey = process.env[envKey] || ''
+        }
+
+        // Base URL（优先从 routeConfig 读取）
+        let baseUrl = ''
+        try {
+          baseUrl = await getRouteConfig(
+            `route:admin-global-config:${input.businessType}`,
+            'llm_base_url',
+            ''
+          )
+        } catch { /* 忽略 */ }
+        if (!baseUrl) {
+          baseUrl = PROVIDER_BASE_URLS[platformProvider as string] || ''
+        }
+
+        if (apiKey && baseUrl) {
+          return buildConfig({
+            userId,
+            executionId,
+            provider: platformProvider,
+            model: platformModel as string,
+            baseUrl,
+            apiKey,
+            source: {
+              model: 'platform_config',
+              apiKey: 'platform_config',
+              baseUrl: baseUrl ? 'platform_config' : 'provider_registry',
+            },
+          })
+        }
+      }
+    } catch (e) {
+      console.warn(`[resolveRuntimeConfig] Platform config 读取失败 (businessType=${input.businessType}):`, e)
+    }
+  }
+
   // ── 5. 阶段配置层 ──
   try {
     const stageConfig = await prisma.aiStageModelConfig.findUnique({
@@ -328,6 +359,10 @@ export async function resolveRuntimeConfig(
   }
 
   // ── 6. 环境变量（开发后门） ──
+  // Sprint-09E-04.5B: Career Agent 落到 env fallback 时写日志
+  if (input?.businessType === 'career_agent') {
+    console.log(`[MODEL_RUNTIME_FALLBACK] Career Agent userId=${userId} 无用户 BYOK 配置，回退到环境变量`)
+  }
   const provider = input?.provider || 'bailian'
   const model = env[`${provider.toUpperCase()}_${capability.toUpperCase()}_MODEL` as keyof typeof env] as string
               || env[`ALIYUN_${capability.toUpperCase()}_MODEL` as keyof typeof env] as string
