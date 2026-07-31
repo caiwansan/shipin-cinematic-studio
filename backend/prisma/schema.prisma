@@ -2912,6 +2912,7 @@ model AIProviderConfig {
 
 model EnterprisePlan {
   id                String   @id @default(uuid()) @db.Uuid
+  code              String?  @unique // Sprint-RECRUITMENT-REALITY-02-B: 套餐等级代码 BASIC | PRO | ENTERPRISE | TRIAL | FREE（取代 displayName 字符串猜测）
   name              String   @unique // 套餐标识（管理员配置）
   displayName       String   @map("display_name") // 显示名称
   description       String? // 套餐说明
@@ -2929,7 +2930,10 @@ model EnterprisePlan {
   allowedProviders  Json     @default("[\"deepseek\",\"openai\",\"claude\",\"zhipu\"]") @map("allowed_providers") // 允许的模型供应商
   // 额度策略
   quotaPolicy      String   @default("unlimited") @map("quota_policy") // unlimited | fixed | pay_as_you_go
+  quotaConfig      Json?    @map("quota_config") // Sprint-RECRUITMENT-REALITY-04 T03: 按能力月配额 { "AI_JD_GENERATE": { "monthly": 100, "unit": "次" } }
   features          Json     @default("[]") // 功能特性列表
+  // Sprint-RECRUITMENT-REALITY-03: 套餐能力集（Plan → Entitlement 继承）。空数组=全部能力开放
+  capabilityCodes   Json     @default("[]") @map("capability_codes") // 新格式: {employees:[], capabilities:[]}；旧格式: ["AI_JD_GENERATE"]
   enabled           Boolean  @default(true)
   sortOrder         Int      @default(0) @map("sort_order")
   createdAt         DateTime @default(now()) @map("created_at")
@@ -2979,6 +2983,9 @@ model EnterpriseEntitlement {
   maxMembers      Int      @default(3) @map("max_members")
   storageLimit    Int      @default(5) @map("storage_limit_gb")
   features        Json     @default("{}")
+  capabilityCodes       Json?    @map("capability_codes")
+  capabilityDeniedCodes Json?    @map("capability_denied_codes")
+  quotaUsage      Json?    @map("quota_usage") // Sprint-RECRUITMENT-REALITY-04 T03: 当前计费周期已用额度 { "AI_JD_GENERATE": { "used": 37, "periodStart": "2026-08-01T00:00:00Z" } }
   status          String   @default("active") // active | suspended | expired
   effectiveFrom   DateTime @default(now()) @map("effective_from")
   effectiveUntil  DateTime? @map("effective_until")
@@ -3273,6 +3280,20 @@ model RouteConfig {
   @@map("route_config")
 }
 
+// SystemConfig — 平台级配置（基础信息 / SEO / 公共通道），key-value 扁平存储
+// Sprint-ADMIN-IA-REALITY-03 T01: 官网、后台、公开页面统一读取，不散落配置
+model SystemConfig {
+  key       String   @id
+  value     String   @default("")
+  group     String   @default("site") // site / seo / public
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([group])
+  @@map("system_config")
+}
+
 model ScriptBreakdown {
   id                String   @id @default(uuid()) @db.Uuid
   projectId         String?
@@ -3457,6 +3478,7 @@ model HdzProject {
   writerAlignmentMetrics WriterAlignmentMetric[]
   plotDagEdges        PlotDagEdge[]
   characterStates     HdzCharacterState[]
+  mindStates          CharacterMindState[]
   planRevisions       HdzPlanRevision[]
   storyEvents         StoryEvent[]
   masterPlan          Json?     @map("master_plan")  // 增强版 Master Plan（三幕结构+卷规划+角色弧线+伏笔系统）
@@ -3516,6 +3538,7 @@ model HdzCharacter {
 
   project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   characterStates HdzCharacterState[]
+  mindStates      CharacterMindState[]
 
   @@index([projectId])
   @@map("hdz_characters")
@@ -3659,6 +3682,29 @@ model HdzCharacterState {
   @@index([projectId, characterId])
   @@index([projectId, chapterNo])
   @@map("hdz_character_states")
+}
+
+model CharacterMindState {
+  id                 String   @id @default(uuid()) @db.Uuid
+  projectId          String   @db.Uuid    @map("project_id")
+  characterId        String   @db.Uuid    @map("character_id")
+  chapterNo          Int      @default(0) @map("chapter_no") // 快照章节（每章更新）
+  fear               String?  @db.Text // 当前恐惧
+  desire             String?  @db.Text // 当前欲望/执念
+  belief             String?  @db.Text // 核心价值观/信念
+  trauma             String?  @db.Text // 创伤记忆
+  moralBoundary      String?  @db.Text @map("moral_boundary") // 道德底线
+  personalityDrift   String?  @db.Text @map("personality_drift") // 性格漂移警告（如：谨慎少年→莽夫）
+  summary            String?  @db.Text // 心理状态小结（每章 MENTAL 事件聚合）
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  project HdzProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character HdzCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, characterId])
+  @@index([projectId, chapterNo])
+  @@map("character_mind_states")
 }
 
 model HdzPlanRevision {
@@ -6693,6 +6739,11 @@ model EnterpriseLlmConfig {
   capabilities          String   @default("[]")
   enabled               Boolean  @default(true)
   status                String   @default("active") @db.VarChar(20)
+  // Sprint-RECRUITMENT-REALITY-04 T01: Model Health Center 健康状态（LLM Key 治理）
+  lastHealthCheckAt     DateTime?  @map("last_health_check_at")
+  healthStatus          String     @default("untested") @map("health_status") @db.VarChar(20) // untested | ok | failed | decrypt_error | disabled
+  healthLatencyMs       Int?       @map("health_latency_ms")
+  healthError           String?    @map("health_error") @db.Text
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
@@ -8301,6 +8352,7 @@ model CareerProfile {
 
   // ── 元数据 ──
   completionScore    Int      @default(0) @map("completion_score")
+  dataQualityStatus  String   @default("valid") @map("data_quality_status") @db.VarChar(32)
   lastActiveAt       DateTime @default(now()) @map("last_active_at")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -8566,6 +8618,34 @@ model CareerTimelineEvent {
   @@index([profileId, occurredAt])
   @@index([eventType])
   @@map("career_timeline_event")
+}
+
+// ── Sprint-09E-04 Career Action Progress ──
+// 用户行动追踪，最小字段，AI 不自动修改状态
+model CareerActionProgress {
+  id          String   @id @default(uuid()) @map("id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+
+  // ── Action 定义 ──
+  actionId    String   @map("action_id")
+  actionTitle String   @map("action_title")
+  phase       String   @default("30days") @map("phase") // 30days | 90days | 12months
+
+  // ── 状态 ──
+  status      String   @default("pending") @map("status") // pending | doing | completed | rejected
+  evidence    String?  @map("evidence") // 用户提供的完成证据
+
+  // ── 反馈 ──
+  feedback    String?  @map("feedback")
+  alternativePath String? @map("alternative_path") // 用户拒绝后选择的新方向
+
+  // ── 时间 ──
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([userId, actionId])
+  @@map("career_action_progress")
 }
 
 // ============================================================
@@ -8896,4 +8976,91 @@ model HiringKnowledge {
   @@index([workspaceId, knowledgeType])
   @@index([enterpriseId])
   @@map("hiring_knowledge")
+}
+
+// ============================================================
+// Sprint-10 Step 3B — Career Agent Autonomous Task
+// ============================================================
+
+model CareerAgentTask {
+  id              String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  agentInstanceId String    @map("agent_instance_id") @db.Text // EnterpriseAgentInstance.id
+  userId          String    @map("user_id") @db.Text
+  taskType        String    @map("task_type") @db.VarChar(50)  // e.g. job_watch, career_plan
+  status          String    @default("pending") @db.VarChar(20) // pending | running | completed | failed
+  input           String?   @db.Text    // 用户原始输入/指令
+  result          String?   @db.Text    // 结构化执行结果 (JSON)
+  error           String?   @db.Text    // 失败原因
+  createdAt       DateTime  @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+
+  @@index([userId, status])
+  @@index([agentInstanceId, status])
+  @@index([createdAt])
+  @@map("career_agent_task")
+}
+
+// ============================================================
+// Sprint-10C — Career Identity Profile（免费+付费共用资产）
+// 以 JSON 文档为核心，不依赖关系表
+// 所有用户信息只能来自用户明确表达，LLM 不可自动补全
+// ============================================================
+
+model CareerIdentityProfile {
+  id        String   @id @default(uuid()) @map("id") @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+
+  // ── 状态 ──
+  status    String   @default("collecting") @map("status") @db.VarChar(32)
+  // collecting | draft | completed | published
+
+  // ── 基本身份 ──
+  identity  Json     @default("{}") @map("identity")
+  // { name:string|null, age:number|null, gender:string|null }
+
+  // ── 位置 ──
+  location  Json     @default("{}") @map("location")
+  // { currentCity:string|null, preferredCities:string[] }
+
+  // ── 教育 ──
+  education Json     @default("{}") @map("education")
+  // { degree:string|null, school:string|null, major:string|null }
+
+  // ── 职业 ──
+  career    Json     @default("{}") @map("career")
+  // { currentStatus:string|null, targetPosition:string|null,
+  //   targetIndustry:string|null, yearsExperience:number|null,
+  //   careerDirection:string|null }
+
+  // ── 技能 ──
+  skills    Json     @default("[]") @map("skills")
+  // [{ name:string, level:"beginner"|"intermediate"|"expert", evidence:string }]
+
+  // ── 工作经历 ──
+  workExperience  Json  @default("[]") @map("work_experience")
+  // [{ company:string, position:string, years:number,
+  //    description:string, achievements:string[] }]
+
+  // ── 项目经验 ──
+  projects  Json     @default("[]") @map("projects")
+  // [{ name:string, description:string, technology:string }]
+
+  // ── 求职偏好 ──
+  jobPreference  Json  @default("{}") @map("job_preference")
+  // { salary:string|null, location:string|null, remote:boolean }
+
+  // ── 事实溯源 ──
+  confirmedFacts  Json  @default("[]") @map("confirmed_facts")
+  // [{ field:string, value:string, source:"user", createdAt:DateTime }]
+
+  // ── 元数据 ──
+  missingFields       String[] @default([]) @map("missing_fields")
+  completionScore     Int      @default(0) @map("completion_score")
+
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status, completionScore])
+  @@map("career_identity_profiles")
 }

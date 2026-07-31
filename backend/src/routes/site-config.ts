@@ -1,33 +1,76 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { requireAdmin } from '../middleware/require-admin.js'
 
-const DEFAULT_CONFIG: Record<string, string> = {
-  site_name: '昆仑镜',
-  site_title: '昆仑镜 – AI 短剧创作平台',
-  site_description: '用 AI 从剧本到成片，一站式短剧创作平台',
-  site_keywords: '昆仑镜, AI, 短剧, 创作平台',
-  icp_beian: '',
-  icp_license: '',
-  icp_company: '',
-  icp_business: '',
-  icp_copyright: '',
-  site_domain: 'aigc.fushtn.com',
-  og_image: '',
+/**
+ * 平台系统配置路由（Sprint-ADMIN-IA-REALITY-03 T01）
+ *
+ * 存储：SystemConfig 表（key/value/group/updatedBy/updatedAt）
+ * 分组：
+ *   site   — 基础信息（系统名称/Logo/favicon/域名/ICP/网站介绍）
+ *   seo    — SEO 设置（标题/关键词/描述/Meta模板/robots/sitemap/搜索引擎验证）
+ *
+ * 公开端点：/api/system/config（官网/前台 SEO 用）
+ * 管理端点：/api/admin/system/config（requireAdmin）
+ * 动态端点：/robots.txt /sitemap.xml（nginx 走 @nuxt → 由 nuxt 代理到后端）
+ */
+
+export const SYSTEM_CONFIG_DEFAULTS: Record<string, { group: string; value: string }> = {
+  // ── site 基础信息 ──
+  site_name: { group: 'site', value: '昆仑镜' },
+  site_title: { group: 'site', value: '昆仑镜 – AI 短剧创作平台' },
+  site_description: { group: 'site', value: '用 AI 从剧本到成片，一站式短剧创作平台' },
+  site_keywords: { group: 'site', value: '昆仑镜, AI, 短剧, 创作平台' },
+  site_logo: { group: 'site', value: '/logo.png' },
+  site_favicon: { group: 'site', value: '/favicon.ico' },
+  site_domain: { group: 'site', value: 'aigc.fushtn.com' },
+  site_intro: { group: 'site', value: '' },
+  icp_beian: { group: 'site', value: '' },
+  icp_license: { group: 'site', value: '' },
+  icp_company: { group: 'site', value: '' },
+  icp_business: { group: 'site', value: '' },
+  icp_copyright: { group: 'site', value: '' },
+  og_image: { group: 'site', value: '' },
+  // ── seo 设置 ──
+  seo_title: { group: 'seo', value: '昆仑镜 – AI 短剧创作平台' },
+  seo_keywords: { group: 'seo', value: '昆仑镜, AI, 短剧, 创作平台' },
+  seo_description: { group: 'seo', value: '用 AI 从剧本到成片，一站式短剧创作平台' },
+  seo_robots: { group: 'seo', value: 'User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /workspace/\nDisallow: /profile/\nDisallow: /enterprise/' },
+  seo_sitemap_urls: { group: 'seo', value: '/\n/about\n/pricing' },
+  seo_verify_baidu: { group: 'seo', value: '' },
+  seo_verify_google: { group: 'seo', value: '' },
 }
 
-// 公开配置（前端读取，无需登录）
-async function getPublicConfig() {
-  try {
-    const rows = await prisma.siteConfig.findMany({
-      where: { key: { in: Object.keys(DEFAULT_CONFIG) } }
+// key → group 白名单（防止写入未知 key）
+const KEY_GROUPS: Record<string, string> = Object.fromEntries(
+  Object.entries(SYSTEM_CONFIG_DEFAULTS).map(([k, v]) => [k, v.group])
+)
+
+export async function getSystemConfig(group?: string): Promise<Record<string, string>> {
+  const rows = await prisma.systemConfig.findMany(
+    group ? { where: { group } } : undefined
+  )
+  const config: Record<string, string> = {}
+  // 先填默认值
+  for (const [key, meta] of Object.entries(SYSTEM_CONFIG_DEFAULTS)) {
+    if (!group || meta.group === group) config[key] = meta.value
+  }
+  // DB 值覆盖
+  for (const row of rows) {
+    if (KEY_GROUPS[row.key]) config[row.key] = row.value
+  }
+  return config
+}
+
+export async function saveSystemConfig(body: Record<string, string>, updatedBy?: string): Promise<void> {
+  for (const [key, rawValue] of Object.entries(body)) {
+    if (!KEY_GROUPS[key]) continue // 白名单过滤
+    const value = String(rawValue ?? '')
+    await prisma.systemConfig.upsert({
+      where: { key },
+      update: { value, group: KEY_GROUPS[key], updatedBy },
+      create: { key, value, group: KEY_GROUPS[key], updatedBy },
     })
-    const config: Record<string, string> = { ...DEFAULT_CONFIG }
-    for (const row of rows) {
-      config[row.key] = row.value
-    }
-    return config
-  } catch {
-    return { ...DEFAULT_CONFIG }
   }
 }
 
@@ -35,41 +78,51 @@ export default async function siteConfigRoutes(fastify: FastifyInstance) {
 
   // GET /api/system/config — 公开读取站点配置（给前端 SEO 用）
   fastify.get('/api/system/config', async (_request, _reply) => {
-    const config = await getPublicConfig()
-    return config
-  })
-
-  // GET /api/admin/system/config — 管理员读取全部配置
-  fastify.get('/api/admin/system/config', async (_request, _reply) => {
     try {
-      const rows = await prisma.siteConfig.findMany()
-      const config: Record<string, string> = { ...DEFAULT_CONFIG }
-      for (const row of rows) {
-        config[row.key] = row.value
-      }
-      return config
+      return await getSystemConfig()
     } catch {
-      return { ...DEFAULT_CONFIG }
+      return Object.fromEntries(
+        Object.entries(SYSTEM_CONFIG_DEFAULTS).map(([k, v]) => [k, v.value])
+      )
     }
   })
 
-  // PUT /api/admin/system/config — 管理员更新配置
-  fastify.put('/api/admin/system/config', async (request, _reply) => {
+  // GET /api/admin/system/config — 管理员读取全部配置（需登录）
+  fastify.get('/api/admin/system/config', { preHandler: requireAdmin }, async () => {
+    return getSystemConfig()
+  })
+
+  // PUT /api/admin/system/config — 管理员更新配置（需登录）
+  fastify.put('/api/admin/system/config', { preHandler: requireAdmin }, async (request, _reply) => {
     const body = request.body as Record<string, string>
-    const allowed = Object.keys(DEFAULT_CONFIG)
+    const { extractAdmin } = await import('../middleware/require-admin.js')
+    const admin = extractAdmin(request)
+    const updatedBy = admin?.username || 'admin'
+    await saveSystemConfig(body, updatedBy)
+    return { success: true, config: await getSystemConfig() }
+  })
 
-    try {
-      for (const key of allowed) {
-        if (body[key] !== undefined) {
-          await prisma.siteConfig.upsert({
-            where: { key },
-            update: { value: String(body[key]) },
-            create: { key, value: String(body[key]) },
-          })
-        }
-      }
-    } catch { /* 表不存在时静默 */ }
+  // GET /robots.txt — 动态生成（SE0 设置里配置 robots 内容）
+  fastify.get('/robots.txt', async (_request, reply) => {
+    const config = await getSystemConfig('seo')
+    const domain = (await getSystemConfig('site')).site_domain || 'aigc.fushtn.com'
+    const robots = config.seo_robots || SYSTEM_CONFIG_DEFAULTS.seo_robots.value
+    const sitemapLine = `Sitemap: https://${domain}/sitemap.xml`
+    const body = robots.includes('Sitemap:') ? robots : `${robots}\n\n${sitemapLine}`
+    return reply.type('text/plain; charset=utf-8').send(body)
+  })
 
-    return { success: true }
+  // GET /sitemap.xml — 动态生成
+  fastify.get('/sitemap.xml', async (_request, reply) => {
+    const site = await getSystemConfig('site')
+    const seo = await getSystemConfig('seo')
+    const domain = site.site_domain || 'aigc.fushtn.com'
+    const urls = (seo.seo_sitemap_urls || '/').split('\n').map(s => s.trim()).filter(Boolean)
+    const lastmod = new Date().toISOString().slice(0, 10)
+    const body = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url><loc>https://${domain}${u.startsWith('/') ? u : '/' + u}</loc><lastmod>${lastmod}</lastmod></url>`).join('\n')}
+</urlset>`
+    return reply.type('application/xml; charset=utf-8').send(body)
   })
 }

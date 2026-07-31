@@ -238,8 +238,8 @@ export const ADMIN_SYSTEM_GROUP: AdminPlatformGroup = {
   label: '系统设置',
   icon: '⚙️',
   children: [
-    // P2: 基础信息（系统名称/Logo/favicon/官网域名/ICP/网站介绍/SEO标题/关键词/描述）
-    // P2: SEO收录配置（robots.txt/sitemap/搜索引擎验证/页面Meta模板）
+    { id: 'sys-base', label: '基础信息 + SEO', to: '/admin/aigc/system' },
+    // P2: SEO收录配置（robots/sitemap/验证独立页，当前合并于 system.vue）
   ],
 }
 

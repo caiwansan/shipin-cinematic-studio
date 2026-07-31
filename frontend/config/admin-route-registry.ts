@@ -65,6 +65,7 @@ export const ADMIN_ROUTE_REGISTRY: AdminRouteEntry[] = [
   { route: '/admin/aigc/legal', owner: 'workspace', workspace: 'legal', status: 'active', note: '法律工作台管理' },
 
   // ─── ⚙️ 系统设置 ───
+  { route: '/admin/aigc/system', owner: 'system', status: 'active', note: '系统设置（基础信息+SEO）' },
   { route: '/admin/aigc/sms', owner: 'system', status: 'active', note: '短信配置' },
   { route: '/admin/aigc/wechat', owner: 'system', status: 'active', note: '微信登录配置' },
   { route: '/admin/aigc/qq', owner: 'system', status: 'active', note: 'QQ登录配置' },
