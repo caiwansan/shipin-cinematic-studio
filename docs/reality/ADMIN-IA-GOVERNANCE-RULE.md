@@ -233,6 +233,7 @@ nuxt build → patch-manifest → asset-sync(_nuxt → nginx root) → pm2 resta
 | 路由登记 | 无孤儿页面 |
 | 数据口径 | DB 真实聚合，零 mock，脏数据排除 |
 | **G8 视觉验证** | **登录链路 + 实际入口 + 组件渲染 + 截图存档** |
+| **G8.1 Admin Layout** | **pages/admin/* 必须声明 `definePageMeta({ layout: 'admin-aigc' })`（登录页除外），禁止独立新页面** |
 | **v1.1 首屏密度** | **1920×1080 零滚动见全部核心指标，详情进 Drawer** |
 
 ---
