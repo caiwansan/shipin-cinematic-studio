@@ -1,0 +1,176 @@
+# ADMIN-IA-GOVERNANCE-RULE — 昆仑镜后台治理规则（永久约束）
+
+**Date:** 2026-08-01
+**Gate:** 掌柜修正指令（ADMIN-IA-REALITY-04 修正指令）
+**性质:** 永久约束，后续任何 Workspace / 任何开发迭代都不得绕过。
+
+---
+
+## 一、数据罗盘定位
+
+> 数据罗盘 = 昆仑镜平台经营驾驶舱（CEO / 平台管理员视角）
+
+不是 AI 调用监控页。必须覆盖平台经营的八个维度：
+
+1. 平台规模（用户 / 企业 / VIP / 收入 / AI员工 / Workspace）
+2. 用户增长
+3. 商业收入
+4. AI 使用情况
+5. Agent 运营情况
+6. Workspace 生态情况
+7. 基础设施健康
+8. 风险事件
+
+页面：`/admin/dashboard`（唯一入口，后台首页）
+
+### 七层布局（标准结构）
+
+```
+第一层：核心经营指标（数字大屏）
+  用户总数 / 企业客户 / VIP会员 / 累计收入 / AI员工数量 / Workspace数量
+
+第二层：AI基础设施
+  模型调用趋势 / Token消耗趋势 / 模型成本排行 / Provider健康状态 / 模型成功率 / 平均响应时间
+
+第三层：Agent运营中心
+  AI员工排行榜 / Agent成功率 / Agent成本 / Agent活跃企业
+
+第四层：Workspace生态地图
+  🎬 短剧工作台 / 📖 小说工作台 / 💼 求职招聘 / ⚖️ 法律 / ...（按业务线卡片）
+
+第五层：商业增长
+  VIP收入趋势 / 企业订阅趋势 / 套餐分布 / 续费率 / 客户生命周期
+
+第六层：系统健康
+  数据库 / Redis / 任务队列 / COS / API / 模型服务
+
+第七层：实时事件流（LIVE）
+```
+
+---
+
+## 二、禁止后台新增孤岛页面
+
+### ❌ 禁止
+
+```
+新增：
+/admin/new-feature          ← 禁止
+```
+
+任何新增管理能力，必须：
+
+### ✅ 必须
+
+```
+已有模块内部增加 Tab / 子菜单
+```
+
+### 后台固定一级模块（唯一清单，≤8 个）
+
+```
+后台
+│
+├── 数据罗盘        /admin/dashboard
+├── 系统设置        /admin/system
+├── 公共信息设置    /admin/settings
+├── VIP套餐管理     /admin/vip
+├── 用户与权限      /admin/users
+├── 大模型管理      /admin/models
+├── AI Agent管理    /admin/agents
+└── Workspace工作台管理 /admin/workspaces
+```
+
+**不得新增一级模块。** 需要新能力时，挂到上述模块内作为 Tab / 子菜单。
+
+---
+
+## 三、右栏统一管理模式
+
+后台页面结构：
+
+```
+Admin Layout
+
+┌──────────────────────┐
+│ 左侧固定导航 │
+│ │
+│ │
+│ │
+│ │
+├──────────┬───────────┤
+│ │ │
+│ │ 右侧内容区 │
+│ │ │
+│ │ │
+└──────────┴───────────┘
+```
+
+### 示例：大模型管理
+
+❌ 不是：`/admin/providers` + `/admin/models` + `/admin/model-health` + `/admin/model-statistics`
+
+✅ 应该：`/admin/models`（Tabs: Provider管理 / 模型列表 / 默认模型 / 健康检测 / 调用统计）
+
+### 示例：AI Agent管理
+
+❌ 不是：`/admin/agents` + `/admin/runtime` + `/admin/capabilities`
+
+✅ 应该：`/admin/agents`（Tabs: Agent列表 / 模板管理 / 能力管理 / 风格库 / Runtime状态 / 使用统计）
+
+### 示例：Workspace管理
+
+❌ 不是：`/admin/recruitment` + `/admin/novel` + `/admin/drama`
+
+✅ 应该：`/admin/workspaces`
+
+```
+工作台列表
+├── 求职招聘
+│   概览 / AI员工 / 企业 / 订阅 / ROI
+├── 短剧
+│   ...
+├── 小说
+│   ...
+├── GEO
+│   ...
+└── 音乐
+```
+
+---
+
+## 四、Admin UI Reality Rule v1.0
+
+1. **后台一级导航 ≤ 8 个**
+2. **一个管理对象一个入口**（对象内部用 Tabs 组织子能力）
+3. **禁止业务能力进入平台一级菜单**
+   - ❌ 招聘套餐管理 / 招聘模型管理 / 招聘ROI / 招聘额度
+   - ✅ Workspace管理 → 求职招聘 → 套餐 / 模型 / ROI / 额度
+4. **后台所有页面必须嵌入 Admin Layout**
+5. **不允许创建脱离后台壳的新管理页面**
+6. **新路由必须登记** AdminRouteRegistry，禁止孤儿路由
+
+---
+
+## 五、执行检查
+
+| 检查项 | 标准 |
+|--------|------|
+| 一级导航数量 | ≤ 8 |
+| 新增能力 | 只能进已有模块 Tab |
+| 页面外壳 | 必须 Admin Layout |
+| 路由登记 | 无孤儿页面 |
+| 数据口径 | DB 真实聚合，零 mock，脏数据排除 |
+
+---
+
+## 附：当前后台模块对照（2026-08-01 冻结）
+
+| 模块 | 路由 | 状态 |
+|------|------|------|
+| 数据罗盘 | /admin/dashboard | ✅（T01 完成，待 04-A 升级） |
+| 大模型管理 | /admin/models | ✅（03-T02 完成，Tabs 化待验） |
+| AI Agent管理 | /admin/agents | ⏳ ADMIN-IA-REALITY-05 |
+| 系统设置 / 公共信息 / VIP / 用户权限 / Workspace | — | ⏳ 后续按此规则统一 |
+
+**此规则生效后，任何代码评审首先检查：是否违反 ADMIN-IA-GOVERNANCE-RULE。**

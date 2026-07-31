@@ -5,6 +5,11 @@
       <span class="text-[9px] text-gray-600">Agent Instance</span>
     </div>
 
+    <!-- Agent 活跃企业 -->
+    <div v-if="activeEnterprises.count > 0" class="mb-3 px-3 py-2 rounded-lg bg-indigo-500/[0.06] border border-indigo-500/20 text-[9px] text-indigo-300/80">
+      🏢 活跃企业 {{ activeEnterprises.count }} 家：{{ activeEnterprises.names.join(' · ') }}
+    </div>
+
     <div v-if="agents.length === 0" class="text-center py-10 text-[10px] text-gray-600">暂无 AI 员工实例</div>
 
     <div v-else class="space-y-2">
@@ -17,6 +22,10 @@
               <span class="text-[11px] text-white/80 font-medium truncate">{{ shortId(a.agentId) }}</span>
               <span class="text-[8px] px-1.5 py-0.5 rounded-full border" :class="statusClass(a.status)">{{ statusText(a.status) }}</span>
             </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-[8px] text-gray-600 truncate">{{ a.orgName !== '—' ? a.orgName : '' }}</span>
+              <span v-if="a.orgPlan !== '—'" class="text-[8px] px-1 py-px rounded bg-white/[0.04] text-gray-500">{{ a.orgPlan }}</span>
+            </div>
             <div class="mt-1 h-1 rounded-full bg-white/[0.05] overflow-hidden">
               <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-500" :style="{ width: rateWidth(a.successRate) }"></div>
             </div>
@@ -24,6 +33,7 @@
           <div class="text-right shrink-0">
             <div class="text-[11px] text-white/70 font-mono">{{ a.totalTasks }} 次</div>
             <div class="text-[9px] text-emerald-400/80">{{ a.successRate }}% 成功</div>
+            <div class="text-[8px] text-amber-400/60 font-mono">¥{{ a.auditCost.toFixed(2) }}</div>
           </div>
         </div>
       </div>
@@ -32,9 +42,14 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   agents: any[]
+  activeEnterprises?: { count: number; names: string[] }
 }>()
+
+const activeEnterprises = computed(() => props.activeEnterprises || { count: 0, names: [] })
 
 const shortId = (id: string) => (id || '').length > 28 ? id.slice(0, 28) + '…' : id || '—'
 const statusClass = (s: string) => ({

@@ -24,6 +24,34 @@
         </div>
       </div>
 
+      <!-- 企业订阅 -->
+      <div class="mb-4 px-3 py-2.5 rounded-lg bg-indigo-500/[0.05] border border-indigo-500/15">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] text-white/70">🏢 企业订阅</span>
+          <span class="text-[9px] text-indigo-300/80 font-mono">{{ data.enterprise.active }} 活跃 / {{ data.enterprise.total }} 总</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+          <div class="px-2 py-1.5 rounded bg-white/[0.03]">
+            <div class="text-sm font-bold text-emerald-400 font-mono">{{ data.enterprise.renewalRate }}%</div>
+            <div class="text-[8px] text-gray-600 mt-0.5">续费率</div>
+          </div>
+          <div class="px-2 py-1.5 rounded bg-white/[0.03]">
+            <div class="text-sm font-bold text-cyan-400 font-mono">{{ data.enterprise.avgLifecycleDays }}天</div>
+            <div class="text-[8px] text-gray-600 mt-0.5">平均周期</div>
+          </div>
+          <div class="px-2 py-1.5 rounded bg-white/[0.03]">
+            <div class="text-sm font-bold text-amber-400 font-mono">¥{{ data.enterprise.revenue.toFixed(0) }}</div>
+            <div class="text-[8px] text-gray-600 mt-0.5">订阅收入</div>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <span v-for="p in data.enterprise.planBreakdown" :key="p.name"
+            class="text-[9px] px-2 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/60">
+            {{ p.name }} × {{ p.count }} · ¥{{ p.revenue.toFixed(0) }}
+          </span>
+        </div>
+      </div>
+
       <!-- 订阅 -->
       <div class="mb-4">
         <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-2">订阅 · 活跃 {{ data.subscriptions.active }} / 共 {{ data.subscriptions.total }}</div>
@@ -33,6 +61,17 @@
             {{ b.planName }} × {{ b.activeCount }}
           </span>
           <span v-if="data.subscriptions.breakdown.length === 0" class="text-[9px] text-gray-600">暂无套餐订阅</span>
+        </div>
+      </div>
+
+      <!-- VIP 套餐分布 -->
+      <div v-if="data.memberPlans && data.memberPlans.length" class="mb-4">
+        <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-2">VIP 套餐</div>
+        <div class="flex flex-wrap gap-1.5">
+          <span v-for="p in data.memberPlans" :key="p.level"
+            class="text-[9px] px-2 py-1 rounded-full border border-amber-500/20 bg-amber-500/[0.05] text-amber-300/80">
+            {{ p.name }} ¥{{ p.price }}
+          </span>
         </div>
       </div>
 
