@@ -78,6 +78,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import * as echarts from 'echarts'
+// 【安全】项目标准：token 从 token-cache（内存→localStorage auth_token）获取，禁止自定义 key
+import { getToken } from '~/utils/token-cache'
 
 definePageMeta({ layout: 'admin-aigc' })
 
@@ -120,7 +122,7 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    const auth = { headers: { Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}` } }
+    const auth = { headers: { Authorization: `Bearer ${getToken()}` } }
     const [o, h, w, a, r, ac] = await Promise.all([
       fetch('/api/admin/dashboard/overview', auth).then((x) => x.json()),
       fetch('/api/admin/dashboard/ai-health', auth).then((x) => x.json()),
