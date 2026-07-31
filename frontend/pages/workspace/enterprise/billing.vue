@@ -1,17 +1,14 @@
 <template>
   <div class="billing-page">
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">📦 套餐订阅</h1>
-        <p class="page-subtitle">管理企业套餐、查看使用额度和订单记录</p>
-      </div>
-      <div class="header-right">
-        <button @click="refresh" class="ceo-btn-secondary" :disabled="loading">
-          🔄 刷新
-        </button>
-      </div>
-    </div>
+    <RecruitmentWorkspaceNav />
+    <RecruitmentPageShell>
+      <template #title>📦 套餐订阅</template>
+      <template #subtitle>管理企业套餐、查看使用额度和订单记录</template>
+      <template #actions>
+        <button @click="refresh" class="ceo-btn-secondary" :disabled="loading">🔄 刷新</button>
+      </template>
+
+      <button @click="router.push('/workspace/enterprise')" class="back-btn">← 返回 AI 招聘中心</button>
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
@@ -61,36 +58,36 @@
         <div class="usage-grid">
           <div class="usage-item">
             <div class="usage-label">🤖 AI 员工</div>
-            <div class="usage-value">{{ usage.aiEmployeeCount || 0 }} / {{ limits.maxEmployees || '∞' }}</div>
-            <div class="usage-bar">
+            <div class="usage-value">{{ usage?.aiEmployeeCount || 0 }} / {{ limits?.maxEmployees || '∞' }}</div>
+            <div class="usage-bar" v-if="limits?.maxEmployees">
               <div class="usage-fill" :style="{ width: getUsagePercent('aiEmployee') + '%' }"></div>
             </div>
           </div>
           <div class="usage-item">
             <div class="usage-label">📡 渠道</div>
-            <div class="usage-value">{{ usage.channelCount || 0 }} / {{ limits.maxChannels || '∞' }}</div>
-            <div class="usage-bar">
+            <div class="usage-value">{{ usage?.channelCount || 0 }} / {{ limits?.maxChannels || '∞' }}</div>
+            <div class="usage-bar" v-if="limits?.maxChannels">
               <div class="usage-fill" :style="{ width: getUsagePercent('channel') + '%' }"></div>
             </div>
           </div>
           <div class="usage-item">
             <div class="usage-label">👥 成员</div>
-            <div class="usage-value">{{ usage.memberCount || 0 }} / {{ limits.maxMembers || '∞' }}</div>
-            <div class="usage-bar">
+            <div class="usage-value">{{ usage?.memberCount || 0 }} / {{ limits?.maxMembers || '∞' }}</div>
+            <div class="usage-bar" v-if="limits?.maxMembers">
               <div class="usage-fill" :style="{ width: getUsagePercent('member') + '%' }"></div>
             </div>
           </div>
           <div class="usage-item">
             <div class="usage-label">📄 简历</div>
-            <div class="usage-value">{{ usage.resumeCount || 0 }}</div>
+            <div class="usage-value">{{ usage?.resumeCount || 0 }}</div>
           </div>
           <div class="usage-item">
             <div class="usage-label">👤 候选人</div>
-            <div class="usage-value">{{ usage.pipelineCount || 0 }}</div>
+            <div class="usage-value">{{ usage?.pipelineCount || 0 }}</div>
           </div>
           <div class="usage-item">
             <div class="usage-label">💼 Offer</div>
-            <div class="usage-value">{{ usage.offerCount || 0 }}</div>
+            <div class="usage-value">{{ usage?.offerCount || 0 }}</div>
           </div>
         </div>
       </div>
@@ -160,15 +157,18 @@
         </div>
       </div>
     </div>
+    </RecruitmentPageShell>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useEnterpriseContext } from '~/composables/useEnterpriseContext'
 import { useIdentityStore } from '~/stores/identity'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const ctx = useEnterpriseContext()
 const identityStore = useIdentityStore()
@@ -211,13 +211,15 @@ async function loadBillingOverview() {
     })
     const data = await res.json()
     if (data.success) {
-      subscription.value = data.data.subscription
-      usage.value = data.data.usage
-      limits.value = data.data.limits
-      availablePlans.value = data.data.availablePlans
-      recentOrders.value = data.data.recentOrders
+      subscription.value = data.data.subscription || null
+      usage.value = data.data.usage || null
+      limits.value = data.data.limits || null
+      availablePlans.value = data.data.availablePlans || []
+      recentOrders.value = data.data.recentOrders || []
     } else {
       error.value = data.message || '加载失败'
+      availablePlans.value = []
+      recentOrders.value = []
     }
   } catch (e: any) {
     error.value = e.message || '网络错误'
@@ -227,6 +229,7 @@ async function loadBillingOverview() {
 }
 
 function getUsagePercent(type: string): number {
+  if (!usage.value || !limits.value) return 0
   const used = type === 'aiEmployee' ? (usage.value.aiEmployeeCount || 0) :
                type === 'channel' ? (usage.value.channelCount || 0) :
                type === 'member' ? (usage.value.memberCount || 0) : 0
@@ -245,29 +248,9 @@ function scrollToPlans() {
   document.getElementById('plans-section')?.scrollIntoView({ behavior: 'smooth' })
 }
 
-async function selectPlan(plan: any) {
-  if (!confirm(`确认选择 ${plan.displayName} 套餐？`)) return
-  try {
-    const token = authStore.getToken()
-    const tenantId = getEnterpriseId()
-    const res = await fetch(`/api/enterprise/${tenantId}/billing/upgrade`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ planId: plan.id }),
-    })
-    const data = await res.json()
-    if (data.success) {
-      alert(`订单创建成功！订单号: ${data.data.orderNo}\n请前往支付页面完成付款。`)
-      await loadBillingOverview()
-    } else {
-      alert(data.message || '创建订单失败')
-    }
-  } catch (e: any) {
-    alert('创建订单失败: ' + e.message)
-  }
+function selectPlan(plan: any) {
+  // 跳转到企业订阅中心进行完整的支付流程
+  window.location.href = `/enterprise/membership?planId=${plan.id}`
 }
 
 onMounted(async () => {
@@ -284,29 +267,10 @@ onMounted(async () => {
 
 <style scoped>
 .billing-page {
-  padding: 24px;
-  max-width: 900px;
-  margin: 0 auto;
+  padding: 0;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
 
-.page-title {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.page-subtitle {
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 4px;
-}
 
 .loading-state {
   display: flex;
@@ -314,14 +278,14 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   padding: 60px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #94a3b8);
 }
 
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #2563eb;
+  border: 3px solid var(--color-border-primary, #1e293b);
+  border-top-color: var(--color-decision, #3b82f6);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -336,7 +300,7 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   padding: 60px;
-  color: #dc2626;
+  color: var(--color-danger, #ef4444);
 }
 
 .error-icon {
@@ -344,8 +308,8 @@ onMounted(async () => {
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-elevated, #111827);
+  border: 1px solid var(--color-border-primary, #1e293b);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 16px;
@@ -362,6 +326,7 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 600;
   margin: 0;
+  color: var(--color-text-primary, #f1f5f9);
 }
 
 .status-badge {
@@ -371,11 +336,11 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-.status-badge.active { background: #dcfce7; color: #16a34a; }
-.status-badge.expired { background: #fef3c7; color: #d97706; }
-.status-badge.cancelled { background: #fee2e2; color: #dc2626; }
-.status-badge.suspended { background: #fee2e2; color: #dc2626; }
-.status-badge.trial { background: #dbeafe; color: #2563eb; }
+.status-badge.active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.status-badge.expired { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.status-badge.cancelled { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.status-badge.suspended { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.status-badge.trial { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 
 .plan-details {
   display: flex;
@@ -386,6 +351,7 @@ onMounted(async () => {
 .plan-name {
   font-size: 20px;
   font-weight: 600;
+  color: var(--color-text-primary, #f1f5f9);
 }
 
 .plan-price {
@@ -397,27 +363,27 @@ onMounted(async () => {
 .plan-price .price {
   font-size: 32px;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--color-decision, #3b82f6);
 }
 
 .plan-price .cycle {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #94a3b8);
 }
 
 .plan-expire {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #94a3b8);
 }
 
 .auto-renew {
-  color: #16a34a;
+  color: #34d399;
 }
 
 .no-subscription {
   text-align: center;
   padding: 20px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #94a3b8);
 }
 
 .usage-grid {
@@ -434,17 +400,18 @@ onMounted(async () => {
 
 .usage-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #94a3b8);
 }
 
 .usage-value {
   font-size: 18px;
   font-weight: 600;
+  color: var(--color-text-primary, #f1f5f9);
 }
 
 .usage-bar {
   height: 4px;
-  background: #e5e7eb;
+  background: var(--color-border-primary, #1e293b);
   border-radius: 2px;
   overflow: hidden;
   margin-top: 4px;
@@ -452,7 +419,7 @@ onMounted(async () => {
 
 .usage-fill {
   height: 100%;
-  background: #2563eb;
+  background: var(--color-decision, #3b82f6);
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -464,24 +431,25 @@ onMounted(async () => {
 }
 
 .plan-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border-primary, #1e293b);
   border-radius: 8px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   position: relative;
+  background: var(--color-bg-elevated, #111827);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .plan-card:hover {
-  border-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+  border-color: var(--color-decision, #3b82f6);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
 .plan-card.current {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--color-decision, #3b82f6);
+  background: var(--color-bg-secondary, #0d1328);
 }
 
 .current-badge {
@@ -489,8 +457,8 @@ onMounted(async () => {
   top: -8px;
   right: 12px;
   padding: 2px 8px;
-  background: #2563eb;
-  color: white;
+  background: var(--color-decision, #3b82f6);
+  color: #fff;
   font-size: 11px;
   border-radius: 10px;
 }
@@ -503,6 +471,7 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 8px;
+  color: var(--color-text-primary, #f1f5f9);
 }
 
 .plan-card-price {
@@ -515,12 +484,12 @@ onMounted(async () => {
 .plan-card-price .price {
   font-size: 28px;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--color-decision, #3b82f6);
 }
 
 .plan-card-price .cycle {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #94a3b8);
 }
 
 .plan-features {
@@ -531,7 +500,7 @@ onMounted(async () => {
 
 .feature-item {
   font-size: 13px;
-  color: #374151;
+  color: var(--color-text-primary, #F1F5F9);
 }
 
 .plan-card .ceo-btn-primary {
@@ -549,7 +518,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: #f9fafb;
+  background: var(--color-bg-secondary, #0d1328);
   border-radius: 8px;
 }
 
@@ -562,12 +531,13 @@ onMounted(async () => {
 .order-no {
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-text-muted, #64748b);
 }
 
 .order-plan {
   font-size: 13px;
   font-weight: 600;
+  color: var(--color-text-primary, #f1f5f9);
 }
 
 .order-meta {
@@ -579,6 +549,7 @@ onMounted(async () => {
 .order-amount {
   font-size: 14px;
   font-weight: 600;
+  color: var(--color-text-primary, #f1f5f9);
 }
 
 .order-status {
@@ -587,14 +558,14 @@ onMounted(async () => {
   font-size: 11px;
 }
 
-.order-status.pending { background: #fef3c7; color: #d97706; }
-.order-status.completed { background: #dcfce7; color: #16a34a; }
-.order-status.failed { background: #fee2e2; color: #dc2626; }
-.order-status.refunded { background: #e5e7eb; color: #6b7280; }
+.order-status.pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.order-status.completed { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.order-status.failed { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.order-status.refunded { background: var(--color-border-primary, #1e293b); color: var(--color-text-muted, #64748b); }
 
 .order-time {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-muted, #64748b);
 }
 
 .empty-card {
@@ -606,7 +577,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: #9ca3af;
+  color: var(--color-text-muted, #64748b);
 }
 
 .empty-icon {
@@ -616,8 +587,8 @@ onMounted(async () => {
 /* Buttons */
 .ceo-btn-primary {
   padding: 8px 16px;
-  background: #2563eb;
-  color: white;
+  background: var(--color-decision, #3b82f6);
+  color: #fff;
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -626,35 +597,59 @@ onMounted(async () => {
 }
 
 .ceo-btn-primary:hover {
-  background: #1d4ed8;
+  opacity: 0.9;
 }
 
 .ceo-btn-primary:disabled {
-  background: #9ca3af;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .ceo-btn-primary.current {
-  background: #e5e7eb;
-  color: #6b7280;
+  background: var(--color-border-primary, #1e293b);
+  color: var(--color-text-muted, #64748b);
+  cursor: not-allowed;
+}
+
+.ceo-btn-primary.current {
+  background: var(--color-border-primary, #1e293b);
+  color: var(--color-text-muted, #64748b);
 }
 
 .ceo-btn-secondary {
   padding: 8px 16px;
-  background: #fff;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: transparent;
+  color: var(--color-text-primary, #F1F5F9);
+  border: 1px solid var(--color-border-primary, #1e293b);
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
 }
 
 .ceo-btn-secondary:hover {
-  background: #f9fafb;
+  background: var(--color-bg-secondary, #0d1328);
 }
 
 .ceo-btn-secondary:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+}
+
+.back-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  transition: all 0.15s;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+.back-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
 }
 </style>
