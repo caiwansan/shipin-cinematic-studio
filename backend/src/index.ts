@@ -417,6 +417,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/dashboard.routes.js')).dashboardRoutes, { prefix: '/api' })
   // Phase 5-B5 — Job Posting Center (skeleton: read-only + maintenance gates)
   await app.register((await import('./routes/job-posting.routes.js')).jobPostingRoutes)
+  // Sprint-RECRUITMENT-CHANNEL-CENTER-01 — 招聘渠道中心（Phase 1: 渠道模型/统计/手动导入）
+  await app.register((await import('./routes/enterprise-channel-center.routes.js')).enterpriseChannelCenterRoutes)
   await app.register((await import('./routes/enterprise-job-intelligence.routes.js')).enterpriseJobIntelligenceRoutes)
   await app.register((await import('./routes/recruitment-department.routes.js')).recruitmentDepartmentRoutes)
   // Sprint 10 — AI Recruitment Director (AI 招聘主管)

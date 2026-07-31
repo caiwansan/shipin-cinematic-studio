@@ -8165,6 +8165,36 @@ model CandidateMatch {
   @@map("candidate_match")
 }
 
+/// 渠道候选人（企业资产）：从招聘渠道导入/手动录入的候选人
+/// 与 candidate_match 区分：candidate_match = 平台用户岗位匹配（AI 匹配引擎产物）；
+/// 本表 = 企业从招聘渠道获得的候选人（渠道入口 → 昆仑镜 AI 筛选/面试/评估）
+/// 设计原则：渠道产生的候选人与数据归企业 Organization（KMKI 渠道 BYOK 类比）
+model EnterpriseCandidate {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  channelId       String   @map("channel_id") @db.Uuid
+  jobId           String?  @map("job_id") @db.Uuid
+  name            String
+  phone           String?
+  email           String?
+  skills          String[]
+  experienceYears Int      @default(0) @map("experience_years")
+  summary         String?
+  expectedSalary  String?  @map("expected_salary")
+  status          String   @default("new") // new → screening → interviewing → hired / rejected
+  aiAnalysis      String?  @map("ai_analysis") // AI 评价（企业模型生成，无企业模型时为 null，诚实显示未生成）
+  importedBy      String?  @map("imported_by") @db.Uuid
+  importedAt      DateTime @default(now()) @map("imported_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  channel RecruitmentChannel @relation(fields: [channelId], references: [id])
+  @@index([organizationId])
+  @@index([channelId])
+  @@index([organizationId, status])
+  @@map("enterprise_candidate")
+}
+
 model RecruitmentChannel {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
@@ -8176,6 +8206,7 @@ model RecruitmentChannel {
 
   mappings    RecruitmentChannelMapping[]
   publishingTasks PublishingTask[]
+  enterpriseCandidates EnterpriseCandidate[]
   @@map("recruitment_channel")
 }
 

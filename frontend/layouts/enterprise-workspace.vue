@@ -62,6 +62,8 @@ const subNavItems = [
   { label: '人才库', path: '/workspace/enterprise/talent' },
   { label: '候选人', path: '/workspace/enterprise/candidates' },
   { label: '面试管理', path: '/workspace/enterprise/interview' },
+  // UX-05: 招聘渠道中心（Phase 1: 渠道入口 → 昆仑镜 AI 筛选/面试/评估）
+  { label: '渠道中心', path: '/workspace/enterprise/channels' },
   { label: 'AI 招聘团队', path: '/workspace/enterprise/ai-employees' },
   // SPRINT-IDENTITY-REALITY-FIX-01: AI 模型设置（BYOK，企业资产）
   { label: 'AI 模型设置', path: '/workspace/enterprise/model-settings' },
