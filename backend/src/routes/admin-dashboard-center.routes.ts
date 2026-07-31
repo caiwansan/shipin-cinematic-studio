@@ -35,6 +35,33 @@ const num = (v: bigint | number | undefined) => Number(v || 0)
 const round2 = (n: number) => Math.round(n * 100) / 100
 const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+const weekKey = (d: Date) => {
+  const onejan = new Date(d.getFullYear(), 0, 1)
+  const week = Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7)
+  return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`
+}
+// ═══ ADMIN-IA-REALITY-04-C：时间范围窗口（数据罗盘顶部控制栏联动） ═══
+const RANGE_WINDOWS: Record<string, (now: Date) => Date> = {
+  today: (now) => new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+  '7d': (now) => new Date(now.getTime() - 7 * 86400000),
+  '30d': (now) => new Date(now.getTime() - 30 * 86400000),
+  '90d': (now) => new Date(now.getTime() - 90 * 86400000),
+  year: (now) => new Date(now.getFullYear(), 0, 1),
+}
+const RANGE_LABELS: Record<string, string> = {
+  today: '今天', '7d': '7天', '30d': '30天', '90d': '90天', year: '今年',
+}
+function parseRange(q: any) {
+  const raw = String(q?.range || '30d')
+  const range = RANGE_WINDOWS[raw] ? raw : '30d'
+  return { range, start: RANGE_WINDOWS[range](new Date()), label: RANGE_LABELS[range] }
+}
+// 趋势聚合粒度：7d→天 30d→天 90d→周 year→月
+function trendGranularity(range: string): 'day' | 'week' | 'month' {
+  if (range === '90d') return 'week'
+  if (range === 'year') return 'month'
+  return 'day'
+}
 
 // ── 30 天连续日期序列 ──
 const lastNDays = (n: number, now = new Date()) => {
@@ -51,7 +78,8 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════════════
   // 第一层：平台核心经营指标（必须第一屏）
   // ══════════════════════════════════════════════════════════════════
-  app.get('/api/admin/dashboard/overview', { preHandler: [requireAdmin] }, async () => {
+  app.get('/api/admin/dashboard/overview', { preHandler: [requireAdmin] }, async (req: any) => {
+    const { range, start: rangeStart, label: rangeLabel } = parseRange(req.query)
     const now = new Date()
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -60,9 +88,10 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
     const yearStart = new Date(now.getFullYear(), 0, 1)
 
     const [totalUsers, todayNewUsers, weekNewUsers, monthNewUsers, dau, active7, active30,
-      vipCount, totalEnterprises, activeEnterprises, totalAgents, activeAgents,
+      vipCount, vipMonthNew, totalEnterprises, activeEnterprises, totalAgents, activeAgents,
       todayCalls, monthCalls, todayCost, monthCost, todayTokens, monthTokens,
       enterpriseSubs, paymentPaid, paymentMonth, paymentYear,
+      winNewUsers, winActiveUsers, winCalls, winCost, winTokens, winPay, winSubs,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: startOfDay } } }),
@@ -72,6 +101,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       prisma.user.count({ where: { lastActiveAt: { gte: days7 } } }),
       prisma.user.count({ where: { lastActiveAt: { gte: days30 } } }),
       prisma.user.count({ where: { memberTier: { not: 'free' } } }),
+      prisma.membership.count({ where: { tier: { not: 'free' }, createdAt: { gte: startOfMonth } } }).catch(() => 0),
       prisma.enterpriseProfile.count(),
       prisma.enterpriseProfile.count({ where: { onboardingDone: true } }),
       prisma.enterpriseAgentInstance.count(),
@@ -87,6 +117,14 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       prisma.paymentOrder.aggregate({ where: { status: 'paid' }, _sum: { amount: true } }),
       prisma.paymentOrder.aggregate({ where: { status: 'paid', payTime: { gte: startOfMonth } }, _sum: { amount: true } }),
       prisma.paymentOrder.aggregate({ where: { status: 'paid', payTime: { gte: yearStart } }, _sum: { amount: true } }),
+      // ── 04-C 窗口化指标（时间控制栏联动：存量不变，流量随窗口） ──
+      prisma.user.count({ where: { createdAt: { gte: rangeStart } } }),
+      prisma.user.count({ where: { lastActiveAt: { gte: rangeStart } } }),
+      prisma.usageLog.count({ where: cleanUsageWhere({ createdAt: { gte: rangeStart } }) }),
+      prisma.usageLog.aggregate({ where: cleanUsageWhere({ createdAt: { gte: rangeStart } }), _sum: { cost: true } }),
+      prisma.$queryRawUnsafe(`SELECT COALESCE(SUM(CASE WHEN tokens ~ '^[0-9]+$' THEN CAST(tokens AS BIGINT) ELSE 0 END),0) AS total FROM usage_logs WHERE "createdAt" >= $1 AND provider NOT IN ($2) AND "taskType" NOT IN ($3)`, rangeStart, ...DIRTY_PROVIDERS, ...DIRTY_TASKS) as Promise<{ total: bigint }[]>,
+      prisma.paymentOrder.aggregate({ where: { status: 'paid', payTime: { gte: rangeStart } }, _sum: { amount: true } }),
+      prisma.enterpriseSubscription.findMany({ where: { startAt: { gte: rangeStart } }, select: { snapshotPrice: true, status: true } }).catch(() => []),
     ])
 
     const subRevenue = enterpriseSubs.reduce((s, x) => s + ((x.snapshotPrice || 0) / 100), 0)
@@ -102,14 +140,29 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
     const usersBefore7 = totalUsers - weekNewUsers
     const growthRate7d = usersBefore7 > 0 ? Math.round((weekNewUsers / usersBefore7) * 1000) / 10 : 0
 
+    // ── 04-C 窗口化收入：窗口内支付订单 + 窗口内新订阅快照 ──
+    const winSubRevenue = (winSubs as { snapshotPrice: number | null }[]).reduce((s, x) => s + ((x.snapshotPrice || 0) / 100), 0)
+    const winRevenue = round2((winPay._sum.amount || 0) + winSubRevenue)
+
     return {
       code: 0,
       data: {
         generatedAt: now.toISOString(),
+        range: { key: range, label: rangeLabel, start: rangeStart.toISOString() },
+        // ── 04-C 窗口化指标（存量卡 sub 联动 + 流量卡主值） ──
+        window: {
+          newUsers: winNewUsers,
+          activeUsers: winActiveUsers,
+          calls: winCalls,
+          cost: round2(winCost._sum.cost || 0),
+          tokens: num(winTokens?.[0]?.total),
+          revenue: winRevenue,
+          subscriptions: winSubs.length,
+        },
         // ── CEO 核心指标大卡 ──
         metrics: {
           users: { total: totalUsers, todayNew: todayNewUsers, weekNew: weekNewUsers, monthNew: monthNewUsers, growthRate7d, dau, active7, active30 },
-          vip: { total: vipCount },
+          vip: { total: vipCount, monthNew: vipMonthNew },
           enterprises: { total: totalEnterprises, active: activeEnterprises, subscriptions: subActive, autoRenew: subAutoRenew },
           agents: { total: totalAgents, active: activeAgents },
           workspaces: { total: 0, note: 'workspace 表为空，生态规模见 /workspace 端点' },
@@ -129,14 +182,17 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════════════
   // 第二层：用户增长中心（30 天趋势 + 生命周期漏斗）
   // ══════════════════════════════════════════════════════════════════
-  app.get('/api/admin/dashboard/users', { preHandler: [requireAdmin] }, async () => {
+  app.get('/api/admin/dashboard/users', { preHandler: [requireAdmin] }, async (req: any) => {
+    const { range, start: rangeStart, label: rangeLabel } = parseRange(req.query)
     const now = new Date()
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const days7 = new Date(now.getTime() - 7 * 86400000)
     const days30 = new Date(now.getTime() - 30 * 86400000)
+    const gran = trendGranularity(range)
 
     const [totalUsers, todayNew, weekNew, monthNew, dau, active7, active30,
       regTrend, returnedUsers, usersWithProject, usersWithUsage, vipCount, enterpriseCount,
+      winNew, winActive,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: startOfDay } } }),
@@ -157,11 +213,31 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       prisma.user.count({ where: { memberTier: { not: 'free' } } }),
       // 漏斗：企业客户
       prisma.enterpriseProfile.count(),
+      // ── 04-C 窗口化 ──
+      prisma.user.count({ where: { createdAt: { gte: rangeStart } } }),
+      prisma.user.count({ where: { lastActiveAt: { gte: rangeStart } } }),
     ])
 
     // 30 天注册序列（补 0）
     const regMap = new Map(regTrend.map((r) => [r.day, r.c]))
     const trend = lastNDays(30).map((day) => ({ date: day, registrations: regMap.get(day) || 0 }))
+
+    // ── 04-C 窗口化趋势（按粒度：day/week/month） ──
+    let windowTrend: { key: string; label: string; registrations: number }[] = []
+    if (gran === 'day') {
+      const days = range === '7d' ? 7 : range === '90d' ? 90 : 30
+      windowTrend = lastNDays(days).map((day) => ({ key: day, label: day.slice(5), registrations: regMap.get(day) || 0 }))
+    } else {
+      const agg = new Map<string, number>()
+      for (const r of regTrend) {
+        const key = gran === 'week' ? weekKey(new Date(r.day + 'T00:00:00')) : monthKey(new Date(r.day + 'T00:00:00'))
+        agg.set(key, (agg.get(key) || 0) + r.c)
+      }
+      windowTrend = Array.from(agg.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .slice(-(gran === 'week' ? 13 : 12))
+        .map(([key, c]) => ({ key, label: key.slice(2), registrations: c }))
+    }
 
     // 生命周期漏斗（真实数据；访问网站暂无埋点 → 显示暂无）
     const funnel = [
@@ -177,6 +253,8 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       code: 0,
       data: {
         generatedAt: now.toISOString(),
+        range: { key: range, label: rangeLabel, start: rangeStart.toISOString() },
+        window: { newUsers: winNew, activeUsers: winActive },
         summary: {
           total: totalUsers,
           todayNew,
@@ -188,6 +266,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
           returned: num(returnedUsers?.[0]?.c),
         },
         trend,
+        windowTrend,
         funnel,
       },
     }
@@ -196,7 +275,9 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════════════
   // 第三层：商业经营中心（收入驾驶舱 + 来源构成）
   // ══════════════════════════════════════════════════════════════════
-  app.get('/api/admin/dashboard/revenue', { preHandler: [requireAdmin] }, async () => {
+  app.get('/api/admin/dashboard/revenue', { preHandler: [requireAdmin] }, async (req: any) => {
+    const { range, start: rangeStart, label: rangeLabel } = parseRange(req.query)
+    const gran = trendGranularity(range)
     const now = new Date()
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -259,6 +340,29 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       .slice(-6)
       .map(([month, revenue]) => ({ month, revenue: round2(revenue) }))
 
+    // ── 04-C 窗口化收入趋势（按 range 粒度：today→小时忽略，7d/30d→天，90d→周，year→月） ──
+    const winMap = new Map<string, number>()
+    const winKey = (d: Date) => {
+      if (gran === 'day') return dateKey(d)
+      if (gran === 'week') return weekKey(d)
+      return monthKey(d)
+    }
+    const winLabel = (k: string) => (gran === 'day' ? k.slice(5) : k.slice(2))
+    for (const o of allOrders) {
+      if (!o.payTime || o.payTime < rangeStart) continue
+      const key = winKey(new Date(o.payTime))
+      winMap.set(key, (winMap.get(key) || 0) + o.amount)
+    }
+    for (const s of enterpriseSubs) {
+      if (!s.startAt || s.startAt < rangeStart) continue
+      const key = winKey(new Date(s.startAt))
+      winMap.set(key, (winMap.get(key) || 0) + ((s.snapshotPrice || 0) / 100))
+    }
+    const windowTrend = Array.from(winMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([key, revenue]) => ({ key, label: winLabel(key), revenue: round2(revenue) }))
+    const windowRevenue = round2(windowTrend.reduce((s, t) => s + t.revenue, 0))
+
     // ARPU = 累计收入 / 总用户
     const arpu = totalUsers > 0 ? round2(totalRevenue / totalUsers) : 0
     const paidUsers = await prisma.paymentOrder.groupBy({ by: ['userId'], where: { status: 'paid' } }).then((r) => r.length)
@@ -293,6 +397,8 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       code: 0,
       data: {
         generatedAt: now.toISOString(),
+        range: { key: range, label: rangeLabel, start: rangeStart.toISOString() },
+        window: { revenue: windowRevenue, trend: windowTrend },
         todayRevenue: round2(todayRevenue),
         monthRevenue,
         yearRevenue,
