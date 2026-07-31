@@ -219,6 +219,61 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
   })
 
   // ══════════════════════════════════════════════════════════════════
+  // Workspace 统一壳数据（SPRINT-ADMIN-CLEANUP-02 T03）
+  // GET /api/admin/workspace/:code → 配置/Agent/数据/用户 4 Tab 全量数据
+  // ══════════════════════════════════════════════════════════════════
+  const WORKSPACE_META: Record<string, { label: string; icon: string; projectTypes: string[]; taskPrefixes: string[]; hasAgents?: boolean }> = {
+    'short-drama': { label: 'AI 短剧', icon: '🎬', projectTypes: ['video', 'short_drama'], taskPrefixes: ['hdz_'] },
+    geo: { label: 'GEO优化', icon: '🌎', projectTypes: ['geo'], taskPrefixes: [] },
+    recruitment: { label: '求职招聘', icon: '💼', projectTypes: [], taskPrefixes: ['enterprise_agent_'], hasAgents: true },
+  }
+
+  app.get('/api/admin/workspace/:code', { preHandler: [requireAdmin] }, async (req: any) => {
+    const code = req.params?.code as string
+    const meta = WORKSPACE_META[code]
+    if (!meta) return { code: 404, message: `未知 Workspace: ${code}` }
+    const rangeStart = new Date(Date.now() - 30 * 86400000)
+
+    const [projects, callsAgg, userRows, agents] = await Promise.all([
+      meta.projectTypes.length
+        ? prisma.project.findMany({
+            where: { type: { in: meta.projectTypes } },
+            select: { id: true, name: true, status: true, type: true, updatedAt: true, userId: true },
+            orderBy: { updatedAt: 'desc' },
+            take: 100,
+          })
+        : Promise.resolve([]),
+      meta.taskPrefixes.length
+        ? prisma.usageLog.aggregate({
+            where: cleanUsageWhere({ createdAt: { gte: rangeStart }, taskType: { startsWith: meta.taskPrefixes[0] } }),
+            _count: true,
+            _sum: { cost: true },
+          })
+        : Promise.resolve(null),
+      meta.taskPrefixes.length
+        ? prisma.$queryRawUnsafe(`SELECT COUNT(DISTINCT "userId") AS users FROM usage_logs WHERE "createdAt" >= $1 AND "taskType" LIKE $2 AND "taskType" NOT IN ($3)`, rangeStart, `${meta.taskPrefixes[0]}%`, ...DIRTY_TASKS) as Promise<{ users: bigint }[]>
+        : Promise.resolve([]),
+      meta.hasAgents ? prisma.enterpriseAgentInstance.findMany({ select: { id: true, name: true, agentType: true, runtimeStatus: true, updatedAt: true } }) : Promise.resolve([]),
+    ])
+
+    return {
+      code: 0,
+      data: {
+        meta: { code, label: meta.label, icon: meta.icon, status: 'active' },
+        stats: {
+          projects: projects.length,
+          calls: callsAgg?._count || 0,
+          cost: Number(callsAgg?._sum?.cost || 0),
+          users: Number(userRows?.[0]?.users || 0),
+          agents: agents.length,
+        },
+        projects,
+        agents,
+      },
+    }
+  })
+
+  // ══════════════════════════════════════════════════════════════════
   // 第二层：用户增长中心（30 天趋势 + 生命周期漏斗）
   // ══════════════════════════════════════════════════════════════════
   app.get('/api/admin/dashboard/users', { preHandler: [requireAdmin] }, async (req: any) => {

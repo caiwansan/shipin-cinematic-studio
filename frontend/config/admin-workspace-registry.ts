@@ -79,46 +79,43 @@ export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [
   },
   {
     code: 'short-drama',
-    name: '短剧工作台管理',
+    name: '短剧工作台',
     icon: '🎬',
-    entry: '/admin/aigc/overview', // 占位：短剧后台尚未独立，P1 接入
-    children: [],
-  },
-  {
-    code: 'novel',
-    name: '小说工作台管理',
-    icon: '📖',
-    entry: '/admin/aigc/overview', // 占位：小说后台尚未独立，P1 接入
-    children: [],
+    entry: '/admin/workspace/short-drama/data',
+    // SPRINT-ADMIN-CLEANUP-02 T03：统一壳（配置/Agent/数据/用户 4 Tab）
+    children: [
+      { id: 'sd-config', label: '配置', to: '/admin/workspace/short-drama/config' },
+      { id: 'sd-agents', label: 'Agent', to: '/admin/workspace/short-drama/agents' },
+      { id: 'sd-data', label: '数据', to: '/admin/workspace/short-drama/data' },
+      { id: 'sd-users', label: '用户', to: '/admin/workspace/short-drama/users' },
+    ],
   },
   {
     code: 'geo',
-    name: 'GEO优化管理',
+    name: 'GEO优化工作台',
     icon: '🌎',
-    entry: '/admin/aigc/overview', // 占位：GEO 后台尚未独立，P1 接入
-    children: [],
+    entry: '/admin/workspace/geo/data',
+    // SPRINT-ADMIN-CLEANUP-02 T03：统一壳（配置/Agent/数据/用户 4 Tab）
+    children: [
+      { id: 'geo-config', label: '配置', to: '/admin/workspace/geo/config' },
+      { id: 'geo-agents', label: 'Agent', to: '/admin/workspace/geo/agents' },
+      { id: 'geo-data', label: '数据', to: '/admin/workspace/geo/data' },
+      { id: 'geo-users', label: '用户', to: '/admin/workspace/geo/users' },
+    ],
   },
-  {
-    code: 'music',
-    name: '音乐制作管理',
-    icon: '🎵',
-    entry: '/admin/aigc/overview', // 占位：P1 接入
-    children: [],
-  },
-  {
-    code: 'ecom-image',
-    name: '电商图片管理',
-    icon: '🖼',
-    entry: '/admin/aigc/overview', // 占位：P1 接入
-    children: [],
-  },
-  {
-    code: 'ad-create',
-    name: '广告制作管理',
-    icon: '📣',
-    entry: '/admin/aigc/overview', // 占位：P1 接入
-    children: [],
-  },
+  // ── SPRINT-ADMIN-CLEANUP-02 T03：未上线业务线隐藏，待业务真正上线再注册 ──
+  // {
+  //   code: 'novel', name: '小说工作台', icon: '📖', entry: '/admin/workspace/novel/data',
+  //   children: [
+  //     { id: 'novel-config', label: '配置', to: '/admin/workspace/novel/config' },
+  //     { id: 'novel-agents', label: 'Agent', to: '/admin/workspace/novel/agents' },
+  //     { id: 'novel-data', label: '数据', to: '/admin/workspace/novel/data' },
+  //     { id: 'novel-users', label: '用户', to: '/admin/workspace/novel/users' },
+  //   ],
+  // },
+  // { code: 'music', name: '音乐制作工作台', icon: '🎵', entry: '/admin/workspace/music/data', children: [] },
+  // { code: 'ecom-image', name: '电商图片工作台', icon: '🖼️', entry: '/admin/workspace/ecom-image/data', children: [] },
+  // { code: 'ad-create', name: '广告制作工作台', icon: '📣', entry: '/admin/workspace/ad-create/data', children: [] },
 ]
 
 /**
