@@ -62,6 +62,11 @@
       <!-- Agent 详情 -->
       <template v-else-if="drawer === 'agents'">
         <AgentRanking :agents="agents?.agents || []" :active-enterprises="agents?.activeEnterprises" />
+        <!-- Sprint-ADMIN-IA-RECRUITMENT-CLEANUP-01 T04：ROI/额度/日报归位数据罗盘 -->
+        <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl p-5">
+          <h4 class="text-xs font-semibold text-white/80 mb-3">🏢 企业智能（AI员工 ROI · 额度 · 日报）</h4>
+          <EnterpriseIntelPanel />
+        </div>
       </template>
       <!-- VIP 详情 -->
       <template v-else-if="drawer === 'vip'">
@@ -105,6 +110,7 @@ import GeographyPanel from '~/components/admin/dashboard/GeographyPanel.vue'
 import RevenueCockpit from '~/components/admin/dashboard/RevenueCockpit.vue'
 import WorkspaceChart from '~/components/admin/dashboard/WorkspaceChart.vue'
 import AgentRanking from '~/components/admin/dashboard/AgentRanking.vue'
+import EnterpriseIntelPanel from '~/components/admin/dashboard/EnterpriseIntelPanel.vue'
 import VipPanel from '~/components/admin/dashboard/VipPanel.vue'
 import AiHealthPanel from '~/components/admin/dashboard/AiHealthPanel.vue'
 import SystemHealthPanel from '~/components/admin/dashboard/SystemHealthPanel.vue'

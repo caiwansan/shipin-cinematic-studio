@@ -1,186 +1,184 @@
 <!--
-  Admin: 🧠 求职顾问 AI 配置
+  Admin: 求职管家 Agent 配置
   位置：/admin/recruitment/config.vue
-  职责：管理求职顾问（公共 AI Agent）的模型/Provider/API Key
+  职责：管理平台提供的招聘 AI Agent「产品定义」（基础信息 / 能力 / Prompt 模板 / 版本）
 
-  复用：
-  - GET  /api/admin/global-config/business-type/career_advisor → 读取当前配置
-  - PUT  /api/admin/global-config/business-type/career_advisor → 保存配置
-  - GET  /api/public/global-models → 获取 Provider + Model 列表
+  Sprint-ADMIN-IA-RECRUITMENT-CLEANUP-01 T02/T03：
+  - 重构前：Provider / 模型 / API Key 配置（模型管理，错误方向）
+  - 重构后：产品定义视图。模型不在此处管理——
+    ❌ DeepSeek API Key / OpenAI Key / 模型健康 / Provider（属「大模型管理」或用户自己的模型设置）
+    ✅ 用户/企业模型配置 → Runtime Resolver → Agent 执行（昆仑镜统一架构）
 
-  设计原则：
-  - 不使用 UserModelConfigV2（那是用户 BYOK）
-  - 不走环境变量（那是基础设施配置）
-  - 存储到 route_config + ApiKey（平台运营配置）
-  - 求职顾问 = 公共 AI Agent，不属于用户资产
+  数据源：
+  - GET /api/admin/recruitment/agent-product → 产品定义（只读）
 -->
 <template>
   <RecruitmentPageShell>
-    <template #title>🧠 求职顾问 AI 配置</template>
-    <template #subtitle>配置求职顾问（公共 AI 获客 Agent）使用的模型与 API Key</template>
+    <template #title>🧠 求职管家 Agent 配置</template>
+    <template #subtitle>平台招聘 AI Agent 产品定义 · 管理「产品」不管理「模型」</template>
     <template #actions>
-      <button class="rec-btn" @click="testConnection" :disabled="testing">
-        {{ testing ? '🔄 测试中...' : '🔗 测试连接' }}
-      </button>
-      <button class="rec-btn rec-btn-primary" @click="saveConfig" :disabled="saving">
-        {{ saving ? '💾 保存中...' : '💾 保存配置' }}
+      <button class="rec-btn" @click="loadData" :disabled="loading">
+        <span v-if="!loading">🔄 刷新</span>
+        <span v-else>加载中...</span>
       </button>
     </template>
 
     <!-- Loading -->
     <div v-if="loading" class="rec-loading">
       <div class="rec-spinner"></div>
-      <span>加载配置中...</span>
+      <span>加载产品定义中...</span>
     </div>
 
     <!-- Error -->
     <div v-else-if="error" class="rec-error">
       <span>⚠️ {{ error }}</span>
-      <button class="rec-link" @click="loadConfig">重试</button>
+      <button class="rec-link" @click="loadData">重试</button>
     </div>
 
-    <!-- Config Form -->
-    <div v-else class="rec-config-form">
-      <!-- 服务说明卡片 -->
-      <div class="rec-info-card">
-        <div class="rec-info-icon">🧠</div>
-        <div class="rec-info-content">
-          <h3>求职顾问 = 平台公共 AI 获客 Agent</h3>
-          <ul>
-            <li>✅ 所有登录用户可使用</li>
-            <li>✅ 使用平台购买的大模型额度，不需要用户 Key</li>
-            <li>✅ 管理员控制成本</li>
-            <li>✅ 不创建 Hermes Instance，不属于用户资产</li>
-            <li>🪞 镜心（私人 AI 职业伙伴）不受影响</li>
-            <li>🏢 企业招聘 AI 员工不受影响</li>
-          </ul>
+    <template v-else-if="product">
+      <!-- ═══ 基础信息 ═══ -->
+      <section class="rec-section-card">
+        <h3 class="rec-section-title">基础信息</h3>
+        <div class="rec-basic-grid">
+          <div class="rec-basic-item">
+            <span class="rec-basic-label">Agent 名称</span>
+            <span class="rec-basic-value">{{ product.base.name }}（{{ product.base.displayName }}）</span>
+          </div>
+          <div class="rec-basic-item">
+            <span class="rec-basic-label">Agent 头像</span>
+            <span class="rec-basic-value">{{ product.base.avatar }}</span>
+          </div>
+          <div class="rec-basic-item">
+            <span class="rec-basic-label">状态</span>
+            <span class="rec-basic-value"><span class="rec-status-pill rec-status-active">● 已启用</span></span>
+          </div>
+          <div class="rec-basic-item">
+            <span class="rec-basic-label">服务对象</span>
+            <span class="rec-basic-value">{{ product.base.audience }}</span>
+          </div>
+          <div class="rec-basic-item rec-basic-wide">
+            <span class="rec-basic-label">Agent 介绍</span>
+            <span class="rec-basic-value">{{ product.base.description }}</span>
+          </div>
+          <div class="rec-basic-item rec-basic-wide">
+            <span class="rec-basic-label">模型策略</span>
+            <span class="rec-basic-value rec-model-policy">{{ product.base.modelPolicy }}</span>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Provider 选择 -->
-      <div class="rec-field">
-        <label class="rec-field-label">AI 供应商</label>
-        <p class="rec-field-desc">选择求职顾问对话使用的 AI 供应商</p>
-        <select v-model="form.provider" class="rec-select" @change="onProviderChange">
-          <option value="">-- 选择供应商 --</option>
-          <option v-for="p in providers" :key="p.provider" :value="p.provider">
-            {{ p.providerName }}
-          </option>
-        </select>
-      </div>
-
-      <!-- 模型选择 -->
-      <div class="rec-field">
-        <label class="rec-field-label">模型</label>
-        <p class="rec-field-desc">选择用于求职顾问对话的语言模型</p>
-        <select v-model="form.model" class="rec-select">
-          <option value="">-- 选择模型 --</option>
-          <option v-for="m in availableModels" :key="m.name" :value="m.name">
-            {{ m.label }}
-          </option>
-        </select>
-        <div v-if="!form.provider" class="rec-field-hint">请先选择供应商</div>
-      </div>
-
-      <!-- API Key -->
-      <div class="rec-field">
-        <label class="rec-field-label">API Key</label>
-        <p class="rec-field-desc">该供应商的 API 访问密钥</p>
-        <div class="rec-key-input">
-          <input
-            :type="showKey ? 'text' : 'password'"
-            v-model="form.apiKey"
-            :placeholder="hasApiKey ? '•••••••••••••••• 已配置密钥，输入新值替换' : '输入 API Key'"
-            class="rec-input"
-          />
-          <button class="rec-key-toggle" @click="showKey = !showKey" :title="showKey ? '隐藏' : '显示'">
-            {{ showKey ? '🙈' : '👁️' }}
-          </button>
+      <!-- ═══ 能力 ═══ -->
+      <section class="rec-section-card">
+        <h3 class="rec-section-title">能力</h3>
+        <div class="rec-cap-grid">
+          <div v-for="cap in product.capabilities" :key="cap.code" class="rec-cap-item">
+            <div class="rec-cap-head">
+              <span class="rec-cap-name">{{ cap.name }}</span>
+              <span class="rec-cap-code">{{ cap.code }}</span>
+              <span class="rec-status-pill rec-status-active">启用</span>
+            </div>
+            <p class="rec-cap-desc">{{ cap.desc }}</p>
+          </div>
         </div>
-        <div class="rec-field-hint">
-          {{ hasApiKey ? '✅ 已配置 API Key（输入新值将覆盖）' : '密钥不会明文返回，仅保存时写入' }}
+      </section>
+
+      <!-- ═══ Prompt 模板 ═══ -->
+      <section class="rec-section-card">
+        <h3 class="rec-section-title">Prompt 模板</h3>
+        <div class="rec-prompt-meta">
+          <span class="rec-basic-label">当前版本</span>
+          <span class="rec-version-tag">v1 · 当前线上</span>
+          <span class="rec-basic-label" style="margin-left:16px">管理方式</span>
+          <span class="rec-basic-value">代码发布管理（STATIC_SYSTEM_PROMPT · KV Cache 友好）</span>
         </div>
-      </div>
+        <div class="rec-prompt-box">
+          <pre class="rec-prompt-pre">{{ currentPrompt }}</pre>
+        </div>
+      </section>
 
-      <!-- 测试结果 -->
-      <div v-if="testResult" class="rec-test-result" :class="testOk ? 'rec-test-ok' : 'rec-test-fail'">
-        <span>{{ testOk ? '✅' : '❌' }}</span>
-        <span>{{ testResult }}</span>
-      </div>
+      <!-- ═══ 版本管理 ═══ -->
+      <section class="rec-section-card">
+        <h3 class="rec-section-title">版本管理</h3>
+        <table class="rec-version-table">
+          <thead>
+            <tr>
+              <th>版本</th>
+              <th>说明</th>
+              <th>状态</th>
+              <th>发布时间</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="v in product.versions" :key="v.version">
+              <td><span class="rec-version-tag">{{ v.version }}</span></td>
+              <td>{{ v.label }}</td>
+              <td>
+                <span class="rec-status-pill" :class="v.status === 'released' ? 'rec-status-active' : 'rec-status-planned'">
+                  {{ v.status === 'released' ? '已发布' : '规划中' }}
+                </span>
+              </td>
+              <td>{{ v.releasedAt || '—' }}</td>
+              <td class="rec-version-note">{{ v.note }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
 
-      <!-- Save feedback -->
-      <div v-if="saveMessage" class="rec-save-msg" :class="saveOk ? 'rec-save-ok' : 'rec-save-fail'">
-        {{ saveMessage }}
-      </div>
-    </div>
+      <!-- ═══ 模型配置说明（删除区域） ═══ -->
+      <section class="rec-section-card rec-model-note">
+        <h3 class="rec-section-title">🔒 模型配置（已移除）</h3>
+        <p class="rec-model-note-text">
+          招聘后台不再管理模型 / Provider / API Key。企业用户使用的 AI 员工，配置的大模型通过
+          <strong>用户模型设置（UserModelConfigV2）→ Runtime Resolver → Agent 执行</strong> 映射，
+          与短剧 / 小说工作台共用同一套昆仑镜统一模型架构。平台模型配置请前往
+          <NuxtLink to="/admin/aigc/models" class="rec-link">🤖 大模型管理</NuxtLink>。
+        </p>
+      </section>
+    </template>
   </RecruitmentPageShell>
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'admin-aigc' })
 import { ref, computed, onMounted } from 'vue'
+import { getAuthToken } from '~/utils/auth/token'
 import RecruitmentPageShell from '~/components/enterprise/recruitment/ui/RecruitmentPageShell.vue'
+definePageMeta({ layout: 'admin-aigc' })
 
-// ─── State ───
+interface AgentProduct {
+  base: {
+    name: string
+    displayName: string
+    avatar: string
+    description: string
+    status: string
+    audience: string
+    modelPolicy: string
+  }
+  capabilities: Array<{ code: string; name: string; desc: string; enabled: boolean }>
+  versions: Array<{ version: string; label: string; status: string; releasedAt: string | null; note: string; content: string }>
+}
+
 const loading = ref(true)
 const error = ref('')
-const saving = ref(false)
-const testing = ref(false)
-const showKey = ref(false)
-const hasApiKey = ref(false)
+const product = ref<AgentProduct | null>(null)
 
-const providers = ref<any[]>([])
-const form = ref({ provider: '', model: '', apiKey: '' })
-
-const testResult = ref('')
-const testOk = ref(false)
-const saveMessage = ref('')
-const saveOk = ref(false)
-
-// ─── Computed ───
-const availableModels = computed(() => {
-  const prov = providers.value.find((p: any) => p.provider === form.value.provider)
-  if (!prov?.models) return []
-  // LLM 类型模型
-  return prov.models
-    .filter((m: any) => m.type === 'llm')
-    .map((m: any) => ({ name: m.id, label: m.name || m.id }))
+const currentPrompt = computed(() => {
+  const released = product.value?.versions.find(v => v.status === 'released')
+  return released?.content || '（暂无提示词内容）'
 })
 
-// ─── API Token ───
-function getToken(): string {
-  try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' }
-}
-
-async function fetchApi(path: string, options?: RequestInit) {
-  const token = getToken()
-  const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    ...options,
-  })
-  return res.json()
-}
-
-// ─── 加载配置 ───
-async function loadConfig() {
+async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    // 1. 获取 Provider + Model 列表
-    const providersRes = await fetchApi('/api/public/global-models')
-    if (providersRes.success && Array.isArray(providersRes.providers)) {
-      providers.value = providersRes.providers
-    } else {
-      throw new Error('获取供应商列表失败')
-    }
-
-    // 2. 获取当前职业顾问配置
-    const configRes = await fetchApi('/api/admin/global-config/business-type/career_advisor')
-    if (configRes.success && configRes.config) {
-      form.value.provider = configRes.config.provider || ''
-      form.value.model = configRes.config.model || ''
-      hasApiKey.value = configRes.config.hasApiKey || false
-    }
+    const token = getAuthToken() || ''
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    const res = await fetch('/api/admin/recruitment/agent-product', { headers })
+    const json = await res.json()
+    if (!res.ok || !json.success) throw new Error(json.message || `HTTP ${res.status}`)
+    product.value = json.data
   } catch (e: any) {
     error.value = e.message || '加载失败'
   } finally {
@@ -188,319 +186,199 @@ async function loadConfig() {
   }
 }
 
-// ─── 保存配置 ───
-async function saveConfig() {
-  saving.value = true
-  saveMessage.value = ''
-  try {
-    if (!form.value.provider) {
-      saveMessage.value = '请选择 AI 供应商'
-      saveOk.value = false
-      return
-    }
-
-    const body: Record<string, string> = {
-      provider: form.value.provider,
-      model: form.value.model,
-    }
-    if (form.value.apiKey) {
-      body.apiKey = form.value.apiKey
-    }
-
-    const res = await fetchApi('/api/admin/global-config/business-type/career_advisor', {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    })
-
-    if (res.success) {
-      saveMessage.value = '✅ 配置保存成功'
-      saveOk.value = true
-      hasApiKey.value = !!form.value.apiKey || hasApiKey.value
-      form.value.apiKey = '' // 清除 Key 输入（已保存）
-    } else {
-      saveMessage.value = `❌ 保存失败: ${res.error || '未知错误'}`
-      saveOk.value = false
-    }
-  } catch (e: any) {
-    saveMessage.value = `❌ 保存失败: ${e.message}`
-    saveOk.value = false
-  } finally {
-    saving.value = false
-  }
-}
-
-// ─── 测试连接 ───
-async function testConnection() {
-  testing.value = true
-  testResult.value = ''
-  try {
-    // 构造测试消息，通过求职顾问 API 验证连通性
-    const res = await fetchApi('/api/job/chat', {
-      method: 'POST',
-      body: JSON.stringify({
-        message: '你好，请用一句话介绍你自己。',
-        userId: 'admin_test',
-      }),
-    })
-
-    if (res.reply) {
-      testResult.value = `连接成功 ✅ 回复：${res.reply.slice(0, 60)}...`
-      testOk.value = true
-    } else if (res.error) {
-      testResult.value = `连接失败：${res.error}`
-      testOk.value = false
-    } else {
-      testResult.value = '连接正常（使用规则引擎 fallback）'
-      testOk.value = true
-    }
-  } catch (e: any) {
-    testResult.value = `连接异常：${e.message}`
-    testOk.value = false
-  } finally {
-    testing.value = false
-  }
-}
-
-// ─── Provider 切换 ───
-function onProviderChange() {
-  form.value.model = '' // 重置模型选择
-}
-
-// ─── 初始化 ───
-onMounted(() => {
-  loadConfig()
-})
+onMounted(loadData)
 </script>
 
 <style scoped>
-.rec-config-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  max-width: 680px;
-}
-
-.rec-info-card {
-  display: flex;
-  gap: 16px;
-  background: rgba(59, 130, 246, 0.06);
-  border: 1px solid rgba(59, 130, 246, 0.15);
+.rec-section-card {
+  background: var(--color-bg-secondary, #0F1526);
+  border: 1px solid var(--color-border-primary, #1E293B);
   border-radius: 12px;
   padding: 20px;
 }
 
-.rec-info-icon {
-  font-size: 2rem;
-  line-height: 1;
+.rec-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary, #F1F5F9);
+  margin: 0 0 14px;
 }
 
-.rec-info-content h3 {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
-  margin: 0 0 8px 0;
+.rec-basic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px 20px;
 }
 
-.rec-info-content ul {
-  margin: 0;
-  padding: 0 0 0 18px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  line-height: 1.8;
-}
-
-.rec-info-content li {
-  list-style: none;
-}
-
-.rec-field {
+.rec-basic-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-.rec-field-label {
-  font-size: 0.85rem;
+.rec-basic-wide {
+  grid-column: 1 / -1;
+}
+
+.rec-basic-label {
+  font-size: 11px;
+  color: var(--color-text-secondary, #94A3B8);
+}
+
+.rec-basic-value {
+  font-size: 13px;
+  color: var(--color-text-primary, #F1F5F9);
+  line-height: 1.5;
+}
+
+.rec-model-policy {
+  color: #38BDF8;
+}
+
+.rec-status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.rec-status-active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ADE80;
+}
+
+.rec-status-planned {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94A3B8;
+}
+
+.rec-cap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.rec-cap-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.rec-cap-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rec-cap-name {
+  font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: #F1F5F9;
 }
 
-.rec-field-desc {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+.rec-cap-code {
+  font-size: 10px;
+  color: #64748B;
+  font-family: monospace;
+}
+
+.rec-cap-desc {
+  font-size: 12px;
+  color: #94A3B8;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.rec-prompt-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.rec-version-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.rec-prompt-box {
+  background: #0A0F1E;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.rec-prompt-pre {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #CBD5E1;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.rec-version-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.rec-version-table th {
+  text-align: left;
+  padding: 8px 10px;
+  color: #64748B;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.rec-version-table td {
+  padding: 10px;
+  color: #CBD5E1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.rec-version-note {
+  color: #64748B;
+  font-size: 11px;
+}
+
+.rec-model-note {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.rec-model-note-text {
+  font-size: 12px;
+  color: #94A3B8;
+  line-height: 1.8;
   margin: 0;
 }
 
-.rec-field-hint {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.rec-select {
-  background: rgba(13, 19, 40, 0.8);
-  border: 1px solid rgba(26, 34, 64, 0.8);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.2s;
-  font-family: inherit;
-}
-
-.rec-select:focus {
-  border-color: rgba(59, 130, 246, 0.5);
-}
-
-.rec-input {
-  flex: 1;
-  background: rgba(13, 19, 40, 0.8);
-  border: 1px solid rgba(26, 34, 64, 0.8);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
-  outline: none;
-  transition: border-color 0.2s;
-  font-family: inherit;
-}
-
-.rec-input:focus {
-  border-color: rgba(59, 130, 246, 0.5);
-}
-
-.rec-key-input {
-  display: flex;
-  gap: 8px;
-}
-
-.rec-key-toggle {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.rec-key-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.rec-test-result {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-}
-
-.rec-test-ok {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  color: rgba(34, 197, 94, 0.9);
-}
-
-.rec-test-fail {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: rgba(239, 68, 68, 0.9);
-}
-
-.rec-save-msg {
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-}
-
-.rec-save-ok {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  color: rgba(34, 197, 94, 0.9);
-}
-
-.rec-save-fail {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: rgba(239, 68, 68, 0.9);
-}
-
-.rec-loading {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 32px 0;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 0.85rem;
-}
-
-.rec-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: rgba(59, 130, 246, 0.6);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.rec-error {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 8px;
-  color: rgba(239, 68, 68, 0.9);
-  font-size: 0.85rem;
+.rec-model-note-text strong {
+  color: #FBBF24;
 }
 
 .rec-link {
-  background: none;
-  border: none;
-  color: rgba(59, 130, 246, 0.8);
-  cursor: pointer;
+  color: #38BDF8;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.rec-link:hover {
   text-decoration: underline;
-  font-size: 0.8rem;
-  font-family: inherit;
-}
-
-/* Reuse existing recruitment button styles */
-.rec-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.rec-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.rec-btn-primary {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: rgba(59, 130, 246, 0.9);
-}
-
-.rec-btn-primary:hover {
-  background: rgba(59, 130, 246, 0.25);
-  border-color: rgba(59, 130, 246, 0.4);
 }
 </style>

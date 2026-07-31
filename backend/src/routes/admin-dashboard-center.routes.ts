@@ -878,4 +878,46 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
     const body = JSON.parse(res.body)
     return reply.type('application/json').send({ code: 0, data: { generatedAt: body.data.generatedAt, overall: body.data.health.overall, checks: body.data.health.checks } })
   })
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Sprint-ADMIN-IA-RECRUITMENT-CLEANUP-01 T04
+  // 企业智能（原招聘后台 ROI / 额度 / 日报 → 归位数据罗盘）
+  // 数据能力从 /api/admin/enterprise/* 移入 /api/admin/dashboard/*
+  // ═══════════════════════════════════════════════════════════════════
+
+  // GET /api/admin/dashboard/roi — AI 员工 ROI（执行次数/Token/成本/时长）
+  app.get('/api/admin/dashboard/roi', { preHandler: [requireAdmin] }, async (request) => {
+    const q = (request.query || {}) as { days?: string; organizationId?: string }
+    const days = q.days ? Math.min(parseInt(q.days, 10) || 30, 365) : 30
+    try {
+      const { getRoiReport } = await import('../services/enterprise/agent-activity.service.js')
+      const result = await getRoiReport({ days, organizationId: q.organizationId || undefined })
+      return { code: 0, data: result }
+    } catch (error: any) {
+      return { code: 500, message: error.message, data: null }
+    }
+  })
+
+  // GET /api/admin/dashboard/quotas — 企业套餐额度总览（权益 vs 用量）
+  app.get('/api/admin/dashboard/quotas', { preHandler: [requireAdmin] }, async () => {
+    try {
+      const { getQuotaOverview } = await import('../services/enterprise/quota.service.js')
+      const rows = await getQuotaOverview()
+      return { code: 0, data: rows }
+    } catch (error: any) {
+      return { code: 500, message: error.message, data: null }
+    }
+  })
+
+  // GET /api/admin/dashboard/daily-report — AI 员工工作日报（企业维度）
+  app.get('/api/admin/dashboard/daily-report', { preHandler: [requireAdmin] }, async (request) => {
+    const q = (request.query || {}) as { organizationId?: string; date?: string }
+    try {
+      const { getDailyReport } = await import('../services/enterprise/agent-activity.service.js')
+      const result = await getDailyReport({ organizationId: q.organizationId || undefined, date: q.date || undefined })
+      return { code: 0, data: result }
+    } catch (error: any) {
+      return { code: 500, message: error.message, data: null }
+    }
+  })
 }

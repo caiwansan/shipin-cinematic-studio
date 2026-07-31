@@ -101,8 +101,17 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
   })
 
   // DELETE /api/admin/recruitment/plans/:id — 删除套餐
+  // Sprint-RECRUITMENT-REALITY-03 T03: 删除保护 — 有历史订阅的套餐禁止硬删，改用 toggle 停用保持历史
   app.delete('/api/admin/recruitment/plans/:id', { preHandler: [requireAdmin] }, async (request, reply) => {
     const { id } = request.params as any
+    const plan = await prisma.enterprisePlan.findUnique({
+      where: { id },
+      include: { _count: { select: { subscriptions: true } } },
+    })
+    if (!plan) return reply.status(404).send({ success: false, message: '套餐不存在' })
+    if (plan._count.subscriptions > 0) {
+      return reply.status(400).send({ success: false, message: '该套餐存在历史订阅，禁止硬删；请使用「停用」按钮（toggle）保留历史' })
+    }
     await prisma.enterprisePlan.delete({ where: { id } })
     return { success: true }
   })
@@ -126,12 +135,15 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
     const { status, page = 1, limit = 20 } = request.query as any
     const where: any = {}
     if (status) where.status = status
+    // Sprint-ADMIN-IA-RECRUITMENT-CLEANUP-01：query 参数为字符串，需显式转 Int（Prisma take/skip 校验）
+    const pageNum = Math.max(1, parseInt(page, 10) || 1)
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20))
 
     const [subscriptions, total] = await Promise.all([
       prisma.enterpriseSubscription.findMany({
         where,
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: (pageNum - 1) * limitNum,
+        take: limitNum,
         orderBy: { createdAt: 'desc' },
         include: {
           plan: true,
@@ -141,7 +153,7 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
       prisma.enterpriseSubscription.count({ where }),
     ])
 
-    return { success: true, data: subscriptions, total, page, limit }
+    return { success: true, data: subscriptions, total, page: pageNum, limit: limitNum }
   })
 
   // GET /api/admin/recruitment/subscriptions/:id — 订阅详情
@@ -232,8 +244,6 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
 
       const where: any = {}
       if (state) where.lifecycleState = state
-      if (type) where.profile = { agentType: type }
-      if (keyword) where.profile = { ...where.profile, name: { contains: keyword, mode: 'insensitive' as any } }
 
       const [instances, total] = await Promise.all([
         prisma.enterpriseAgentInstance.findMany({
@@ -241,25 +251,45 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
           skip,
           take: size,
           orderBy: { updatedAt: 'desc' },
-          include: {
-            profile: { select: { name: true, agentType: true, description: true } },
-            enterprise: { select: { id: true, name: true } },
-          },
         }),
         prisma.enterpriseAgentInstance.count({ where }),
       ])
 
-      const list = instances.map(inst => ({
-        id: inst.id,
-        tenantId: inst.tenantId,
-        name: inst.profile?.name || 'Unknown',
-        agentType: inst.profile?.agentType || 'unknown',
-        description: inst.profile?.description || null,
-        lifecycleState: inst.lifecycleState,
-        lastRecoveredAt: inst.lastRecoveredAt,
-        updatedAt: inst.updatedAt,
-        enterprise: inst.enterprise ? { id: inst.enterprise.id, name: inst.enterprise.name } : null,
-      }))
+      // 手动关联 Profile + Organization（无 Prisma 关系定义）
+      const employeeIds = [...new Set(instances.map((i) => i.employeeId))]
+      const orgIds = [...new Set(instances.map((i) => i.organizationId).filter(Boolean))]
+      const [profiles, orgs] = await Promise.all([
+        prisma.enterpriseAgentProfile.findMany({
+          where: { id: { in: employeeIds } },
+          select: { id: true, name: true, agentType: true, description: true },
+        }),
+        prisma.organization.findMany({
+          where: { id: { in: orgIds } },
+          select: { id: true, name: true },
+        }),
+      ])
+      const profileMap = new Map(profiles.map((p) => [p.id, p]))
+      const orgMap = new Map(orgs.map((o) => [o.id, o]))
+
+      // type & keyword 过滤在内存中执行
+      let list = instances.map((inst) => {
+        const profile = profileMap.get(inst.employeeId)
+        const org = inst.organizationId ? orgMap.get(inst.organizationId) : null
+        return {
+          id: inst.id,
+          tenantId: inst.tenantId,
+          name: profile?.name || 'Unknown',
+          agentType: profile?.agentType || 'unknown',
+          description: profile?.description || null,
+          lifecycleState: inst.lifecycleState,
+          lastRecoveredAt: inst.lastRecoveredAt,
+          updatedAt: inst.updatedAt,
+          enterprise: org ? { id: org.id, name: org.name } : null,
+        }
+      })
+      // 二次过滤
+      if (type) list = list.filter((x) => x.agentType === type)
+      if (keyword) list = list.filter((x) => x.name.toLowerCase().includes(keyword.toLowerCase()))
 
       // 统计各状态数量
       const stateStats = await prisma.enterpriseAgentInstance.groupBy({
@@ -1300,4 +1330,151 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
       limit,
     }
   })
+
+  // ═══════════════════════════════════════════════════════════════
+  // Sprint-ADMIN-IA-RECRUITMENT-CLEANUP-01
+  // 求职管家 Agent 产品定义（只读）— 管理「产品」不管理「模型」
+  // ═══════════════════════════════════════════════════════════════
+  app.get('/api/admin/recruitment/agent-product', { preHandler: [requireAdmin] }, async (_request, reply) => {
+    try {
+      const { STATIC_SYSTEM_PROMPT } = await import('../services/career/career-advisor.service.js')
+      const capabilities = [
+        { code: 'resume_analysis', name: '简历分析', desc: '解析用户简历，提炼技能/经历/优势，输出结构化职业画像', enabled: true },
+        { code: 'career_planning', name: '职业规划', desc: '基于用户背景与目标，提供转行/晋升/技能提升路线建议', enabled: true },
+        { code: 'job_recommendation', name: '岗位推荐', desc: '根据画像输出求职方向与岗位匹配思路（不编造具体 JD）', enabled: true },
+        { code: 'interview_coaching', name: '面试辅导', desc: '生成面试问题、提供回答框架与表达建议', enabled: true },
+      ]
+      const base = {
+        name: 'Career Agent',
+        displayName: '求职管家',
+        avatar: '🧠',
+        description: '昆仑镜求职工作台的 AI 职业助理：帮助求职者认识职业优势、分析求职方向、创建简历、提供职业建议。',
+        status: 'active',
+        audience: '所有登录用户（平台公共 AI Agent）',
+        modelPolicy: '平台托管模型（career_advisor 白名单）；企业 AI 员工走 用户模型设置 → Runtime Resolver → Agent 执行（昆仑镜统一架构）',
+      }
+      const versions = [
+        { version: 'v1', label: '当前线上版本', status: 'released', releasedAt: '2026-06', note: 'STATIC_SYSTEM_PROMPT · KV Cache 友好静态提示词', content: STATIC_SYSTEM_PROMPT },
+        { version: 'v2', label: '规划中', status: 'planned', releasedAt: null, note: '待产品决策，版本走代码发布管理，不在此后台编辑' },
+      ]
+      return reply.send({ success: true, data: { base, capabilities, versions } })
+    } catch (error: any) {
+      return reply.status(500).send({ success: false, message: error.message })
+    }
+  })
+
+  // ═══════════════════════════════════════════════════════════════
+  // 企业套餐授权 — Admin 开通/续期（链路：Subscription → Entitlement → Provision）
+  // 幂等：同一企业仅一条订阅（organizationId unique），重复开通 = 续期/换套餐
+  // ═══════════════════════════════════════════════════════════════
+  app.post('/api/admin/recruitment/authorization/grant', { preHandler: [requireAdmin] }, async (request, reply) => {
+    try {
+      const { organizationId, planId, cycle = 'monthly', periodDays = 30 } = (request.body || {}) as any
+      if (!organizationId || !planId) {
+        return reply.status(400).send({ success: false, message: '缺少 organizationId / planId' })
+      }
+      const [org, plan] = await Promise.all([
+        prisma.organization.findUnique({ where: { id: organizationId } }),
+        prisma.enterprisePlan.findUnique({ where: { id: planId } }),
+      ])
+      if (!org) return reply.status(404).send({ success: false, message: '企业不存在' })
+      if (!plan) return reply.status(404).send({ success: false, message: '套餐不存在' })
+
+      const price = cycle === 'yearly' ? plan.yearlyPrice : plan.price
+      const expireAt = new Date(Date.now() + Math.max(1, Number(periodDays) || 30) * 86400_000)
+
+      // organizationId 唯一 → upsert（首次=开通，再次=续期/换套餐）
+      const snapshot = {
+        snapshotName: plan.displayName,
+        snapshotPrice: price,
+        snapshotCycle: cycle,
+        snapshotMaxEmployees: plan.maxEmployees,
+        snapshotMaxChannels: plan.maxChannels,
+        snapshotMaxMembers: plan.maxMembers,
+        snapshotFeatures: plan.features as any,
+      }
+      const subscription = await prisma.enterpriseSubscription.upsert({
+        where: { organizationId },
+        create: { organizationId, planId, status: 'active', startAt: new Date(), expireAt, autoRenew: true, ...snapshot },
+        update: { planId, status: 'active', startAt: new Date(), expireAt, autoRenew: true, ...snapshot },
+      })
+
+      // Entitlement 同步（权益 = 订阅的实时兑现）
+      const { entitlementService } = await import('../services/enterprise/enterprise-entitlement.service.js')
+      const entitlement = await entitlementService.createFromSubscription(organizationId, subscription.id)
+
+      // Provision AI 员工（按套餐 employees 配置幂等创建 Profile + Instance）
+      // ⚠️ 注：employeeTemplate model 不存在于 schema，旧 provision 服务为死代码；此处内联幂等实现
+      const provision = await provisionEmployeesByPlan(plan, organizationId)
+
+      return reply.send({
+        success: true,
+        data: {
+          subscriptionId: subscription.id,
+          organizationId,
+          planId,
+          cycle,
+          expireAt: expireAt.toISOString(),
+          entitlement,
+          provision,
+        },
+      })
+    } catch (error: any) {
+      console.error('[Authorization/Grant] ERROR:', error)
+      return reply.status(500).send({ success: false, message: error.message })
+    }
+  })
+
+  // ── 内置幂等 Provision：按套餐 capabilityCodes.employees 创建 EnterpriseAgentProfile + Instance ──
+  async function provisionEmployeesByPlan(plan: any, organizationId: string) {
+    const raw = plan.capabilityCodes as any
+    let employees: Array<{ role: string; displayName: string }> = []
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      employees = Array.isArray(raw.employees) ? (raw.employees as Array<{ role: string; displayName: string }>) : []
+    }
+    const tenantId = organizationId
+    const result: { provisioned: number; skipped: number; employees: any[] } = { provisioned: 0, skipped: 0, employees: [] }
+
+    for (const emp of employees) {
+      const role = emp.role
+      const existing = await prisma.enterpriseAgentProfile.findFirst({ where: { organizationId, role } })
+      if (existing) {
+        result.skipped++
+        result.employees.push({ id: existing.id, name: existing.name, role, status: 'skipped' })
+        continue
+      }
+      const profile = await prisma.enterpriseAgentProfile.create({
+        data: {
+          tenantId,
+          organizationId,
+          name: emp.displayName || role,
+          role,
+          agentType: role,
+          status: 'active',
+          runtimeStatus: 'active',
+          knowledgeScope: '[]',
+          tools: '[]',
+          permissions: '[]',
+          capabilities: JSON.stringify(Array.isArray(raw) ? raw : []),
+          metadata: '{}',
+        },
+      })
+      const shortId = profile.id.slice(0, 8)
+      const instance = await prisma.enterpriseAgentInstance.create({
+        data: {
+          tenantId,
+          organizationId,
+          employeeId: profile.id,
+          agentId: `agent_${tenantId.slice(0, 8)}_${shortId}`,
+          namespace: `tenant_${tenantId.slice(0, 8)}_${role}`,
+          runtime: 'openclaw',
+          runtimeStatus: 'active',
+          lifecycleState: 'ACTIVE',
+        },
+      })
+      result.provisioned++
+      result.employees.push({ id: profile.id, instanceId: instance.id, name: profile.name, role, status: 'provisioned' })
+    }
+    return result
+  }
 }
