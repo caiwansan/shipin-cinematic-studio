@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen" style="background: #070B16">
-    <div class="max-w-[1600px] mx-auto px-4 py-3 space-y-3">
+  <div class="min-h-full" style="background: #070B16">
+    <div class="max-w-[1560px] mx-auto px-4 py-3 space-y-3">
       <!-- ═══ 顶部控制栏（时间范围联动） ═══ -->
       <TimeRangeBar :model-value="range" :loading="loading" @change="onRangeChange" @refresh="loadAll" />
 
@@ -85,6 +85,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { getToken } from '~/utils/token-cache'
+
+definePageMeta({ layout: 'admin-aigc' })
 
 // 显式 import（Nuxt3 pathPrefix 命名，短名需显式导入）
 import TimeRangeBar from '~/components/admin/dashboard/TimeRangeBar.vue'
