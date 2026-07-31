@@ -127,8 +127,81 @@ export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [ ... ]
 
 | Gate | 要求 | 状态 |
 |------|------|------|
-| G1 | 一级菜单 ≤ 15 | 待验证 |
-| G2 | 招聘 Workspace 仅 1 个一级入口 | 待验证 |
-| G3 | 全部现有路由可达（无回归 404） | 待验证 |
-| G4 | Registry 落地，新增 Workspace 走 Registry | 待验证 |
-| G5 | 前端 build PASS | 待验证 |
+| G1 | 一级菜单 ≤ 15 | ✅ 11 个 |
+| G2 | 招聘 Workspace 仅 1 个一级入口 | ✅ |
+| G3 | 全部现有路由可达（无回归 404） | ✅ build + 页面 200 |
+| G4 | Registry 落地，新增 Workspace 走 Registry | ✅ |
+| G5 | 前端 build PASS | ✅ |
+
+---
+
+# Sprint-ADMIN-IA-REALITY-01-B — 孤儿页面归属治理 ✅
+
+**Date:** 2026-08-01
+**Gate:** 掌柜指令（归档治理路线，不删除文件）
+
+## 最终处理矩阵（掌柜确认）
+
+| 页面 | 动作 | 状态 |
+|------|------|------|
+| /admin/enterprise/* | 保留，归招聘 Workspace（已在 Registry 内） | ✅ |
+| /admin/aigc/styles | 移入平台公共（风格库/AI资源管理） | ✅ |
+| /admin/aigc/runtime | 移入平台公共（Runtime监控） | ✅ |
+| /admin/aigc/vip-orders | 移入平台公共（商业中心 VIP订单） | ✅ |
+| /admin/aigc/enterprises + /admin/enterprises | 保留，合并候选（等掌柜批） | ⏸ |
+| /admin/aigc/beta-customers | deprecated（hidden，不删文件） | ✅ |
+| /admin/recruitment/{plans,subscriptions,reviews,config} | 保留，旧 URL redirect | ✅ |
+
+## T01 — AdminRouteRegistry ✅
+
+`frontend/config/admin-route-registry.ts`
+
+49 个后台路由全部登记：47 active + 2 deprecated（beta-customers / customer-service），0 孤儿。
+
+```ts
+{
+  route: '/admin/recruitment/plans',
+  workspace: 'recruitment',
+  status: 'active'
+}
+```
+
+## T02 — 孤儿页面 CI 检查 ✅
+
+`frontend/scripts/route-ownership-check.mjs` → 挂载 nuxt.config.ts nitro:compiled hook
+
+- 扫描 pages/admin/** 与 Registry 比对
+- 未登记路由 → ⚠️ build warning（不阻断，`--strict` 可阻断）
+- 已登记 deprecated → ⚠️ 允许存在
+
+验证：49 路由 / 0 孤儿 / 2 deprecated ✅
+
+## T03 — Deprecated 机制 ✅
+
+```json
+{
+  "route": "/admin/aigc/beta-customers",
+  "status": "deprecated",
+  "deprecatedReason": "BetaCustomer 无独立业务入口",
+  "replacement": "/admin/aigc/members"
+}
+```
+
+不删除文件，仅隐藏导航入口。
+
+---
+
+# 🚫 冻结治理规则（KMKI 级）
+
+> **任何新 Workspace 必须同时提交：**
+> 1. 前台 Workspace
+> 2. 后台 Workspace Registry（admin-workspace-registry.ts）
+> 3. Admin Route Registry（admin-route-registry.ts）
+>
+> **缺一不可。**
+>
+> 后台页面必须属于：platform / workspace / system / deprecated 之一，禁止孤儿页面。
+>
+> 新增功能只能进入 Workspace 内部 Tab，禁止新增一级菜单。
+
+未来新增短剧/小说/GEO/音乐/电商图片后台，必须三件套齐提交，否则 build warning。

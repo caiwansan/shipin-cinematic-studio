@@ -9,7 +9,10 @@ const BUILD_TIME = process.env.BUILD_TIME || new Date().toISOString()
 export default defineNuxtConfig({
   ssr: false,
   telemetry: false,
-  css: ['~/assets/styles/enterprise-tokens.css'],
+  css: [
+    '~/assets/styles/enterprise-tokens.css',
+    '~/assets/styles/recruitment-tokens.css',
+  ],
   alias: {
     'shared': resolve(fileURLToPath(import.meta.url), '..', '..', 'shared'),
     'workspaces': resolve(fileURLToPath(import.meta.url), '..', 'workspaces'),
@@ -127,6 +130,8 @@ export default defineNuxtConfig({
           const scriptsDir = resolve(publicDir, '..', '..', 'scripts')
           // Validate build integrity first
           execSync('node ' + resolve(scriptsDir, 'build-validator.mjs'), { stdio: 'inherit' })
+          // Sprint-ADMIN-IA-REALITY-01-B: 孤儿页面 CI 检查（未登记路由 → build warning）
+          execSync('node ' + resolve(scriptsDir, 'route-ownership-check.mjs'), { stdio: 'inherit' })
           // Then sync
           execSync('node ' + resolve(scriptsDir, 'asset-sync.mjs'), { stdio: 'inherit' })
           // Generate release metadata
