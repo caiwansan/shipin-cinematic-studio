@@ -5,7 +5,7 @@
       <header class="h-12 bg-[#0D1328] border-b border-[#1A2240] flex items-center justify-between px-4 shrink-0">
         <div class="flex items-center gap-3">
           <span class="text-base">🎬</span>
-          <NuxtLink to="/admin/aigc/overview" class="text-sm font-semibold text-white/80 no-underline hover:text-white">Director OS Admin</NuxtLink>
+          <NuxtLink to="/admin/dashboard" class="text-sm font-semibold text-white/80 no-underline hover:text-white">Director OS Admin</NuxtLink>
           <span class="flex items-center gap-1.5"><img src="/logo.png" style="height:16px;width:auto;display:inline-block;vertical-align:middle" alt=""/> 昆仑镜 <span class="text-[10px] text-gray-600">v1.2</span></span>
         </div>
         <div class="flex items-center gap-3">

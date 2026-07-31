@@ -146,7 +146,7 @@ export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [
 export const ADMIN_DASHBOARD: AdminWorkspaceChild = {
   id: 'dashboard',
   label: '数据罗盘',
-  to: '/admin/aigc/overview',
+  to: '/admin/dashboard',
 }
 
 /**

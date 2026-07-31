@@ -92,6 +92,7 @@ import adminModelV2Routes from './routes/admin-models-v2.js'
 import adminAiProviderRoutes from './routes/admin-ai-provider.routes.js'
 import adminPlatformDefaultModelsRoutes from './routes/admin-platform-default-models.routes.js'
 import adminUsageStatsRoutes from './routes/admin-usage-stats.routes.js'
+import adminDashboardCenterRoutes from './routes/admin-dashboard-center.routes.js'
 import voiceRoutes from './routes/voice.js'
 import { initializeRuntimeSafety, timerRegistry, getLifecycleStatus } from './services/lifecycle-manager.js'
 // character routes loaded dynamically below
@@ -544,6 +545,7 @@ await app.register(projectV2Routes)
   await app.register(adminAiProviderRoutes)
   await app.register(adminPlatformDefaultModelsRoutes)
   await app.register(adminUsageStatsRoutes)
+  await app.register(adminDashboardCenterRoutes)
 
   // Admin Image Prompt Templates (提示词模板管理)
   await app.register(adminImagePromptRoutes)

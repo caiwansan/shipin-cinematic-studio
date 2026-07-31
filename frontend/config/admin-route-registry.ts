@@ -46,6 +46,7 @@ export interface AdminRouteEntry {
 export const ADMIN_ROUTE_REGISTRY: AdminRouteEntry[] = [
   // ─── 🏠 控制台 ───
   { route: '/admin/aigc/overview', owner: 'platform', status: 'active', note: '总控制台' },
+  { route: '/admin/dashboard', owner: 'platform', status: 'active', note: '数据罗盘（昆仑镜 AI Operating Center）' },
 
   // ─── 🔐 平台公共管理 ───
   { route: '/admin/aigc/models', owner: 'platform', status: 'active', note: '大模型列表' },
