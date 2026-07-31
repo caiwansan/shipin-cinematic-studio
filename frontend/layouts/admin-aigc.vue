@@ -53,7 +53,55 @@
                 </div>
               </div>
 
-              <!-- Workspace（唯一入口 + 内部子页） -->
+              <!-- Workspace 工作台管理（分组 → Workspace → 子页，三层嵌套） -->
+              <div v-else-if="sec.kind === 'workspace-group'" class="pt-1">
+                <button
+                  class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition cursor-pointer text-gray-500 hover:text-gray-300 hover:bg-white/5 bg-transparent border-none text-left"
+                  @click="toggle(sec.id)"
+                >
+                  <span>{{ sec.icon }}</span>
+                  <span class="flex-1">{{ sec.label }}</span>
+                  <span class="text-[10px] text-gray-600">{{ expanded[sec.id] ? '▾' : '▸' }}</span>
+                </button>
+                <div v-if="expanded[sec.id]" class="mt-0.5 ml-3 space-y-0.5 border-l border-[#1A2240] pl-2">
+                  <div v-for="w in sec.workspaces" :key="'wsg-' + w.code" class="pt-0.5">
+                    <!-- Workspace 占位（无子页，直接跳转入口） -->
+                    <NuxtLink
+                      v-if="w.children.length === 0"
+                      :to="w.entry"
+                      class="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] transition cursor-pointer no-underline"
+                      :class="isActive(w.entry) ? 'bg-blue-500/15 text-blue-400' : 'text-gray-600 hover:text-gray-300 hover:bg-white/5'"
+                    >
+                      <span>{{ w.icon }}</span>
+                      <span>{{ w.name }}</span>
+                      <span class="text-[9px] text-gray-700">接入中</span>
+                    </NuxtLink>
+                    <!-- Workspace 有子页：可展开 -->
+                    <div v-else>
+                      <button
+                        class="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[11px] transition cursor-pointer text-gray-600 hover:text-gray-300 hover:bg-white/5 bg-transparent border-none text-left"
+                        @click="toggleWs('wsg-' + w.code)"
+                      >
+                        <span>{{ w.icon }}</span>
+                        <span class="flex-1">{{ w.name }}</span>
+                        <span class="text-[10px] text-gray-700">{{ wsExpanded['wsg-' + w.code] ? '▾' : '▸' }}</span>
+                      </button>
+                      <div v-if="wsExpanded['wsg-' + w.code]" class="mt-0.5 ml-3 space-y-0.5 border-l border-[#1A2240] pl-2">
+                        <NuxtLink
+                          v-for="c in w.children" :key="c.id"
+                          :to="c.to"
+                          class="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] transition cursor-pointer no-underline"
+                          :class="isActive(c.to) ? 'bg-blue-500/15 text-blue-400' : 'text-gray-600 hover:text-gray-300 hover:bg-white/5'"
+                        >
+                          <span>{{ c.label }}</span>
+                        </NuxtLink>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 旧 Workspace 一级入口（已废弃，保留渲染兼容） -->
               <div v-else class="pt-1">
                 <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs"
                   :class="isWsActive(sec) ? 'bg-blue-500/15 text-blue-400' : 'text-gray-500'">
@@ -128,6 +176,14 @@ const expanded = reactive<Record<string, boolean>>({})
 const wsExpanded = reactive<Record<string, boolean>>({})
 for (const sec of nav) {
   if (sec.kind === 'group' && sec.children?.some(c => isActive(c.to))) expanded[sec.id] = true
+  if (sec.kind === 'workspace-group') {
+    // 若当前路由属于某 Workspace 子页，展开工作台组 + 该 Workspace
+    const hit = sec.workspaces?.find(w => w.entry === route.path || w.children.some(c => c.to === route.path))
+    if (hit) {
+      expanded[sec.id] = true
+      wsExpanded['wsg-' + hit.code] = true
+    }
+  }
   if (sec.kind === 'workspace' && (isActive(sec.to!) || sec.children?.some(c => isActive(c.to)))) wsExpanded[sec.id] = true
 }
 

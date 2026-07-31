@@ -12,10 +12,10 @@
  *   active     — 正常页面，归属于某个 Workspace / platform / system
  *   deprecated — 废弃页面，保留代码不删除，replacement 指向替代路由
  *
- * 页面归属分类：
- *   platform  — 平台公共管理（🔐）
+ * 页面归属分类（Sprint-ADMIN-IA-REALITY-02 对齐）：
+ *   platform  — 平台运营管理（公共信息设置 🌐 / VIP 💎 / 用户与权限 👥 / 大模型 🤖 / AI Agent 🧠）
  *   system    — 系统设置（⚙️）
- *   workspace — 归属某个 Workspace（code 对应 ADMIN_WORKSPACE_REGISTRY）
+ *   workspace — 归属某个 Workspace（code 对应 ADMIN_WORKSPACE_REGISTRY，全部折叠在 🏭 工作台管理组内）
  *   deprecated— 废弃归档
  */
 

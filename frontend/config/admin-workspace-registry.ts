@@ -1,12 +1,20 @@
 /**
- * AdminWorkspaceRegistry — 昆仑镜后台管理 Workspace 注册表
+ * AdminWorkspaceRegistry — 昆仑镜后台管理导航注册表
  *
- * ⚠️ 冻结规则（Sprint-ADMIN-IA-REALITY-01）：
- *   一个前台 Workspace 在后台只能有一个一级导航入口。
- *   新增功能只能进入 Workspace 内部 Tabs，禁止新增一级菜单。
- *   新增 Workspace 的唯一方式：在此 Registry 增加一项。
+ * 🚫 冻结治理规则（Sprint-ADMIN-IA-REALITY-02）：
+ *   > 后台管理 = 管理昆仑镜平台本身
+ *   > 工作台管理 = 管理某个业务 Workspace 的运营能力
+ *   > 企业管理 = 企业客户自己的组织/员工/订阅/资产管理
+ *   > 个人中心 = 当前用户自己的账户与权益管理
  *
- * 一级菜单数量控制：10~15 个以内。
+ *   不得混在一起。
+ *
+ * 硬规则：
+ *   1. 一个 Workspace = 一个后台入口（全部折叠在「🏭 Workspace工作台管理」组内）
+ *   2. 禁止在后台一级导航出现业务套餐/订阅/模型/ROI/额度（如 enterprise-plans / recruitment-roi）
+ *      → 业务商业能力（套餐/订阅/能力/Agent）只允许存在于对应 Workspace 内部
+ *   3. 新增功能只能进入所属模块内部，禁止新增一级菜单
+ *   4. 新增 Workspace 的唯一方式：在 ADMIN_WORKSPACE_REGISTRY 增加一项（三件套：前台 + Workspace Registry + Route Registry）
  */
 
 export interface AdminWorkspaceChild {
@@ -16,9 +24,9 @@ export interface AdminWorkspaceChild {
 }
 
 export interface AdminWorkspaceEntry {
-  /** 唯一码：recruitment / short-drama / novel / legal / geo / ... */
+  /** 唯一码：recruitment / short-drama / novel / legal / geo / music / ... */
   code: string
-  /** 一级导航显示名 */
+  /** Workspace 显示名 */
   name: string
   icon: string
   /** 后台入口路由（唯一） */
@@ -27,7 +35,7 @@ export interface AdminWorkspaceEntry {
   children: AdminWorkspaceChild[]
 }
 
-/** 平台公共管理（不属于任何 Workspace，折叠在一个一级入口下） */
+/** 平台运营模块组（折叠在一个一级入口下） */
 export interface AdminPlatformGroup {
   id: string
   label: string
@@ -35,7 +43,10 @@ export interface AdminPlatformGroup {
   children: AdminWorkspaceChild[]
 }
 
-/** 前台 Workspace → 后台一级入口 映射表 */
+/**
+ * ─── 🏭 Workspace 工作台管理 ───
+ * 一个 Workspace = 一个子项。业务商业能力（套餐/订阅/能力/Agent）只能存在于此。
+ */
 export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [
   {
     code: 'recruitment',
@@ -52,12 +63,12 @@ export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [
       { id: 'rec-campaigns', label: 'Campaign', to: '/admin/recruitment/campaigns' },
       { id: 'rec-departments', label: '企业招聘部门', to: '/admin/recruitment/departments' },
       { id: 'rec-reviews', label: '审核队列', to: '/admin/recruitment/reviews' },
+      { id: 'rec-audit', label: '审计中心', to: '/admin/recruitment/audit' },
+      { id: 'rec-runtime', label: '运行监控', to: '/admin/recruitment/runtime' },
+      // ── 业务商业能力（禁止污染一级导航，只允许在此）──
       { id: 'rec-plans', label: '套餐管理', to: '/admin/recruitment/plans' },
       { id: 'rec-subscriptions', label: '订阅管理', to: '/admin/recruitment/subscriptions' },
       { id: 'rec-config', label: '配置', to: '/admin/recruitment/config' },
-      { id: 'rec-audit', label: '审计中心', to: '/admin/recruitment/audit' },
-      { id: 'rec-runtime', label: '运行监控', to: '/admin/recruitment/runtime' },
-      // ── 企业域（原 /admin/enterprise/* 一级菜单，全部折叠进招聘 Workspace）──
       { id: 'ent-subscriptions', label: '企业订阅', to: '/admin/enterprise/subscriptions' },
       { id: 'ent-plans', label: '套餐定义', to: '/admin/enterprise/plans' },
       { id: 'ent-llm-health', label: '模型健康中心', to: '/admin/enterprise/llm-health' },
@@ -76,6 +87,13 @@ export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [
     icon: '⚖️',
     entry: '/admin/aigc/legal',
     children: [{ id: 'legal-main', label: '法律工作台', to: '/admin/aigc/legal' }],
+  },
+  {
+    code: 'mall',
+    name: '商城管理',
+    icon: '🛒',
+    entry: '/admin/aigc/mall',
+    children: [{ id: 'mall-main', label: '商城管理', to: '/admin/aigc/mall' }],
   },
   {
     code: 'short-drama',
@@ -99,6 +117,13 @@ export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [
     children: [],
   },
   {
+    code: 'music',
+    name: '音乐制作管理',
+    icon: '🎵',
+    entry: '/admin/aigc/overview', // 占位：P1 接入
+    children: [],
+  },
+  {
     code: 'ecom-image',
     name: '电商图片管理',
     icon: '🖼',
@@ -112,78 +137,177 @@ export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [
     entry: '/admin/aigc/overview', // 占位：P1 接入
     children: [],
   },
-  {
-    code: 'mall',
-    name: '商城管理',
-    icon: '🛒',
-    entry: '/admin/aigc/mall',
-    children: [{ id: 'mall-main', label: '商城管理', to: '/admin/aigc/mall' }],
-  },
 ]
 
-/** 平台公共管理组（折叠入口） */
-export const ADMIN_PLATFORM_GROUP: AdminPlatformGroup = {
-  id: 'platform',
-  label: '平台公共管理',
-  icon: '🔐',
+/**
+ * ─── 📊 数据罗盘 ───
+ * 平台全局数据总览。
+ */
+export const ADMIN_DASHBOARD: AdminWorkspaceChild = {
+  id: 'dashboard',
+  label: '数据罗盘',
+  to: '/admin/aigc/overview',
+}
+
+/**
+ * ─── 🌐 公共信息设置 ───
+ * 短信/微信/QQ/邮件/支付/COS/CDN 等平台公共通道。
+ */
+export const ADMIN_PUBLIC_GROUP: AdminPlatformGroup = {
+  id: 'public',
+  label: '公共信息设置',
+  icon: '🌐',
   children: [
-    { id: 'p-models', label: '大模型列表', to: '/admin/aigc/models' },
-    { id: 'p-members', label: '会员模块', to: '/admin/aigc/members' },
-    { id: 'p-payment', label: '支付设置', to: '/admin/aigc/payment' },
-    { id: 'p-vip', label: 'VIP套餐管理', to: '/admin/aigc/vip' },
-    { id: 'p-vip-orders', label: 'VIP订单', to: '/admin/aigc/vip-orders' },
-    { id: 'p-admins', label: '管理员设置', to: '/admin/aigc/admins' },
-    { id: 'p-cos', label: 'COS用户存储', to: '/admin/aigc/cos' },
-    { id: 'p-community', label: '社区管理', to: '/admin/aigc/community' },
-    { id: 'p-messages', label: '发私信', to: '/admin/aigc/messages' },
-    { id: 'p-agents', label: 'Agent管理', to: '/admin/aigc/agents' },
-    { id: 'p-market', label: '市场代理管理', to: '/admin/aigc/market' },
-    { id: 'p-styles', label: '风格库', to: '/admin/aigc/styles' },
-    { id: 'p-runtime', label: 'Runtime监控', to: '/admin/aigc/runtime' },
-    { id: 'p-revenue', label: '收入报表', to: '/admin/enterprise/revenue' },
+    { id: 'pub-sms', label: '短信配置', to: '/admin/aigc/sms' },
+    { id: 'pub-wechat', label: '微信配置', to: '/admin/aigc/wechat' },
+    { id: 'pub-qq', label: 'QQ配置', to: '/admin/aigc/qq' },
+    { id: 'pub-payment', label: '支付配置', to: '/admin/aigc/payment' },
+    { id: 'pub-cos', label: 'COS对象存储', to: '/admin/aigc/cos' },
+    // P2: 邮件配置 / CDN配置
   ],
 }
 
-/** 系统设置组 */
+/**
+ * ─── 💎 VIP 套餐管理 ───
+ * 平台级会员商业化（不是某个 Workspace 的业务）。
+ */
+export const ADMIN_VIP_GROUP: AdminPlatformGroup = {
+  id: 'vip',
+  label: 'VIP套餐管理',
+  icon: '💎',
+  children: [
+    { id: 'vip-plans', label: '套餐列表', to: '/admin/aigc/vip' },
+    { id: 'vip-orders', label: 'VIP订单', to: '/admin/aigc/vip-orders' },
+  ],
+}
+
+/**
+ * ─── 👥 用户与权限 ───
+ * 用户/会员/管理员/角色权限/代理/企业客户。
+ */
+export const ADMIN_USER_GROUP: AdminPlatformGroup = {
+  id: 'users',
+  label: '用户与权限',
+  icon: '👥',
+  children: [
+    { id: 'usr-members', label: '会员管理', to: '/admin/aigc/members' },
+    { id: 'usr-admins', label: '管理员管理', to: '/admin/aigc/admins' },
+    { id: 'usr-market', label: '代理管理', to: '/admin/aigc/market' },
+    { id: 'usr-community', label: '社区管理', to: '/admin/aigc/community' },
+    { id: 'usr-messages', label: '发私信', to: '/admin/aigc/messages' },
+    { id: 'usr-enterprises', label: '企业客户列表', to: '/admin/aigc/enterprises' },
+    // P2: 角色权限管理
+  ],
+}
+
+/**
+ * ─── 🤖 大模型管理 ───
+ * 模型列表 / Provider / 平台模型配置 / 健康检测 / 调用统计。
+ */
+export const ADMIN_LLM_GROUP: AdminPlatformGroup = {
+  id: 'llm',
+  label: '大模型管理',
+  icon: '🤖',
+  children: [
+    { id: 'llm-models', label: '模型列表', to: '/admin/aigc/models' },
+    // P2: Provider管理 / 平台模型配置 / 调用统计
+  ],
+}
+
+/**
+ * ─── 🧠 AI Agent 管理 ───
+ * Agent列表 / 模板 / 能力 / Runtime状态 / 使用统计。
+ */
+export const ADMIN_AGENT_GROUP: AdminPlatformGroup = {
+  id: 'agents',
+  label: 'AI Agent管理',
+  icon: '🧠',
+  children: [
+    { id: 'agt-agents', label: 'Agent列表', to: '/admin/aigc/agents' },
+    { id: 'agt-runtime', label: 'Runtime状态', to: '/admin/aigc/runtime' },
+    { id: 'agt-styles', label: '能力资源（风格库）', to: '/admin/aigc/styles' },
+  ],
+}
+
+/**
+ * ─── ⚙️ 系统设置 ───
+ * 基础信息（系统名称/Logo/域名/ICP/SEO）+ SEO收录配置。
+ */
 export const ADMIN_SYSTEM_GROUP: AdminPlatformGroup = {
   id: 'system',
   label: '系统设置',
   icon: '⚙️',
   children: [
-    { id: 's-sms', label: '短信配置', to: '/admin/aigc/sms' },
-    { id: 's-wechat', label: '微信登录配置', to: '/admin/aigc/wechat' },
-    { id: 's-qq', label: 'QQ登录配置', to: '/admin/aigc/qq' },
+    // P2: 基础信息（系统名称/Logo/favicon/官网域名/ICP/网站介绍/SEO标题/关键词/描述）
+    // P2: SEO收录配置（robots.txt/sitemap/搜索引擎验证/页面Meta模板）
   ],
 }
 
 /** 完整后台一级导航（供 layout 渲染） */
 export interface AdminNavSection {
-  kind: 'link' | 'group' | 'workspace'
+  kind: 'link' | 'group' | 'workspace-group'
   id: string
   label: string
   icon: string
   to?: string
   children?: AdminWorkspaceChild[]
+  /** workspace-group 专用：全部 Workspace 子项 */
+  workspaces?: AdminWorkspaceEntry[]
 }
 
 export function buildAdminNav(): AdminNavSection[] {
   const sections: AdminNavSection[] = [
-    { kind: 'link', id: 'overview', label: '控制台', icon: '🏠', to: '/admin/aigc/overview' },
+    // 📊 数据罗盘
+    { kind: 'link', id: 'dashboard', label: ADMIN_DASHBOARD.label, icon: '📊', to: ADMIN_DASHBOARD.to },
+    // 🌐 公共信息设置
     {
       kind: 'group',
-      id: ADMIN_PLATFORM_GROUP.id,
-      label: ADMIN_PLATFORM_GROUP.label,
-      icon: ADMIN_PLATFORM_GROUP.icon,
-      children: ADMIN_PLATFORM_GROUP.children,
+      id: ADMIN_PUBLIC_GROUP.id,
+      label: ADMIN_PUBLIC_GROUP.label,
+      icon: ADMIN_PUBLIC_GROUP.icon,
+      children: ADMIN_PUBLIC_GROUP.children,
     },
-    ...ADMIN_WORKSPACE_REGISTRY.filter(w => w.children.length > 0).map(w => ({
-      kind: 'workspace' as const,
-      id: `ws-${w.code}`,
-      label: w.name,
-      icon: w.icon,
-      to: w.entry,
-      children: w.children,
-    })),
+    // 💎 VIP 套餐管理
+    {
+      kind: 'group',
+      id: ADMIN_VIP_GROUP.id,
+      label: ADMIN_VIP_GROUP.label,
+      icon: ADMIN_VIP_GROUP.icon,
+      children: ADMIN_VIP_GROUP.children,
+    },
+    // 👥 用户与权限
+    {
+      kind: 'group',
+      id: ADMIN_USER_GROUP.id,
+      label: ADMIN_USER_GROUP.label,
+      icon: ADMIN_USER_GROUP.icon,
+      children: ADMIN_USER_GROUP.children,
+    },
+    // 🤖 大模型管理
+    {
+      kind: 'group',
+      id: ADMIN_LLM_GROUP.id,
+      label: ADMIN_LLM_GROUP.label,
+      icon: ADMIN_LLM_GROUP.icon,
+      children: ADMIN_LLM_GROUP.children,
+    },
+    // 🧠 AI Agent 管理
+    {
+      kind: 'group',
+      id: ADMIN_AGENT_GROUP.id,
+      label: ADMIN_AGENT_GROUP.label,
+      icon: ADMIN_AGENT_GROUP.icon,
+      children: ADMIN_AGENT_GROUP.children,
+    },
+    // 🏭 Workspace 工作台管理（全部 Workspace 折叠在此）
+    {
+      kind: 'workspace-group',
+      id: 'workspaces',
+      label: 'Workspace工作台管理',
+      icon: '🏭',
+      workspaces: ADMIN_WORKSPACE_REGISTRY,
+    },
+    // ⚙️ 系统设置
     {
       kind: 'group',
       id: ADMIN_SYSTEM_GROUP.id,
@@ -192,5 +316,9 @@ export function buildAdminNav(): AdminNavSection[] {
       children: ADMIN_SYSTEM_GROUP.children,
     },
   ]
-  return sections
+  // 过滤空 children 的 group（如系统设置 P2 待建）
+  return sections.filter(s => {
+    if (s.kind === 'group') return (s.children?.length ?? 0) > 0
+    return true
+  })
 }
