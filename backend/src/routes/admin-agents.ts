@@ -1,3 +1,4 @@
+// DEPRECATED（ADMIN-IA-REALITY-05-C-0）: Legacy Agent Registry — 引用不存在的 agent_def 表（旧图引擎未迁移）。保留路由不删除（禁补表/禁恢复），AI 员工管理统一走 /api/admin/ai-employees（EnterpriseAgentProfile 体系）。
 /**
  * routes/admin-agents.ts — 后台 Agent 管理路由
  *
@@ -14,7 +15,8 @@ import { randomUUID } from 'crypto'
 
 export default async function adminAgentRoutes(fastify: FastifyInstance) {
   // GET 所有 Agent
-  fastify.get('/api/admin/agents', { preHandler: [requireAdmin] }, async () => {
+  fastify.get('/api/admin/agents', { preHandler: [requireAdmin] }, async (_request: any, reply: any) => {
+    return reply.code(410).send({ error: '已废弃: Legacy Agent Registry（agent_def 表不存在）。AI 员工管理请使用 /api/admin/ai-employees（EnterpriseAgentProfile 体系）' })
     const agents = await prisma.agentDef.findMany({
       orderBy: { createdAt: 'desc' },
     })
@@ -31,6 +33,7 @@ export default async function adminAgentRoutes(fastify: FastifyInstance) {
     // 生成可读的 id，如 agent_xxx
     const id = 'agent_' + randomUUID().slice(0, 8)
 
+    return reply.code(410).send({ error: '已废弃: Legacy Agent Registry（agent_def 表不存在）。AI 员工管理请使用 /api/admin/ai-employees' })
     const agent = await prisma.agentDef.create({
       data: {
         id,
@@ -60,6 +63,7 @@ export default async function adminAgentRoutes(fastify: FastifyInstance) {
     if (body.systemPrompt !== undefined) data.systemPrompt = body.systemPrompt
     if (body.status !== undefined) data.status = body.status
 
+    return reply.code(410).send({ error: '已废弃: Legacy Agent Registry（agent_def 表不存在）。AI 员工管理请使用 /api/admin/ai-employees' })
     const agent = await prisma.agentDef.update({ where: { id }, data })
     return { success: true, data: agent }
   })

@@ -1,3 +1,4 @@
+// DEPRECATED（ADMIN-IA-REALITY-05-C-0）: Legacy AgentPlan — 引用不存在的 agent_plan/agent_level_config 表。保留路由不删除，套餐/权益走 SubscriptionPlan + CapabilityGrant。
 /**
  * routes/agent-plan.ts — 代理商套餐 API
  *
@@ -27,7 +28,8 @@ export default async function agentPlanRoutes(app: FastifyInstance) {
   // ================================================
 
   // GET /api/admin/agent-plans
-  app.get('/api/admin/agent-plans', { preHandler: [requireAdmin] }, async () => {
+  app.get('/api/admin/agent-plans', { preHandler: [requireAdmin] }, async (_request: any, reply: any) => {
+    return reply.code(410).send({ error: '已废弃: Legacy AgentPlan（agent_plan 表不存在）。套餐/权益请走 SubscriptionPlan + CapabilityGrant' })
     const plans = await prisma.agentPlan.findMany({ orderBy: { sortOrder: 'asc' } })
     return { success: true, data: plans }
   })
@@ -92,7 +94,8 @@ export default async function agentPlanRoutes(app: FastifyInstance) {
   // ================================================
 
   // GET /api/agent/plans — 可用套餐
-  app.get('/api/agent/plans', async () => {
+  app.get('/api/agent/plans', async (_request: any, reply: any) => {
+    return reply.code(410).send({ error: '已废弃: Legacy AgentPlan（agent_plan 表不存在）。套餐/权益请走 SubscriptionPlan + CapabilityGrant' })
     const plans = await prisma.agentPlan.findMany({
       where: { enabled: true },
       orderBy: { sortOrder: 'asc' },

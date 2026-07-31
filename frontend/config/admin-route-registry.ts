@@ -57,7 +57,7 @@ export const ADMIN_ROUTE_REGISTRY: AdminRouteEntry[] = [
   { route: '/admin/aigc/cos', owner: 'platform', status: 'active', note: 'COS用户存储' },
   { route: '/admin/aigc/community', owner: 'platform', status: 'active', note: '社区管理' },
   { route: '/admin/aigc/messages', owner: 'platform', status: 'active', note: '发私信' },
-  { route: '/admin/aigc/agents', owner: 'platform', status: 'active', note: 'Agent管理' },
+  { route: '/admin/aigc/agents', owner: 'platform', status: 'active', note: 'AI员工运营中心（5 Tab：员工/模板/能力/运行/价值）' },
   { route: '/admin/aigc/market', owner: 'platform', status: 'active', note: '市场代理管理' },
   { route: '/admin/aigc/styles', owner: 'platform', status: 'active', note: '风格库（AI资源管理）' },
   { route: '/admin/aigc/runtime', owner: 'platform', status: 'deprecated', note: 'Runtime监控（Hermes/Worker执行监控）：API 从未挂载（credential-lifecycle 路由群 0 注册）+ platform_provider_config 表不存在（Hybrid Runtime 从未落地），功能已被数据罗盘第八层 AI 基础设施取代', replacement: '/admin/dashboard' },

@@ -49,6 +49,7 @@ import adminGlobalConfigRoutes from './routes/admin-global-config.js'
 import adminStorageConfigRoutes from './routes/admin-storage-config.js'
 import adminMembersStorageRoutes from './routes/admin-members-storage.js'
 import adminAgentRoutes from './routes/admin-agents.js'
+import adminAiEmployeesRoutes from './routes/admin-ai-employees.js'
 import adminEnterpriseRoutes from './routes/admin-enterprises.js'
 import adminEnterprisePlanRoutes from './routes/admin-enterprise-plans.js'
 import adminMarketAgentRoutes from './routes/admin-market-agents.js'
@@ -555,6 +556,7 @@ await app.register(projectV2Routes)
 
   // Admin Agent management
   await app.register(adminAgentRoutes)
+  await app.register(adminAiEmployeesRoutes)
 
   // Admin Enterprise Console
   await app.register(adminEnterpriseRoutes)

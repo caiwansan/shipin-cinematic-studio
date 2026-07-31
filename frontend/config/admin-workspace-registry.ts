@@ -202,7 +202,7 @@ export const ADMIN_AGENT_GROUP: AdminPlatformGroup = {
   label: 'AI Agent管理',
   icon: '🧠',
   children: [
-    { id: 'agt-agents', label: 'Agent列表', to: '/admin/aigc/agents' },
+    { id: 'agt-agents', label: 'AI员工', to: '/admin/aigc/agents' },
     // SPRINT-ADMIN-CLEANUP-02-FIX：Runtime状态已废弃（API 从未挂载+表不存在），AI 基础设施在数据罗盘第八层
     { id: 'agt-styles', label: '能力资源（风格库）', to: '/admin/aigc/styles' },
   ],

@@ -1,131 +1,261 @@
+<!-- ============================================================
+ADMIN-IA-REALITY-05-C — AI 员工运营中心（5 Tab）
+替代旧 Agent CRUD 页（旧页引用不存在的 agent_def 表 → 500）
+数据源：/api/admin/ai-employees/*（EnterpriseAgentProfile SSOT）
+Gate：AI Employee Reality Gate G1-G6，六项全 PASS 才显示「运行中」
+============================================================ -->
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <h2 class="text-sm text-white/70 font-medium">Agent 管理</h2>
-      <button @click="openCreate"
-        class="px-3 py-1.5 bg-blue-600/20 text-blue-400 rounded-lg text-xs hover:bg-blue-600/30 transition cursor-pointer border-none">
-        + 创建 Agent
+  <div class="min-h-screen" style="background:#070B16">
+    <!-- Tab 导航 -->
+    <div class="flex gap-1 border-b border-white/[0.06] px-6 pt-4">
+      <button v-for="t in tabs" :key="t.id" @click="activeTab = t.id"
+        class="px-4 py-2.5 text-[12px] transition rounded-t-lg no-underline"
+        :class="activeTab === t.id ? 'text-white bg-white/[0.06] border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'">
+        {{ t.icon }} {{ t.label }}
       </button>
     </div>
 
-    <div v-if="loading" class="flex items-center justify-center py-16 text-gray-500 text-sm">加载中...</div>
-
-    <div v-else-if="error" class="bg-red-900/20 border border-red-800/30 rounded-xl p-4 text-red-400 text-xs">
-      {{ error }}
-      <button @click="fetchData" class="ml-2 underline">重试</button>
-    </div>
-
-    <template v-else>
-      <div v-if="agents.length === 0" class="py-12 text-center text-gray-600 text-sm">暂无 Agent</div>
-
-      <!-- 表格 -->
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-xs border-collapse">
-          <thead>
-            <tr class="border-b border-[#1A2240]">
-              <th class="text-left py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">ID</th>
-              <th class="text-left py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">名称</th>
-              <th class="text-left py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">角色</th>
-              <th class="text-left py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">类型</th>
-              <th class="text-left py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">模型</th>
-              <th class="text-left py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">状态</th>
-              <th class="text-left py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">版本</th>
-              <th class="text-left py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">创建时间</th>
-              <th class="text-right py-2.5 px-3 text-gray-500 font-medium whitespace-nowrap">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="agent in agents" :key="agent.id"
-              class="border-b border-[#1A2240]/50 hover:bg-white/[0.02] transition">
-              <td class="py-2.5 px-3 text-gray-400 font-mono">{{ agent.id }}</td>
-              <td class="py-2.5 px-3 text-white/80 font-medium">{{ agent.name }}</td>
-              <td class="py-2.5 px-3 text-gray-400">{{ agent.role || '—' }}</td>
-              <td class="py-2.5 px-3">
-                <span class="px-2 py-0.5 rounded-full text-[10px]"
-                  :class="agent.type === 'llm' ? 'bg-purple-500/10 text-purple-400' : 'bg-yellow-500/10 text-yellow-400'">
-                  {{ agent.type || '—' }}
-                </span>
-              </td>
-              <td class="py-2.5 px-3 text-gray-400">{{ agent.model || '—' }}</td>
-              <td class="py-2.5 px-3">
-                <span class="px-2 py-0.5 rounded-full text-[10px]"
-                  :class="agent.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'">
-                  {{ agent.status || 'inactive' }}
-                </span>
-              </td>
-              <td class="py-2.5 px-3 text-gray-400">{{ agent.version || 'v1' }}</td>
-              <td class="py-2.5 px-3 text-gray-500 whitespace-nowrap">{{ formatTime(agent.createdAt) }}</td>
-              <td class="py-2.5 px-3 text-right whitespace-nowrap">
-                <button @click="openEdit(agent)"
-                  class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded-lg text-[10px] hover:bg-blue-600/30 transition cursor-pointer border-none mr-1">
-                  编辑
-                </button>
-                <button @click="deleteAgent(agent)"
-                  class="px-2 py-1 bg-red-600/20 text-red-400 rounded-lg text-[10px] hover:bg-red-600/30 transition cursor-pointer border-none">
-                  删除
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </template>
-
-    <!-- Create/Edit Dialog -->
-    <div v-if="dialogVisible" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div class="bg-[#0D1328] border border-[#1A2240] rounded-2xl p-6 w-full max-w-lg mx-4">
-        <div class="text-sm text-white/80 font-medium mb-4">{{ isEditing ? '编辑 Agent' : '创建 Agent' }}</div>
-        <div class="space-y-3">
-          <div>
-            <label class="text-[10px] text-gray-500 block mb-1">名称 *</label>
-            <input v-model="form.name" type="text" placeholder="Agent 名称"
-              class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50" />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-[10px] text-gray-500 block mb-1">角色</label>
-              <input v-model="form.role" type="text" placeholder="如: director, writer"
-                class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50" />
-            </div>
-            <div>
-              <label class="text-[10px] text-gray-500 block mb-1">类型</label>
-              <select v-model="form.type"
-                class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50">
-                <option value="llm">llm</option>
-                <option value="rule">rule</option>
-                <option value="hybrid">hybrid</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="text-[10px] text-gray-500 block mb-1">模型</label>
-            <input v-model="form.model" type="text" placeholder="如: deepseek-v3, gpt-4"
-              class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50" />
-          </div>
-          <div>
-            <label class="text-[10px] text-gray-500 block mb-1">System Prompt</label>
-            <textarea v-model="form.systemPrompt" rows="3" placeholder="Agent 系统提示词..."
-              class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50 resize-none"></textarea>
-          </div>
-          <div>
-            <label class="text-[10px] text-gray-500 block mb-1">状态</label>
-            <select v-model="form.status"
-              class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50">
-              <option value="active">active</option>
-              <option value="deprecated">deprecated</option>
-            </select>
+    <div class="p-6 space-y-5">
+      <!-- ================= Tab1: AI员工 ================= -->
+      <div v-if="activeTab === 'employees'">
+        <div class="grid grid-cols-4 gap-3">
+          <div v-for="s in employeeSummaryCards" :key="s.label" class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p class="text-[10px] text-gray-500">{{ s.label }}</p>
+            <p class="text-2xl font-semibold mt-1" :style="{ color: s.color }">{{ s.value }}</p>
           </div>
         </div>
-        <div v-if="formError" class="text-red-400 text-[10px] mt-2">{{ formError }}</div>
-        <div class="flex gap-2 mt-4">
-          <button @click="saveAgent" :disabled="saving"
-            class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-medium transition cursor-pointer disabled:opacity-50 border-none">
-            {{ saving ? '保存中...' : '保存' }}
-          </button>
-          <button @click="closeDialog"
-            class="px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs text-gray-400 transition cursor-pointer border-none">
-            取消
-          </button>
+        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] mt-4 overflow-hidden">
+          <table class="w-full text-[12px]">
+            <thead>
+              <tr class="text-left text-gray-500 border-b border-white/[0.06]">
+                <th class="py-3 px-4 font-normal">员工</th>
+                <th class="py-3 px-2 font-normal">岗位</th>
+                <th class="py-3 px-2 font-normal">所属业务</th>
+                <th class="py-3 px-2 font-normal">企业</th>
+                <th class="py-3 px-2 font-normal">状态</th>
+                <th class="py-3 px-2 font-normal">六要素</th>
+                <th class="py-3 px-2 font-normal">今日任务</th>
+                <th class="py-3 px-2 font-normal">今日成本</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="e in employees" :key="e.id" class="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                <td class="py-3 px-4">
+                  <p class="text-white/85 font-medium">{{ e.name }}</p>
+                  <p class="text-[10px] text-gray-600 font-mono">{{ e.id.slice(0, 8) }}</p>
+                </td>
+                <td class="py-3 px-2 text-gray-300">{{ e.role }}</td>
+                <td class="py-3 px-2">
+                  <span class="px-2 py-0.5 rounded-full text-[10px]" :class="typeClass(e.agentType)">{{ e.agentType }}</span>
+                </td>
+                <td class="py-3 px-2 text-gray-400">{{ e.organization || '—' }}</td>
+                <td class="py-3 px-2">
+                  <span class="px-2 py-0.5 rounded-full text-[10px]" :class="e.gate.allPass ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'">
+                    {{ e.gate.allPass ? '● 运行中' : '◐ 配置不完整' }}
+                  </span>
+                </td>
+                <td class="py-3 px-2">
+                  <span v-if="e.gate.allPass" class="text-green-400 text-[10px]">G1-G6 全 PASS</span>
+                  <span v-else class="text-amber-400 text-[10px]" :title="e.gate.missing.join(', ')">{{ e.gate.missing.join(' ') }}</span>
+                </td>
+                <td class="py-3 px-2 text-white/80">{{ e.today.tasks }}</td>
+                <td class="py-3 px-2 text-gray-300">¥{{ e.today.cost.toFixed(3) }}</td>
+              </tr>
+              <tr v-if="!employees.length"><td colspan="8" class="py-10 text-center text-gray-600 text-[12px]">暂无 AI 员工</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-[10px] text-gray-600 mt-3">六要素 = Identity / Capability / Runtime / Model Policy / Memory / Usage，任一缺失即「配置不完整」，不假装上线（AI Employee Reality Gate）</p>
+      </div>
+
+      <!-- ================= Tab2: 模板中心 ================= -->
+      <div v-if="activeTab === 'templates'">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[12px] text-gray-500">平台岗位模板（模板 ≠ 实例：模板 → 企业员工 → 运行实例）</p>
+          <button @click="openTemplateModal()" class="px-3 py-1.5 rounded-lg text-[11px] bg-blue-600/20 border border-blue-600/30 text-blue-400 hover:bg-blue-600/30 transition">+ 新建模板</button>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div v-for="t in templates" :key="t.id" class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-white/85 font-medium text-[13px]">{{ t.name }}</p>
+                <p class="text-[10px] text-gray-600 font-mono mt-0.5">{{ t.code }}</p>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px]" :class="t.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'">{{ t.status }}</span>
+            </div>
+            <p class="text-[11px] text-gray-500 mt-2 line-clamp-2">{{ t.description || '—' }}</p>
+            <div class="mt-3">
+              <p class="text-[10px] text-gray-600 mb-1">可授权业务</p>
+              <div class="flex flex-wrap gap-1">
+                <span v-for="w in t.workspace" :key="w" class="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[10px]">{{ w }}</span>
+                <span v-if="!t.workspace.length" class="text-gray-700 text-[10px]">未配置</span>
+              </div>
+            </div>
+            <div class="mt-2">
+              <p class="text-[10px] text-gray-600 mb-1">默认能力</p>
+              <div class="flex flex-wrap gap-1">
+                <span v-for="c in t.defaultCapabilities" :key="c" class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px]">{{ c }}</span>
+                <span v-if="!t.defaultCapabilities.length" class="text-gray-700 text-[10px]">—</span>
+              </div>
+            </div>
+            <div class="flex gap-2 mt-3">
+              <button @click="openTemplateModal(t)" class="px-2 py-1 rounded text-[10px] bg-white/[0.05] text-gray-300 hover:bg-white/[0.1] transition">编辑</button>
+              <button @click="deleteTemplate(t)" class="px-2 py-1 rounded text-[10px] bg-red-500/10 text-red-400 hover:bg-red-500/20 transition">删除</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 模板编辑弹窗 -->
+        <div v-if="showTemplateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="showTemplateModal = false">
+          <div class="w-[520px] rounded-2xl border border-white/[0.08] bg-[#0d1220] p-6 space-y-3">
+            <p class="text-white/85 font-medium">{{ editingTemplate?.id ? '编辑模板' : '新建模板' }}</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[10px] text-gray-500">名称</label>
+                <input v-model="templateForm.name" class="mt-1 w-full rounded-lg bg-white/[0.04] border border-white/[0.08] px-3 py-2 text-[12px] text-white outline-none focus:border-blue-500/50" />
+              </div>
+              <div>
+                <label class="text-[10px] text-gray-500">编码（= agentType）</label>
+                <input v-model="templateForm.code" :disabled="!!editingTemplate?.id" class="mt-1 w-full rounded-lg bg-white/[0.04] border border-white/[0.08] px-3 py-2 text-[12px] text-white outline-none disabled:opacity-40" />
+              </div>
+            </div>
+            <div>
+              <label class="text-[10px] text-gray-500">描述</label>
+              <textarea v-model="templateForm.description" rows="2" class="mt-1 w-full rounded-lg bg-white/[0.04] border border-white/[0.08] px-3 py-2 text-[12px] text-white outline-none"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[10px] text-gray-500">可授权业务（逗号分隔）</label>
+                <input v-model="templateForm.workspaceText" class="mt-1 w-full rounded-lg bg-white/[0.04] border border-white/[0.08] px-3 py-2 text-[12px] text-white outline-none" placeholder="recruitment,short_drama" />
+              </div>
+              <div>
+                <label class="text-[10px] text-gray-500">默认能力（逗号分隔）</label>
+                <input v-model="templateForm.capsText" class="mt-1 w-full rounded-lg bg-white/[0.04] border border-white/[0.08] px-3 py-2 text-[12px] text-white outline-none" placeholder="JOB_CREATE,CANDIDATE_SEARCH" />
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+              <button @click="showTemplateModal = false" class="px-3 py-1.5 rounded-lg text-[11px] bg-white/[0.05] text-gray-300">取消</button>
+              <button @click="saveTemplate" class="px-3 py-1.5 rounded-lg text-[11px] bg-blue-600/30 border border-blue-600/40 text-blue-300">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= Tab3: 能力中心 ================= -->
+      <div v-if="activeTab === 'capabilities'">
+        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 mb-4">
+          <p class="text-[12px] text-gray-500">链路：Agent → Capabilities → Tools → Runtime。能力由平台注册（CapabilityRegistry），套餐通过 CapabilityGrant 授权，禁止 Workspace 自注册。</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p class="text-[11px] text-gray-400 mb-3">能力授权全景（{{ capabilities.length }}）</p>
+            <table class="w-full text-[11px]">
+              <thead><tr class="text-left text-gray-600 border-b border-white/[0.06]"><th class="py-2 font-normal">能力</th><th class="py-2 font-normal">授权套餐</th><th class="py-2 font-normal">使用岗位</th></tr></thead>
+              <tbody>
+                <tr v-for="c in capabilities" :key="c.code" class="border-b border-white/[0.03]">
+                  <td class="py-2 text-blue-400 font-mono">{{ c.code }}</td>
+                  <td class="py-2 text-white/70">{{ c.grantedPlans }}</td>
+                  <td class="py-2 text-gray-500">{{ c.templates.join('、') || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p class="text-[11px] text-gray-400 mb-3">岗位能力画像</p>
+            <div v-for="bt in byTemplate" :key="bt.code" class="mb-3">
+              <p class="text-[12px] text-white/75">{{ bt.template }} <span class="text-gray-600 font-mono text-[10px]">{{ bt.code }}</span></p>
+              <div class="flex flex-wrap gap-1 mt-1">
+                <span v-for="c in bt.capabilities" :key="c" class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px]">{{ c }}</span>
+                <span v-if="!bt.capabilities.length" class="text-gray-700 text-[10px]">未绑定能力（待配置）</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= Tab4: 运行中心 ================= -->
+      <div v-if="activeTab === 'runtime'">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[12px] text-gray-500">老板视角：今天工作了吗？有没有失败？花多少钱？</p>
+          <div class="flex gap-1">
+            <button v-for="r in ranges" :key="r" @click="loadRuntime(r)" class="px-3 py-1 rounded-lg text-[11px] transition"
+              :class="runtimeRange === r ? 'bg-blue-600/30 text-blue-300 border border-blue-600/40' : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]'">{{ r }}</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-5 gap-3">
+          <div v-for="s in runtimeCards" :key="s.label" class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p class="text-[10px] text-gray-500">{{ s.label }}</p>
+            <p class="text-2xl font-semibold mt-1" :style="{ color: s.color }">{{ s.value }}</p>
+          </div>
+        </div>
+        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] mt-4 overflow-hidden">
+          <table class="w-full text-[12px]">
+            <thead><tr class="text-left text-gray-500 border-b border-white/[0.06]">
+              <th class="py-3 px-4 font-normal">AI员工</th><th class="py-3 px-2 font-normal">任务</th><th class="py-3 px-2 font-normal">成功</th>
+              <th class="py-3 px-2 font-normal">失败</th><th class="py-3 px-2 font-normal">运行中</th><th class="py-3 px-2 font-normal">Token</th><th class="py-3 px-2 font-normal">成本</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="e in runtimeByEmployee" :key="e.employeeId" class="border-b border-white/[0.04]">
+                <td class="py-3 px-4 text-white/85">{{ e.name }}</td>
+                <td class="py-3 px-2 text-white/80">{{ e.tasks }}</td>
+                <td class="py-3 px-2 text-green-400">{{ e.success }}</td>
+                <td class="py-3 px-2" :class="e.failed ? 'text-red-400' : 'text-gray-600'">{{ e.failed }}</td>
+                <td class="py-3 px-2 text-gray-400">{{ e.running }}</td>
+                <td class="py-3 px-2 text-gray-300">{{ e.tokens.toLocaleString() }}</td>
+                <td class="py-3 px-2 text-gray-300">¥{{ e.cost.toFixed(3) }}</td>
+              </tr>
+              <tr v-if="!runtimeByEmployee.length"><td colspan="7" class="py-10 text-center text-gray-600 text-[12px]">该时间范围无任务记录</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================= Tab5: 价值中心 ================= -->
+      <div v-if="activeTab === 'value'">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[12px] text-gray-500">价值模型：单任务替代工时 0.5h × 工时单价 ¥50/h（平台定义，可调）</p>
+          <div class="flex gap-1">
+            <button v-for="r in ['7d','month']" :key="r" @click="loadValue(r)" class="px-3 py-1 rounded-lg text-[11px] transition"
+              :class="valueRange === r ? 'bg-blue-600/30 text-blue-300 border border-blue-600/40' : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]'">{{ r }}</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-4 gap-3">
+          <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p class="text-[10px] text-gray-500">AI员工成本</p>
+            <p class="text-2xl font-semibold mt-1 text-white/85">¥{{ valueTotal.cost.toFixed(2) }}</p>
+          </div>
+          <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p class="text-[10px] text-gray-500">替代工时</p>
+            <p class="text-2xl font-semibold mt-1 text-white/85">{{ valueTotal.savedHours }}h</p>
+          </div>
+          <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p class="text-[10px] text-gray-500">估算价值</p>
+            <p class="text-2xl font-semibold mt-1 text-blue-400">¥{{ valueTotal.value.toLocaleString() }}</p>
+          </div>
+          <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p class="text-[10px] text-gray-500">ROI</p>
+            <p class="text-2xl font-semibold mt-1" :class="valueTotal.roi > 0 ? 'text-green-400' : 'text-gray-600'">{{ valueTotal.roi > 0 ? valueTotal.roi + '×' : '—' }}</p>
+          </div>
+        </div>
+        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] mt-4 overflow-hidden">
+          <table class="w-full text-[12px]">
+            <thead><tr class="text-left text-gray-500 border-b border-white/[0.06]">
+              <th class="py-3 px-4 font-normal">AI员工</th><th class="py-3 px-2 font-normal">调用</th><th class="py-3 px-2 font-normal">成本</th>
+              <th class="py-3 px-2 font-normal">Token</th><th class="py-3 px-2 font-normal">替代工时</th><th class="py-3 px-2 font-normal">估算价值</th><th class="py-3 px-2 font-normal">ROI</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="e in valueByEmployee" :key="e.employeeId" class="border-b border-white/[0.04]">
+                <td class="py-3 px-4 text-white/85">{{ e.name }}</td>
+                <td class="py-3 px-2 text-white/80">{{ e.tasks }}</td>
+                <td class="py-3 px-2 text-gray-300">¥{{ e.cost.toFixed(2) }}</td>
+                <td class="py-3 px-2 text-gray-300">{{ e.tokens.toLocaleString() }}</td>
+                <td class="py-3 px-2 text-gray-300">{{ e.savedHours }}h</td>
+                <td class="py-3 px-2 text-blue-400">¥{{ e.estimatedValue.toLocaleString() }}</td>
+                <td class="py-3 px-2"><span :class="e.roi > 0 ? 'text-green-400' : 'text-gray-600'">{{ e.roi > 0 ? e.roi + '×' : '—' }}</span></td>
+              </tr>
+              <tr v-if="!valueByEmployee.length"><td colspan="7" class="py-10 text-center text-gray-600 text-[12px]">该时间范围无任务记录</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -133,125 +263,118 @@
 </template>
 
 <script setup lang="ts">
-import { getToken, setToken, clearAuth } from '~/utils/token-cache'
 definePageMeta({ layout: 'admin-aigc' })
-import { ref, onMounted } from 'vue'
 
-const loading = ref(true)
-const error = ref('')
-const agents = ref<any[]>([])
-const dialogVisible = ref(false)
-const isEditing = ref(false)
-const saving = ref(false)
-const formError = ref('')
-const editingId = ref<string | null>(null)
-const form = ref({ name: '', role: '', type: 'llm', model: '', systemPrompt: '', status: 'active' })
+const tabs = [
+  { id: 'employees', label: 'AI员工', icon: '👥' },
+  { id: 'templates', label: '模板中心', icon: '📋' },
+  { id: 'capabilities', label: '能力中心', icon: '🔌' },
+  { id: 'runtime', label: '运行中心', icon: '⚙️' },
+  { id: 'value', label: '价值中心', icon: '💰' },
+]
+const activeTab = ref('employees')
 
-function formatTime(iso: string) {
-  if (!iso) return '—'
-  try {
-    const d = new Date(iso)
-    return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-  } catch { return iso }
+const token = () => {
+  if (typeof localStorage !== 'undefined') return localStorage.getItem('auth_token') || ''
+  return ''
+}
+async function api(path: string, opts: any = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+  })
+  if (!res.ok) throw new Error(path + ' → ' + res.status)
+  return res.json()
 }
 
-async function fetchData() {
-  loading.value = true
-  error.value = ''
+// ---------- Tab1 ----------
+const overview = ref<any>({ summary: {}, employees: [] })
+const employees = computed(() => overview.value.employees || [])
+const employeeSummaryCards = computed(() => [
+  { label: 'AI员工总数', value: overview.value.summary?.total ?? 0, color: '#fff' },
+  { label: '运行中（六要素全 PASS）', value: overview.value.summary?.running ?? 0, color: '#4ade80' },
+  { label: '配置不完整', value: overview.value.summary?.incomplete ?? 0, color: '#fbbf24' },
+  { label: '草稿', value: overview.value.summary?.draft ?? 0, color: '#9ca3af' },
+])
+function typeClass(t: string) {
+  const map: Record<string, string> = {
+    recruiter: 'bg-blue-500/10 text-blue-400', interview: 'bg-purple-500/10 text-purple-400',
+    talent_analyst: 'bg-green-500/10 text-green-400', career_advisor: 'bg-cyan-500/10 text-cyan-400',
+    talent_agent: 'bg-orange-500/10 text-orange-400', hotspot_analyst: 'bg-pink-500/10 text-pink-400',
+  }
+  return map[t] || 'bg-gray-500/10 text-gray-400'
+}
+async function loadOverview() { overview.value = await api('/api/admin/ai-employees/overview') }
+
+// ---------- Tab2 ----------
+const templates = ref<any[]>([])
+const showTemplateModal = ref(false)
+const editingTemplate = ref<any>(null)
+const templateForm = ref<any>({})
+async function loadTemplates() { templates.value = await api('/api/admin/ai-employees/templates') }
+function openTemplateModal(t?: any) {
+  editingTemplate.value = t || null
+  templateForm.value = t ? {
+    name: t.name, code: t.code, description: t.description || '',
+    workspaceText: (t.workspace || []).join(','), capsText: (t.defaultCapabilities || []).join(','),
+  } : { name: '', code: '', description: '', workspaceText: '', capsText: '' }
+  showTemplateModal.value = true
+}
+async function saveTemplate() {
+  const payload = {
+    name: templateForm.value.name, code: templateForm.value.code, description: templateForm.value.description,
+    workspace: templateForm.value.workspaceText.split(',').map((s: string) => s.trim()).filter(Boolean),
+    defaultCapabilities: templateForm.value.capsText.split(',').map((s: string) => s.trim()).filter(Boolean),
+  }
+  if (editingTemplate.value) await api(`/api/admin/ai-employees/templates/${editingTemplate.value.id}`, { method: 'PUT', body: JSON.stringify(payload) })
+  else await api('/api/admin/ai-employees/templates', { method: 'POST', body: JSON.stringify(payload) })
+  showTemplateModal.value = false
+  await loadTemplates()
+}
+async function deleteTemplate(t: any) {
+  if (!confirm(`删除模板「${t.name}」？`)) return
+  await api(`/api/admin/ai-employees/templates/${t.id}`, { method: 'DELETE' })
+  await loadTemplates()
+}
+
+// ---------- Tab3 ----------
+const capabilities = ref<any[]>([])
+const byTemplate = ref<any[]>([])
+async function loadCapabilities() {
+  const d = await api('/api/admin/ai-employees/capabilities')
+  capabilities.value = d.capabilities
+  byTemplate.value = d.byTemplate
+}
+
+// ---------- Tab4 ----------
+const ranges = ['today', '7d', 'month']
+const runtimeRange = ref('today')
+const runtime = ref<any>({ total: {}, byEmployee: [] })
+const runtimeByEmployee = computed(() => runtime.value.byEmployee || [])
+const runtimeCards = computed(() => {
+  const t = runtime.value.total || {}
+  return [
+    { label: '任务', value: t.tasks ?? 0, color: '#fff' },
+    { label: '成功', value: t.success ?? 0, color: '#4ade80' },
+    { label: '失败', value: t.failed ?? 0, color: t.failed ? '#f87171' : '#9ca3af' },
+    { label: 'Token', value: (t.tokens ?? 0).toLocaleString(), color: '#60a5fa' },
+    { label: '成本', value: '¥' + (t.cost ?? 0).toFixed(3), color: '#e879f9' },
+  ]
+})
+async function loadRuntime(r: string) { runtimeRange.value = r; runtime.value = await api(`/api/admin/ai-employees/runtime?range=${r}`) }
+
+// ---------- Tab5 ----------
+const valueRange = ref('month')
+const value = ref<any>({ total: {}, byEmployee: [] })
+const valueByEmployee = computed(() => value.value.byEmployee || [])
+const valueTotal = computed(() => value.value.total || {})
+async function loadValue(r: string) { valueRange.value = r; value.value = await api(`/api/admin/ai-employees/value?range=${r}`) }
+
+onMounted(async () => {
   try {
-    const token = getToken()
-    const res = await fetch('/api/admin/agents', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
-    if (res.ok) {
-      const d = await res.json()
-      agents.value = Array.isArray(d) ? d : (d.data || d.agents || [])
-    } else {
-      error.value = '请求失败'
-    }
+    await Promise.all([loadOverview(), loadTemplates(), loadCapabilities(), loadRuntime('today'), loadValue('month')])
   } catch (e: any) {
-    error.value = e.message || '网络异常'
+    console.error('[ai-employees]', e.message)
   }
-  loading.value = false
-}
-
-function openCreate() {
-  isEditing.value = false
-  editingId.value = null
-  form.value = { name: '', role: '', type: 'llm', model: '', systemPrompt: '', status: 'active' }
-  formError.value = ''
-  dialogVisible.value = true
-}
-
-function openEdit(agent: any) {
-  isEditing.value = true
-  editingId.value = agent.id
-  form.value = {
-    name: agent.name || '',
-    role: agent.role || '',
-    type: agent.type || 'llm',
-    model: agent.model || '',
-    systemPrompt: agent.systemPrompt || '',
-    status: agent.status || 'active',
-  }
-  formError.value = ''
-  dialogVisible.value = true
-}
-
-function closeDialog() {
-  dialogVisible.value = false
-  isEditing.value = false
-  editingId.value = null
-}
-
-async function saveAgent() {
-  if (!form.value.name) { formError.value = '请输入 Agent 名称'; return }
-  saving.value = true
-  formError.value = ''
-  const payload = { ...form.value }
-  try {
-    const token = getToken()
-    const url = isEditing.value && editingId.value
-      ? `/api/admin/agents/${editingId.value}`
-      : '/api/admin/agents'
-    const res = await fetch(url, {
-      method: isEditing.value ? 'PUT' : 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify(payload)
-    })
-    if (res.ok) {
-      await fetchData()
-    } else {
-      const err = await res.json().catch(() => ({}))
-      formError.value = err.message || `请求失败 (${res.status})`
-    }
-  } catch (e: any) {
-    formError.value = e.message || '网络异常'
-  }
-  saving.value = false
-  closeDialog()
-}
-
-async function deleteAgent(agent: any) {
-  if (!confirm(`确定删除 Agent「${agent.name}」？此操作不可恢复。`)) return
-  try {
-    const token = getToken()
-    const res = await fetch(`/api/admin/agents/${agent.id}`, {
-      method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
-    if (res.ok) {
-      agents.value = agents.value.filter((a: any) => a.id !== agent.id)
-    } else {
-      agents.value = agents.value.filter((a: any) => a.id !== agent.id)
-    }
-  } catch {
-    agents.value = agents.value.filter((a: any) => a.id !== agent.id)
-  }
-}
-
-onMounted(fetchData)
+})
 </script>

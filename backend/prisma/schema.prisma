@@ -6847,6 +6847,31 @@ model EnterpriseAgentProfile {
 }
 
 // ============================================================
+// KM-AI-JOB-AGENT-05 — AI 员工模板中心（平台层岗位模板）
+// 模板 ≠ 实例：AgentTemplate（岗位定义）→ EnterpriseAgentProfile（企业员工）→ EnterpriseAgentInstance（运行实例）
+// ============================================================
+
+model AgentTemplate {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  name                String   @db.VarChar(100) // 展示名：招聘顾问 / 面试专家
+  code                String   @unique @db.VarChar(50) // 唯一编码 = profile.agentType（recruiter / interview ...）
+  description         String?  @db.Text
+  workspace           String   @default("[]") // 可授权业务线：recruitment / short_drama / geo / career ...
+  defaultCapabilities String   @default("[]") @map("default_capabilities") // capability code 数组
+  defaultMemoryPolicy String   @default("{}") @map("default_memory_policy") // JSON: namespace pattern / retention
+  defaultRuntime      String   @default("openclaw") @map("default_runtime") @db.VarChar(50)
+  defaultModelPolicy  String   @default("{}") @map("default_model_policy") // JSON: text/image/video 模态策略
+  status              String   @default("active") @db.VarChar(20) // active | draft
+  sortOrder           Int      @default(0) @map("sort_order")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([code])
+  @@index([status])
+  @@map("agent_template")
+}
+
+// ============================================================
 // Sprint 4.2.8 Step 5 — Agent Identity Layer
 // ============================================================
 
