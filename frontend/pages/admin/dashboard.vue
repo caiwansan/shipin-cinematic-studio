@@ -84,6 +84,18 @@ import * as echarts from 'echarts'
 // 【安全】项目标准：token 从 token-cache（内存→localStorage auth_token）获取，禁止自定义 key
 import { getToken } from '~/utils/token-cache'
 
+// 显式 import 组件（Nuxt 3 默认 pathPrefix 命名，模板用短名需显式导入）
+import KpiOverview from '~/components/admin/dashboard/KpiOverview.vue'
+import UserGrowthPanel from '~/components/admin/dashboard/UserGrowthPanel.vue'
+import RevenueCockpit from '~/components/admin/dashboard/RevenueCockpit.vue'
+import VipPanel from '~/components/admin/dashboard/VipPanel.vue'
+import WorkspaceChart from '~/components/admin/dashboard/WorkspaceChart.vue'
+import GeographyPanel from '~/components/admin/dashboard/GeographyPanel.vue'
+import AgentRanking from '~/components/admin/dashboard/AgentRanking.vue'
+import AiHealthPanel from '~/components/admin/dashboard/AiHealthPanel.vue'
+import SystemHealthPanel from '~/components/admin/dashboard/SystemHealthPanel.vue'
+import ActivityTimeline from '~/components/admin/dashboard/ActivityTimeline.vue'
+
 definePageMeta({ layout: 'admin-aigc' })
 
 const loading = ref(true)

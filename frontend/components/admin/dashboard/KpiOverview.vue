@@ -28,6 +28,8 @@
 </template>
 
 <script setup lang="ts">
+import MetricCard from '~/components/admin/dashboard/MetricCard.vue'
+
 defineProps<{
   m: any
   loading?: boolean

@@ -43,7 +43,8 @@ onMounted(() => {
   if (process.client) {
     const token = getAuthToken()
     if (token) {
-      router.push('/admin/aigc/overview')
+      // 已登录 → 数据罗盘（经营驾驶舱首页）
+      router.push('/admin/dashboard')
     }
   }
 })
@@ -71,7 +72,8 @@ async function doLogin() {
       const { setToken } = await import('~/utils/token-cache')
       setToken(data.token)
       localStorage.setItem('admin-aigc-user', username.value)
-      router.push('/admin/aigc/overview')
+      // 登录成功 → 数据罗盘（经营驾驶舱首页）
+      router.push('/admin/dashboard')
     } else {
       loginError.value = '登录响应无效'
     }
