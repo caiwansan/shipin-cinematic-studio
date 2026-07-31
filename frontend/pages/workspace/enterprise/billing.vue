@@ -250,7 +250,7 @@ function scrollToPlans() {
 
 function selectPlan(plan: any) {
   // 跳转到企业订阅中心进行完整的支付流程
-  window.location.href = `/enterprise/membership?planId=${plan.id}`
+  window.location.href = `/workspace/enterprise/membership?planId=${plan.id}`
 }
 
 onMounted(async () => {
