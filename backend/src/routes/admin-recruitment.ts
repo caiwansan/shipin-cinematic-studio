@@ -104,6 +104,9 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
   // Sprint-RECRUITMENT-REALITY-03 T03: 删除保护 — 有历史订阅的套餐禁止硬删，改用 toggle 停用保持历史
   app.delete('/api/admin/recruitment/plans/:id', { preHandler: [requireAdmin] }, async (request, reply) => {
     const { id } = request.params as any
+    if (!id || typeof id !== 'string' || id.length < 8) {
+      return reply.status(400).send({ success: false, message: '无效的套餐 ID' })
+    }
     const plan = await prisma.enterprisePlan.findUnique({
       where: { id },
       include: { _count: { select: { subscriptions: true } } },

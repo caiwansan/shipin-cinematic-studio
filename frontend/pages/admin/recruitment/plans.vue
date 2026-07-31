@@ -94,6 +94,7 @@
                 <template v-else>
                   <button class="btn-edit" @click="startEdit(plan)">编辑</button>
                   <button class="btn-toggle" @click="togglePlan(plan)">{{ plan.enabled ? '停用' : '启用' }}</button>
+                  <button class="btn-danger" @click="deletePlan(plan)">删除</button>
                 </template>
               </td>
             </tr>
@@ -416,6 +417,22 @@ async function togglePlan(plan: any) {
   } catch (e: any) { alert(e.message) }
 }
 
+async function deletePlan(plan: any) {
+  if (!confirm(`⚠️ 确定删除套餐「${plan.displayName || plan.name}」？\n\n无历史订阅的套餐会被永久删除；有历史订阅的套餐需先停用。`)) return
+  try {
+    const res = await fetch(`/api/admin/recruitment/plans/${plan.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${getAdminToken()}` },
+    })
+    const data = await res.json()
+    if (data.success) {
+      fetchPlans()
+    } else {
+      alert(data.message || '删除失败')
+    }
+  } catch (e: any) { alert(e.message) }
+}
+
 async function createPlan() {
   try {
     const features = createForm.featuresStr.split(',').map((s: string) => s.trim()).filter(Boolean)
@@ -636,6 +653,7 @@ async function viewDetail(sub: any) {
 .actions-cell button { padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; }
 .btn-edit { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
 .btn-toggle { background: rgba(239,68,68,0.15); color: #ef4444; }
+.btn-danger { background: rgba(239,68,68,0.18); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
 .btn-save { background: rgba(34,197,94,0.15); color: #22c55e; }
 .btn-cancel { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
 .btn-pause { background: rgba(245,158,11,0.15); color: #f59e0b; }
