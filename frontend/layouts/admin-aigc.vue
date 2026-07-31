@@ -17,17 +17,67 @@
       <!-- Body: left sidebar + right content -->
       <div class="flex flex-1 min-h-0">
         <!-- Sidebar -->
-        <aside class="w-48 bg-[#0A0F1E] border-r border-[#1A2240] flex flex-col shrink-0">
-          <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-            <NuxtLink
-              v-for="m in menu" :key="m.id"
-              :to="m.to"
-              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition cursor-pointer no-underline"
-              :class="isActive(m.to) ? 'bg-blue-500/15 text-blue-400' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'"
-            >
-              <span>{{ m.icon }}</span>
-              <span>{{ m.label }}</span>
-            </NuxtLink>
+        <aside class="w-52 bg-[#0A0F1E] border-r border-[#1A2240] flex flex-col shrink-0">
+          <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-1">
+            <template v-for="sec in nav" :key="sec.id">
+              <!-- 单链接（控制台） -->
+              <NuxtLink
+                v-if="sec.kind === 'link'"
+                :to="sec.to!"
+                class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition cursor-pointer no-underline"
+                :class="isActive(sec.to!) ? 'bg-blue-500/15 text-blue-400' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'"
+              >
+                <span>{{ sec.icon }}</span>
+                <span>{{ sec.label }}</span>
+              </NuxtLink>
+
+              <!-- 分组（可展开） -->
+              <div v-else-if="sec.kind === 'group'" class="pt-1">
+                <button
+                  class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition cursor-pointer text-gray-500 hover:text-gray-300 hover:bg-white/5 bg-transparent border-none text-left"
+                  @click="toggle(sec.id)"
+                >
+                  <span>{{ sec.icon }}</span>
+                  <span class="flex-1">{{ sec.label }}</span>
+                  <span class="text-[10px] text-gray-600">{{ expanded[sec.id] ? '▾' : '▸' }}</span>
+                </button>
+                <div v-if="expanded[sec.id]" class="mt-0.5 ml-3 space-y-0.5 border-l border-[#1A2240] pl-2">
+                  <NuxtLink
+                    v-for="c in sec.children" :key="c.id"
+                    :to="c.to"
+                    class="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] transition cursor-pointer no-underline"
+                    :class="isActive(c.to) ? 'bg-blue-500/15 text-blue-400' : 'text-gray-600 hover:text-gray-300 hover:bg-white/5'"
+                  >
+                    <span>{{ c.label }}</span>
+                  </NuxtLink>
+                </div>
+              </div>
+
+              <!-- Workspace（唯一入口 + 内部子页） -->
+              <div v-else class="pt-1">
+                <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs"
+                  :class="isWsActive(sec) ? 'bg-blue-500/15 text-blue-400' : 'text-gray-500'">
+                  <span>{{ sec.icon }}</span>
+                  <span class="flex-1">{{ sec.label }}</span>
+                  <span class="text-[10px] text-gray-600">{{ wsExpanded[sec.id] ? '▾' : '▸' }}</span>
+                  <button
+                    class="text-[10px] text-gray-600 hover:text-gray-300 transition cursor-pointer bg-transparent border-none"
+                    @click.stop="toggleWs(sec.id)"
+                    :title="wsExpanded[sec.id] ? '折叠' : '展开'"
+                  >{{ wsExpanded[sec.id] ? '−' : '+' }}</button>
+                </div>
+                <div v-if="wsExpanded[sec.id]" class="mt-0.5 ml-3 space-y-0.5 border-l border-[#1A2240] pl-2">
+                  <NuxtLink
+                    v-for="c in sec.children" :key="c.id"
+                    :to="c.to"
+                    class="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] transition cursor-pointer no-underline"
+                    :class="isActive(c.to) ? 'bg-blue-500/15 text-blue-400' : 'text-gray-600 hover:text-gray-300 hover:bg-white/5'"
+                  >
+                    <span>{{ c.label }}</span>
+                  </NuxtLink>
+                </div>
+              </div>
+            </template>
           </nav>
         </aside>
 
@@ -42,7 +92,8 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { onMounted } from 'vue'
+import { onMounted, reactive } from 'vue'
+import { buildAdminNav, type AdminNavSection } from '~/config/admin-workspace-registry'
 
 const route = useRoute()
 const router = useRouter()
@@ -70,31 +121,26 @@ onMounted(async () => {
   }
 })
 
-const menu = [
-  { id: 'overview', label: '总控制台', icon: '📊', to: '/admin/aigc/overview' },
-  { id: 'models', label: '大模型列表', icon: '🤖', to: '/admin/aigc/models' },
-  { id: 'members', label: '会员模块', icon: '👥', to: '/admin/aigc/members' },
-  { id: 'payment', label: '支付设置', icon: '💳', to: '/admin/aigc/payment' },
-  { id: 'vip', label: 'VIP套餐管理', icon: '💎', to: '/admin/aigc/vip' },
-  { id: 'admins', label: '管理员设置', icon: '🛡️', to: '/admin/aigc/admins' },
-  { id: 'cos', label: 'COS用户存储', icon: '🗄️', to: '/admin/aigc/cos' },
-  // { id: 'coins', label: '积分充值', icon: '💰', to: '/admin/aigc/coins' },
-  { id: 'community', label: '社区管理', icon: '💬', to: '/admin/aigc/community' },
-  { id: 'messages', label: '发私信', icon: '✉️', to: '/admin/aigc/messages' },
-  { id: 'mall', label: '商城管理', icon: '🛍️', to: '/admin/aigc/mall' },
-  { id: 'legal', label: '法律工作台管理', icon: '⚖️', to: '/admin/aigc/legal' },
-  // @deprecated 客服管理 — V4.2 业务废弃，入口已隐藏，保留代码可恢复
-  // { id: 'customer-service', label: '客服管理', icon: '🎧', to: '/admin/aigc/customer-service' },
-  { id: 'sms', label: '短信配置', icon: '📱', to: '/admin/aigc/sms' },
-  { id: 'wechat', label: '微信登录配置', icon: '💬', to: '/admin/aigc/wechat' },
-  { id: 'qq', label: 'QQ登录配置', icon: '🐧', to: '/admin/aigc/qq' },
-  { id: 'agents', label: 'Agent管理', icon: '🤖', to: '/admin/aigc/agents' },
-  { id: 'market', label: '市场代理管理', icon: '📈', to: '/admin/aigc/market' },
-  { id: 'recruitment', label: '求职招聘管理', icon: '🏢', to: '/admin/recruitment' },
-]
+const nav: AdminNavSection[] = buildAdminNav()
+
+// 展开状态：默认展开包含当前路由的分组
+const expanded = reactive<Record<string, boolean>>({})
+const wsExpanded = reactive<Record<string, boolean>>({})
+for (const sec of nav) {
+  if (sec.kind === 'group' && sec.children?.some(c => isActive(c.to))) expanded[sec.id] = true
+  if (sec.kind === 'workspace' && (isActive(sec.to!) || sec.children?.some(c => isActive(c.to)))) wsExpanded[sec.id] = true
+}
+
+function toggle(id: string) { expanded[id] = !expanded[id] }
+function toggleWs(id: string) { wsExpanded[id] = !wsExpanded[id] }
 
 function isActive(path: string) {
   return route.path === path
+}
+
+function isWsActive(sec: AdminNavSection) {
+  if (sec.kind !== 'workspace') return false
+  return isActive(sec.to!) || sec.children?.some(c => isActive(c.to)) || false
 }
 
 function logout() {
