@@ -13,21 +13,16 @@
         <!-- ═══ Row 1：KPI 6 列（首屏） ═══ -->
         <KpiOverview :m="overview?.metrics" :w="overview?.window" :range-label="rangeLabel" :loading="loading" />
 
-        <!-- ═══ Row 2：用户趋势 | 收入趋势 ═══ -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <!-- ═══ Row 2：用户增长 | 商业收入 | Agent 运营（3 列） ═══ -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <UserTrendCard :data="users" :range-label="rangeLabel" @detail="openDrawer('user')" />
           <RevenueTrendCard :data="revenue" :range-label="rangeLabel" @detail="openDrawer('revenue')" />
-        </div>
-
-        <!-- ═══ Row 3：Workspace 生态 | Agent 运营 ═══ -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <WorkspaceMiniCard :data="workspace" @detail="openDrawer('workspace')" />
           <AgentMiniCard :agents="agents?.agents || []" :active-enterprises="agents?.activeEnterprises" @detail="openDrawer('agents')" />
         </div>
 
-        <!-- ═══ Row 4：VIP 经营 | AI 健康 ═══ -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <VipMiniCard :data="vip" @detail="openDrawer('vip')" />
+        <!-- ═══ Row 3：Workspace 生态地图（跨 2 列） | AI 健康 ═══ -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <WorkspaceEcosystemCard class="lg:col-span-2" :data="ecosystem" />
           <AiHealthMiniCard :providers="infra?.providers || []" :task-health="infra?.taskHealth" :model-count="infra?.modelCount"
             :dirty-data="infra?.dirtyData" :health="infra?.health" @detail="openDrawer('health')" />
         </div>
@@ -36,7 +31,7 @@
         <ActivityStrip :events="events?.events || []" />
 
         <div class="text-center text-[8px] text-gray-700 pb-2">
-          昆仑镜 v1.5 · ADMIN-IA-REALITY-04-C AI Operating Center · 时间范围联动 · Dashboard Reality Rule v1.1
+          昆仑镜 v1.5 · SPRINT-ADMIN-CLEANUP-02 CEO 经营驾驶舱 · 时间范围联动 · Dashboard Reality Rule v1.1
         </div>
       </template>
     </div>
@@ -99,6 +94,7 @@ import KpiOverview from '~/components/admin/dashboard/KpiOverview.vue'
 import UserTrendCard from '~/components/admin/dashboard/UserTrendCard.vue'
 import RevenueTrendCard from '~/components/admin/dashboard/RevenueTrendCard.vue'
 import WorkspaceMiniCard from '~/components/admin/dashboard/WorkspaceMiniCard.vue'
+import WorkspaceEcosystemCard from '~/components/admin/dashboard/WorkspaceEcosystemCard.vue'
 import AgentMiniCard from '~/components/admin/dashboard/AgentMiniCard.vue'
 import VipMiniCard from '~/components/admin/dashboard/VipMiniCard.vue'
 import AiHealthMiniCard from '~/components/admin/dashboard/AiHealthMiniCard.vue'
@@ -124,6 +120,7 @@ const users = ref<any>(null)
 const revenue = ref<any>(null)
 const vip = ref<any>(null)
 const workspace = ref<any>(null)
+const ecosystem = ref<any>(null)
 const geography = ref<any>(null)
 const agents = ref<any>(null)
 const infra = ref<any>(null)
@@ -160,19 +157,20 @@ async function loadAll() {
   error.value = ''
   const q = `?range=${range.value}`
   try {
-    const [ov, us, rv, vp, ws, geo, ag, inf, ev] = await Promise.all([
+    const [ov, us, rv, vp, ws, eco, geo, ag, inf, ev] = await Promise.all([
       fetchJson(`/api/admin/dashboard/overview${q}`),
       fetchJson(`/api/admin/dashboard/users${q}`),
       fetchJson(`/api/admin/dashboard/revenue${q}`),
       fetchJson('/api/admin/dashboard/vip'),
       fetchJson('/api/admin/dashboard/workspace'),
+      fetchJson('/api/admin/dashboard/ecosystem'),
       fetchJson('/api/admin/dashboard/geography'),
       fetchJson('/api/admin/dashboard/agents'),
       fetchJson('/api/admin/dashboard/infrastructure'),
       fetchJson('/api/admin/dashboard/events'),
     ])
     overview.value = ov; users.value = us; revenue.value = rv; vip.value = vp
-    workspace.value = ws; geography.value = geo; agents.value = ag; infra.value = inf; events.value = ev
+    workspace.value = ws; ecosystem.value = eco; geography.value = geo; agents.value = ag; infra.value = inf; events.value = ev
   } catch (e: any) {
     error.value = e.message || String(e)
   } finally {

@@ -180,6 +180,45 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
   })
 
   // ══════════════════════════════════════════════════════════════════
+  // Workspace 生态地图（SPRINT-ADMIN-CLEANUP-02 T02）
+  // 6 条业务线真实聚合：项目/调用/用户/成本；未上线的线诚实显示 offline
+  // ══════════════════════════════════════════════════════════════════
+  app.get('/api/admin/dashboard/ecosystem', { preHandler: [requireAdmin] }, async () => {
+    const now = new Date()
+    const rangeStart = new Date(now.getTime() - 30 * 86400000)
+
+    const [shortDramaProjects, geoProjects, recrAgents,
+      hdzStats, recrStats,
+      shortDramaUsers, recrUsers] = await Promise.all([
+      // 项目数（短剧：video + short_drama 口径，与 04-B 一致）
+      prisma.project.count({ where: { type: { in: ['video', 'short_drama'] } } }),
+      prisma.project.count({ where: { type: 'geo' } }),
+      prisma.enterpriseAgentInstance.count(),
+      // 调用数/成本（排除脏数据，30 天窗口）
+      prisma.usageLog.aggregate({ where: cleanUsageWhere({ createdAt: { gte: rangeStart }, taskType: { startsWith: 'hdz_' } }), _count: true, _sum: { cost: true } }),
+      prisma.usageLog.aggregate({ where: cleanUsageWhere({ createdAt: { gte: rangeStart }, taskType: { startsWith: 'enterprise_agent_' } }), _count: true, _sum: { cost: true } }),
+      // 去重用户数（短剧/招聘调用用户）
+      prisma.$queryRawUnsafe(`SELECT COUNT(DISTINCT "userId") AS users FROM usage_logs WHERE "createdAt" >= $1 AND "taskType" LIKE 'hdz_%' AND "taskType" NOT IN ($2)`, rangeStart, ...DIRTY_TASKS) as Promise<{ users: bigint }[]>,
+      prisma.$queryRawUnsafe(`SELECT COUNT(DISTINCT "userId") AS users FROM usage_logs WHERE "createdAt" >= $1 AND "taskType" LIKE 'enterprise_agent_%' AND "taskType" NOT IN ($2)`, rangeStart, ...DIRTY_TASKS) as Promise<{ users: bigint }[]>,
+    ])
+
+    const hdzCalls = hdzStats._count || 0
+    const hdzCost = Number(hdzStats._sum?.cost || 0)
+    const recrCalls = recrStats._count || 0
+    const recrCost = Number(recrStats._sum?.cost || 0)
+
+    const lines = [
+      { code: 'shortdrama', label: 'AI 短剧', icon: '🎬', projects: shortDramaProjects, calls: hdzCalls, users: Number(shortDramaUsers?.[0]?.users || 0), cost: hdzCost, status: 'active' },
+      { code: 'recruitment', label: '求职招聘', icon: '💼', projects: 0, calls: recrCalls, users: Number(recrUsers?.[0]?.users || 0), cost: recrCost, agents: recrAgents, status: 'active' },
+      { code: 'geo', label: 'GEO优化', icon: '🌎', projects: geoProjects, calls: 0, users: 0, cost: 0, status: 'active' },
+      { code: 'novel', label: '小说', icon: '📖', projects: 0, calls: 0, users: 0, cost: 0, status: 'offline', note: '业务未上线' },
+      { code: 'music', label: '音乐制作', icon: '🎵', projects: 0, calls: 0, users: 0, cost: 0, status: 'offline', note: '业务未上线' },
+      { code: 'ecom-image', label: '电商图片', icon: '🖼️', projects: 0, calls: 0, users: 0, cost: 0, status: 'offline', note: '业务未上线' },
+    ]
+    return { code: 0, data: { generatedAt: new Date().toISOString(), windowLabel: '30天', lines } }
+  })
+
+  // ══════════════════════════════════════════════════════════════════
   // 第二层：用户增长中心（30 天趋势 + 生命周期漏斗）
   // ══════════════════════════════════════════════════════════════════
   app.get('/api/admin/dashboard/users', { preHandler: [requireAdmin] }, async (req: any) => {
