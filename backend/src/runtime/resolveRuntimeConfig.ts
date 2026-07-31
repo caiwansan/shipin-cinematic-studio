@@ -30,6 +30,7 @@ import { getRuntimeContext, type RuntimeContext } from '../services/runtime-cont
 import { decryptKey } from '../services/crypto.service.js'
 import { getRouteConfig } from '../utils/index.js'
 import { env } from '../config/env.js'
+import { getBaseUrl } from '../services/hdz/llm.client.js' // SPRINT-IDENTITY-REALITY-FIX-01: 统一 Provider Base URL
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -54,9 +55,9 @@ export interface ResolvedRuntimeConfig {
   retry: number
   /** 配置来源追踪 */
   source: {
-    model: 'input' | 'enterprise_config' | 'platform_config' | 'user_config' | 'user_capability_config' | 'stage_config' | 'provider_registry' | 'env_default'
-    apiKey: 'enterprise_config' | 'user_config' | 'user_capability_config' | 'platform_config' | 'env' | 'none'
-    baseUrl: 'enterprise_config' | 'user_config' | 'user_capability_config' | 'platform_config' | 'provider_registry' | 'env_default'
+    model: 'input' | 'org_byok' | 'compat_enterprise' | 'enterprise_config' | 'platform_config' | 'user_config' | 'user_capability_config' | 'stage_config' | 'provider_registry' | 'env_default'
+    apiKey: 'org_byok' | 'compat_enterprise' | 'enterprise_config' | 'user_config' | 'user_capability_config' | 'platform_config' | 'env' | 'none'
+    baseUrl: 'org_byok' | 'compat_enterprise' | 'enterprise_config' | 'user_config' | 'user_capability_config' | 'platform_config' | 'provider_registry' | 'env_default' | 'input'
   }
 }
 
@@ -93,8 +94,11 @@ export async function resolveRuntimeConfig(
   input?: {
     model?: string
     provider?: string
+    apiKey?: string    // SPRINT-IDENTITY-REALITY-FIX-01: 企业模型显式覆盖（Input Override）
+    baseUrl?: string
     userId?: string
     tenantId?: string      // Sprint-06A: 企业 ID → EnterpriseLlmConfig
+    organizationId?: string // SPRINT-IDENTITY-REALITY-FIX-01: 企业唯一身份 → OrgModelConfig
     businessType?: string  // Sprint-07A.3: 'hdz' | 'career_advisor' | 'ppt' | 'music' → admin-global-config
   }
 ): Promise<ResolvedRuntimeConfig> {
@@ -105,42 +109,98 @@ export async function resolveRuntimeConfig(
 
   // ── 1. 输入层（最高优先级） ──
   if (input?.model && input?.provider) {
-    let apiKey: string | undefined
-    // Sprint-06A: 如果有 tenantId，优先从 EnterpriseLlmConfig 取 Key
-    if (tenantId) {
-      try {
-        const enterpriseConfig = await prisma.enterpriseLlmConfig.findFirst({
-          where: {
-            tenantId,
-            provider: input.provider,
-            modelName: input.model,
-            enabled: true,
-            status: 'active',
-            credentialOwner: 'enterprise',
-          },
-        })
-        if (enterpriseConfig?.encryptedApiKey) {
-          apiKey = decryptKey(enterpriseConfig.encryptedApiKey)
-        }
-      } catch { /* ignore */ }
-    }
+    // SPRINT-IDENTITY-REALITY-FIX-01: 企业模型显式覆盖（由 ModelResolver 解析，企业 BYOK）
+    // 优先使用显式传入的 apiKey（企业 Key 不落平台表）；否则 fallback 到精确匹配
+    let apiKey = input.apiKey || ''
+    let apiKeySource: 'enterprise_config' | 'user_config' | 'env' = 'enterprise_config'
     if (!apiKey) {
-      apiKey = await resolveApiKeyExact(userId, input.provider, capability)
+      // Sprint-06A: 如果有 tenantId，优先从 EnterpriseLlmConfig 取 Key（deprecated 兼容）
+      if (tenantId) {
+        try {
+          const enterpriseConfig = await prisma.enterpriseLlmConfig.findFirst({
+            where: {
+              tenantId,
+              provider: input.provider,
+              modelName: input.model,
+              enabled: true,
+              status: 'active',
+              credentialOwner: 'enterprise',
+            },
+          })
+          if (enterpriseConfig?.encryptedApiKey) {
+            apiKey = decryptKey(enterpriseConfig.encryptedApiKey)
+          }
+        } catch { /* ignore */ }
+      }
+      if (!apiKey) {
+        apiKey = await resolveApiKeyExact(userId, input.provider, capability)
+        apiKeySource = 'user_config'
+      }
     }
     return buildConfig({
       userId,
       executionId,
       provider: input.provider,
       model: input.model,
-      baseUrl: PROVIDER_BASE_URLS[input.provider] || '',
+      baseUrl: input.baseUrl || PROVIDER_BASE_URLS[input.provider] || '',
       apiKey,
-      source: { model: 'input', apiKey: apiKey ? (tenantId ? 'enterprise_config' : 'user_config') : 'env', baseUrl: 'provider_registry' },
+      source: { model: 'input', apiKey: apiKey ? apiKeySource : 'env', baseUrl: input.baseUrl ? 'input' : 'provider_registry' },
     })
   }
 
-  // ── 2. 企业配置层（EnterpriseLlmConfig, credentialOwner=enterprise）──
-  // Sprint-06A: 企业 AI 员工走这里，不走用户 BYOK
-  if (tenantId && capability === 'llm') {
+  // ── 2. 企业模型设置层（OrgModelConfig + ProviderCredential — BYOK 唯一权威）──
+  // SPRINT-IDENTITY-REALITY-FIX-01: 替换 EnterpriseLlmConfig 平台托管层
+  // 企业 AI 员工使用企业自己的 Key（企业资产，加密存储），平台不托管
+  const orgId = input?.organizationId || (tenantId && /^[0-9a-f-]{36}$/i.test(tenantId) ? tenantId : '')
+  if (orgId && capability === 'llm') {
+    let orgConfigPresent = false
+    try {
+      const orgConfig = await prisma.orgModelConfig.findFirst({
+        where: { organizationId: orgId as any, enabled: true, capability: 'llm' },
+        orderBy: { isDefault: 'desc' },
+      })
+      if (orgConfig) {
+        orgConfigPresent = true
+        const credential = await prisma.providerCredential.findUnique({
+          where: {
+            ownerType_organizationId_provider: {
+              ownerType: 'organization',
+              organizationId: orgId as any,
+              provider: orgConfig.provider,
+            },
+          },
+        })
+        if (credential?.status === 'active' && credential.encryptedKey) {
+          try {
+            const apiKey = decryptKey(credential.encryptedKey)
+            if (apiKey) {
+              return buildConfig({
+                userId,
+                executionId,
+                provider: orgConfig.provider,
+                model: orgConfig.model,
+                baseUrl: getBaseUrl(orgConfig.provider),
+                apiKey,
+                source: { model: 'org_byok', apiKey: 'org_byok', baseUrl: 'provider_registry' },
+              })
+            }
+          } catch (decryptErr) {
+            console.warn(`[resolveRuntimeConfig] ProviderCredential 解密失败 (org=${orgId.slice(0, 8)}, provider=${orgConfig.provider})`)
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[resolveRuntimeConfig] OrgModelConfig 读取失败:`, e)
+    }
+
+    // 企业已配置 OrgModelConfig 但 Key 缺失 → 显式缺失，不 fallback compat/个人/平台（G2 身份隔离）
+    if (orgConfigPresent) {
+      throw new Error(
+        `[EnterpriseLLM] 企业模型配置缺失 — 请企业管理员前往 企业工作台 → AI模型设置 配置模型与 API Key（企业提供算力，平台不托管企业 Key）`
+      )
+    }
+
+    // ── 2.5 EnterpriseLlmConfig（deprecated 兼容读取，仅存量企业且未迁移到 OrgModelConfig）──
     try {
       const enterpriseConfig = await prisma.enterpriseLlmConfig.findFirst({
         where: {
@@ -163,35 +223,19 @@ export async function resolveRuntimeConfig(
               baseUrl: enterpriseConfig.baseUrl || PROVIDER_BASE_URLS[enterpriseConfig.provider] || '',
               apiKey,
               source: {
-                model: 'enterprise_config',
-                apiKey: 'enterprise_config',
-                baseUrl: enterpriseConfig.baseUrl ? 'enterprise_config' : 'provider_registry',
+                model: 'compat_enterprise',
+                apiKey: 'compat_enterprise',
+                baseUrl: enterpriseConfig.baseUrl ? 'compat_enterprise' : 'provider_registry',
               },
             })
           }
         } catch (decryptErr) {
-          // Sprint-RECRUITMENT-REALITY-04 T01: 解密失败 → 标记健康状态
-          // Sprint-05 T01: 升级为阻断 —— 企业 AI 员工不允许静默 fallback 到平台/用户 key（身份隔离）
-          // 必须显式失败并提示重新配置，否则企业会误以为员工在工作，实际用的是别人的 key
-          console.warn(`[resolveRuntimeConfig] EnterpriseLlmConfig key 解密失败 (config=${enterpriseConfig.id.slice(0, 8)})`)
-          await prisma.enterpriseLlmConfig.update({
-            where: { id: enterpriseConfig.id },
-            data: {
-              healthStatus: 'decrypt_error',
-              lastHealthCheckAt: new Date(),
-              healthError: '运行时解密失败：CRYPTO_ENCRYPTION_KEY 变更或数据损坏，需重新配置 key',
-            },
-          }).catch(() => {}) // fire-and-forget 标记
-          throw new Error(
-            `[EnterpriseLLM] 模型密钥解密失败，AI 员工暂不可用。请在企业工作台重新配置模型密钥 (config=${enterpriseConfig.id.slice(0, 8)})`
-          )
+          // deprecated 兼容层：解密失败不阻断（新链路已走 OrgModelConfig）
+          console.warn(`[resolveRuntimeConfig] EnterpriseLlmConfig(deprecated) 解密失败 (config=${enterpriseConfig.id.slice(0, 8)})`)
         }
       }
     } catch (e) {
-      // Sprint-05 T01: 解密失败必须阻断（不允许静默 fallback 到平台/用户 key）
-      // 仅吞 DB 读取层错误；企业密钥错误继续冒泡给调用方
-      if (e instanceof Error && e.message.startsWith('[EnterpriseLLM]')) throw e
-      console.warn(`[resolveRuntimeConfig] EnterpriseLlmConfig 读取失败:`, e)
+      console.warn(`[resolveRuntimeConfig] EnterpriseLlmConfig(deprecated) 读取失败:`, e)
     }
   }
 

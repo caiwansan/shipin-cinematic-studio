@@ -16,15 +16,15 @@ function safeJson(s: string | null | undefined, fallback: any = null) {
 // ---------- AI Employee Reality Gate（六要素） ----------
 // G1 Identity / G2 Capability / G3 Runtime / G4 Model Policy / G5 Memory / G6 Usage
 // 六项全 PASS → 运行中；否则 → 配置不完整（不能假装上线）
-function gateFor(profile: any, instance: any, hermes: any, bindings: any[], taskCount: number) {
+function gateFor(profile: any, instance: any, hermes: any, bindings: any[], taskCount: number, orgModel?: any) {
   const g1 = !!(profile?.name && profile?.role)
   const g2 = (profile?.capabilities && safeJson(profile.capabilities, []).length > 0) || !!profile?.agentType
   const g3 = !!(instance && hermes)
-  // G4 Model Policy: 绑定存在 + 绑定启用 + 模型配置启用 + 健康(ok/untested 允许，failed/decrypt_error 不算)
-  // SPRINT-IDENTITY-REALITY-01 T05: 健康检查结果参与 Gate（key 失效 → 配置不完整，诚实显示）
-  const g4 = Array.isArray(bindings) && bindings.length > 0 && bindings.some(
-    (b: any) => b.enabled && b.llmConfig?.enabled && ['ok', 'untested'].includes(b.llmConfig?.healthStatus)
-  )
+  // SPRINT-IDENTITY-REALITY-FIX-01: G4 改为「企业模型设置（BYOK）」判定
+  // 企业 AI 员工使用企业自己的 Key（OrgModelConfig + ProviderCredential，企业资产）
+  // 平台不再持有企业 Key，不再以平台模型池/绑定作为判定依据
+  const g4 = !!orgModel && !!orgModel.provider && !!orgModel.model && orgModel.hasCredential &&
+    ['ok', 'untested'].includes(orgModel.healthStatus || 'untested')
   const g5 = !!instance?.namespace || !!hermes?.memoryNamespace
   const g6 = taskCount > 0
   const gates = { G1_Identity: g1, G2_Capability: g2, G3_Runtime: g3, G4_ModelPolicy: g4, G5_Memory: g5, G6_Usage: g6 }
@@ -41,31 +41,30 @@ export default async function adminAiEmployeesRoutes(fastify: FastifyInstance) {
   }
 
   // SPRINT-IDENTITY-REALITY-01 T04: 自动绑定（企业已配置 Key → 员工绑定，幂等）
-  // 仅绑定同 Organization 的模型配置（平台不托管 Key，Key 属于企业自配）
+  // SPRINT-IDENTITY-REALITY-FIX-01: auto-bind 退役 — AgentModelBinding 已 deprecated
+  // 企业 AI 员工模型来源 = OrgModelConfig + ProviderCredential（企业 BYOK，平台不托管 Key）
+  // 该端点仅保留为「企业模型设置覆盖检查」（幂等，不创建 binding）
   fastify.post('/api/admin/ai-employees/auto-bind', { preHandler: [requireAdmin] }, async () => {
     const profiles: any[] = await prisma.enterpriseAgentProfile.findMany({
       where: { organizationId: { not: null } },
       select: { id: true, name: true, organizationId: true },
     })
-    let bound = 0, skipped = 0
+    const orgIds = [...new Set(profiles.map(p => p.organizationId))] as string[]
+    const orgConfigs = orgIds.length ? await prisma.orgModelConfig.findMany({ where: { organizationId: { in: orgIds as any }, enabled: true } }) : []
+    const credentials = orgIds.length ? await prisma.providerCredential.findMany({ where: { ownerType: 'organization', organizationId: { in: orgIds as any } } }) : []
+    const cfgByOrg = new Map(orgConfigs.map(c => [c.organizationId, c]))
+    const credKey = (orgId: string, provider: string) => `${orgId}:${provider}`
+    const credByOrg = new Map(credentials.map(c => [credKey(c.organizationId as string, c.provider), c]))
+    let covered = 0, skipped = 0
     const details: string[] = []
     for (const p of profiles) {
-      const cfgs: any[] = await prisma.enterpriseLlmConfig.findMany({
-        where: { organizationId: p.organizationId, enabled: true, status: 'active' },
-        select: { id: true, provider: true, modelName: true, healthStatus: true },
-      })
-      if (cfgs.length === 0) { skipped++; continue }
-      const cfg = cfgs[0]
-      const existing = await prisma.agentModelBinding.findFirst({ where: { agentId: p.id, llmConfigId: cfg.id, taskType: 'general' } })
-      if (!existing) {
-        await prisma.agentModelBinding.create({
-          data: { tenantId: String(p.organizationId), agentId: p.id, llmConfigId: cfg.id, taskType: 'general', priority: 0, enabled: true },
-        })
-        bound++
-      }
-      details.push(`${p.name} → ${cfg.provider}/${cfg.modelName}[${cfg.healthStatus}]`)
+      const cfg = cfgByOrg.get(p.organizationId as string)
+      if (!cfg) { skipped++; continue }
+      const cred = credByOrg.get(credKey(p.organizationId, cfg.provider))
+      details.push(`${p.name} → ${cfg.provider}/${cfg.model}[${cred?.status === 'active' ? (cred.healthStatus || 'untested') : '无Key'}](企业BYOK)`)
+      covered++
     }
-    return { success: true, bound, skipped, details }
+    return { success: true, bound: 0, covered, skipped, details, note: 'AgentModelBinding 已 deprecated，企业模型来源 = OrgModelConfig + ProviderCredential（BYOK）' }
   })
 
   // SPRINT-IDENTITY-REALITY-01 T02: 套餐→模板授权校验（模板是否被套餐允许）
@@ -117,11 +116,37 @@ export default async function adminAiEmployeesRoutes(fastify: FastifyInstance) {
     })
     const totalMap = new Map(totalTasks.map(t => [t.agentInstanceId, t._count._all]))
 
+    // SPRINT-IDENTITY-REALITY-FIX-01: 企业模型设置（BYOK）—— OrgModelConfig + ProviderCredential
+    // 平台管理员不可见企业 Key（G4 验收）：只返回 provider/model/健康状态，绝不返回 key 明文
+    const orgIds = [...new Set(profiles.map(p => p.organizationId).filter(Boolean))] as string[]
+    const orgConfigs = orgIds.length ? await prisma.orgModelConfig.findMany({ where: { organizationId: { in: orgIds as any }, enabled: true } }) : []
+    const credentials = orgIds.length ? await prisma.providerCredential.findMany({ where: { ownerType: 'organization', organizationId: { in: orgIds as any } } }) : []
+    const orgConfigByOrg = new Map<string, any>()
+    for (const c of orgConfigs) {
+      if (!orgConfigByOrg.has(c.organizationId)) orgConfigByOrg.set(c.organizationId, c)
+    }
+    const credByOrgProvider = new Map<string, any>()
+    for (const c of credentials) credByOrgProvider.set(`${c.organizationId}:${c.provider}`, c)
+    const orgModelFor = (orgId: string | null | undefined) => {
+      if (!orgId) return null
+      const cfg = orgConfigByOrg.get(orgId)
+      if (!cfg) return null
+      const cred = credByOrgProvider.get(`${orgId}:${cfg.provider}`)
+      return {
+        provider: cfg.provider,
+        model: cfg.model,
+        fallbackModel: cfg.fallbackModel,
+        hasCredential: !!(cred && cred.status === 'active'),
+        healthStatus: cred?.healthStatus || 'untested',
+      }
+    }
+
     const employees = profiles.map(p => {
       const inst = instByEmployee.get(p.id)
       const h = inst ? hermesByInstance.get(inst.id) : undefined
       const today = inst ? taskMap.get(inst.id) : undefined
-      const gate = gateFor(p, inst, h, p.modelBindings, totalMap.get(inst?.id || '') || 0)
+      const orgModel = orgModelFor(p.organizationId)
+      const gate = gateFor(p, inst, h, p.modelBindings, totalMap.get(inst?.id || '') || 0, orgModel)
       return {
         id: p.id,
         name: p.name,
@@ -141,7 +166,15 @@ export default async function adminAiEmployeesRoutes(fastify: FastifyInstance) {
           tokens: (today._sum.tokenInput || 0) + (today._sum.tokenOutput || 0),
           cost: today._sum.cost || 0,
         } : { tasks: 0, tokens: 0, cost: 0 },
-        modelPolicy: p.modelBindings.map(b => ({ taskType: b.taskType, enabled: b.enabled, provider: b.llmConfig?.provider || null, modelName: b.llmConfig?.modelName || null, healthStatus: b.llmConfig?.healthStatus || null })),
+        // SPRINT-IDENTITY-REALITY-FIX-01: 模型来源 = 企业BYOK（不显示平台 Key / 平台模型池）
+        modelPolicy: orgModel ? [{
+          source: 'org_byok',
+          provider: orgModel.provider,
+          modelName: orgModel.model,
+          fallbackModel: orgModel.fallbackModel,
+          hasCredential: orgModel.hasCredential,
+          healthStatus: orgModel.healthStatus,
+        }] : [],
         memoryNamespace: h?.memoryNamespace || inst?.namespace || null,
         gate: { ...gate, label: gate.allPass ? '运行中' : '配置不完整' },
       }

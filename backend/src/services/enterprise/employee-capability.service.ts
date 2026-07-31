@@ -94,23 +94,35 @@ export class EmployeeCapabilityService {
    * @throws EntitlementGateError if gate blocks (use safely with try/catch)
    */
   async entitlementGate(tenantId: string, capabilityCodes: string[]): Promise<{ allowed: boolean; denied: string[] }> {
-    // 1. 通过 EnterpriseProfile 找到 organizationId
-    const profile = await prisma.enterpriseProfile.findUnique({
-      where: { organizationId: tenantId },
-      select: { organizationId: true },
-    })
-    if (!profile) {
-      return { allowed: false, denied: capabilityCodes }
-    }
-
-    // 2. 查找租户的 active subscription + entitlement
-    const sub = await prisma.enterpriseSubscription.findFirst({
+    // SPRINT-IDENTITY-REALITY-FIX-01: Organization 表 = 商业主体 SSOT（订阅/权益锚点）
+    // 优先直接按 organizationId 查订阅；enterprise_profile 仅作旧链路 fallback
+    let orgId: string = tenantId
+    let sub = await prisma.enterpriseSubscription.findFirst({
       where: {
-        organizationId: profile.organizationId,
+        organizationId: tenantId as any,
         status: { in: ['active', 'trial'] },
       },
       orderBy: { createdAt: 'desc' },
     })
+
+    if (!sub) {
+      // 旧链路 fallback：通过 EnterpriseProfile 找到 organizationId
+      const profile = await prisma.enterpriseProfile.findUnique({
+        where: { organizationId: tenantId },
+        select: { organizationId: true },
+      })
+      if (!profile) {
+        return { allowed: false, denied: capabilityCodes }
+      }
+      orgId = profile.organizationId
+      sub = await prisma.enterpriseSubscription.findFirst({
+        where: {
+          organizationId: orgId,
+          status: { in: ['active', 'trial'] },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
 
     if (!sub) {
       return { allowed: false, denied: capabilityCodes }

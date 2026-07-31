@@ -63,6 +63,8 @@ const subNavItems = [
   { label: '候选人', path: '/workspace/enterprise/candidates' },
   { label: '面试管理', path: '/workspace/enterprise/interview' },
   { label: 'AI 招聘团队', path: '/workspace/enterprise/ai-employees' },
+  // SPRINT-IDENTITY-REALITY-FIX-01: AI 模型设置（BYOK，企业资产）
+  { label: 'AI 模型设置', path: '/workspace/enterprise/model-settings' },
 ]
 
 function isActive(path: string): boolean {

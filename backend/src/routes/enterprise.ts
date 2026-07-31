@@ -12,6 +12,7 @@ import { enterpriseOnboarding } from '../services/enterprise/enterprise-onboardi
 import { entitlementService } from '../services/enterprise/enterprise-entitlement.service.js'
 import { tenantOwnershipGuard } from '../enterprise/reality/tenant-guard.js'
 import { getOrganizationIdForUser, resolveTenantIdForUser } from '../services/enterprise/organization/identity-bootstrap.service.js'
+import { modelResolver } from '../services/enterprise/model-resolver.service.js' // SPRINT-IDENTITY-REALITY-FIX-01: 企业 BYOK 模型解析
 
 export async function enterpriseRoutes(app: FastifyInstance) {
   // 所有企业接口都需要 JWT 认证
@@ -20,8 +21,85 @@ export async function enterpriseRoutes(app: FastifyInstance) {
   app.addHook('preHandler', tenantOwnershipGuard)
 
   // ============================================================
-  // 企业初始化向导
+  // SPRINT-IDENTITY-REALITY-FIX-01: 企业 AI 模型设置（BYOK，企业资产）
+  // 企业工作台 → 设置 → AI模型设置：Provider / 模型 / API Key / 测试连接 / 默认模型
+  // 平台不托管企业 Key：Key 加密存储于 provider_credential（owner=organization）
   // ============================================================
+
+  // 解析当前用户的 Organization（商业主体 SSOT）
+  const resolveUserOrganizationId = async (userId: string): Promise<string | null> => {
+    const owned = await prisma.organization.findMany({ where: { ownerId: userId }, orderBy: { createdAt: 'desc' } })
+    // 优先选择已配置模型的企业（用户实际使用的企业）
+    for (const o of owned) {
+      const cfg = await prisma.orgModelConfig.count({ where: { organizationId: o.id } })
+      if (cfg > 0) return o.id
+    }
+    // 其次选择有 AI 员工的企业（商业主体 SSOT 锚点）
+    for (const o of owned) {
+      const cnt = await prisma.enterpriseAgentProfile.count({ where: { organizationId: o.id } })
+      if (cnt > 0) return o.id
+    }
+    if (owned.length) return owned[0].id
+    const govOrgId = await getOrganizationIdForUser(userId)
+    if (govOrgId) {
+      const byGov = await prisma.organization.findFirst({ where: { OR: [{ id: govOrgId as any }, { slug: govOrgId }] } })
+      if (byGov) return byGov.id
+    }
+    return null
+  }
+
+  // GET /api/enterprise/model-config — 企业模型设置（绝不返回 Key 明文）
+  app.get('/api/enterprise/model-config', async (request) => {
+    const user = request.user as any
+    const organizationId = await resolveUserOrganizationId(user.id)
+    if (!organizationId) return { success: false, error: '企业不存在，请先创建企业' }
+    const settings = await modelResolver.getOrgModelSettings(organizationId)
+    return { success: true, data: { organizationId, settings } }
+  })
+
+  // PUT /api/enterprise/model-config — 保存企业模型设置（加密存储企业 Key）
+  app.put('/api/enterprise/model-config', async (request, reply) => {
+    const user = request.user as any
+    const body = request.body as any
+    const organizationId = await resolveUserOrganizationId(user.id)
+    if (!organizationId) return reply.status(400).send({ success: false, error: '企业不存在，请先创建企业' })
+    if (!body?.provider || !body?.model) return reply.status(400).send({ success: false, error: 'provider 和 model 必填' })
+    if (!body?.apiKey) return reply.status(400).send({ success: false, error: 'API Key 必填（昆仑镜不托管企业 Key，请使用企业自己的 Key）' })
+    try {
+      const result = await modelResolver.saveOrgModelSettings(organizationId, {
+        provider: body.provider,
+        model: body.model,
+        fallbackModel: body.fallbackModel,
+        apiKey: body.apiKey,
+        isDefault: body.isDefault !== false,
+      })
+      return { success: true, data: result }
+    } catch (e: any) {
+      return reply.status(500).send({ success: false, error: e.message })
+    }
+  })
+
+  // POST /api/enterprise/model-config/test — 测试连接（真实调用验证企业 Key）
+  app.post('/api/enterprise/model-config/test', async (request, reply) => {
+    const user = request.user as any
+    const body = request.body as any
+    const organizationId = await resolveUserOrganizationId(user.id)
+    if (!organizationId) return reply.status(400).send({ success: false, error: '企业不存在，请先创建企业' })
+    if (!body?.provider || !body?.model) return reply.status(400).send({ success: false, error: 'provider 和 model 必填' })
+    const result = await modelResolver.testConnection(organizationId, body.provider, body.model, body.apiKey)
+    return { success: result.ok, data: result }
+  })
+
+  // DELETE /api/enterprise/model-config/:provider — 删除企业模型设置（G2：删 Key → AI 员工停止运行）
+  app.delete('/api/enterprise/model-config/:provider', async (request, reply) => {
+    const user = request.user as any
+    const { provider } = request.params as any
+    const organizationId = await resolveUserOrganizationId(user.id)
+    if (!organizationId) return reply.status(400).send({ success: false, error: '企业不存在，请先创建企业' })
+    await prisma.orgModelConfig.deleteMany({ where: { organizationId: organizationId as any, provider } })
+    await prisma.providerCredential.deleteMany({ where: { ownerType: 'organization', organizationId: organizationId as any, provider } })
+    return { success: true, message: `已删除 ${provider} 模型配置，AI 员工将停止运行（需重新配置后才能继续）` }
+  })
 
   // POST /api/enterprise — 创建企业并初始化 AI 部门
   app.post('/api/enterprise', async (request, reply) => {

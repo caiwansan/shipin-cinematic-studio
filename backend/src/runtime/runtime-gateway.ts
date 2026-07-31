@@ -48,6 +48,8 @@ export async function executeViaGateway(
     userId?: string
     provider?: string
     model?: string
+    apiKey?: string    // SPRINT-IDENTITY-REALITY-FIX-01: 企业模型显式覆盖（Runtime Input Override）
+    baseUrl?: string   // SPRINT-IDENTITY-REALITY-FIX-01
     tenantId?: string      // Sprint-06A: 企业 ID → EnterpriseLlmConfig
     businessType?: string  // Sprint-06A: 平台业务类型 → admin-global-config
   }
@@ -56,6 +58,8 @@ export async function executeViaGateway(
   const config = await resolveRuntimeConfig(capability, {
     model: options?.model || input.model as string,
     provider: options?.provider || input.provider as string,
+    apiKey: options?.apiKey,
+    baseUrl: options?.baseUrl,
     userId: options?.userId,
     tenantId: options?.tenantId,
     businessType: options?.businessType,

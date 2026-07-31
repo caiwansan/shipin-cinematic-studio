@@ -583,42 +583,52 @@ export class EnterpriseAgentRuntimeService {
         // 不阻断 — legacy 兼容
       }
 
-      // 3. Sprint-08G: 模型配置不再强依赖 EnterpriseLlmConfig
-      // 企业 AI 员工统一走 UserModelConfigV2 BYOK 链路
-      // 尝试读取 EnterpriseLlmConfig（兼容旧数据），不存在则 fallback
-      let enterpriseLlm = await prisma.enterpriseLlmConfig.findFirst({
-        where: { tenantId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
-      });
+      // 3. SPRINT-IDENTITY-REALITY-FIX-01: 企业 AI 员工模型解析（BYOK 唯一原则）
+      // 昆仑镜 = AI 员工操作系统：企业提供算力，平台不托管企业 Key。
+      // 解析链: Runtime Input Override → OrgModelConfig + ProviderCredential（企业资产）→ EnterpriseLlmConfig（deprecated 兼容）
+      // 无企业配置 → 显式阻断（G2：提示「企业模型配置缺失」，不是「平台模型错误」）
+      const { modelResolver } = await import('./model-resolver.service.js')
+      const resolvedModel = organizationId
+        ? await modelResolver.resolveEnterpriseModel({ organizationId, tenantId })
+        : null
 
-      // Sprint-05 T01: Model Health Gate — AI 员工启动前健康检查
-      // unhealthy (failed/decrypt_error/disabled) → 阻断 + 明确提示，不允许静默使用平台/用户 key
-      if (enterpriseLlm) {
-        const hs = enterpriseLlm.healthStatus;
-        if (hs === 'failed' || hs === 'decrypt_error' || hs === 'disabled') {
-          const reason =
-            hs === 'decrypt_error'
-              ? '模型密钥解密失败（CRYPTO_ENCRYPTION_KEY 变更或数据损坏）'
-              : hs === 'failed'
-                ? '模型密钥已失效（认证失败/余额不足/模型不存在）'
-                : '模型配置已停用';
-          const detail = enterpriseLlm.healthError ? ` — ${enterpriseLlm.healthError}` : '';
-          await agentAuditService.log({
-            tenantId, agentId: profileId, taskId,
-            action: 'execution.blocked_model_health',
-            resource: 'enterprise_llm_config',
-            resourceId: enterpriseLlm.id,
-            metadata: { healthStatus: hs, error: enterpriseLlm.healthError || '', provider: enterpriseLlm.provider, model: enterpriseLlm.modelName },
-          });
-          return this.errorResult(`MODEL_HEALTH_BLOCKED: ${reason}${detail} — 请在企业工作台重新配置模型密钥后重试`, startTime, taskId);
-        }
+      if (!resolvedModel) {
+        await agentAuditService.log({
+          tenantId, agentId: profileId, taskId,
+          action: 'execution.blocked_model_config_missing',
+          resource: 'org_model_config',
+          resourceId: instance.id,
+          metadata: { reason: 'enterprise_model_config_missing', organizationId },
+        })
+        return this.errorResult(
+          `ENTERPRISE_MODEL_CONFIG_MISSING: 企业模型配置缺失 — 请企业管理员前往 企业工作台 → AI模型设置 配置模型与 API Key（企业提供算力，平台不托管企业 Key）`,
+          startTime, taskId,
+        )
+      }
+
+      if (resolvedModel.healthStatus === 'failed' || resolvedModel.healthStatus === 'decrypt_error' || resolvedModel.healthStatus === 'disabled') {
+        const reason =
+          resolvedModel.healthStatus === 'decrypt_error'
+            ? '企业模型密钥解密失败（CRYPTO_ENCRYPTION_KEY 变更或数据损坏）'
+            : resolvedModel.healthStatus === 'failed'
+              ? '企业模型密钥已失效（认证失败/余额不足/模型不存在）'
+              : '企业模型配置已停用'
+        await agentAuditService.log({
+          tenantId, agentId: profileId, taskId,
+          action: 'execution.blocked_model_health',
+          resource: 'provider_credential',
+          resourceId: resolvedModel.credentialId || instance.id,
+          metadata: { healthStatus: resolvedModel.healthStatus, provider: resolvedModel.provider, model: resolvedModel.model },
+        })
+        return this.errorResult(`MODEL_HEALTH_BLOCKED: ${reason} — 请在企业工作台重新配置模型密钥后重试`, startTime, taskId)
       }
 
       // 4. Sprint-08G: 构建 System Prompt
       const systemPrompt = getSystemPrompt(profile.agentType);
 
       // Timeline: Runtime Started
-      const modelSource = enterpriseLlm ? MODEL_SOURCE_ENTERPRISE : MODEL_SOURCE_USER;
-      const modelLabel = enterpriseLlm ? `${enterpriseLlm.provider}/${enterpriseLlm.modelName}` : 'UserModelConfigV2 BYOK';
+      const modelSource = resolvedModel.source === 'org_byok' ? 'org_byok' : resolvedModel.source === 'compat_enterprise' ? 'compat_enterprise' : 'input'
+      const modelLabel = `${resolvedModel.sourceLabel} ${resolvedModel.provider}/${resolvedModel.model}`
       await agentAuditService.log({
         tenantId, agentId: profileId, taskId,
         action: 'runtime.started',
@@ -627,27 +637,29 @@ export class EnterpriseAgentRuntimeService {
         metadata: { modelSource, modelLabel },
       });
 
-      // 5. Sprint-08G: 通过 executeViaGateway 统一调用 LLM
-      // 不再强制注入 provider/model，让 resolveRuntimeConfig 自然解析
-      // 优先级: 输入层 > EnterpriseLlmConfig(如有) > 平台配置 > UserModelConfigV2 > 系统默认
+      // 5. SPRINT-IDENTITY-REALITY-FIX-01: 显式传入企业模型（Runtime Input Override）
+      // resolveRuntimeConfig 第 1 层命中 → 不再经过 EnterpriseLlmConfig 平台层
       // Timeline: LLM Request Sent
       await agentAuditService.log({
         tenantId, agentId: profileId, taskId,
         action: 'llm.request_sent',
         resource: 'llm',
-        resourceId: enterpriseLlm?.id || instance.id,
+        resourceId: resolvedModel.configId || instance.id,
         metadata: { modelSource, modelLabel, systemPromptLen: systemPrompt.length, instructionLen: instruction.length },
       });
 
       const { executeViaGateway } = await import('../../runtime/runtime-gateway.js');
-      // Sprint-08G: 只传 userId + tenantId，不传 provider/model
-      // Sprint-09B-2B: businessType 从调用方透传，默认 recruitment
-      // Sprint-10 T03: 传入 agentInstanceId + memoryNamespace 用于 context 链路追踪
+      // 企业模型显式覆盖（Input Override）：provider/model/apiKey 从企业设置解析，不落平台表
       const bt = businessType || 'recruitment';
       const gatewayCtx: Record<string, any> = {
         userId,
         tenantId,
         businessType: bt,
+        model: resolvedModel.model,
+        provider: resolvedModel.provider,
+        apiKey: resolvedModel.apiKey,
+        baseUrl: resolvedModel.baseUrl || undefined,
+        modelSource,
       };
       if (binding) {
         gatewayCtx.agentInstanceId = instance.id;
@@ -670,33 +682,38 @@ export class EnterpriseAgentRuntimeService {
         tenantId, agentId: profileId, taskId,
         action: 'llm.response_received',
         resource: 'llm',
-        resourceId: enterpriseLlm?.id || instance.id,
+        resourceId: resolvedModel.configId || instance.id,
         metadata: { modelSource, outputLen: output.length },
       });
 
       // 7. 估算 Token 用量（Sprint-06A: 优先使用 Gateway 返回的 totalTokens）
       const tokenInput = gatewayTotalTokens > 0 ? Math.ceil(gatewayTotalTokens * 0.6) : Math.ceil((systemPrompt.length + instruction.length) / 4);
       const tokenOutput = gatewayTotalTokens > 0 ? Math.ceil(gatewayTotalTokens * 0.4) : Math.ceil(output.length / 4);
-      const providerForCost = enterpriseLlm?.provider || 'volcengine';
+      const providerForCost = resolvedModel.provider || 'volcengine';
       const cost = this.estimateCost(providerForCost, tokenInput, tokenOutput);
 
-      // Sprint-06A: 写入 usage_logs（统一 Token 统计）
+      // Sprint-06A: 写入 usage_logs（统一 Token 统计）— G5: 成本归属企业 + AI 员工维度 + 实际模型
       try {
         await prisma.usageLog.create({
           data: {
             userId,
             tenantId,
+            organizationId: organizationId ? (organizationId as any) : null,
+            agentId: profileId,
             taskId,
             cost,
             taskType: `enterprise_agent_${taskType}`,
-            provider: enterpriseLlm?.provider || 'user_byok',
+            provider: resolvedModel.provider,
+            model: resolvedModel.model,
             tokens: JSON.stringify({
               input: tokenInput,
               output: tokenOutput,
               total: tokenInput + tokenOutput,
-              source: enterpriseLlm ? 'enterprise_config' : 'user_config',
+              source: resolvedModel.source,
               businessType: bt,
               tenantId,
+              organizationId,
+              agentId: profileId,
             }),
             isPlatform: false,
           },
@@ -759,7 +776,7 @@ export class EnterpriseAgentRuntimeService {
         action: 'task_executed',
         resource: 'enterprise_agent_task',
         resourceId: taskId,
-        llmConfigId: enterpriseLlm?.id || undefined,
+        llmConfigId: resolvedModel.configId || undefined,
         tokenUsage: tokenInput + tokenOutput,
         cost,
         durationMs,
@@ -827,8 +844,8 @@ export class EnterpriseAgentRuntimeService {
             tokenOutput,
             cost,
             durationMs,
-            provider: enterpriseLlm?.provider || 'user_byok',
-            model: enterpriseLlm?.modelName || 'user_config',
+            provider: resolvedModel.provider,
+            model: resolvedModel.model,
           }]),
           occurredAt: new Date(),
           verifiedAt: new Date(),

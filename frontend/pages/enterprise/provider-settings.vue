@@ -1,21 +1,21 @@
 <!-- pages/enterprise/provider-settings.vue -->
-<!-- Phase 3.1.3-B — Provider Credential Management UI -->
-<!-- 企业管理员在此配置 AI Provider API Key -->
+<!-- SPRINT-IDENTITY-REALITY-FIX-01 — 企业 AI 模型设置（BYOK） -->
+<!-- 昆仑镜 = AI 员工操作系统：企业提供算力，平台不托管企业 Key -->
 
 <template>
   <div class="provider-settings space-y-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-xl font-bold text-white">AI 模型与供应商</h1>
-        <p class="text-sm text-gray-400 mt-1">配置企业 AI Provider，加密存储，多模型切换</p>
+        <h1 class="text-xl font-bold text-white">AI 模型设置</h1>
+        <p class="text-sm text-gray-400 mt-1">配置企业自己的大模型（BYOK）— Key 属企业资产，加密存储，平台不可见</p>
       </div>
       <button
         class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition flex items-center gap-2"
         @click="showAddModal = true"
       >
         <span>+</span>
-        <span>添加 Provider</span>
+        <span>添加模型配置</span>
       </button>
     </div>
 
@@ -288,6 +288,7 @@ const healthStatus = ref<any>(null)
 const newProvider = reactive({
   provider: 'deepseek',
   modelName: 'deepseek-v4-flash',
+  fallbackModel: '',
   apiKey: '',
   baseUrl: '',
   isDefault: true,
@@ -396,10 +397,17 @@ async function apiFetch(path: string, options: any = {}) {
 async function loadCredentials() {
   loading.value = true
   try {
-    const res = await apiFetch('/api/provider-management/credentials')
+    // SPRINT-IDENTITY-REALITY-FIX-01: 企业模型设置（BYOK）— 企业资产，平台不托管 Key
+    const res = await apiFetch('/api/enterprise/model-config')
     if (res.ok) {
       const json = await res.json()
-      credentials.value = json.data || []
+      credentials.value = (json.data?.settings || []).map((s: any) => ({
+        id: s.id,
+        provider: s.provider,
+        modelName: s.model,
+        healthStatus: s.hasCredential ? (s.healthStatus === 'ok' ? 'healthy' : s.healthStatus === 'failed' ? 'invalid_key' : 'unknown') : 'missing_key',
+        isDefault: s.isDefault,
+      }))
     }
   } catch (e) {
     console.error('Failed to load credentials:', e)
@@ -410,31 +418,15 @@ async function loadCredentials() {
 
 async function loadAgents() {
   try {
-    const res = await apiFetch('/api/agent-runtime/agents')
+    const res = await apiFetch('/api/enterprise/agent-profiles')
     if (res.ok) {
       const json = await res.json()
-      const agentList = (json.data || json || []).slice(0, 10)
-      
-      // Fetch binding for each agent
-      agents.value = await Promise.all(
-        agentList.map(async (a: any) => {
-          try {
-            const bRes = await apiFetch(`/api/provider-management/bindings/${a.id}`)
-            const bJson = bRes.ok ? await bRes.json() : null
-            return {
-              id: a.id,
-              name: a.name,
-              role: a.role,
-              binding: bJson?.data ? {
-                provider: bJson.data.provider,
-                modelName: bJson.data.modelName,
-              } : undefined,
-            }
-          } catch {
-            return { id: a.id, name: a.name, role: a.role }
-          }
-        })
-      )
+      const list = json.data || json || []
+      agents.value = (Array.isArray(list) ? list : []).slice(0, 10).map((a: any) => ({
+        id: a.id,
+        name: a.name,
+        role: a.role,
+      }))
     }
   } catch (e) {
     console.error('Failed to load agents:', e)
@@ -445,21 +437,26 @@ async function createCredential() {
   creating.value = true
   addError.value = ''
   try {
-    const res = await apiFetch('/api/provider-management/credentials', {
-      method: 'POST',
-      body: JSON.stringify(newProvider),
+    // SPRINT-IDENTITY-REALITY-FIX-01: 保存企业模型设置（Key 加密存储为企业资产）
+    const res = await apiFetch('/api/enterprise/model-config', {
+      method: 'PUT',
+      body: JSON.stringify({
+        provider: newProvider.provider,
+        model: newProvider.modelName,
+        fallbackModel: newProvider.fallbackModel,
+        apiKey: newProvider.apiKey,
+        isDefault: newProvider.isDefault,
+      }),
     })
     const json = await res.json()
     if (json.success) {
       showAddModal.value = false
-      // Reset form
       newProvider.apiKey = ''
       newProvider.modelName = 'deepseek-v4-flash'
       newProvider.baseUrl = ''
       newProvider.isDefault = true
       showApiKey.value = false
       await loadCredentials()
-      // Auto-check health
       await checkHealth(newProvider.provider)
     } else {
       addError.value = json.error || '创建失败'
@@ -474,15 +471,21 @@ async function createCredential() {
 async function checkHealth(provider: string) {
   checkingHealth.value = true
   try {
-    const res = await apiFetch(`/api/provider-management/health/${provider}`)
+    // SPRINT-IDENTITY-REALITY-FIX-01: 测试连接（真实调用验证企业 Key）
+    const cred = credentials.value.find(c => c.provider === provider)
+    const res = await apiFetch('/api/enterprise/model-config/test', {
+      method: 'POST',
+      body: JSON.stringify({ provider, model: newProvider.modelName || cred?.modelName || 'deepseek-v4-flash' }),
+    })
     if (res.ok) {
       const json = await res.json()
-      healthStatus.value = json.data
-      // Update the credential's health status in the list
-      const cred = credentials.value.find(c => c.provider === provider)
-      if (cred) {
-        cred.healthStatus = json.data.status
+      const ok = json.success
+      healthStatus.value = {
+        status: ok ? 'healthy' : 'invalid_key',
+        message: ok ? `连接成功（${json.data?.latencyMs}ms）` : (json.data?.error || '连接失败'),
       }
+      const c = credentials.value.find(c => c.provider === provider)
+      if (c) c.healthStatus = ok ? 'healthy' : 'invalid_key'
     }
   } catch (e) {
     console.error('Health check failed:', e)
@@ -492,14 +495,16 @@ async function checkHealth(provider: string) {
 }
 
 async function setDefault(id: string) {
-  // TODO: Implement set default API
+  // 默认模型由保存时 isDefault 指定（OrgModelConfig 唯一权威）
   await loadCredentials()
 }
 
 async function revokeCredential(id: string) {
-  if (!confirm('确定要吊销此 Provider 凭证吗？绑定此凭证的 Agent 将无法执行任务。')) return
+  if (!confirm('确定要删除此模型配置吗？删除后 AI 员工将停止运行（G2：企业模型配置缺失）。')) return
   try {
-    const res = await apiFetch(`/api/provider-management/credentials/${id}`, { method: 'DELETE' })
+    const cred = credentials.value.find(c => c.id === id)
+    if (!cred) return
+    const res = await apiFetch(`/api/enterprise/model-config/${cred.provider}`, { method: 'DELETE' })
     if (res.ok) {
       await loadCredentials()
     }
@@ -509,7 +514,6 @@ async function revokeCredential(id: string) {
 }
 
 function openBindingModal(_agent: Agent) {
-  // TODO: Open binding modal
   showAddModal.value = true
 }
 

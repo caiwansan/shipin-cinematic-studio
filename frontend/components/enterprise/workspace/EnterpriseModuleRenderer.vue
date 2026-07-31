@@ -29,6 +29,8 @@ const moduleMap: Record<string, any> = {
   'growth': defineAsyncComponent(() => import('./modules/GrowthModule.vue')),
   'governance': defineAsyncComponent(() => import('./modules/GovernanceModule.vue')),
   'settings': defineAsyncComponent(() => import('./modules/SettingsModule.vue')),
+  // SPRINT-IDENTITY-REALITY-FIX-01: AI 模型设置（BYOK）
+  'model-settings': defineAsyncComponent(() => import('./modules/ProviderSettingsModule.vue')),
 }
 
 const moduleComponent = computed(() => moduleMap[props.module] || moduleMap['dashboard'])

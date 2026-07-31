@@ -33,6 +33,7 @@ Gate：AI Employee Reality Gate G1-G6，六项全 PASS 才显示「运行中」
                 <th class="py-3 px-2 font-normal">所属业务</th>
                 <th class="py-3 px-2 font-normal">企业</th>
                 <th class="py-3 px-2 font-normal">状态</th>
+                <th class="py-3 px-2 font-normal">模型来源</th>
                 <th class="py-3 px-2 font-normal">六要素</th>
                 <th class="py-3 px-2 font-normal">今日任务</th>
                 <th class="py-3 px-2 font-normal">今日成本</th>
@@ -54,6 +55,17 @@ Gate：AI Employee Reality Gate G1-G6，六项全 PASS 才显示「运行中」
                     {{ e.gate.allPass ? '● 运行中' : '◐ 配置不完整' }}
                   </span>
                 </td>
+                <!-- SPRINT-IDENTITY-REALITY-FIX-01: 模型来源 = 企业BYOK（不显示平台 Key / 平台模型池） -->
+                <td class="py-3 px-2">
+                  <template v-if="e.modelPolicy && e.modelPolicy.length">
+                    <p class="text-[10px] text-cyan-400">企业BYOK · {{ e.modelPolicy[0].provider }}/{{ e.modelPolicy[0].modelName }}</p>
+                    <p class="text-[10px] text-gray-600">{{ e.modelPolicy[0].healthStatus === 'ok' ? '🟢 可运行' : e.modelPolicy[0].healthStatus === 'failed' ? '🔴 Key 失效' : '🟡 未检测' }}</p>
+                  </template>
+                  <template v-else>
+                    <p class="text-[10px] text-amber-400">⚠️ 等待企业配置模型</p>
+                    <p class="text-[10px] text-gray-600">企业工作台 → AI模型设置</p>
+                  </template>
+                </td>
                 <td class="py-3 px-2">
                   <span v-if="e.gate.allPass" class="text-green-400 text-[10px]">G1-G6 全 PASS</span>
                   <span v-else class="text-amber-400 text-[10px]" :title="e.gate.missing.join(', ')">{{ e.gate.missing.join(' ') }}</span>
@@ -61,7 +73,7 @@ Gate：AI Employee Reality Gate G1-G6，六项全 PASS 才显示「运行中」
                 <td class="py-3 px-2 text-white/80">{{ e.today.tasks }}</td>
                 <td class="py-3 px-2 text-gray-300">¥{{ e.today.cost.toFixed(3) }}</td>
               </tr>
-              <tr v-if="!employees.length"><td colspan="8" class="py-10 text-center text-gray-600 text-[12px]">暂无 AI 员工</td></tr>
+              <tr v-if="!employees.length"><td colspan="9" class="py-10 text-center text-gray-600 text-[12px]">暂无 AI 员工</td></tr>
             </tbody>
           </table>
         </div>

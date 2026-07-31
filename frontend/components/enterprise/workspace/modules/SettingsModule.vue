@@ -38,6 +38,32 @@
       </div>
     </section>
 
+    <!-- SPRINT-IDENTITY-REALITY-FIX-01: AI 模型设置（BYOK）入口 -->
+    <section class="section model-section" @click="goToModelSettings">
+      <div class="billing-header">
+        <div>
+          <h2 class="section-title">🤖 AI 模型设置</h2>
+          <p class="billing-subtitle">配置企业自己的大模型 Key（BYOK）— 企业提供算力，昆仑镜管理 AI 员工</p>
+        </div>
+        <span class="billing-arrow">→</span>
+      </div>
+      <div class="billing-summary" v-if="!modelLoading">
+        <div class="billing-stat">
+          <span class="billing-stat-label">模型来源</span>
+          <span class="billing-stat-value">{{ modelSummary }}</span>
+        </div>
+        <div class="billing-stat">
+          <span class="billing-stat-label">状态</span>
+          <span :class="['billing-status-badge', modelStatus]">{{ modelStatusLabel }}</span>
+        </div>
+        <div class="billing-stat">
+          <span class="billing-stat-label">Provider</span>
+          <span class="billing-stat-value">{{ modelProvider || '—' }}</span>
+        </div>
+      </div>
+      <div class="billing-loading" v-else><span class="loading-text">加载中…</span></div>
+    </section>
+
     <section class="section">
       <h2 class="section-title">成员管理</h2>
       <EmptyState icon="👥" title="暂无成员数据" description="管理企业成员权限，分配数字员工角色。" helper-text="支持 SSO、SCIM、API Key 管理" />
@@ -56,6 +82,11 @@ const subscriptionStatus = ref('')
 const maxEmployees = ref(0)
 const agentCount = ref(0)
 const billingLoading = ref(true)
+const modelLoading = ref(true)
+const modelSummary = ref('等待企业配置模型')
+const modelProvider = ref('')
+const modelStatus = ref('')
+const modelStatusLabel = ref('⚠️ 未配置')
 
 const statusLabel = computed(() => {
   const map: Record<string, string> = {
@@ -100,9 +131,46 @@ function goToBilling() {
   window.location.href = '/workspace/enterprise/billing'
 }
 
+function goToModelSettings() {
+  window.location.href = '/workspace/enterprise/model-settings'
+}
+
+async function loadModelSettings() {
+  try {
+    const res = await fetch('/api/enterprise/model-config')
+    if (!res.ok) return
+    const json = await res.json()
+    const settings = json?.data?.settings || []
+    if (!settings.length) {
+      modelSummary.value = '未配置（员工不可运行）'
+      modelStatus.value = 'missing'
+      modelStatusLabel.value = '⚠️ 未配置'
+      return
+    }
+    const s = settings[0]
+    modelSummary.value = s.hasCredential ? `${s.provider}/${s.model}` : 'Key 缺失'
+    modelProvider.value = s.provider
+    if (s.healthStatus === 'ok') {
+      modelStatus.value = 'active'
+      modelStatusLabel.value = '✅ 可运行'
+    } else if (s.healthStatus === 'failed') {
+      modelStatus.value = 'expired'
+      modelStatusLabel.value = '🔴 Key 失效'
+    } else {
+      modelStatus.value = 'trialing'
+      modelStatusLabel.value = '🟡 未检测'
+    }
+  } catch {
+    // 静默
+  } finally {
+    modelLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadBillingInfo()
   loadAgentCount()
+  loadModelSettings()
   /* TODO: 接入 Org Settings API 获取 orgName/apiKey */
 })
 </script>
@@ -116,6 +184,12 @@ onMounted(() => {
   padding: var(--space-xl);
 }
 .billing-section { cursor: pointer; transition: all 0.2s; }
+.model-section { cursor: pointer; transition: all 0.2s; }
+.model-section:hover {
+  border-color: var(--color-intelligence);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
 .billing-section:hover {
   border-color: var(--color-intelligence);
   background: var(--color-bg-hover);
