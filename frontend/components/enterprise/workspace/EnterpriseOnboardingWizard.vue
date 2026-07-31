@@ -275,17 +275,24 @@ async function handleComplete() {
       }).catch(() => {})
     }
 
-    // Step 2: 保存 AI Provider
+    // Step 2: 保存 AI 模型设置（KMKI BYOK：企业 Key → OrgModelConfig + ProviderCredential，平台不托管）
+    // 旧端点 /api/enterprise-foundation/ai-providers 写 AIProviderConfig 死表 → 已 deprecated
     if (selectedProvider.value && apiKey.value) {
-      await fetch('/api/enterprise-foundation/ai-providers', {
-        method: 'POST',
+      const modelName = selectedModel.value || 'deepseek-v4-flash'
+      const res = await fetch('/api/enterprise/model-config', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: selectedProvider.value,
+          model: modelName,
           apiKey: apiKey.value,
-          model: selectedModel.value,
+          isDefault: true,
         }),
-      }).catch(() => {})
+      })
+      const json = await res.json().catch(() => ({ success: false }))
+      if (!json?.success) {
+        console.error('[Onboarding] 模型配置保存失败:', json?.error)
+      }
     }
 
     // 通知完成
@@ -314,17 +321,17 @@ async function loadActivationStatus() {
 async function testConnection() {
   testResult.value = null
   try {
-    const res = await fetch('/api/enterprise-foundation/ai-providers/test', {
+    const res = await fetch('/api/enterprise/model-config/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         provider: selectedProvider.value,
+        model: selectedModel.value || 'deepseek-v4-flash',
         apiKey: apiKey.value,
-        model: selectedModel.value,
       }),
     })
     const data = await res.json()
-    testResult.value = { success: data.code === 0, message: data.message }
+    testResult.value = { success: data?.success === true, message: data?.data?.message || data?.error || '连接失败' }
   } catch (e: any) {
     testResult.value = { success: false, message: e.message || '连接失败' }
   }
@@ -334,13 +341,15 @@ onMounted(async () => {
   // 加载激活状态
   await loadActivationStatus()
 
-  // 加载支持的模型提供商
+  // 加载支持的模型提供商（KMKI: Provider Registry 平台层信息，前端内置，不依赖旧 enterprise-foundation 端点）
   try {
-    const res = await fetch('/api/enterprise-foundation/ai-providers/supported')
-    if (res.ok) {
-      const data = await res.json()
-      supportedProviders.value = data.data || []
-    }
+    supportedProviders.value = [
+      { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-chat', 'deepseek-reasoner', 'deepseek-v4-flash'] },
+      { id: 'openai', name: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
+      { id: 'qwen', name: '通义千问', models: ['qwen-max', 'qwen-plus'] },
+      { id: 'volcengine', name: '火山引擎', models: ['doubao-pro-32k', 'doubao-lite-32k'] },
+      { id: 'claude', name: 'Claude', models: ['claude-3-5-sonnet', 'claude-3-haiku'] },
+    ]
   } catch (e) {
     supportedProviders.value = [
       { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-v4-flash', 'deepseek-v4-pro'] },

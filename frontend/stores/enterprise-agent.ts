@@ -277,13 +277,20 @@ export const useEnterpriseAgentStore = defineStore('enterpriseAgent', () => {
 
   // ═══════════════════════════════════════════════════════════
   // Bind Model to Agent
+  // ⚠️ KMKI AUDIT-02: 旧 provider-management 死表 API（enterpriseProviderCredential 表不存在）
+  // 已改为走 /api/enterprise/model-config（OrgModelConfig + ProviderCredential 唯一权威）
   // ═══════════════════════════════════════════════════════════
   async function bindModel(payload: BindModelPayload): Promise<boolean> {
     try {
-      const res = await fetch('/api/provider-management/bindings', {
-        method: 'POST',
+      const res = await fetch('/api/enterprise/model-config', {
+        method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          provider: payload.provider,
+          model: payload.modelName,
+          apiKey: '', // 不覆盖已存 Key（仅更新模型选择）—— 若需换 Key 请走 AI模型设置页
+          isDefault: false,
+        }),
       })
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}))
@@ -303,16 +310,26 @@ export const useEnterpriseAgentStore = defineStore('enterpriseAgent', () => {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // Get Agent Model Binding
+  // Get Agent Model Binding（KMKI: 从统一模型设置读取，不再读死表）
   // ═══════════════════════════════════════════════════════════
   async function getAgentBinding(agentId: string): Promise<AgentModelBinding | null> {
     try {
-      const res = await fetch(`/api/provider-management/bindings/${agentId}`, {
+      const res = await fetch('/api/enterprise/model-config', {
         headers: getAuthHeaders(),
       })
       if (!res.ok) throw new Error(`API ${res.status}`)
       const json = await res.json()
-      return json.data || null
+      const settings: any[] = json?.data?.settings || []
+      const s = settings.find((x: any) => x.id === agentId) || settings[0] || null
+      if (!s) return null
+      return {
+        id: s.id,
+        agentId,
+        credentialId: s.credentialId || '',
+        provider: s.provider,
+        modelName: s.model,
+        enabled: !!s.isDefault || !!s.hasCredential,
+      }
     } catch {
       return null
     }

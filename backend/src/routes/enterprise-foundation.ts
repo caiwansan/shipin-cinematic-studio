@@ -79,52 +79,41 @@ export async function enterpriseFoundationRoutes(app: FastifyInstance) {
   })
 
   // ─── AI Provider Config ─────────────────────────────────
+  // ⚠️ DEPRECATED（SPRINT-KMKI-AUDIT-02）：AIProviderConfig 表违反 KMKI AI Runtime Principle（双轨断裂）
+  // 唯一权威：/api/enterprise/model-config（OrgModelConfig + ProviderCredential，企业 BYOK）
+  // 写操作全部拒绝（防止死表继续写入）；读操作仅兼容存量
 
   // List AI providers
   app.get('/api/enterprise-foundation/:orgId/ai-providers', async (req, reply) => {
     try {
       const { orgId } = req.params as { orgId: string }
       const providers = await aiProviderConfigService.listForOrganization(orgId)
-      return { success: true, data: providers }
+      return { success: true, data: providers, deprecated: true, hint: '请使用 /api/enterprise/model-config' }
     } catch (err: any) {
       reply.status(500).send({ success: false, error: err.message })
     }
   })
 
-  // Add AI provider
-  app.post('/api/enterprise-foundation/:orgId/ai-providers', async (req, reply) => {
-    try {
-      const { orgId } = req.params as { orgId: string }
-      const config = await aiProviderConfigService.create({ organizationId: orgId, ...req.body as any })
-      return { success: true, data: config }
-    } catch (err: any) {
-      reply.status(500).send({ success: false, error: err.message })
-    }
+  // Add AI provider — DEPRECATED: 拒绝写入（旧前端会得到明确指引）
+  app.post('/api/enterprise-foundation/:orgId/ai-providers', async (_req, reply) => {
+    return reply.status(410).send({
+      success: false,
+      error: '该接口已停用（KMKI AI Runtime Principle：平台不托管企业 Key）。请改用 PUT /api/enterprise/model-config 保存企业模型设置。',
+      deprecated: true,
+    })
   })
 
-  // Toggle provider
-  app.patch('/api/enterprise-foundation/:orgId/ai-providers/:providerId/toggle', async (req, reply) => {
-    try {
-      const { providerId } = req.params as { providerId: string }
-      const result = await aiProviderConfigService.toggleEnabled(providerId)
-      return { success: true, data: result }
-    } catch (err: any) {
-      reply.status(500).send({ success: false, error: err.message })
-    }
+  // Toggle provider — DEPRECATED: 拒绝
+  app.patch('/api/enterprise-foundation/:orgId/ai-providers/:providerId/toggle', async (_req, reply) => {
+    return reply.status(410).send({ success: false, error: '该接口已停用，请使用 /api/enterprise/model-config', deprecated: true })
   })
 
-  // Remove provider
-  app.delete('/api/enterprise-foundation/:orgId/ai-providers/:providerId', async (req, reply) => {
-    try {
-      const { providerId } = req.params as { providerId: string }
-      await aiProviderConfigService.remove(providerId)
-      return { success: true }
-    } catch (err: any) {
-      reply.status(500).send({ success: false, error: err.message })
-    }
+  // Remove provider — DEPRECATED: 拒绝
+  app.delete('/api/enterprise-foundation/:orgId/ai-providers/:providerId', async (_req, reply) => {
+    return reply.status(410).send({ success: false, error: '该接口已停用，请使用 DELETE /api/enterprise/model-config/:provider', deprecated: true })
   })
 
-  // Get supported model providers (static list)
+  // Get supported model providers (static list, 平台层 Provider Registry 信息)
   app.get('/api/enterprise-foundation/ai-providers/supported', async (_req, reply) => {
     try {
       const providers = aiProviderConfigService.getSupportedProviders()
@@ -134,23 +123,8 @@ export async function enterpriseFoundationRoutes(app: FastifyInstance) {
     }
   })
 
-  // Test AI provider connection (BYOK verification)
-  app.post('/api/enterprise-foundation/:orgId/ai-providers/:providerId/test', async (req, reply) => {
-    try {
-      const { providerId } = req.params as { providerId: string }
-      const config = await prisma.aIProviderConfig.findUnique({ where: { id: providerId } })
-      if (!config) {
-        return reply.status(404).send({ success: false, message: '配置不存在' })
-      }
-
-      // Decrypt API key
-      const decryptedKey = aiProviderConfigService.decryptKey(config.encryptedApiKey)
-
-      // Dispatch test by provider
-      const result = await testProviderConnection(config.provider, decryptedKey, config.baseUrl, config.model)
-      return reply.send({ success: true, data: result })
-    } catch (err: any) {
-      reply.status(400).send({ success: false, error: err.message })
-    }
+  // Test AI provider connection — DEPRECATED: 拒绝（改用 /api/enterprise/model-config/test）
+  app.post('/api/enterprise-foundation/:orgId/ai-providers/:providerId/test', async (_req, reply) => {
+    return reply.status(410).send({ success: false, error: '该接口已停用，请使用 POST /api/enterprise/model-config/test', deprecated: true })
   })
 }

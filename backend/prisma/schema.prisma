@@ -2912,6 +2912,8 @@ model EnterpriseProfile {
 }
 
 model AIProviderConfig {
+  /// @deprecated KMKI AI Runtime Principle（2026-08-01 冻结）：双轨断裂死表（0 数据）
+  /// 唯一权威 = OrgModelConfig + ProviderCredential；写端点已 410 拒绝，仅保留兼容读
   id              String       @id @default(uuid()) @db.Uuid
   organizationId  String       @map("organization_id") @db.Uuid
   provider        String       // deepseek | openai | claude | qwen | zhipu
@@ -6784,6 +6786,8 @@ model LegalSystemConfig {
 // ============================================================
 
 model EnterpriseLlmConfig {
+  /// @deprecated KMKI AI Runtime Principle（2026-08-01 冻结）：平台托管企业 Key 旧体系
+  /// 仅 compat 读取（resolveRuntimeConfig 第 2.5 层，存量未迁移企业）；禁止新写入
   id                    String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
   tenantId              String   @map("tenant_id") @db.Text
   organizationId        String?  @map("organization_id") @db.Uuid // SPRINT-IDENTITY-REALITY-01 T04: 归属 Organization (商业主体 SSOT)
@@ -7022,6 +7026,8 @@ model HermesProfileBinding {
 }
 
 model EmployeeModelBinding {
+  /// @deprecated KMKI AI Runtime Principle（2026-08-01 冻结）：双轨断裂死表（0 数据）
+  /// Agent 模型解析一律走 modelResolver.resolveEnterpriseModel（OrgModelConfig 权威）
   id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
   tenantId          String   @map("tenant_id") @db.Text
   employeeId        String   @map("employee_id") @db.Text // EnterpriseAgentProfile.id

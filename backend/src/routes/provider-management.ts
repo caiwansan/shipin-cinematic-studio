@@ -2,7 +2,11 @@
  * routes/provider-management.ts
  * Phase 3.1.2 — Provider Credential Management API
  * 
- * 企业数字部门控制台 → API Key 配置接口
+ * ⚠️ DEPRECATED（SPRINT-KMKI-AUDIT-02）：本模块读写 enterpriseProviderCredential /
+ * enterpriseAgentModelBinding —— 这两张表从未在 Prisma schema 中定义（死表 API）。
+ * KMKI AI Runtime Principle 唯一权威：/api/enterprise/model-config
+ * （OrgModelConfig + ProviderCredential，企业 BYOK，平台不托管 Key）
+ * 写端点已 410 拒绝，读端点仅兼容返回空。
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -51,44 +55,12 @@ export default async function providerManagementRoutes(fastify: FastifyInstance)
    * POST /api/provider-management/credentials
    * 创建 Provider 凭证
    */
-  fastify.post('/api/provider-management/credentials', { preHandler: providerAuthGuard }, async (request, reply) => {
-    try {
-      const orgId = (request.headers['x-organization-id'] as string) || '';
-      const { provider, modelName, apiKey, baseUrl, isDefault } = request.body as any;
-      const userId = (request.user as any)?.id || '';
-
-      if (!provider || !modelName || !apiKey) {
-        return reply.status(400).send({ success: false, error: 'Missing required fields' });
-      }
-
-      // 验证 API Key 格式
-      if (!apiKey.startsWith('sk-') && apiKey.length < 10) {
-        return reply.status(400).send({ success: false, error: 'API Key 格式错误' });
-      }
-
-      const result = await credentialService.createCredential({
-        organizationId: orgId,
-        provider,
-        modelName,
-        apiKey,
-        baseUrl,
-        isDefault,
-        createdBy: userId,
-      });
-
-      return reply.status(201).send({ success: true, data: result });
-    } catch (error: any) {
-      // Handle unique constraint violations
-      if (error.code === 'P2002' || error.message?.includes('Unique constraint')) {
-        return reply.status(409).send({ success: false, error: '该 Provider + Model 组合已存在，如需更换 API Key 请先吊销旧凭证' });
-      }
-      // Hide internal error details in production
-      const message = error.message?.includes('prisma') || error.message?.includes('invocation') 
-        ? '创建失败，请检查输入' 
-        : (error.message || '创建失败');
-      request.log.error('Provider credential create error:', error);
-      return reply.status(400).send({ success: false, error: message });
-    }
+  fastify.post('/api/provider-management/credentials', { preHandler: providerAuthGuard }, async (_request, reply) => {
+    return reply.status(410).send({
+      success: false,
+      error: '该接口已停用（KMKI AI Runtime Principle）。企业 Key 请使用 PUT /api/enterprise/model-config（企业工作台 → AI模型设置）',
+      deprecated: true,
+    })
   });
 
   /**
@@ -109,57 +81,28 @@ export default async function providerManagementRoutes(fastify: FastifyInstance)
    * DELETE /api/provider-management/credentials/:id
    * 吊销 Provider 凭证
    */
-  fastify.delete('/api/provider-management/credentials/:id', { preHandler: providerAuthGuard }, async (request, reply) => {
-    try {
-      const orgId = (request.headers['x-organization-id'] as string) || '';
-      const { id } = request.params as any;
-      const success = await credentialService.revokeCredential(id, orgId);
-      return reply.send({ success, message: success ? 'Credential revoked' : 'Not found' });
-    } catch (error: any) {
-      return reply.status(400).send({ success: false, error: error.message });
-    }
+  fastify.delete('/api/provider-management/credentials/:id', { preHandler: providerAuthGuard }, async (_request, reply) => {
+    return reply.status(410).send({ success: false, error: '该接口已停用，请使用 DELETE /api/enterprise/model-config/:provider', deprecated: true })
   });
 
   /**
    * POST /api/provider-management/bindings
-   * 绑定 Agent ↔ Model
+   * ⚠️ DEPRECATED: 死表 API（enterpriseAgentModelBinding 不存在），410 拒绝
    */
-  fastify.post('/api/provider-management/bindings', { preHandler: providerAuthGuard }, async (request, reply) => {
-    try {
-      const orgId = (request.headers['x-organization-id'] as string) || '';
-      const { agentId, credentialId, provider, modelName, reasoningMode } = request.body as any;
-
-      if (!agentId || !credentialId || !provider || !modelName) {
-        return reply.status(400).send({ success: false, error: 'Missing required fields' });
-      }
-
-      const result = await credentialService.bindAgentModel({
-        organizationId: orgId,
-        agentId,
-        credentialId,
-        provider,
-        modelName,
-        reasoningMode,
-      });
-
-      return reply.status(201).send({ success: true, data: result });
-    } catch (error: any) {
-      return reply.status(400).send({ success: false, error: error.message });
-    }
+  fastify.post('/api/provider-management/bindings', { preHandler: providerAuthGuard }, async (_request, reply) => {
+    return reply.status(410).send({
+      success: false,
+      error: '该接口已停用（KMKI AI Runtime Principle）。模型选择请使用 /api/enterprise/model-config（企业工作台 → AI模型设置）',
+      deprecated: true,
+    })
   });
 
   /**
    * GET /api/provider-management/bindings/:agentId
-   * 获取 Agent 的 Model 绑定
+   * ⚠️ DEPRECATED: 死表 API，仅兼容返回空
    */
-  fastify.get('/api/provider-management/bindings/:agentId', { preHandler: providerAuthGuard }, async (request, reply) => {
-    try {
-      const { agentId } = request.params as any;
-      const binding = await credentialService.getAgentBinding(agentId);
-      return reply.send({ success: true, data: binding });
-    } catch (error: any) {
-      return reply.status(400).send({ success: false, error: error.message });
-    }
+  fastify.get('/api/provider-management/bindings/:agentId', { preHandler: providerAuthGuard }, async (_request, reply) => {
+    return reply.send({ success: true, data: null, deprecated: true })
   });
 
   /**
@@ -219,24 +162,10 @@ export default async function providerManagementRoutes(fastify: FastifyInstance)
 
   /**
    * GET /api/provider-management/usage/:agentId
-   * Agent 使用量统计
+   * ⚠️ DEPRECATED: 死表 API（enterpriseProviderUsage 不存在）。用量请走数据罗盘 /api/admin/dashboard/ecosystem 或 usage_logs
    */
-  fastify.get('/api/provider-management/usage/:agentId', { preHandler: providerAuthGuard }, async (request, reply) => {
-    try {
-      const orgId = (request.headers['x-organization-id'] as string) || '';
-      const { agentId } = request.params as any;
-
-      const usage = await prisma.enterpriseProviderUsage.groupBy({
-        by: ['provider', 'modelName', 'callType'],
-        where: { organizationId: orgId, agentId },
-        _sum: { tokenInput: true, tokenOutput: true, cost: true },
-        _count: { id: true },
-      });
-
-      return reply.send({ success: true, data: usage });
-    } catch (error: any) {
-      return reply.status(400).send({ success: false, error: error.message });
-    }
+  fastify.get('/api/provider-management/usage/:agentId', { preHandler: providerAuthGuard }, async (_request, reply) => {
+    return reply.status(410).send({ success: false, error: '该接口已停用（死表 API）。用量统计请使用后台数据罗盘', deprecated: true })
   });
 }
 

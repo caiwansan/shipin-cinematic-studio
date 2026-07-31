@@ -312,6 +312,28 @@
         </div>
       </section>
 
+      <!-- ═══ 4.5 P0: AI 模型配置引导（KMKI BYOK）═══ -->
+      <section v-if="hasSubscription && modelCheckDone && !modelConfigured" class="rec-section">
+        <div class="rec-model-banner">
+          <div class="rec-model-banner-icon">🔑</div>
+          <div class="rec-model-banner-content">
+            <h3 class="rec-model-banner-title">欢迎使用 AI 招聘团队</h3>
+            <p class="rec-model-banner-text">
+              您的 AI 员工需要连接您的大模型账号才能开始工作。<br/>
+              请配置：① DeepSeek　② OpenAI　③ 火山引擎　④ 其他兼容模型<br/>
+              配置完成后，<b>Alice 招聘顾问 · Bob 面试专家 · Carol 人才分析师</b> 即可开始工作。
+            </p>
+            <p class="rec-model-banner-hint">
+              <span class="rec-model-banner-dot"></span>
+              企业提供算力（BYOK），昆仑镜不托管您的 API Key，Key 加密存储仅归企业所有。
+            </p>
+          </div>
+          <button class="rec-btn-primary" @click="navigateTo('/workspace/enterprise/model-settings')">
+            立即配置 AI 模型
+          </button>
+        </div>
+      </section>
+
       <!-- ═══ 5. AI 招聘团队 ═══ -->
       <section class="rec-section">
         <h2 class="rec-sec-title">我的 AI 招聘团队</h2>
@@ -456,6 +478,10 @@ const subLoading = ref(false)
 const data = ref<EnterpriseHomeDTO | null>(null)
 const agentData = ref<AgentBrief[]>([])
 const subscriptionInfo = ref<SubscriptionDTO | null>(null)
+
+/* ── P0: AI 模型配置引导（KMKI BYOK：首次使用需企业配置自己的模型 Key）── */
+const modelConfigured = ref(false)
+const modelCheckDone = ref(false)
 
 /* ── Report State ── */
 const reportData = ref<any>(null)
@@ -726,12 +752,28 @@ async function loadAgents() {
       }
     }
 
-    // Load Carol stats from report API
+    // P0: 检测企业是否已配置模型（OrgModelConfig + ProviderCredential 权威）
+    // 未配置 → 显示引导横幅 → 跳转 AI模型设置
     try {
       const token2 = getAuthToken()
       if (!token2) return
-      const reportRes = await fetch('/api/enterprise/reports/summary', {
+      const mcRes = await fetch('/api/enterprise/model-config', {
         headers: { Authorization: `Bearer ${token2}` },
+      })
+      if (mcRes.ok) {
+        const mcJson = await mcRes.json()
+        const settings: any[] = mcJson?.data?.settings || []
+        modelConfigured.value = settings.some((s: any) => s.hasCredential && s.healthStatus === 'ok')
+      }
+    } catch { /* non-fatal */ }
+    modelCheckDone.value = true
+
+    // Load Carol stats from report API
+    try {
+      const token3 = getAuthToken()
+      if (!token3) return
+      const reportRes = await fetch('/api/enterprise/reports/summary', {
+        headers: { Authorization: `Bearer ${token3}` },
       })
       if (reportRes.ok) {
         const reportJson = await reportRes.json()
@@ -792,6 +834,59 @@ async function refreshReport() {
    Recruitment Home — Product IA v2 (Driving Cockpit)
    以招聘运营效率为中心，非功能入口集合
    ═══════════════════════════════════════════════════ */
+
+/* ── P0: AI 模型配置引导横幅（KMKI BYOK）── */
+.rec-model-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg, 20px);
+  padding: 20px 24px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(16,185,129,0.08));
+  border: 1px solid rgba(99,102,241,0.35);
+}
+.rec-model-banner-icon {
+  font-size: 34px;
+  flex-shrink: 0;
+}
+.rec-model-banner-content {
+  flex: 1;
+  min-width: 0;
+}
+.rec-model-banner-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--color-text-primary, #e8ecf4);
+}
+.rec-model-banner-text {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--color-text-secondary, #9aa4b8);
+  margin: 0 0 8px 0;
+}
+.rec-model-banner-text b {
+  color: var(--color-text-primary, #e8ecf4);
+}
+.rec-model-banner-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7688);
+  margin: 0;
+}
+.rec-model-banner-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+}
+.rec-model-banner .rec-btn-primary {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 
 .rec-home {
   max-width: 1200px;

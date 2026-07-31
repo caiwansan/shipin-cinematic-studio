@@ -11,6 +11,12 @@ import type { RuntimeContext } from '../types/agent-runtime.types.js';
 import type { BrainRequest, BrainResult, IAgentBrain } from './agent-brain.interface.js';
 import { executeViaGateway } from '../../runtime/runtime-gateway.js';
 
+// SPRINT-KMKI-AUDIT-02: 统一 Runtime Resolver（KMKI AI Runtime Principle 冻结）
+// 企业 AI 员工一律走 modelResolver.resolveEnterpriseModel（OrgModelConfig + ProviderCredential 唯一权威）
+// 禁止 agent-brain 自行读取 EmployeeModelBinding / EnterpriseLlmConfig 旧表（双轨断裂源）
+const ENTERPRISE_MODEL_MISSING_MSG =
+  '企业模型配置缺失 — 请企业管理员前往 企业工作台 → AI模型设置 配置模型与 API Key（企业提供算力，平台不托管企业 Key）'
+
 export class AgentBrainService implements IAgentBrain {
   constructor(private prisma: PrismaClient) {}
 
@@ -37,21 +43,23 @@ export class AgentBrainService implements IAgentBrain {
     // 2. 构建 System Prompt
     const systemPrompt = this.buildSystemPrompt(agent, request.systemPrompt);
 
-    // 3. 解析 Provider 配置
-    // Sprint-06A: 如果有 EmployeeModelBinding，传 provider+model 让 input 层命中
-    // 否则只传 tenantId，让 gateway 从 EnterpriseLlmConfig 解析
-    const providerInfo = await this.resolveProvider(context.organizationId, context.agentId)
+    // 3. 解析 Provider 配置（KMKI 统一 Resolver：企业 BYOK 唯一权威，无配置显式阻断）
+    // 旧实现读 EmployeeModelBinding/EnterpriseLlmConfig → 双轨断裂，已退役
+    const providerInfo = await this.resolveProvider(context.organizationId || '', context.agentId || '')
 
     // 4. 通过 AI Runtime Gateway 调用 LLM
-    // Sprint-06A: 统一走 executeViaGateway，tenantId 触发企业配置层
+    // KMKI: 企业 AI 员工 → 统一 Resolver 解析（OrgModelConfig 权威）→ 企业 Key 显式注入（不落平台表）
     const gatewayOptions: Record<string, string> = { userId: context.actorId ?? '' }
     if (context.organizationId) {
       gatewayOptions.tenantId = context.organizationId
-    }
-    // 仅当有 Agent 级绑定时传 provider/model（input 层）
-    if (providerInfo.fromBinding) {
-      gatewayOptions.provider = providerInfo.provider
-      gatewayOptions.model = providerInfo.model
+      // provider/model/apiKey 由 resolveProvider 给出（企业 BYOK，Input Override）
+      if (providerInfo.provider && providerInfo.model) {
+        gatewayOptions.provider = providerInfo.provider
+        gatewayOptions.model = providerInfo.model
+      }
+      if (providerInfo.apiKey) {
+        gatewayOptions.apiKey = providerInfo.apiKey
+      }
     }
 
     const result = await executeViaGateway('llm', {
@@ -79,37 +87,30 @@ export class AgentBrainService implements IAgentBrain {
 
   /**
    * 解析 Agent 的 Provider 配置
-   * 优先级：EmployeeModelBinding → EnterpriseLlmConfig(tenant) → 环境变量
-   *
-   * Sprint-06A: 返回 fromBinding 标记，供 gateway 调用决定传参方式
-   *   - fromBinding=true: 传 provider+model（agent 级精确绑定）
-   *   - fromBinding=false: 仅传 tenantId，gateway 从 EnterpriseLlmConfig 解析
+   * KMKI AI Runtime Principle（冻结）: 统一 Runtime Resolver，企业 BYOK 唯一权威
+   *   - 企业 AI 员工 → modelResolver.resolveEnterpriseModel（OrgModelConfig + ProviderCredential）
+   *   - 未配置 → 显式阻断（G2 身份隔离，不 fallback 个人/平台 Key）
+   *   - 非企业上下文 → 空配置，交给 executeViaGateway → resolveRuntimeConfig 统一链
+   * 旧实现（EmployeeModelBinding → EnterpriseLlmConfig → env 开发后门）已退役：双轨断裂源
    */
-  private async resolveProvider(organizationId: string, agentId: string): Promise<{ provider: string; model: string; fromBinding: boolean }> {
-    // 1. 尝试从 EmployeeModelBinding 获取（agent 级精确绑定）
-    const binding = await (this.prisma as any).employeeModelBinding.findFirst({
-      where: { employeeId: agentId, enabled: true },
-    })
-    if (binding) {
-      return { provider: 'deepseek', model: binding.modelName || 'deepseek-v4-flash', fromBinding: true }
-    }
-
-    // 2. 企业租户级配置 → 不传 provider/model，让 gateway 从 EnterpriseLlmConfig 解析
+  private async resolveProvider(organizationId: string, agentId: string): Promise<{ provider: string; model: string; apiKey: string; fromBinding: boolean }> {
     if (organizationId) {
-      const llmConfig = await (this.prisma as any).enterpriseLlmConfig.findFirst({
-        where: { tenantId: organizationId, status: 'active', enabled: true, credentialOwner: 'enterprise' },
-      })
-      if (llmConfig) {
-        return { provider: llmConfig.provider, model: llmConfig.modelName, fromBinding: false }
+      const { ModelResolverService } = await import('../../services/enterprise/model-resolver.service.js')
+      const resolver = new ModelResolverService()
+      const resolved = await resolver.resolveEnterpriseModel({ organizationId, tenantId: organizationId })
+      if (!resolved) {
+        throw new Error(ENTERPRISE_MODEL_MISSING_MSG)
+      }
+      return {
+        provider: resolved.provider,
+        model: resolved.model,
+        apiKey: resolved.apiKey || '',
+        fromBinding: false,
       }
     }
 
-    // 3. 环境变量 fallback（无企业配置时的开发后门）
-    return {
-      provider: process.env.DEFAULT_PROVIDER || 'deepseek',
-      model: process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash',
-      fromBinding: false,
-    }
+    // 非企业上下文：不传 provider/model，由 executeViaGateway 统一链解析（用户 BYOK → 平台默认）
+    return { provider: '', model: '', apiKey: '', fromBinding: false }
   }
 
   /**
