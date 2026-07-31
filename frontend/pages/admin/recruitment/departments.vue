@@ -1,3 +1,4 @@
+<!-- ⛔ DEPRECATED · 已退出后台导航（SPRINT-ADMIN-IA-RECRUITMENT-CLEANUP-01）· 页面保留仅供 URL 直链/归档，业务数据归企业招聘工作台，运营数据归数据罗盘 -->
 <!-- Admin: 企业招聘部门 -->
 <!-- 位置：/admin/recruitment/departments.vue -->
 <!-- 职责：平台所有企业的 AI 招聘部门总览 — 搜索/筛选/详情 -->

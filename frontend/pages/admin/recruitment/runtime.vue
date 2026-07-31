@@ -1,3 +1,4 @@
+<!-- ⛔ DEPRECATED · 已退出后台导航（SPRINT-ADMIN-IA-RECRUITMENT-CLEANUP-01）· 页面保留仅供 URL 直链/归档，业务数据归企业招聘工作台，运营数据归数据罗盘 -->
 <!-- Admin: 运行监控 -->
 <!-- 位置：/admin/recruitment/runtime.vue -->
 <!-- 职责：AI 员工实时运行状态监控 — 搜索/筛选/详情/操作 -->

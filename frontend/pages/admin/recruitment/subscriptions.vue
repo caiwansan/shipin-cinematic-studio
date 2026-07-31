@@ -1,3 +1,4 @@
+<!-- ⛔ DEPRECATED · 已退出后台导航（SPRINT-ADMIN-IA-RECRUITMENT-CLEANUP-01）· 页面保留仅供 URL 直链/归档，业务数据归企业招聘工作台，运营数据归数据罗盘 -->
 <!-- /admin/recruitment/subscriptions.vue — Enterprise Recruitment 订阅管理 -->
 <!-- 职责：订阅列表（企业/套餐/金额/周期/状态/AI Employee数量/Usage） -->
 <!-- 数据源唯一：EnterpriseSubscription / EnterprisePlan / EnterpriseEntitlement -->

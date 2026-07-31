@@ -1,3 +1,4 @@
+<!-- ⛔ DEPRECATED · 已退出后台导航（SPRINT-ADMIN-IA-RECRUITMENT-CLEANUP-01）· 页面保留仅供 URL 直链/归档，业务数据归企业招聘工作台，运营数据归数据罗盘 -->
 <!-- Admin: 候选人池管理 -->
 <!-- 位置：/admin/recruitment/candidates.vue -->
 <!-- 职责：全平台候选人列表 — 搜索/筛选/详情/只读管理 + 运营统计面板（P5-ADMIN-02） -->

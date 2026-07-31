@@ -1,3 +1,4 @@
+<!-- ⛔ DEPRECATED · 已退出后台导航（SPRINT-ADMIN-IA-RECRUITMENT-CLEANUP-01）· 页面保留仅供 URL 直链/归档，业务数据归企业招聘工作台，运营数据归数据罗盘 -->
 <!-- Admin: Human Review 审核队列 -->
 <!-- 位置：/admin/recruitment/reviews.vue -->
 <!-- 职责：审核队列列表 — 查看待审核候选人 + 状态筛选（P5-ADMIN-04） -->

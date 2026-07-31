@@ -1,3 +1,4 @@
+<!-- ⛔ DEPRECATED · 已退出后台导航（SPRINT-ADMIN-IA-RECRUITMENT-CLEANUP-01）· 页面保留仅供 URL 直链/归档，业务数据归企业招聘工作台，运营数据归数据罗盘 -->
 <!-- Admin: Campaign 管理 -->
 <!-- 位置：/admin/recruitment/campaigns.vue -->
 <!-- 职责：全平台招聘宣传活动 — 搜索/筛选/详情/审批 -->

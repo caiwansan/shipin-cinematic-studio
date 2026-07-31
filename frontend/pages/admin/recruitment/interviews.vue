@@ -1,3 +1,4 @@
+<!-- ⛔ DEPRECATED · 已退出后台导航（SPRINT-ADMIN-IA-RECRUITMENT-CLEANUP-01）· 页面保留仅供 URL 直链/归档，业务数据归企业招聘工作台，运营数据归数据罗盘 -->
 <!-- Admin: 面试管理 -->
 <!-- 位置：/admin/recruitment/interviews.vue -->
 <!-- 职责：全平台面试列表 — 搜索/筛选/详情/评分 -->
