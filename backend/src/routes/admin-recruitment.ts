@@ -135,9 +135,10 @@ export default async function adminRecruitmentRoutes(app: FastifyInstance) {
 
   // GET /api/admin/recruitment/subscriptions — 所有企业订阅列表
   app.get('/api/admin/recruitment/subscriptions', { preHandler: [requireAdmin] }, async (request) => {
-    const { status, page = 1, limit = 20 } = request.query as any
+    const { status, planId, page = 1, limit = 20 } = request.query as any
     const where: any = {}
     if (status) where.status = status
+    if (planId) where.planId = planId
     // Sprint-ADMIN-IA-RECRUITMENT-CLEANUP-01：query 参数为字符串，需显式转 Int（Prisma take/skip 校验）
     const pageNum = Math.max(1, parseInt(page, 10) || 1)
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20))
