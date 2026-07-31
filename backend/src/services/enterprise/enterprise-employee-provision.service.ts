@@ -188,11 +188,21 @@ class EnterpriseEmployeeProvisionService {
       return { id: existing.id, name: existing.name, role: existing.role, status: 'skipped' }
     }
 
-    // 查找模板
-    const template = await prisma.employeeTemplate.findFirst({
-      where: { role: input.role, isSystem: true },
-      orderBy: { sortOrder: 'asc' },
-    })
+    // 查找模板：优先新模板体系 agent_template（code=role），回退旧体系 employee_template（role=role）
+    // SPRINT-IDENTITY-REALITY-01: 05-C 已建 agent_template 10 岗位模板为权威，employee_template 为兼容旧数据
+    let template: any = null
+    try {
+      template = await prisma.agentTemplate.findFirst({
+        where: { code: input.role, status: 'active' },
+        orderBy: { sortOrder: 'asc' },
+      })
+    } catch { /* agent_template 表不可用时忽略 */ }
+    if (!template) {
+      template = await prisma.employeeTemplate.findFirst({
+        where: { role: input.role, isSystem: true },
+        orderBy: { sortOrder: 'asc' },
+      })
+    }
     if (!template) {
       console.warn(`[Provision] Template not found for role: ${input.role}, skipping`)
       return { id: '', name: input.displayName, role: input.role, status: 'skipped' }

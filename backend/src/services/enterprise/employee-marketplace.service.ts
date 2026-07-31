@@ -183,34 +183,52 @@ export class EmployeeMarketplaceService {
     tools: string[]
     status: 'created'
   } | null> {
-    const template = await prisma.employeeTemplate.findUnique({
+    // SPRINT-IDENTITY-REALITY-01: 兼容新模板体系 agent_template（code 匹配）+ 旧体系 employee_template
+    let template: any = await prisma.employeeTemplate.findUnique({
       where: { id: input.templateId },
     })
+    let templateSource: 'employee' | 'agent' = 'employee'
+    if (!template) {
+      try {
+        template = await prisma.agentTemplate.findUnique({
+          where: { id: input.templateId },
+        })
+        templateSource = 'agent'
+      } catch { /* ignore */ }
+    }
     if (!template) return null
 
-    const capabilities = input.customCapabilities || JSON.parse(template.capabilities)
-    const tools = JSON.parse(template.defaultTools)
+    const capabilities =
+      input.customCapabilities ||
+      (templateSource === 'agent'
+        ? JSON.parse(template.defaultCapabilities || '[]')
+        : JSON.parse(template.capabilities))
+    const tools = templateSource === 'agent' ? '[]' : JSON.parse(template.defaultTools)
     const name = input.employeeName || template.name
+    const role = templateSource === 'agent' ? template.code : template.role
+    const description = template.description
+    const agentType = role
 
     // 创建 Employee Profile
     const employee = await prisma.enterpriseAgentProfile.create({
       data: {
         organizationId: input.organizationId,
+        tenantId: input.tenantId || String(input.organizationId),
         name,
-        role: template.role,
-        agentType: template.role,
-        description: template.description,
+        role,
+        agentType,
+        description,
         capabilities: JSON.stringify(capabilities),
         tools: JSON.stringify(tools),
         permissions: JSON.stringify([]),
-        goal: template.description,
+        goal: description,
         isDefault: false,
         status: 'active',
         metadata: JSON.stringify({
           templateId: template.id,
-          department: template.department,
-          memoryPolicy: template.defaultMemoryPolicy,
-          requiredChannels: JSON.parse(template.requiredChannels),
+          department: templateSource === 'agent' ? 'AI员工' : template.department,
+          memoryPolicy: templateSource === 'agent' ? (JSON.parse(template.defaultMemoryPolicy || '{}').namespace || 'business') : template.defaultMemoryPolicy,
+          requiredChannels: templateSource === 'agent' ? [] : JSON.parse(template.requiredChannels || '[]'),
         }),
       },
     })

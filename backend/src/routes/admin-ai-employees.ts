@@ -20,7 +20,11 @@ function gateFor(profile: any, instance: any, hermes: any, bindings: any[], task
   const g1 = !!(profile?.name && profile?.role)
   const g2 = (profile?.capabilities && safeJson(profile.capabilities, []).length > 0) || !!profile?.agentType
   const g3 = !!(instance && hermes)
-  const g4 = Array.isArray(bindings) && bindings.length > 0
+  // G4 Model Policy: 绑定存在 + 绑定启用 + 模型配置启用 + 健康(ok/untested 允许，failed/decrypt_error 不算)
+  // SPRINT-IDENTITY-REALITY-01 T05: 健康检查结果参与 Gate（key 失效 → 配置不完整，诚实显示）
+  const g4 = Array.isArray(bindings) && bindings.length > 0 && bindings.some(
+    (b: any) => b.enabled && b.llmConfig?.enabled && ['ok', 'untested'].includes(b.llmConfig?.healthStatus)
+  )
   const g5 = !!instance?.namespace || !!hermes?.memoryNamespace
   const g6 = taskCount > 0
   const gates = { G1_Identity: g1, G2_Capability: g2, G3_Runtime: g3, G4_ModelPolicy: g4, G5_Memory: g5, G6_Usage: g6 }
@@ -36,13 +40,60 @@ export default async function adminAiEmployeesRoutes(fastify: FastifyInstance) {
     return true
   }
 
+  // SPRINT-IDENTITY-REALITY-01 T04: 自动绑定（企业已配置 Key → 员工绑定，幂等）
+  // 仅绑定同 Organization 的模型配置（平台不托管 Key，Key 属于企业自配）
+  fastify.post('/api/admin/ai-employees/auto-bind', { preHandler: [requireAdmin] }, async () => {
+    const profiles: any[] = await prisma.enterpriseAgentProfile.findMany({
+      where: { organizationId: { not: null } },
+      select: { id: true, name: true, organizationId: true },
+    })
+    let bound = 0, skipped = 0
+    const details: string[] = []
+    for (const p of profiles) {
+      const cfgs: any[] = await prisma.enterpriseLlmConfig.findMany({
+        where: { organizationId: p.organizationId, enabled: true, status: 'active' },
+        select: { id: true, provider: true, modelName: true, healthStatus: true },
+      })
+      if (cfgs.length === 0) { skipped++; continue }
+      const cfg = cfgs[0]
+      const existing = await prisma.agentModelBinding.findFirst({ where: { agentId: p.id, llmConfigId: cfg.id, taskType: 'general' } })
+      if (!existing) {
+        await prisma.agentModelBinding.create({
+          data: { tenantId: String(p.organizationId), agentId: p.id, llmConfigId: cfg.id, taskType: 'general', priority: 0, enabled: true },
+        })
+        bound++
+      }
+      details.push(`${p.name} → ${cfg.provider}/${cfg.modelName}[${cfg.healthStatus}]`)
+    }
+    return { success: true, bound, skipped, details }
+  })
+
+  // SPRINT-IDENTITY-REALITY-01 T02: 套餐→模板授权校验（模板是否被套餐允许）
+  fastify.get('/api/admin/ai-employees/template-eligibility/:planId', { preHandler: [requireAdmin] }, async (request: any) => {
+    const plan = await prisma.enterprisePlan.findUnique({ where: { id: request.params.planId } })
+    if (!plan) return { error: '套餐不存在' }
+    const parsed = (plan.capabilityCodes as any) || {}
+    const planCaps: string[] = Array.isArray(parsed) ? parsed : (parsed.capabilities || [])
+    const planEmployees: any[] = Array.isArray(parsed) ? [] : (parsed.employees || [])
+    const templates = await prisma.agentTemplate.findMany({ where: { status: 'active' } })
+    return {
+      plan: plan.name,
+      allowedEmployees: planEmployees,
+      templates: templates.map(t => {
+        const caps = JSON.parse(t.defaultCapabilities || '[]')
+        const allowed = caps.some((c: string) => planCaps.includes(c))
+        return { code: t.code, name: t.name, allowed, matchedCaps: caps.filter((c: string) => planCaps.includes(c)) }
+      }),
+    }
+  })
+
   // ============ Tab1: AI 员工列表 + 六要素 Gate ============
   fastify.get('/api/admin/ai-employees/overview', { preHandler: [requireAdmin] }, async () => {
     const profiles = await prisma.enterpriseAgentProfile.findMany({
       orderBy: { createdAt: 'asc' },
       include: {
         organization: { select: { name: true } },
-        modelBindings: { select: { id: true, taskType: true, llmConfigId: true, enabled: true } },
+        modelBindings: { select: { id: true, taskType: true, llmConfigId: true, enabled: true, llmConfig: { select: { enabled: true, healthStatus: true, provider: true, modelName: true } } } },
       },
     })
     const ids = profiles.map(p => p.id)
@@ -90,7 +141,7 @@ export default async function adminAiEmployeesRoutes(fastify: FastifyInstance) {
           tokens: (today._sum.tokenInput || 0) + (today._sum.tokenOutput || 0),
           cost: today._sum.cost || 0,
         } : { tasks: 0, tokens: 0, cost: 0 },
-        modelPolicy: p.modelBindings.map(b => ({ taskType: b.taskType, enabled: b.enabled })),
+        modelPolicy: p.modelBindings.map(b => ({ taskType: b.taskType, enabled: b.enabled, provider: b.llmConfig?.provider || null, modelName: b.llmConfig?.modelName || null, healthStatus: b.llmConfig?.healthStatus || null })),
         memoryNamespace: h?.memoryNamespace || inst?.namespace || null,
         gate: { ...gate, label: gate.allPass ? '运行中' : '配置不完整' },
       }
@@ -102,6 +153,8 @@ export default async function adminAiEmployeesRoutes(fastify: FastifyInstance) {
         active: profiles.filter(p => p.runtimeStatus === 'active').length,
         running: employees.filter(e => e.gate.allPass).length,
         incomplete: employees.filter(e => !e.gate.allPass).length,
+        // SPRINT-IDENTITY-REALITY-01 T05: 上线率 = 运行中/总数（商业价值指标）
+        deploymentRate: profiles.length ? Math.round((employees.filter(e => e.gate.allPass).length / profiles.length) * 100) : 0,
       },
       employees,
     }

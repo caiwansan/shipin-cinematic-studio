@@ -6781,6 +6781,7 @@ model LegalSystemConfig {
 model EnterpriseLlmConfig {
   id                    String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
   tenantId              String   @map("tenant_id") @db.Text
+  organizationId        String?  @map("organization_id") @db.Uuid // SPRINT-IDENTITY-REALITY-01 T04: 归属 Organization (商业主体 SSOT)
   provider              String   @db.VarChar(50)
   modelName             String   @map("model_name") @db.VarChar(200)
   encryptedApiKey       String   @map("encrypted_api_key")
@@ -9140,4 +9141,31 @@ model CareerIdentityProfile {
   @@index([userId])
   @@index([status, completionScore])
   @@map("career_identity_profiles")
+}
+
+// ============================================================
+// SPRINT-IDENTITY-REALITY-01: EmployeeTemplate（旧模板体系，兼容表）
+// 表已存在（手写 SQL 迁移），补 Prisma 模型使 provision 双表兼容
+// 新模板权威 = AgentTemplate（05-C）；本表仅兼容旧 provision 数据
+// ============================================================
+model EmployeeTemplate {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  name                String   @db.VarChar(100)
+  department          String   @db.VarChar(50)
+  role                String   @db.VarChar(100)
+  description         String   @db.Text
+  icon                String   @default("🎯") @db.VarChar(10)
+  capabilities        String   @default("[]")
+  defaultTools        String   @default("[]") @map("default_tools")
+  defaultMemoryPolicy String   @default("business") @map("default_memory_policy") @db.VarChar(20)
+  requiredChannels    String   @default("[]") @map("required_channels")
+  isPublic            Boolean  @default(true) @map("is_public")
+  isSystem            Boolean  @default(false) @map("is_system")
+  sortOrder           Int      @default(0) @map("sort_order")
+  metadata            String   @default("{}")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isPublic, department])
+  @@map("employee_template")
 }

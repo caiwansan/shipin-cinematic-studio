@@ -18,7 +18,7 @@ Gate：AI Employee Reality Gate G1-G6，六项全 PASS 才显示「运行中」
     <div class="p-6 space-y-5">
       <!-- ================= Tab1: AI员工 ================= -->
       <div v-if="activeTab === 'employees'">
-        <div class="grid grid-cols-4 gap-3">
+        <div class="grid grid-cols-5 gap-3">
           <div v-for="s in employeeSummaryCards" :key="s.label" class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <p class="text-[10px] text-gray-500">{{ s.label }}</p>
             <p class="text-2xl font-semibold mt-1" :style="{ color: s.color }">{{ s.value }}</p>
@@ -292,6 +292,7 @@ const overview = ref<any>({ summary: {}, employees: [] })
 const employees = computed(() => overview.value.employees || [])
 const employeeSummaryCards = computed(() => [
   { label: 'AI员工总数', value: overview.value.summary?.total ?? 0, color: '#fff' },
+  { label: '上线率（运行中/总数）', value: (overview.value.summary?.deploymentRate ?? 0) + '%', color: '#4ade80' },
   { label: '运行中（六要素全 PASS）', value: overview.value.summary?.running ?? 0, color: '#4ade80' },
   { label: '配置不完整', value: overview.value.summary?.incomplete ?? 0, color: '#fbbf24' },
   { label: '草稿', value: overview.value.summary?.draft ?? 0, color: '#9ca3af' },

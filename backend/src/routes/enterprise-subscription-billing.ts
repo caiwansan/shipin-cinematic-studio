@@ -529,6 +529,15 @@ export default async function enterpriseSubscriptionBillingRoutes(app: FastifyIn
       if (subscription) {
         const { entitlementService } = await import('../services/enterprise/enterprise-entitlement.service.js')
         await entitlementService.createFromSubscription(orgId, subscription.id)
+
+        // SPRINT-IDENTITY-REALITY-01 T03: 订阅激活 → AI 员工自动到岗（套餐 employees 配置）
+        try {
+          const { enterpriseEmployeeProvisionService } = await import('../services/enterprise/enterprise-employee-provision.service.js')
+          const provisionResult = await enterpriseEmployeeProvisionService.provisionEmployeesForPlan(orgId, subscription.planId)
+          console.log(`[Activate] Provision result: ${JSON.stringify(provisionResult)}`)
+        } catch (provisionErr: any) {
+          console.warn(`[Activate] Provision failed (非阻塞): ${provisionErr.message}`)
+        }
       }
 
       const updated = await prisma.enterpriseSubscription.findUnique({

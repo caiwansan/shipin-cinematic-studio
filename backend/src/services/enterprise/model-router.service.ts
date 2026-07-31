@@ -13,6 +13,7 @@ export interface RouteInput {
   agentType: string   // growth_director / content_manager / writer / reviewer / ...
   taskType: string    // strategy / content / research / customer / sales / creative
   organizationId?: string
+  agentId?: string    // SPRINT-IDENTITY-REALITY-01 T04: EnterpriseAgentProfile.id → agent_binding 优先
   userId?: string     // 用于 fallback 到用户个人 BYOK
 }
 
@@ -38,7 +39,24 @@ export class ModelRouterService {
     // 3. Fallback 到企业默认模型池
     // 4. Fallback 到用户个人 BYOK
 
-    const { tenantId, agentType, taskType } = input
+    const { tenantId, taskType } = input
+
+    // --- Step 0 (SPRINT-IDENTITY-REALITY-01 T04): Agent 显式绑定优先 ---
+    // 关系链: AgentInstance → AgentModelBinding → EnterpriseLlmConfig（企业自配 Key，平台不托管）
+    if (input.agentId) {
+      const binding = await prisma.agentModelBinding.findFirst({
+        where: { agentId: input.agentId, taskType, enabled: true },
+        orderBy: { priority: 'desc' },
+      })
+      if (binding) {
+        const bound = await this.tryConfig(binding.llmConfigId, 'agent_binding')
+        if (bound) return bound
+        // 绑定失效 → 尝试 fallback 策略（fallbackEnabled）
+        if (binding.fallbackEnabled && binding.failureStrategy === 'fallback') {
+          // 继续走后续策略链
+        }
+      }
+    }
 
     // --- Step 1: 查询 model_routing_policy ---
     const policies = await prisma.modelRoutingPolicy.findMany({
@@ -70,7 +88,14 @@ export class ModelRouterService {
 
     // --- Step 2: 查找企业默认模型（第一个启用的） ---
     const defaultConfigs = await prisma.enterpriseLlmConfig.findMany({
-      where: { tenantId, enabled: true, status: 'active' },
+      where: {
+        enabled: true,
+        status: 'active',
+        OR: [
+          { tenantId },
+          ...(input.organizationId ? [{ organizationId: input.organizationId as any }] : []), // SPRINT-IDENTITY-REALITY-01: 支持 Organization 归属匹配
+        ],
+      },
       orderBy: { createdAt: 'asc' },
       take: 3,
     })
@@ -91,11 +116,16 @@ export class ModelRouterService {
 
   /**
    * 根据 Agent 绑定获取模型（当已知具体 agentId 时）
+   * SPRINT-IDENTITY-REALITY-01 T04: 真实现（原 TODO）
    */
-  resolveByAgentBinding(agentId: string, taskType: string): Promise<RouteResult | null> {
-    // TODO: 需要在 service 层调用时传入 agentId
-    // 暂时通过 routing policy 路由
-    return this.resolve({ tenantId: '', agentType: '', taskType })
+  resolveByAgentBinding(agentId: string, taskType: string, organizationId?: string): Promise<RouteResult | null> {
+    return this.resolve({
+      tenantId: '',
+      agentType: '',
+      taskType,
+      organizationId,
+      agentId,
+    })
   }
 
   /**
@@ -121,7 +151,7 @@ export class ModelRouterService {
   /**
    * 尝试加载一个企业模型配置（验证有效性并解密）
    */
-  private async tryConfig(configId: string): Promise<RouteResult | null> {
+  private async tryConfig(configId: string, source: RouteResult['source'] = 'routing_policy'): Promise<RouteResult | null> {
     const full = await enterpriseLlmService.getFullConfig(configId)
     if (!full || !full.apiKey || !full.enabled || full.status !== 'active') return null
 
@@ -133,7 +163,7 @@ export class ModelRouterService {
       baseUrl: full.baseUrl || undefined,
       maxTokens: 16384,
       temperature: 0.7,
-      source: 'routing_policy',
+      source,
       credentialOwner: full.credentialOwner as string,
     }
   }

@@ -2,8 +2,12 @@
 // Identity Bootstrap Service v2.0
 // Enterprise OS Identity Recovery — P0-3-05 Phase A
 // ============================================================
-// Phase 3.2 CTO 决策: governance_organization 为唯一 Source of Truth
-// 禁止写入 Organization / OrgMember 表（已冻结）
+// 决策变更记录（SPRINT-IDENTITY-REALITY-01, 2026-08-01 掌柜指令）:
+// 旧决策(Phase 3.2 CTO): governance_organization 为唯一 Source of Truth
+// 新决策(掌柜): Organization 表 = 唯一企业身份 SSOT（商业主体：订阅/权益/员工/实例/任务）
+//   governance_organization/tenant/user = 组织架构辅助体系（部门树+成员），不产生企业身份业务
+// 冻结: EnterpriseMember / EnterpriseTenant / CustomerOrg 不产生新业务逻辑
+// 禁止写入 Organization / OrgMember 表 的旧决策已解除（OrgMember = OrganizationMember，正常使用）
 // ============================================================
 
 import { prisma } from '../../../utils/index.js'
