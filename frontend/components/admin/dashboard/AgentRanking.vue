@@ -1,13 +1,13 @@
 <template>
   <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl p-5">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-xs font-semibold text-white/80 flex items-center gap-2">🤖 AI 员工运营中心</h3>
+      <h3 class="text-xs font-semibold text-white/80 flex items-center gap-2">🤖 Agent 运营中心</h3>
       <span class="text-[9px] text-gray-600">Agent Instance</span>
     </div>
 
     <!-- Agent 活跃企业 -->
     <div v-if="activeEnterprises.count > 0" class="mb-3 px-3 py-2 rounded-lg bg-indigo-500/[0.06] border border-indigo-500/20 text-[9px] text-indigo-300/80">
-      🏢 活跃企业 {{ activeEnterprises.count }} 家：{{ activeEnterprises.names.join(' · ') }}
+      🏢 服务企业 {{ activeEnterprises.count }} 家：{{ activeEnterprises.names.join(' · ') }}
     </div>
 
     <div v-if="agents.length === 0" class="text-center py-10 text-[10px] text-gray-600">暂无 AI 员工实例</div>
@@ -23,7 +23,7 @@
               <span class="text-[8px] px-1.5 py-0.5 rounded-full border" :class="statusClass(a.status)">{{ statusText(a.status) }}</span>
             </div>
             <div class="flex items-center gap-2 mt-0.5">
-              <span class="text-[8px] text-gray-600 truncate">{{ a.orgName !== '—' ? a.orgName : '' }}</span>
+              <span v-if="a.orgName !== '—'" class="text-[8px] text-gray-600 truncate">{{ a.orgName }}</span>
               <span v-if="a.orgPlan !== '—'" class="text-[8px] px-1 py-px rounded bg-white/[0.04] text-gray-500">{{ a.orgPlan }}</span>
             </div>
             <div class="mt-1 h-1 rounded-full bg-white/[0.05] overflow-hidden">
@@ -33,7 +33,8 @@
           <div class="text-right shrink-0">
             <div class="text-[11px] text-white/70 font-mono">{{ a.totalTasks }} 次</div>
             <div class="text-[9px] text-emerald-400/80">{{ a.successRate }}% 成功</div>
-            <div class="text-[8px] text-amber-400/60 font-mono">¥{{ a.auditCost.toFixed(2) }}</div>
+            <div class="text-[8px] text-amber-400/60 font-mono">¥{{ a.cost.toFixed(2) }}</div>
+            <div v-if="a.servedOrganizations" class="text-[8px] text-gray-500">🏢 {{ a.servedOrganizations }} 企业</div>
           </div>
         </div>
       </div>

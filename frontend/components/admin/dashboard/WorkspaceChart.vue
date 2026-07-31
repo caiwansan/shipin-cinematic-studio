@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <!-- 业务线卡片 -->
+    <!-- 业务线卡片（用户/项目/活跃度/调用/成本） -->
     <div class="space-y-2">
       <div v-for="(r, i) in rankingTop" :key="r.biz"
         class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.05] transition-all">
@@ -36,9 +36,9 @@
             <span class="text-[8px] text-gray-600">{{ r.biz }}</span>
           </div>
           <div class="flex items-center gap-3 mt-1 text-[9px] text-gray-500">
-            <span>⚡ {{ r.calls }} 次调用</span>
+            <span>👥 {{ r.users }} 用户</span>
             <span v-if="r.projects">📁 {{ r.projects }} 项目</span>
-            <span v-if="r.enterprises">🏢 {{ r.enterprises }} 企业</span>
+            <span>⚡ {{ r.calls }} 调用</span>
             <span class="text-amber-400/70 font-mono">¥{{ r.cost.toFixed(2) }}</span>
           </div>
         </div>

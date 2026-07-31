@@ -31,8 +31,8 @@ const props = defineProps<{
   data: any
 }>()
 
-const checks = computed(() => props.data?.checks || null)
-const overall = computed(() => props.data?.overall || 'ok')
+const checks = computed(() => props.data?.health?.checks || props.data?.checks || null)
+const overall = computed(() => props.data?.health?.overall || props.data?.overall || 'ok')
 
 const overallLabel = computed(() => ({ ok: '全绿', warn: '关注', error: '异常' })[overall.value] || '—')
 

@@ -1,8 +1,8 @@
 <template>
   <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl p-5">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-xs font-semibold text-white/80 flex items-center gap-2">🩺 AI 基础设施</h3>
-      <span class="text-[9px] text-gray-600">近 24h · 实时</span>
+      <h3 class="text-xs font-semibold text-white/80 flex items-center gap-2">🩺 AI 基础设施中心</h3>
+      <span class="text-[9px] text-gray-600">技术指标 · 降位</span>
     </div>
 
     <!-- 模型成功率 + 平均响应 -->
@@ -92,14 +92,14 @@ const props = defineProps<{
   providers: any[]
   runtime: { active: number; paused: number; stopped: number; totalTasks: number }
   dirtyData?: { dagExecutionCount: number }
-  health?: any
+  data?: any
 }>()
 
 const tokenEl = ref<HTMLDivElement | null>(null)
 let tokenChart: echarts.ECharts | null = null
 
-const taskHealth = computed(() => props.health?.taskHealth || { successRate: 100, total: 0, avgDurationMs: 0, cost: 0 })
-const costRankTop = computed(() => (props.health?.costRank || []).slice(0, 5))
+const taskHealth = computed(() => props.data?.taskHealth || { successRate: 100, total: 0, avgDurationMs: 0, cost: 0 })
+const costRankTop = computed(() => (props.data?.costRank || []).slice(0, 5))
 
 const fmtMs = (ms: number) => {
   if (!ms) return '—'
@@ -133,7 +133,7 @@ const statusLabel = (s: string) => ({
 function renderToken() {
   if (!tokenEl.value) return
   if (!tokenChart) tokenChart = echarts.init(tokenEl.value)
-  const trend = props.health?.tokenTrend || []
+  const trend = props.data?.tokenTrend || []
   tokenChart.setOption({
     grid: { left: 4, right: 4, top: 8, bottom: 0, containLabel: true },
     tooltip: {
@@ -144,7 +144,7 @@ function renderToken() {
       formatter: (p: any) => {
         const i = p[0].dataIndex
         const t = trend[i]
-        return t ? `${t.day}<br/>调用 ${t.calls} 次<br/>Tokens ${t.tokens.toLocaleString()}` : ''
+        return t ? `${t.day}<br/>调用 ${t.calls} 次<br/>Tokens ${Number(t.tokens).toLocaleString()}` : ''
       },
     },
     xAxis: {
@@ -161,7 +161,7 @@ function renderToken() {
     },
     series: [{
       type: 'line',
-      data: trend.map((t: any) => t.tokens),
+      data: trend.map((t: any) => Number(t.tokens)),
       smooth: true,
       symbol: 'none',
       lineStyle: { color: '#a78bfa', width: 1.5 },
@@ -176,7 +176,7 @@ function renderToken() {
 }
 
 const onResize = () => tokenChart?.resize()
-watch(() => props.health, renderToken, { deep: true })
+watch(() => props.data, renderToken, { deep: true })
 
 onMounted(() => {
   renderToken()
