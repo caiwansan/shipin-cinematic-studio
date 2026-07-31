@@ -2,6 +2,7 @@ import type { ApiResponse } from '../contracts/api/base.js';
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { StyleProfileService } from '../services/style-profile.service.js'
+import { verifyProjectOwner } from '../services/director/project-ownership.service.js'
 import { writeFile, mkdir } from 'fs/promises'
 import { resolve } from 'path'
 import { get as httpsGet } from 'https'
@@ -11,6 +12,15 @@ async function downloadAndUpload(imageUrl: string, userId: string, subDir: strin
   const fs = await import('fs/promises')
   const path = await import('path')
   const crypto = await import('crypto')
+
+  // SSRF 防护：只允许下载白名单域名
+  const { guardExternalUrl } = await import('../utils/ssrf-protection.js')
+  try {
+    guardExternalUrl(imageUrl)
+  } catch (e: any) {
+    console.warn('[SSRF] downloadAndUpload 阻止:', e.message, imageUrl.substring(0, 100))
+    throw new Error('SSRF 防护: 不允许下载该 URL')
+  }
   
   const uploadDir = resolve(process.cwd(), 'public/uploads', subDir)
   await mkdir(uploadDir, { recursive: true })
@@ -186,6 +196,12 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
         pid = newProject.id
       }
       console.log('[Execution-Images] projectId 自动兜底:', pid)
+    } else {
+      // ⭐ Phase 6 安全隔离: 显式传 projectId 必须归属校验
+      const ownerCheck = await verifyProjectOwner(pid, userId)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
     }
 
     try {
@@ -453,7 +469,13 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
 
     // 确保 project 存在（前端可能自动生成了 UUID 但还没写入 DB）
     const existing = await prisma.project.findUnique({ where: { id: projectId } })
-    if (!existing) {
+    if (existing) {
+      // ⭐ Phase 6 安全隔离: 已存在项目必须归属校验
+      const ownerCheck = await verifyProjectOwner(projectId, (request.user as any).id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+    } else {
       await prisma.project.create({
         data: { id: projectId, name: '临时项目', userId: (request.user as any).id },
       })
@@ -480,12 +502,17 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
 
   })
 
-  fastify.get('/execution-images/characters/:projectId', async (request, reply) => {
+  fastify.get('/execution-images/characters/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
     // 非 UUID 格式的 projectId 返回空（如前端临时 ID）
     if (!projectId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
       return { success: true, data: [] } satisfies ApiResponse<unknown>;
 
+    }
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
     }
     const images = await prisma.characterImage.findMany({
       where: { projectId },
@@ -509,6 +536,15 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
     const authHeader = (request.headers as any).authorization || ''
     const projId = pid
     if (!projId) return reply.status(400).send({ error: 'projectId required' })
+
+    // ⭐ Phase 6 安全隔离: project 已存在必须归属校验
+    const projCheck = await prisma.project.findUnique({ where: { id: projId }, select: { userId: true } })
+    if (projCheck) {
+      const ownerCheck = await verifyProjectOwner(projId, (request.user as any)?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+    }
 
     // ⭐ 场景风格约束从 StyleProfile 动态读取（禁止硬编码）
     const vsScene: string = body.videoStyle || 'realistic'
@@ -624,7 +660,13 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
 
     // 确保 project 存在
     const existing = await prisma.project.findUnique({ where: { id: projectId } })
-    if (!existing) {
+    if (existing) {
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(projectId, (request.user as any).id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+      }
+    } else {
       await prisma.project.create({
         data: { id: projectId, name: '临时项目', userId: (request.user as any).id },
       })
@@ -650,11 +692,16 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
 
   })
 
-  fastify.get('/execution-images/scenes/:projectId', async (request, reply) => {
+  fastify.get('/execution-images/scenes/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
     if (!projectId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
       return { success: true, data: [] } satisfies ApiResponse<unknown>;
 
+    }
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
     }
     const images = await prisma.sceneImage.findMany({
       where: { projectId },
@@ -668,6 +715,12 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
   fastify.put('/execution-images/storyboards', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId, images } = request.body as any
     if (!projectId || !images) return reply.status(400).send({ error: 'projectId and images required' })
+
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any).id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
 
     // 逐张 upsert，不整体删除（修复：刷新后只剩最后一张图的问题）
     await prisma.$transaction(
@@ -689,11 +742,16 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
 
   })
 
-  fastify.get('/execution-images/storyboards/:projectId', async (request, reply) => {
+  fastify.get('/execution-images/storyboards/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
     if (!projectId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
       return { success: true, data: [] } satisfies ApiResponse<unknown>;
 
+    }
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
     }
     const images = await prisma.storyboardImage.findMany({
       where: { projectId },
@@ -704,7 +762,7 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
   })
 
   // GET /execution-images/storyboards/all — 返回所有有故事板图片的项目（给前端兜底用）
-  fastify.get('/execution-images/storyboards/all', async (request, reply) => {
+  fastify.get('/execution-images/storyboards/all', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = (request.user as any)?.id
     const images = await prisma.storyboardImage.findMany({
       where: userId ? { project: { userId } } : {},
@@ -715,10 +773,15 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
   })
 
   // ─── 全量素材图（含道具图）─ 一次性返回所有素材 ───
-  fastify.get('/execution-images/all/:projectId', async (request, reply) => {
+  fastify.get('/execution-images/all/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
     if (!projectId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
       return { success: true, data: [] } satisfies ApiResponse<unknown>;
+    }
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
     }
     const [characters, scenes, storyboards, frames, props] = await Promise.all([
       prisma.characterImage.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }),
@@ -734,11 +797,16 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
   })
 
   // ─── 道具图片获取 ⭐ ───
-  fastify.get('/execution-images/prop-images/:projectId', async (request, reply) => {
+  fastify.get('/execution-images/prop-images/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const { projectId } = request.params as any
       if (!projectId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
         return { success: true, data: [] } satisfies ApiResponse<unknown>;
+      }
+      // ⭐ Phase 6 安全隔离: 归属校验
+      const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+      if (!ownerCheck.ok) {
+        return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
       }
       const images = await prisma.propImage.findMany({
         where: { projectId },
@@ -751,9 +819,15 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
   })
 
   // ─── 视频帧图片 ───
-  fastify.put('/execution-images/frames', async (request, reply) => {
+  fastify.put('/execution-images/frames', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId, images } = request.body as any
     if (!projectId || !images) return reply.status(400).send({ error: 'projectId and images required' })
+
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any).id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
 
     await prisma.$transaction([
       prisma.frameImage.deleteMany({ where: { projectId } }),
@@ -767,11 +841,16 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
 
   })
 
-  fastify.get('/execution-images/frames/:projectId', async (request, reply) => {
+  fastify.get('/execution-images/frames/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
     if (!projectId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
       return { success: true, data: [] } satisfies ApiResponse<unknown>;
 
+    }
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
     }
     const images = await prisma.frameImage.findMany({
       where: { projectId },
@@ -782,8 +861,13 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
   })
 
   // GET /execution-images/videos/:projectId — 获取已生成的各分镜视频 URL
-  fastify.get('/execution-images/videos/:projectId', async (request, reply) => {
+  fastify.get('/execution-images/videos/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
     const segments = await prisma.aiVideoSegment.findMany({
       where: { projectId, videoUrl: { not: null } },
       select: { segmentId: true, videoUrl: true, duration: true },
@@ -793,8 +877,14 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
   })
 
   // ⭐ POST /execution-images/migrate/:projectId — 从 executionResults / pipelineStage 迁移图片到独立表
-  fastify.post('/execution-images/migrate/:projectId', async (request, reply) => {
+  fastify.post('/execution-images/migrate/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
+
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -934,8 +1024,13 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
 
   // ─── POST /execution-images/refresh/:projectId — 下载过期的阿里云 OSS 图片到本地并更新 URL
   // 阿里云 dashscope 生成的图片 URL 带临时签名，24h 后过期
-  fastify.post('/execution-images/refresh/:projectId', async (request, reply) => {
+  fastify.post('/execution-images/refresh/:projectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { projectId } = request.params as any
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(projectId, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
     const fs = await import('fs/promises')
     const path = await import('path')
     const https = await import('https')
@@ -1079,9 +1174,20 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
   })
 
   // GET /execution-images/proxy — 图片代理（解决 OSS 防盗链问题）
-  fastify.get('/execution-images/proxy', async (request, reply) => {
+  // ⚡ 必须包含 SSRF 防护
+  fastify.get('/execution-images/proxy', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { url } = request.query as any
     if (!url) return reply.status(400).send({ error: '缺少 url 参数' })
+
+    // SSRF 防护：只允许代理白名单域名
+    const { guardExternalUrl } = await import('../utils/ssrf-protection.js')
+    try {
+      guardExternalUrl(url)
+    } catch (e: any) {
+      console.warn('[SSRF] /execution-images/proxy 阻止:', e.message, url.substring(0, 100))
+      // 回退到客户端重定向（不通过服务器转发）
+      return reply.redirect(url, 302)
+    }
 
     try {
       const response = await fetch(url, {
@@ -1115,6 +1221,14 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any
     if (!id) return reply.status(400).send({ error: 'id required' })
     try {
+      // ⭐ Phase 6 安全隔离: 按图片记录归属校验（防越权删除他人素材）
+      const rec = await prisma.characterImage.findUnique({ where: { id }, select: { projectId: true } })
+      if (rec) {
+        const ownerCheck = await verifyProjectOwner(rec.projectId, (request.user as any)?.id)
+        if (!ownerCheck.ok) {
+          return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+        }
+      }
       await prisma.characterImage.delete({ where: { id } })
       return { success: true } satisfies ApiResponse<unknown>;
 
@@ -1129,6 +1243,14 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any
     if (!id) return reply.status(400).send({ error: 'id required' })
     try {
+      // ⭐ Phase 6 安全隔离: 按图片记录归属校验（防越权删除他人素材）
+      const rec = await prisma.sceneImage.findUnique({ where: { id }, select: { projectId: true } })
+      if (rec) {
+        const ownerCheck = await verifyProjectOwner(rec.projectId, (request.user as any)?.id)
+        if (!ownerCheck.ok) {
+          return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+        }
+      }
       await prisma.sceneImage.delete({ where: { id } })
       return { success: true } satisfies ApiResponse<unknown>;
 
@@ -1154,6 +1276,12 @@ export default async function executionImageRoutes(fastify: FastifyInstance) {
     const authHeader = (request.headers as any).authorization || ''
     const pid = projectId || body.projectId
     if (!pid) return reply.status(400).send({ error: 'projectId required' })
+
+    // ⭐ Phase 6 安全隔离: 归属校验
+    const ownerCheck = await verifyProjectOwner(pid, (request.user as any)?.id)
+    if (!ownerCheck.ok) {
+      return reply.status(ownerCheck.status).send({ success: false, error: ownerCheck.error })
+    }
 
     try {
       // 构造白底道具图 prompt
