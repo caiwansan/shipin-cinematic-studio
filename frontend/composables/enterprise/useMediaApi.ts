@@ -6,7 +6,8 @@ import { getAuthToken } from '~/utils/auth/token'
  * 统一：认证、organizationId 注入、响应解析
  */
 
-const API_BASE = '/api/v1'
+// 真实后端端点：/api/enterprise/* （/api/v1 从未在后端注册，历史假端点）
+const API_BASE = '/api/enterprise'
 
 export interface ApiResult<T> {
   data: T
@@ -129,15 +130,18 @@ export const KunlunMediaApi = {
 
   getMe: () => apiGet<any>('/auth/me'),
 
-  // Employees
-  getEmployees: () => apiGet<EmployeeDto[]>('/employees'),
-  getEmployee: (id: string) => apiGet<EmployeeDto>(`/employees/${id}`),
-  getEmployeeValueSummary: (id: string) => apiGet<any>(`/employees/${id}/value-summary`),
+  // Employees — 真实端点：/api/enterprise/media-department/employees (profile+instance 合并)
+  getEmployees: () => apiGet<EmployeeDto[]>('/media-department/employees'),
+  getEmployee: (id: string) => apiGet<EmployeeDto>(`/media-department/employees/${id}`),
+  getEmployeeValueSummary: (id: string) => apiGet<any>(`/media-department/employees/${id}/value-summary`),
 
-  // Onboarding
+  // Onboarding — 真实端点：/api/enterprise/onboarding/status
   getOnboardingStatus: () => apiGet<OnboardingStatusDto>('/onboarding/status'),
 
-  // CEO Analytics
+  // Subscription — 真实端点：/api/enterprise/subscription/current（套餐 SSOT）
+  getSubscriptionCurrent: () => apiGet<any>('/subscription/current'),
+
+  // CEO Analytics（暂未接线，保留接口）
   getCeoValueSummary: () => apiGet<CeoValueSummaryDto>('/ceo/value-summary'),
 
   // Knowledge / Organization

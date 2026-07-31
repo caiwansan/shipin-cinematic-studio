@@ -186,20 +186,16 @@ async function fetchData() {
       const d = await res.json()
       admins.value = Array.isArray(d) ? d : (Array.isArray(d.data) ? d.data : (Array.isArray(d.admins) ? d.admins : (d.data?.admins || [])))
     } else {
-      admins.value = getMockAdmins()
+      // Reality Gate: API 失败不返回假数据，显示错误状态
+      const d = await res.json().catch(() => ({}))
+      error.value = `加载失败（HTTP ${res.status}）：${d.error || d.message || '请检查后端服务'}`
+      admins.value = []
     }
-  } catch {
-    admins.value = getMockAdmins()
+  } catch (e: any) {
+    error.value = `加载失败：${e.message || '网络错误'}`
+    admins.value = []
   }
   loading.value = false
-}
-
-function getMockAdmins(): any[] {
-  return [
-    { id: 1, username: 'admin', role: 'superadmin', status: 'active', lastLogin: '2025-03-20T10:30:00' },
-    { id: 2, username: 'operator1', role: 'admin', status: 'active', lastLogin: '2025-03-19T14:20:00' },
-    { id: 3, username: 'operator2', role: 'admin', status: 'disabled', lastLogin: '2025-03-10T09:00:00' },
-  ]
 }
 
 function openCreateDialog() {
@@ -230,13 +226,12 @@ async function doCreateAdmin() {
       admins.value.push(d.data || d || { id: Date.now(), ...newAdmin.value, status: 'active' })
       showCreate.value = false
     } else {
-      // Mock success
-      admins.value.push({ id: Date.now(), ...newAdmin.value, status: 'active', lastLogin: null })
-      showCreate.value = false
+      // Reality Gate: 创建失败不 push 假数据，显示真实错误
+      const d = await res.json().catch(() => ({}))
+      createError.value = d.error || d.message || `创建失败（HTTP ${res.status}）`
     }
-  } catch {
-    admins.value.push({ id: Date.now(), ...newAdmin.value, status: 'active', lastLogin: null })
-    showCreate.value = false
+  } catch (e: any) {
+    createError.value = `创建失败：${e.message || '网络错误'}`
   }
   creating.value = false
 }
@@ -252,10 +247,12 @@ async function deleteAdmin(a: any) {
     if (res.ok || res.status === 404) {
       admins.value = admins.value.filter((x: any) => x.id !== a.id && x._id !== a._id)
     } else {
-      admins.value = admins.value.filter((x: any) => x.id !== a.id && x._id !== a._id)
+      // Reality Gate: 删除失败不假装成功
+      const d = await res.json().catch(() => ({}))
+      alert(`删除失败：${d.error || d.message || `HTTP ${res.status}`}`)
     }
-  } catch {
-    admins.value = admins.value.filter((x: any) => x.id !== a.id && x._id !== a._id)
+  } catch (e: any) {
+    alert(`删除失败：${e.message || '网络错误'}`)
   }
 }
 

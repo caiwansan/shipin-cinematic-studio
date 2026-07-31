@@ -1,19 +1,7 @@
 <template>
   <div class="media-department">
     <!-- 顶部导航栏（复用 KunlunNav） -->
-    <KunlunNav :is-logged-in="isLoggedIn" @show-login="showLogin = true" @show-register="showRegister = true" />
-
-    <!-- 紧急停止按钮（全局固定） -->
-    <button
-      v-if="isLoggedIn && hasOrganization"
-      class="emergency-stop-btn"
-      :class="{ 'emergency-active': emergencyStopped }"
-      @click="toggleEmergencyStop"
-      :title="emergencyStopped ? 'AI 操作已停止，点击恢复' : '点击停止全部 AI 操作'"
-    >
-      <span class="stop-icon">🛑</span>
-      <span class="stop-text">{{ emergencyStopped ? '已停止' : '停止全部AI操作' }}</span>
-    </button>
+    <KunlunNav :is-logged-in="isLoggedIn" @show-login="goLogin" @show-register="goRegister" />
 
     <!-- 主内容 -->
     <main class="main-content">
@@ -23,8 +11,8 @@
           <h1 class="welcome-title">欢迎使用昆仑镜 AI 新媒体运营部门</h1>
           <p class="welcome-desc">由 Hermes Agent Runtime 驱动的 AI 新媒体运营团队</p>
           <div class="welcome-actions">
-            <button class="btn btn-primary" @click="showLogin = true">登录使用</button>
-            <button class="btn btn-outline" @click="showRegister = true">免费注册</button>
+            <button class="btn btn-primary" @click="goLogin">登录使用</button>
+            <button class="btn btn-outline" @click="goRegister">免费注册</button>
           </div>
         </div>
       </div>
@@ -68,12 +56,12 @@
         <div class="status-header">
           <div class="company-info">
             <h2 class="company-name">{{ organizationName || '我的企业' }}</h2>
-            <span class="plan-badge">{{ planName }}</span>
+            <span class="plan-badge">{{ planName || '未开通' }}</span>
           </div>
           <div class="status-quick">
             <div class="quick-item">
               <span class="quick-label">AI 员工</span>
-              <span class="quick-value">{{ realAgents.length }}/{{ employeeMax }}</span>
+              <span class="quick-value">{{ realAgents.length }}{{ employeeMax ? '/' + employeeMax : '' }}</span>
             </div>
             <div class="quick-item">
               <span class="quick-label">已连接平台</span>
@@ -130,34 +118,20 @@
             </button>
             <button class="action-card" @click="goToWorkspace">
               <span class="action-icon">📡</span>
-              <span class="action-label">创建热点分析师</span>
+              <span class="action-label">管理 AI 员工</span>
             </button>
             <button class="action-card" @click="goToWorkspace">
               <span class="action-icon">✍️</span>
               <span class="action-label">创建内容创作 AI</span>
             </button>
-            <button class="action-card" @click="goToAnalytics">
-              <span class="action-icon">📊</span>
-              <span class="action-label">查看运营数据</span>
+            <button class="action-card" @click="goToSettings">
+              <span class="action-icon">⚙️</span>
+              <span class="action-label">企业账号设置</span>
             </button>
           </div>
         </div>
       </div>
     </main>
-
-    <!-- 登录/注册弹窗占位（Phase 2 实现） -->
-    <div v-if="showLogin" class="modal-overlay" @click.self="showLogin = false">
-      <div class="modal-content">
-        <p>登录功能尚未实现，请联系管理员</p>
-        <button class="btn btn-outline btn-sm" @click="showLogin = false">关闭</button>
-      </div>
-    </div>
-    <div v-if="showRegister" class="modal-overlay" @click.self="showRegister = false">
-      <div class="modal-content">
-        <p>注册功能尚未实现，请联系管理员</p>
-        <button class="btn btn-outline btn-sm" @click="showRegister = false">关闭</button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -167,17 +141,15 @@ import { ref, computed, onMounted, watch } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 import { KunlunMediaApi } from '~/composables/enterprise/useMediaApi'
 
-// ─── 认证状态 ───
+// ─── 认证状态（真实 token 判断） ───
 const isLoggedIn = ref(false)
 const token = ref('')
-const userId = ref('')
 
 // ─── 组织信息（从 API 读取） ───
 const organizationName = ref('')
 const organizationId = ref('')
-const planName = ref('免费版')
-const employeeCount = ref(0)
-const employeeMax = ref(5)
+const planName = ref('')
+const employeeMax = ref(0)
 const connectedPlatforms = ref<string[]>([])
 const hasOrg = ref(false)
 const isLoading = ref(true)
@@ -185,23 +157,8 @@ const isLoading = ref(true)
 // ─── AI 员工实例（真实数据） ───
 const realAgents = ref<any[]>([])
 
-// ─── 弹窗状态 ───
-const showLogin = ref(false)
-const showRegister = ref(false)
-const emergencyStopped = ref(false)
-
 // ─── 计算属性 ───
 const hasOrganization = computed(() => hasOrg.value)
-
-// AI 员工模拟数据（Phase 2 动态化）
-const aiEmployees = ref([
-  { id: '1', name: 'AI 运营总监', icon: '👔', status: 'working', currentTask: '制定账号策略' },
-  { id: '2', name: '热点分析师', icon: '📡', status: 'working', currentTask: '今日扫描热点' },
-  { id: '3', name: '内容创作 AI', icon: '✍️', status: 'idle', currentTask: '' },
-  { id: '4', name: '销售顾问', icon: '💼', status: 'idle', currentTask: '' },
-  { id: '5', name: '客服 AI', icon: '🎧', status: 'idle', currentTask: '' },
-  { id: '6', name: '数据分析', icon: '📊', status: 'idle', currentTask: '' },
-])
 
 // ─── 方法 ───
 function getToken(): string {
@@ -253,14 +210,11 @@ function platformIcon(platform: string): string {
   return map[platform] || '📱'
 }
 
-function toggleEmergencyStop() {
-  emergencyStopped.value = !emergencyStopped.value
-  if (emergencyStopped.value) {
-    // TODO: 调用紧急停止 API
-    console.log('[MediaDepartment] Emergency stop ACTIVATED')
-  } else {
-    console.log('[MediaDepartment] Emergency stop DEACTIVATED')
-  }
+function goLogin() {
+  window.location.href = '/?login=1'
+}
+function goRegister() {
+  window.location.href = '/?register=1'
 }
 
 function goToWorkspace() {
@@ -269,15 +223,15 @@ function goToWorkspace() {
 function goToSettings() {
   window.location.href = '/media-department/settings'
 }
-function goToAnalytics() {
-  window.location.href = '/media-department/analytics'
-}
 
 // ─── 生命周期 ───
 onMounted(() => {
   token.value = getToken()
-  // 允许 demo 无 token 访问（显示真实 demo 数据）
-  isLoggedIn.value = true
+  isLoggedIn.value = !!token.value
+  if (!isLoggedIn.value) {
+    isLoading.value = false
+    return
+  }
   fetchOrganizationInfo().then(() => {
     if (hasOrg.value) {
       fetchRealAgents()
@@ -287,17 +241,23 @@ onMounted(() => {
 
 async function fetchOrganizationInfo() {
   try {
-    const result = await KunlunMediaApi.getOnboardingStatus()
-    if (result.data && result.data.hasOrganization) {
+    // 真实数据：企业初始化状态 + 订阅 SSOT（套餐名/员工额度）
+    const [onboard, sub] = await Promise.all([
+      KunlunMediaApi.getOnboardingStatus(),
+      KunlunMediaApi.getSubscriptionCurrent(),
+    ])
+    const ob = onboard.data as any
+    const sb = sub.data as any
+    if (ob && ob.hasOrganization) {
       hasOrg.value = true
-      organizationName.value = (result.data as any).organizationName || '我的企业'
-      organizationId.value = result.data.organizationId
-      planName.value = '企业版'
-      employeeCount.value = 0
-      employeeMax.value = 20
+      organizationName.value = ob.organizationName || '我的企业'
+      organizationId.value = ob.organizationId
+      // 套餐名/额度来自 Subscription SSOT，缺失时诚实留空（不写死企业版）
+      planName.value = (sb && (sb.planName || sb.name)) || ''
+      employeeMax.value = (sb && sb.maxEmployees) || 0
+      // 已连接平台：后端媒体账号模块未上线（无真实 API），显示「未连接」不造假
       connectedPlatforms.value = []
-      // Persist org ID for other pages
-      try { localStorage.setItem('organizationId', result.data.organizationId) } catch {}
+      try { localStorage.setItem('organizationId', ob.organizationId) } catch {}
     } else {
       hasOrg.value = false
     }
@@ -317,12 +277,12 @@ async function fetchRealAgents() {
       realAgents.value = result.data.map((emp: any) => ({
         id: emp.id,
         name: emp.name || 'AI 员工',
-        role: emp.role || emp.type || '运营',
-        status: emp.status || 'active',
+        role: emp.role || emp.agentType || '运营',
+        type: emp.agentType || emp.type || '',
+        status: (emp.runtimeStatus || emp.status || 'inactive').toLowerCase(),
         capabilities: emp.capabilities || [],
-        valueSummary: emp.valueSummary,
+        totalTasks: emp.totalTasks || 0,
       }))
-      employeeCount.value = result.data.length
     }
   } catch (e) {
     console.warn('[MediaDepartment] Agent fetch failed:', e)

@@ -11,6 +11,7 @@ import { agentAuditService } from '../services/enterprise/agent-audit.service.js
 import { enterpriseOnboarding } from '../services/enterprise/enterprise-onboarding.service.js'
 import { entitlementService } from '../services/enterprise/enterprise-entitlement.service.js'
 import { tenantOwnershipGuard } from '../enterprise/reality/tenant-guard.js'
+import { getOrganizationIdForUser, resolveTenantIdForUser } from '../services/enterprise/organization/identity-bootstrap.service.js'
 
 export async function enterpriseRoutes(app: FastifyInstance) {
   // 所有企业接口都需要 JWT 认证
@@ -49,16 +50,35 @@ export async function enterpriseRoutes(app: FastifyInstance) {
 
   // GET /api/enterprise/onboarding/status — 当前用户的初始化状态（无需 tenantId）
   app.get('/api/enterprise/onboarding/status', async (request) => {
-    const user = request.user as any
-    const tenantId = user?.tenantId || user?.id
+    const userId = (request.user as any)?.id
+    // 注意：这里需要 tenantId（gov tenant），不是 org id
+    const tenantId = userId ? (await resolveTenantIdForUser(userId) || userId) : ''
     const status = await enterpriseOnboarding.getOnboardingStatus(tenantId)
-    return { code: 0, data: status }
+    // 补充组织信息（media-department 前端使用）：真实 gov 组织名/ID
+    let organizationName = ''
+    let organizationId = ''
+    if (tenantId) {
+      const org = await prisma.govOrganization.findFirst({
+        where: { tenantId },
+        select: { id: true, name: true },
+      })
+      if (org) {
+        organizationId = org.id
+        organizationName = org.name
+      }
+    }
+    return { code: 0, data: {
+      ...status,
+      hasOrganization: status.organizations > 0,
+      organizationId,
+      organizationName,
+    } }
   })
 
   // POST /api/enterprise/setup/complete — 标记 Setup 完成
   app.post('/api/enterprise/setup/complete', async (request, reply) => {
-    const user = request.user as any
-    const tenantId = user?.tenantId || user?.id
+    const userId = (request.user as any)?.id
+    const tenantId = userId ? (await resolveTenantIdForUser(userId) || userId) : ''
     try {
       // 更新 onboarding 状态：确保 isComplete = true
       const status = await enterpriseOnboarding.getOnboardingStatus(tenantId)

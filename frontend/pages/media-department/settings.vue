@@ -1,16 +1,6 @@
 <template>
   <div class="media-department">
-    <KunlunNav :is-logged-in="isLoggedIn" @show-login="showLogin = true" @show-register="showRegister = true" />
-    
-    <button
-      v-if="isLoggedIn && hasOrganization"
-      class="emergency-stop-btn"
-      :class="{ 'emergency-active': emergencyStopped }"
-      @click="toggleEmergencyStop"
-    >
-      <span class="stop-icon">🛑</span>
-      <span class="stop-text">{{ emergencyStopped ? '已停止' : '停止全部AI操作' }}</span>
-    </button>
+    <KunlunNav :is-logged-in="isLoggedIn" @show-login="goLogin" @show-register="goRegister" />
 
     <main class="main-content">
       <div class="sub-nav">
@@ -20,7 +10,7 @@
 
       <div v-if="!isLoggedIn" class="empty-state">
         <p>请先登录</p>
-        <button class="btn btn-primary" @click="showLogin = true">登录</button>
+        <button class="btn btn-primary" @click="goLogin">登录</button>
       </div>
 
       <div v-else class="settings-page">
@@ -87,62 +77,6 @@
           </div>
         </div>
 
-        <!-- 平台授权连接弹窗 -->
-        <div v-if="showConnectModal" class="modal-overlay" @click.self="cancelConnect">
-          <div class="modal-content connect-modal">
-            <div class="connect-header">
-              <h3>连接 {{ connectingPlatfrm?.name }} 账号</h3>
-              <button class="btn-close" @click="cancelConnect">×</button>
-            </div>
-
-            <div class="connect-body">
-              <!-- 等待登录状态 -->
-              <div v-if="connectStatus === 'waiting_login'" class="connect-waiting">
-                <div class="connect-spinner"></div>
-                <p>打开浏览器中...</p>
-                <p class="connect-sub">弹窗将显示登录页，请完成登录</p>
-              </div>
-
-              <!-- 登录页截图 -->
-              <div v-if="_connectScreenshot" class="connect-screenshot">
-                <img :src="_connectScreenshot" alt="登录页截图" />
-                <p class="connect-sub">完成登录后系统将自动检测</p>
-              </div>
-
-              <!-- 连接成功 -->
-              <div v-if="connectStatus === 'login_completed'" class="connect-success">
-                <span class="success-icon">✅</span>
-                <p>登录成功！正在保存账号...</p>
-              </div>
-
-              <!-- 已绑定 -->
-              <div v-if="connectStatus === 'active'" class="connect-done">
-                <span class="success-icon">🎉</span>
-                <p>账号绑定成功！</p>
-                <p class="connect-sub">AI 员工现在可以管理你的 {{ connectingPlatfrm?.name }} 账号</p>
-              </div>
-
-              <!-- 出错 -->
-              <div v-if="connectStatus === 'error'" class="connect-error">
-                <span class="error-icon">❌</span>
-                <p>{{ connectErrorMessage }}</p>
-                <button class="btn btn-primary btn-sm" @click="retryConnect">重试</button>
-              </div>
-            </div>
-
-            <div class="connect-footer">
-              <button class="btn btn-outline btn-sm" @click="cancelConnect">取消</button>
-              <button
-                v-if="connectStatus === 'waiting_login' || connectStatus === 'login_completed'"
-                class="btn btn-primary btn-sm"
-                @click="confirmConnect"
-              >
-                确认绑定
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- 升级套餐 -->
         <div class="settings-section">
           <h2 class="section-subtitle">套餐升级</h2>
@@ -155,10 +89,10 @@
               :class="{ 'plan-active': planName === plan.displayName }"
             >
               <h3>{{ plan.displayName }}</h3>
-              <p class="plan-price">¥{{ (plan.priceMonthly / 100).toFixed(0) }}<span>/月</span></p>
+              <p class="plan-price">¥{{ ((plan.price ?? plan.priceMonthly) / 100).toFixed(0) }}<span>/月</span></p>
               <ul class="plan-features">
-                <li>{{ plan.maxEmployers }} 个 AI 员工</li>
-                <li>{{ plan.maxChannels }} 个平台账号</li>
+                <li>{{ plan.maxEmployees ?? plan.maxEmployers ?? 0 }} 个 AI 员工</li>
+                <li>{{ plan.maxChannels ?? 0 }} 个平台账号</li>
                 <li v-for="f in plan.features" :key="f">{{ f }}</li>
               </ul>
               <button
@@ -180,13 +114,6 @@
         </div>
       </div>
     </main>
-
-    <div v-if="showLogin" class="modal-overlay" @click.self="showLogin = false">
-      <div class="modal-content">
-        <p>登录功能尚未实现，请联系管理员</p>
-        <button class="btn btn-outline btn-sm" @click="showLogin = false">关闭</button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -197,10 +124,7 @@ import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 import { KunlunMediaApi } from '~/composables/enterprise/useMediaApi'
 
 const isLoggedIn = ref(false)
-const showLogin = ref(false)
-const showRegister = ref(false)
-const emergencyStopped = ref(false)
-const planName = ref('基础版')
+const planName = ref('')
 
 const orgInfo = ref({
   name: '',
@@ -225,17 +149,9 @@ const platforms = ref([
   { id: 'qiwechat', name: '企业微信', icon: '🏢', status: 'coming_soon', loginUrl: '' },
 ])
 
-// Platform connection modal state
+// Platform connection modal state（后端 media-platform 未上线，弹窗已移除）
 const showConnectModal = ref(false)
 const connectingPlatform = ref<string | null>(null)
-const connectingPlatfrm = ref<any>(null)
-const connectSessionId = ref('')
-const connectStatus = ref<'waiting_login' | 'login_completed' | 'active' | 'error'>('waiting_login')
-const _connectScreenshot = ref('')
-const connectErrorMessage = ref('')
-let _connectPollTimer: any = null
-
-const BASE_URL = 'https://aigc.fushtn.com'
 
 function getToken(): string {
   try { return getAuthToken() || '' } catch { return '' }
@@ -247,16 +163,35 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : { Authorization: 'Bearer demo-token' }
 }
 
-function toggleEmergencyStop() {
-  emergencyStopped.value = !emergencyStopped.value
-}
+function goLogin() { window.location.href = '/?login=1' }
+function goRegister() { window.location.href = '/?register=1' }
 
-function saveOrgInfo() {
-  if (!orgInfo.value.name) {
+async function saveOrgInfo() {
+  if (!orgInfo.value.name.trim()) {
     alert('请输入企业名称')
     return
   }
-  alert(`企业「${orgInfo.value.name}」创建成功！（Phase 1 演示）`)
+  try {
+    const token = getToken()
+    const res = await fetch('/api/enterprise', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ name: orgInfo.value.name.trim(), industry: orgInfo.value.industry }),
+    })
+    const d = await res.json().catch(() => ({}))
+    if (res.ok) {
+      alert(`企业「${orgInfo.value.name}」创建成功`)
+      try {
+        if (d.data?.organization?.id) localStorage.setItem('organizationId', d.data.organization.id)
+        if (d.data?.tenantId) localStorage.setItem('organizationId', d.data.tenantId)
+      } catch {}
+      window.location.reload()
+    } else {
+      alert(`创建失败：${d.error || d.message || `HTTP ${res.status}`}`)
+    }
+  } catch (e: any) {
+    alert(`创建失败：${e.message || '网络错误'}`)
+  }
 }
 
 async function openConnectModal(p: any) {
@@ -264,138 +199,29 @@ async function openConnectModal(p: any) {
     alert(`${p.name} 平台即将在 Phase 3 支持`)
     return
   }
-
-  connectingPlatform.value = p.id
-  connectingPlatfrm.value = p
-  showConnectModal.value = true
-  connectStatus.value = 'waiting_login'
-  _connectScreenshot.value = ''
-  connectErrorMessage.value = ''
-
-  try {
-    const resp = await fetch(`${BASE_URL}/api/enterprise/media-department/media/accounts/connect`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({
-        platform: p.id,
-      }),
-    })
-    const data = await resp.json()
-    if (data.code === 0) {
-      connectSessionId.value = data.data.sessionId
-      // Start polling for status
-      _connectPollTimer = setInterval(async () => {
-        await pollConnectStatus()
-      }, 3000)
-    } else {
-      connectStatus.value = 'error'
-      connectErrorMessage.value = data.message || '创建连接失败'
-    }
-  } catch (err: any) {
-    connectStatus.value = 'error'
-    connectErrorMessage.value = err.message || '网络错误'
-  }
-}
-
-async function pollConnectStatus() {
-  if (!connectSessionId.value) return
-
-  try {
-    const resp = await fetch(`${BASE_URL}/api/enterprise/media-department/media/accounts/connect/${connectSessionId.value}/status`)
-    const data = await resp.json()
-    if (data.code === 0) {
-      if (data.data.screenshot) {
-        _connectScreenshot.value = `data:image/png;base64,${data.data.screenshot}`
-      }
-      if (data.data.status === 'login_completed' && connectStatus.value !== 'active') {
-        connectStatus.value = 'login_completed'
-        // Auto-confirm after 2 seconds
-        setTimeout(() => confirmConnect(), 2000)
-      }
-    }
-  } catch (err) {
-    // Silently retry on next poll
-  }
-}
-
-async function confirmConnect() {
-  if (_connectPollTimer) {
-    clearInterval(_connectPollTimer)
-    _connectPollTimer = null
-  }
-
-  try {
-    const resp = await fetch(`${BASE_URL}/api/enterprise/media-department/media/accounts/connect/${connectSessionId.value}/confirm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({
-        platform: connectingPlatform.value,
-        accountName: `${connectingPlatform.value}_creator`,
-      }),
-    })
-    const data = await resp.json()
-    if (data.code === 0) {
-      connectStatus.value = 'active'
-      // Update platform status in list
-      const p = platforms.value.find((x: any) => x.id === connectingPlatform.value)
-      if (p) p.status = 'active'
-    } else {
-      connectStatus.value = 'error'
-      connectErrorMessage.value = data.message || '绑定失败'
-    }
-  } catch (err: any) {
-    connectStatus.value = 'error'
-    connectErrorMessage.value = err.message || '网络错误'
-  }
-}
-
-async function cancelConnect() {
-  if (_connectPollTimer) {
-    clearInterval(_connectPollTimer)
-    _connectPollTimer = null
-  }
-  if (connectSessionId.value) {
-    await fetch(`${BASE_URL}/api/enterprise/media-department/media/accounts/connect/${connectSessionId.value}/cancel`, { method: 'POST' })
-  }
-  showConnectModal.value = false
-  connectSessionId.value = ''
-  connectingPlatform.value = null
-  connectingPlatfrm.value = null
-}
-
-async function retryConnect() {
-  if (connectingPlatfrm.value) {
-    await openConnectModal(connectingPlatfrm.value)
-  }
+  // 平台账号连接后端（media-platform）尚未上线，诚实提示不发起无效请求
+  alert(`${p.name} 账号连接功能正在接入中，暂未开放`)
 }
 
 async function disconnectPlatform(p: any) {
-  if (confirm(`确认断开与 ${p.name} 的连接吗？AI 员工将无法继续操作该账号。`)) {
-    // Phase 2: call API to disconnect
-    p.status = 'none'
-    alert(`${p.name} 已断开`)
-  }
+  // 平台账号断开 API 未上线，诚实提示
+  alert('平台账号断开功能正在接入中，暂未开放')
 }
 
 async function loadPlatformStatus() {
-  try {
-    const resp = await fetch(`${BASE_URL}/api/enterprise/media-department/media/accounts/health?platform=xiaohongshu`, { headers: getAuthHeaders() })
-    const data = await resp.json()
-    if (data.code === 0 && data.data.hasAccount) {
-      const p = platforms.value.find((x: any) => x.id === 'xiaohongshu')
-      if (p) p.status = data.data.accountStatus || 'none'
-    }
-  } catch (err) {
-    // Ignore health check errors
-  }
+  // 平台账号后端（media-platform）未上线，不调用无效端点，状态保持初始映射
+  return
 }
 
 async function loadPlans() {
   try {
-    const resp = await fetch(`${BASE_URL}/api/plans`)
+    // 套餐列表真实端点：/api/enterprise/subscription/available-plans（DB EnterprisePlan）
+    const resp = await fetch('/api/enterprise/subscription/available-plans', {
+      headers: getAuthHeaders(),
+    })
     const data = await resp.json()
-    if (data.code === 0 && data.data) {
-      plans.value = data.data
+    if (data.success !== false && data.data) {
+      plans.value = Array.isArray(data.data) ? data.data : (Array.isArray(data.data.plans) ? data.data.plans : [])
     }
   } catch (err) {
     console.warn('[Settings] Failed to load plans:', err)
@@ -403,15 +229,23 @@ async function loadPlans() {
 }
 
 function upgradePlan(plan: any) {
-  alert(`升级到「${plan.displayName}」需要支付 ¥${(plan.priceMonthly / 100).toFixed(0)}/月`)
+  alert(`升级到「${plan.displayName}」需要支付 ¥${((plan.price ?? plan.priceMonthly) / 100).toFixed(0)}/月`)
 }
 
-onMounted(() => {
+onMounted(async () => {
   const token = getToken()
-  if (token) {
-    isLoggedIn.value = true
+  if (!token) return
+  isLoggedIn.value = true
+  // 当前套餐来自 Subscription SSOT（不写死）
+  try {
+    const sub = await KunlunMediaApi.getSubscriptionCurrent()
+    const d = sub.data as any
+    if (d && (d.planName || d.name)) {
+      planName.value = d.planName || d.name
+    }
+  } catch (e) {
+    console.warn('[Settings] Subscription fetch failed:', e)
   }
-  loadPlatformStatus()
   loadPlans()
 })
 </script>
