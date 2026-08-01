@@ -34,7 +34,7 @@
           </button>
         </div>
         <div v-else class="to-list-empty">
-          <MediaEmptyState icon="🤖" title="部门待组建" desc="先连接新媒体账号，AI 员工将随账号接入自动部署。" source="EnterpriseAgentInstance" action>
+          <MediaEmptyState icon="🤖" title="部门待组建" desc="先连接新媒体账号，再解锁 AI 员工团队——部署后自动开始运营。" source="EnterpriseAgentInstance" action>
             <template #action>
               <NuxtLink to="/workspace/media/accounts" class="to-empty-cta">① 连接公众号 →</NuxtLink>
             </template>
@@ -48,7 +48,9 @@
             <span>{{ r.avatar }}</span>
             <div class="to-roster-meta">
               <div><b>{{ r.name }}</b><span class="to-roster-role">{{ r.role }}</span></div>
-              <div class="to-roster-value">{{ r.value }}</div>
+              <div class="to-roster-duty">{{ r.duty }}</div>
+              <div class="to-roster-value">→ {{ r.value }}</div>
+              <div class="to-roster-auto">⚙️ 订阅后自动执行：{{ r.auto }}</div>
             </div>
             <span class="to-roster-tag">🔒 订阅解锁</span>
           </div>
@@ -137,11 +139,11 @@ const outcomes = ref<any[]>([])
 const { $toast } = useNuxtApp() as any
 
 const roster = [
-  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略，指挥团队执行', value: '减少人工策划成本：战略与排期自动生成' },
-  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与内容策略建议', value: '持续产生内容方向：选题自动排满日历' },
-  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作并输出成品', value: '提高生产效率：图文视频批量产出' },
-  { name: 'David', role: '客服互动', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '减少人工客服压力：私信秒回自动接待' },
-  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '持续优化运营：每周自动复盘' },
+  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略，指挥团队执行', value: '减少人工策划成本：战略与排期自动生成', auto: '每月内容战略与排期计划，自动指挥团队执行' },
+  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与内容策略建议', value: '持续产生内容方向：选题自动排满日历', auto: '每日扫描热点与竞品，选题池自动填充' },
+  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作并输出成品', value: '提高生产效率：图文视频批量产出', auto: '按选题自动生成图文与视频初稿，交人工审核' },
+  { name: 'David', role: '客服互动', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '减少人工客服压力：私信秒回自动接待', auto: '自动回复粉丝私信，A/B/C 分级并提醒销售机会' },
+  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '持续优化运营：每周自动复盘', auto: '每周自动产出运营周报与增长建议' },
 ]
 
 // 岗位职责：优先真实档案（暂无 desc 字段）→ 标准编制职责兜底
@@ -340,6 +342,18 @@ function stateClass(s: string) {
 .to-roster-value {
   font-size: 10px;
   color: var(--color-decision);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.to-roster-duty {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.to-roster-auto {
+  font-size: 10px;
+  color: var(--color-warning);
   margin-top: 2px;
   line-height: 1.4;
 }

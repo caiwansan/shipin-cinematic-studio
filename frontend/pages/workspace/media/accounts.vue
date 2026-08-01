@@ -45,6 +45,12 @@
       <button class="as-cta" @click="connect">连接微信公众平台</button>
     </div>
 
+    <!-- 连接价值说明（未连接 ≠ 不可用：连接后 AI 员工才能执行运营任务） -->
+    <div class="as-note">
+      <span class="as-note-ico">🔗</span>
+      <span><b>未连接不是不可用</b>——连接账号后，AI 员工才能基于授权执行运营任务：发布内容、回复粉丝、读取数据。连接流程见下方 4 步。</span>
+    </div>
+
     <!-- 连接流程 -->
     <div class="as-steps">
       <div v-for="(s, i) in steps" :key="i" class="as-step">
@@ -56,8 +62,8 @@
       </div>
     </div>
 
-    <!-- 多平台规划 -->
-    <MediaPanel icon="🌐" title="多平台规划" sub="企业新媒体矩阵扩展方向">
+    <!-- 多平台规划（统一「未连接」表达：接入准备中，非不可用） -->
+    <MediaPanel icon="🌐" title="多平台规划" sub="企业新媒体矩阵扩展方向 · 均未连接">
       <div class="as-planned">
         <div v-for="p in planned" :key="p.name" class="as-planned-item">
           <span class="as-planned-ico">{{ p.icon }}</span>
@@ -65,9 +71,10 @@
             <b>{{ p.name }}</b>
             <span class="as-planned-sub">{{ p.note }}</span>
           </div>
-          <span class="as-planned-tag">规划中</span>
+          <span class="as-planned-tag">未连接</span>
         </div>
       </div>
+      <div class="as-planned-foot">各平台接入后统一走同一套流程：获取凭证 → 配置白名单 → 授权 AI 员工 → 验证连接。连接后 AI 员工才能执行对应平台的运营任务。</div>
     </MediaPanel>
   </MediaWorkspaceShell>
 </template>
@@ -284,12 +291,33 @@ function connect() {
 .as-planned-tag {
   margin-left: auto;
   font-size: 9px;
-  color: var(--color-text-disabled);
-  border: 1px dashed var(--color-border-secondary);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-secondary);
   border-radius: 8px;
   padding: 2px 8px;
   white-space: nowrap;
 }
+.as-planned-foot {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+.as-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+.as-note-ico { font-size: 15px; }
+.as-note b { color: var(--color-text-primary); }
 @media (max-width: 1000px) {
   .as-asset { grid-template-columns: 1fr; }
   .as-perms { border-left: none; padding-left: 0; border-top: 1px solid var(--color-border-primary); padding-top: 14px; }

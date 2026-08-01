@@ -29,6 +29,39 @@
       <span class="dash-pos-item dash-pos-ai">🤖 由 AI 员工自动执行</span>
     </div>
 
+    <!-- ═══ 首次进入行动路径（空态时：当前状态 → 下一步动作）═══ -->
+    <div v-if="!agents.length" class="dash-steps">
+      <div class="dash-steps-title">🚀 三步开启你的 AI 新媒体运营部</div>
+      <div class="dash-steps-row">
+        <div class="dash-step">
+          <span class="dash-step-num">1</span>
+          <div class="dash-step-body">
+            <b>连接渠道资产</b>
+            <span>公众号 / 抖音 / 小红书 / 视频号</span>
+          </div>
+          <NuxtLink to="/workspace/media/accounts" class="dash-step-cta">去连接 →</NuxtLink>
+        </div>
+        <span class="dash-step-arrow">→</span>
+        <div class="dash-step">
+          <span class="dash-step-num">2</span>
+          <div class="dash-step-body">
+            <b>解锁 AI 团队</b>
+            <span>5 名 AI 员工自动部署</span>
+          </div>
+          <button class="dash-step-cta" @click="showSubscribe = true">查看编制 →</button>
+        </div>
+        <span class="dash-step-arrow">→</span>
+        <div class="dash-step">
+          <span class="dash-step-num">3</span>
+          <div class="dash-step-body">
+            <b>AI 自动运营</b>
+            <span>选题·生产·发布·复盘，成果回流驾驶舱</span>
+          </div>
+          <NuxtLink to="/workspace/media/content" class="dash-step-cta">查看车间 →</NuxtLink>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ ① CEO 驾驶舱 · 部门状态卡 ═══ -->
     <div class="dash-dept">
       <div class="dash-dept-title">
@@ -42,7 +75,7 @@
       <div class="dash-dept-metrics">
         <div class="dash-dept-metric">
           <div class="ddm-value">{{ agents.length }}<span class="ddm-unit">/5</span></div>
-          <div class="ddm-label">AI 员工</div>
+          <div class="ddm-label">AI 员工已激活</div>
         </div>
         <div class="dash-dept-metric">
           <div class="ddm-value">{{ channels.connected }}<span class="ddm-unit">/{{ channels.total }}</span></div>
@@ -52,6 +85,15 @@
           <div class="ddm-value">{{ today.completed }}<span class="ddm-unit">/{{ today.completed + today.pendingSchedules }}</span></div>
           <div class="ddm-label">今日任务完成</div>
         </div>
+      </div>
+      <!-- 空态原因 + 下一步（产品感：当前状态 + 为什么为空 + 下一步动作） -->
+      <div v-if="!agents.length" class="dash-dept-hint">
+        <span class="dash-dept-hint-ico">💡</span>
+        <span class="dash-dept-hint-text">
+          <b>部门未激活：</b>当前尚未订阅 AI 员工服务。
+          下一步：<NuxtLink to="/workspace/media/accounts">连接渠道资产</NuxtLink>
+          并<button class="dash-dept-hint-btn" @click="showSubscribe = true">解锁 AI 新媒体团队</button>。
+        </span>
       </div>
     </div>
 
@@ -222,8 +264,9 @@
               <span class="sub-modal-avatar">{{ m.avatar }}</span>
               <div class="sub-modal-meta">
                 <div class="sub-modal-name">{{ m.name }} · {{ m.role }}</div>
-                <div class="sub-modal-duty">{{ m.duty }}</div>
+                <div class="sub-modal-duty">📌 {{ m.duty }}</div>
                 <div class="sub-modal-value">→ {{ m.value }}</div>
+                <div class="sub-modal-auto">⚙️ 订阅后自动执行：{{ m.auto }}</div>
               </div>
             </div>
           </div>
@@ -326,11 +369,11 @@ const channelBlueprints = computed(() => {
 
 // 标准编制（免费可见价值 · 订阅解锁）
 const teamRoster = [
-  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略', value: '减少人工策划成本：运营策略与排期自动生成，每周一份清晰运营计划' },
-  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与策略建议', value: '持续产生内容方向：选题自动排满内容日历，不再为“今天发什么”发愁' },
-  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作输出成品', value: '提高生产效率：图文视频批量产出，发布前可人工审核把关' },
-  { name: 'David', role: 'AI 客服', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '减少人工客服压力：私信秒回，客户线索自动分类，不错过潜在客户' },
-  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '持续优化运营：每周自动复盘，什么有效、粉丝从哪来、下一步做什么' },
+  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略', value: '减少人工策划成本：运营策略与排期自动生成，每周一份清晰运营计划', auto: '自动制定内容战略与月度排期，指挥团队执行' },
+  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与策略建议', value: '持续产生内容方向：选题自动排满内容日历，不再为“今天发什么”发愁', auto: '每日扫描热点与竞品，选题池自动填充' },
+  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作输出成品', value: '提高生产效率：图文视频批量产出，发布前可人工审核把关', auto: '按选题自动生成图文与视频初稿，交人工审核' },
+  { name: 'David', role: 'AI 客服', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '减少人工客服压力：私信秒回，客户线索自动分类，不错过潜在客户', auto: '自动回复粉丝私信，A/B/C 分级并提醒销售机会' },
+  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '持续优化运营：每周自动复盘，什么有效、粉丝从哪来、下一步做什么', auto: '每周自动产出运营周报与增长建议' },
 ]
 
 const showSubscribe = ref(false)
@@ -431,6 +474,84 @@ function stateClass(s: string) {
   color: var(--color-text-disabled);
 }
 
+/* ─── 首次进入行动路径 ─── */
+.dash-steps {
+  background: linear-gradient(135deg, var(--color-bg-elevated), var(--color-decision-glow));
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.dash-steps-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+}
+.dash-steps-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+.dash-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.dash-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-intelligence);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dash-step-body {
+  flex: 1;
+  min-width: 0;
+}
+.dash-step-body b {
+  display: block;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+.dash-step-body span {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.dash-step-cta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-decision);
+  background: var(--color-decision-glow);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dash-step-cta:hover { filter: brightness(1.1); }
+.dash-step-arrow {
+  align-self: center;
+  color: var(--color-text-disabled);
+  font-size: 16px;
+}
+@media (max-width: 900px) {
+  .dash-steps-row { flex-direction: column; }
+  .dash-step-arrow { transform: rotate(90deg); }
+}
+
 /* ─── ① 部门状态卡 ─── */
 .dash-dept {
   background: linear-gradient(135deg, var(--color-bg-elevated), var(--color-intelligence-glow));
@@ -494,6 +615,42 @@ function stateClass(s: string) {
   color: var(--color-text-muted);
   margin-top: 2px;
 }
+
+/* 部门空态提示（当前状态 + 为什么为空 + 下一步动作） */
+.dash-dept-hint {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+.dash-dept-hint-ico { font-size: 15px; }
+.dash-dept-hint-text b { color: var(--color-warning); }
+.dash-dept-hint-text a {
+  color: var(--color-decision);
+  font-weight: 700;
+  text-decoration: none;
+}
+.dash-dept-hint-text a:hover { text-decoration: underline; }
+.dash-dept-hint-btn {
+  background: var(--color-decision-glow);
+  color: var(--color-decision);
+  border: none;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 0 2px;
+}
+.dash-dept-hint-btn:hover { filter: brightness(1.1); }
 
 /* ─── ② 我的 AI 团队 ─── */
 .dash-team-panel { margin-bottom: 16px; }
@@ -936,6 +1093,12 @@ function stateClass(s: string) {
 .sub-modal-value {
   font-size: 11px;
   color: var(--color-decision);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+.sub-modal-auto {
+  font-size: 11px;
+  color: var(--color-warning);
   margin-top: 3px;
   line-height: 1.5;
 }
