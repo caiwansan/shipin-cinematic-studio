@@ -84,7 +84,7 @@
               <span class="mirror-price-amount">¥9.9</span>
               <span class="mirror-price-cycle">/月</span>
             </div>
-            <button class="mirror-purchase-btn" @click="handlePurchase">立即开通</button>
+            <button class="mirror-purchase-btn" @click="openPurchaseModal">立即开通</button>
           </div>
 
           <!-- 已订阅未创建 Agent：显示创建按钮 -->
@@ -137,6 +137,77 @@
             </div>
           </div>
         </div>
+
+        <!-- 🪞 镜心开通支付弹窗（Commerce Authority：复用 /api/payment/career/checkout 订单链路） -->
+        <Transition name="purchase-fade">
+          <div v-if="showPurchaseModal" class="purchase-modal-mask" @click.self="closePurchaseModal">
+            <div class="purchase-modal">
+              <div class="purchase-modal-header">
+                <span class="purchase-modal-title">🪞 开通镜心职业助理</span>
+                <button class="purchase-modal-close" @click="closePurchaseModal">✕</button>
+              </div>
+
+              <!-- 套餐信息（金额来自后端订单，非写死） -->
+              <div class="purchase-plan">
+                <div class="purchase-plan-name">镜心 · AI 职业伙伴</div>
+                <div class="purchase-plan-desc">认识自己 · 规划方向 · 发现机会 · 提升竞争力</div>
+                <div class="purchase-plan-price">
+                  <span class="purchase-price-amount">¥{{ purchaseAmount }}</span>
+                  <span class="purchase-price-cycle">/月</span>
+                </div>
+                <div class="purchase-plan-benefits">
+                  <span>✓ AI职业规划</span><span>✓ 简历优化</span><span>✓ 模拟面试</span><span>✓ 职业路线分析</span><span>✓ AI求职顾问</span>
+                </div>
+              </div>
+
+              <!-- 支付方式选择 -->
+              <div class="purchase-methods">
+                <button class="purchase-method" :class="{ active: selectedMethod === 'alipay' }" @click="selectedMethod = 'alipay'">
+                  <span class="pm-icon">💙</span> 支付宝
+                </button>
+                <button class="purchase-method" :class="{ active: selectedMethod === 'wechat' }" @click="selectedMethod = 'wechat'">
+                  <span class="pm-icon">💚</span> 微信支付
+                </button>
+              </div>
+
+              <!-- 错误提示（原断点：purchaseError 无处显示） -->
+              <div v-if="purchaseError" class="purchase-error">{{ purchaseError }}</div>
+
+              <!-- 确认支付 -->
+              <div v-if="!purchaseOrderNo" class="purchase-confirm-row">
+                <button class="purchase-confirm-btn" @click="confirmPurchase" :disabled="purchasing">
+                  {{ purchasing ? '创建订单中...' : '确认支付' }}
+                </button>
+              </div>
+
+              <!-- 订单已创建：支付引导 + 轮询 -->
+              <div v-else class="purchase-payarea">
+                <div class="purchase-order-no">订单号：{{ purchaseOrderNo }}</div>
+
+                <!-- 微信支付：渲染二维码 -->
+                <div v-if="selectedMethod === 'wechat'" class="purchase-qr">
+                  <img v-if="wechatQrDataUrl" :src="wechatQrDataUrl" class="purchase-qr-img" alt="微信扫码支付" />
+                  <div v-else class="purchase-qr-placeholder">二维码生成中...</div>
+                  <div class="purchase-qr-tip">请使用微信「扫一扫」完成支付</div>
+                </div>
+
+                <!-- 支付宝：新窗口 + 手动链接兑底（防浏览器拦截） -->
+                <div v-else class="purchase-alipay">
+                  <a v-if="purchasePaymentUrl" :href="purchasePaymentUrl" target="_blank" rel="noopener" class="purchase-open-link">
+                    若支付页面未自动打开，点击此处前往支付宝支付 →
+                  </a>
+                  <div v-else class="purchase-qr-tip">支付链接生成中...</div>
+                </div>
+
+                <!-- 轮询状态 -->
+                <div class="purchase-polling">
+                  <span v-if="polling" class="purchase-spinner"></span>
+                  {{ polling ? '正在确认支付结果，请稍候...' : '等待支付完成，成功后自动开通' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Transition>
 
         <!-- 推荐标题 -->
         <div class="job-recommend-header">
@@ -427,7 +498,7 @@ import { getAuthToken } from '~/utils/auth/token'
  * - Agent 激活入口
  * - Workflow 状态展示
  */
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { getPipelineStages } from '~/studio-v2/config/workspace-config'
 import { chatWithCareerAgent, getJobRecommendations, submitJobFeedback, getCareerProfileCenter } from '~/studio-v2/api/job/candidate-api'
 import { getCareerAgentStatus, activateAndExecuteCareerAgent, executeCareerWorkflow, toBackendWorkflowType, type CareerAgentStatus, type CareerWorkflowResult } from '~/studio-v2/api/job/career-agent-api'
@@ -754,6 +825,13 @@ async function handleCreateAgent() {
     if (err.action === 'purchase_career_agent') {
       showPurchaseCard.value = true
       careerAgentError.value = ''
+    } else if (err.code === 'NO_BYOK_CONFIG' || (err.message || '').includes('未配置 AI 模型')) {
+      // SPRINT-CAREER-REALITY-01: 未配置用户模型 → 显式引导配置（KMKI BYOK）
+      messages.value.push({
+        role: 'assistant',
+        content: `🪞 镜心需要你的 AI 模型配置才能工作。\n\n请点击卡片上的「模型」按钮，配置你自己的 API Key（DeepSeek / OpenAI / 豆包等）。\n\n配置完成后重新发送即可。`,
+      })
+      careerAgentError.value = ''
     } else if (err.code === 'EXECUTION_FAILED' || err.retryable) {
       // Sprint-09C-3-2 Task 02: 平台模型异常 → 友好提示
       const userMsg = err.message || '镜心暂时繁忙，AI模型服务暂时不可用'
@@ -831,8 +909,35 @@ async function handleAuthorizeJobWatch() {
     authorizingJobWatch.value = false
   }
 }
-// Sprint-09C-1 Task 01: 发起镜心购买
-async function handlePurchase() {
+// SPRINT-CAREER-REALITY-01: 镜心购买全流程（Commerce Authority 复用，不新增套餐系统）
+// 弹窗状态: showPurchaseModal / purchaseStep 逻辑
+const showPurchaseModal = ref(false)
+const purchaseAmount = ref(9.9)
+const wechatQrDataUrl = ref('')
+const polling = ref(false)
+let purchasePollTimer: ReturnType<typeof setInterval> | null = null
+
+// 打开开通弹窗
+function openPurchaseModal() {
+  purchaseError.value = ''
+  purchaseOrderNo.value = ''
+  purchaseMethod.value = ''
+  purchasePaymentUrl.value = ''
+  purchaseQrCode.value = ''
+  wechatQrDataUrl.value = ''
+  selectedMethod.value = 'alipay'
+  polling.value = false
+  stopPurchasePolling()
+  showPurchaseModal.value = true
+}
+
+function closePurchaseModal() {
+  showPurchaseModal.value = false
+  stopPurchasePolling()
+}
+
+// 确认支付 → 创建订单（POST /api/payment/career/checkout）
+async function confirmPurchase() {
   purchasing.value = true
   purchaseError.value = ''
   try {
@@ -851,19 +956,75 @@ async function handlePurchase() {
       throw new Error(err.error || err.message)
     }
     const data = await res.json()
-    purchaseOrderNo.value = data.orderNo
-    purchaseMethod.value = data.method || ''
-    purchasePaymentUrl.value = data.paymentUrl || ''
-    purchaseQrCode.value = data.qrCode || ''
+    // 兼容 toApiResponse 嵌套（{success, data:{...}}）与平铺响应
+    const payload = data?.data && typeof data.data === 'object' && 'orderNo' in data.data ? data.data : data
+    purchaseOrderNo.value = payload.orderNo
+    purchaseMethod.value = payload.method || ''
+    purchasePaymentUrl.value = payload.paymentUrl || ''
+    purchaseQrCode.value = payload.qrCode || ''
+    if (payload.amount) purchaseAmount.value = payload.amount
 
-    // 支付宝支付：自动打开支付页面
-    if (data.method === 'alipay' && data.paymentUrl) {
-      window.open(data.paymentUrl, '_blank')
+    // 支付宝：自动打开支付页面（被拦截时用户可点手动链接）
+    if (payload.method === 'alipay' && payload.paymentUrl) {
+      window.open(payload.paymentUrl, '_blank')
     }
+
+    // 微信：渲染二维码
+    if (payload.method === 'wechat' && payload.qrCode) {
+      renderWechatQr(payload.qrCode)
+    }
+
+    // 开始轮询支付结果
+    startPurchasePolling()
   } catch (err: any) {
     purchaseError.value = err.message || '创建订单失败，请稍后重试'
   } finally {
     purchasing.value = false
+  }
+}
+
+// 微信二维码渲染（qrcode 库，浏览器端动态 import）
+async function renderWechatQr(qrCode: string) {
+  try {
+    const QRCode = (await import('qrcode')).default
+    wechatQrDataUrl.value = await QRCode.toDataURL(qrCode, {
+      width: 210,
+      margin: 1,
+      color: { dark: '#0b0f14', light: '#ffffff' },
+    })
+  } catch {
+    // 渲染失败则仅显示订单号，不影响支付主链路
+  }
+}
+
+// 支付状态轮询：复用真实状态端点 GET /api/career/agent/status
+// 支付成功 → 后端 notify 已自动 Provision Career Agent → 前端刷新状态即可
+function startPurchasePolling() {
+  stopPurchasePolling()
+  polling.value = true
+  purchasePollTimer = setInterval(async () => {
+    try {
+      const status = await getCareerAgentStatus()
+      if (status.hasActiveSubscription) {
+        stopPurchasePolling()
+        polling.value = false
+        showPurchaseModal.value = false
+        await loadCareerAgentStatus()
+        // 订阅已激活但 Agent 尚未创建（provisioning 未完成）→ 自动补建
+        if (status.hasActiveSubscription && !status.hasAgent && !careerAgentCreating.value) {
+          await handleCreateAgent()
+        }
+      }
+    } catch {
+      // 网络抖动忽略，继续轮询
+    }
+  }, 3000)
+}
+
+function stopPurchasePolling() {
+  if (purchasePollTimer) {
+    clearInterval(purchasePollTimer)
+    purchasePollTimer = null
   }
 }
 
@@ -936,10 +1097,13 @@ async function handleExecuteWorkflow(workflowType: string) {
     // 刷新状态，更新 stats
     await loadCareerAgentStatus()
   } catch (err: any) {
-    // Sprint-09C-3-2 风格：友好错误
+    // SPRINT-CAREER-REALITY-01: 未配置用户模型（BYOK）→ 显式引导，不静默走平台 Key
+    const noByok = err?.code === 'NO_BYOK_CONFIG' || (err?.message || '').includes('未配置') || (err?.original?.message || '').includes('NO_BYOK')
     messages.value[loadingIdx] = {
       role: 'assistant',
-      content: `🪞 镜心这次没有完成分析。\n\n服务暂时不可用，请稍后重新尝试。`,
+      content: noByok
+        ? `🪞 镜心需要你的 AI 模型配置才能工作。\n\n请点击卡片上的「模型」按钮，配置你自己的 API Key（DeepSeek / OpenAI / 豆包等）。\n\n配置完成后重新发送即可。`
+        : `🪞 镜心这次没有完成分析。\n\n服务暂时不可用，请稍后重新尝试。`,
     }
     await loadCareerAgentStatus()
   }
@@ -980,6 +1144,10 @@ onMounted(async () => {
   watch(messages, () => {
     saveChatHistory()
   }, { deep: true })
+})
+
+onUnmounted(() => {
+  stopPurchasePolling()
 })
 </script>
 
@@ -2625,5 +2793,232 @@ onMounted(async () => {
   gap: 6px;
   margin-top: 10px;
   flex-wrap: wrap;
+}
+
+/* ─── SPRINT-CAREER-REALITY-01: 镜心开通支付弹窗 ─── */
+.purchase-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.purchase-modal {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: #11161d;
+  border: 1px solid rgba(201, 168, 108, 0.25);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.purchase-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.purchase-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f5f0e6;
+}
+.purchase-modal-close {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.purchase-modal-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+.purchase-plan {
+  background: linear-gradient(135deg, rgba(201, 168, 108, 0.12), rgba(201, 168, 108, 0.04));
+  border: 1px solid rgba(201, 168, 108, 0.3);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.purchase-plan-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f5f0e6;
+}
+.purchase-plan-desc {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 4px 0 10px;
+}
+.purchase-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.purchase-price-amount {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #c9a86c;
+}
+.purchase-price-cycle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+.purchase-plan-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.purchase-plan-benefits span {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+.purchase-methods {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.purchase-method {
+  flex: 1;
+  padding: 10px 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: all 0.15s;
+}
+.purchase-method.active {
+  border-color: #c9a86c;
+  background: rgba(201, 168, 108, 0.12);
+  color: #f5f0e6;
+}
+.pm-icon {
+  margin-right: 4px;
+}
+.purchase-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  margin-bottom: 12px;
+}
+.purchase-confirm-row {
+  display: flex;
+  justify-content: center;
+}
+.purchase-confirm-btn {
+  width: 100%;
+  padding: 12px 0;
+  background: linear-gradient(135deg, #c9a86c, #a8844a);
+  border: none;
+  border-radius: 8px;
+  color: #0b0f14;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.purchase-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.purchase-payarea {
+  text-align: center;
+}
+.purchase-order-no {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 12px;
+  word-break: break-all;
+}
+.purchase-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.purchase-qr-img {
+  width: 210px;
+  height: 210px;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px;
+}
+.purchase-qr-placeholder {
+  width: 210px;
+  height: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+}
+.purchase-qr-tip {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+.purchase-alipay {
+  margin-bottom: 14px;
+}
+.purchase-open-link {
+  display: inline-block;
+  padding: 10px 16px;
+  background: rgba(22, 119, 255, 0.12);
+  border: 1px solid rgba(22, 119, 255, 0.35);
+  border-radius: 8px;
+  color: #7cb3ff;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.purchase-open-link:hover {
+  background: rgba(22, 119, 255, 0.2);
+}
+.purchase-polling {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 6px;
+}
+.purchase-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(201, 168, 108, 0.3);
+  border-top-color: #c9a86c;
+  border-radius: 50%;
+  animation: purchase-spin 0.8s linear infinite;
+}
+@keyframes purchase-spin {
+  to { transform: rotate(360deg); }
+}
+.purchase-fade-enter-active,
+.purchase-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+.purchase-fade-enter-from,
+.purchase-fade-leave-to {
+  opacity: 0;
 }
 </style>

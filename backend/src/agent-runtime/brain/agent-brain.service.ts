@@ -95,22 +95,43 @@ export class AgentBrainService implements IAgentBrain {
    */
   private async resolveProvider(organizationId: string, agentId: string): Promise<{ provider: string; model: string; apiKey: string; fromBinding: boolean }> {
     if (organizationId) {
-      const { ModelResolverService } = await import('../../services/enterprise/model-resolver.service.js')
-      const resolver = new ModelResolverService()
-      const resolved = await resolver.resolveEnterpriseModel({ organizationId, tenantId: organizationId })
-      if (!resolved) {
-        throw new Error(ENTERPRISE_MODEL_MISSING_MSG)
-      }
-      return {
-        provider: resolved.provider,
-        model: resolved.model,
-        apiKey: resolved.apiKey || '',
-        fromBinding: false,
+      // SPRINT-CAREER-REALITY-01: Career Agent（个人 AI 员工）不适用企业权威阻断
+      // 个人 Career Agent 无 OrgModelConfig → 交给 executeViaGateway 统一链（UserModelConfigV2 → 4.5 阻断）
+      const isCareerAgent = await this.isCareerAgent(agentId)
+      if (!isCareerAgent) {
+        const { ModelResolverService } = await import('../../services/enterprise/model-resolver.service.js')
+        const resolver = new ModelResolverService()
+        const resolved = await resolver.resolveEnterpriseModel({ organizationId, tenantId: organizationId })
+        if (!resolved) {
+          throw new Error(ENTERPRISE_MODEL_MISSING_MSG)
+        }
+        return {
+          provider: resolved.provider,
+          model: resolved.model,
+          apiKey: resolved.apiKey || '',
+          fromBinding: false,
+        }
       }
     }
 
-    // 非企业上下文：不传 provider/model，由 executeViaGateway 统一链解析（用户 BYOK → 平台默认）
+    // 非企业上下文 / Career Agent：不传 provider/model，由 executeViaGateway 统一链解析（用户 BYOK → 显式阻断）
     return { provider: '', model: '', apiKey: '', fromBinding: false }
+  }
+
+  /**
+   * 判断 Agent 是否为 Career Agent（metadata.source === 'career_agent'）
+   */
+  private async isCareerAgent(agentId: string): Promise<boolean> {
+    try {
+      const agent = await (this.prisma as any).enterpriseAgentProfile.findUnique({
+        where: { id: agentId },
+        select: { metadata: true },
+      })
+      const meta = agent?.metadata ? JSON.parse(agent.metadata) : {}
+      return meta?.source === 'career_agent'
+    } catch {
+      return false
+    }
   }
 
   /**

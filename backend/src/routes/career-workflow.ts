@@ -173,8 +173,19 @@ export async function careerWorkflowRoutes(fastify: FastifyInstance) {
         },
       })
 
+      // SPRINT-CAREER-REALITY-01: 查询订阅状态（hasAgent 分支统一返回，支付轮询依赖）
+      let subscriptionActive: any = null
+      try {
+        const careerPlan = await prisma.subscriptionPlan.findUnique({ where: { code: 'career_agent' } })
+        subscriptionActive = careerPlan ? await prisma.subscription.findFirst({
+          where: { tenantId: userId, planId: careerPlan.id, status: 'active' },
+        }) : null
+      } catch { /* ignore */ }
+
       return reply.send({
         hasAgent: true,
+        hasActiveSubscription: !!subscriptionActive,
+        subscriptionStatus: subscriptionActive?.status || null,
         status: instance?.runtimeStatus || agent.status,
         agent: {
           profileId: agent.profileId,
@@ -220,6 +231,22 @@ export async function careerWorkflowRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // SPRINT-CAREER-REALITY-01: Career Agent 个人用户 BYOK Gate（KMKI Runtime Principle）
+      // 纯个人用户（无企业关联）必须配置 UserModelConfigV2，禁止静默走平台 Key
+      const enterprise = await resolveCurrentEnterprise(userId)
+      if (!enterprise) {
+        const { userModelConfigV2Repository } = await import('../services/hdz/repositories/user-model-config-v2.repository.js')
+        const v2 = await userModelConfigV2Repository.findUnique({ userId })
+        const hasByok = v2 && v2.llmEnabled && v2.llmApiKey && v2.llmApiKey.trim()
+        if (!hasByok) {
+          return reply.code(400).send({
+            error: 'NO_BYOK_CONFIG',
+            message: '未配置 AI 模型。请先在大模型设置中配置你自己的 API Key（DeepSeek/OpenAI/豆包等）',
+            action: 'configure_model',
+          })
+        }
+      }
+
       // 获取用户的 AI 职业助理 Runtime Context
       const runtimeCtx = await careerAgentService.getRuntimeContext(userId)
       if (!runtimeCtx) {

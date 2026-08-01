@@ -288,7 +288,10 @@ export async function resolveRuntimeConfig(
           const model = (v2[modelField_m as keyof typeof v2] || requireModel(provider, capability)) as string
 
           if (encKey) {
-            const apiKey = decryptKey(encKey)
+            // 兼容加密 key（iv:tag:cipher）与明文 key（历史数据）
+            const apiKey = encKey.includes(':')
+              ? decryptKey(encKey)
+              : encKey
             return buildConfig({
               userId, executionId,
               provider, model, baseUrl: v2.baseUrl || PROVIDER_BASE_URLS[provider] || '', apiKey,
@@ -379,6 +382,15 @@ export async function resolveRuntimeConfig(
     } catch (e) {
       console.warn(`[resolveRuntimeConfig] Platform config 读取失败 (businessType=${input.businessType}):`, e)
     }
+  }
+
+  // ── 4.5 SPRINT-CAREER-REALITY-01: Career Agent 无用户 BYOK → 显式阻断 ──
+  // KMKI Runtime Principle：用户负责模型成本，平台禁止成为调用中转方
+  // 到达此处 = 用户未配置 UserModelConfigV2（或 Key 无效）→ 禁止静默回退平台 Key
+  if (input?.businessType === 'career_agent') {
+    const err = new Error('未配置 AI 模型。请先在大模型设置中配置你自己的 API Key（DeepSeek/OpenAI/豆包等）')
+    ;(err as any).code = 'NO_BYOK_CONFIG'
+    throw err
   }
 
   // ── 5. 阶段配置层 ──
