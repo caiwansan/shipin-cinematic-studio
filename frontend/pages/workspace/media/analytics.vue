@@ -83,7 +83,7 @@ const dims = [
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.1));
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(37, 99, 235, 0.1));
   border: 1px solid var(--media-ai-border);
   border-radius: var(--media-radius-card);
   padding: 16px 22px;

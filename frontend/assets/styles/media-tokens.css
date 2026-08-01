@@ -1,46 +1,51 @@
 /* ═══════════════════════════════════════════════════════════
-   Media Design Language v3.0 — 昆仑镜统一 Workspace · 白天模式
-   Sprint-MEDIA-UX-CONSOLIDATION-04（UX 收敛治理）
-   掌柜设计纪律（UX-CONSOLIDATION-04）：
-   - 定位：不是「AI 科技」，是「企业经营软件」
-   - 色彩比例：90% 中性色（白/雾灰/深灰）+ 8% 蓝色 + 2% 紫色（只做激活态/CTA/AI标识）
-   - 深紫大面积使用清零（紫色大面积 = AI 模板网站廉价感）
-   - 白天模式优先：#F7F8FA 背景 / #FFFFFF 卡片 / #111827 文字 / #64748B 辅助 / #6366F1 AI强调只点缀
-   - 参考：Stripe / Linear / Notion 商业 SaaS
+   Media Design Language v4.0 — 昆仑镜 · AI 时代企业经营操作系统
+   Sprint-MEDIA-UX-PRODUCT-DESIGN-05（Design System v1 冻结）
+   掌柜设计哲学（长期遵守）：
+   - 世界级 SaaS = 品牌气质 + 空间层次 + 视觉记忆 + 高级克制易用
+   - 不是深色科技风，也不是白色后台风 —— 是「未来企业办公空间」
+   - 颜色比例：90% 中性（#F4F6FA 背景 / #FFFFFF 卡片 / #111827 文字）
+     + 7% 蓝青（昆仑蓝 #2563EB 品牌主色 / 青蓝 #06B6D4 AI状态）
+     + 3% 紫（#8B5CF6 仅 AI 能力标签）
+   - 禁止：大面积渐变、深紫科技模板、金色、荧光绿、超大卡片、emoji 导航
+   - 参考：Apple / Notion / Linear / Stripe（不照抄）
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── 品牌（indigo 系 · 只用于 logo / 激活态 / CTA，不做大面积背景）── */
-  --media-brand-gradient: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-  --media-brand-soft: rgba(99, 102, 241, 0.08);
-  --media-brand-glow: rgba(99, 102, 241, 0.18);
-  --media-brand-text: #6366F1;
+  /* ── 品牌（昆仑蓝 #2563EB = CTA/激活/AI标识；青蓝 #06B6D4 = 数据流/AI状态）── */
+  --media-brand-gradient: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  --media-brand-soft: rgba(37, 99, 235, 0.08);
+  --media-brand-glow: rgba(37, 99, 235, 0.14);
+  --media-brand-text: #2563EB;
 
-  /* ── AI 强调（#6366F1 只点缀，取代大面积紫）── */
-  --media-ai: #6366F1;
-  --media-ai-soft: #4F46E5;
-  --media-ai-glow: rgba(99, 102, 241, 0.07);
-  --media-ai-border: rgba(99, 102, 241, 0.28);
+  /* ── AI 强调（昆仑蓝为主；青蓝为 AI 状态点；紫 #8B5CF6 仅能力标签）── */
+  --media-ai: #2563EB;
+  --media-ai-soft: #1D4ED8;
+  --media-ai-glow: rgba(37, 99, 235, 0.07);
+  --media-ai-border: rgba(37, 99, 235, 0.28);
+  --media-ai-cyan: #06B6D4;          /* 数据流 / AI 状态 */
+  --media-ai-cyan-glow: rgba(6, 182, 212, 0.1);
+  --media-ai-purple: #8B5CF6;        /* 少量紫：仅 AI 能力标签（3%） */
 
   /* ── 经营语义色（白天模式）── */
-  --media-primary: #4F46E5;   /* CTA / 激活 */
-  --media-info: #2563EB;      /* 辅助蓝 */
-  --media-success: #16A34A;   /* 成长绿 */
+  --media-primary: #2563EB;   /* CTA / 激活 */
+  --media-info: #0EA5E9;      /* 辅助信息 */
+  --media-success: #10B981;   /* 成长绿 */
   --media-warn: #D97706;      /* 预警 */
   --media-danger: #DC2626;    /* 下降 */
 
-  /* ── 背景（白天模式：#F7F8FA 雾灰）── */
-  --media-bg-deep: #F7F8FA;
+  /* ── 背景（未来企业办公空间：#F4F6FA，非纯白非纯黑）── */
+  --media-bg-deep: #F4F6FA;
   --media-bg-surface: #FFFFFF;
-  --media-hero-grid-line: rgba(99, 102, 241, 0.04);
-  --media-hero-glow-1: rgba(99, 102, 241, 0.05);
-  --media-hero-glow-2: rgba(37, 99, 235, 0.04);
+  --media-hero-grid-line: rgba(37, 99, 235, 0.04);
+  --media-hero-glow-1: rgba(37, 99, 235, 0.04);
+  --media-hero-glow-2: rgba(6, 182, 212, 0.03);
 
-  /* ── 卡片（白卡 + 细边框 + 微投影）── */
+  /* ── 卡片（白卡 + 细边框 + 微投影；信息卡高 80-120px）── */
   --media-card-bg: #FFFFFF;
-  --media-card-bg-solid: rgba(255, 255, 255, 0.92);
+  --media-card-bg-solid: rgba(255, 255, 255, 0.94);
   --media-card-border: #E5E7EB;
-  --media-card-border-hover: rgba(99, 102, 241, 0.45);
+  --media-card-border-hover: rgba(37, 99, 235, 0.45);
   --media-card-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 
   /* ── 文字 ── */
@@ -61,8 +66,38 @@
   --media-gap-card: 12px;
   --media-pad-page: 24px;
 
-  /* ── 阴影（白天克制）── */
-  --media-shadow-float: 0 4px 16px rgba(16, 24, 40, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.04);
-  --media-shadow-hover: 0 8px 24px rgba(16, 24, 40, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.10);
+  /* ── 阴影（克制）── */
+  --media-shadow-float: 0 4px 16px rgba(16, 24, 40, 0.08), 0 0 0 1px rgba(37, 99, 235, 0.04);
+  --media-shadow-hover: 0 8px 24px rgba(16, 24, 40, 0.1), 0 0 0 1px rgba(37, 99, 235, 0.08);
   --media-shadow-card: 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Media Workspace 作用域覆盖（Design System v1 · 第 9 节）
+   子页 140+ 处引用全局 --color-*（enterprise-tokens 深色主题值）。
+   在 .mws 作用域内覆盖为白天值 → 媒体工作区自动白天化；
+   短剧 / 招聘 / 企业工作台（不在 .mws 内）不受影响。
+   ═══════════════════════════════════════════════════════════ */
+.mws {
+  --color-text-primary: #111827;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-text-disabled: #9CA3AF;
+  --color-bg-secondary: #F8FAFC;
+  --color-bg-hover: #F3F4F6;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-active: #EEF0F3;
+  --color-border-primary: #E5E7EB;
+  --color-border-secondary: #EEF0F3;
+  --color-border-hover: rgba(37, 99, 235, 0.4);
+  --color-intelligence: #2563EB;
+  --color-intelligence-soft: #3B82F6;
+  --color-intelligence-glow: rgba(37, 99, 235, 0.08);
+  --color-decision: #2563EB;
+  --color-decision-glow: rgba(37, 99, 235, 0.08);
+  --color-execution: #10B981;
+  --color-execution-glow: rgba(16, 185, 129, 0.09);
+  --color-warning: #D97706;
+  --color-danger: #DC2626;
+  --color-success: #10B981;
 }

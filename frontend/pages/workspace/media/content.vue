@@ -240,7 +240,7 @@ const stages = ref([
 .cf-line-arrow {
   font-size: 13px;
   color: var(--media-text-dim);
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+  text-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
 }
 .cf-line-foot {
   display: flex;
@@ -294,7 +294,7 @@ const stages = ref([
   flex-direction: column;
   align-items: center;
   padding: 24px 16px;
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.08), rgba(7, 11, 22, 0.4));
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.08), rgba(244, 246, 250, 0.4));
   border-right: 1px solid var(--media-card-border);
 }
 .cf-station-num {
@@ -318,7 +318,7 @@ const stages = ref([
   justify-content: center;
   font-size: 23px;
   margin-bottom: 10px;
-  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.4);
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
 }
 .cf-station-name {
   font-size: 14px;
@@ -380,7 +380,7 @@ const stages = ref([
   border: 1px solid var(--color-border-primary);
 }
 .cf-station-cap.ai {
-  background: linear-gradient(160deg, var(--media-ai-glow), rgba(7, 11, 22, 0.4));
+  background: linear-gradient(160deg, var(--media-ai-glow), rgba(244, 246, 250, 0.4));
   border: 1px solid var(--media-ai-border);
 }
 .cf-cap-label {
@@ -412,7 +412,7 @@ const stages = ref([
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.1));
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(37, 99, 235, 0.1));
   border: 1px solid var(--media-ai-border);
   border-radius: var(--media-radius-card);
   padding: 18px 24px;

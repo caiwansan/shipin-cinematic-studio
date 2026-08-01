@@ -1,49 +1,48 @@
 <!--
-  MediaWorkspaceShell — AI 企业经营总部 · 产品级工作空间壳
-  Sprint-MEDIA-EXECUTIVE-EXPERIENCE-03（视觉体验重构：数据驾驶舱 → 企业经营总部）
-  左栏 = AI 公司总部（品牌 + SaaS 分组导航 + 当前态明显 + 模型/会员/首页入口）
-  顶栏 = 当前模块标题 + Live 状态 + 模型快捷入口
-  色彩：深墨灰 #0B1020 / 昆仑紫 #7C3AED / 智能蓝 #3B82F6 / 成长绿 #22C55E；金色退场
+  MediaWorkspaceShell v2 — 昆仑镜 · AI 经营总部（Design System v1）
+  Sprint-MEDIA-UX-PRODUCT-DESIGN-05：
+  - 品牌区：昆仑镜 / AI 经营总部（企业操作系统心智）
+  - 分组导航：经营总览（8 模块）+ 系统（模型/会员/返回）
+  - SVG 线性图标（16px stroke 1.5），不用 emoji
+  - 白天作用域：.mws 覆盖 --color-* 白天值 → 子页自动白天化，其他 Workspace 零影响
+  - 单一入口：模型中心仅左栏底部；返回昆仑镜仅左栏底部
 -->
 <template>
   <div class="mws">
-    <!-- ═══ 左栏 · AI 公司总部 ═══ -->
+    <!-- ═══ 左栏 ═══ -->
     <aside class="mws-side">
-      <!-- 品牌 -->
+      <!-- 品牌区 -->
       <div class="mws-brand">
-        <div class="mws-brand-logo">AI</div>
+        <span class="mws-brand-logo">K</span>
         <div class="mws-brand-text">
-          <div class="mws-brand-name">AI 经营总部</div>
-          <div class="mws-brand-sub">企业操作系统</div>
+          <b class="mws-brand-name">昆仑镜</b>
+          <span class="mws-brand-sub">AI 经营总部</span>
         </div>
       </div>
 
-      <!-- 导航（SaaS 分组：icon / 名称 / 一句能力解释） -->
+      <!-- 经营总览 -->
       <nav class="mws-nav">
+        <div class="mws-nav-group">经营总览</div>
         <NuxtLink
           v-for="item in navItems"
           :key="item.path"
           :to="item.path"
           class="mws-nav-item"
           :class="{ 'is-active': isActive(item.path) }"
-          :title="item.hint"
         >
-          <span class="mws-nav-icon">{{ item.icon }}</span>
-          <span class="mws-nav-text">
-            <span class="mws-nav-label">{{ item.label }}</span>
-            <span class="mws-nav-hint">{{ item.hint }}</span>
-          </span>
+          <span class="mws-nav-icon" v-html="item.icon"></span>
+          <span class="mws-nav-label">{{ item.label }}</span>
           <span v-if="item.tag" class="mws-nav-tag">{{ item.tag }}</span>
         </NuxtLink>
       </nav>
 
-      <!-- 底部：系统入口（模型/渠道/会员/首页，单一入口）+ 用户卡 -->
+      <!-- 底部系统区（单一入口：模型中心/我的会员/返回昆仑镜）+ 用户卡 -->
       <div class="mws-side-foot">
+        <div class="mws-nav-group">系统</div>
         <div class="mws-side-ops">
-          <button class="mws-op" @click="showModelSettings = true"><span class="mws-op-ico">⚙</span>模型中心</button>
-          <NuxtLink to="/workspace/media/accounts" class="mws-op"><span class="mws-op-ico">⇄</span>渠道中心</NuxtLink>
-          <NuxtLink to="/user/membership" class="mws-op"><span class="mws-op-ico">★</span>会员中心</NuxtLink>
-          <NuxtLink to="/" class="mws-op"><span class="mws-op-ico">←</span>昆仑镜首页</NuxtLink>
+          <button class="mws-op" @click="showModelSettings = true"><span class="mws-op-ico" v-html="icons.model"></span>模型中心</button>
+          <NuxtLink to="/user/membership" class="mws-op"><span class="mws-op-ico" v-html="icons.member"></span>我的会员</NuxtLink>
+          <NuxtLink to="/" class="mws-op"><span class="mws-op-ico" v-html="icons.home"></span>返回昆仑镜</NuxtLink>
         </div>
         <div class="mws-side-glow"></div>
         <WorkspaceUserCard
@@ -59,10 +58,9 @@
 
     <!-- ═══ 主区 ═══ -->
     <div class="mws-main">
-      <!-- 顶栏（当前模块 + 状态；返回/模型/工作空间已收敛至左栏，单一入口） -->
       <header class="mws-topbar">
         <div class="mws-topbar-left">
-          <span class="mws-module-icon">{{ currentModule.icon }}</span>
+          <span class="mws-module-icon" v-html="currentModule.icon"></span>
           <div class="mws-module-text">
             <span class="mws-module-name">{{ currentModule.name }}</span>
             <span class="mws-module-sub">{{ currentModule.sub }}</span>
@@ -75,18 +73,12 @@
           </span>
         </div>
       </header>
-
-      <!-- 内容区 -->
       <main class="mws-content">
         <slot />
       </main>
     </div>
 
-    <!-- 模型设置：完整复用短剧 ModelSettingsModal（语言/图片/视觉理解/视频/TTS/音乐） -->
-    <ModelSettingsModal
-      :visible="showModelSettings"
-      @close="showModelSettings = false"
-    />
+    <ModelSettingsModal v-if="showModelSettings" @close="showModelSettings = false" />
   </div>
 </template>
 
@@ -133,26 +125,38 @@ onMounted(async () => {
   }
 })
 
+/* ── SVG 线性图标（Design System v1 · 第 4 节：16px stroke 1.5 单色）── */
+const S = (path: string) =>
+  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`
+
+const icons = {
+  cockpit: S('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'), // 生意驾驶舱
+  staff: S('<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/><path d="M19 3l.6 1.4L21 5l-1.4.6L19 7l-.6-1.4L17 5l1.4-.6z"/>'), // AI员工
+  content: S('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'), // 内容中心
+  customer: S('<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-4.7a8.5 8.5 0 1 1 16.1-4.8z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>'), // 客户中心
+  shop: S('<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>'), // 商品中心
+  channel: S('<circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.4 10.9L16.6 6M7.4 13.1L16.6 18"/>'), // 渠道中心
+  data: S('<path d="M3 20V10M9 20V4M15 20v-7M21 20V7"/>'), // 数据智能
+  insight: S('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>'), // 行业机会
+  model: S('<rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3"/>'), // 模型中心
+  member: S('<path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.9L6.6 19.6l1-6L3.3 9.4l6-.9z"/>'), // 我的会员
+  home: S('<path d="M19 12H5M12 19l-7-7 7-7"/>'), // 返回昆仑镜
+}
+
 const navItems = [
-  { icon: '⌂', label: '经营总部', hint: '我的生意 · AI 经营状态', path: '/workspace/media/' },
-  { icon: '♙', label: 'AI员工', hint: '5 名智能员工 · 正在工作', path: '/workspace/media/team' },
-  { icon: '✎', label: '内容工厂', hint: '选题 → 创作 → 发布 → 复盘', path: '/workspace/media/content' },
-  { icon: '♡', label: '客户中心', hint: '自动回复客户 · 发现销售机会', path: '/workspace/media/messages' },
-  { icon: '□', label: '商品经营', hint: '我的线上生意 · 商品与店铺', path: '/workspace/media/shop', tag: '新' },
-  { icon: '◫', label: '数据洞察', hint: '内容效果 · 商品销售 · 运营策略', path: '/workspace/media/analytics' },
-  { icon: '◌', label: '行业机会', hint: '热点 · 竞品 · 平台规则', path: '/workspace/media/intelligence' },
+  { icon: icons.cockpit, label: '生意驾驶舱', path: '/workspace/media/', sub: '我的生意 · 经营状态' },
+  { icon: icons.staff, label: 'AI员工', path: '/workspace/media/team', sub: '我的 AI 管理团队' },
+  { icon: icons.content, label: '内容中心', path: '/workspace/media/content', sub: '选题到发布的内容生产' },
+  { icon: icons.customer, label: '客户中心', path: '/workspace/media/messages', sub: '自动回复客户 · 销售机会' },
+  { icon: icons.shop, label: '商品中心', path: '/workspace/media/shop', sub: '我的线上生意', tag: '新' },
+  { icon: icons.channel, label: '渠道中心', path: '/workspace/media/accounts', sub: '内容 · 电商 · 客户渠道' },
+  { icon: icons.data, label: '数据智能', path: '/workspace/media/analytics', sub: '内容效果 · 经营分析' },
+  { icon: icons.insight, label: '行业机会', path: '/workspace/media/intelligence', sub: '热点 · 竞品 · 平台规则' },
 ]
 
-const moduleMap: Record<string, { icon: string; name: string; sub: string }> = {
-  '/workspace/media': { icon: '⌂', name: '经营总部', sub: '我的生意 · AI 经营状态' },
-  '/workspace/media/team': { icon: '♙', name: 'AI员工', sub: '5 名智能员工 · 正在工作' },
-  '/workspace/media/content': { icon: '✎', name: '内容工厂', sub: '选题到发布的内容生产中心' },
-  '/workspace/media/messages': { icon: '♡', name: '客户中心', sub: '自动回复客户 · 发现销售机会' },
-  '/workspace/media/accounts': { icon: '⇄', name: '渠道中心', sub: '内容平台 · 电商店铺 · 客户渠道' },
-  '/workspace/media/shop': { icon: '□', name: '商品经营', sub: '我的线上生意 · 商品与店铺' },
-  '/workspace/media/analytics': { icon: '◫', name: '数据洞察', sub: '内容效果 · 商品销售 · 运营策略' },
-  '/workspace/media/intelligence': { icon: '◌', name: '行业机会', sub: '热点 · 竞品 · 平台规则' },
-}
+const moduleMap: Record<string, { icon: string; name: string; sub: string }> = Object.fromEntries(
+  navItems.map(n => [n.path.replace(/\/$/, ''), { icon: n.icon, name: n.label, sub: n.sub }])
+)
 
 const currentModule = computed(() => {
   const p = route.path
@@ -187,16 +191,18 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ═══════ Design System v1 · 白天作用域 ═══════
+   90% 中性（#F4F6FA 未来企业办公空间）+ 7% 蓝青（昆仑蓝 #2563EB / 青蓝 #06B6D4）+ 3% 紫 */
 .mws {
   display: flex;
   min-height: 100vh;
   background: var(--media-bg-deep);
-  color: var(--media-text-title);
+  color: #111827;
 }
 
-/* ── 左栏 · AI 工作空间（白天：白底 + 细边框） ── */
+/* ── 左栏（白底细边框） ── */
 .mws-side {
-  width: 232px;
+  width: 228px;
   flex-shrink: 0;
   background: #FFFFFF;
   border-right: 1px solid #E5E7EB;
@@ -207,145 +213,129 @@ onMounted(async () => {
   height: 100vh;
   overflow-y: auto;
 }
-/* 品牌 */
+/* 品牌区 */
 .mws-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px 18px 16px;
+  gap: 11px;
+  padding: 18px 16px 14px;
 }
 .mws-brand-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--media-brand-gradient);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.02em;
   color: #fff;
   font-family: var(--font-mono);
-  box-shadow: 0 6px 18px var(--media-brand-glow);
-  position: relative;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
 }
-.mws-brand-logo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-.mws-brand-name {
-  font-size: 13.5px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--media-text-hero);
-}
-.mws-brand-sub {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--media-brand-text);
-  margin-top: 2px;
-}
-/* 导航（平铺） */
-.mws-nav {
-  flex: 1;
-  padding: 14px 12px;
+.mws-brand-text {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 1px;
+}
+.mws-brand-name {
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #111827;
+  line-height: 1.2;
+}
+.mws-brand-sub {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #2563EB;
+}
+
+/* ── 分组导航 ── */
+.mws-nav {
+  flex: 1;
+  padding: 4px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mws-nav-group {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9CA3AF;
+  padding: 12px 10px 6px;
 }
 .mws-nav-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 9px 13px;
-  border-radius: var(--media-radius-node);
-  color: var(--media-text-body);
+  gap: 10px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  color: #64748B;
   text-decoration: none;
-  transition: background 0.18s, color 0.18s, transform 0.12s;
+  transition: background 0.15s, color 0.15s;
   border: 1px solid transparent;
 }
 .mws-nav-item:hover {
   background: #F3F4F6;
-  color: var(--media-text-title);
+  color: #111827;
 }
 .mws-nav-item.is-active {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.22);
-  color: #4F46E5;
-  box-shadow: none;
+  background: rgba(37, 99, 235, 0.07);
+  border-color: rgba(37, 99, 235, 0.22);
+  color: #1D4ED8;
 }
 .mws-nav-item.is-active::before {
   content: '';
   position: absolute;
   left: -12px;
-  top: 20%;
-  bottom: 20%;
+  top: 22%;
+  bottom: 22%;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: #6366F1;
-}
-.mws-nav-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
+  background: #2563EB;
 }
 .mws-nav-icon {
-  font-size: 15px;
-  width: 20px;
-  text-align: center;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #94A3B8;
-  font-weight: 400;
-  transition: color 0.18s;
+  flex-shrink: 0;
+  transition: color 0.15s;
 }
-.mws-nav-item:hover .mws-nav-icon { color: #64748B; }
-.mws-nav-item.is-active .mws-nav-icon {
-  color: #6366F1;
-}
+.mws-nav-icon :deep(svg) { display: block; }
+.mws-nav-item:hover .mws-nav-icon { color: #475569; }
+.mws-nav-item.is-active .mws-nav-icon { color: #2563EB; }
 .mws-nav-label {
-  font-size: 13.5px;
+  flex: 1;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.3;
 }
-.mws-nav-item.is-active .mws-nav-label {
-  font-weight: 800;
-}
-.mws-nav-hint {
-  font-size: 9.5px;
-  color: var(--media-text-dim);
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 0.18s;
-}
-.mws-nav-item:hover .mws-nav-hint,
-.mws-nav-item.is-active .mws-nav-hint {
-  color: var(--media-ai);
-}
+.mws-nav-item.is-active .mws-nav-label { font-weight: 800; }
 .mws-nav-tag {
   font-size: 9px;
   font-weight: 800;
-  color: #6366F1;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.28);
+  color: #2563EB;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.25);
   border-radius: 8px;
   padding: 1px 7px;
   letter-spacing: 0.08em;
-  align-self: flex-start;
-  margin-top: 4px;
 }
-/* 底部 */
+
+/* ── 底部系统区 ── */
 .mws-side-foot {
   position: relative;
-  padding: 10px 10px 14px;
+  padding: 6px 12px 14px;
   border-top: 1px solid #EEF0F3;
   overflow: hidden;
   z-index: 2;
@@ -356,18 +346,18 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .mws-op {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 12px;
-  border-radius: 8px;
+  gap: 10px;
+  padding: 7px 11px;
+  border-radius: 9px;
   border: none;
   background: transparent;
   color: #64748B;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -375,46 +365,46 @@ onMounted(async () => {
   transition: background 0.15s, color 0.15s;
 }
 .mws-op-ico {
-  width: 16px;
-  text-align: center;
-  font-size: 13px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #94A3B8;
+  flex-shrink: 0;
 }
+.mws-op-ico :deep(svg) { display: block; }
 .mws-op:hover {
   background: #F3F4F6;
   color: #111827;
 }
+.mws-op:hover .mws-op-ico { color: #475569; }
+.mws-side-glow { display: none; }
+
+/* 用户卡（白天作用域覆盖） */
 .mws-side-foot :deep(.w-user-card) {
   position: relative;
   z-index: 2;
   border-top: none;
-  padding: 10px 4px 2px;
+  padding: 8px 4px 2px;
 }
 .mws-side-foot :deep(.wuc-avatar) {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  font-size: 14px;
-  background: linear-gradient(135deg, #6366F1, #4F46E5);
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  font-size: 13px;
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
 }
-.mws-side-foot :deep(.wuc-name) {
-  color: #111827;
-}
-.mws-side-foot :deep(.wuc-org) {
-  color: #9CA3AF;
-}
+.mws-side-foot :deep(.wuc-name) { color: #111827; }
+.mws-side-foot :deep(.wuc-org) { color: #9CA3AF; }
 .mws-side-foot :deep(.wuc-plan-row) {
-  background: rgba(99, 102, 241, 0.07);
-  border: 1px solid rgba(99, 102, 241, 0.22);
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.22);
   border-radius: var(--media-radius-pill);
   padding: 3px 12px;
 }
-.mws-side-foot :deep(.wuc-plan-dot) {
-  background: #6366F1;
-}
-.mws-side-foot :deep(.wuc-plan-name) {
-  color: #4F46E5;
-}
+.mws-side-foot :deep(.wuc-plan-dot) { background: #2563EB; }
+.mws-side-foot :deep(.wuc-plan-name) { color: #1D4ED8; }
 .mws-side-foot :deep(.wuc-btn) {
   border: 1px solid #E5E7EB;
   background: #FFFFFF;
@@ -422,12 +412,9 @@ onMounted(async () => {
   border-radius: var(--media-radius-node);
 }
 .mws-side-foot :deep(.wuc-btn:hover) {
-  border-color: rgba(99, 102, 241, 0.4);
-  color: #4F46E5;
-  background: rgba(99, 102, 241, 0.06);
-}
-.mws-side-glow {
-  display: none;
+  border-color: rgba(37, 99, 235, 0.4);
+  color: #1D4ED8;
+  background: rgba(37, 99, 235, 0.05);
 }
 
 /* ── 主区 ── */
@@ -442,7 +429,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 32px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid #E5E7EB;
   position: sticky;
@@ -455,17 +442,17 @@ onMounted(async () => {
   gap: 12px;
 }
 .mws-module-icon {
-  font-size: 15px;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.22);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.07);
+  border: 1px solid rgba(37, 99, 235, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6366F1;
+  color: #2563EB;
 }
+.mws-module-icon :deep(svg) { display: block; }
 .mws-module-name {
   display: block;
   font-size: 14px;

@@ -76,22 +76,20 @@ defineProps<{
   border-radius: 50%;
 }
 .mph-status--ok {
-  background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.09);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 .mph-status--ok .mph-status-dot {
-  background: #34d399;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+  background: #10B981;
 }
 .mph-status--warn {
-  background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(217, 119, 6, 0.09);
+  color: #B45309;
+  border: 1px solid rgba(217, 119, 6, 0.25);
 }
 .mph-status--warn .mph-status-dot {
-  background: #fbbf24;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+  background: #D97706;
 }
 .mph-status--off {
   background: var(--color-bg-hover);
