@@ -12,6 +12,7 @@ export default defineNuxtConfig({
   css: [
     '~/assets/styles/enterprise-tokens.css',
     '~/assets/styles/recruitment-tokens.css',
+    '~/assets/styles/media-tokens.css',
   ],
   alias: {
     'shared': resolve(fileURLToPath(import.meta.url), '..', '..', 'shared'),

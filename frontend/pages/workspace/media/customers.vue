@@ -58,6 +58,11 @@
         <div class="ci-rule-item"><b class="r-c">C 级</b><span>一般留言/点赞 → AI 标准回复</span></div>
       </div>
     </div>
+    <!-- 订阅提示条 -->
+    <div class="ci-cta">
+      <span>订阅 AI 员工后：AI 客服自动识别客户价值、分级沉淀资产，高价值客户立即转真人接管。</span>
+      <NuxtLink to="/workspace/media" class="ci-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
+    </div>
   </MediaWorkspaceShell>
 </template>
 
@@ -99,12 +104,13 @@ const tiers = ref([
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
   padding: 16px 22px;
-  margin-bottom: 18px;
+  margin-bottom: var(--media-gap-card);
   overflow-x: auto;
+  box-shadow: var(--media-card-shadow);
 }
 .ci-pnode {
   display: flex;
@@ -113,10 +119,11 @@ const tiers = ref([
   white-space: nowrap;
 }
 .ci-pnode-ico {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: var(--color-bg-hover);
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--media-brand-soft);
+  border: 1px solid var(--media-ai-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -140,11 +147,12 @@ const tiers = ref([
   margin-bottom: 18px;
 }
 .ci-tier {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
   overflow: hidden;
   border-left-width: 4px;
+  box-shadow: var(--media-card-shadow);
 }
 .ct-a { border-left-color: var(--color-danger); }
 .ct-b { border-left-color: var(--color-warning); }
@@ -199,7 +207,8 @@ const tiers = ref([
   align-items: center;
   gap: 10px;
   background: var(--color-bg-secondary);
-  border-radius: 9px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--media-radius-node);
   padding: 10px 14px;
   margin-bottom: 8px;
   font-size: 13px;
@@ -261,6 +270,33 @@ const tiers = ref([
 .r-a { color: var(--color-danger); }
 .r-b { color: var(--color-warning); }
 .r-c { color: var(--color-text-muted); }
+.ci-cta {
+  margin-top: var(--media-gap-section);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.1));
+  border: 1px solid var(--media-ai-border);
+  border-radius: var(--media-radius-card);
+  padding: 16px 22px;
+  font-size: 12px;
+  color: var(--media-text-body);
+  box-shadow: var(--media-card-shadow);
+}
+.ci-cta-btn {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--media-brand-gradient);
+  border-radius: var(--media-radius-node);
+  padding: 10px 20px;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px var(--media-brand-glow);
+}
+.ci-cta-btn:hover { filter: brightness(1.1); }
+
 @media (max-width: 900px) {
   .ci-rule-grid { grid-template-columns: 1fr; }
 }

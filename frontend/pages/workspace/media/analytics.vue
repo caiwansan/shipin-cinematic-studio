@@ -27,6 +27,11 @@
       <div class="an-rule-title">🔒 数据原则（已冻结）</div>
       <p>所有图表数据来自微信公众平台 datacube 官方接口回流。禁止伪造阅读量、粉丝数与互动数据。账号连接并开启数据权限后自动点亮。</p>
     </div>
+    <!-- 订阅提示条 -->
+    <div class="an-cta">
+      <span>订阅 AI 员工后：数据自动回流、每周自动复盘，产出增长建议驱动下一轮内容。</span>
+      <NuxtLink to="/workspace/media" class="an-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
+    </div>
   </MediaWorkspaceShell>
 </template>
 
@@ -53,23 +58,51 @@ const dims = [
   margin-bottom: 18px;
 }
 .an-rule {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
-  padding: 18px 20px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 18px 22px;
+  box-shadow: var(--media-card-shadow);
 }
 .an-rule-title {
   font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
+  font-weight: 800;
+  color: var(--media-text-title);
   margin-bottom: 8px;
 }
 .an-rule p {
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--media-text-body);
   line-height: 1.7;
   margin: 0;
 }
+.an-cta {
+  margin-top: var(--media-gap-section);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.1));
+  border: 1px solid var(--media-ai-border);
+  border-radius: var(--media-radius-card);
+  padding: 16px 22px;
+  font-size: 12px;
+  color: var(--media-text-body);
+  box-shadow: var(--media-card-shadow);
+}
+.an-cta-btn {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--media-brand-gradient);
+  border-radius: var(--media-radius-node);
+  padding: 10px 20px;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px var(--media-brand-glow);
+}
+.an-cta-btn:hover { filter: brightness(1.1); }
+
 @media (max-width: 900px) {
   .an-grid { grid-template-columns: 1fr; }
 }

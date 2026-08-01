@@ -41,17 +41,19 @@ defineProps<{
 
 <style scoped>
 .mkc {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
   padding: 18px;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.2s, transform 0.2s;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--media-card-shadow);
 }
 .mkc:hover {
-  border-color: var(--color-border-accent);
+  border-color: var(--media-card-border-hover);
   transform: translateY(-2px);
+  box-shadow: var(--media-shadow-hover);
 }
 .mkc::before {
   content: '';
@@ -60,8 +62,8 @@ defineProps<{
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--color-intelligence), var(--color-decision));
-  opacity: 0.5;
+  background: var(--media-brand-gradient);
+  opacity: 0.55;
 }
 .mkc-head {
   display: flex;
@@ -71,10 +73,11 @@ defineProps<{
 }
 .mkc-icon {
   font-size: 15px;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--color-bg-hover);
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--media-brand-soft);
+  border: 1px solid var(--media-ai-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -82,7 +85,7 @@ defineProps<{
 .mkc-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--media-text-body);
   letter-spacing: 0.03em;
 }
 .mkc-trend {

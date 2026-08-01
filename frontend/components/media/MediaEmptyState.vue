@@ -35,38 +35,40 @@ defineProps<{
 }
 .mes-ico {
   font-size: 30px;
-  width: 60px;
-  height: 60px;
-  border-radius: 16px;
-  background: var(--color-bg-hover);
-  border: 1px solid var(--color-border-primary);
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--media-brand-soft);
+  border: 1px solid var(--media-ai-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.4);
 }
 .mes-title {
   font-size: 14px;
-  font-weight: 700;
-  color: var(--color-text-primary);
+  font-weight: 800;
+  color: var(--media-text-title);
 }
 .mes-desc {
   font-size: 12px;
-  color: var(--color-text-secondary);
-  max-width: 340px;
-  line-height: 1.6;
+  color: var(--media-text-body);
+  max-width: 360px;
+  line-height: 1.7;
 }
 .mes-source {
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 10px;
-  color: var(--color-text-disabled);
+  color: var(--media-text-dim);
   background: var(--color-bg-secondary);
-  border: 1px dashed var(--color-border-primary);
-  border-radius: 8px;
-  padding: 4px 12px;
+  border: 1px dashed var(--color-border-secondary);
+  border-radius: var(--media-radius-pill);
+  padding: 4px 14px;
   letter-spacing: 0.04em;
+  font-family: var(--font-mono);
 }
 .mes-action {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 </style>

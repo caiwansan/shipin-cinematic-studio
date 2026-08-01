@@ -1,0 +1,58 @@
+/* ═══════════════════════════════════════════════════════════
+   Media Design Language v1.0 — 新媒体工作台专属 Design Token
+   Sprint-MEDIA-DESIGN-SYSTEM-01
+   基于 Kunlun Design System（enterprise-tokens.css）派生：
+   - 不新建色彩体系：全部引用 --color-* 基元
+   - 语义化新媒体表达：品牌 / AI 高亮 / 卡片玻璃感 / Hero 氛围
+   - 禁止页面内联 #hex（除特殊渐变）
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── 品牌（Kunlun intelligence→decision 渐变）── */
+  --media-brand-gradient: linear-gradient(135deg, #8B5CF6 0%, #6366F1 55%, #3B82F6 100%);
+  --media-brand-soft: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(59, 130, 246, 0.14));
+  --media-brand-glow: rgba(139, 92, 246, 0.28);
+  --media-brand-text: #C4B5FD;
+
+  /* ── AI 高亮 ── */
+  --media-ai: #A78BFA;
+  --media-ai-soft: #8B5CF6;
+  --media-ai-glow: rgba(139, 92, 246, 0.16);
+  --media-ai-border: rgba(167, 139, 250, 0.35);
+
+  /* ── 背景氛围 ── */
+  --media-bg-deep: #070B16;
+  --media-hero-grid-line: rgba(99, 102, 241, 0.07);
+  --media-hero-glow-1: rgba(139, 92, 246, 0.13);
+  --media-hero-glow-2: rgba(59, 130, 246, 0.09);
+
+  /* ── 卡片（玻璃感，深色基底）── */
+  --media-card-bg: linear-gradient(160deg, rgba(30, 41, 59, 0.5), rgba(13, 19, 40, 0.88));
+  --media-card-bg-solid: rgba(13, 19, 40, 0.85);
+  --media-card-border: rgba(71, 85, 105, 0.32);
+  --media-card-border-hover: rgba(139, 92, 246, 0.45);
+  --media-card-shadow: 0 8px 30px rgba(2, 6, 23, 0.45);
+
+  /* ── 文字 ── */
+  --media-text-hero: #F8FAFC;
+  --media-text-title: #F1F5F9;
+  --media-text-body: #94A3B8;
+  --media-text-dim: #64748B;
+
+  /* ── 圆角 ── */
+  --media-radius-card: 16px;
+  --media-radius-panel: 14px;
+  --media-radius-node: 12px;
+  --media-radius-pill: 999px;
+
+  /* ── 间距（页面节奏）── */
+  --media-gap-page: 28px;
+  --media-gap-section: 24px;
+  --media-gap-card: 16px;
+  --media-pad-page: 32px;
+
+  /* ── 阴影 ── */
+  --media-shadow-float: 0 12px 40px rgba(2, 6, 23, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.06);
+  --media-shadow-hover: 0 14px 44px rgba(2, 6, 23, 0.55), 0 0 0 1px rgba(139, 92, 246, 0.14);
+  --media-shadow-card: 0 4px 20px rgba(2, 6, 23, 0.35);
+}

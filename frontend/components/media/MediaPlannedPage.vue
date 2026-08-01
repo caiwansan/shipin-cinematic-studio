@@ -1,8 +1,6 @@
 <!--
-  MediaPlannedPage — 预留模块统一空态页
-
-  Sprint-MEDIA-UX-01: 未实现功能必须明确 Empty State，禁止假数据
-  本组件仅用于 messages / customers / analytics / team 四个预留模块
+  MediaPlannedPage — 预留模块统一空态页（Sprint-MEDIA-DESIGN-SYSTEM-01 暗色化）
+  未实现功能必须明确 Empty State，禁止假数据
 -->
 <template>
   <MediaWorkspaceShell>
@@ -40,13 +38,14 @@ const goOverview = () => router.push('/workspace/media/')
   padding-top: 40px;
 }
 .mpp-card {
-  background: #fff;
-  border: 1px dashed #d5d5e0;
-  border-radius: 16px;
+  background: var(--media-card-bg);
+  border: 1px dashed var(--media-ai-border);
+  border-radius: var(--media-radius-card);
   padding: 48px 40px;
   text-align: center;
   max-width: 520px;
   width: 100%;
+  box-shadow: var(--media-card-shadow);
 }
 .mpp-icon {
   font-size: 44px;
@@ -54,11 +53,12 @@ const goOverview = () => router.push('/workspace/media/')
 .mpp-title {
   margin: 14px 0 8px;
   font-size: 18px;
-  color: #1a1a2e;
+  font-weight: 800;
+  color: var(--media-text-title);
 }
 .mpp-desc {
   font-size: 13px;
-  color: #8a8a9e;
+  color: var(--media-text-dim);
   line-height: 1.7;
   margin: 0 auto 16px;
   max-width: 400px;
@@ -67,32 +67,37 @@ const goOverview = () => router.push('/workspace/media/')
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #f7f8fa;
-  border-radius: 10px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--media-radius-pill);
   padding: 8px 14px;
   margin-bottom: 20px;
 }
 .mpp-plan-tag {
   font-size: 11px;
-  background: #f0f0f5;
-  color: #9a9aad;
-  border-radius: 10px;
-  padding: 2px 8px;
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--media-ai);
+  border-radius: var(--media-radius-pill);
+  padding: 2px 10px;
+  font-weight: 700;
 }
 .mpp-plan-text {
   font-size: 12px;
-  color: #6b6b80;
+  color: var(--media-text-dim);
 }
 .mpp-back {
-  border: 1px solid #e2e2ea;
-  background: #fff;
-  border-radius: 8px;
-  padding: 8px 16px;
+  border: 1px solid var(--media-card-border);
+  background: var(--media-card-bg-solid);
+  border-radius: var(--media-radius-node);
+  padding: 9px 18px;
   font-size: 13px;
-  color: #555;
+  color: var(--media-text-body);
   cursor: pointer;
+  transition: all 0.15s;
 }
 .mpp-back:hover {
-  background: #f5f5f8;
+  background: var(--media-ai-glow);
+  border-color: var(--media-ai-border);
+  color: var(--media-text-title);
 }
 </style>

@@ -39,8 +39,8 @@ defineProps<{
   padding: 6px 4px;
 }
 .mcs-col {
-  border-radius: 10px;
-  padding: 12px 14px;
+  border-radius: var(--media-radius-node);
+  padding: 13px 15px;
   border: 1px solid var(--color-border-primary);
 }
 .mcs-free {
@@ -48,9 +48,9 @@ defineProps<{
   border-color: rgba(16, 185, 129, 0.25);
 }
 .mcs-ai {
-  background: var(--color-bg-secondary);
-  border-color: var(--color-border-primary);
-  border-left: 3px solid var(--color-warning);
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.1), var(--color-bg-secondary));
+  border-color: var(--media-ai-border);
+  border-left: 3px solid var(--media-ai);
 }
 .mcs-col-head {
   display: flex;

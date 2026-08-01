@@ -89,17 +89,21 @@ const sessions = ref<any[]>([])
 
 <style scoped>
 .mg-flow {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 20px 22px;
+  margin-bottom: var(--media-gap-card);
+  box-shadow: var(--media-card-shadow);
 }
 .mg-flow-title {
   font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: 12px;
+  font-weight: 800;
+  color: var(--media-text-title);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .mg-flow-steps {
   display: grid;
@@ -107,31 +111,47 @@ const sessions = ref<any[]>([])
   gap: 10px;
 }
 .mg-flow-step {
+  position: relative;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border-primary);
-  border-radius: 10px;
-  padding: 12px 14px;
+  border-radius: var(--media-radius-node);
+  padding: 13px 14px;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  transition: all 0.18s;
+}
+.mg-flow-step:hover {
+  border-color: var(--media-ai-border);
+  transform: translateY(-2px);
 }
 .mg-flow-step b {
-  color: var(--color-decision);
-  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--media-brand-gradient);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  box-shadow: 0 3px 10px var(--media-brand-glow);
 }
 .mg-flow-name {
   font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text-primary);
+  font-weight: 800;
+  color: var(--media-text-title);
 }
 .mg-flow-desc {
   font-size: 10px;
-  color: var(--color-text-muted);
+  color: var(--media-text-dim);
   line-height: 1.5;
 }
 
 .mg-cap {
-  margin-bottom: 16px;
+  margin-bottom: var(--media-gap-card);
 }
 
 .mg-tier-grid {
@@ -140,58 +160,61 @@ const sessions = ref<any[]>([])
   gap: 12px;
 }
 .mg-tier {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 14px 16px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-panel);
+  padding: 16px 18px;
+  box-shadow: var(--media-card-shadow);
 }
 .mg-tier-a { border-left: 3px solid var(--color-danger); }
 .mg-tier-b { border-left: 3px solid var(--color-warning); }
-.mg-tier-c { border-left: 3px solid var(--color-text-muted); }
+.mg-tier-c { border-left: 3px solid var(--media-text-dim); }
 .mg-tier-tag {
   font-size: 10px;
   font-weight: 800;
-  border-radius: 8px;
-  padding: 2px 10px;
+  border-radius: var(--media-radius-pill);
+  padding: 2px 12px;
 }
 .mg-tier-a .mg-tier-tag { background: rgba(239, 68, 68, 0.15); color: var(--color-danger); }
 .mg-tier-b .mg-tier-tag { background: rgba(245, 158, 11, 0.14); color: var(--color-warning); }
-.mg-tier-c .mg-tier-tag { background: var(--color-bg-hover); color: var(--color-text-muted); }
+.mg-tier-c .mg-tier-tag { background: var(--color-bg-hover); color: var(--media-text-dim); }
 .mg-tier-name {
   font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin-top: 8px;
+  font-weight: 800;
+  color: var(--media-text-title);
+  margin-top: 10px;
 }
 .mg-tier-desc {
   font-size: 11px;
-  color: var(--color-text-muted);
-  line-height: 1.6;
-  margin-top: 4px;
+  color: var(--media-text-dim);
+  line-height: 1.7;
+  margin-top: 5px;
 }
 
 .mg-cta {
-  margin-top: 18px;
+  margin-top: var(--media-gap-section);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(90deg, var(--color-bg-elevated), var(--color-intelligence-glow));
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
-  padding: 16px 22px;
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.1));
+  border: 1px solid var(--media-ai-border);
+  border-radius: var(--media-radius-card);
+  padding: 18px 24px;
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--media-text-body);
+  box-shadow: var(--media-card-shadow);
 }
 .mg-cta-btn {
   font-size: 13px;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
-  border-radius: 10px;
-  padding: 9px 18px;
+  background: var(--media-brand-gradient);
+  border-radius: var(--media-radius-node);
+  padding: 11px 22px;
   text-decoration: none;
   white-space: nowrap;
+  box-shadow: 0 6px 18px var(--media-brand-glow);
 }
 .mg-cta-btn:hover { filter: brightness(1.1); }
 

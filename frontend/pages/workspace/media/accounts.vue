@@ -114,16 +114,16 @@ function connect() {
 
 <style scoped>
 .as-asset {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
-  padding: 22px 24px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 24px 26px;
   display: grid;
   grid-template-columns: 1.2fr 0.8fr auto auto;
   gap: 22px;
   align-items: center;
-  margin-bottom: 16px;
-  background-image: linear-gradient(90deg, var(--color-bg-elevated), rgba(139, 92, 246, 0.05));
+  margin-bottom: var(--media-gap-card);
+  box-shadow: var(--media-card-shadow);
 }
 .as-asset-left {
   display: flex;
@@ -243,13 +243,14 @@ function connect() {
   margin-bottom: 16px;
 }
 .as-step {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 14px 16px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-panel);
+  padding: 15px 16px;
   display: flex;
   gap: 10px;
   align-items: flex-start;
+  box-shadow: var(--media-card-shadow);
 }
 .as-step-num {
   width: 22px;
@@ -282,10 +283,11 @@ function connect() {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 14px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-panel);
+  padding: 15px;
+  box-shadow: var(--media-card-shadow);
 }
 .as-planned-ico { font-size: 22px; }
 .as-planned-item b { display: block; font-size: 13px; color: var(--color-text-primary); }
@@ -309,13 +311,13 @@ function connect() {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.06));
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-panel);
+  padding: 14px 18px;
+  margin-bottom: var(--media-gap-card);
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--media-text-body);
   line-height: 1.6;
 }
 .as-note-ico { font-size: 15px; }

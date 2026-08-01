@@ -32,18 +32,21 @@ defineProps<{
 
 <style scoped>
 .mp {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
   overflow: hidden;
+  box-shadow: var(--media-card-shadow);
+  transition: border-color 0.2s;
 }
+.mp:hover { border-color: var(--media-card-border-hover); }
 .mp-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border-primary);
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.04), transparent);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.07), transparent);
 }
 .mp-head-left {
   display: flex;
@@ -51,10 +54,11 @@ defineProps<{
   gap: 12px;
 }
 .mp-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: var(--color-bg-hover);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--media-radius-node);
+  background: var(--media-brand-soft);
+  border: 1px solid var(--media-ai-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -62,13 +66,13 @@ defineProps<{
 }
 .mp-title {
   font-size: 14px;
-  font-weight: 700;
-  color: var(--color-text-primary);
+  font-weight: 800;
+  color: var(--media-text-title);
   margin: 0;
 }
 .mp-sub {
   font-size: 11px;
-  color: var(--color-text-muted);
+  color: var(--media-text-dim);
   margin: 2px 0 0;
 }
 .mp-body {

@@ -1,23 +1,13 @@
 <!--
-  Sprint-MEDIA-PRODUCT-ONBOARDING-01A — CEO 驾驶舱产品化（SaaS 价值地图）
-  产品逻辑: 免费看到完整价值地图 → 理解能力 → 订阅解锁 AI 员工 → 启动运营闭环
-  真实数据源: GET /api/enterprise/media/overview（唯一驾驶舱数据源）
-  诚实原则: 数字 = 真实计数；无数据 → 等待激活/未连接（禁 mock）
+  Sprint-MEDIA-DESIGN-SYSTEM-01 — AI 新媒体运营总控中心（世界级 UI 重构）
+  结构: Hero(标题+CTA+运营状态) → 我的AI团队 → 内容生产流水线 → 客户运营中心 → 数据洞察 → 运营轨迹/行业智能 → 最近执行/成本
+  数据源: GET /api/enterprise/media/overview（唯一驾驶舱数据源）
+  诚实原则: 数字 = 真实计数；无数据 → 产品化空态（禁 mock）
+  视觉: Media Design Language（media-tokens.css，基于 Kunlun）
 -->
 <template>
   <MediaWorkspaceShell>
-    <!-- 页面头 -->
-    <MediaPageHeader
-      kicker="AI Media Ops · SaaS"
-      title="AI 新媒体运营中心"
-      desc="帮助企业管理渠道、生产内容、运营客户——免费使用运营基础设施，订阅解锁 AI 员工自动执行。"
-    >
-      <template #actions>
-        <NuxtLink to="/workspace/media/intelligence" class="mph-btn">📡 行业智能</NuxtLink>
-      </template>
-    </MediaPageHeader>
-
-    <!-- ═══ 身份引导（SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 登录过期 → 弹窗登录；个人空间 → 欢迎引导）═══ -->
+    <!-- ═══ 身份引导（登录过期 → 弹窗登录；个人空间 → 欢迎引导）═══ -->
     <div v-if="identityState === 'login-expired'" class="dash-identity-error">
       <b>🔐 登录已过期</b>
       <span>当前会话已失效，请重新登录后再进入你的新媒体运营空间。</span>
@@ -25,171 +15,211 @@
     </div>
     <div v-else-if="identityState === 'personal-space'" class="dash-identity-ok">
       <b>🚀 欢迎，这是你的个人 AI 新媒体运营空间</b>
-      <span>无需企业身份，绑定你的平台账号（小红书 / 抖音 / 视频号 / 公众号）即可开始 AI 运营。</span>
+      <span>无需企业身份，绑定你的平台账号（公众号 / 抖音 / 小红书 / 视频号）即可开始 AI 运营。</span>
     </div>
 
-    <!-- ═══ 产品定位（30 秒理解：这是什么产品）═══ -->
-    <div class="dash-position">
-      <span class="dash-pos-label">这是你的 AI 新媒体运营空间</span>
-      <span class="dash-pos-item">📢 管理渠道</span>
-      <span class="dash-pos-arrow">→</span>
-      <span class="dash-pos-item">📝 生产内容</span>
-      <span class="dash-pos-arrow">→</span>
-      <span class="dash-pos-item">💬 运营客户</span>
-      <span class="dash-pos-arrow">→</span>
-      <span class="dash-pos-item dash-pos-ai">🤖 由 AI 员工自动执行</span>
-    </div>
+    <!-- ═══ Hero · 总控中心 ═══ -->
+    <section class="hero">
+      <div class="hero-grid"></div>
+      <div class="hero-glow hero-glow-a"></div>
+      <div class="hero-glow hero-glow-b"></div>
 
-    <!-- ═══ 首次进入行动路径（空态时：当前状态 → 下一步动作）═══ -->
-    <div v-if="!agents.length" class="dash-steps">
-      <div class="dash-steps-title">🚀 三步开启你的 AI 新媒体运营部</div>
-      <div class="dash-steps-row">
-        <div class="dash-step">
-          <span class="dash-step-num">1</span>
-          <div class="dash-step-body">
-            <b>连接渠道资产</b>
-            <span>公众号 / 抖音 / 小红书 / 视频号</span>
-          </div>
-          <NuxtLink to="/workspace/media/accounts" class="dash-step-cta">去连接 →</NuxtLink>
+      <div class="hero-body">
+        <div class="hero-kicker">
+          <span class="hero-kicker-dot"></span>
+          AI MEDIA OPERATIONS · 你的 AI 新媒体部门
         </div>
-        <span class="dash-step-arrow">→</span>
-        <div class="dash-step">
-          <span class="dash-step-num">2</span>
-          <div class="dash-step-body">
-            <b>解锁 AI 团队</b>
-            <span>5 名 AI 员工自动部署</span>
-          </div>
-          <button class="dash-step-cta" @click="showSubscribe = true">查看编制 →</button>
-        </div>
-        <span class="dash-step-arrow">→</span>
-        <div class="dash-step">
-          <span class="dash-step-num">3</span>
-          <div class="dash-step-body">
-            <b>AI 自动运营</b>
-            <span>选题·生产·发布·复盘，成果回流驾驶舱</span>
-          </div>
-          <NuxtLink to="/workspace/media/content" class="dash-step-cta">查看车间 →</NuxtLink>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══ ① CEO 驾驶舱 · 部门状态卡 ═══ -->
-    <div class="dash-dept">
-      <div class="dash-dept-title">
-        <span class="dash-dept-ico">🏢</span>
-        <div>
-          <div class="dash-dept-name">AI 新媒体运营部</div>
-          <div class="dash-dept-sub">EnterpriseAgentInstance · 真实部署状态</div>
-        </div>
-        <span class="dash-dept-state" :class="deptStateClass">{{ deptStateText }}</span>
-      </div>
-      <div class="dash-dept-metrics">
-        <div class="dash-dept-metric">
-          <div class="ddm-value">{{ agents.length }}<span class="ddm-unit">/5</span></div>
-          <div class="ddm-label">AI 员工已激活</div>
-        </div>
-        <div class="dash-dept-metric">
-          <div class="ddm-value">{{ channels.connected }}<span class="ddm-unit">/{{ channels.total }}</span></div>
-          <div class="ddm-label">渠道已连接</div>
-        </div>
-        <div class="dash-dept-metric">
-          <div class="ddm-value">{{ today.completed }}<span class="ddm-unit">/{{ today.completed + today.pendingSchedules }}</span></div>
-          <div class="ddm-label">今日任务完成</div>
-        </div>
-      </div>
-      <!-- 空态原因 + 下一步（产品感：当前状态 + 为什么为空 + 下一步动作） -->
-      <div v-if="!agents.length" class="dash-dept-hint">
-        <span class="dash-dept-hint-ico">💡</span>
-        <span class="dash-dept-hint-text">
-          <b>部门未激活：</b>当前尚未订阅 AI 员工服务。
-          下一步：<NuxtLink to="/workspace/media/accounts">连接渠道资产</NuxtLink>
-          并<button class="dash-dept-hint-btn" @click="showSubscribe = true">解锁 AI 新媒体团队</button>。
-        </span>
-      </div>
-    </div>
-
-    <!-- ═══ ② 我的 AI 团队（免费可见价值 · 订阅解锁）═══ -->
-    <MediaPanel icon="🤖" title="我的 AI 团队" sub="免费查看完整编制 · 订阅后自动部署并开始工作" class="dash-team-panel">
-      <template v-if="agents.length">
-        <div class="dept-list">
-          <div v-for="a in agents" :key="a.instanceId" class="dept-row">
-            <span class="dept-avatar">{{ a.avatar || a.name[0] }}</span>
-            <div class="dept-meta">
-              <div class="dept-name">{{ a.name }} <span class="dept-role">{{ a.role }}</span></div>
-              <div class="dept-sub">{{ a.totalTasks }} 任务 · {{ a.totalErrors }} 错误 · {{ a.lastActiveAt ? '活跃 ' + fmtTime(a.lastActiveAt) : '未活跃' }}</div>
-            </div>
-            <span class="dept-state" :class="stateClass(a.lifecycleState)">{{ stateText(a.lifecycleState) }}</span>
-          </div>
-        </div>
-      </template>
-      <template v-else>
-        <div class="team-grid">
-          <button
-            v-for="m in teamRoster" :key="m.name"
-            class="team-card" @click="showSubscribe = true"
-          >
-            <div class="team-card-avatar">{{ m.avatar }}</div>
-            <div class="team-card-meta">
-              <div class="team-card-name">{{ m.name }}</div>
-              <div class="team-card-role">{{ m.role }}</div>
-            </div>
-            <div class="team-card-duty">{{ m.duty }}</div>
-            <div class="team-card-value">{{ m.value }}</div>
-            <span class="team-card-lock">🔒 订阅解锁</span>
+        <h1 class="hero-title">
+          AI 新媒体运营<span class="hero-title-accent">总控中心</span>
+        </h1>
+        <p class="hero-desc">
+          {{ agents.length
+            ? '你的 AI 团队正在工作——内容生产、客户运营、数据洞察，全部自动执行，成果回流这里。'
+            : '你的 AI 团队正在等待启动——连接渠道资产、解锁 AI 员工，新媒体运营将全自动执行。' }}
+        </p>
+        <div class="hero-cta">
+          <NuxtLink to="/workspace/media/accounts" class="hero-btn hero-btn-primary">
+            🔗 连接渠道资产
+          </NuxtLink>
+          <button v-if="!agents.length" class="hero-btn hero-btn-ghost" @click="showSubscribe = true">
+            🤖 解锁 AI 团队 →
           </button>
+          <NuxtLink v-else to="/workspace/media/team" class="hero-btn hero-btn-ghost">
+            🤖 查看 AI 团队 →
+          </NuxtLink>
         </div>
-        <div class="team-cta-row">
-          <button class="team-cta" @click="showSubscribe = true">解锁 AI 新媒体团队</button>
-          <span class="team-cta-note">订阅后：自动部署 AI 员工 · 绑定渠道资产 · 开始自动运营 · 成果回流 CEO 驾驶舱</span>
+        <div class="hero-hint">
+          {{ agents.length
+            ? `${activeCount} 名 AI 员工运行中 · 今日已完成 ${today.completed} 项任务`
+            : '免费查看完整价值地图 · 订阅后 AI 员工自动部署并开始工作' }}
         </div>
-      </template>
-    </MediaPanel>
+      </div>
 
-    <!-- ═══ ③ 渠道资产中心（产品蓝图 4 平台 · 连接后 AI 才能运营）═══ -->
-    <MediaPanel icon="🔗" title="渠道资产中心" sub="连接账号后，AI 员工才能开始运营你的渠道" class="dash-assets">
-      <div class="dash-assets-row">
-        <div v-for="p in channelBlueprints" :key="p.key" class="dash-asset" :class="{ 'is-connected': p.connected }">
-          <span class="dash-asset-ico">{{ p.icon }}</span>
-          <div class="dash-asset-meta">
-            <div class="dash-asset-name">{{ p.name }}</div>
-            <div class="dash-asset-sub">{{ p.connected ? '已连接' : '未连接' }}</div>
+      <!-- 运营状态（Hero 右侧 · 三大指标） -->
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-ico ai">🤖</div>
+          <div class="hero-stat-num">{{ agents.length }}<span class="hero-stat-unit">/5</span></div>
+          <div class="hero-stat-label">AI 员工</div>
+          <div class="hero-stat-sub">{{ agents.length ? activeCount + ' 名运行中' : '待启动' }}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-ico ch">🌐</div>
+          <div class="hero-stat-num">{{ channels.connected }}<span class="hero-stat-unit">/{{ channels.total }}</span></div>
+          <div class="hero-stat-label">渠道已连接</div>
+          <div class="hero-stat-sub">{{ channels.connected ? 'AI 可执行运营' : '连接后 AI 开始工作' }}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-ico tk">✅</div>
+          <div class="hero-stat-num">{{ today.completed }}<span class="hero-stat-unit">/{{ today.completed + today.pendingSchedules }}</span></div>
+          <div class="hero-stat-label">今日任务</div>
+          <div class="hero-stat-sub">{{ today.pendingSchedules ? today.pendingSchedules + ' 项待执行' : '暂无排程' }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 我的 AI 团队 ═══ -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <span class="sec-ico">🤖</span>
+          <div>
+            <h2 class="sec-title">我的 AI 团队</h2>
+            <p class="sec-sub">免费查看完整编制 · 订阅后自动部署并开始工作</p>
           </div>
-          <NuxtLink v-if="!p.connected" to="/workspace/media/accounts" class="dash-asset-cta">去连接 →</NuxtLink>
-          <span v-else class="dash-asset-ok">✅</span>
+        </div>
+        <NuxtLink to="/workspace/media/team" class="sec-more">进入团队工作台 →</NuxtLink>
+      </div>
+
+      <div v-if="agents.length" class="team-grid">
+        <div
+          v-for="a in agents" :key="a.instanceId"
+          class="team-card" @click="$router.push('/workspace/media/team')"
+        >
+          <div class="team-card-avatar" :class="stateClass(a.lifecycleState)">{{ a.avatar || a.name[0] }}</div>
+          <div class="team-card-meta">
+            <div class="team-card-name">{{ a.name }}</div>
+            <div class="team-card-role">{{ a.role }}</div>
+          </div>
+          <span class="team-card-state" :class="stateClass(a.lifecycleState)">{{ stateText(a.lifecycleState) }}</span>
+          <div class="team-card-stats">
+            <span>{{ a.totalTasks }} 任务</span>
+            <span>{{ a.totalErrors }} 错误</span>
+            <span>{{ a.lastActiveAt ? '活跃 ' + fmtTime(a.lastActiveAt) : '未活跃' }}</span>
+          </div>
         </div>
       </div>
-      <div class="dash-assets-foot">免费用户可手动管理渠道 · AI 自动运营随员工订阅解锁</div>
-    </MediaPanel>
 
-    <!-- ═══ ④ 健康度 + KPI（免费运营基础设施）═══ -->
-    <div class="dash-hero">
-      <div class="dash-health">
-        <MediaHealthRing :score="healthScore" foot="今日任务完成率 · 真实计算（agent_outcome + agent_schedule + 错误惩罚）" />
+      <div v-else class="team-grid">
+        <div v-for="m in teamRoster" :key="m.name" class="team-card is-locked" @click="showSubscribe = true">
+          <div class="team-card-avatar roster">{{ m.avatar }}</div>
+          <div class="team-card-meta">
+            <div class="team-card-name">{{ m.name }}</div>
+            <div class="team-card-role">{{ m.role }}</div>
+          </div>
+          <span class="team-card-lock">🔒 订阅解锁</span>
+          <div class="team-card-duty">“{{ m.duty }}”</div>
+          <div class="team-card-value">→ {{ m.value }}</div>
+        </div>
       </div>
-      <div class="dash-kpis">
-        <MediaKpiCard
-          icon="📝" label="内容生产" :value="today.completed ? String(today.completed) : '0'"
-          :sub="today.completed ? `今日完成 ${today.completed} 项任务` : '今日暂无任务记录'"
-          source="agent_outcome" accent="green"
-        />
-        <MediaKpiCard
-          icon="💬" label="互动" :value="null"
-          empty-text="等待微信消息接入" source="SocialMetricsSnapshot · Sprint-MEDIA-01"
-        />
-        <MediaKpiCard
-          icon="👥" label="客户" :value="null"
-          empty-text="等待 AI 客服识别" source="客户价值识别 · Sprint-MEDIA-04"
-        />
-        <MediaKpiCard
-          icon="⚠️" label="风险" :value="String(riskCount)" :sub="riskCount ? '累计错误待处理' : '无运行错误'"
-          source="EnterpriseAgentInstance" accent="red"
-        />
-      </div>
-    </div>
 
-    <!-- ═══ ⑤ 今日时间轴 + 行业智能 ═══ -->
+      <div v-if="!agents.length" class="sec-cta">
+        <button class="sec-cta-btn" @click="showSubscribe = true">解锁 AI 新媒体团队</button>
+        <span class="sec-cta-note">订阅后：自动部署 AI 员工 · 绑定渠道资产 · 开始自动运营 · 成果回流总控中心</span>
+      </div>
+    </section>
+
+    <!-- ═══ 内容生产流水线 ═══ -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <span class="sec-ico">🏭</span>
+          <div>
+            <h2 class="sec-title">内容生产流水线</h2>
+            <p class="sec-sub">战略 → 选题 → 创作 → 审核 → 发布 → 复盘 · AI 员工自动执行</p>
+          </div>
+        </div>
+        <NuxtLink to="/workspace/media/content" class="sec-more">进入内容车间 →</NuxtLink>
+      </div>
+
+      <div class="factory">
+        <div v-for="(s, i) in factoryStages" :key="s.key" class="factory-node">
+          <div class="factory-ico">{{ s.icon }}</div>
+          <div class="factory-num">{{ i + 1 }}</div>
+          <div class="factory-name">{{ s.name }}</div>
+          <div class="factory-worker">{{ s.worker }}</div>
+          <span class="factory-ai">AI 自动</span>
+        </div>
+        <span v-for="i in 5" :key="'a' + i" class="factory-arrow">→</span>
+      </div>
+    </section>
+
+    <!-- ═══ 客户运营中心 ═══ -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <span class="sec-ico">💬</span>
+          <div>
+            <h2 class="sec-title">客户运营中心</h2>
+            <p class="sec-sub">客户进入 → AI 理解需求 → 价值判断 → 自动回复 → 销售机会 → 人工接管</p>
+          </div>
+        </div>
+        <NuxtLink to="/workspace/media/messages" class="sec-more">进入客户运营 →</NuxtLink>
+      </div>
+
+      <div class="cust-flow">
+        <div v-for="(c, i) in custStages" :key="c.key" class="cust-node">
+          <span class="cust-num">{{ i + 1 }}</span>
+          <span class="cust-ico">{{ c.icon }}</span>
+          <div class="cust-meta">
+            <div class="cust-name">{{ c.name }}</div>
+            <div class="cust-sub">{{ c.sub }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 数据洞察（健康环 + KPI）═══ -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <span class="sec-ico">📊</span>
+          <div>
+            <h2 class="sec-title">数据洞察</h2>
+            <p class="sec-sub">真实数据回流 · 诚实展示 · 禁 mock</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight">
+        <div class="insight-health">
+          <MediaHealthRing :score="healthScore" foot="今日任务完成率 · 真实计算（agent_outcome + agent_schedule + 错误惩罚）" />
+        </div>
+        <div class="insight-kpis">
+          <MediaKpiCard
+            icon="📝" label="内容生产" :value="today.completed ? String(today.completed) : '0'"
+            :sub="today.completed ? `今日完成 ${today.completed} 项任务` : '今日暂无任务记录'"
+            source="agent_outcome" accent="green"
+          />
+          <MediaKpiCard
+            icon="💬" label="互动" :value="null"
+            empty-text="等待微信消息接入" source="SocialMetricsSnapshot"
+          />
+          <MediaKpiCard
+            icon="👥" label="客户" :value="null"
+            empty-text="等待 AI 客服识别" source="客户价值识别"
+          />
+          <MediaKpiCard
+            icon="⚠️" label="风险" :value="String(riskCount)" :sub="riskCount ? '累计错误待处理' : '无运行错误'"
+            source="EnterpriseAgentInstance" accent="red"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 运营轨迹 + 行业智能 ═══ -->
     <div class="dash-grid">
-      <MediaPanel icon="🕒" title="今日运营时间轴" :sub="`${today.scheduleItems.length} 项排程 · ${today.completed} 项完成`">
+      <MediaPanel icon="🕒" title="今日运营轨迹" :sub="`${today.scheduleItems.length} 项排程 · ${today.completed} 项完成`">
         <template v-if="timeline.length">
           <div class="tl">
             <div v-for="(t, i) in timeline" :key="i" class="tl-item" :class="t.kind">
@@ -221,14 +251,14 @@
           </div>
         </template>
         <MediaEmptyState
-          v-else icon="📡" title="雷达待激活"
+          v-else icon="📡" title="行业雷达待激活"
           :desc="industryRadar.reason || '热点/竞品/规则真实数据源未接入。'"
           source="Sprint-MEDIA-03 数据源接入后启用"
         />
       </MediaPanel>
     </div>
 
-    <!-- ═══ ⑥ 最近执行 + 今日成本 ═══ -->
+    <!-- ═══ 最近执行 + 今日成本 ═══ -->
     <div class="dash-grid">
       <MediaPanel icon="🧾" title="最近执行记录" :sub="`${recentOutcomes.length} 条 · 近 7 天`">
         <template v-if="recentOutcomes.length">
@@ -259,7 +289,7 @@
       </div>
     </div>
 
-    <!-- ═══ AI 员工订阅说明弹窗（01A 价值说明 · 01C 接入真实商业入口）═══ -->
+    <!-- ═══ 解锁 AI 团队弹窗 ═══ -->
     <Teleport to="body">
       <div v-if="showSubscribe" class="sub-modal-mask" @click.self="showSubscribe = false">
         <div class="sub-modal">
@@ -282,7 +312,7 @@
             </div>
           </div>
           <div class="sub-modal-foot">
-            <div class="sub-modal-note">订阅后：自动部署 AI 员工 → 绑定渠道资产 → 开始自动运营 → 成果回流 CEO 驾驶舱</div>
+            <div class="sub-modal-note">订阅后：自动部署 AI 员工 → 绑定渠道资产 → 开始自动运营 → 成果回流总控中心</div>
             <div class="sub-modal-actions">
               <NuxtLink to="/workspace/media/accounts" class="sub-modal-secondary" @click="showSubscribe = false">先去连接公众号 →</NuxtLink>
               <button class="sub-modal-primary" @click="showSubscribe = false">知道了</button>
@@ -299,7 +329,6 @@ import { getAuthToken } from '~/utils/auth/token'
 
 definePageMeta({ middleware: 'auth' })
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
-import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
 import MediaKpiCard from '~/components/media/MediaKpiCard.vue'
 import MediaPanel from '~/components/media/MediaPanel.vue'
 import MediaEmptyState from '~/components/media/MediaEmptyState.vue'
@@ -326,16 +355,6 @@ const industryRadar = computed(() => overview.value.industryRadar || {})
 
 const activeCount = computed(() => agents.value.filter((a: any) => a.lifecycleState === 'ACTIVE').length)
 const riskCount = computed(() => agents.value.reduce((s: number, a: any) => s + (a.totalErrors || 0), 0))
-
-// 部门状态（真实计算）
-const deptStateText = computed(() => {
-  if (!agents.value.length) return '未激活'
-  return activeCount.value > 0 ? '运行中' : '已部署 · 待激活'
-})
-const deptStateClass = computed(() => {
-  if (!agents.value.length) return 'dd-st-inactive'
-  return activeCount.value > 0 ? 'dd-st-active' : 'dd-st-pending'
-})
 
 // 健康度：真实计算。今日完成率 + 错误惩罚；无数据 → null
 const healthScore = computed(() => {
@@ -388,6 +407,26 @@ const teamRoster = [
   { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作输出成品', value: '提高生产效率：图文视频批量产出，发布前可人工审核把关', auto: '按选题自动生成图文与视频初稿，交人工审核' },
   { name: 'David', role: 'AI 客服', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '减少人工客服压力：私信秒回，客户线索自动分类，不错过潜在客户', auto: '自动回复粉丝私信，A/B/C 分级并提醒销售机会' },
   { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '持续优化运营：每周自动复盘，什么有效、粉丝从哪来、下一步做什么', auto: '每周自动产出运营周报与增长建议' },
+]
+
+// 内容生产流水线（首页简版 · 与 content.vue 六节点一致）
+const factoryStages = [
+  { key: 'strategy', icon: '🎯', name: '战略', worker: 'Alice 运营总监' },
+  { key: 'ideas', icon: '💡', name: '选题', worker: 'Bob 内容策划' },
+  { key: 'produce', icon: '✍️', name: '创作', worker: 'Carol 内容生产' },
+  { key: 'review', icon: '🔍', name: '审核', worker: '合规检查' },
+  { key: 'publish', icon: '🚀', name: '发布', worker: '渠道直发' },
+  { key: 'feedback', icon: '📈', name: '复盘', worker: 'Eve 数据分析' },
+]
+
+// 客户运营流程（首页简版 · 与 messages.vue 一致）
+const custStages = [
+  { key: 'in', icon: '📥', name: '客户进入', sub: '私信/评论' },
+  { key: 'understand', icon: '🧠', name: 'AI 理解需求', sub: '意图识别' },
+  { key: 'value', icon: '💎', name: '价值判断', sub: 'A/B/C 分级' },
+  { key: 'reply', icon: '⚡', name: '自动回复', sub: '秒级响应' },
+  { key: 'lead', icon: '💰', name: '销售机会', sub: '提醒跟进' },
+  { key: 'human', icon: '👤', name: '人工接管', sub: '高价值客户' },
 ]
 
 const showSubscribe = ref(false)
@@ -443,776 +482,598 @@ function stateClass(s: string) {
 </script>
 
 <style scoped>
-.mph-btn {
-  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-  box-shadow: 0 4px 16px var(--color-intelligence-glow);
-}
-.mph-btn:hover {
-  opacity: 0.92;
-}
-
-/* ─── 产品定位条 ─── */
-.dash-identity-error {
+/* ── 身份引导 ── */
+.dash-identity-error, .dash-identity-ok {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 14px 16px;
-  border: 1px solid var(--color-warning, #f59e0b);
-  background: rgba(245, 158, 11, 0.08);
-  border-radius: 10px;
+  padding: 14px 18px;
+  border-radius: var(--media-radius-panel);
   font-size: 12px;
-  color: var(--color-text-secondary);
   line-height: 1.6;
+  margin-bottom: var(--media-gap-section);
 }
-.dash-identity-error b {
-  color: var(--color-warning);
-  font-size: 13px;
-}
-.dash-identity-ok {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px;
-  border: 1px solid var(--color-success, #22c55e);
-  background: rgba(34, 197, 94, 0.08);
-  border-radius: 10px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-}
-.dash-identity-ok b {
-  color: var(--color-success);
-  font-size: 13px;
-}
+.dash-identity-error { border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.07); color: var(--media-text-body); }
+.dash-identity-error b { color: var(--color-warning); font-size: 13px; }
+.dash-identity-ok { border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.06); color: var(--media-text-body); }
+.dash-identity-ok b { color: var(--color-execution); font-size: 13px; }
 .dash-identity-btn {
   align-self: flex-start;
   margin-top: 4px;
   padding: 5px 14px;
   border-radius: 8px;
-  background: var(--color-intelligence);
+  background: var(--media-brand-gradient);
   color: #fff;
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
 }
-.dash-position {
-  display: flex;
+
+/* ── Hero ── */
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 32px;
+  align-items: center;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: 20px;
+  padding: 44px 44px 40px;
+  margin-bottom: var(--media-gap-section);
+  overflow: hidden;
+  box-shadow: var(--media-card-shadow);
+}
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--media-hero-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--media-hero-grid-line) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(ellipse at 30% 40%, #000 30%, transparent 75%);
+  pointer-events: none;
+}
+.hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+}
+.hero-glow-a { width: 380px; height: 380px; top: -140px; left: -80px; background: var(--media-hero-glow-1); }
+.hero-glow-b { width: 300px; height: 300px; bottom: -120px; right: 10%; background: var(--media-hero-glow-2); }
+.hero-body { position: relative; z-index: 1; }
+.hero-kicker {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 10px 18px;
-  margin-bottom: 14px;
-  font-size: 12px;
-}
-.dash-pos-label {
-  font-weight: 800;
-  color: var(--color-text-primary);
-  margin-right: 4px;
-}
-.dash-pos-item {
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 8px;
-  padding: 4px 12px;
-  white-space: nowrap;
-}
-.dash-pos-ai {
-  color: var(--color-warning);
-  border-color: rgba(245, 158, 11, 0.35);
-  background: rgba(245, 158, 11, 0.1);
-}
-.dash-pos-arrow {
-  color: var(--color-text-disabled);
-}
-
-/* ─── 首次进入行动路径 ─── */
-.dash-steps {
-  background: linear-gradient(135deg, var(--color-bg-elevated), var(--color-decision-glow));
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
-  padding: 16px 20px;
-  margin-bottom: 16px;
-}
-.dash-steps-title {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  margin-bottom: 12px;
-}
-.dash-steps-row {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-}
-.dash-step {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-.dash-step-num {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--color-intelligence);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.dash-step-body {
-  flex: 1;
-  min-width: 0;
-}
-.dash-step-body b {
-  display: block;
-  font-size: 13px;
-  color: var(--color-text-primary);
-}
-.dash-step-body span {
-  font-size: 10px;
-  color: var(--color-text-muted);
-}
-.dash-step-cta {
   font-size: 11px;
   font-weight: 700;
-  color: var(--color-decision);
-  background: var(--color-decision-glow);
-  border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
+  letter-spacing: 0.14em;
+  color: var(--media-brand-text);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.hero-kicker-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--media-ai);
+  box-shadow: 0 0 10px var(--media-ai);
+}
+.hero-title {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--media-text-hero);
+  margin: 0 0 12px;
+  line-height: 1.25;
+}
+.hero-title-accent {
+  background: var(--media-brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero-desc {
+  font-size: 14px;
+  color: var(--media-text-body);
+  line-height: 1.7;
+  max-width: 460px;
+  margin: 0 0 22px;
+}
+.hero-cta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: var(--media-radius-node);
+  padding: 11px 22px;
   text-decoration: none;
-  white-space: nowrap;
   cursor: pointer;
+  transition: all 0.18s;
 }
-.dash-step-cta:hover { filter: brightness(1.1); }
-.dash-step-arrow {
-  align-self: center;
-  color: var(--color-text-disabled);
-  font-size: 16px;
+.hero-btn-primary {
+  background: var(--media-brand-gradient);
+  color: #fff;
+  border: none;
+  box-shadow: 0 8px 24px var(--media-brand-glow);
 }
-@media (max-width: 900px) {
-  .dash-steps-row { flex-direction: column; }
-  .dash-step-arrow { transform: rotate(90deg); }
+.hero-btn-primary:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.hero-btn-ghost {
+  background: rgba(51, 65, 85, 0.3);
+  color: var(--media-text-title);
+  border: 1px solid var(--media-card-border);
 }
+.hero-btn-ghost:hover { border-color: var(--media-ai-border); background: var(--media-ai-glow); }
+.hero-hint {
+  margin-top: 16px;
+  font-size: 11.5px;
+  color: var(--media-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-hint::before {
+  content: '✨';
+}
+/* Hero 状态 */
+.hero-stats {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.hero-stat {
+  background: rgba(7, 11, 22, 0.55);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-panel);
+  padding: 18px 14px;
+  text-align: center;
+  backdrop-filter: blur(6px);
+  transition: all 0.2s;
+}
+.hero-stat:hover { border-color: var(--media-card-border-hover); transform: translateY(-2px); }
+.hero-stat-ico {
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  margin: 0 auto 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+}
+.hero-stat-ico.ai { background: var(--media-ai-glow); border: 1px solid var(--media-ai-border); }
+.hero-stat-ico.ch { background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); }
+.hero-stat-ico.tk { background: var(--color-execution-glow); border: 1px solid rgba(16, 185, 129, 0.3); }
+.hero-stat-num {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--media-text-hero);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.hero-stat-unit { font-size: 13px; font-weight: 700; color: var(--media-text-dim); }
+.hero-stat-label { font-size: 11.5px; font-weight: 700; color: var(--media-text-body); margin-top: 3px; }
+.hero-stat-sub { font-size: 10px; color: var(--media-text-dim); margin-top: 2px; }
 
-/* ─── ① 部门状态卡 ─── */
-.dash-dept {
-  background: linear-gradient(135deg, var(--color-bg-elevated), var(--color-intelligence-glow));
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
-  padding: 18px 22px;
-  margin-bottom: 16px;
+/* ── Section 通用 ── */
+.sec { margin-bottom: var(--media-gap-section); }
+.sec-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
+  margin-bottom: 14px;
 }
-.dash-dept-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.sec-head-left { display: flex; align-items: center; gap: 12px; }
+.sec-ico {
+  width: 38px; height: 38px;
+  border-radius: var(--media-radius-node);
+  background: var(--media-brand-soft);
+  border: 1px solid var(--media-ai-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
 }
-.dash-dept-ico { font-size: 26px; }
-.dash-dept-name {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-}
-.dash-dept-sub {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-.dash-dept-state {
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 20px;
-  padding: 4px 14px;
-  white-space: nowrap;
-}
-.dd-st-active { background: var(--color-execution-glow); color: var(--color-execution); }
-.dd-st-pending { background: rgba(245, 158, 11, 0.14); color: var(--color-warning); }
-.dd-st-inactive { background: var(--color-bg-hover); color: var(--color-text-muted); }
-.dash-dept-metrics {
-  display: flex;
-  gap: 28px;
-}
-.dash-dept-metric {
-  text-align: center;
-}
-.ddm-value {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  font-variant-numeric: tabular-nums;
-}
-.ddm-unit {
+.sec-title { font-size: 16px; font-weight: 800; color: var(--media-text-title); margin: 0; letter-spacing: -0.01em; }
+.sec-sub { font-size: 11.5px; color: var(--media-text-dim); margin: 3px 0 0; }
+.sec-more {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-muted);
-  margin-left: 2px;
-}
-.ddm-label {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-
-/* 部门空态提示（当前状态 + 为什么为空 + 下一步动作） */
-.dash-dept-hint {
-  flex-basis: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  padding: 10px 14px;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px dashed rgba(245, 158, 11, 0.4);
-  border-radius: 10px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-}
-.dash-dept-hint-ico { font-size: 15px; }
-.dash-dept-hint-text b { color: var(--color-warning); }
-.dash-dept-hint-text a {
-  color: var(--color-decision);
-  font-weight: 700;
+  color: var(--media-ai);
   text-decoration: none;
+  padding: 7px 14px;
+  border-radius: var(--media-radius-pill);
+  border: 1px solid var(--media-ai-border);
+  background: var(--media-ai-glow);
+  transition: all 0.15s;
 }
-.dash-dept-hint-text a:hover { text-decoration: underline; }
-.dash-dept-hint-btn {
-  background: var(--color-decision-glow);
-  color: var(--color-decision);
-  border: none;
-  border-radius: 8px;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  margin: 0 2px;
-}
-.dash-dept-hint-btn:hover { filter: brightness(1.1); }
-
-/* ─── ② 我的 AI 团队 ─── */
-.dash-team-panel { margin-bottom: 16px; }
-.team-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-}
-.team-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 16px 12px;
-  cursor: pointer;
-  transition: transform .12s ease, border-color .12s ease;
-  text-align: center;
-  font-family: inherit;
-}
-.team-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--color-intelligence);
-}
-.team-card-avatar { font-size: 28px; }
-.team-card-name {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-}
-.team-card-role {
-  font-size: 11px;
-  color: var(--color-intelligence);
-  background: var(--color-intelligence-glow);
-  border-radius: 8px;
-  padding: 2px 10px;
-  font-weight: 600;
-}
-.team-card-duty {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  min-height: 34px;
-}
-.team-card-value {
-  font-size: 11px;
-  color: var(--color-decision);
-  line-height: 1.5;
-  background: var(--color-decision-glow);
-  border-radius: 8px;
-  padding: 5px 8px;
-  min-height: 32px;
-}
-.team-card-lock {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--color-warning);
-  background: rgba(245, 158, 11, 0.12);
-  border-radius: 8px;
-  padding: 3px 10px;
-}
-.team-cta-row {
+.sec-more:hover { background: rgba(139, 92, 246, 0.25); }
+.sec-cta {
   margin-top: 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
   justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.08));
+  border: 1px dashed var(--media-ai-border);
+  border-radius: var(--media-radius-panel);
 }
-.team-cta {
-  font-size: 13px;
-  font-weight: 700;
+.sec-cta-btn {
+  font-size: 13px; font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
+  background: var(--media-brand-gradient);
   border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
+  border-radius: var(--media-radius-node);
+  padding: 10px 22px;
   cursor: pointer;
-  box-shadow: 0 4px 14px var(--color-intelligence-glow);
+  box-shadow: 0 6px 18px var(--media-brand-glow);
 }
-.team-cta:hover { filter: brightness(1.1); }
-.team-cta-note {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
+.sec-cta-btn:hover { filter: brightness(1.1); }
+.sec-cta-note { font-size: 11px; color: var(--media-text-dim); }
 
-/* ─── ③ 渠道资产中心 ─── */
-.dash-assets { margin-bottom: 16px; }
-.dash-assets-row {
+/* ── AI 团队卡 ── */
+.team-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--media-gap-card);
 }
-.dash-asset {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 14px 16px;
+.team-card {
+  position: relative;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--media-card-shadow);
 }
-.dash-asset.is-connected { border-color: var(--color-execution); }
-.dash-asset-ico { font-size: 24px; }
-.dash-asset-meta { flex: 1; min-width: 0; }
-.dash-asset-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
+.team-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--media-card-border-hover);
+  box-shadow: var(--media-shadow-hover);
 }
-.dash-asset-sub {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-.dash-asset-cta {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-intelligence);
-  background: var(--color-intelligence-glow);
-  border-radius: 8px;
-  padding: 6px 12px;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.dash-asset-cta:hover { filter: brightness(1.15); }
-.dash-asset-ok { font-size: 14px; }
-.dash-assets-foot {
-  margin-top: 12px;
-  font-size: 11px;
-  color: var(--color-text-muted);
-  text-align: center;
-}
-
-/* ─── ④ 健康度 + KPI ─── */
-.dash-hero {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-.dash-health {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
+.team-card-avatar {
+  width: 46px; height: 46px;
   border-radius: 14px;
-  padding: 20px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800;
+  margin-bottom: 12px;
+  background: var(--media-brand-soft);
+  border: 1px solid var(--media-ai-border);
 }
-.dash-kpis {
+.team-card-avatar.st-active { border-color: rgba(16, 185, 129, 0.4); }
+.team-card-avatar.roster { background: rgba(51, 65, 85, 0.4); border-color: var(--media-card-border); }
+.team-card-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.team-card-name { font-size: 15px; font-weight: 800; color: var(--media-text-title); }
+.team-card-role { font-size: 11px; color: var(--media-brand-text); font-weight: 600; }
+.team-card-state {
+  position: absolute; top: 18px; right: 18px;
+  font-size: 10px; font-weight: 700;
+  border-radius: var(--media-radius-pill);
+  padding: 3px 10px;
+}
+.team-card-state.st-active { background: var(--color-execution-glow); color: var(--color-execution); }
+.team-card-state.st-paused { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
+.team-card-state.st-recovering { background: var(--color-decision-glow); color: var(--color-decision); }
+.team-card-state.st-stopped { background: var(--color-bg-hover); color: var(--media-text-dim); }
+.team-card-stats {
+  display: flex; gap: 14px;
+  font-size: 10.5px; color: var(--media-text-dim);
+  border-top: 1px solid var(--media-card-border);
+  padding-top: 10px; margin-top: 10px;
+}
+.team-card-lock {
+  position: absolute; top: 18px; right: 18px;
+  font-size: 10px; font-weight: 700;
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--media-radius-pill);
+  padding: 3px 10px;
+}
+.team-card-duty {
+  font-size: 11.5px;
+  color: var(--media-text-body);
+  line-height: 1.6;
+  margin-top: 6px;
+}
+.team-card-value {
+  font-size: 10.5px;
+  color: var(--color-decision);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.team-card.is-locked:hover { border-color: rgba(245, 158, 11, 0.35); }
+
+/* ── 内容生产流水线 ── */
+.factory {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 24px 20px;
+  box-shadow: var(--media-card-shadow);
+}
+.factory-node {
+  position: relative;
+  text-align: center;
+  padding: 10px 6px;
+}
+.factory-ico {
+  width: 46px; height: 46px;
+  margin: 0 auto 8px;
+  border-radius: 14px;
+  background: var(--media-brand-soft);
+  border: 1px solid var(--media-ai-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  transition: all 0.2s;
+}
+.factory-node:hover .factory-ico {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px var(--media-brand-glow);
+}
+.factory-num {
+  position: absolute;
+  top: 4px; right: calc(50% - 32px);
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: var(--media-brand-gradient);
+  color: #fff;
+  font-size: 9px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px var(--media-brand-glow);
+}
+.factory-name { font-size: 13px; font-weight: 800; color: var(--media-text-title); }
+.factory-worker { font-size: 10px; color: var(--media-text-dim); margin-top: 3px; }
+.factory-ai {
+  display: inline-block;
+  margin-top: 7px;
+  font-size: 9px; font-weight: 700;
+  color: var(--media-ai);
+  background: var(--media-ai-glow);
+  border-radius: var(--media-radius-pill);
+  padding: 2px 9px;
+  letter-spacing: 0.06em;
+}
+.factory-arrow {
+  position: absolute;
+  top: 50%;
+  font-size: 14px;
+  color: var(--media-text-dim);
+  z-index: 1;
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}
+.factory-arrow:nth-of-type(1) { left: calc(100% / 6 - 4px); }
+.factory-arrow:nth-of-type(2) { left: calc(100% / 6 * 2 - 4px); }
+.factory-arrow:nth-of-type(3) { left: calc(100% / 6 * 3 - 4px); }
+.factory-arrow:nth-of-type(4) { left: calc(100% / 6 * 4 - 4px); }
+.factory-arrow:nth-of-type(5) { left: calc(100% / 6 * 5 - 4px); }
+
+/* ── 客户运营流程 ── */
+.cust-flow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+.cust-node {
+  position: relative;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 16px 12px;
+  text-align: center;
+  transition: all 0.2s;
+  box-shadow: var(--media-card-shadow);
+}
+.cust-node:hover { border-color: var(--media-card-border-hover); transform: translateY(-2px); }
+.cust-num {
+  position: absolute;
+  top: 8px; left: 10px;
+  font-size: 10px; font-weight: 800;
+  color: var(--media-text-dim);
+  font-family: var(--font-mono);
+}
+.cust-ico { font-size: 20px; display: block; margin-bottom: 7px; }
+.cust-name { font-size: 12px; font-weight: 700; color: var(--media-text-title); }
+.cust-sub { font-size: 10px; color: var(--media-text-dim); margin-top: 2px; }
+
+/* ── 数据洞察 ── */
+.insight {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--media-gap-card);
+}
+.insight-health {
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--media-card-shadow);
+}
+.insight-kpis {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: var(--media-gap-card);
 }
+
+/* ── 双栏网格（轨迹/智能/执行） ── */
 .dash-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-  align-items: start;
+  gap: var(--media-gap-card);
+  margin-bottom: var(--media-gap-section);
 }
-
-/* 部门员工列表（已部署态） */
-.dept-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.dept-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-.dept-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--color-intelligence-glow);
-  color: var(--color-intelligence);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 15px;
-}
-.dept-meta {
-  flex: 1;
-  min-width: 0;
-}
-.dept-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-.dept-role {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-left: 6px;
-  font-weight: 400;
-}
-.dept-sub {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-.dept-state {
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 10px;
-  padding: 3px 10px;
-  white-space: nowrap;
-}
-.st-active { background: var(--color-execution-glow); color: var(--color-execution); }
-.st-paused { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
-.st-recovering { background: var(--color-decision-glow); color: var(--color-decision); }
-.st-stopped { background: var(--color-bg-hover); color: var(--color-text-muted); }
-
-/* 时间轴 */
-.tl {
-  display: flex;
-  flex-direction: column;
-}
-.tl-item {
-  display: flex;
-  gap: 12px;
-}
-.tl-rail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 12px;
-}
+.tl { display: flex; flex-direction: column; }
+.tl-item { display: flex; gap: 10px; }
+.tl-rail { display: flex; flex-direction: column; align-items: center; }
 .tl-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  margin-top: 5px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--media-text-dim);
+  margin-top: 4px;
   flex-shrink: 0;
 }
 .tl-dot.schedule { background: var(--color-warning); box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
-.tl-dot.outcome { background: var(--color-execution); box-shadow: 0 0 8px var(--color-execution-glow); }
-.tl-line {
-  width: 2px;
-  flex: 1;
-  background: var(--color-border-primary);
-  margin-top: 4px;
-}
+.tl-dot.outcome { background: var(--color-execution); box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+.tl-line { width: 1px; flex: 1; background: var(--color-border-primary); margin: 3px 0; }
 .tl-body {
-  padding: 4px 0 16px;
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
+  padding-bottom: 14px;
   gap: 2px;
 }
-.tl-label {
-  font-size: 13px;
-  color: var(--color-text-primary);
-}
-.tl-time {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-
-/* 行业雷达四象限 */
-.radar-quads {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
+.tl-label { font-size: 12px; color: var(--media-text-body); }
+.tl-time { font-size: 10.5px; color: var(--media-text-dim); font-family: var(--font-mono); }
+.radar-quads { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .radar-quad {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border-primary);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 12px;
 }
-.radar-q-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: 6px;
-}
-.radar-q-body {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-}
-
-/* 最近执行 */
-.rec-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.radar-q-title { font-size: 11.5px; font-weight: 700; color: var(--media-text-title); margin-bottom: 6px; }
+.radar-q-body { font-size: 11px; color: var(--media-text-dim); line-height: 1.6; }
+.rec-list { display: flex; flex-direction: column; gap: 8px; }
 .rec-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: flex; align-items: center; gap: 10px;
   background: var(--color-bg-secondary);
   border-radius: 8px;
   padding: 9px 12px;
   font-size: 12px;
+  color: var(--media-text-title);
 }
 .rec-type {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 10px; font-weight: 700;
   color: var(--color-decision);
   background: var(--color-decision-glow);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 2px 8px;
   white-space: nowrap;
+  font-family: var(--font-mono);
 }
-.rec-title {
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.rec-time {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
+.rec-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-time { font-size: 11px; color: var(--media-text-dim); white-space: nowrap; }
 
-/* 成本条 */
+/* ── 成本卡 ── */
 .dash-cost {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(90deg, var(--color-bg-elevated), var(--color-intelligence-glow));
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
-  padding: 18px 22px;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 24px;
+  box-shadow: var(--media-card-shadow);
 }
-.dash-cost-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.dash-cost-left { display: flex; align-items: center; gap: 14px; }
 .dash-cost-ico {
-  font-size: 22px;
+  width: 44px; height: 44px;
+  border-radius: 13px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px;
 }
-.dash-cost-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-.dash-cost-sub {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-.dash-cost-value {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--color-execution);
-  font-variant-numeric: tabular-nums;
-}
+.dash-cost-label { font-size: 13px; font-weight: 700; color: var(--media-text-title); }
+.dash-cost-sub { font-size: 10.5px; color: var(--media-text-dim); margin-top: 3px; }
+.dash-cost-value { font-size: 24px; font-weight: 900; color: var(--color-warning); font-variant-numeric: tabular-nums; }
 
-/* ─── 订阅说明弹窗 ─── */
+/* ── 订阅弹窗 ── */
 .sub-modal-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 14, 24, 0.66);
-  backdrop-filter: blur(3px);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed; inset: 0;
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
   padding: 20px;
 }
 .sub-modal {
-  width: 560px;
-  max-width: 100%;
-  max-height: 86vh;
+  width: 560px; max-width: 100%;
+  max-height: 84vh;
   overflow-y: auto;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 16px;
-  padding: 22px 24px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(170deg, #111827, #0B1020);
+  border: 1px solid var(--media-card-border);
+  border-radius: 20px;
+  padding: 26px;
+  box-shadow: var(--media-shadow-float);
 }
 .sub-modal-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: flex; align-items: flex-start; justify-content: space-between;
   margin-bottom: 16px;
 }
-.sub-modal-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-}
-.sub-modal-sub {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 4px;
-}
+.sub-modal-title { font-size: 17px; font-weight: 800; color: var(--media-text-hero); }
+.sub-modal-sub { font-size: 11.5px; color: var(--media-text-dim); margin-top: 4px; }
 .sub-modal-close {
-  background: var(--color-bg-hover);
-  border: 1px solid var(--color-border-primary);
-  color: var(--color-text-muted);
-  border-radius: 8px;
-  width: 28px;
-  height: 28px;
+  background: transparent; border: none;
+  color: var(--media-text-dim); font-size: 16px;
   cursor: pointer;
-  font-size: 12px;
 }
-.sub-modal-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.sub-modal-list { display: flex; flex-direction: column; gap: 10px; }
 .sub-modal-row {
-  display: flex;
-  gap: 12px;
+  display: flex; gap: 12px;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border-primary);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 12px 14px;
 }
-.sub-modal-avatar { font-size: 22px; }
-.sub-modal-meta { flex: 1; min-width: 0; }
-.sub-modal-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
+.sub-modal-avatar {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  background: var(--media-brand-soft);
+  border: 1px solid var(--media-ai-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
 }
-.sub-modal-duty {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  margin-top: 3px;
-  line-height: 1.5;
-}
-.sub-modal-value {
-  font-size: 11px;
-  color: var(--color-decision);
-  margin-top: 3px;
-  line-height: 1.5;
-}
-.sub-modal-auto {
-  font-size: 11px;
-  color: var(--color-warning);
-  margin-top: 3px;
-  line-height: 1.5;
-}
+.sub-modal-name { font-size: 13px; font-weight: 700; color: var(--media-text-title); }
+.sub-modal-duty { font-size: 11px; color: var(--media-text-body); margin-top: 3px; }
+.sub-modal-value { font-size: 10.5px; color: var(--color-decision); margin-top: 3px; }
+.sub-modal-auto { font-size: 10.5px; color: var(--color-warning); margin-top: 3px; }
 .sub-modal-foot {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--color-border-primary);
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-primary);
 }
-.sub-modal-note {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  text-align: center;
-  margin-bottom: 12px;
-}
-.sub-modal-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-}
-.sub-modal-primary {
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
-  border: none;
-  border-radius: 10px;
-  padding: 10px 22px;
-  cursor: pointer;
-}
+.sub-modal-note { font-size: 11px; color: var(--media-text-dim); margin-bottom: 12px; line-height: 1.6; }
+.sub-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .sub-modal-secondary {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-secondary);
+  font-size: 12px; font-weight: 600;
+  color: var(--media-text-body);
   background: var(--color-bg-hover);
   border: 1px solid var(--color-border-primary);
   border-radius: 10px;
-  padding: 10px 22px;
+  padding: 9px 16px;
   text-decoration: none;
+}
+.sub-modal-primary {
+  font-size: 12px; font-weight: 700;
+  color: #fff;
+  background: var(--media-brand-gradient);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
 }
 
 @media (max-width: 1100px) {
-  .team-grid { grid-template-columns: repeat(3, 1fr); }
-  .dash-assets-row { grid-template-columns: repeat(2, 1fr); }
+  .hero { grid-template-columns: 1fr; }
+  .factory { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .factory-arrow { display: none; }
+  .cust-flow { grid-template-columns: repeat(3, 1fr); }
 }
-@media (max-width: 1000px) {
-  .dash-hero { grid-template-columns: 1fr; }
+@media (max-width: 760px) {
+  .insight { grid-template-columns: 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
-  .dash-dept { flex-direction: column; align-items: flex-start; }
-}
-@media (max-width: 640px) {
-  .team-grid { grid-template-columns: repeat(2, 1fr); }
-  .dash-assets-row { grid-template-columns: 1fr; }
+  .insight-kpis { grid-template-columns: 1fr; }
+  .hero-stats { grid-template-columns: repeat(3, 1fr); }
+  .team-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }
 </style>

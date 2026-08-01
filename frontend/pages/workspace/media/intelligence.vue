@@ -61,6 +61,11 @@
         <div class="ii-flow-step"><b>4</b> 机会生成<span>转化为内容选题建议</span></div>
       </div>
     </div>
+    <!-- 订阅提示条 -->
+    <div class="ii-cta">
+      <span>订阅 AI 员工后：行业雷达自动扫描热点、竞品与规则，内容机会持续流入选题池。</span>
+      <NuxtLink to="/workspace/media" class="ii-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
+    </div>
   </MediaWorkspaceShell>
 </template>
 
@@ -111,10 +116,10 @@ const quads = computed(() => [
   gap: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 20px;
+  color: var(--media-text-body);
+  background: var(--media-card-bg-solid);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-pill);
   padding: 7px 14px;
 }
 .ii-status-dot {
@@ -164,10 +169,12 @@ const quads = computed(() => [
   margin-bottom: 18px;
 }
 .ii-quad {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 14px;
-  overflow: hidden;
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 18px;
+  box-shadow: var(--media-card-shadow);
+  transition: border-color 0.2s;
 }
 .ii-quad-head {
   display: flex;
@@ -244,6 +251,33 @@ const quads = computed(() => [
 }
 .ii-flow-step b { color: var(--color-intelligence); font-size: 14px; }
 .ii-flow-step span { font-size: 10px; color: var(--color-text-muted); }
+.ii-cta {
+  margin-top: var(--media-gap-section);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.1));
+  border: 1px solid var(--media-ai-border);
+  border-radius: var(--media-radius-card);
+  padding: 16px 22px;
+  font-size: 12px;
+  color: var(--media-text-body);
+  box-shadow: var(--media-card-shadow);
+}
+.ii-cta-btn {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--media-brand-gradient);
+  border-radius: var(--media-radius-node);
+  padding: 10px 20px;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px var(--media-brand-glow);
+}
+.ii-cta-btn:hover { filter: brightness(1.1); }
+
 @media (max-width: 900px) {
   .ii-quads { grid-template-columns: 1fr; }
   .ii-flow-steps { grid-template-columns: 1fr 1fr; }
