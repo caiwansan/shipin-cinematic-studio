@@ -39,7 +39,7 @@ function maskSecretFields(obj: any): any {
 // 收款码模式（微信/支付宝收款码），管理员手动确认到账
 
 import { FastifyInstance } from 'fastify'
-import { requireAdmin } from '../middleware/require-admin.js'
+import { requireAdmin, extractAdmin } from '../middleware/require-admin.js'
 import { prisma } from '../utils/index.js'
 import { verifyToken } from './admin-auth.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js';
@@ -414,9 +414,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/admin/payment/confirm — 管理员确认到账
-  fastify.post('/api/admin/payment/confirm',  async (request, reply) => {
-    const auth = request.headers.authorization
-    const decoded = auth ? verifyToken(auth.slice(7)) : null
+  // SPRINT-PAYMENT-SECURITY-01: 必须管理员（requireAdmin + verifyToken isAdmin 双重防线），
+  // 支付成功唯一来源 = 验签回调（自动）+ 管理员线下收款对账（人工）；普通用户 JWT 一律 401
+  fastify.post('/api/admin/payment/confirm', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = extractAdmin(request)
     const { orderId } = request.body as any
     if (!orderId) return reply.status(400).send({ error: '缺少订单ID' })
 
@@ -426,8 +427,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
     // 获取管理员
     let adminId: number | null = null
-    if (decoded?.username) {
-      const adminUser = await prisma.adminUser.findUnique({ where: { username: decoded.username } })
+    if (admin?.username) {
+      const adminUser = await prisma.adminUser.findUnique({ where: { username: admin.username } })
       adminId = adminUser?.id ?? null
     }
 
@@ -492,9 +493,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/admin/member/confirm — 管理员确认 VIP 升级订单
-  fastify.post('/api/admin/member/confirm', async (request, reply) => {
-    const auth = request.headers.authorization
-    const decoded = auth ? verifyToken(auth.slice(7)) : null
+  // SPRINT-PAYMENT-SECURITY-01: requireAdmin（同 payment/confirm）
+  fastify.post('/api/admin/member/confirm', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = extractAdmin(request)
     const { orderId } = request.body as any
     if (!orderId) return reply.status(400).send({ error: '缺少订单ID' })
 
@@ -504,8 +505,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
     // 获取管理员
     let adminId: number | null = null
-    if (decoded?.username) {
-      const adminUser = await prisma.adminUser.findUnique({ where: { username: decoded.username } })
+    if (admin?.username) {
+      const adminUser = await prisma.adminUser.findUnique({ where: { username: admin.username } })
       adminId = adminUser?.id ?? null
     }
 

@@ -18,6 +18,9 @@ export function verifyToken(token: string): { userId: string; username: string; 
   if (!_app) return null
   try {
     const decoded: any = _app.jwt.verify(token)
+    // SPRINT-PAYMENT-SECURITY-01: admin/用户 JWT 共用同一 secret，
+    // 必须校验 isAdmin === true，否则普通用户 JWT 可冒充管理员（requireAdmin 形同虚设）
+    if (!decoded || decoded.isAdmin !== true) return null
     return { userId: decoded.userId, username: decoded.username, role: decoded.role, isAdmin: !!decoded.isAdmin }
   } catch {
     return null
