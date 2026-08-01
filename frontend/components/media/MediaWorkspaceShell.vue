@@ -1,24 +1,24 @@
 <!--
-  MediaWorkspaceShell — AI 全渠道运营中心 · 产品级工作空间壳
-  Sprint-MEDIA-DESIGN-SYSTEM-01（世界级 UI 重构）+ Sprint-MEDIA-CHANNEL-EXPANSION-05（全渠道定位）
-  左栏 = AI 工作空间（品牌 + 平铺导航 + 当前态明显 + VIP/模型）
+  MediaWorkspaceShell — AI 企业经营总部 · 产品级工作空间壳
+  Sprint-MEDIA-EXECUTIVE-EXPERIENCE-03（视觉体验重构：数据驾驶舱 → 企业经营总部）
+  左栏 = AI 公司总部（品牌 + SaaS 分组导航 + 当前态明显 + 模型/会员/首页入口）
   顶栏 = 当前模块标题 + Live 状态 + 模型快捷入口
-  全部基于 Kunlun Token + Media Design Language（media-tokens.css）
+  色彩：深墨灰 #0B1020 / 昆仑紫 #7C3AED / 智能蓝 #3B82F6 / 成长绿 #22C55E；金色退场
 -->
 <template>
   <div class="mws">
-    <!-- ═══ 左栏 · AI 工作空间 ═══ -->
+    <!-- ═══ 左栏 · AI 公司总部 ═══ -->
     <aside class="mws-side">
       <!-- 品牌 -->
       <div class="mws-brand">
         <div class="mws-brand-logo">AI</div>
         <div class="mws-brand-text">
-          <div class="mws-brand-name">全渠道运营中心</div>
-          <div class="mws-brand-sub">AI 经营驾驶舱</div>
+          <div class="mws-brand-name">AI 经营总部</div>
+          <div class="mws-brand-sub">企业操作系统</div>
         </div>
       </div>
 
-      <!-- 导航（三层级：icon / 名称+概念副题 / 一句能力解释） -->
+      <!-- 导航（SaaS 分组：icon / 名称 / 一句能力解释） -->
       <nav class="mws-nav">
         <NuxtLink
           v-for="item in navItems"
@@ -37,11 +37,12 @@
         </NuxtLink>
       </nav>
 
-      <!-- 底部：工作空间操作 + 用户卡 -->
+      <!-- 底部：系统入口（模型/渠道/会员/首页） + 用户卡 -->
       <div class="mws-side-foot">
         <div class="mws-side-ops">
-          <button class="mws-op" @click="showModelSettings = true">⚙️ 模型设置</button>
-          <NuxtLink to="/user/membership" class="mws-op">💳 会员中心</NuxtLink>
+          <button class="mws-op" @click="showModelSettings = true">🧠 模型中心</button>
+          <NuxtLink to="/workspace/media/accounts" class="mws-op">🔗 渠道中心</NuxtLink>
+          <NuxtLink to="/user/membership" class="mws-op">⭐ 会员中心</NuxtLink>
           <NuxtLink to="/" class="mws-op">🏠 返回昆仑镜首页</NuxtLink>
         </div>
         <div class="mws-side-glow"></div>
@@ -144,25 +145,24 @@ onMounted(async () => {
 })
 
 const navItems = [
-  { icon: '⌂', label: '经营驾驶舱', hint: '我的生意 · 经营数据中心', path: '/workspace/media/', tag: '⭐' },
-  { icon: '◉', label: 'AI员工团队', hint: '5 名智能员工 · 解锁后自动工作', path: '/workspace/media/team', tag: '' },
-  { icon: '✦', label: '内容生产', hint: '选题 → 创作 → 发布 → 复盘', path: '/workspace/media/content', tag: '' },
-  { icon: '◌', label: '客户运营', hint: '自动回复客户 · 发现销售机会', path: '/workspace/media/messages', tag: '' },
-  { icon: '◎', label: '渠道中心', hint: '内容平台 · 电商店铺 · 客户渠道', path: '/workspace/media/accounts', tag: '' },
-  { icon: '🛒', label: '商品运营', hint: '我的线上生意 · 商品与店铺', path: '/workspace/media/shop', tag: '新' },
-  { icon: '◌', label: '数据分析', hint: '内容效果 · 商品销售 · 运营策略', path: '/workspace/media/analytics', tag: '' },
-  { icon: '◌', label: '行业机会', hint: '热点 · 竞品 · 平台规则', path: '/workspace/media/intelligence', tag: '' },
+  { icon: '🏠', label: '经营总部', hint: '我的生意 · AI 经营状态', path: '/workspace/media/' },
+  { icon: '👥', label: 'AI员工', hint: '5 名智能员工 · 正在工作', path: '/workspace/media/team' },
+  { icon: '✍', label: '内容工厂', hint: '选题 → 创作 → 发布 → 复盘', path: '/workspace/media/content' },
+  { icon: '💬', label: '客户中心', hint: '自动回复客户 · 发现销售机会', path: '/workspace/media/messages' },
+  { icon: '🛒', label: '商品经营', hint: '我的线上生意 · 商品与店铺', path: '/workspace/media/shop', tag: '新' },
+  { icon: '📊', label: '数据洞察', hint: '内容效果 · 商品销售 · 运营策略', path: '/workspace/media/analytics' },
+  { icon: '🌎', label: '行业机会', hint: '热点 · 竞品 · 平台规则', path: '/workspace/media/intelligence' },
 ]
 
 const moduleMap: Record<string, { icon: string; name: string; sub: string }> = {
-  '/workspace/media': { icon: '⌂', name: '经营驾驶舱', sub: '我的生意 · 经营数据中心' },
-  '/workspace/media/team': { icon: '◉', name: 'AI员工团队', sub: '5 名智能员工 · 解锁后自动工作' },
-  '/workspace/media/content': { icon: '✦', name: '内容生产', sub: '选题到发布的内容生产中心' },
-  '/workspace/media/messages': { icon: '◌', name: '客户运营', sub: '自动回复客户 · 发现销售机会' },
-  '/workspace/media/accounts': { icon: '◎', name: '渠道中心', sub: '内容平台 · 电商店铺 · 客户渠道' },
-  '/workspace/media/shop': { icon: '🛒', name: '商品运营', sub: '我的线上生意 · 商品与店铺' },
-  '/workspace/media/analytics': { icon: '◌', name: '数据分析', sub: '内容效果 · 商品销售 · 运营策略' },
-  '/workspace/media/intelligence': { icon: '◌', name: '行业机会', sub: '热点 · 竞品 · 平台规则' },
+  '/workspace/media': { icon: '🏠', name: '经营总部', sub: '我的生意 · AI 经营状态' },
+  '/workspace/media/team': { icon: '👥', name: 'AI员工', sub: '5 名智能员工 · 正在工作' },
+  '/workspace/media/content': { icon: '✍', name: '内容工厂', sub: '选题到发布的内容生产中心' },
+  '/workspace/media/messages': { icon: '💬', name: '客户中心', sub: '自动回复客户 · 发现销售机会' },
+  '/workspace/media/accounts': { icon: '🔗', name: '渠道中心', sub: '内容平台 · 电商店铺 · 客户渠道' },
+  '/workspace/media/shop': { icon: '🛒', name: '商品经营', sub: '我的线上生意 · 商品与店铺' },
+  '/workspace/media/analytics': { icon: '📊', name: '数据洞察', sub: '内容效果 · 商品销售 · 运营策略' },
+  '/workspace/media/intelligence': { icon: '🌎', name: '行业机会', sub: '热点 · 竞品 · 平台规则' },
 }
 
 const currentModule = computed(() => {

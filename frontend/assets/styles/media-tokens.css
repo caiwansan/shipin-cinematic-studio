@@ -1,37 +1,46 @@
 /* ═══════════════════════════════════════════════════════════
-   Media Design Language v1.0 — 新媒体工作台专属 Design Token
-   Sprint-MEDIA-DESIGN-SYSTEM-01
-   基于 Kunlun Design System（enterprise-tokens.css）派生：
-   - 不新建色彩体系：全部引用 --color-* 基元
-   - 语义化新媒体表达：品牌 / AI 高亮 / 卡片玻璃感 / Hero 氛围
-   - 禁止页面内联 #hex（除特殊渐变）
+   Media Design Language v2.0 — AI 企业经营总部专属 Design Token
+   Sprint-MEDIA-EXECUTIVE-EXPERIENCE-03
+   掌柜设计纪律（EXECUTIVE-EXPERIENCE-03）：
+   - 禁止：数据大屏风 / 仪表盘模板风 / 卡片堆叠风 / 科技蓝炫技风 / 金色廉价感
+   - 方向：高级 · 克制 · 可信 · 未来企业 · AI 助理（Apple 发布页 / Notion / Linear / Stripe）
+   - 色彩：深墨灰 #0B1020 基础 / 昆仑紫 #7C3AED 主色 / 智能蓝 #3B82F6 辅助 / 成长绿 #22C55E 强调
+   - 金色退场：不再使用暖金高亮（黄金 = 交易系统廉价感）
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── 品牌（Kunlun intelligence→decision 渐变）── */
-  --media-brand-gradient: linear-gradient(135deg, #8B5CF6 0%, #6366F1 55%, #3B82F6 100%);
-  --media-brand-soft: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(59, 130, 246, 0.14));
-  --media-brand-glow: rgba(139, 92, 246, 0.28);
+  /* ── 品牌（昆仑紫 → 智能蓝）── */
+  --media-brand-gradient: linear-gradient(135deg, #7C3AED 0%, #6D28D9 55%, #3B82F6 100%);
+  --media-brand-soft: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(59, 130, 246, 0.14));
+  --media-brand-glow: rgba(124, 58, 237, 0.30);
   --media-brand-text: #C4B5FD;
 
-  /* ── AI 高亮 ── */
+  /* ── AI 高亮（昆仑紫系，克制使用）── */
   --media-ai: #A78BFA;
-  --media-ai-soft: #8B5CF6;
-  --media-ai-glow: rgba(139, 92, 246, 0.16);
-  --media-ai-border: rgba(167, 139, 250, 0.35);
+  --media-ai-soft: #7C3AED;
+  --media-ai-glow: rgba(124, 58, 237, 0.14);
+  --media-ai-border: rgba(167, 139, 250, 0.32);
 
-  /* ── 背景氛围（DESIGN-REFINEMENT-03：深空黑 Base #050816 / Surface #0F172A） ── */
-  --media-bg-deep: #050816;
-  --media-hero-grid-line: rgba(99, 102, 241, 0.07);
-  --media-hero-glow-1: rgba(139, 92, 246, 0.13);
-  --media-hero-glow-2: rgba(59, 130, 246, 0.09);
+  /* ── 经营语义色（EXECUTIVE-EXPERIENCE-03）── */
+  --media-primary: #7C3AED;   /* 昆仑紫 · 主色 */
+  --media-info: #3B82F6;      /* 智能蓝 · 辅助 */
+  --media-success: #22C55E;   /* 成长绿 · 强调 */
+  --media-warn: #F59E0B;      /* 预警（极少用） */
+  --media-danger: #EF4444;    /* 下降 */
 
-  /* ── 卡片（玻璃感，深色基底）── */
-  --media-card-bg: linear-gradient(160deg, rgba(30, 41, 59, 0.5), rgba(13, 19, 40, 0.88));
-  --media-card-bg-solid: rgba(13, 19, 40, 0.85);
-  --media-card-border: rgba(71, 85, 105, 0.32);
-  --media-card-border-hover: rgba(139, 92, 246, 0.45);
-  --media-card-shadow: 0 8px 30px rgba(2, 6, 23, 0.45);
+  /* ── 背景氛围（深墨灰基础 #0B1020）── */
+  --media-bg-deep: #0B1020;
+  --media-bg-surface: #101830;
+  --media-hero-grid-line: rgba(124, 58, 237, 0.06);
+  --media-hero-glow-1: rgba(124, 58, 237, 0.10);
+  --media-hero-glow-2: rgba(59, 130, 246, 0.07);
+
+  /* ── 卡片（克制深色面板，细边框 + 微投影，不做玻璃炫技）── */
+  --media-card-bg: linear-gradient(180deg, #101830 0%, #0C1326 100%);
+  --media-card-bg-solid: rgba(16, 24, 48, 0.85);
+  --media-card-border: rgba(71, 85, 105, 0.30);
+  --media-card-border-hover: rgba(124, 58, 237, 0.45);
+  --media-card-shadow: 0 6px 24px rgba(2, 6, 23, 0.35);
 
   /* ── 文字 ── */
   --media-text-hero: #F8FAFC;
@@ -51,8 +60,8 @@
   --media-gap-card: 16px;
   --media-pad-page: 32px;
 
-  /* ── 阴影 ── */
-  --media-shadow-float: 0 12px 40px rgba(2, 6, 23, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.06);
-  --media-shadow-hover: 0 14px 44px rgba(2, 6, 23, 0.55), 0 0 0 1px rgba(139, 92, 246, 0.14);
-  --media-shadow-card: 0 4px 20px rgba(2, 6, 23, 0.35);
+  /* ── 阴影（克制）── */
+  --media-shadow-float: 0 12px 36px rgba(2, 6, 23, 0.45), 0 0 0 1px rgba(124, 58, 237, 0.05);
+  --media-shadow-hover: 0 14px 40px rgba(2, 6, 23, 0.5), 0 0 0 1px rgba(124, 58, 237, 0.12);
+  --media-shadow-card: 0 4px 18px rgba(2, 6, 23, 0.3);
 }
