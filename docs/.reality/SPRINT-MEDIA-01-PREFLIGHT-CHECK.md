@@ -4,6 +4,16 @@
 **Gate:** 掌柜指令（先解决真实微信公众平台商务凭证路径，再开 Sprint-MEDIA-01）
 **性质:** Preflight 检查清单 + 外部依赖确认书。**零代码**。通过本检查后拆 Sprint-MEDIA-01。
 
+## 0.1 掌柜拍板记录（2026-08-02 01:55）
+- ✅ **Preflight 设计层通过**；业务凭证 Preflight 未过（等真实账号资产）
+- ✅ **账号选型拍板：A 企业主体+已认证服务号**（B=技术降级被否，A=产品闭环）
+- ✅ ProviderCredential 统一方案批准（禁 WechatCredential 等新凭证体系）
+- ✅ 多公众号：Phase 1 单账号 provider=`wechat_mp` 不提前复杂化；Phase 2 再扩展
+- ✅ Adapter 隔离批准 + 冻结：**Adapter 不得含业务逻辑**（见 MEDIA-PRODUCT-CONSTITUTION-01 规则三）
+- ✅ Sprint-MEDIA-01 开工范围批准：M1 三表 + B1(/api/media/accounts|posts) + B2(account.service+wechat-mp.adapter) + Gate E1-E6；❌ 不加 AI 自动运营/私信客服/企业微信/客户评分
+- 🔒 新增永久治理规则：**MEDIA-PRODUCT-CONSTITUTION-01**（官方 API 唯一通道/禁伪造发布/Adapter 无业务/凭证统一/账号=用户资产）
+- ⏸ 状态：等真实微信资产（企业认证服务号 appid/secret + IP 白名单授权）→ 到货即启动 Sprint-MEDIA-01，第一提交目标 SPRINT-MEDIA-01-REALITY-REPORT.md
+
 ---
 
 ## 0. 结论先行
