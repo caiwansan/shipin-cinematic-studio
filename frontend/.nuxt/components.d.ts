@@ -20,6 +20,7 @@ interface _GlobalComponents {
     'WorkspaceSwitcher': typeof import("../components/WorkspaceSwitcher.vue")['default']
     'AdminDashboardActivityStrip': typeof import("../components/admin/dashboard/ActivityStrip.vue")['default']
     'AdminDashboardActivityTimeline': typeof import("../components/admin/dashboard/ActivityTimeline.vue")['default']
+    'AdminDashboardAgentHealthCard': typeof import("../components/admin/dashboard/AgentHealthCard.vue")['default']
     'AdminDashboardAgentMiniCard': typeof import("../components/admin/dashboard/AgentMiniCard.vue")['default']
     'AdminDashboardAgentRanking': typeof import("../components/admin/dashboard/AgentRanking.vue")['default']
     'AdminDashboardAiHealthMiniCard': typeof import("../components/admin/dashboard/AiHealthMiniCard.vue")['default']
@@ -29,6 +30,7 @@ interface _GlobalComponents {
     'AdminDashboardEnterpriseIntelPanel': typeof import("../components/admin/dashboard/EnterpriseIntelPanel.vue")['default']
     'AdminDashboardGeographyPanel': typeof import("../components/admin/dashboard/GeographyPanel.vue")['default']
     'AdminDashboardKpiOverview': typeof import("../components/admin/dashboard/KpiOverview.vue")['default']
+    'AdminDashboardLifecycleCard': typeof import("../components/admin/dashboard/LifecycleCard.vue")['default']
     'AdminDashboardMetricCard': typeof import("../components/admin/dashboard/MetricCard.vue")['default']
     'AdminDashboardRevenueCockpit': typeof import("../components/admin/dashboard/RevenueCockpit.vue")['default']
     'AdminDashboardRevenuePanel': typeof import("../components/admin/dashboard/RevenuePanel.vue")['default']
@@ -48,6 +50,7 @@ interface _GlobalComponents {
     'AdminMallOrdersTab': typeof import("../components/admin/mall/OrdersTab.vue")['default']
     'AdminMallProductsTab': typeof import("../components/admin/mall/ProductsTab.vue")['default']
     'AdminMallRecommendTab': typeof import("../components/admin/mall/RecommendTab.vue")['default']
+    'AiCenterMiniAIBrowser': typeof import("../components/ai-center/MiniAIBrowser.vue")['default']
     'AiModelSettingsLauncher': typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']
     'BusinessLoginModal': typeof import("../components/business/LoginModal.vue")['default']
     'CommunityHero': typeof import("../components/community/CommunityHero.vue")['default']
@@ -195,6 +198,9 @@ interface _GlobalComponents {
     'KunlunScenesHeroScene': typeof import("../components/kunlun/scenes/HeroScene.vue")['default']
     'KunlunScenesWenquxingScene': typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']
     'KunlunScenesWorkbenchUniverseScene': typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']
+    'MediaAgentRoster': typeof import("../components/media/MediaAgentRoster.vue")['default']
+    'MediaPlannedPage': typeof import("../components/media/MediaPlannedPage.vue")['default']
+    'MediaWorkspaceShell': typeof import("../components/media/MediaWorkspaceShell.vue")['default']
     'R11CausePanel': typeof import("../components/r11/CausePanel.vue")['default']
     'R11DiffTimeline': typeof import("../components/r11/DiffTimeline.vue")['default']
     'R11DriftMonitor': typeof import("../components/r11/DriftMonitor.vue")['default']
@@ -252,6 +258,7 @@ interface _GlobalComponents {
     'LazyWorkspaceSwitcher': LazyComponent<typeof import("../components/WorkspaceSwitcher.vue")['default']>
     'LazyAdminDashboardActivityStrip': LazyComponent<typeof import("../components/admin/dashboard/ActivityStrip.vue")['default']>
     'LazyAdminDashboardActivityTimeline': LazyComponent<typeof import("../components/admin/dashboard/ActivityTimeline.vue")['default']>
+    'LazyAdminDashboardAgentHealthCard': LazyComponent<typeof import("../components/admin/dashboard/AgentHealthCard.vue")['default']>
     'LazyAdminDashboardAgentMiniCard': LazyComponent<typeof import("../components/admin/dashboard/AgentMiniCard.vue")['default']>
     'LazyAdminDashboardAgentRanking': LazyComponent<typeof import("../components/admin/dashboard/AgentRanking.vue")['default']>
     'LazyAdminDashboardAiHealthMiniCard': LazyComponent<typeof import("../components/admin/dashboard/AiHealthMiniCard.vue")['default']>
@@ -261,6 +268,7 @@ interface _GlobalComponents {
     'LazyAdminDashboardEnterpriseIntelPanel': LazyComponent<typeof import("../components/admin/dashboard/EnterpriseIntelPanel.vue")['default']>
     'LazyAdminDashboardGeographyPanel': LazyComponent<typeof import("../components/admin/dashboard/GeographyPanel.vue")['default']>
     'LazyAdminDashboardKpiOverview': LazyComponent<typeof import("../components/admin/dashboard/KpiOverview.vue")['default']>
+    'LazyAdminDashboardLifecycleCard': LazyComponent<typeof import("../components/admin/dashboard/LifecycleCard.vue")['default']>
     'LazyAdminDashboardMetricCard': LazyComponent<typeof import("../components/admin/dashboard/MetricCard.vue")['default']>
     'LazyAdminDashboardRevenueCockpit': LazyComponent<typeof import("../components/admin/dashboard/RevenueCockpit.vue")['default']>
     'LazyAdminDashboardRevenuePanel': LazyComponent<typeof import("../components/admin/dashboard/RevenuePanel.vue")['default']>
@@ -280,6 +288,7 @@ interface _GlobalComponents {
     'LazyAdminMallOrdersTab': LazyComponent<typeof import("../components/admin/mall/OrdersTab.vue")['default']>
     'LazyAdminMallProductsTab': LazyComponent<typeof import("../components/admin/mall/ProductsTab.vue")['default']>
     'LazyAdminMallRecommendTab': LazyComponent<typeof import("../components/admin/mall/RecommendTab.vue")['default']>
+    'LazyAiCenterMiniAIBrowser': LazyComponent<typeof import("../components/ai-center/MiniAIBrowser.vue")['default']>
     'LazyAiModelSettingsLauncher': LazyComponent<typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']>
     'LazyBusinessLoginModal': LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
     'LazyCommunityHero': LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
@@ -427,6 +436,9 @@ interface _GlobalComponents {
     'LazyKunlunScenesHeroScene': LazyComponent<typeof import("../components/kunlun/scenes/HeroScene.vue")['default']>
     'LazyKunlunScenesWenquxingScene': LazyComponent<typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']>
     'LazyKunlunScenesWorkbenchUniverseScene': LazyComponent<typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']>
+    'LazyMediaAgentRoster': LazyComponent<typeof import("../components/media/MediaAgentRoster.vue")['default']>
+    'LazyMediaPlannedPage': LazyComponent<typeof import("../components/media/MediaPlannedPage.vue")['default']>
+    'LazyMediaWorkspaceShell': LazyComponent<typeof import("../components/media/MediaWorkspaceShell.vue")['default']>
     'LazyR11CausePanel': LazyComponent<typeof import("../components/r11/CausePanel.vue")['default']>
     'LazyR11DiffTimeline': LazyComponent<typeof import("../components/r11/DiffTimeline.vue")['default']>
     'LazyR11DriftMonitor': LazyComponent<typeof import("../components/r11/DriftMonitor.vue")['default']>
@@ -490,6 +502,7 @@ export const RegionPicker: typeof import("../components/RegionPicker.vue")['defa
 export const WorkspaceSwitcher: typeof import("../components/WorkspaceSwitcher.vue")['default']
 export const AdminDashboardActivityStrip: typeof import("../components/admin/dashboard/ActivityStrip.vue")['default']
 export const AdminDashboardActivityTimeline: typeof import("../components/admin/dashboard/ActivityTimeline.vue")['default']
+export const AdminDashboardAgentHealthCard: typeof import("../components/admin/dashboard/AgentHealthCard.vue")['default']
 export const AdminDashboardAgentMiniCard: typeof import("../components/admin/dashboard/AgentMiniCard.vue")['default']
 export const AdminDashboardAgentRanking: typeof import("../components/admin/dashboard/AgentRanking.vue")['default']
 export const AdminDashboardAiHealthMiniCard: typeof import("../components/admin/dashboard/AiHealthMiniCard.vue")['default']
@@ -499,6 +512,7 @@ export const AdminDashboardDetailDrawer: typeof import("../components/admin/dash
 export const AdminDashboardEnterpriseIntelPanel: typeof import("../components/admin/dashboard/EnterpriseIntelPanel.vue")['default']
 export const AdminDashboardGeographyPanel: typeof import("../components/admin/dashboard/GeographyPanel.vue")['default']
 export const AdminDashboardKpiOverview: typeof import("../components/admin/dashboard/KpiOverview.vue")['default']
+export const AdminDashboardLifecycleCard: typeof import("../components/admin/dashboard/LifecycleCard.vue")['default']
 export const AdminDashboardMetricCard: typeof import("../components/admin/dashboard/MetricCard.vue")['default']
 export const AdminDashboardRevenueCockpit: typeof import("../components/admin/dashboard/RevenueCockpit.vue")['default']
 export const AdminDashboardRevenuePanel: typeof import("../components/admin/dashboard/RevenuePanel.vue")['default']
@@ -518,6 +532,7 @@ export const AdminMallCouponsTab: typeof import("../components/admin/mall/Coupon
 export const AdminMallOrdersTab: typeof import("../components/admin/mall/OrdersTab.vue")['default']
 export const AdminMallProductsTab: typeof import("../components/admin/mall/ProductsTab.vue")['default']
 export const AdminMallRecommendTab: typeof import("../components/admin/mall/RecommendTab.vue")['default']
+export const AiCenterMiniAIBrowser: typeof import("../components/ai-center/MiniAIBrowser.vue")['default']
 export const AiModelSettingsLauncher: typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']
 export const BusinessLoginModal: typeof import("../components/business/LoginModal.vue")['default']
 export const CommunityHero: typeof import("../components/community/CommunityHero.vue")['default']
@@ -665,6 +680,9 @@ export const KunlunScenesFourStepScene: typeof import("../components/kunlun/scen
 export const KunlunScenesHeroScene: typeof import("../components/kunlun/scenes/HeroScene.vue")['default']
 export const KunlunScenesWenquxingScene: typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']
 export const KunlunScenesWorkbenchUniverseScene: typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']
+export const MediaAgentRoster: typeof import("../components/media/MediaAgentRoster.vue")['default']
+export const MediaPlannedPage: typeof import("../components/media/MediaPlannedPage.vue")['default']
+export const MediaWorkspaceShell: typeof import("../components/media/MediaWorkspaceShell.vue")['default']
 export const R11CausePanel: typeof import("../components/r11/CausePanel.vue")['default']
 export const R11DiffTimeline: typeof import("../components/r11/DiffTimeline.vue")['default']
 export const R11DriftMonitor: typeof import("../components/r11/DriftMonitor.vue")['default']
@@ -722,6 +740,7 @@ export const LazyRegionPicker: LazyComponent<typeof import("../components/Region
 export const LazyWorkspaceSwitcher: LazyComponent<typeof import("../components/WorkspaceSwitcher.vue")['default']>
 export const LazyAdminDashboardActivityStrip: LazyComponent<typeof import("../components/admin/dashboard/ActivityStrip.vue")['default']>
 export const LazyAdminDashboardActivityTimeline: LazyComponent<typeof import("../components/admin/dashboard/ActivityTimeline.vue")['default']>
+export const LazyAdminDashboardAgentHealthCard: LazyComponent<typeof import("../components/admin/dashboard/AgentHealthCard.vue")['default']>
 export const LazyAdminDashboardAgentMiniCard: LazyComponent<typeof import("../components/admin/dashboard/AgentMiniCard.vue")['default']>
 export const LazyAdminDashboardAgentRanking: LazyComponent<typeof import("../components/admin/dashboard/AgentRanking.vue")['default']>
 export const LazyAdminDashboardAiHealthMiniCard: LazyComponent<typeof import("../components/admin/dashboard/AiHealthMiniCard.vue")['default']>
@@ -731,6 +750,7 @@ export const LazyAdminDashboardDetailDrawer: LazyComponent<typeof import("../com
 export const LazyAdminDashboardEnterpriseIntelPanel: LazyComponent<typeof import("../components/admin/dashboard/EnterpriseIntelPanel.vue")['default']>
 export const LazyAdminDashboardGeographyPanel: LazyComponent<typeof import("../components/admin/dashboard/GeographyPanel.vue")['default']>
 export const LazyAdminDashboardKpiOverview: LazyComponent<typeof import("../components/admin/dashboard/KpiOverview.vue")['default']>
+export const LazyAdminDashboardLifecycleCard: LazyComponent<typeof import("../components/admin/dashboard/LifecycleCard.vue")['default']>
 export const LazyAdminDashboardMetricCard: LazyComponent<typeof import("../components/admin/dashboard/MetricCard.vue")['default']>
 export const LazyAdminDashboardRevenueCockpit: LazyComponent<typeof import("../components/admin/dashboard/RevenueCockpit.vue")['default']>
 export const LazyAdminDashboardRevenuePanel: LazyComponent<typeof import("../components/admin/dashboard/RevenuePanel.vue")['default']>
@@ -750,6 +770,7 @@ export const LazyAdminMallCouponsTab: LazyComponent<typeof import("../components
 export const LazyAdminMallOrdersTab: LazyComponent<typeof import("../components/admin/mall/OrdersTab.vue")['default']>
 export const LazyAdminMallProductsTab: LazyComponent<typeof import("../components/admin/mall/ProductsTab.vue")['default']>
 export const LazyAdminMallRecommendTab: LazyComponent<typeof import("../components/admin/mall/RecommendTab.vue")['default']>
+export const LazyAiCenterMiniAIBrowser: LazyComponent<typeof import("../components/ai-center/MiniAIBrowser.vue")['default']>
 export const LazyAiModelSettingsLauncher: LazyComponent<typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']>
 export const LazyBusinessLoginModal: LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
 export const LazyCommunityHero: LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
@@ -897,6 +918,9 @@ export const LazyKunlunScenesFourStepScene: LazyComponent<typeof import("../comp
 export const LazyKunlunScenesHeroScene: LazyComponent<typeof import("../components/kunlun/scenes/HeroScene.vue")['default']>
 export const LazyKunlunScenesWenquxingScene: LazyComponent<typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']>
 export const LazyKunlunScenesWorkbenchUniverseScene: LazyComponent<typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']>
+export const LazyMediaAgentRoster: LazyComponent<typeof import("../components/media/MediaAgentRoster.vue")['default']>
+export const LazyMediaPlannedPage: LazyComponent<typeof import("../components/media/MediaPlannedPage.vue")['default']>
+export const LazyMediaWorkspaceShell: LazyComponent<typeof import("../components/media/MediaWorkspaceShell.vue")['default']>
 export const LazyR11CausePanel: LazyComponent<typeof import("../components/r11/CausePanel.vue")['default']>
 export const LazyR11DiffTimeline: LazyComponent<typeof import("../components/r11/DiffTimeline.vue")['default']>
 export const LazyR11DriftMonitor: LazyComponent<typeof import("../components/r11/DriftMonitor.vue")['default']>

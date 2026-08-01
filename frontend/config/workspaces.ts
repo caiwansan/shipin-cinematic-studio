@@ -114,12 +114,23 @@ export const workspaces: WorkspaceConfig[] = [
   },
   {
     id: 'media-department',
-    name: '媒体部门',
+    name: '媒体部门（旧）',
+    status: 'hidden',
+    visibleOnHome: false,
+    routeAccessible: true,
+    completion: 45,
+    note: '已冻结旧版媒体部门，产品迁移至 /workspace/media（Sprint-MEDIA-UX-01）',
+  },
+
+  // ===== media =====
+  {
+    id: 'media',
+    name: '新媒体运营',
     status: 'preview',
     visibleOnHome: true,
     routeAccessible: true,
-    completion: 45,
-    note: '内部媒体部门管理，半完成',
+    completion: 15,
+    note: 'AI 员工新媒体运营工作台（产品壳，等微信资产接入）',
   },
 
   // ===== hidden =====
