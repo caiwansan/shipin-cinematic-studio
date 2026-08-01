@@ -77,6 +77,7 @@
           <div class="wf-head">
             <span class="wf-title">🧠 团队协作建议</span>
             <span class="wf-badge">观察层 · 仅建议</span>
+            <span class="wf-badge" style="color:#94a3b8;border-color:rgba(148,163,184,0.35);background:rgba(148,163,184,0.08)">⏸ 已暂停扩展（掌柜战略：AI中心聚焦消费决策）</span>
             <span class="wf-sub">一个任务不再是一个 AI 在工作——而是 AI 团队协作。系统只识别与建议，由你确认发起</span>
           </div>
           <div class="wf-grid">

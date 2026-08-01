@@ -9392,6 +9392,10 @@ model AiProviderDirectory {
   browserMode          String   @default("iframe") @db.VarChar(30) // iframe | external_fallback | desktop_webview | disabled（AI-CENTER-02B 浏览器能力状态层）
   apiEnabled           Boolean  @default(true) // 是否提供 API（BYOK 接入）
   capabilityScore      Json? // AI能力评分六维 { cost, speed, quality, chinese, coding, reasoning } 0-100（运营维护）
+  pricingInfo          Json? // AI-CENTER-03 价格信息 { inputPrice, outputPrice, currency } 元/百万 tokens（参考价，运营维护）
+  costScore            Int    @default(50) // AI-CENTER-03 价格优势分 0-100（运营维护，性价比=能力×60%+价格×40%）
+  officialBalanceApi   String @default("") @db.VarChar(500) // AI-CENTER-03 官方余额查询接口完整 URL（空=暂不支持，BYOK 不落库）
+  supportedModels      Json? // AI-CENTER-03 支持模型列表 ["DeepSeek-V3", "DeepSeek-R1"]
   affiliateUrl         String   @default("") @db.VarChar(500) // 官方推广注册链接（前台优先）
   affiliateEnabled     Boolean  @default(false)
   affiliateDescription String?  @db.Text // 推广说明（如：通过推荐链接注册享额度）

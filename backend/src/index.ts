@@ -95,6 +95,7 @@ import aiProviderDirectoryRoutes from './routes/ai-provider-directory.routes.js'
 import aiRecommendationsRoutes from './routes/ai-recommendations.routes.js'
 import agentRecommendationRoutes from './routes/agent-recommendation.routes.js'
 import agentWorkflowTemplateRoutes from './routes/agent-workflow-templates.routes.js'
+import aiCenterConsumerRoutes from './routes/ai-center-consumer.routes.js'
 import adminPlatformDefaultModelsRoutes from './routes/admin-platform-default-models.routes.js'
 import adminUsageStatsRoutes from './routes/admin-usage-stats.routes.js'
 import adminDashboardCenterRoutes from './routes/admin-dashboard-center.routes.js'
@@ -555,6 +556,7 @@ await app.register(projectV2Routes)
   await app.register(aiProviderDirectoryRoutes)
   await app.register(agentRecommendationRoutes)
   await app.register(agentWorkflowTemplateRoutes)
+  await app.register(aiCenterConsumerRoutes)
   await app.register(aiRecommendationsRoutes)
   await app.register(adminPlatformDefaultModelsRoutes)
   await app.register(adminUsageStatsRoutes)

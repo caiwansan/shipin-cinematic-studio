@@ -138,6 +138,47 @@
         </div>
       </section>
 
+      <!-- ═══ AI-CENTER-03：💰 性价比排行 ═══ -->
+      <section class="max-w-7xl mx-auto px-4 pb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <h2 class="text-sm font-semibold text-white/90 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-xs">💰</span>
+            性价比排行
+          </h2>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-gray-500">能力×60% + 价格×40% · 纯计算，无 AI 参与</span>
+        </div>
+
+        <div v-if="rankingsLoading" class="h-24 rounded-2xl bg-white/[0.03] border border-white/5 animate-pulse"></div>
+        <div v-else class="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <!-- 领奖台前3 -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div v-for="r in rankings.slice(0, 3)" :key="r.code"
+              class="relative rounded-xl border p-4 text-center overflow-hidden"
+              :class="r.rank === 1 ? 'border-amber-500/40 bg-gradient-to-b from-amber-500/10 to-transparent' : r.rank === 2 ? 'border-slate-400/30 bg-gradient-to-b from-slate-400/8 to-transparent' : 'border-orange-700/40 bg-gradient-to-b from-orange-700/10 to-transparent'">
+              <div class="text-3xl mb-1">{{ r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : '🥉' }}</div>
+              <div class="text-sm font-semibold text-white/90">{{ r.name }}</div>
+              <div class="text-2xl font-bold mt-1" :class="r.rank === 1 ? 'text-amber-300' : r.rank === 2 ? 'text-slate-300' : 'text-orange-400'">{{ r.valueScore }}</div>
+              <div class="text-[10px] text-gray-500 mt-1">能力 {{ r.ability }} · 价格 {{ r.costScore }}</div>
+              <div v-if="r.pricing" class="text-[10px] text-gray-600 mt-0.5">¥{{ r.pricing.inputPrice }}/{{ r.pricing.outputPrice }} /百万tokens</div>
+            </div>
+          </div>
+          <!-- 完整榜单 -->
+          <div class="mt-4 flex flex-col gap-1">
+            <div v-for="r in rankings.slice(3)" :key="r.code"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition">
+              <span class="w-6 text-center text-xs text-gray-500">#{{ r.rank }}</span>
+              <span class="text-xs text-white/80 flex-1">{{ r.name }}</span>
+              <span class="text-[10px] text-gray-500 hidden sm:block">能力 {{ r.ability }}</span>
+              <span class="text-[10px] text-gray-500 hidden sm:block">价格 {{ r.costScore }}</span>
+              <div class="w-24 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                <div class="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400" :style="{ width: r.valueScore + '%' }"></div>
+              </div>
+              <span class="text-xs font-semibold text-amber-300 w-9 text-right">{{ r.valueScore }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ═══ 区域二：API模型接入（全部 AI） ═══ -->
       <section class="max-w-7xl mx-auto px-4 pb-8">
         <div class="flex items-center gap-3 mb-4">
@@ -179,7 +220,10 @@
                   </div>
                 </div>
               </div>
-              <div class="shrink-0">
+              <div class="shrink-0 flex items-center gap-1.5">
+                <span v-if="valueScoreOf(p)" class="text-[10px] px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-300" title="性价比 = 能力×60% + 价格×40%">
+                  💰 性价比 {{ valueScoreOf(p) }}
+                </span>
                 <span v-if="p.connected" class="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300">
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>已配置
                 </span>
@@ -190,6 +234,16 @@
             </div>
 
             <p class="text-xs text-gray-400 leading-relaxed mt-4 line-clamp-3 min-h-[48px]">{{ p.description }}</p>
+
+            <!-- AI-CENTER-03 价格信息（参考价） -->
+            <div v-if="p.pricingInfo?.inputPrice != null" class="flex items-center gap-3 mt-3 text-[11px] text-gray-400">
+              <span class="text-cyan-300/90">💴 输入 ¥{{ p.pricingInfo.inputPrice }}</span>
+              <span class="text-cyan-300/90">输出 ¥{{ p.pricingInfo.outputPrice }}</span>
+              <span class="text-gray-600">/百万 tokens · 参考价</span>
+            </div>
+            <div v-if="p.supportedModels?.length" class="flex flex-wrap gap-1.5 mt-2">
+              <span v-for="m in p.supportedModels.slice(0, 3)" :key="m" class="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/10 text-gray-400">{{ m }}</span>
+            </div>
 
             <div class="flex items-center gap-1 mt-3">
               <span v-for="s in 5" :key="s" class="text-[11px]" :class="s <= p.recommended ? 'text-amber-400' : 'text-white/10'">★</span>
@@ -228,6 +282,62 @@
               class="w-full mt-2 text-[11px] py-1.5 rounded-lg border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 transition cursor-pointer bg-transparent">
               ⚙️ 配置模型（BYOK）
             </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ AI-CENTER-03：🔑 我的AI余额（BYOK 即时查询，Key 不保存） ═══ -->
+      <section class="max-w-7xl mx-auto px-4 pb-6">
+        <div class="flex items-center gap-3 mb-4">
+          <h2 class="text-sm font-semibold text-white/90 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center text-xs">🔑</span>
+            我的AI余额
+          </h2>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-gray-500">BYOK · 官方余额接口即时查询 · Key 仅本次使用，不保存</span>
+        </div>
+
+        <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+          <div class="flex flex-col md:flex-row gap-3">
+            <select v-model="balance.provider"
+              class="px-3 py-2 rounded-xl bg-[#0A1122] border border-white/10 text-sm text-white/90 focus:outline-none focus:border-cyan-500/40"
+              style="font-family: inherit">
+              <option v-for="p in providers.filter((x) => x.officialBalanceApi)" :key="p.code" :value="p.code">{{ p.name }}</option>
+              <option value="__none" disabled v-if="!providers.some((x) => x.officialBalanceApi)">暂无可查询厂商</option>
+            </select>
+            <input v-model="balance.apiKey" type="password" placeholder="粘贴你的官方 API Key（仅本次查询）"
+              class="flex-1 px-3 py-2 rounded-xl bg-[#0A1122] border border-white/10 text-sm text-white/90 placeholder-gray-600 focus:outline-none focus:border-cyan-500/40" />
+            <button @click="queryBalance" :disabled="balance.loading"
+              class="px-5 py-2 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white transition disabled:opacity-50 cursor-pointer">
+              {{ balance.loading ? '查询中…' : '查询余额' }}
+            </button>
+          </div>
+
+          <p class="text-[11px] text-gray-600 mt-3">
+            🛡️ 昆仑镜调用厂商官方余额接口即时返回，Key 只在内存中使用，不落库、不打日志、不保存。余额由对应 AI 服务商管理。
+          </p>
+
+          <div v-if="balance.error" class="mt-4 rounded-xl border border-red-500/25 bg-red-500/8 px-4 py-3 text-xs text-red-300">
+            ⚠️ {{ balance.error }}
+          </div>
+
+          <div v-if="balance.result" class="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4">
+            <template v-if="balance.result.supported">
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-white/90">{{ balance.result.providerName }}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300">🟢 官方余额</span>
+              </div>
+              <div class="text-3xl font-bold mt-2 text-emerald-300">
+                {{ balance.result.balance != null ? '¥' + balance.result.balance : '—' }}
+                <span class="text-xs font-normal text-gray-500 ml-1">{{ balance.result.currency }}</span>
+              </div>
+              <div v-if="balance.result.used != null" class="text-xs text-gray-400 mt-1">已用 ¥{{ balance.result.used }}</div>
+              <div class="text-[11px] text-gray-500 mt-2">
+                {{ balance.result.byok }} · 查询时间 {{ new Date(balance.result.fetchedAt).toLocaleString('zh-CN') }}
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-xs text-gray-300">📭 {{ balance.result.providerName }}：{{ balance.result.reason }}</div>
+            </template>
           </div>
         </div>
       </section>
@@ -338,6 +448,9 @@ interface DirectoryProvider {
   registerViaAffiliate: boolean
   connected: boolean
   recommended: number
+  pricingInfo?: { inputPrice?: number; outputPrice?: number; currency?: string } | null
+  costScore?: number
+  supportedModels?: string[] | null
 }
 
 const keyword = ref('')
@@ -346,6 +459,50 @@ const loading = ref(true)
 const providers = ref<DirectoryProvider[]>([])
 const isLoggedIn = ref(false)
 const modelConfig = ref<any>(null)
+
+// ─── AI-CENTER-03 消费决策中心：性价比排行 + 我的AI余额 ───
+const rankings = ref<any[]>([])
+const rankingsLoading = ref(true)
+const balance = reactive({ provider: 'deepseek', apiKey: '', loading: false, result: null as any, error: '' })
+
+/** 性价比指数 = 能力综合×60% + 价格优势×40%（与后端同公式，纯计算） */
+function valueScoreOf(p: DirectoryProvider): number | null {
+  const caps = p.capabilityScore as Record<string, number> | null
+  if (!caps) return null
+  const dims = ['cost', 'speed', 'quality', 'chinese', 'coding', 'reasoning']
+  const vals = dims.map((d) => Number(caps[d]) || 0)
+  const ability = vals.reduce((a, b) => a + b, 0) / vals.length
+  return Math.round((ability * 0.6 + (p.costScore ?? 50) * 0.4) * 10) / 10
+}
+
+async function loadRankings() {
+  try {
+    const res = await $fetch('/api/ai/center/rankings').catch(() => null)
+    if (res?.code === 0) rankings.value = res.data.ranked
+  } finally {
+    rankingsLoading.value = false
+  }
+}
+
+async function queryBalance() {
+  if (!balance.apiKey.trim()) {
+    balance.error = '请输入 API Key'
+    return
+  }
+  balance.loading = true
+  balance.error = ''
+  balance.result = null
+  try {
+    const res = await $fetch('/api/ai/center/balance-query', {
+      method: 'POST',
+      body: { provider: balance.provider, apiKey: balance.apiKey.trim() },
+    }).catch((e: any) => ({ code: 1, error: e?.data?.error || '查询失败' }))
+    if (res.code === 0) balance.result = res.data
+    else balance.error = res.error || '查询失败'
+  } finally {
+    balance.loading = false
+  }
+}
 
 const tabs = [
   { key: 'all', label: '全部' },
@@ -476,9 +633,10 @@ onMounted(async () => {
     const headers: Record<string, string> = {}
     const token = getAuthToken()
     if (token) headers.Authorization = `Bearer ${token}`
-    const [dirRes, cfgRes] = await Promise.all([
+    const [dirRes, cfgRes, rankRes] = await Promise.all([
       $fetch('/api/ai-provider-directory', { headers }).catch(() => null),
       isLoggedIn.value ? $fetch('/api/user/llm-config', { headers }).catch(() => null) : Promise.resolve(null),
+      loadRankings(),
     ])
     if (dirRes?.code === 0 && Array.isArray(dirRes.data)) providers.value = dirRes.data
     if (cfgRes?.code === 0) modelConfig.value = cfgRes.data
