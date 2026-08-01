@@ -19,7 +19,9 @@ export default defineNuxtRouteMiddleware((to) => {
     path.startsWith('/studio/') ||
     path.startsWith('/user/') ||
     path.startsWith('/admin/') ||
-    path.startsWith('/api/')
+    path.startsWith('/api/') ||
+    path.startsWith('/ai-center') ||
+    path.startsWith('/models/')
 
   if (!matched) {
     // 重定向到 error 页面，Nuxt 会自动使用 error.vue 渲染

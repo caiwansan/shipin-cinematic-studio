@@ -9387,6 +9387,9 @@ model AiProviderDirectory {
   registerUrl          String   @default("") @db.VarChar(500) // 官方注册页
   billingUrl           String   @default("") @db.VarChar(500) // 充值入口
   documentationUrl     String   @default("") @db.VarChar(500) // 配置教程
+  loginUrl             String   @default("") @db.VarChar(500) // AI迷你浏览器打开目标（官方登录/使用页）
+  browserEnabled       Boolean  @default(true) // 是否支持 AI迷你浏览器打开
+  apiEnabled           Boolean  @default(true) // 是否提供 API（BYOK 接入）
   affiliateUrl         String   @default("") @db.VarChar(500) // 官方推广注册链接（前台优先）
   affiliateEnabled     Boolean  @default(false)
   affiliateDescription String?  @db.Text // 推广说明（如：通过推荐链接注册享额度）

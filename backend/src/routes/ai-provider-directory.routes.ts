@@ -21,6 +21,81 @@ import { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { requireAdmin } from '../middleware/require-admin.js'
 
+/** iframe 预检缓存（host → verdict，10 分钟 TTL） */
+const frameCheckCache = new Map<string, { verdict: string; reason: string; ts: number }>()
+
+/**
+ * GET /api/ai-center/iframe-check?url=<encoded>
+ * 探测第三方站点是否允许 iframe 内嵌（X-Frame-Options / CSP frame-ancestors）
+ * 安全边界：
+ *  - 仅允许 http(s)
+ *  - SSRF 防护：host 必须在供应商目录（active）的 loginUrl/officialWebsite 域名白名单内
+ *  - 只探测响应头，不保存/代理任何第三方内容
+ */
+async function iframeCheck(app: FastifyInstance) {
+  app.get('/api/ai-center/iframe-check', async (req, reply) => {
+    const url = (req.query as any)?.url as string | undefined
+    if (!url) return reply.status(400).send({ code: 1, error: 'url 必填' })
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      return reply.status(400).send({ code: 1, error: 'url 非法' })
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return reply.status(400).send({ code: 1, error: '仅支持 http/https' })
+    }
+    // SSRF 防护：host 必须在供应商白名单内
+    const providers = await prisma.aiProviderDirectory.findMany({
+      where: { status: 'active' },
+      select: { loginUrl: true, officialWebsite: true },
+    })
+    const allowedHosts = new Set<string>()
+    for (const p of providers) {
+      for (const u of [p.loginUrl, p.officialWebsite]) {
+        if (!u) continue
+        try { allowedHosts.add(new URL(u).host) } catch { /* 忽略非法 URL */ }
+      }
+    }
+    if (!allowedHosts.has(parsed.host)) {
+      return reply.status(403).send({ code: 1, error: '仅支持昆仑镜已收录供应商域名' })
+    }
+    // 缓存命中
+    const cached = frameCheckCache.get(parsed.host)
+    if (cached && Date.now() - cached.ts < 10 * 60 * 1000) {
+      return { code: 0, data: { ...cached, url } }
+    }
+    // 探测响应头
+    let verdict = 'unknown'
+    let reason = '无法探测（目标可能拦截非浏览器请求）'
+    try {
+      const res = await fetch(url, {
+        redirect: 'follow',
+        signal: AbortSignal.timeout(12000),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+          'Accept-Language': 'zh-CN,zh;q=0.9',
+        },
+      })
+      const xfo = (res.headers.get('x-frame-options') || '').toLowerCase()
+      const csp = (res.headers.get('content-security-policy') || '').toLowerCase()
+      const fa = csp.match(/frame-ancestors\s+([^;]+)/)?.[1]?.trim()
+      if (xfo && (xfo === 'deny' || xfo === 'sameorigin')) {
+        verdict = 'deny'; reason = `X-Frame-Options: ${xfo}`
+      } else if (fa && (fa.includes("'none'") || fa.includes("'self'"))) {
+        verdict = 'deny'; reason = `CSP frame-ancestors: ${fa}`
+      } else {
+        verdict = 'allow'; reason = xfo || fa ? `允许（${xfo || fa}）` : '无 frame 限制头'
+      }
+    } catch (e: any) {
+      reason = `探测失败：${e?.message || '网络错误'}`
+    }
+    const entry = { verdict, reason, ts: Date.now() }
+    frameCheckCache.set(parsed.host, entry)
+    return { code: 0, data: { verdict, reason, url } }
+  })
+}
+
 /** 可选用户认证：有 token 返回 userId，无/无效返回 null（公开接口不强制登录） */
 async function optionalUserId(req: FastifyRequest): Promise<string | null> {
   try {
@@ -54,6 +129,8 @@ async function connectedCodes(userId: string | null): Promise<Set<string>> {
 }
 
 export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
+  await iframeCheck(app)
+
   // ── 公开：目录列表 ──
   app.get('/api/ai-provider-directory', async (req) => {
     const [list, connected] = await Promise.all([
@@ -123,6 +200,9 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         registerUrl: body.registerUrl || '',
         billingUrl: body.billingUrl || '',
         documentationUrl: body.documentationUrl || '',
+        loginUrl: body.loginUrl || '',
+        browserEnabled: body.browserEnabled !== undefined ? !!body.browserEnabled : true,
+        apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : true,
         affiliateUrl: body.affiliateUrl || '',
         affiliateEnabled: !!body.affiliateEnabled,
         affiliateDescription: body.affiliateDescription || null,
@@ -153,6 +233,9 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         registerUrl: body.registerUrl ?? exist.registerUrl,
         billingUrl: body.billingUrl ?? exist.billingUrl,
         documentationUrl: body.documentationUrl ?? exist.documentationUrl,
+        loginUrl: body.loginUrl ?? exist.loginUrl,
+        browserEnabled: body.browserEnabled !== undefined ? !!body.browserEnabled : exist.browserEnabled,
+        apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : exist.apiEnabled,
         affiliateUrl: body.affiliateUrl ?? exist.affiliateUrl,
         affiliateEnabled: body.affiliateEnabled ?? exist.affiliateEnabled,
         affiliateDescription: body.affiliateDescription ?? exist.affiliateDescription,
