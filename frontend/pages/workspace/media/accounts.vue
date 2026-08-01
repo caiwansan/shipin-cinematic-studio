@@ -94,8 +94,8 @@ const steps = [
 
 const planned = [
   { icon: '📱', name: '抖音', note: '企业号 · 视频内容分发' },
-  { icon: '🧣', name: '微博', note: '企业号 · 图文分发' },
-  { icon: '💼', name: '知乎', note: '企业号 · 深度内容' },
+  { icon: '📕', name: '小红书', note: '企业号 · 种草图文' },
+  { icon: '📺', name: '视频号', note: '企业认证 · 微信生态分发' },
 ]
 
 function connect() {

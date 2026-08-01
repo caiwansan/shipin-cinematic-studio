@@ -247,7 +247,22 @@ export async function registerMediaOverviewRoutes(app: FastifyInstance) {
         })
       }
 
-      // 6. 行业雷达：无真实数据源，诚实返回 supported:false
+      // 6. 渠道连接（真实计数）
+      // 新媒体渠道表（mediaPlatformAccount）待 Sprint-MEDIA-01 落地：
+      // 表存在 → 真实 active 计数；未落地 → 诚实返回 0（当前无连接能力）
+      let connectedChannels = 0
+      try {
+        const mediaAccountModel = (prisma as any).mediaPlatformAccount
+        if (mediaAccountModel && typeof mediaAccountModel.count === 'function') {
+          connectedChannels = await mediaAccountModel.count({
+            where: { organizationId: organizationId as any, status: 'active' },
+          })
+        }
+      } catch {
+        connectedChannels = 0
+      }
+
+      // 7. 行业雷达：无真实数据源，诚实返回 supported:false
       const industryRadar = {
         supported: false,
         reason: '热点/竞品/规则数据源未接入。真实雷达将于 Sprint-MEDIA-03 数据源就绪后启用。',
@@ -288,6 +303,11 @@ export async function registerMediaOverviewRoutes(app: FastifyInstance) {
           usage: {
             todayCost: todayUsage._sum.cost ?? 0,
             executions: todayUsage._count._all,
+          },
+          channels: {
+            connected: connectedChannels,
+            total: 4,
+            platforms: ['wechat', 'douyin', 'xiaohongshu', 'video'],
           },
           industryRadar,
         },

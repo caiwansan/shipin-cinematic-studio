@@ -1,22 +1,101 @@
 <!--
-  Sprint-MEDIA-UX-03 — AI 运营驾驶舱（产品级 Dashboard）
-  真实数据源: GET /api/enterprise/media/overview
-  健康度 = 真实计算（今日完成率 + 错误惩罚）；无数据 → 诚实空态（禁 mock）
+  Sprint-MEDIA-PRODUCT-ONBOARDING-01A — CEO 驾驶舱产品化（SaaS 价值地图）
+  产品逻辑: 免费看到完整价值地图 → 理解能力 → 订阅解锁 AI 员工 → 启动运营闭环
+  真实数据源: GET /api/enterprise/media/overview（唯一驾驶舱数据源）
+  诚实原则: 数字 = 真实计数；无数据 → 等待激活/未连接（禁 mock）
 -->
 <template>
   <MediaWorkspaceShell>
     <!-- 页面头 -->
     <MediaPageHeader
-      kicker="AI Media Ops · Command Center"
-      title="运营驾驶舱"
-      desc="你的 AI 新媒体运营部门实时状态：员工、任务、成本与业务结果一屏掌握。"
+      kicker="AI Media Ops · SaaS"
+      title="AI 新媒体运营中心"
+      desc="你的 AI 新媒体运营团队：免费使用运营基础设施，订阅解锁 AI 员工，启动自动运营闭环。"
     >
       <template #actions>
         <NuxtLink to="/workspace/media/intelligence" class="mph-btn">📡 行业智能</NuxtLink>
       </template>
     </MediaPageHeader>
 
-    <!-- ═══ 健康度 + KPI ═══ -->
+    <!-- ═══ ① CEO 驾驶舱 · 部门状态卡 ═══ -->
+    <div class="dash-dept">
+      <div class="dash-dept-title">
+        <span class="dash-dept-ico">🏢</span>
+        <div>
+          <div class="dash-dept-name">AI 新媒体运营部</div>
+          <div class="dash-dept-sub">EnterpriseAgentInstance · 真实部署状态</div>
+        </div>
+        <span class="dash-dept-state" :class="deptStateClass">{{ deptStateText }}</span>
+      </div>
+      <div class="dash-dept-metrics">
+        <div class="dash-dept-metric">
+          <div class="ddm-value">{{ agents.length }}<span class="ddm-unit">/5</span></div>
+          <div class="ddm-label">AI 员工</div>
+        </div>
+        <div class="dash-dept-metric">
+          <div class="ddm-value">{{ channels.connected }}<span class="ddm-unit">/{{ channels.total }}</span></div>
+          <div class="ddm-label">渠道已连接</div>
+        </div>
+        <div class="dash-dept-metric">
+          <div class="ddm-value">{{ today.completed }}<span class="ddm-unit">/{{ today.completed + today.pendingSchedules }}</span></div>
+          <div class="ddm-label">今日任务完成</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ② 我的 AI 团队（免费可见价值 · 订阅解锁）═══ -->
+    <MediaPanel icon="🤖" title="我的 AI 团队" sub="免费查看完整编制 · 订阅后自动部署并开始工作" class="dash-team-panel">
+      <template v-if="agents.length">
+        <div class="dept-list">
+          <div v-for="a in agents" :key="a.instanceId" class="dept-row">
+            <span class="dept-avatar">{{ a.avatar || a.name[0] }}</span>
+            <div class="dept-meta">
+              <div class="dept-name">{{ a.name }} <span class="dept-role">{{ a.role }}</span></div>
+              <div class="dept-sub">{{ a.totalTasks }} 任务 · {{ a.totalErrors }} 错误 · {{ a.lastActiveAt ? '活跃 ' + fmtTime(a.lastActiveAt) : '未活跃' }}</div>
+            </div>
+            <span class="dept-state" :class="stateClass(a.lifecycleState)">{{ stateText(a.lifecycleState) }}</span>
+          </div>
+        </div>
+      </template>
+      <template v-else>
+        <div class="team-grid">
+          <button
+            v-for="m in teamRoster" :key="m.name"
+            class="team-card" @click="showSubscribe = true"
+          >
+            <div class="team-card-avatar">{{ m.avatar }}</div>
+            <div class="team-card-meta">
+              <div class="team-card-name">{{ m.name }}</div>
+              <div class="team-card-role">{{ m.role }}</div>
+            </div>
+            <div class="team-card-duty">{{ m.duty }}</div>
+            <span class="team-card-lock">🔒 订阅解锁</span>
+          </button>
+        </div>
+        <div class="team-cta-row">
+          <button class="team-cta" @click="showSubscribe = true">了解 AI 员工订阅 →</button>
+          <span class="team-cta-note">订阅后自动部署 5 名 AI 员工并启动运营</span>
+        </div>
+      </template>
+    </MediaPanel>
+
+    <!-- ═══ ③ 渠道资产中心（产品蓝图 4 平台 · 连接后 AI 才能运营）═══ -->
+    <MediaPanel icon="🔗" title="渠道资产中心" sub="连接账号后，AI 员工才能开始运营你的渠道" class="dash-assets">
+      <div class="dash-assets-row">
+        <div v-for="p in channelBlueprints" :key="p.key" class="dash-asset" :class="{ 'is-connected': p.connected }">
+          <span class="dash-asset-ico">{{ p.icon }}</span>
+          <div class="dash-asset-meta">
+            <div class="dash-asset-name">{{ p.name }}</div>
+            <div class="dash-asset-sub">{{ p.connected ? '已连接' : '未连接' }}</div>
+          </div>
+          <NuxtLink v-if="!p.connected" to="/workspace/media/accounts" class="dash-asset-cta">去连接 →</NuxtLink>
+          <span v-else class="dash-asset-ok">✅</span>
+        </div>
+      </div>
+      <div class="dash-assets-foot">免费用户可手动管理渠道 · AI 自动运营随员工订阅解锁</div>
+    </MediaPanel>
+
+    <!-- ═══ ④ 健康度 + KPI（免费运营基础设施）═══ -->
     <div class="dash-hero">
       <div class="dash-health">
         <MediaHealthRing :score="healthScore" foot="今日任务完成率 · 真实计算（agent_outcome + agent_schedule + 错误惩罚）" />
@@ -42,33 +121,8 @@
       </div>
     </div>
 
-    <!-- ═══ AI 部门概览 + 今日时间轴 ═══ -->
+    <!-- ═══ ⑤ 今日时间轴 + 行业智能 ═══ -->
     <div class="dash-grid">
-      <MediaPanel icon="🧑‍💼" title="AI 部门概览" :sub="agents.length ? `${agents.length} 名员工 · ${activeCount} 名工作中` : '等待 AI 员工部署'">
-        <template v-if="agents.length">
-          <div class="dept-list">
-            <div v-for="a in agents" :key="a.instanceId" class="dept-row">
-              <span class="dept-avatar">{{ a.avatar || a.name[0] }}</span>
-              <div class="dept-meta">
-                <div class="dept-name">{{ a.name }} <span class="dept-role">{{ a.role }}</span></div>
-                <div class="dept-sub">{{ a.totalTasks }} 任务 · {{ a.totalErrors }} 错误 · {{ a.lastActiveAt ? '活跃 ' + fmtTime(a.lastActiveAt) : '未活跃' }}</div>
-              </div>
-              <span class="dept-state" :class="stateClass(a.lifecycleState)">{{ stateText(a.lifecycleState) }}</span>
-            </div>
-          </div>
-        </template>
-        <MediaEmptyState
-          v-else icon="🤖" title="AI 部门待组建"
-          desc="先连接新媒体账号，AI 员工将随账号接入自动部署并开始工作。"
-          source="EnterpriseAgentInstance + AgentProfile"
-          action
-        >
-          <template #action>
-            <NuxtLink to="/workspace/media/accounts" class="dash-empty-cta">① 连接公众号 →</NuxtLink>
-          </template>
-        </MediaEmptyState>
-      </MediaPanel>
-
       <MediaPanel icon="🕒" title="今日运营时间轴" :sub="`${today.scheduleItems.length} 项排程 · ${today.completed} 项完成`">
         <template v-if="timeline.length">
           <div class="tl">
@@ -90,10 +144,7 @@
           source="AgentSchedule + AgentOutcome"
         />
       </MediaPanel>
-    </div>
 
-    <!-- ═══ 行业智能 + 最近执行 ═══ -->
-    <div class="dash-grid">
       <MediaPanel icon="📡" title="行业智能" sub="热点 · 竞品 · 规则 · 机会">
         <template v-if="industryRadar.supported">
           <div class="radar-quads">
@@ -109,7 +160,10 @@
           source="Sprint-MEDIA-03 数据源接入后启用"
         />
       </MediaPanel>
+    </div>
 
+    <!-- ═══ ⑥ 最近执行 + 今日成本 ═══ -->
+    <div class="dash-grid">
       <MediaPanel icon="🧾" title="最近执行记录" :sub="`${recentOutcomes.length} 条 · 近 7 天`">
         <template v-if="recentOutcomes.length">
           <div class="rec-list">
@@ -126,47 +180,50 @@
           source="AgentOutcome · 近 7 天"
         />
       </MediaPanel>
+
+      <div class="dash-cost">
+        <div class="dash-cost-left">
+          <span class="dash-cost-ico">💰</span>
+          <div>
+            <div class="dash-cost-label">今日 AI 运营成本</div>
+            <div class="dash-cost-sub">UsageLog 真实归因 · {{ usage.executions }} 次模型执行</div>
+          </div>
+        </div>
+        <div class="dash-cost-value">${{ usage.todayCost.toFixed(4) }}</div>
+      </div>
     </div>
 
-    <!-- ═══ 新媒体资产状态条（30秒规则 Q2: 我的账号资产在哪里）═══ -->
-    <MediaPanel icon="🔗" title="新媒体资产" sub="账号连接后 AI 员工即可代运营" class="dash-assets">
-      <div class="dash-assets-row">
-        <div class="dash-asset">
-          <span class="dash-asset-ico">🟢</span>
-          <div class="dash-asset-meta">
-            <div class="dash-asset-name">微信公众号</div>
-            <div class="dash-asset-sub">企业认证服务号 · 未连接</div>
+    <!-- ═══ AI 员工订阅说明弹窗（01A 价值说明 · 01C 接入真实商业入口）═══ -->
+    <Teleport to="body">
+      <div v-if="showSubscribe" class="sub-modal-mask" @click.self="showSubscribe = false">
+        <div class="sub-modal">
+          <div class="sub-modal-head">
+            <div>
+              <div class="sub-modal-title">🤖 订阅 AI 新媒体团队</div>
+              <div class="sub-modal-sub">一份订阅 · 5 名 AI 员工 · 自动部署自动工作</div>
+            </div>
+            <button class="sub-modal-close" @click="showSubscribe = false">✕</button>
           </div>
-          <NuxtLink to="/workspace/media/accounts" class="dash-asset-cta">去连接 →</NuxtLink>
-        </div>
-        <div class="dash-asset is-planned">
-          <span class="dash-asset-ico">📱</span>
-          <div class="dash-asset-meta">
-            <div class="dash-asset-name">抖音</div>
-            <div class="dash-asset-sub">企业号 · 规划中</div>
+          <div class="sub-modal-list">
+            <div v-for="m in teamRoster" :key="m.name" class="sub-modal-row">
+              <span class="sub-modal-avatar">{{ m.avatar }}</span>
+              <div class="sub-modal-meta">
+                <div class="sub-modal-name">{{ m.name }} · {{ m.role }}</div>
+                <div class="sub-modal-duty">{{ m.duty }}</div>
+                <div class="sub-modal-value">→ {{ m.value }}</div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="dash-asset is-planned">
-          <span class="dash-asset-ico">🧣</span>
-          <div class="dash-asset-meta">
-            <div class="dash-asset-name">微博</div>
-            <div class="dash-asset-sub">企业号 · 规划中</div>
+          <div class="sub-modal-foot">
+            <div class="sub-modal-note">订阅后：自动部署 → 绑定账号 → 自动执行 → 成果回流驾驶舱</div>
+            <div class="sub-modal-actions">
+              <NuxtLink to="/workspace/media/accounts" class="sub-modal-secondary" @click="showSubscribe = false">先去连接公众号 →</NuxtLink>
+              <button class="sub-modal-primary" @click="showSubscribe = false">知道了</button>
+            </div>
           </div>
         </div>
       </div>
-    </MediaPanel>
-
-    <!-- ═══ 今日成本 ═══ -->
-    <div class="dash-cost">
-      <div class="dash-cost-left">
-        <span class="dash-cost-ico">💰</span>
-        <div>
-          <div class="dash-cost-label">今日 AI 运营成本</div>
-          <div class="dash-cost-sub">UsageLog 真实归因 · {{ usage.executions }} 次模型执行</div>
-        </div>
-      </div>
-      <div class="dash-cost-value">${{ usage.todayCost.toFixed(4) }}</div>
-    </div>
+    </Teleport>
   </MediaWorkspaceShell>
 </template>
 
@@ -184,6 +241,7 @@ const overview = ref<any>({
   calendar: [],
   recentOutcomes: [],
   usage: { todayCost: 0, executions: 0 },
+  channels: { connected: 0, total: 4 },
   industryRadar: { supported: false, reason: '' },
 })
 
@@ -192,11 +250,22 @@ const { $toast } = useNuxtApp() as any
 const agents = computed(() => overview.value.agents || [])
 const today = computed(() => overview.value.today || {})
 const usage = computed(() => overview.value.usage || {})
+const channels = computed(() => overview.value.channels || { connected: 0, total: 4 })
 const recentOutcomes = computed(() => overview.value.recentOutcomes || [])
 const industryRadar = computed(() => overview.value.industryRadar || {})
 
 const activeCount = computed(() => agents.value.filter((a: any) => a.lifecycleState === 'ACTIVE').length)
 const riskCount = computed(() => agents.value.reduce((s: number, a: any) => s + (a.totalErrors || 0), 0))
+
+// 部门状态（真实计算）
+const deptStateText = computed(() => {
+  if (!agents.value.length) return '未激活'
+  return activeCount.value > 0 ? '运行中' : '已部署 · 待激活'
+})
+const deptStateClass = computed(() => {
+  if (!agents.value.length) return 'dd-st-inactive'
+  return activeCount.value > 0 ? 'dd-st-active' : 'dd-st-pending'
+})
 
 // 健康度：真实计算。今日完成率 + 错误惩罚；无数据 → null
 const healthScore = computed(() => {
@@ -229,6 +298,29 @@ const radarQuads = computed(() => [
   { key: 'rule', icon: '📜', title: '平台规则', items: industryRadar.value.rule || [] },
   { key: 'opportunity', icon: '💡', title: '内容机会', items: industryRadar.value.suggestion || [] },
 ])
+
+// 渠道资产蓝图（产品 4 平台；连接状态由 overview.channels 真实计数，平台级映射待真实接入后细化）
+const channelBlueprints = computed(() => {
+  const connected = channels.value.connected || 0
+  const defs = [
+    { key: 'wechat', icon: '🟢', name: '微信公众号', plan: '企业认证服务号' },
+    { key: 'douyin', icon: '📱', name: '抖音', plan: '企业号' },
+    { key: 'xiaohongshu', icon: '📕', name: '小红书', plan: '企业号' },
+    { key: 'video', icon: '📺', name: '视频号', plan: '企业认证' },
+  ]
+  return defs.map((d, i) => ({ ...d, connected: i < connected }))
+})
+
+// 标准编制（免费可见价值 · 订阅解锁）
+const teamRoster = [
+  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略', value: '部门围绕目标运转，每周一份清晰运营计划' },
+  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与策略建议', value: '不再为“今天发什么”发愁，选题自动排满内容日历' },
+  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作输出成品', value: '图文视频批量产出，发布前可人工审核把关' },
+  { name: 'David', role: 'AI 客服', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '私信秒回，客户线索自动分类，不错过潜在客户' },
+  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '每周自动复盘：什么有效、粉丝从哪来、下一步做什么' },
+]
+
+const showSubscribe = ref(false)
 
 onMounted(async () => {
   try {
@@ -290,6 +382,196 @@ function stateClass(s: string) {
   opacity: 0.92;
 }
 
+/* ─── ① 部门状态卡 ─── */
+.dash-dept {
+  background: linear-gradient(135deg, var(--color-bg-elevated), var(--color-intelligence-glow));
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.dash-dept-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dash-dept-ico { font-size: 26px; }
+.dash-dept-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+.dash-dept-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.dash-dept-state {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 4px 14px;
+  white-space: nowrap;
+}
+.dd-st-active { background: var(--color-execution-glow); color: var(--color-execution); }
+.dd-st-pending { background: rgba(245, 158, 11, 0.14); color: var(--color-warning); }
+.dd-st-inactive { background: var(--color-bg-hover); color: var(--color-text-muted); }
+.dash-dept-metrics {
+  display: flex;
+  gap: 28px;
+}
+.dash-dept-metric {
+  text-align: center;
+}
+.ddm-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.ddm-unit {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-left: 2px;
+}
+.ddm-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* ─── ② 我的 AI 团队 ─── */
+.dash-team-panel { margin-bottom: 16px; }
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.team-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 16px 12px;
+  cursor: pointer;
+  transition: transform .12s ease, border-color .12s ease;
+  text-align: center;
+  font-family: inherit;
+}
+.team-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-intelligence);
+}
+.team-card-avatar { font-size: 28px; }
+.team-card-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+.team-card-role {
+  font-size: 11px;
+  color: var(--color-intelligence);
+  background: var(--color-intelligence-glow);
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-weight: 600;
+}
+.team-card-duty {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  min-height: 34px;
+}
+.team-card-lock {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.12);
+  border-radius: 8px;
+  padding: 3px 10px;
+}
+.team-cta-row {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+.team-cta {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px var(--color-intelligence-glow);
+}
+.team-cta:hover { filter: brightness(1.1); }
+.team-cta-note {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* ─── ③ 渠道资产中心 ─── */
+.dash-assets { margin-bottom: 16px; }
+.dash-assets-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.dash-asset {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.dash-asset.is-connected { border-color: var(--color-execution); }
+.dash-asset-ico { font-size: 24px; }
+.dash-asset-meta { flex: 1; min-width: 0; }
+.dash-asset-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.dash-asset-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.dash-asset-cta {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-intelligence);
+  background: var(--color-intelligence-glow);
+  border-radius: 8px;
+  padding: 6px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.dash-asset-cta:hover { filter: brightness(1.15); }
+.dash-asset-ok { font-size: 14px; }
+.dash-assets-foot {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ─── ④ 健康度 + KPI ─── */
 .dash-hero {
   display: grid;
   grid-template-columns: 300px 1fr;
@@ -318,7 +600,7 @@ function stateClass(s: string) {
   align-items: start;
 }
 
-/* 部门概览 */
+/* 部门员工列表（已部署态） */
 .dept-list {
   display: flex;
   flex-direction: column;
@@ -484,62 +766,6 @@ function stateClass(s: string) {
 }
 
 /* 成本条 */
-.dash-empty-cta {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
-  border-radius: 10px;
-  padding: 9px 16px;
-  text-decoration: none;
-  box-shadow: 0 4px 14px var(--color-intelligence-glow);
-}
-.dash-empty-cta:hover { filter: brightness(1.12); }
-.dash-assets {
-  margin-bottom: 16px;
-}
-.dash-assets-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.dash-asset {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 12px;
-  padding: 14px 16px;
-}
-.dash-asset-ico { font-size: 24px; }
-.dash-asset-meta { flex: 1; min-width: 0; }
-.dash-asset-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-.dash-asset-sub {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-.dash-asset.is-planned { opacity: 0.55; }
-.dash-asset-cta {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-intelligence);
-  background: var(--color-intelligence-glow);
-  border-radius: 8px;
-  padding: 6px 12px;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.dash-asset-cta:hover { filter: brightness(1.15); }
-@media (max-width: 900px) {
-  .dash-assets-row { grid-template-columns: 1fr; }
-}
 .dash-cost {
   display: flex;
   justify-content: space-between;
@@ -573,8 +799,136 @@ function stateClass(s: string) {
   color: var(--color-execution);
   font-variant-numeric: tabular-nums;
 }
+
+/* ─── 订阅说明弹窗 ─── */
+.sub-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 24, 0.66);
+  backdrop-filter: blur(3px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.sub-modal {
+  width: 560px;
+  max-width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.sub-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.sub-modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+.sub-modal-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+.sub-modal-close {
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-muted);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.sub-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sub-modal-row {
+  display: flex;
+  gap: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.sub-modal-avatar { font-size: 22px; }
+.sub-modal-meta { flex: 1; min-width: 0; }
+.sub-modal-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.sub-modal-duty {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+.sub-modal-value {
+  font-size: 11px;
+  color: var(--color-decision);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+.sub-modal-foot {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-border-primary);
+}
+.sub-modal-note {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-bottom: 12px;
+}
+.sub-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.sub-modal-primary {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
+  border: none;
+  border-radius: 10px;
+  padding: 10px 22px;
+  cursor: pointer;
+}
+.sub-modal-secondary {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 10px;
+  padding: 10px 22px;
+  text-decoration: none;
+}
+
+@media (max-width: 1100px) {
+  .team-grid { grid-template-columns: repeat(3, 1fr); }
+  .dash-assets-row { grid-template-columns: repeat(2, 1fr); }
+}
 @media (max-width: 1000px) {
   .dash-hero { grid-template-columns: 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
+  .dash-dept { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  .team-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-assets-row { grid-template-columns: 1fr; }
 }
 </style>
