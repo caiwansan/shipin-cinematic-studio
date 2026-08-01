@@ -76,7 +76,7 @@
       </main>
     </div>
 
-    <ModelSettingsModal v-if="showModelSettings" @close="showModelSettings = false" />
+    <ModelSettingsModal :visible="showModelSettings" @close="showModelSettings = false" />
   </div>
 </template>
 
