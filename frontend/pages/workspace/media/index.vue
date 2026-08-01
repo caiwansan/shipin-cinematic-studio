@@ -59,9 +59,14 @@
         </template>
         <MediaEmptyState
           v-else icon="🤖" title="AI 部门待组建"
-          desc="部署 AI 员工后，他们的实时状态、任务与成果将出现在这里。"
+          desc="先连接新媒体账号，AI 员工将随账号接入自动部署并开始工作。"
           source="EnterpriseAgentInstance + AgentProfile"
-        />
+          action
+        >
+          <template #action>
+            <NuxtLink to="/workspace/media/accounts" class="dash-empty-cta">① 连接公众号 →</NuxtLink>
+          </template>
+        </MediaEmptyState>
       </MediaPanel>
 
       <MediaPanel icon="🕒" title="今日运营时间轴" :sub="`${today.scheduleItems.length} 项排程 · ${today.completed} 项完成`">
@@ -122,6 +127,34 @@
         />
       </MediaPanel>
     </div>
+
+    <!-- ═══ 新媒体资产状态条（30秒规则 Q2: 我的账号资产在哪里）═══ -->
+    <MediaPanel icon="🔗" title="新媒体资产" sub="账号连接后 AI 员工即可代运营" class="dash-assets">
+      <div class="dash-assets-row">
+        <div class="dash-asset">
+          <span class="dash-asset-ico">🟢</span>
+          <div class="dash-asset-meta">
+            <div class="dash-asset-name">微信公众号</div>
+            <div class="dash-asset-sub">企业认证服务号 · 未连接</div>
+          </div>
+          <NuxtLink to="/workspace/media/accounts" class="dash-asset-cta">去连接 →</NuxtLink>
+        </div>
+        <div class="dash-asset is-planned">
+          <span class="dash-asset-ico">📱</span>
+          <div class="dash-asset-meta">
+            <div class="dash-asset-name">抖音</div>
+            <div class="dash-asset-sub">企业号 · 规划中</div>
+          </div>
+        </div>
+        <div class="dash-asset is-planned">
+          <span class="dash-asset-ico">🧣</span>
+          <div class="dash-asset-meta">
+            <div class="dash-asset-name">微博</div>
+            <div class="dash-asset-sub">企业号 · 规划中</div>
+          </div>
+        </div>
+      </div>
+    </MediaPanel>
 
     <!-- ═══ 今日成本 ═══ -->
     <div class="dash-cost">
@@ -451,6 +484,62 @@ function stateClass(s: string) {
 }
 
 /* 成本条 */
+.dash-empty-cta {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
+  border-radius: 10px;
+  padding: 9px 16px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px var(--color-intelligence-glow);
+}
+.dash-empty-cta:hover { filter: brightness(1.12); }
+.dash-assets {
+  margin-bottom: 16px;
+}
+.dash-assets-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.dash-asset {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.dash-asset-ico { font-size: 24px; }
+.dash-asset-meta { flex: 1; min-width: 0; }
+.dash-asset-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.dash-asset-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.dash-asset.is-planned { opacity: 0.55; }
+.dash-asset-cta {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-intelligence);
+  background: var(--color-intelligence-glow);
+  border-radius: 8px;
+  padding: 6px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.dash-asset-cta:hover { filter: brightness(1.15); }
+@media (max-width: 900px) {
+  .dash-assets-row { grid-template-columns: 1fr; }
+}
 .dash-cost {
   display: flex;
   justify-content: space-between;

@@ -34,7 +34,11 @@
           </button>
         </div>
         <div v-else class="to-list-empty">
-          <MediaEmptyState icon="🤖" title="部门待组建" desc="部署 AI 员工后在此管理" source="EnterpriseAgentInstance" />
+          <MediaEmptyState icon="🤖" title="部门待组建" desc="先连接新媒体账号，AI 员工将随账号接入自动部署。" source="EnterpriseAgentInstance" action>
+            <template #action>
+              <NuxtLink to="/workspace/media/accounts" class="to-empty-cta">① 连接公众号 →</NuxtLink>
+            </template>
+          </MediaEmptyState>
         </div>
 
         <!-- 标准编制（未部署时的组织架构） -->
@@ -46,7 +50,7 @@
               <b>{{ r.name }}</b>
               <span class="to-roster-role">{{ r.role }}</span>
             </div>
-            <span class="to-roster-tag">待注册</span>
+            <span class="to-roster-tag">接入后部署</span>
           </div>
         </div>
       </div>
@@ -61,6 +65,12 @@
               <div class="to-detail-role">{{ selected.role }}</div>
             </div>
             <span class="to-detail-state" :class="stateClass(selected.lifecycleState)">{{ stateText(selected.lifecycleState) }}</span>
+          </div>
+
+          <!-- 岗位职责（产品感: 用户雇佣的是团队，不是软件） -->
+          <div class="to-detail-block">
+            <div class="to-block-title">📌 岗位职责</div>
+            <div class="to-duty">{{ selectedDuty }}</div>
           </div>
 
           <div class="to-detail-stats">
@@ -90,6 +100,19 @@
             </div>
             <div v-else class="to-block-empty">能力绑定后将在此展示</div>
           </div>
+
+          <!-- 最近产出（产品感: 雇佣的团队看得见成果） -->
+          <div class="to-detail-block">
+            <div class="to-block-title">🏆 最近产出 <span class="to-block-src">AgentOutcome · 近 7 天</span></div>
+            <div v-if="selectedOutcomes.length" class="to-outcomes">
+              <div v-for="o in selectedOutcomes" :key="o.id" class="to-outcome">
+                <span class="to-outcome-type">{{ o.outcomeType }}</span>
+                <span class="to-outcome-title">{{ o.title || '—' }}</span>
+                <span class="to-outcome-time">{{ fmtDate(o.createdAt) }}</span>
+              </div>
+            </div>
+            <div v-else class="to-block-empty">该员工暂无产出记录，执行任务后将如实展示</div>
+          </div>
         </template>
 
         <div v-else class="to-detail-placeholder">
@@ -108,19 +131,35 @@ import MediaEmptyState from '~/components/media/MediaEmptyState.vue'
 const agents = ref<any[]>([])
 const selected = ref<any>(null)
 const schedules = ref<any[]>([])
+const outcomes = ref<any[]>([])
 const { $toast } = useNuxtApp() as any
 
 const roster = [
-  { name: 'Alice', role: '运营总监', avatar: '👩‍💼' },
-  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻' },
-  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨' },
-  { name: 'David', role: '客服互动', avatar: '🧑‍💼' },
-  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬' },
+  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略，指挥团队执行' },
+  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与内容策略建议' },
+  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作并输出成品' },
+  { name: 'David', role: '客服互动', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进' },
+  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察' },
 ]
+
+// 岗位职责：优先真实档案（暂无 desc 字段）→ 标准编制职责兜底
+const selectedDuty = computed(() => {
+  if (!selected.value) return ''
+  const r = roster.find((x: any) => x.role === selected.value.role)
+  return r?.duty || (selected.value.role === '未分配角色' ? '角色待分配，请先完成岗位配置' : `${selected.value.role}：负责新媒体运营线对应环节`) 
+})
 
 const selectedTasks = computed(() => {
   if (!selected.value) return []
   return (schedules.value || []).filter((s: any) => s.agentId === selected.value.employeeId || s.agentId === selected.value.instanceId)
+})
+
+// 最近产出：overview.recentOutcomes 按员工实例过滤（纯前端，无新接口）
+const selectedOutcomes = computed(() => {
+  if (!selected.value) return []
+  return (outcomes.value || [])
+    .filter((o: any) => o.agentInstanceId === selected.value.instanceId)
+    .slice(0, 6)
 })
 
 const selectedCapabilities = computed(() => {
@@ -138,6 +177,7 @@ onMounted(async () => {
     if (data?.code === 0 && data?.data) {
       agents.value = data.data.agents || []
       schedules.value = data.data.today?.scheduleItems || []
+      outcomes.value = data.data.recentOutcomes || []
       if (agents.value.length) selected.value = agents.value[0]
     }
   } catch {
@@ -152,6 +192,10 @@ function taskTypeLabel(t: string) {
 function fmtTime(iso: string) {
   if (!iso) return '—'
   return new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+function fmtDate(iso: string) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
 }
 function stateText(s: string) {
   const map: Record<string, string> = { ACTIVE: 'Working', PAUSED: 'Paused', STOPPED: 'Stopped', EMERGENCY_STOP: '紧急停止', RECOVERING: '恢复中' }
@@ -250,6 +294,18 @@ function stateClass(s: string) {
 .to-list-empty {
   padding: 10px;
 }
+.to-empty-cta {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
+  border-radius: 10px;
+  padding: 9px 16px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px var(--color-intelligence-glow);
+}
+.to-empty-cta:hover { filter: brightness(1.12); }
 .to-roster {
   border-top: 1px solid var(--color-border-primary);
   padding: 14px 18px;
@@ -333,6 +389,14 @@ function stateClass(s: string) {
 .st-paused { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
 .st-recovering { background: var(--color-decision-glow); color: var(--color-decision); }
 .st-stopped { background: var(--color-bg-hover); color: var(--color-text-muted); }
+.to-duty {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
 .to-detail-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -425,6 +489,43 @@ function stateClass(s: string) {
   background: var(--color-decision-glow);
   border-radius: 8px;
   padding: 4px 10px;
+}
+.to-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.to-outcome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+.to-outcome-type {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-decision);
+  background: var(--color-decision-glow);
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+.to-outcome-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.to-outcome-time {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 .to-detail-placeholder {
   display: flex;
