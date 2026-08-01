@@ -215,12 +215,16 @@ function modelDto(m: any) {
     outputPrice: m.outputPrice,
     currency: m.currency,
     priceModel: m.priceModel,
+    pricingUnit: m.pricingUnit || '/1M tokens', // 掌柜 schema：计价单位
+    costScore: m.costScore ?? (cap ? (cap as any).cost : null) ?? null, // 独立成本分
+    verificationSource: m.verificationSource || (m.dataStatus === 'verified' ? '官方公开价格' : '待验证'), // 掌柜 schema：来源类型
     capabilityScore: cap,
     capabilitySource: m.capabilitySource,
     ability: modelAbility(cap),
     valueScore: modelValueScore(m),
     officialDocsUrl: m.officialDocsUrl,
     officialApiUrl: m.officialApiUrl,
+    officialPricingUrl: m.officialPricingUrl || m.dataSource || '', // 三链接之一
     lastVerifiedAt: m.lastVerifiedAt,
     dataSource: m.dataSource,
     verifiedBy: m.verifiedBy,
@@ -258,14 +262,48 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
   })
 
   // ── AI-CENTER-06 公开：排行榜（三榜：综合性价比 / 最强能力·推理 / 最低成本） ──
+  // 掌柜公式（修正版）：性价比 = 能力评分 × 60% + 价格评分 × 40%（币种归一 USD：CNY/7.2，对数归一）
+  const toUSD = (v: number, cur: string) => (cur === 'CNY' ? v / 7.2 : v)
+  const computeAbility = (m: any) => {
+    const c = m.capabilityScore as any
+    if (!c) return null
+    const dims = ['quality', 'speed', 'chinese', 'coding', 'reasoning'].filter((k) => typeof c[k] === 'number')
+    if (!dims.length) return null
+    return dims.reduce((s, k) => s + c[k], 0) / dims.length
+  }
+  const buildPriceScores = (models: any[]) => {
+    const costs = models
+      .filter((m) => m.inputPrice != null && m.outputPrice != null)
+      .map((m) => toUSD(m.inputPrice, m.currency) + toUSD(m.outputPrice, m.currency))
+    const map = new Map<string, number>()
+    if (!costs.length) return map
+    const min = Math.min(...costs)
+    const max = Math.max(...costs)
+    for (const m of models) {
+      if (m.inputPrice == null || m.outputPrice == null) { map.set(m.id, -1); continue }
+      const cost = toUSD(m.inputPrice, m.currency) + toUSD(m.outputPrice, m.currency)
+      const ps = max === min ? 100 : 100 * (1 - (Math.log10(cost) - Math.log10(min)) / (Math.log10(max) - Math.log10(min)))
+      map.set(m.id, Math.round(Math.max(0, Math.min(100, ps))))
+    }
+    return map
+  }
   app.get('/api/ai-provider-directory/leaderboards', async () => {
     const list = await prisma.aiModelDirectory.findMany({
       where: { status: 'active', dataStatus: 'verified', provider: { status: 'active' } },
       include: { provider: true },
     })
-    const ranked = list.map(modelDto).filter((m) => m.valueScore != null)
-    // 综合性价比榜
-    const value = [...ranked].sort((a: any, b: any) => b.valueScore - a.valueScore).slice(0, 10)
+    const priceScores = buildPriceScores(list)
+    // 综合性价比榜（掌柜公式：能力60% + 价格40%）
+    const value = list
+      .map((m) => {
+        const dto = modelDto(m)
+        const ability = computeAbility(m)
+        const ps = priceScores.get(m.id) ?? -1
+        const vs = ability != null && ps >= 0 ? Math.round(ability * 0.6 + ps * 0.4) : null
+        return { ...dto, ability: ability != null ? Math.round(ability * 10) / 10 : null, priceScore: ps >= 0 ? ps : null, valueScore: vs, formula: '能力60% + 价格40%' }
+      })
+      .filter((m: any) => m.valueScore != null)
+      .sort((a: any, b: any) => b.valueScore - a.valueScore).slice(0, 10)
       .map((m: any, i) => ({ rank: i + 1, ...m }))
     // 最强能力榜（推理）：仅语言/Agent 模型，按 reasoning 降序
     const reasoning = list
@@ -362,6 +400,7 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
           registerUrl: m.provider.affiliateEnabled && m.provider.affiliateUrl ? m.provider.affiliateUrl : m.provider.registerUrl,
           registerViaAffiliate: !!(m.provider.affiliateEnabled && m.provider.affiliateUrl),
           affiliateDescription: m.provider.affiliateDescription,
+          officialBalanceApi: m.provider.officialBalanceApi || '', // BYOK 余额查询开关（旧厂商详情页同源）
         },
         priceHistory: history.map((h) => ({ id: h.id, inputPrice: h.inputPrice, outputPrice: h.outputPrice, currency: h.currency, verifiedAt: h.verifiedAt, verifiedBy: h.verifiedBy, dataSource: h.dataSource, note: h.note })),
         siblings: siblings.map(modelDto),
@@ -474,6 +513,9 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         lastVerifiedAt: new Date(),
         verifiedBy,
         dataSource,
+        verificationSource: body?.verificationSource || '官方公开价格', // 掌柜 schema：来源类型
+        officialPricingUrl: body?.officialPricingUrl || exist.officialPricingUrl || dataSource,
+        costScore: body?.costScore ?? exist.costScore ?? (exist.capabilityScore as any)?.cost ?? null,
       },
     })
     await prisma.aiModelPriceHistory.create({

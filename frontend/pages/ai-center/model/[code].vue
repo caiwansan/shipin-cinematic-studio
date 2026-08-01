@@ -26,6 +26,7 @@
             <div class="aicd-verify">
               <div class="aicd-verify-item">🕐 最后验证：<b>{{ fmtDate(m.lastVerifiedAt) }}</b></div>
               <div class="aicd-verify-item">👤 验证人：<b>{{ m.verifiedBy || '—' }}</b></div>
+              <div class="aicd-verify-item">🏷️ 价格来源：<b>{{ m.verificationSource || '官方公开价格' }}</b></div>
               <div class="aicd-verify-item">📚 数据来源：<b :title="m.dataSource">{{ short(m.dataSource, 46) }}</b></div>
             </div>
           </template>
@@ -77,9 +78,33 @@
       <div class="aicd-actions">
         <a v-if="registerUrl" :href="registerUrl" target="_blank" rel="noopener" class="aicd-btn primary">注册API账号{{ registerViaAffiliate ? '（推广）' : '' }}</a>
         <a v-if="provider?.billingUrl" :href="provider.billingUrl" target="_blank" rel="noopener" class="aicd-btn">充值</a>
+        <a v-if="m.officialPricingUrl" :href="m.officialPricingUrl" target="_blank" rel="noopener" class="aicd-btn">📄 官方定价</a>
         <a v-if="m.officialApiUrl" :href="m.officialApiUrl" target="_blank" rel="noopener" class="aicd-btn">API 文档</a>
+        <button v-if="provider?.officialBalanceApi" class="aicd-btn" @click="balance.open = true">🔍 查询余额</button>
         <a v-if="provider?.officialWebsite" :href="provider.officialWebsite" target="_blank" rel="noopener" class="aicd-btn">官网</a>
       </div>
+
+      <!-- 余额弹窗（BYOK 实时查询即释放，复用统一接口 /api/ai/center/balance-query） -->
+      <Teleport to="body">
+        <div v-if="balance.open" class="aicd-mask" @click.self="balance.open = false">
+          <div class="aicd-modal">
+            <div class="aicd-modal-head">
+              <b>{{ m.name }} · 余额查询</b>
+              <button class="aicd-modal-x" @click="balance.open = false">✕</button>
+            </div>
+            <p class="aicd-modal-sub">BYOK：Key 实时请求官方接口，展示后立即释放，绝不落库。</p>
+            <input v-model="balance.apiKey" class="aicd-input" type="password" placeholder="sk-…" @keyup.enter="queryBalance" />
+            <div v-if="balance.error" class="aicd-err">{{ balance.error }}</div>
+            <div v-if="balance.result" class="aicd-ok">
+              <div class="aicd-ok-big">{{ balance.result.currency === 'CNY' ? '¥' : '$' }}{{ balance.result.balance ?? '—' }}</div>
+              <div class="aicd-ok-note">{{ balance.result.note || '官方实时余额' }}</div>
+            </div>
+            <button class="aicd-btn primary block" :disabled="balance.loading" @click="queryBalance">
+              {{ balance.loading ? '查询中…' : '查询余额' }}
+            </button>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- 价格历史 -->
       <div class="aicd-card" v-if="m.priceHistory?.length">
@@ -184,6 +209,23 @@ const scenes = computed(() => {
 
 const registerUrl = computed(() => m.value?.registerUrl || provider.value?.registerUrl || '')
 const registerViaAffiliate = computed(() => m.value?.registerViaAffiliate || false)
+
+// BYOK 余额查询（实时查询即释放，Key 不落库）
+const balance = reactive({ open: false, apiKey: '', loading: false, error: '', result: null as any })
+async function queryBalance() {
+  if (!balance.apiKey.trim()) { balance.error = '请输入 API Key'; return }
+  balance.loading = true; balance.error = ''; balance.result = null
+  try {
+    const r = await fetch('/api/ai/center/balance-query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: m.value?.providerCode || provider.value?.code, apiKey: balance.apiKey.trim() }),
+    }).then((r) => r.json())
+    if (r.code === 0) balance.result = r.data
+    else balance.error = r.error || '查询失败'
+  } catch { balance.error = '网络错误' }
+  finally { balance.loading = false }
+}
 
 function typeLabel(types: string[]) {
   const map: Record<string, string> = { language: '语言', image: '图片', video: '视频', audio: '语音', multimodal: '多模态', agent: 'Agent' }

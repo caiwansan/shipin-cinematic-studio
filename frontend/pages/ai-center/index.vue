@@ -27,7 +27,7 @@
     <section class="aic-sec" id="boards">
       <div class="aic-sec-title">
         <h2>今日 AI 排名</h2>
-        <span class="aic-sec-note">基于已验证价格与公开评测能力分 · {{ verifiedLabel }}</span>
+        <span class="aic-sec-note">基于已验证价格与公开评测能力分 · 性价比 = 能力 60% + 价格 40%（币种归一 USD） · {{ verifiedLabel }}</span>
       </div>
       <div class="aic-boards">
         <!-- 综合性价比 -->
@@ -159,8 +159,9 @@
             </template>
             <div v-else class="aic-mcard-na">价格待验证（订阅制/按量）</div>
           </div>
+          <div class="aic-mcard-verify">📚 {{ m.verificationSource || (m.dataStatus === 'verified' ? '官方公开价格' : '价格待验证') }}<template v-if="m.lastVerifiedAt"> · {{ fmtYm(m.lastVerifiedAt) }}</template></div>
           <div class="aic-mcard-foot">
-            <span class="aic-mcard-value">性价比 <b>{{ m.valueScore ?? '—' }}</b></span>
+            <span class="aic-mcard-value">性价比 <b>{{ valueScoreOf(m) ?? '—' }}</b></span>
             <NuxtLink :to="'/ai-center/model/' + m.code" class="aic-mcard-detail">详情 →</NuxtLink>
           </div>
         </div>
@@ -279,6 +280,41 @@ function typeCount(key: string) {
   return models.value.filter((m) => (m.modelTypes || []).includes(key)).length
 }
 
+// ── 掌柜公式（修正版）：性价比 = 能力评分×60% + 价格评分×40%，币种归一 USD（CNY/7.2），对数归一 ──
+const USD_RATE = 7.2
+function toUSD(v: number, cur?: string) { return (cur || 'USD') === 'CNY' ? v / USD_RATE : v }
+function abilityOf(m: any): number | null {
+  const c = m.capabilityScore || {}
+  const dims = ['quality', 'speed', 'chinese', 'coding', 'reasoning'].filter((k) => typeof c[k] === 'number')
+  if (!dims.length) return null
+  return dims.reduce((s, k) => s + c[k], 0) / dims.length
+}
+const priceScoreMap = computed(() => {
+  const map = new Map<string, number>()
+  const list = models.value.filter((m) => m.inputPrice != null && m.outputPrice != null)
+  const costs = list.map((m) => toUSD(m.inputPrice, m.currency) + toUSD(m.outputPrice, m.currency))
+  if (!costs.length) return map
+  const min = Math.min(...costs), max = Math.max(...costs)
+  for (const m of list) {
+    const cost = toUSD(m.inputPrice, m.currency) + toUSD(m.outputPrice, m.currency)
+    const ps = max === min ? 100 : 100 * (1 - (Math.log10(cost) - Math.log10(min)) / (Math.log10(max) - Math.log10(min)))
+    map.set(m.code, Math.round(Math.max(0, Math.min(100, ps))))
+  }
+  return map
+})
+function valueScoreOf(m: any): number | null {
+  const ability = abilityOf(m)
+  const ps = priceScoreMap.value.get(m.code)
+  if (ability == null || ps == null) return null
+  return Math.round(ability * 0.6 + ps * 0.4)
+}
+function fmtYm(d: string): string {
+  if (!d) return ''
+  const dt = new Date(d)
+  if (isNaN(dt.getTime())) return d.slice(0, 7)
+  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0')
+}
+
 const addCandidates = computed(() => {
   const inCmp = new Set(compare.value.map((m) => m.code))
   return models.value.filter((m) => !inCmp.has(m.code) && m.dataStatus === 'verified' && (m.modelTypes || []).includes('language'))
@@ -317,7 +353,7 @@ const compareRows = computed(() => {
   rows.push({ key: 'g2', label: '能力', group: true })
   for (const d of CAP_DIMS) rows.push(scoreRow(d.k, d.label))
   rows.push({ key: 'ctx', label: '上下文', kind: 'ctx', models: compare.value.map((m) => ({ code: m.code, value: num(m.contextWindow) })) })
-  rows.push({ key: 'value', label: '性价比', kind: 'score', models: compare.value.map((m) => ({ code: m.code, value: num(m.valueScore), currency: m.currency })) })
+  rows.push({ key: 'value', label: '性价比（能力60%+价格40%）', kind: 'score', models: compare.value.map((m) => ({ code: m.code, value: valueScoreOf(m), currency: m.currency })) })
   return rows
 })
 

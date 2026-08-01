@@ -9443,6 +9443,10 @@ model AiModelDirectory {
   releaseDate      DateTime?
   officialDocsUrl  String   @default("") @db.VarChar(500)
   officialApiUrl   String   @default("") @db.VarChar(500)
+  officialPricingUrl String @default("") @db.VarChar(500) // 官方定价页（价格可信度三要素之一）
+  pricingUnit      String   @default("/1M tokens") @db.VarChar(30) // 计价单位（掌柜 schema）
+  costScore        Float? // 独立成本评分 0-100（掌柜 schema；与 capabilityScore.cost 同步）
+  verificationSource String @default("") @db.VarChar(200) // 来源类型：官方公开价格 / OpenRouter 聚合（掌柜 schema）
   lastVerifiedAt   DateTime? // 最后验证时间（可信度核心）
   dataSource       String   @default("") @db.VarChar(200) // 数据来源：官方定价页 URL / OpenRouter 聚合
   verifiedBy       String   @default("") @db.VarChar(50) // 验证人

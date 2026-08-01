@@ -116,8 +116,12 @@ const seed = async () => {
       priceModel: m.priceModel || 'token',
       capabilityScore: m.cap,
       capabilitySource: '昆仑镜基于公开评测（LMArena/官方发布）综合',
+      costScore: m.cap?.cost ?? null, // 独立成本分（掌柜 schema，与 capabilityScore.cost 同步）
       officialDocsUrl: m.docs || '',
       officialApiUrl: m.api || '',
+      officialPricingUrl: m.ds || '', // 官方定价页（三链接之一）
+      pricingUnit: '/1M tokens',
+      verificationSource: m.pending ? '待验证' : '官方公开价格', // 掌柜 schema：来源类型
       lastVerifiedAt: m.pending ? null : new Date('2026-08-02T00:00:00+08:00'),
       dataSource: m.ds || '',
       verifiedBy: m.pending ? '' : VERIFIED_BY,

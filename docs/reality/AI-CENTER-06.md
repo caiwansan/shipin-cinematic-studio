@@ -76,3 +76,53 @@ AI模型中心
 ## 路线
 05 厂商级性价比中心 → **06 模型粒度可信数据库**（AIProvider/AIModel 分离 + 真实价格 + 验证留痕 + 专业 Marketplace UI）
 > AI中心 = AI 时代的「显卡性能榜 + 云服务价格中心 + API 管理台」，数据可信、价格可追溯
+
+---
+
+# 修正版对齐补丁（掌柜技术总监级修正，2026-08-02）
+
+## 掌柜修正核心
+> 不要直接大规模重构数据库和页面。先建立 AIModel 数据层，再逐步迁移展示。
+> 禁止一次性删除 AIProviderDirectory；禁止破坏 API接入/BYOK/余额查询/推荐评分。
+
+## 执行方式：增量对齐（零删除、零破坏）
+基础架构（Provider/Model 分离）已在 378ceab0 落地。本轮按掌柜修正版 schema 做**对齐补丁**：
+
+### 数据层增量（ALTER TABLE 只加列，不删任何现有结构）
+| 新列 | 用途 | 回填 |
+|------|------|------|
+| officialPricingUrl | 官方定价页（三链接之一） | ← dataSource（40/40） |
+| pricingUnit | 计价单位（/1M tokens） | 默认值（40/40） |
+| costScore | 独立成本评分 0-100 | ← capabilityScore.cost（40/40） |
+| verificationSource | 价格来源类型（官方公开价格/待验证） | ← dataStatus 推导（40/40） |
+
+> 运维注意：prisma migrate shadow DB 历史链断裂（20260531_add_event_ledger_fields 在 shadow 上失败）+ ai_provider.id 类型漂移 → 改用原生 ALTER 加列，schema.prisma 与 DB 已一致。后续迁移需先修复 shadow DB 历史链（非本 Sprint 范围）。
+
+### 性价比公式（掌柜指定：能力60% + 价格40%）
+```
+valueScore = round(能力均分 × 0.6 + 价格评分 × 0.4)
+- 能力均分 = quality/speed/chinese/coding/reasoning 均值（排除 cost 防双重计费）
+- 价格评分 = 对数归一化（输入+输出合计；CNY/7.2 折算 USD；全库 min→max 映射 100→0）
+- 验证：Qwen3.7 Flash 93 = 87.8×0.6 + 100×0.4 ✅
+```
+- 后端 leaderboards 公式化（返回 formula 标注 + ability/priceScore 明细）
+- 前端卡片/对比表/详情同公式（前端独立实现，与后端一致）
+
+### 前端对齐（掌柜单卡示例逐项落实）
+- 市场卡片补「📚 官方公开价格 · 2026-08」更新时间行
+- 排行榜标题标注「性价比 = 能力 60% + 价格 40%（币种归一 USD）」
+- 详情页 8 项补齐：模型介绍/雷达图/价格/官方来源（三链接+来源类型）/适用场景/API注册/充值/**余额查询（BYOK 弹窗，复用 /api/ai/center/balance-query，Key 不落库）**
+- 后台模型管理：编辑表单加官方定价/API/文档三链接 + 定价单位 + 成本评分 + 验证来源类型
+
+### 回归验收（不破坏清单全过）
+| 项 | 结果 |
+|----|------|
+| balance-query 接口（BYOK 余额查询） | ✅ 活着；假 key → 官方 401 → 前端错误提示（真实链路） |
+| recommend 接口（推荐评分） | ✅ 活着 |
+| 旧厂商级详情页 /ai-center/deepseek（含余额查询） | ✅ 仍可访问 |
+| AIProviderDirectory 表 | ✅ 未删未动 |
+| BYOK / Runtime | ✅ 零改动 |
+| 40 模型价格验证记录 | ✅ 快照留痕完整 |
+
+截图：docs/reality/AI-CENTER-06-fix-{home,detail,balance}.png
+提交：`（见 git log）`

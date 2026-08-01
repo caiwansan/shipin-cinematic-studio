@@ -55,6 +55,7 @@
             <th class="px-4 py-3">厂商</th>
             <th class="px-4 py-3">类型</th>
             <th class="px-4 py-3">价格（输入/输出）</th>
+            <th class="px-4 py-3">单位</th>
             <th class="px-4 py-3">上下文</th>
             <th class="px-4 py-3">性价比</th>
             <th class="px-4 py-3">数据状态</th>
@@ -76,11 +77,12 @@
             <td class="px-4 py-3">
               <template v-if="m.inputPrice != null">
                 <span class="text-emerald-400 font-semibold">{{ fmtPrice(m.inputPrice, m.currency) }} / {{ fmtPrice(m.outputPrice, m.currency) }}</span>
-                <div class="text-[10px] text-gray-600">{{ m.currency }} · /1M tokens</div>
+                <div class="text-[10px] text-gray-600">{{ m.currency }} · {{ m.pricingUnit || '/1M tokens' }}</div>
               </template>
               <span v-else class="text-amber-400">待验证</span>
             </td>
             <td class="px-4 py-3 text-gray-400">{{ m.contextWindow ? fmtCtx(m.contextWindow) : '—' }}</td>
+            <td class="px-4 py-3 text-gray-500">{{ m.pricingUnit || '/1M tokens' }}</td>
             <td class="px-4 py-3 text-cyan-400 font-semibold">{{ m.valueScore ?? '—' }}</td>
             <td class="px-4 py-3">
               <span v-if="m.dataStatus === 'verified'" class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full px-2 py-0.5">✅ 已验证</span>
@@ -168,8 +170,36 @@
               <input v-model.number="form.capabilityScore[d.k]" type="number" min="0" max="100" class="w-full bg-[#0D1428] border border-[#1A2240] rounded-lg px-2 py-2 text-xs text-white outline-none" />
             </div>
           </div>
+          <div class="col-span-2 grid grid-cols-3 gap-2">
+            <div class="col-span-1">
+              <label class="text-[11px] text-gray-500 block mb-1">官方定价页 URL</label>
+              <input v-model="form.officialPricingUrl" class="w-full bg-[#0D1428] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none" placeholder="https://…/pricing" />
+            </div>
+            <div class="col-span-1">
+              <label class="text-[11px] text-gray-500 block mb-1">官方 API URL</label>
+              <input v-model="form.officialApiUrl" class="w-full bg-[#0D1428] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none" placeholder="https://api.…" />
+            </div>
+            <div class="col-span-1">
+              <label class="text-[11px] text-gray-500 block mb-1">官方文档 URL</label>
+              <input v-model="form.officialDocsUrl" class="w-full bg-[#0D1428] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none" placeholder="https://docs.…" />
+            </div>
+          </div>
+          <div class="col-span-2 grid grid-cols-3 gap-2">
+            <div class="col-span-1">
+              <label class="text-[11px] text-gray-500 block mb-1">定价单位</label>
+              <input v-model="form.pricingUnit" class="w-full bg-[#0D1428] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none" placeholder="/1M tokens" />
+            </div>
+            <div class="col-span-1">
+              <label class="text-[11px] text-gray-500 block mb-1">成本评分（0-100）</label>
+              <input v-model.number="form.costScore" type="number" min="0" max="100" class="w-full bg-[#0D1428] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none" />
+            </div>
+            <div class="col-span-1">
+              <label class="text-[11px] text-gray-500 block mb-1">验证来源类型</label>
+              <input v-model="form.verificationSource" class="w-full bg-[#0D1428] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none" placeholder="官方公开价格" />
+            </div>
+          </div>
           <div class="col-span-2">
-            <label class="text-[11px] text-gray-500 block mb-1">数据来源（可追溯）</label>
+            <label class="text-[11px] text-gray-500 block mb-1">数据来源 URL（历史兼容，可追溯）</label>
             <input v-model="form.dataSource" class="w-full bg-[#0D1428] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none" placeholder="官方定价页 URL / OpenRouter 聚合" />
           </div>
           <div class="col-span-2">
@@ -209,6 +239,8 @@ const form = reactive<any>({
   code: '', name: '', providerCode: 'deepseek', modelVersion: '', modelTypes: ['language'],
   contextWindow: null, maxOutput: null, inputPrice: null, inputCacheHit: null, outputPrice: null,
   currency: 'USD', capabilityScore: { quality: 80, speed: 85, cost: 80, chinese: 85, coding: 80, reasoning: 80 },
+  costScore: null, pricingUnit: '/1M tokens', verificationSource: '',
+  officialPricingUrl: '', officialDocsUrl: '', officialApiUrl: '',
   dataSource: '', description: '',
 })
 
@@ -250,7 +282,7 @@ onMounted(load)
 
 function openNew() {
   editing.value = null
-  Object.assign(form, { code: '', name: '', providerCode: providers.value[0]?.code || 'deepseek', modelVersion: '', modelTypes: ['language'], contextWindow: null, maxOutput: null, inputPrice: null, inputCacheHit: null, outputPrice: null, currency: 'USD', capabilityScore: { quality: 80, speed: 85, cost: 80, chinese: 85, coding: 80, reasoning: 80 }, dataSource: '', description: '' })
+  Object.assign(form, { code: '', name: '', providerCode: providers.value[0]?.code || 'deepseek', modelVersion: '', modelTypes: ['language'], contextWindow: null, maxOutput: null, inputPrice: null, inputCacheHit: null, outputPrice: null, currency: 'USD', capabilityScore: { quality: 80, speed: 85, cost: 80, chinese: 85, coding: 80, reasoning: 80 }, costScore: null, pricingUnit: '/1M tokens', verificationSource: '', officialPricingUrl: '', officialDocsUrl: '', officialApiUrl: '', dataSource: '', description: '' })
   dialog.value = true
 }
 function openEdit(m: any) {
@@ -259,7 +291,10 @@ function openEdit(m: any) {
     code: m.code, name: m.name, providerCode: m.providerCode, modelVersion: m.modelVersion || '',
     modelTypes: m.modelTypes || [], contextWindow: m.contextWindow, maxOutput: m.maxOutput,
     inputPrice: m.inputPrice, inputCacheHit: m.inputCacheHit, outputPrice: m.outputPrice, currency: m.currency || 'USD',
-    capabilityScore: { ...(m.capabilityScore || {}) }, dataSource: m.dataSource || '', description: m.description || '',
+    capabilityScore: { ...(m.capabilityScore || {}) }, costScore: m.costScore ?? null,
+    pricingUnit: m.pricingUnit || '/1M tokens', verificationSource: m.verificationSource || '',
+    officialPricingUrl: m.officialPricingUrl || '', officialDocsUrl: m.officialDocsUrl || '', officialApiUrl: m.officialApiUrl || '',
+    dataSource: m.dataSource || '', description: m.description || '',
   })
   dialog.value = true
 }
