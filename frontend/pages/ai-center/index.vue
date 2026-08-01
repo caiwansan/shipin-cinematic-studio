@@ -4,6 +4,7 @@
     <header class="aic-head">
       <div class="aic-head-inner">
         <div class="aic-brand">
+          <NuxtLink to="/" class="aic-home-btn">← 返回首页</NuxtLink>
           <div class="aic-brand-icon">🧭</div>
           <div>
             <div class="aic-brand-title">AI 模型中心</div>
@@ -27,7 +28,7 @@
     <section class="aic-sec" id="boards">
       <div class="aic-sec-title">
         <h2>今日 AI 排名</h2>
-        <span class="aic-sec-note">基于已验证价格与公开评测能力分 · 性价比 = 能力 60% + 价格 40%（币种归一 USD） · {{ verifiedLabel }}</span>
+        <span class="aic-sec-note">基于已验证价格与公开评测能力分 · 性价比 = 能力 60% + 价格 40%（统一人民币计价，USD×7.2 折算） · {{ verifiedLabel }}</span>
       </div>
       <div class="aic-boards">
         <!-- 综合性价比 -->
@@ -141,6 +142,7 @@
             <span v-if="m.contextWindow" class="aic-chip">🪟 {{ fmtCtx(m.contextWindow) }}</span>
             <span v-if="m.maxOutput" class="aic-chip">↗ {{ fmtCtx(m.maxOutput) }} 输出</span>
             <span v-if="m.currency === 'CNY'" class="aic-chip">🇨🇳 人民币计价</span>
+            <span v-else class="aic-chip">💱 人民币折算</span>
           </div>
           <div class="aic-mcard-caps">
             <div v-for="d in capDims(m)" :key="d.k" class="aic-cap">
@@ -345,7 +347,7 @@ const compareRows = computed(() => {
   })
   const priceRow = (key: string, label: string) => {
     const best = priceBest(key)
-    return { key, label, unit: '/1M tokens', kind: 'price', best, models: compare.value.map((m) => ({ code: m.code, value: num(m[key]), currency: m.currency })) }
+    return { key, label, unit: '¥/1M tokens', kind: 'price', best, models: compare.value.map((m) => ({ code: m.code, value: num(m[key]), currency: m.currency })) }
   }
   rows.push({ key: 'g1', label: '价格', group: true })
   rows.push(priceRow('inputPrice', '输入'))
@@ -387,12 +389,12 @@ function typeLabel(types: string[]) {
 }
 function fmtPrice(v: number | null | undefined, cur?: string): string {
   if (v == null) return '—'
+  // 掌柜指令：计价单位统一人民币（数据权威保留 USD，展示层按 7.2 折算）
   const c = cur || 'USD'
-  const s = c === 'CNY' ? '¥' : '$'
-  const raw = v >= 10 ? v.toFixed(0) : v >= 1 ? v.toFixed(2) : v >= 0.1 ? v.toFixed(2) : v.toFixed(3)
-  // 只去小数尾零，整数不动（¥20 不能变 ¥2）
-  const out = raw.includes('.') ? raw.replace(/0+$/, '').replace(/\.$/, '') : raw
-  return s + out
+  const cny = c === 'CNY' ? v : v * USD_RATE
+  // 人民币习惯：统一 2 位小数，去尾零（¥36.00 → ¥36，¥0.22 保持）
+  const out = cny.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')
+  return '¥' + out
 }
 function fmtCtx(v: number): string {
   if (!v) return '—'
@@ -425,6 +427,11 @@ function brandBg(name: string): string {
 .light .aic-head { background: rgba(247,248,251,.9); border-bottom-color: rgba(0,0,0,.08); }
 .aic-head-inner { max-width: 1280px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .aic-brand { display: flex; align-items: center; gap: 10px; }
+.aic-brand { display: flex; align-items: center; gap: 10px; }
+.aic-home-btn { flex-shrink: 0; font-size: 12px; color: #93a2c0; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 6px 10px; text-decoration: none; transition: all .2s; }
+.aic-home-btn:hover { color: #fff; border-color: #3b82f6; background: rgba(59,130,246,.15); }
+.light .aic-home-btn { color: #5a6478; border-color: #d3d9e4; }
+.light .aic-home-btn:hover { color: #1d4ed8; border-color: #3b82f6; background: rgba(59,130,246,.08); }
 .aic-brand-icon { font-size: 24px; }
 .aic-brand-title { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
 .aic-brand-sub { font-size: 11px; color: #7a86a3; margin-top: 1px; }

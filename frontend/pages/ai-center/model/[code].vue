@@ -34,7 +34,7 @@
           <div v-if="m.contextWindow || m.maxOutput" class="aicd-spec">
             <div v-if="m.contextWindow" class="aicd-spec-item"><span>上下文</span><b>{{ fmtCtx(m.contextWindow) }}</b></div>
             <div v-if="m.maxOutput" class="aicd-spec-item"><span>最大输出</span><b>{{ fmtCtx(m.maxOutput) }}</b></div>
-            <div class="aicd-spec-item"><span>计价</span><b>{{ m.currency }} / token</b></div>
+            <div class="aicd-spec-item"><span>计价</span><b>¥ 人民币 / 1M tokens</b></div>
           </div>
         </div>
 
@@ -233,11 +233,12 @@ function typeLabel(types: string[]) {
 }
 function fmtPrice(v: number | null | undefined, cur?: string): string {
   if (v == null) return '—'
+  // 掌柜指令：计价单位统一人民币（数据权威保留 USD，展示层按 7.2 折算）
   const c = cur || 'USD'
-  const s = c === 'CNY' ? '¥' : '$'
-  const raw = v >= 10 ? v.toFixed(0) : v >= 1 ? v.toFixed(2) : v >= 0.1 ? v.toFixed(2) : v.toFixed(3)
-  const out = raw.includes('.') ? raw.replace(/0+$/, '').replace(/\.$/, '') : raw
-  return s + out
+  const cny = c === 'CNY' ? v : v * 7.2
+  // 人民币习惯：统一 2 位小数，去尾零
+  const out = cny.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')
+  return '¥' + out
 }
 function fmtCtx(v: number): string {
   if (!v) return '—'
