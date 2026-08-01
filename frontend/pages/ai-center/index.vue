@@ -162,6 +162,7 @@
             <div v-else class="aic-mcard-na">价格待验证（订阅制/按量）</div>
           </div>
           <div class="aic-mcard-verify">📚 {{ m.verificationSource || (m.dataStatus === 'verified' ? '官方公开价格' : '价格待验证') }}<template v-if="m.lastVerifiedAt"> · {{ fmtYm(m.lastVerifiedAt) }}</template></div>
+          <div v-if="m.effectiveStatus === 'expired'" class="aic-mcard-expired">⚠️ 价格可能过期（{{ m.daysSinceVerified }} 天未验证），请以官方最新价格为准</div>
           <div class="aic-mcard-foot">
             <span class="aic-mcard-value">性价比 <b>{{ valueScoreOf(m) ?? '—' }}</b></span>
             <NuxtLink :to="'/ai-center/model/' + m.code" class="aic-mcard-detail">详情 →</NuxtLink>
@@ -536,6 +537,7 @@ function brandBg(name: string): string {
 .aic-mcard-p b { font-size: 13px; }
 .aic-mcard-cache { font-size: 10px; color: #10b981; }
 .aic-mcard-na { font-size: 11.5px; color: #f59e0b; padding: 4px 0; }
+.aic-mcard-expired { margin-top: 6px; font-size: 10.5px; color: #f97316; background: rgba(249,115,22,.08); border: 1px solid rgba(249,115,22,.25); border-radius: 6px; padding: 4px 8px; }
 .aic-mcard-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; }
 .light .aic-mcard-foot { border-top-color: #eef1f6; }
 .aic-mcard-value { font-size: 11px; color: #7a86a3; }

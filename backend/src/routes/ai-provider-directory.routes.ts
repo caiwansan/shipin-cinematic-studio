@@ -196,6 +196,16 @@ function modelValueScore(m: { capabilityScore: any }): number | null {
 }
 
 /** 模型 → 前台 DTO（含性价比/状态） */
+const VERIFY_TTL_DAYS = 90 // AI-CENTER-07：价格验证有效期（掌柜规则：90天未验证 → expired）
+
+/** AI-CENTER-07：派生数据状态（DB 存真值 verified/pending/deprecated，expired 由验证时间动态派生） */
+function modelEffectiveStatus(m: any): string {
+  if (m.dataStatus === 'deprecated') return 'deprecated'
+  if (m.dataStatus === 'pending' || !m.lastVerifiedAt) return 'pending'
+  const age = Date.now() - new Date(m.lastVerifiedAt).getTime()
+  if (age > VERIFY_TTL_DAYS * 864e5) return 'expired'
+  return 'verified'
+}
 function modelDto(m: any) {
   const cap = m.capabilityScore as Record<string, number> | null
   return {
@@ -229,6 +239,8 @@ function modelDto(m: any) {
     dataSource: m.dataSource,
     verifiedBy: m.verifiedBy,
     dataStatus: m.dataStatus,
+    effectiveStatus: modelEffectiveStatus(m), // AI-CENTER-07：verified / expired / pending / deprecated
+    daysSinceVerified: m.lastVerifiedAt ? Math.floor((Date.now() - new Date(m.lastVerifiedAt).getTime()) / 864e5) : null,
     description: m.description,
     sort: m.sort,
     registerUrl: m.provider?.affiliateEnabled && m.provider?.affiliateUrl ? m.provider.affiliateUrl : (m.provider?.registerUrl || ''),
@@ -242,7 +254,7 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
   // ── AI-CENTER-06 公开：模型列表（?type= 分类 + ?q= 搜索，模型粒度） ──
   app.get('/api/ai-provider-directory/models', async (req) => {
     const { type, q } = req.query as { type?: string; q?: string }
-    const where: any = { status: 'active', provider: { status: 'active' } }
+    const where: any = { status: 'active', provider: { status: 'active' }, dataStatus: { not: 'deprecated' } } // AI-CENTER-07：废弃模型前台隐藏
     if (type && type !== 'all') where.modelTypes = { has: type }
     let list = await prisma.aiModelDirectory.findMany({
       where,
@@ -376,6 +388,7 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
     if (!m || m.status !== 'active' || m.provider.status !== 'active') {
       return reply.status(404).send({ code: 1, error: '模型不存在或已下架' })
     }
+    if (m.dataStatus === 'deprecated') return reply.status(404).send({ code: 1, error: '模型已下架（deprecated）' }) // AI-CENTER-07：废弃模型详情不可访问
     const [history, siblings] = await Promise.all([
       prisma.aiModelPriceHistory.findMany({ where: { modelId: m.id }, orderBy: { verifiedAt: 'desc' }, take: 20 }),
       prisma.aiModelDirectory.findMany({
@@ -495,6 +508,23 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
       },
     })
     return { code: 0, data: updated }
+  })
+
+  // ── AI-CENTER-07 后台：数据状态切换（标记废弃 / 恢复待验证 / 直接置已验证） ──
+  app.patch('/api/admin/ai-model-directory/:id/status', { preHandler: [requireAdmin] }, async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const { dataStatus } = (req.body || {}) as { dataStatus?: string }
+    if (!['verified', 'pending', 'deprecated'].includes(dataStatus || '')) {
+      return reply.code(400).send({ code: 1, error: '非法状态：仅支持 verified / pending / deprecated' })
+    }
+    const exist = await prisma.aiModelDirectory.findUnique({ where: { id: Number(id) } })
+    if (!exist) return reply.code(404).send({ code: 1, error: '模型不存在' })
+    // 诚实规则：废弃模型不可直接置 verified（必须经 pending 重新验证）
+    if (exist.dataStatus === 'deprecated' && dataStatus === 'verified') {
+      return reply.code(400).send({ code: 1, error: '废弃模型需先恢复为待验证，再重新验证' })
+    }
+    await prisma.aiModelDirectory.update({ where: { id: Number(id) }, data: { dataStatus } })
+    return { code: 0, data: { id: Number(id), dataStatus } }
   })
 
   // ── AI-CENTER-06 后台：标记已验证（可信度核心操作：更新三要素 + 写价格快照） ──

@@ -4,6 +4,8 @@
       <!-- 面包屑 -->
       <div class="aicd-crumb"><NuxtLink to="/ai-center">← AI模型中心</NuxtLink><span v-if="provider"> / {{ provider.name }}</span></div>
 
+      <div v-if="m.effectiveStatus === 'expired'" class="aicd-expired-banner">⚠️ 价格可能过期：最后验证于 {{ fmtDate(m.lastVerifiedAt) }}，已 {{ m.daysSinceVerified }} 天未更新。请以官方最新价格为准，或联系运营重新验证。</div>
+
       <div class="aicd-top">
         <div class="aicd-brand" :style="{ background: brandBg(provider?.name || m.name) }">{{ brandChar(provider?.name || m.name) }}</div>
         <div class="aicd-title-wrap">
@@ -268,6 +270,7 @@ function brandBg(name: string): string {
 .aicd.light { background: #f7f8fb; color: #1a2233; }
 .aicd-inner { max-width: 1080px; margin: 0 auto; }
 .aicd-crumb { font-size: 12px; color: #7a86a3; margin-bottom: 18px; }
+.aicd-expired-banner { margin-bottom: 16px; font-size: 12px; color: #f97316; background: rgba(249,115,22,.08); border: 1px solid rgba(249,115,22,.3); border-radius: 8px; padding: 9px 12px; }
 .aicd-crumb a { color: #3b82f6; text-decoration: none; }
 .aicd-top { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; }
 .aicd-brand { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 24px; }

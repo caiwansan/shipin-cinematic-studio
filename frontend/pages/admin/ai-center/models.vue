@@ -2,8 +2,8 @@
   <div class="p-6 max-w-[1400px] mx-auto">
     <div class="flex items-center justify-between mb-5">
       <div>
-        <h1 class="text-lg font-bold text-white">🧭 AI 模型数据库</h1>
-        <p class="text-xs text-gray-500 mt-1">模型粒度运营管理（AI-CENTER-06）· 价格必须可追溯：验证时间 / 验证人 / 数据来源 · 未验证不展示价格</p>
+        <h1 class="text-lg font-bold text-white">🧭 AI 模型运营中心</h1>
+        <p class="text-xs text-gray-500 mt-1">数据质量运营（AI-CENTER-07）· 90 天未验证自动过期 · 价格必须可追溯：验证时间 / 验证人 / 数据来源 · 未验证不展示价格</p>
       </div>
       <div class="flex gap-2">
         <span class="text-[11px] px-3 py-1.5 rounded-lg bg-[#0B1020] border border-[#1A2240] text-gray-400">已验证 {{ stats.verified }} / {{ stats.total }}</span>
@@ -11,23 +11,27 @@
       </div>
     </div>
 
-    <!-- 统计卡 -->
-    <div class="grid grid-cols-4 gap-3 mb-5">
+    <!-- 统计卡（四态：已验证 / 已过期 / 待验证 / 已废弃） -->
+    <div class="grid grid-cols-5 gap-3 mb-5">
       <div class="rounded-xl border border-[#1A2240] bg-[#0B1020] p-4">
         <div class="text-[11px] text-gray-500">模型总数</div>
         <div class="text-2xl font-bold text-white mt-1">{{ stats.total }}</div>
       </div>
-      <div class="rounded-xl border border-[#1A2240] bg-[#0B1020] p-4">
-        <div class="text-[11px] text-gray-500">价格已验证</div>
+      <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+        <div class="text-[11px] text-emerald-400/80">🟢 价格已验证</div>
         <div class="text-2xl font-bold text-emerald-400 mt-1">{{ stats.verified }}</div>
       </div>
-      <div class="rounded-xl border border-[#1A2240] bg-[#0B1020] p-4">
-        <div class="text-[11px] text-gray-500">待验证</div>
+      <div class="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+        <div class="text-[11px] text-orange-400/80">⚠️ 已过期（90天）</div>
+        <div class="text-2xl font-bold text-orange-400 mt-1">{{ stats.expired }}</div>
+      </div>
+      <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+        <div class="text-[11px] text-amber-400/80">🟡 待验证</div>
         <div class="text-2xl font-bold text-amber-400 mt-1">{{ stats.pending }}</div>
       </div>
       <div class="rounded-xl border border-[#1A2240] bg-[#0B1020] p-4">
-        <div class="text-[11px] text-gray-500">覆盖厂商</div>
-        <div class="text-2xl font-bold text-cyan-400 mt-1">{{ stats.providers }}</div>
+        <div class="text-[11px] text-gray-500">⚫ 已废弃 · {{ stats.providers }} 厂商</div>
+        <div class="text-2xl font-bold text-gray-500 mt-1">{{ stats.deprecated }}</div>
       </div>
     </div>
 
@@ -36,8 +40,10 @@
       <input v-model="q" placeholder="搜索模型 / 厂商…" class="w-64 bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-cyan-500" />
       <select v-model="statusFilter" class="bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none">
         <option value="all">全部状态</option>
-        <option value="verified">已验证</option>
-        <option value="pending">待验证</option>
+        <option value="verified">🟢 已验证</option>
+        <option value="expired">⚠️ 已过期</option>
+        <option value="pending">🟡 待验证</option>
+        <option value="deprecated">⚫ 已废弃</option>
       </select>
       <select v-model="typeFilter" class="bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white outline-none">
         <option value="all">全部类型</option>
@@ -65,7 +71,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="m in filtered" :key="m.id" class="border-b border-[#0D1428] hover:bg-[#0D1428]/60">
+          <tr v-for="m in filtered" :key="m.id" class="border-b border-[#0D1428] hover:bg-[#0D1428]/60" :class="{ 'bg-orange-500/5': m.effectiveStatus === 'expired' }">
             <td class="px-4 py-3">
               <div class="font-semibold text-white">{{ m.name }}</div>
               <div class="text-[10px] text-gray-600">{{ m.code }}</div>
@@ -85,14 +91,18 @@
             <td class="px-4 py-3 text-gray-500">{{ m.pricingUnit || '/1M tokens' }}</td>
             <td class="px-4 py-3 text-cyan-400 font-semibold">{{ m.valueScore ?? '—' }}</td>
             <td class="px-4 py-3">
-              <span v-if="m.dataStatus === 'verified'" class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full px-2 py-0.5">✅ 已验证</span>
-              <span v-else class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5">⏳ 待验证</span>
+              <span v-if="m.effectiveStatus === 'verified'" class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full px-2 py-0.5">🟢 已验证</span>
+              <span v-else-if="m.effectiveStatus === 'expired'" class="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full px-2 py-0.5">⚠️ 已过期 {{ m.daysSinceVerified }}天</span>
+              <span v-else-if="m.effectiveStatus === 'deprecated'" class="text-[10px] bg-gray-500/10 text-gray-400 border border-gray-500/20 rounded-full px-2 py-0.5">⚫ 已废弃</span>
+              <span v-else class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5">🟡 待验证</span>
             </td>
             <td class="px-4 py-3 text-gray-400">{{ fmtDate(m.lastVerifiedAt) }}</td>
             <td class="px-4 py-3 text-gray-400">{{ m.verifiedBy || '—' }}</td>
             <td class="px-4 py-3">
               <div class="flex gap-1.5">
-                <button v-if="m.dataStatus !== 'verified'" @click="verify(m)" class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded px-2 py-1 hover:bg-emerald-500/20">标记已验证</button>
+                <button v-if="m.effectiveStatus === 'pending'" @click="verify(m)" class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded px-2 py-1 hover:bg-emerald-500/20">标记已验证</button>
+                <button v-if="m.effectiveStatus === 'deprecated'" @click="setStatus(m, 'pending')" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded px-2 py-1 hover:bg-amber-500/20">恢复待验证</button>
+                <button v-if="m.effectiveStatus !== 'deprecated'" @click="setStatus(m, 'deprecated')" class="text-[10px] bg-gray-500/10 text-gray-400 border border-gray-500/20 rounded px-2 py-1 hover:bg-gray-500/20">标记废弃</button>
                 <button @click="openEdit(m)" class="text-[10px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded px-2 py-1 hover:bg-cyan-500/20">编辑</button>
                 <button @click="del(m)" class="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 rounded px-2 py-1 hover:bg-red-500/20">删除</button>
               </div>
@@ -222,7 +232,7 @@ useHead({ title: 'AI模型数据库 · 后台' })
 
 const authHeaders = (json = false) => {
   const h: Record<string, string> = {}
-  const t = localStorage.getItem('admin_token')
+  const t = localStorage.getItem('auth_token') || localStorage.getItem('admin_token') // AI-CENTER-07：登录链路统一 auth_token（admin_token 历史兼容）
   if (t) h.Authorization = 'Bearer ' + t
   if (json) h['Content-Type'] = 'application/json'
   return h
@@ -255,13 +265,15 @@ const CAP_DIMS = [
 
 const stats = computed(() => ({
   total: list.value.length,
-  verified: list.value.filter((m) => m.dataStatus === 'verified').length,
-  pending: list.value.filter((m) => m.dataStatus !== 'verified').length,
+  verified: list.value.filter((m) => m.effectiveStatus === 'verified').length,
+  expired: list.value.filter((m) => m.effectiveStatus === 'expired').length,
+  pending: list.value.filter((m) => m.effectiveStatus === 'pending').length,
+  deprecated: list.value.filter((m) => m.effectiveStatus === 'deprecated').length,
   providers: new Set(list.value.map((m) => m.providerName)).size,
 }))
 const filtered = computed(() => {
   let l = list.value
-  if (statusFilter.value !== 'all') l = l.filter((m) => (statusFilter.value === 'verified' ? m.dataStatus === 'verified' : m.dataStatus !== 'verified'))
+  if (statusFilter.value !== 'all') l = l.filter((m) => m.effectiveStatus === statusFilter.value)
   if (typeFilter.value !== 'all') l = l.filter((m) => (m.modelTypes || []).includes(typeFilter.value))
   if (q.value.trim()) {
     const kw = q.value.trim().toLowerCase()
@@ -308,6 +320,13 @@ async function save() {
 async function verify(m: any) {
   if (!confirm(`标记「${m.name}」为已验证？将写入价格验证记录`)) return
   const res = await fetch(`/api/admin/ai-model-directory/${m.id}/verify`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ verifiedBy: 'admin', dataSource: m.dataSource || '后台人工验证' }) }).then((r) => r.json())
+  if (res.code === 0) load()
+  else alert(res.error || '操作失败')
+}
+async function setStatus(m: any, dataStatus: string) {
+  const label = dataStatus === 'deprecated' ? '标记为已废弃（前台下架，数据保留）' : '恢复为待验证'
+  if (!confirm(`「${m.name}」${label}？`)) return
+  const res = await fetch(`/api/admin/ai-model-directory/${m.id}/status`, { method: 'PATCH', headers: authHeaders(true), body: JSON.stringify({ dataStatus }) }).then((r) => r.json())
   if (res.code === 0) load()
   else alert(res.error || '操作失败')
 }
