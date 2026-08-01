@@ -249,6 +249,50 @@
               <input v-model="form.affiliateDescription" class="w-full bg-[#0B1020] border border-amber-500/20 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-amber-500" placeholder="推广说明（可选），如：通过推荐链接注册享 10 元额度" />
             </div>
 
+            <!-- AI-CENTER-04B/04C：价格运营 + 标签运营（无算法，后台可调） -->
+            <div class="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs text-cyan-300 font-medium">💴 价格运营（AI-CENTER-04B）</div>
+                  <div class="text-[10px] text-gray-500 mt-0.5">参考价 ¥/百万 tokens；保存时自动更新「价格更新时间」；前台展示提高可信度</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="text-[11px] text-gray-500 block mb-1.5">输入价（¥/百万 tokens）</label>
+                  <input v-model.number="form.pricing.inputPrice" type="number" step="0.1" min="0" class="w-full bg-[#0B1020] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-cyan-500" />
+                </div>
+                <div>
+                  <label class="text-[11px] text-gray-500 block mb-1.5">输出价（¥/百万 tokens）</label>
+                  <input v-model.number="form.pricing.outputPrice" type="number" step="0.1" min="0" class="w-full bg-[#0B1020] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-cyan-500" />
+                </div>
+                <div>
+                  <label class="text-[11px] text-gray-500 block mb-1.5">价格优势分（0-100，性价比=能力×60%+价格×40%）</label>
+                  <input v-model.number="form.costScore" type="number" min="0" max="100" class="w-full bg-[#0B1020] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-cyan-500" />
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="text-[11px] text-gray-500 block mb-1.5">价格更新时间（只读，保存自动刷新）</label>
+                  <input :value="form.pricingUpdatedAt ? new Date(form.pricingUpdatedAt).toISOString().slice(0, 10) : '—'" disabled class="w-full bg-[#0B1020]/60 border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-gray-500 outline-none" />
+                </div>
+                <div>
+                  <label class="text-[11px] text-gray-500 block mb-1.5">运营标签（AI-CENTER-04C，无算法）</label>
+                  <select v-model="form.recommendTag" class="w-full bg-[#0B1020] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="">无</option>
+                    <option value="🔥 新用户推荐">🔥 新用户推荐</option>
+                    <option value="💰 最省钱">💰 最省钱</option>
+                    <option value="🚀 最强推理">🚀 最强推理</option>
+                    <option value="🇨🇳 中文最佳">🇨🇳 中文最佳</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[11px] text-gray-500 block mb-1.5">支持模型（逗号分隔）</label>
+                  <input :value="(form.supportedModels || []).join(', ')" @change="form.supportedModels = ($event.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean)" class="w-full bg-[#0B1020] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-cyan-500" placeholder="DeepSeek-V3, DeepSeek-R1" />
+                </div>
+              </div>
+            </div>
+
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="text-[11px] text-gray-500 block mb-1.5">推荐等级（1-5）</label>
@@ -295,6 +339,11 @@ const tagsText = ref('')
 const form = reactive({
   code: '', name: '', logo: '', description: '', category: 'domestic', country: '',
   capabilityScore: { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 } as Record<string, number>,
+  pricing: { inputPrice: 2, outputPrice: 8, currency: 'CNY' } as Record<string, number | string>,
+  costScore: 50,
+  supportedModels: [] as string[],
+  pricingUpdatedAt: null as string | null,
+  recommendTag: '',
   officialWebsite: '', registerUrl: '', billingUrl: '', documentationUrl: '', loginUrl: '',
   browserEnabled: true, apiEnabled: true, browserMode: 'iframe',
   affiliateUrl: '', affiliateEnabled: false, affiliateDescription: '',
@@ -375,6 +424,11 @@ function openEdit(p: any) {
   editing.value = p
   Object.assign(form, {
     code: p.code, name: p.name, logo: p.logo || '', description: p.description || '', category: p.category || 'domestic',
+    pricing: p.pricingInfo || { inputPrice: 2, outputPrice: 8, currency: 'CNY' },
+    costScore: p.costScore ?? 50,
+    supportedModels: p.supportedModels || [],
+    pricingUpdatedAt: p.pricingUpdatedAt || null,
+    recommendTag: p.recommendTag || '',
     country: p.country || '', officialWebsite: p.officialWebsite || '', registerUrl: p.registerUrl || '',
     billingUrl: p.billingUrl || '', documentationUrl: p.documentationUrl || '', loginUrl: p.loginUrl || '',
     browserEnabled: p.browserEnabled !== false, apiEnabled: p.apiEnabled !== false, browserMode: p.browserMode || 'iframe',
@@ -396,6 +450,8 @@ async function save() {
       ...form,
       tags: tagsText.value.split(/[,，]/).map((s: string) => s.trim()).filter(Boolean),
       affiliateEnabled: !!form.affiliateEnabled,
+      // AI-CENTER-04B：保存即视为价格维护，更新时间自动刷新
+      pricingUpdatedAt: new Date().toISOString(),
     }
     const url = editing.value
       ? `/api/admin/ai-provider-directory/${editing.value.id}`

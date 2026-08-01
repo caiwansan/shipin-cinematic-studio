@@ -9396,6 +9396,8 @@ model AiProviderDirectory {
   costScore            Int    @default(50) // AI-CENTER-03 价格优势分 0-100（运营维护，性价比=能力×60%+价格×40%）
   officialBalanceApi   String @default("") @db.VarChar(500) // AI-CENTER-03 官方余额查询接口完整 URL（空=暂不支持，BYOK 不落库）
   supportedModels      Json? // AI-CENTER-03 支持模型列表 ["DeepSeek-V3", "DeepSeek-R1"]
+  pricingUpdatedAt      DateTime? // AI-CENTER-04B 价格更新时间（可信度：显示「价格更新: 2026-08-01」）
+  recommendTag          String   @default("") @db.VarChar(50) // AI-CENTER-04C 运营标签 🔥新用户推荐/💰最省钱/🚀最强推理/🇨🇳中文最佳（后台可调，无算法）
   affiliateUrl         String   @default("") @db.VarChar(500) // 官方推广注册链接（前台优先）
   affiliateEnabled     Boolean  @default(false)
   affiliateDescription String?  @db.Text // 推广说明（如：通过推荐链接注册享额度）

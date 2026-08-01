@@ -212,6 +212,7 @@
                 <div>
                   <h3 class="font-semibold text-[15px] leading-tight">{{ p.name }}</h3>
                   <div class="flex items-center gap-1.5 mt-1">
+                    <span v-if="p.recommendTag" class="text-[10px] px-1.5 py-0.5 rounded-md bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 text-orange-300">{{ p.recommendTag }}</span>
                     <span class="text-[10px] px-1.5 py-0.5 rounded-md border"
                       :class="p.category === 'domestic' ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-blue-500/10 border-blue-500/20 text-blue-300'">
                       {{ p.category === 'domestic' ? '国产' : '海外' }}
@@ -235,11 +236,12 @@
 
             <p class="text-xs text-gray-400 leading-relaxed mt-4 line-clamp-3 min-h-[48px]">{{ p.description }}</p>
 
-            <!-- AI-CENTER-03 价格信息（参考价） -->
+            <!-- AI-CENTER-03 价格信息（参考价）+ 04B 价格更新时间 -->
             <div v-if="p.pricingInfo?.inputPrice != null" class="flex items-center gap-3 mt-3 text-[11px] text-gray-400">
               <span class="text-cyan-300/90">💴 输入 ¥{{ p.pricingInfo.inputPrice }}</span>
               <span class="text-cyan-300/90">输出 ¥{{ p.pricingInfo.outputPrice }}</span>
-              <span class="text-gray-600">/百万 tokens · 参考价</span>
+              <span class="text-gray-600">/百万 tokens</span>
+              <span v-if="p.pricingUpdatedAt" class="text-gray-600">· 更新 {{ fmtDate(p.pricingUpdatedAt) }}</span>
             </div>
             <div v-if="p.supportedModels?.length" class="flex flex-wrap gap-1.5 mt-2">
               <span v-for="m in p.supportedModels.slice(0, 3)" :key="m" class="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/10 text-gray-400">{{ m }}</span>
@@ -268,10 +270,10 @@
                 class="text-center text-xs font-medium py-2 rounded-xl bg-white/[0.04] border border-white/10 text-gray-300 hover:text-white hover:bg-white/[0.08] transition no-underline">
                 🔑 获取 API Key<span v-if="p.registerViaAffiliate" class="ml-1 text-[9px] text-indigo-300">推广</span>
               </a>
-              <a v-if="p.billingUrl" :href="p.billingUrl" target="_blank" rel="noopener noreferrer"
-                class="text-center text-[11px] py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-gray-300 hover:text-white hover:bg-white/[0.08] transition no-underline">
-                💳 充值入口
-              </a>
+              <button v-if="p.billingUrl" @click="openRecharge(p)"
+                class="text-center text-[11px] py-1.5 rounded-lg bg-gradient-to-r from-amber-600/80 to-orange-600/80 border border-amber-500/30 text-amber-200 hover:from-amber-500 hover:to-orange-500 hover:text-white transition cursor-pointer">
+                💳 官方充值
+              </button>
               <a v-if="p.documentationUrl" :href="p.documentationUrl" target="_blank" rel="noopener noreferrer"
                 class="text-center text-[11px] py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-gray-300 hover:text-white hover:bg-white/[0.08] transition no-underline">
                 📖 接入教程
@@ -451,6 +453,8 @@ interface DirectoryProvider {
   pricingInfo?: { inputPrice?: number; outputPrice?: number; currency?: string } | null
   costScore?: number
   supportedModels?: string[] | null
+  pricingUpdatedAt?: string | null
+  recommendTag?: string
 }
 
 const keyword = ref('')
@@ -617,6 +621,28 @@ function openBrowser(p: DirectoryProvider) {
   browserColors.value = brandColors(p.code)
   browserInitial.value = brandInitial(p.name)
   browserOpen.value = true
+}
+
+/** 官方充值入口：Mini Browser 打开官方充值页（AI-CENTER-04A，不代付；厂商拒内嵌→外链官方窗口） */
+function openRecharge(p: DirectoryProvider) {
+  const target = p.billingUrl
+  if (!target) return
+  if (browserModeOf(p) !== 'iframe') {
+    window.open(target, '_blank', 'noopener,noreferrer')
+    return
+  }
+  browserUrl.value = target
+  browserName.value = p.name + ' · 官方充值'
+  browserColors.value = brandColors(p.code)
+  browserInitial.value = brandInitial(p.name)
+  browserOpen.value = true
+}
+
+function fmtDate(s: string | null | undefined): string {
+  if (!s) return ''
+  const d = new Date(s)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 function goConfigure(p: DirectoryProvider) {

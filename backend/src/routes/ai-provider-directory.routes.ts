@@ -259,6 +259,12 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         browserMode: body.browserMode !== undefined ? sanitizeBrowserMode(body.browserMode) : exist.browserMode,
         apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : exist.apiEnabled,
         capabilityScore: body.capabilityScore !== undefined ? sanitizeCapabilityScore(body.capabilityScore) : exist.capabilityScore,
+        // AI-CENTER-04：价格运营 + 标签运营（运营后台维护，无算法）
+        pricingInfo: body.pricingInfo !== undefined ? body.pricingInfo : exist.pricingInfo,
+        costScore: body.costScore != null ? Number(body.costScore) : exist.costScore,
+        supportedModels: Array.isArray(body.supportedModels) ? body.supportedModels : exist.supportedModels,
+        recommendTag: body.recommendTag !== undefined ? body.recommendTag : exist.recommendTag,
+        pricingUpdatedAt: body.pricingUpdatedAt != null ? new Date(body.pricingUpdatedAt) : exist.pricingUpdatedAt,
         affiliateUrl: body.affiliateUrl ?? exist.affiliateUrl,
         affiliateEnabled: body.affiliateEnabled ?? exist.affiliateEnabled,
         affiliateDescription: body.affiliateDescription ?? exist.affiliateDescription,
