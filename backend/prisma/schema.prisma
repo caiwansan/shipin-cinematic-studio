@@ -8223,6 +8223,29 @@ model AgentOutcome {
 // 一个 AI 员工一条；未配置 → ROI 不展示（待企业配置）
 // ============================================================
 
+// SPRINT-COMMERCE-UNIFICATION-CAREER-01: 个人线 Entitlement（Commerce Authority 统一层）
+// 对称企业线 EnterpriseEntitlement：Subscription(个人) → PersonalEntitlement(权益授予) → Agent Provision
+// 用途：VIP 会员 / AI 员工增值包（career_agent 等）统一权益授予；禁止业务线自建权益表
+model PersonalEntitlement {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid // User.id
+  subscriptionId String   @map("subscription_id") @db.Uuid // Subscription(governance_subscription).id
+  planCode       String   @map("plan_code") @db.VarChar(100) // career_agent | vip_basic | ...
+  productType    String   @default("AI_AGENT") @map("product_type") @db.VarChar(50) // VIP | AI_AGENT | ...
+  capabilityCodes Json   @map("capability_codes") // 授予能力列表（来自套餐 capabilities 目录）
+  status         String   @default("active") // active | expired | revoked
+  effectiveFrom  DateTime @default(now()) @map("effective_from")
+  effectiveUntil DateTime? @map("effective_until")
+  source         String   @default("payment") // payment | admin | gift
+  orderNo        String?  @map("order_no") // 来源订单号（PaymentOrder.orderNo）
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([planCode])
+  @@map("personal_entitlement")
+}
+
 model EnterpriseValueParam {
   id                   String   @id @default(uuid()) @db.Uuid
   organizationId       String   @map("organization_id") @db.Uuid // FK → Organization.id

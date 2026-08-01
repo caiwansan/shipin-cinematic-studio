@@ -120,7 +120,7 @@ export class CareerAgentService {
     if (!tenant) {
       return {
         allowed: false,
-        reason: '需要开通镜心职业助理（¥9.9/月）',
+        reason: '需要开通 AI 职业助理（¥9.9/月）',
       }
     }
 
@@ -131,11 +131,12 @@ export class CareerAgentService {
     if (!plan) {
       return {
         allowed: false,
-        reason: '镜心职业助理套餐未配置',
+        reason: 'AI 职业助理套餐未配置',
       }
     }
 
-    // 检查激活订阅
+    // SPRINT-COMMERCE-UNIFICATION-CAREER-01: Entitlement 权威校验
+    // Subscription（订阅）→ PersonalEntitlement（权益授予）双确认；缺任一即视为未开通
     const subscription = await this.prisma.subscription.findFirst({
       where: {
         tenantId,
@@ -146,7 +147,22 @@ export class CareerAgentService {
     if (!subscription) {
       return {
         allowed: false,
-        reason: '需要开通镜心职业助理（¥9.9/月）',
+        reason: '需要开通 AI 职业助理（¥9.9/月）',
+      }
+    }
+
+    const entitlement = await this.prisma.personalEntitlement.findFirst({
+      where: {
+        userId,
+        subscriptionId: subscription.id,
+        planCode: CareerAgentService.CAREER_AGENT_PLAN_CODE,
+        status: 'active',
+      },
+    })
+    if (!entitlement) {
+      return {
+        allowed: false,
+        reason: '订阅存在但权益未授予，请联系客服（或重新购买）',
       }
     }
 

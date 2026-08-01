@@ -84,7 +84,7 @@
               <span class="mirror-price-amount">¥9.9</span>
               <span class="mirror-price-cycle">/月</span>
             </div>
-            <button class="mirror-purchase-btn" @click="openPurchaseModal">立即开通</button>
+            <button class="mirror-purchase-btn" @click="openPurchaseModal">立即开通 AI 职业助理</button>
           </div>
 
           <!-- 已订阅未创建 Agent：显示创建按钮 -->
@@ -143,7 +143,7 @@
           <div v-if="showPurchaseModal" class="purchase-modal-mask" @click.self="closePurchaseModal">
             <div class="purchase-modal">
               <div class="purchase-modal-header">
-                <span class="purchase-modal-title">🪞 开通镜心职业助理</span>
+                <span class="purchase-modal-title">🪞 立即开通 AI 职业助理</span>
                 <button class="purchase-modal-close" @click="closePurchaseModal">✕</button>
               </div>
 
@@ -156,7 +156,7 @@
                   <span class="purchase-price-cycle">/月</span>
                 </div>
                 <div class="purchase-plan-benefits">
-                  <span>✓ AI职业规划</span><span>✓ 简历优化</span><span>✓ 模拟面试</span><span>✓ 职业路线分析</span><span>✓ AI求职顾问</span>
+                  <span v-for="(b, bi) in productBenefits" :key="bi">✓ {{ b }}</span>
                 </div>
               </div>
 
@@ -910,12 +910,52 @@ async function handleAuthorizeJobWatch() {
   }
 }
 // SPRINT-CAREER-REALITY-01: 镜心购买全流程（Commerce Authority 复用，不新增套餐系统）
+// SPRINT-COMMERCE-UNIFICATION-CAREER-01: 商品/权益来自统一 Product 目录（/api/payment/products/:code），禁硬编码
 // 弹窗状态: showPurchaseModal / purchaseStep 逻辑
 const showPurchaseModal = ref(false)
 const purchaseAmount = ref(9.9)
+const productBenefits = ref<string[]>(['AI 职业规划', '简历优化', '模拟面试', '职业路线分析', 'AI 求职顾问'])
 const wechatQrDataUrl = ref('')
 const polling = ref(false)
 let purchasePollTimer: ReturnType<typeof setInterval> | null = null
+
+// 权益能力码 → 中文展示名（Commerce Authority 目录映射）
+const CAPABILITY_LABELS: Record<string, string> = {
+  CAREER_AGENT_PROVISION: 'AI 职业助理',
+  PROFILE_BUILD: '职业画像',
+  RESUME_UPLOAD: '简历上传',
+  RESUME_MANAGE: '简历管理',
+  JOB_APPLY: '岗位投递',
+  JOB_VIEW: '岗位浏览',
+  JOB_SEARCH: '岗位搜索',
+  AI_RESUME_OPTIMIZE: '简历优化',
+  AI_RESUME_REWRITE: '简历改写',
+  AI_CAREER_COACH: 'AI 职业规划',
+  AI_INTERVIEW_PRACTICE: '模拟面试',
+  AI_JOB_RECOMMEND: 'AI 求职顾问',
+  AI_SALARY_ANALYSIS: '薪酬分析',
+  AI_OFFER_ANALYSIS: 'Offer 分析',
+}
+
+// 从统一 Product 目录加载商品信息（金额 + 权益列表），失败 fallback 到默认值
+async function loadProductInfo() {
+  try {
+    const res = await fetch('/api/payment/products/career_agent', {
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    })
+    const payload = await res.json()
+    const product = payload?.data || payload
+    if (product?.price) purchaseAmount.value = Number(product.price)
+    if (Array.isArray(product?.capabilities) && product.capabilities.length > 0) {
+      productBenefits.value = product.capabilities
+        .map((c: string) => CAPABILITY_LABELS[c] || c)
+        .filter((v: string, i: number, arr: string[]) => v && arr.indexOf(v) === i)
+        .slice(0, 6)
+    }
+  } catch {
+    // 网络失败保持默认展示
+  }
+}
 
 // 打开开通弹窗
 function openPurchaseModal() {
@@ -929,6 +969,7 @@ function openPurchaseModal() {
   polling.value = false
   stopPurchasePolling()
   showPurchaseModal.value = true
+  loadProductInfo()
 }
 
 function closePurchaseModal() {
@@ -943,7 +984,7 @@ async function confirmPurchase() {
   try {
     const { getToken } = await import('~/utils/token-cache')
     const token = getToken()
-    const res = await fetch('/api/payment/career/checkout', {
+    const res = await fetch('/api/payment/checkout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
