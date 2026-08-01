@@ -13,6 +13,7 @@ import type {
   PublishResult,
   PlatformInteraction,
   ChannelHealth,
+  ChannelMetrics,
   EnterpriseChannelAdapter,
 } from '../../enterprise/channel/channel.adapter.js'
 import { ContentStatus } from '../../enterprise/channel/channel.adapter.js'
@@ -26,6 +27,18 @@ export class ChannelService {
   registerAdapter(adapter: EnterpriseChannelAdapter) {
     console.log(`[ChannelService] 注册渠道: ${adapter.platform}`)
     this.adapters.set(adapter.platform, adapter)
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — AdapterRegistry 渠道解析
+   * channelType（如 douyin）→ 对应 EnterpriseChannelAdapter
+   */
+  resolveAdapter(platform: string): EnterpriseChannelAdapter {
+    const adapter = this.adapters.get(platform)
+    if (!adapter) {
+      throw new Error(`未注册渠道适配器: ${platform}（请在 index.ts 注册 EnterpriseChannelAdapter 实现）`)
+    }
+    return adapter
   }
 
   /**
@@ -74,6 +87,78 @@ export class ChannelService {
     const enc = (account.credentialEncrypted as any)?.payload
     if (!enc) throw new Error('Channel credential is empty')
     return JSON.parse(decryptKey(enc))
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.1.4 — 凭证续期回写（仅 Runtime 适配器内部调用）
+   * adapter 不落库：refreshCredential 取到新 cookie 后经此方法加密写回 credentialEncrypted
+   */
+  async updateCredential(accountId: string, credential: Record<string, string>): Promise<void> {
+    const encryptedCred = encryptKey(JSON.stringify(credential))
+    await prisma.enterpriseChannelAccount.update({
+      where: { id: accountId },
+      data: {
+        credentialEncrypted: { cipher: 'aes-256-gcm', payload: encryptedCred } as any,
+        updatedAt: new Date(),
+      },
+    })
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 编排：连接渠道
+   * 企业渠道账号 → resolveAdapter(channelType) → adapter.connect（浏览器自动化登录）
+   */
+  async connectChannel(accountId: string) {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    const adapter = this.resolveAdapter(account.channelType)
+    const result = await adapter.connect(account.id)
+    if (result.status === 'connected') {
+      await prisma.enterpriseChannelAccount.update({
+        where: { id: account.id },
+        data: { connectionStatus: 'connected', connectedAt: new Date() },
+      })
+    }
+    return result
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 编排：读取真实指标
+   * 企业渠道账号 → resolveAdapter → adapter.fetchMetrics（粉丝/作品/获赞，禁止 mock）
+   */
+  async fetchMetrics(accountId: string): Promise<ChannelMetrics> {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    const adapter = this.resolveAdapter(account.channelType)
+    return adapter.fetchMetrics(account.id)
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 编排：凭证续期
+   * adapter.refreshCredential → updateCredential（AES 回写）
+   */
+  async refreshChannelCredential(accountId: string) {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    const adapter = this.resolveAdapter(account.channelType)
+    const result = await adapter.refreshCredential(account.id)
+    if (result.ok) {
+      await prisma.enterpriseChannelAccount.update({
+        where: { id: account.id },
+        data: { connectionStatus: 'connected', connectedAt: new Date() },
+      })
+    }
+    return result
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 编排：健康检查
+   */
+  async getChannelHealth(accountId: string): Promise<ChannelHealth> {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    const adapter = this.resolveAdapter(account.channelType)
+    return adapter.healthCheck()
   }
 
   /**

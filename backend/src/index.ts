@@ -470,12 +470,21 @@ await app.register(projectV2Routes)
   // 注册渠道适配器
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')
+  const { DouyinBrowserAdapter } = await import('./enterprise/channel/adapters/douyin-browser.adapter.js')
   // P4.2.5.2: WeCom 不再使用 Mock（CTO: No Mock in Production）
   // 其他渠道继续使用 Mock（开发测试用）
   channelService.registerAdapter(new VideoAccountAdapter())
   channelService.registerAdapter(new WeiboAdapter())
   channelService.registerAdapter(new BilibiliAdapter())
   channelService.registerAdapter(new QQAdapter())
+  // SPRINT-MEDIA-CHANNEL-01 Task03.1 — 抖音真实 Runtime（浏览器自动化）
+  // Credential 流程：adapter 不保存凭证，经注入回调走 EnterpriseChannelService.getCredential/updateCredential（AES）
+  channelService.registerAdapter(new DouyinBrowserAdapter({
+    getCredential: (accountId) => channelService.getCredential(accountId),
+    persistCredential: (accountId, credential) => channelService.updateCredential(accountId, credential),
+  }))
+  // SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 链路（真实执行，非模拟授权）
+  await app.register((await import('./routes/enterprise-channel-runtime.js')).enterpriseChannelRuntimeRoutes)
   // P1.7 — V3 Schema 三层审计系统（只读观测路由）
   await app.register(await import('./routes/v3-metrics.js').then(m => m.default))
   // P1.8 — 生产切换决策模型（只读评估，不修改任何系统状态）

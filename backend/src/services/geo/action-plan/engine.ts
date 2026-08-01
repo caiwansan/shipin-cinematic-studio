@@ -5,7 +5,7 @@
 
 import { ActionPlanBuilder } from './builder.js'
 import { ActionPlanRepository } from './repository.js'
-import { ActionPlan, ActionPlanResult, ActionPlanSummary } from './types.js'
+import type { ActionPlan, ActionPlanResult, ActionPlanSummary } from './types.js'
 import { geoProjectRepository } from '../repositories/geo-project.repository.js'
 import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
 import { geoClaimRepository } from '../repositories/geo-claim.repository.js'

@@ -3,9 +3,9 @@
 // Exports: ActionPlan, ActionPlanResult, ActionPlanEngine (singleton)
 // ============================================================
 
-export { ActionPlan } from './types.js'
-export { ActionPlanResult } from './types.js'
-export { ActionPlanSummary } from './types.js'
+export type { ActionPlan } from './types.js'
+export type { ActionPlanResult } from './types.js'
+export type { ActionPlanSummary } from './types.js'
 export { ActionPlanBuilder } from './builder.js'
 export { ActionPlanEngine } from './engine.js'
 export { ActionPlanRepository } from './repository.js'

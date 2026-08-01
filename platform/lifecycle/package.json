@@ -6,5 +6,6 @@
   "exports": {
     ".": "./runtime-lifecycle.js",
     "./*": "./*"
-  }
+  },
+  "type": "module"
 }

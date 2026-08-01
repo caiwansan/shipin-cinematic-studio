@@ -4,7 +4,8 @@
   "main": "platform-errors.js",
   "types": "platform-errors.d.ts",
   "exports": {
-    ".": "./platform-errors.js",
-    "./*": "./*"
-  }
+    ".": "./platform-errors.ts",
+    "./*": "./*.ts"
+  },
+  "type": "module"
 }

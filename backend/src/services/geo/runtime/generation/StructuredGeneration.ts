@@ -62,5 +62,6 @@ export async function structuredGenerate<T = any>(
 
   return structuredExecute<T>(execInput)
 }
-
-export { StructuredExecutor } from './StructuredExecutor'
+// 修复（SPRINT-MEDIA-CHANNEL-01 Task03.1 环境修复）：原 `export { StructuredExecutor } from './StructuredExecutor'`
+// re-export 了不存在的导出（该文件只导出 structuredExecute + interfaces），ESM 严格校验下启动崩溃；
+// 全仓零消费者（死导出），删除零影响

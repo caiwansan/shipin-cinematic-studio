@@ -6,5 +6,6 @@
   "exports": {
     ".": "./plugin-registry.js",
     "./*": "./*"
-  }
+  },
+  "type": "module"
 }

@@ -4,7 +4,7 @@
 // ============================================================
 
 import crypto from 'crypto'
-import { ActionPlan } from './types.js'
+import type { ActionPlan } from './types.js'
 
 function generateId(): string {
   return crypto.randomUUID()

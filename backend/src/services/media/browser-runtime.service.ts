@@ -218,6 +218,18 @@ class BrowserRuntimeService {
   }
 
   /**
+   * 注入 Cookie（SPRINT-MEDIA-CHANNEL-01 Task03.1）
+   * 供 Channel Runtime Adapter 从解密凭证恢复登录态（Credential Layer 在 EnterpriseChannelService，不在浏览器层）
+   * 不落盘、不持久化——凭证存储仅限 EnterpriseChannelAccount.credentialEncrypted
+   */
+  async restoreCookies(sessionId: string, cookies: CookieData[]): Promise<boolean> {
+    if (!cookies || cookies.length === 0) return false
+    const { context } = await this.getOrCreate(sessionId)
+    await context.addCookies(cookies as any)
+    return true
+  }
+
+  /**
    * 获取当前 Cookie
    */
   async getCookies(sessionId: string): Promise<CookieData[]> {

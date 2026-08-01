@@ -15,7 +15,7 @@
     "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
-      "@platform/*": ["../platform/*"]
+      "@platform/*": ["../platform/*.ts", "../platform/*"]
     }
   },
   "include": [

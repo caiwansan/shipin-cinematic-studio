@@ -7,9 +7,10 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-// mammoth CJS — 用 require 避免 ESM 问题
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const mammoth = require('mammoth')
+// mammoth CJS — ESM 下用默认导入（node CJS interop：default = module.exports）
+// 修复背景：npm install 后 tsx ESM loader 生效，动态 import 链中 require() 在 ESM scope 下不可用
+// （SPRINT-MEDIA-CHANNEL-01 Task03.1 环境修复，零行为变更）
+import mammoth from 'mammoth'
 
 export interface ParsedDocument {
   title: string

@@ -15,7 +15,7 @@ import { geoScoreSnapshotRepository } from '../repositories/geo-score-snapshot.r
 import { geoQualityRepository } from '../repositories/geo-quality.repository.js'
 import { geoFreshnessRepository } from '../repositories/geo-freshness.repository.js'
 import { geoReviewRepository } from '../repositories/geo-review.repository.js'
-import { geoFaqRepository } from '../repositories/geo-faq.repository.js'
+import { geoFAQRepository } from '../repositories/geo-faq.repository.js'
 import { geoSchemaRepository } from '../repositories/geo-schema.repository.js'
 import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
 import { calculateScore, calculateScoreSimple } from '../recommendation/recommendation-score.service.js'
