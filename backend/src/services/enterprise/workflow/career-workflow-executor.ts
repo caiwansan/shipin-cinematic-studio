@@ -182,6 +182,37 @@ export class CareerWorkflowExecutor {
     // 6. 记录 Workflow 执行到 Memory
     await this.recordWorkflowMemory(toolCtx, req.workflowType, workflowOutput, steps)
 
+    // SPRINT-AGENT-OUTCOME-01: 工作流完成 → 统一结果登记（真实执行结果）
+    try {
+      const { outcomeRegistry } = await import('../outcome-registry.service.js')
+      const workflowOutcome: Record<string, string> = {
+        job_change: 'JOB_MATCH_GENERATED', // 简历分析→岗位搜索→匹配→行动计划
+        interview_prep: 'INTERVIEW_SIMULATION_COMPLETED', // 面试准备/模拟
+        career_profile_analysis: 'CAREER_PLAN_CREATED', // 职业优势分析→规划
+        skill_gap: 'SKILL_GAP_ANALYZED',
+        salary_negotiation: 'SALARY_GUIDE_GENERATED',
+      }
+      const outcomeType = workflowOutcome[req.workflowType]
+      if (outcomeType) {
+        await outcomeRegistry.record({
+          userId: req.userId,
+          agentInstanceId: req.agentInstanceId,
+          workspace: 'career',
+          outcomeType,
+          sourceExecutionId: `${req.agentInstanceId}:${req.workflowType}:${Date.now()}`,
+          metadata: {
+            workflowType: req.workflowType,
+            model: totalTokens ? 'deepseek-v4-flash' : 'n/a',
+            tokensUsed: totalTokens,
+            durationMs: Date.now() - startTime,
+            steps: steps?.length || 0,
+          },
+        })
+      }
+    } catch (oe: any) {
+      console.warn(`[CareerWorkflow] outcome record skipped: ${oe.message}`)
+    }
+
     return {
       workflowType: req.workflowType,
       status: 'completed',

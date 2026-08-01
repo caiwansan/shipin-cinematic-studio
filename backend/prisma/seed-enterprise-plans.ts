@@ -117,7 +117,7 @@ async function seedEnterprisePlans() {
           maxMembers: plan.maxMembers,
           storageLimit: plan.storageLimit,
           requireOwnLLMKey: false,
-          allowedProviders: ['deepseek', 'openai', 'claude', 'zhipu'],
+          allowedProviders: ['deepseek', 'openai', 'claude', 'zhipu', 'volcengine'],
           quotaPolicy: 'unlimited',
           features: plan.features,
           enabled: true,

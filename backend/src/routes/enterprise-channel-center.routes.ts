@@ -197,6 +197,31 @@ export const enterpriseChannelCenterRoutes = async (fastify: FastifyInstance) =>
         },
       })
 
+      // SPRINT-AGENT-OUTCOME-01: 真实结果登记（统一 Outcome Layer）
+      try {
+        const { outcomeRegistry } = await import('../services/enterprise/outcome-registry.service.js')
+        await outcomeRegistry.record({
+          organizationId: enterpriseId,
+          userId,
+          workspace: 'recruitment',
+          outcomeType: 'CANDIDATE_RECEIVED',
+          sourceExecutionId: candidate.id,
+          metadata: { candidateId: candidate.id, name, channelId, channelName: channel.name, jobId: jobId || null },
+        })
+        if (aiAnalysis) {
+          await outcomeRegistry.record({
+            organizationId: enterpriseId,
+            userId,
+            workspace: 'recruitment',
+            outcomeType: 'EVALUATION_GENERATED',
+            sourceExecutionId: candidate.id,
+            metadata: { candidateId: candidate.id, name, model: 'enterprise-byok' },
+          })
+        }
+      } catch (oe: any) {
+        request.log.warn(`[channel-center] outcome record skipped: ${oe.message}`)
+      }
+
       return reply.send({ success: true, candidate, aiAnalysisGenerated: !!aiAnalysis })
     } catch (error: any) {
       request.log.error(`[channel-center] import: ${error.message}`)
@@ -281,6 +306,29 @@ export const enterpriseChannelCenterRoutes = async (fastify: FastifyInstance) =>
           ...(body.aiAnalysis !== undefined ? { aiAnalysis: body.aiAnalysis } : {}),
         },
       })
+
+      // SPRINT-AGENT-OUTCOME-01: 状态流转 → 真实结果登记
+      try {
+        const { outcomeRegistry } = await import('../services/enterprise/outcome-registry.service.js')
+        const statusOutcome: Record<string, string> = {
+          screening: 'CANDIDATE_SCREENED',
+          interviewing: 'INTERVIEW_CREATED',
+          hired: 'HIRING_RECOMMENDATION',
+        }
+        const outcomeType = statusOutcome[body.status]
+        if (outcomeType) {
+          await outcomeRegistry.record({
+            organizationId: enterpriseId,
+            userId,
+            workspace: 'recruitment',
+            outcomeType,
+            sourceExecutionId: `${id}:${body.status}`,
+            metadata: { candidateId: id, name: existing.name, fromStatus: existing.status, toStatus: body.status },
+          })
+        }
+      } catch (oe: any) {
+        request.log.warn(`[channel-center] outcome record skipped: ${oe.message}`)
+      }
 
       return reply.send({ success: true, candidate: updated, statusLabel: CANDIDATE_STATUS_LABELS[updated.status] })
     } catch (error: any) {

@@ -24,6 +24,7 @@ interface _GlobalComponents {
     'AdminDashboardAgentRanking': typeof import("../components/admin/dashboard/AgentRanking.vue")['default']
     'AdminDashboardAiHealthMiniCard': typeof import("../components/admin/dashboard/AiHealthMiniCard.vue")['default']
     'AdminDashboardAiHealthPanel': typeof import("../components/admin/dashboard/AiHealthPanel.vue")['default']
+    'AdminDashboardAiOutcomeValueCard': typeof import("../components/admin/dashboard/AiOutcomeValueCard.vue")['default']
     'AdminDashboardDetailDrawer': typeof import("../components/admin/dashboard/DetailDrawer.vue")['default']
     'AdminDashboardEnterpriseIntelPanel': typeof import("../components/admin/dashboard/EnterpriseIntelPanel.vue")['default']
     'AdminDashboardGeographyPanel': typeof import("../components/admin/dashboard/GeographyPanel.vue")['default']
@@ -255,6 +256,7 @@ interface _GlobalComponents {
     'LazyAdminDashboardAgentRanking': LazyComponent<typeof import("../components/admin/dashboard/AgentRanking.vue")['default']>
     'LazyAdminDashboardAiHealthMiniCard': LazyComponent<typeof import("../components/admin/dashboard/AiHealthMiniCard.vue")['default']>
     'LazyAdminDashboardAiHealthPanel': LazyComponent<typeof import("../components/admin/dashboard/AiHealthPanel.vue")['default']>
+    'LazyAdminDashboardAiOutcomeValueCard': LazyComponent<typeof import("../components/admin/dashboard/AiOutcomeValueCard.vue")['default']>
     'LazyAdminDashboardDetailDrawer': LazyComponent<typeof import("../components/admin/dashboard/DetailDrawer.vue")['default']>
     'LazyAdminDashboardEnterpriseIntelPanel': LazyComponent<typeof import("../components/admin/dashboard/EnterpriseIntelPanel.vue")['default']>
     'LazyAdminDashboardGeographyPanel': LazyComponent<typeof import("../components/admin/dashboard/GeographyPanel.vue")['default']>
@@ -492,6 +494,7 @@ export const AdminDashboardAgentMiniCard: typeof import("../components/admin/das
 export const AdminDashboardAgentRanking: typeof import("../components/admin/dashboard/AgentRanking.vue")['default']
 export const AdminDashboardAiHealthMiniCard: typeof import("../components/admin/dashboard/AiHealthMiniCard.vue")['default']
 export const AdminDashboardAiHealthPanel: typeof import("../components/admin/dashboard/AiHealthPanel.vue")['default']
+export const AdminDashboardAiOutcomeValueCard: typeof import("../components/admin/dashboard/AiOutcomeValueCard.vue")['default']
 export const AdminDashboardDetailDrawer: typeof import("../components/admin/dashboard/DetailDrawer.vue")['default']
 export const AdminDashboardEnterpriseIntelPanel: typeof import("../components/admin/dashboard/EnterpriseIntelPanel.vue")['default']
 export const AdminDashboardGeographyPanel: typeof import("../components/admin/dashboard/GeographyPanel.vue")['default']
@@ -723,6 +726,7 @@ export const LazyAdminDashboardAgentMiniCard: LazyComponent<typeof import("../co
 export const LazyAdminDashboardAgentRanking: LazyComponent<typeof import("../components/admin/dashboard/AgentRanking.vue")['default']>
 export const LazyAdminDashboardAiHealthMiniCard: LazyComponent<typeof import("../components/admin/dashboard/AiHealthMiniCard.vue")['default']>
 export const LazyAdminDashboardAiHealthPanel: LazyComponent<typeof import("../components/admin/dashboard/AiHealthPanel.vue")['default']>
+export const LazyAdminDashboardAiOutcomeValueCard: LazyComponent<typeof import("../components/admin/dashboard/AiOutcomeValueCard.vue")['default']>
 export const LazyAdminDashboardDetailDrawer: LazyComponent<typeof import("../components/admin/dashboard/DetailDrawer.vue")['default']>
 export const LazyAdminDashboardEnterpriseIntelPanel: LazyComponent<typeof import("../components/admin/dashboard/EnterpriseIntelPanel.vue")['default']>
 export const LazyAdminDashboardGeographyPanel: LazyComponent<typeof import("../components/admin/dashboard/GeographyPanel.vue")['default']>

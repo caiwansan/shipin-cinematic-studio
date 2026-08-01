@@ -8195,6 +8195,28 @@ model EnterpriseCandidate {
   @@map("enterprise_candidate")
 }
 
+// SPRINT-AGENT-OUTCOME-01: 统一 Agent Outcome Layer（价值层 SSOT）
+// 禁止各 Workspace 自建结果表（RecruitmentOutcome/CareerOutcome/HDZOutcome 全禁止）
+// 所有 AI 员工业务结果统一写入此表，workspace 字段区分业务线
+model AgentOutcome {
+  id                String   @id @default(uuid()) @db.Uuid
+  organizationId    String?  @map("organization_id") @db.Uuid // 企业业务线（招聘）归属；个人业务线为 null
+  userId            String?  @map("user_id") @db.Uuid // 个人业务线（求职管家）归属；企业业务线记录操作人
+  agentInstanceId   String?  @map("agent_instance_id") @db.Text // 关联 AI 员工实例（EnterpriseAgentInstance.id）
+  workspace         String   @db.VarChar(50) // recruitment | career | shortdrama(预留)
+  outcomeType       String   @map("outcome_type") @db.VarChar(80) // 见 outcome-registry OUTCOME_TYPES
+  sourceExecutionId String?  @map("source_execution_id") @db.Text // 来源执行记录（EnterpriseAgentTask.id / workflow run）
+  metricValue       Float    @default(1) @map("metric_value") // 计数（默认 1 次结果）
+  metadata          Json? // 附加：candidateId / taskType / model / 备注
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([userId, createdAt])
+  @@index([workspace, outcomeType])
+  @@index([sourceExecutionId])
+  @@map("agent_outcome")
+}
+
 model RecruitmentChannel {
   id          String   @id @default(uuid()) @db.Uuid
   name        String

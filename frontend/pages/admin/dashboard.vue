@@ -27,6 +27,11 @@
             :dirty-data="infra?.dirtyData" :health="infra?.health" @detail="openDrawer('health')" />
         </div>
 
+        <!-- ═══ Row 3.5：AI 员工价值中心（SPRINT-AGENT-OUTCOME-01）═══ -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <AiOutcomeValueCard class="lg:col-span-3" :data="outcomes" />
+        </div>
+
         <!-- ═══ Bottom：实时事件流（横向紧凑条） ═══ -->
         <ActivityStrip :events="events?.events || []" />
 
@@ -96,6 +101,7 @@ import RevenueTrendCard from '~/components/admin/dashboard/RevenueTrendCard.vue'
 import WorkspaceEcosystemCard from '~/components/admin/dashboard/WorkspaceEcosystemCard.vue'
 import AgentMiniCard from '~/components/admin/dashboard/AgentMiniCard.vue'
 import AiHealthMiniCard from '~/components/admin/dashboard/AiHealthMiniCard.vue'
+import AiOutcomeValueCard from '~/components/admin/dashboard/AiOutcomeValueCard.vue'
 import ActivityStrip from '~/components/admin/dashboard/ActivityStrip.vue'
 import DetailDrawer from '~/components/admin/dashboard/DetailDrawer.vue'
 // 详情抽屉复用（完整分析）
@@ -119,6 +125,7 @@ const revenue = ref<any>(null)
 const vip = ref<any>(null)
 const workspace = ref<any>(null)
 const ecosystem = ref<any>(null)
+const outcomes = ref<any>(null)
 const geography = ref<any>(null)
 const agents = ref<any>(null)
 const infra = ref<any>(null)
@@ -155,13 +162,14 @@ async function loadAll() {
   error.value = ''
   const q = `?range=${range.value}`
   try {
-    const [ov, us, rv, vp, ws, eco, geo, ag, inf, ev] = await Promise.all([
+    const [ov, us, rv, vp, ws, eco, oc, geo, ag, inf, ev] = await Promise.all([
       fetchJson(`/api/admin/dashboard/overview${q}`),
       fetchJson(`/api/admin/dashboard/users${q}`),
       fetchJson(`/api/admin/dashboard/revenue${q}`),
       fetchJson('/api/admin/dashboard/vip'),
       fetchJson('/api/admin/dashboard/workspace'),
       fetchJson('/api/admin/dashboard/ecosystem'),
+      fetchJson('/api/admin/dashboard/outcomes?days=30'),
       fetchJson('/api/admin/dashboard/geography'),
       fetchJson('/api/admin/dashboard/agents'),
       fetchJson('/api/admin/dashboard/infrastructure'),
@@ -169,6 +177,7 @@ async function loadAll() {
     ])
     overview.value = ov; users.value = us; revenue.value = rv; vip.value = vp
     workspace.value = ws; ecosystem.value = eco; geography.value = geo; agents.value = ag; infra.value = inf; events.value = ev
+    outcomes.value = oc
   } catch (e: any) {
     error.value = e.message || String(e)
   } finally {

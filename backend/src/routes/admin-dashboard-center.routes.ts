@@ -215,7 +215,63 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       { code: 'music', label: '音乐制作', icon: '🎵', projects: 0, calls: 0, users: 0, cost: 0, status: 'offline', note: '业务未上线' },
       { code: 'ecom-image', label: '电商图片', icon: '🖼️', projects: 0, calls: 0, users: 0, cost: 0, status: 'offline', note: '业务未上线' },
     ]
-    return { code: 0, data: { generatedAt: new Date().toISOString(), windowLabel: '30天', lines } }
+
+    // SPRINT-AGENT-OUTCOME-01: 价值层 — 真实 AI 员工结果聚合（agent_outcome）
+    const { outcomeRegistry } = await import('../services/enterprise/outcome-registry.service.js')
+    const outcomeGroups = await outcomeRegistry.summarize({ from: rangeStart })
+    const outcomes = Object.entries(
+      outcomeGroups.reduce((acc: Record<string, any>, g) => {
+        if (!acc[g.workspace]) acc[g.workspace] = { workspace: g.workspace, types: [] }
+        acc[g.workspace].types.push({ outcomeType: g.outcomeType, count: g.count, metricSum: g.metricSum })
+        return acc
+      }, {}),
+    ).map(([, v]) => v)
+
+    return { code: 0, data: { generatedAt: new Date().toISOString(), windowLabel: '30天', lines, outcomes } }
+  })
+
+  // ══════════════════════════════════════════════════════════════════
+  // SPRINT-AGENT-OUTCOME-01: AI 员工价值中心数据
+  // GET /api/admin/dashboard/outcomes?days=30 → 真实结果聚合 + 真实成本（禁估算/Mock ROI）
+  // ══════════════════════════════════════════════════════════════════
+  app.get('/api/admin/dashboard/outcomes', { preHandler: [requireAdmin] }, async (req: any) => {
+    const days = Math.min(Math.max(Number(req.query?.days) || 30, 1), 365)
+    const from = new Date(Date.now() - days * 86400000)
+
+    const { outcomeRegistry } = await import('../services/enterprise/outcome-registry.service.js')
+    const [groups, recrCostAgg, careerCostAgg, recent] = await Promise.all([
+      outcomeRegistry.summarize({ from }),
+      // 招聘成本：enterprise_agent_* 任务（排除 career 激活类）
+      prisma.usageLog.aggregate({ where: cleanUsageWhere({ createdAt: { gte: from }, taskType: { startsWith: 'enterprise_agent_' } }), _count: true, _sum: { cost: true } }),
+      // 求职管家成本：career_activation 等 career 前缀任务 + career_agent_task 相关
+      prisma.usageLog.aggregate({ where: cleanUsageWhere({ createdAt: { gte: from }, OR: [{ taskType: { startsWith: 'enterprise_agent_career_' } }, { taskType: { startsWith: 'career_' } }] }), _count: true, _sum: { cost: true } }),
+      prisma.agentOutcome.findMany({ orderBy: { createdAt: 'desc' }, take: 20 }),
+    ])
+
+    const byWorkspace = groups.reduce((acc: Record<string, any>, g) => {
+      if (!acc[g.workspace]) acc[g.workspace] = { workspace: g.workspace, types: [] }
+      acc[g.workspace].types.push({ outcomeType: g.outcomeType, count: g.count, metricSum: g.metricSum })
+      return acc
+    }, {})
+
+    return {
+      code: 0,
+      data: {
+        generatedAt: new Date().toISOString(),
+        windowDays: days,
+        outcomes: Object.values(byWorkspace),
+        costs: {
+          recruitment: { calls: recrCostAgg._count || 0, cost: Number(recrCostAgg._sum?.cost || 0) },
+          career: { calls: careerCostAgg._count || 0, cost: Number(careerCostAgg._sum?.cost || 0) },
+        },
+        // 价值说明：ROI 需企业价值参数（如 HR 小时成本）真实配置后才可计算，禁止估算
+        roiNote: 'ROI 待企业价值参数配置后启用（当前仅展示真实结果与真实成本）',
+        recent: recent.map(r => ({
+          id: r.id, workspace: r.workspace, outcomeType: r.outcomeType,
+          organizationId: r.organizationId, userId: r.userId, createdAt: r.createdAt,
+        })),
+      },
+    }
   })
 
   // ══════════════════════════════════════════════════════════════════

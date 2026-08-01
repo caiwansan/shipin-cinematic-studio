@@ -199,6 +199,21 @@ export class CareerAgentTaskService {
         },
       });
 
+      // SPRINT-AGENT-OUTCOME-01: 自治任务完成 → 统一结果登记（真实执行结果）
+      try {
+        const { outcomeRegistry } = await import('./outcome-registry.service.js');
+        await outcomeRegistry.record({
+          userId: task.userId,
+          agentInstanceId: task.agentInstanceId,
+          workspace: 'career',
+          outcomeType: 'CAREER_TASK_COMPLETED',
+          sourceExecutionId: taskId,
+          metadata: { taskType: task.taskType, durationMs: execResult.durationMs },
+        });
+      } catch (oe: any) {
+        console.warn(`[CareerAgentTask] outcome record skipped: ${oe.message}`);
+      }
+
       console.log(`[CareerAgentTask] ✅ Task completed: id=${taskId.slice(0, 8)} type=${task.taskType} duration=${execResult.durationMs}ms`);
 
       return {

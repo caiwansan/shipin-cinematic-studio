@@ -79,6 +79,20 @@ export const careerPlanningRoutes = async (fastify: FastifyInstance) => {
       // ── Step 3: 生成可读摘要 ──
       const readable = formatIntelligenceForUser(output)
 
+      // SPRINT-AGENT-OUTCOME-01: 职业规划真实生成 → 统一结果登记
+      try {
+        const { outcomeRegistry } = await import('../services/enterprise/outcome-registry.service.js')
+        await outcomeRegistry.record({
+          userId,
+          workspace: 'career',
+          outcomeType: 'CAREER_PLAN_CREATED',
+          sourceExecutionId: `planning:${userId}:${Date.now()}`,
+          metadata: { goal: userGoal || null, hasEnoughData: ctx.missingInformation.length <= 2 },
+        })
+      } catch (oe: any) {
+        console.warn(`[CareerPlanning] outcome record skipped: ${oe.message}`)
+      }
+
       return reply.send({
         structured: output,
         readable,
