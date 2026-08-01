@@ -9420,3 +9420,26 @@ model WorkspaceAiWeight {
 
   @@map("workspace_ai_weight")
 }
+
+// ============================================================
+// AI-CENTER-02C — Agent AI Profile（AI 员工模型智能画像）
+// 平台层定义「角色 → 模型能力偏好」；引擎融合 workspace 权重输出推荐组合
+// 只建议，不自动切换（掌柜红线 2026-08-01）
+// ============================================================
+
+model AgentAiProfile {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  agentType             String   @unique @db.VarChar(50) // recruiter / interview / talent_analyst / career_advisor ...
+  roleName              String   @db.VarChar(100) // 招聘顾问 / 面试专家 / 人才分析师 ...
+  workspace             String   @default("job") @db.VarChar(50) // 主业务场景
+  preferredCapabilities String   @default("{}") @map("preferred_capabilities") // JSON 六维权重 {chinese,reasoning,quality,cost,speed,coding}
+  avoidCapabilities     String   @default("{}") @map("avoid_capabilities") // JSON 需降低权重维度（×0.3）
+  costPreference        String   @default("balanced") @map("cost_preference") @db.VarChar(20) // cost_priority | balanced | quality_priority
+  reasonNotes           String   @default("[]") @map("reason_notes") // JSON 角色化原因模板
+  status                String   @default("active") @db.VarChar(20)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([agentType])
+  @@map("agent_ai_profile")
+}

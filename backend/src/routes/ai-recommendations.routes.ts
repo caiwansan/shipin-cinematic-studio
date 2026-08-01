@@ -31,10 +31,10 @@ export const WORKSPACE_LABELS: Record<string, string> = {
   coding: '代码开发',
 }
 
-const DIM_KEYS = ['cost', 'speed', 'quality', 'chinese', 'coding', 'reasoning'] as const
-type DimKey = (typeof DIM_KEYS)[number]
+export const DIM_KEYS = ['cost', 'speed', 'quality', 'chinese', 'coding', 'reasoning'] as const
+export type DimKey = (typeof DIM_KEYS)[number]
 
-const DIM_LABELS: Record<DimKey, string> = {
+export const DIM_LABELS: Record<DimKey, string> = {
   cost: '成本优势',
   speed: '响应速度',
   quality: '生成质量',
@@ -43,15 +43,7 @@ const DIM_LABELS: Record<DimKey, string> = {
   reasoning: '推理能力',
 }
 
-/** 表数据缺失时的内置默认权重（与 seed 一致，保证引擎永不空转） */
-const DEFAULT_WEIGHTS: Record<string, Record<DimKey, number>> = {
-  job: { chinese: 35, reasoning: 30, quality: 20, cost: 15, speed: 0, coding: 0 },
-  shortdrama: { quality: 35, chinese: 25, reasoning: 20, cost: 20, speed: 0, coding: 0 },
-  novel: { chinese: 35, quality: 30, cost: 20, reasoning: 15, speed: 0, coding: 0 },
-  coding: { coding: 40, reasoning: 30, speed: 15, cost: 15, chinese: 0, quality: 0 },
-}
-
-function scoreLabel(v: number): string {
+export function scoreLabel(v: number): string {
   if (v >= 90) return '优秀'
   if (v >= 85) return '强'
   if (v >= 80) return '良好'
@@ -59,18 +51,25 @@ function scoreLabel(v: number): string {
   return '一般'
 }
 
+export const DEFAULT_WEIGHTS: Record<string, Record<DimKey, number>> = {
+  job: { chinese: 35, reasoning: 30, quality: 20, cost: 15, speed: 0, coding: 0 },
+  shortdrama: { quality: 35, chinese: 25, reasoning: 20, cost: 20, speed: 0, coding: 0 },
+  novel: { chinese: 35, quality: 30, cost: 20, reasoning: 15, speed: 0, coding: 0 },
+  coding: { coding: 40, reasoning: 30, speed: 15, cost: 15, chinese: 0, quality: 0 },
+}
+
 /**
  * 生成可解释 reasons：
  * 1. 权重最高的非零维度（top 3）按得分段给出「中文能力优秀 / 推理能力强」等
  * 2. 若某维度得分居全体前 3 且权重非零，追加「XX领先」强调相对优势
  */
-function buildReasons(
+export function buildReasons(
   caps: Record<string, number>,
   weight: Record<DimKey, number>,
   providerRank: Record<DimKey, number>, // 该 provider 各维度在全体中的排名（1=最高）
 ): string[] {
   const reasons: string[] = []
-  const weightedDims = (DIM_KEYS as DimKey[])
+  const weightedDims = (DIM_KEYS as unknown as DimKey[])
     .filter((d) => (weight[d] || 0) > 0)
     .sort((a, b) => weight[b] - weight[a])
 
@@ -87,7 +86,7 @@ function buildReasons(
   return reasons.slice(0, 4)
 }
 
-async function getWeight(workspace: string): Promise<Record<DimKey, number>> {
+export async function getWeight(workspace: string): Promise<Record<DimKey, number>> {
   const row = await prisma.workspaceAiWeight.findUnique({ where: { workspace } })
   if (row?.enabled && row.weightConfig && typeof row.weightConfig === 'object') {
     const cfg = row.weightConfig as Record<string, number>

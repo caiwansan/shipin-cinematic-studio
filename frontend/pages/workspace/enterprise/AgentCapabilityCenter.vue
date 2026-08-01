@@ -84,6 +84,31 @@
               <RecruitmentBadge :variant="statusVariant(agent.status)">{{ statusLabels[agent.status] || agent.status }}</RecruitmentBadge>
             </div>
 
+            <!-- AI 大脑建议 (AI-CENTER-02C) -->
+            <div v-if="recommendations[agent.id]" class="cc-brain">
+              <div class="cc-brain-head">
+                <span>🧠 AI大脑建议</span>
+                <span v-if="recommendations[agent.id].weightSource === 'workspace_default'" class="cc-brain-src" title="该岗位暂无专属画像，基于业务场景默认权重推荐">基于场景默认权重</span>
+                <span class="cc-brain-cost">{{ recommendations[agent.id].costLabel }}</span>
+              </div>
+              <div class="cc-brain-row">
+                <span class="cc-brain-role-lbl">当前角色</span>
+                <span class="cc-brain-role">{{ recommendations[agent.id].roleName }}</span>
+              </div>
+              <div class="cc-brain-primary">
+                <span class="cc-brain-trophy">🏆</span>
+                <span class="cc-brain-p-name">{{ recommendations[agent.id].primary?.name || '—' }}</span>
+                <span class="cc-brain-p-score">{{ recommendations[agent.id].primary?.score ?? '' }}分</span>
+              </div>
+              <div v-if="recommendations[agent.id].secondary" class="cc-brain-secondary">
+                🔶 备选：{{ recommendations[agent.id].secondary.name }} {{ recommendations[agent.id].secondary.score }}分
+              </div>
+              <div class="cc-brain-reasons">
+                <div v-for="(r, ri) in recommendations[agent.id].reasons.slice(0, 3)" :key="ri" class="cc-brain-reason">✓ {{ r }}</div>
+              </div>
+              <button class="cc-brain-apply" @click="goToModelSettings">应用建议 → 配置企业模型</button>
+            </div>
+
             <!-- Capabilities -->
             <div v-if="agent.capabilities?.length" class="cc-capabilities">
               <div class="cc-section-label">核心能力</div>
@@ -210,6 +235,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const hasSubscription = ref(false)
 const agents = ref<AgentData[]>([])
+const recommendations = ref<Record<string, any>>({})
 const summary = ref({ totalAgents: 0, totalMonthlyTasks: 0, totalAnalyzedCandidates: 0, taskCompletionRate: 0 })
 
 const statusLabels: Record<string, string> = {
@@ -301,6 +327,8 @@ async function loadData() {
         await loadAgentTasks(agent)
       }
     }
+    // AI 大脑建议（AI-CENTER-02C，只建议不切换）
+    await loadAgentRecommendations()
   } catch (e: any) {
     console.error('Failed to load capability data:', e)
     if (!error.value) error.value = '网络错误，请稍后重试'
@@ -311,6 +339,26 @@ async function loadData() {
 
 function goToBilling() {
   window.location.href = '/workspace/enterprise/billing'
+}
+
+function goToModelSettings() {
+  window.location.href = '/workspace/enterprise/model-settings'
+}
+
+async function loadAgentRecommendations() {
+  for (const agent of agents.value) {
+    if (!agent.agentType) continue
+    try {
+      const res = await fetch(`/api/ai/agent-recommendation?agentType=${encodeURIComponent(agent.agentType)}`)
+      if (!res.ok) continue
+      const json = await res.json()
+      if (json.code === 0 && json.data) {
+        recommendations.value[agent.id] = json.data
+      }
+    } catch (e) {
+      // 建议加载失败不阻断员工页
+    }
+  }
 }
 
 function getTaskLabel(taskType: string): string {
@@ -943,5 +991,123 @@ onMounted(loadData)
 
 .cc-action-btn--primary:hover {
   background: rgba(99, 102, 241, 0.15);
+}
+
+/* ─── AI 大脑建议 (AI-CENTER-02C) ─── */
+.cc-brain {
+  margin-top: 12px;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.06), rgba(99, 102, 241, 0.06));
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cc-brain-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.cc-brain-src {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.cc-brain-cost {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.cc-brain-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.cc-brain-role-lbl {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.cc-brain-role {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.cc-brain-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.cc-brain-trophy {
+  font-size: 15px;
+}
+
+.cc-brain-p-name {
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.cc-brain-p-score {
+  font-size: 12px;
+  font-weight: 600;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 1px 8px;
+  border-radius: 99px;
+}
+
+.cc-brain-secondary {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.cc-brain-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cc-brain-reason {
+  font-size: 11px;
+  color: #a7f3d0;
+}
+
+.cc-brain-apply {
+  margin-top: 2px;
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.12);
+  color: #ddd6fe;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: all 0.12s;
+}
+
+.cc-brain-apply:hover {
+  background: rgba(168, 85, 247, 0.22);
+  border-color: rgba(168, 85, 247, 0.7);
 }
 </style>
