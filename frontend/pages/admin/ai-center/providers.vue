@@ -249,6 +249,37 @@
               <input v-model="form.affiliateDescription" class="w-full bg-[#0B1020] border border-amber-500/20 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-amber-500" placeholder="推广说明（可选），如：通过推荐链接注册享 10 元额度" />
             </div>
 
+            <!-- AI-CENTER-05：模型分类（全球AI模型性价比中心） -->
+            <div class="rounded-xl border border-purple-500/20 bg-purple-500/[0.04] p-4 space-y-3">
+              <div>
+                <div class="text-xs text-purple-300 font-medium">🧭 模型分类（AI-CENTER-05）</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">分类决定前台 Tab 归属；主推模型名 + 上下文长度展示在卡片标题</div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[11px] text-gray-500 block mb-1.5">主推模型名（卡片标题，如 DeepSeek-V3）</label>
+                  <input v-model="form.modelName" class="w-full bg-[#0B1020] border border-purple-500/20 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-purple-500" placeholder="DeepSeek-V3" />
+                </div>
+                <div>
+                  <label class="text-[11px] text-gray-500 block mb-1.5">上下文长度（tokens，可选）</label>
+                  <input v-model.number="form.contextLength" type="number" min="0" class="w-full bg-[#0B1020] border border-purple-500/20 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-purple-500" placeholder="128000" />
+                </div>
+              </div>
+              <div>
+                <label class="text-[11px] text-gray-500 block mb-1.5">模型类型（可多选）</label>
+                <div class="flex flex-wrap gap-2">
+                  <label v-for="mt in MODEL_TYPE_OPTS" :key="mt.key" class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" :value="mt.key" v-model="form.modelTypes" class="accent-purple-500" />
+                    <span class="text-[11px] text-gray-300">{{ mt.label }}</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label class="text-[11px] text-gray-500 block mb-1.5">价格来源（前台展示）</label>
+                <input v-model="form.priceSource" class="w-full bg-[#0B1020] border border-purple-500/20 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-purple-500" placeholder="官方公开价格" />
+              </div>
+            </div>
+
             <!-- AI-CENTER-04B/04C：价格运营 + 标签运营（无算法，后台可调） -->
             <div class="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] p-4 space-y-3">
               <div class="flex items-center justify-between">
@@ -348,7 +379,15 @@ const form = reactive({
   browserEnabled: true, apiEnabled: true, browserMode: 'iframe',
   affiliateUrl: '', affiliateEnabled: false, affiliateDescription: '',
   recommended: 3, sort: 0, status: 'active',
+  // AI-CENTER-05 分类字段
+  modelName: '', modelTypes: [] as string[], contextLength: null as number | null, priceSource: '官方公开价格',
 })
+
+const MODEL_TYPE_OPTS = [
+  { key: 'language', label: '💬 语言模型' }, { key: 'image', label: '🎨 图片模型' },
+  { key: 'video', label: '🎬 视频模型' }, { key: 'audio', label: '🎙️ 语音模型' },
+  { key: 'multimodal', label: '🌐 多模态模型' }, { key: 'agent', label: '🤖 Agent模型' },
+]
 
 const scoreDims = [
   { key: 'cost', label: '成本' },
@@ -437,6 +476,8 @@ function openEdit(p: any) {
       : { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 }, affiliateUrl: p.affiliateUrl || '',
     affiliateEnabled: !!p.affiliateEnabled, affiliateDescription: p.affiliateDescription || '',
     recommended: p.recommended || 3, sort: p.sort || 0, status: p.status || 'active',
+    modelName: p.modelName || '', modelTypes: p.modelTypes || [],
+    contextLength: p.contextLength ?? null, priceSource: p.priceSource || '官方公开价格',
   })
   tagsText.value = (p.tags || []).join(', ')
   dialog.value = true

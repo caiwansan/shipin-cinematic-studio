@@ -9404,6 +9404,11 @@ model AiProviderDirectory {
   recommended          Int      @default(3) // 推荐等级 1-5
   sort                 Int      @default(0)
   status               String   @default("active") @db.VarChar(20) // active | disabled
+  // ── AI-CENTER-05 模型分类（全球AI模型性价比中心） ──
+  modelTypes           String[] @default([]) // 分类: language / image / video / audio / multimodal / agent（可多分类）
+  modelName            String   @default("") @db.VarChar(200) // 主推模型名（卡片标题，如 DeepSeek-V3）
+  contextLength        Int? // 上下文长度（tokens）
+  priceSource          String   @default("官方公开价格") @db.VarChar(100) // 价格来源（前台展示，运营可改）
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

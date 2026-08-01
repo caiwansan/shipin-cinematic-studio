@@ -147,28 +147,110 @@ async function connectedCodes(userId: string | null): Promise<Set<string>> {
   return set
 }
 
+/** 能力综合分：六维平均（图片/视频等非语言模型忽略 coding/reasoning 为 0 的维度） */
+function abilityOf(p: { capabilityScore: any }): number {
+  const caps = p.capabilityScore as Record<string, number> | null
+  if (!caps) return 0
+  const dims = ['cost', 'speed', 'quality', 'chinese', 'coding', 'reasoning']
+  const vals = dims.map((d) => Number(caps[d]) || 0)
+  const nonZero = vals.filter((v) => v > 0)
+  if (!nonZero.length) return 0
+  return Math.round(nonZero.reduce((a, b) => a + b, 0) / nonZero.length)
+}
+
+/** 性价比 = 能力综合×60% + 价格优势×40%（纯计算，禁 AI 调用） */
+function valueScoreOf(p: { capabilityScore: any; costScore?: number | null }): number | null {
+  const a = abilityOf(p)
+  if (!a) return null
+  return Math.round((a * 0.6 + (p.costScore ?? 50) * 0.4) * 10) / 10
+}
+
+/** 参考价格：优先输入价（元/百万tokens），无则 null */
+function priceOf(p: { pricingInfo: any }): number | null {
+  const info = p.pricingInfo as any
+  const v = info?.inputPrice
+  return typeof v === 'number' ? v : null
+}
+
 export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
   await iframeCheck(app)
 
-  // ── 公开：目录列表 ──
+  // ── 公开：目录列表（支持 ?type= 分类过滤 + ?q= 搜索） ──
   app.get('/api/ai-provider-directory', async (req) => {
+    const { type, q } = req.query as { type?: string; q?: string }
+    const where: any = { status: 'active' }
+    if (type && type !== 'all') where.modelTypes = { has: type }
     const [list, connected] = await Promise.all([
       prisma.aiProviderDirectory.findMany({
-        where: { status: 'active' },
+        where,
         orderBy: [{ sort: 'asc' }, { recommended: 'desc' }],
       }),
       connectedCodes(await optionalUserId(req as FastifyRequest)),
     ])
+    let rows = list
+    if (q && q.trim()) {
+      const kw = q.trim().toLowerCase()
+      rows = rows.filter((p) =>
+        p.name.toLowerCase().includes(kw) ||
+        p.modelName.toLowerCase().includes(kw) ||
+        (p.description || '').toLowerCase().includes(kw) ||
+        (p.tags || []).some((t) => t.toLowerCase().includes(kw)) ||
+        (p.supportedModels as string[] || []).some((m) => m.toLowerCase().includes(kw))
+      )
+    }
     return {
       code: 0,
-      data: list.map((p) => ({
+      data: rows.map((p) => ({
         ...p,
-        // 前台按钮优先级：推广链接（启用时）→ 官方注册链接
         registerUrl: p.affiliateEnabled && p.affiliateUrl ? p.affiliateUrl : p.registerUrl,
         registerViaAffiliate: !!(p.affiliateEnabled && p.affiliateUrl),
         connected: connected.has(p.code),
+        valueScore: valueScoreOf(p),
       })),
     }
+  })
+
+  // ── 公开：统计（Hero 三个数据卡：全球模型 / 支持厂商 / 已连接） ──
+  app.get('/api/ai-provider-directory/stats', async (req) => {
+    const [list, connected] = await Promise.all([
+      prisma.aiProviderDirectory.findMany({ where: { status: 'active' } }),
+      connectedCodes(await optionalUserId(req as FastifyRequest)),
+    ])
+    const modelLines = list.reduce((n, p) => n + ((p.supportedModels as string[])?.length || 0), 0)
+    return {
+      code: 0,
+      data: {
+        modelCount: modelLines,          // 全球模型（品牌线数）
+        providerCount: list.length,       // 支持厂商
+        connectedCount: connected.size,   // 已连接（当前用户真实配置）
+        typeCount: {
+          language: list.filter((p) => (p.modelTypes as string[])?.includes('language')).length,
+          image: list.filter((p) => (p.modelTypes as string[])?.includes('image')).length,
+          video: list.filter((p) => (p.modelTypes as string[])?.includes('video')).length,
+          audio: list.filter((p) => (p.modelTypes as string[])?.includes('audio')).length,
+          multimodal: list.filter((p) => (p.modelTypes as string[])?.includes('multimodal')).length,
+          agent: list.filter((p) => (p.modelTypes as string[])?.includes('agent')).length,
+        },
+      },
+    }
+  })
+
+  // ── 公开：AI Compare 二维对比（能力 vs 价格，性价比计算，纯计算无 AI） ──
+  app.get('/api/ai/center/compare', async () => {
+    const list = await prisma.aiProviderDirectory.findMany({ where: { status: 'active' } })
+    const data = list
+      .map((p) => ({
+        code: p.code,
+        name: p.name,
+        modelName: p.modelName,
+        valueScore: valueScoreOf(p),
+        ability: abilityOf(p),   // 能力综合 0-100
+        costScore: p.costScore ?? 50, // 价格优势 0-100（高=便宜）
+        price: priceOf(p),       // 参考输入价（元/百万tokens，用于横轴）
+        types: p.modelTypes || [],
+      }))
+      .filter((x) => x.valueScore != null)
+    return { code: 0, data }
   })
 
   // ── 公开：单家详情 ──
@@ -223,13 +305,18 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         browserEnabled: body.browserEnabled !== undefined ? !!body.browserEnabled : true,
         browserMode: sanitizeBrowserMode(body.browserMode),
         apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : true,
-        capabilityScore: sanitizeCapabilityScore(body.capabilityScore),
+        capabilityScore: sanitizeCapabilityScore(body.capabilityScore) as any,
         affiliateUrl: body.affiliateUrl || '',
         affiliateEnabled: !!body.affiliateEnabled,
         affiliateDescription: body.affiliateDescription || null,
         recommended: Number(body.recommended) || 3,
         sort: Number(body.sort) || 0,
         status: body.status || 'active',
+        // AI-CENTER-05 分类字段
+        modelName: body.modelName || '',
+        modelTypes: Array.isArray(body.modelTypes) ? body.modelTypes : [],
+        contextLength: body.contextLength != null ? Number(body.contextLength) : null,
+        priceSource: body.priceSource || '官方公开价格',
       },
     })
     return { code: 0, data: created }
@@ -258,7 +345,7 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         browserEnabled: body.browserEnabled !== undefined ? !!body.browserEnabled : exist.browserEnabled,
         browserMode: body.browserMode !== undefined ? sanitizeBrowserMode(body.browserMode) : exist.browserMode,
         apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : exist.apiEnabled,
-        capabilityScore: body.capabilityScore !== undefined ? sanitizeCapabilityScore(body.capabilityScore) : exist.capabilityScore,
+        capabilityScore: (body.capabilityScore !== undefined ? sanitizeCapabilityScore(body.capabilityScore) : exist.capabilityScore) as any,
         // AI-CENTER-04：价格运营 + 标签运营（运营后台维护，无算法）
         pricingInfo: body.pricingInfo !== undefined ? body.pricingInfo : exist.pricingInfo,
         costScore: body.costScore != null ? Number(body.costScore) : exist.costScore,
@@ -271,6 +358,11 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         recommended: body.recommended != null ? Number(body.recommended) : exist.recommended,
         sort: body.sort != null ? Number(body.sort) : exist.sort,
         status: body.status ?? exist.status,
+        // AI-CENTER-05 分类字段
+        modelName: body.modelName !== undefined ? body.modelName : exist.modelName,
+        modelTypes: Array.isArray(body.modelTypes) ? body.modelTypes : exist.modelTypes,
+        contextLength: body.contextLength !== undefined ? (body.contextLength != null ? Number(body.contextLength) : null) : exist.contextLength,
+        priceSource: body.priceSource !== undefined ? body.priceSource : exist.priceSource,
       },
     })
     return { code: 0, data: updated }
