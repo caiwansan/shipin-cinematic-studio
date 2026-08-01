@@ -138,7 +138,7 @@
           </div>
         </div>
 
-        <!-- 🪞 镜心开通支付弹窗（Commerce Authority：复用 /api/payment/career/checkout 订单链路） -->
+        <!-- 🪞 镜心开通支付弹窗（Commerce Authority 统一链：/api/payment/checkout + productCode=career_agent，与 VIP 同一支付通道） -->
         <Transition name="purchase-fade">
           <div v-if="showPurchaseModal" class="purchase-modal-mask" @click.self="closePurchaseModal">
             <div class="purchase-modal">
@@ -977,7 +977,7 @@ function closePurchaseModal() {
   stopPurchasePolling()
 }
 
-// 确认支付 → 创建订单（POST /api/payment/career/checkout）
+// 确认支付 → 统一下单（POST /api/payment/checkout，productCode=career_agent，与 VIP 同一支付通道）
 async function confirmPurchase() {
   purchasing.value = true
   purchaseError.value = ''
@@ -990,7 +990,8 @@ async function confirmPurchase() {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ method: selectedMethod.value }),
+      // COMMERCE-SSOT-02: 必须携带 productCode，缺省后端返回 400（曾导致无法付款）
+      body: JSON.stringify({ productCode: 'career_agent', method: selectedMethod.value }),
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: '创建订单失败' }))
