@@ -1012,10 +1012,9 @@ async function confirmPurchase() {
     purchaseQrCode.value = payload.qrCode || ''
     if (payload.amount) purchaseAmount.value = payload.amount
 
-    // 支付宝：渲染扫码二维码（对齐 VIP 支付体验）+ 新窗口（被拦截时扫码/手动链接兑底）
+    // 支付宝：只渲染扫码二维码（对齐 VIP 支付体验，不弹新窗口），手动链接兑底
     if (payload.method === 'alipay' && payload.paymentUrl) {
       renderAlipayQr(payload.paymentUrl)
-      window.open(payload.paymentUrl, '_blank')
     }
 
     // 微信：渲染二维码
