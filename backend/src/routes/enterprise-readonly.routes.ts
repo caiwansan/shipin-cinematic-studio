@@ -17,6 +17,11 @@ async function resolveOrgId(request: any): Promise<string> {
   const userId = user?.id
   if (!userId) return ''
 
+  // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 优先 JWT 注入的 organizationId（新 token 零查库）
+  if (user.organizationId) {
+    return user.organizationId
+  }
+
   if (user?.tenantId && user.tenantId !== userId) {
     return user.tenantId
   }

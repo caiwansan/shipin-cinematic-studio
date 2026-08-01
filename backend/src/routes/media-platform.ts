@@ -27,6 +27,28 @@ export async function registerMediaPlatformRoutes(app: FastifyInstance) {
     // 所有其他路由：验证 JWT + 注入 TenantContext
     try {
       await (request as any).jwtVerify()
+      // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 真实 JWT 用户注入 TenantContext
+      // 优先 JWT 携带的 organizationId（新 token），缺失则查库（老 token 兼容）
+      const jwtUser = (request as any).user
+      if (jwtUser?.id) {
+        let orgId = jwtUser.organizationId
+        if (!orgId) {
+          try {
+            const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+            orgId = (await getOrganizationIdForUser(jwtUser.id)) || undefined
+          } catch { /* non-fatal */ }
+        }
+        if (orgId) {
+          (request as any).tenantContext = {
+            userId: jwtUser.id,
+            email: jwtUser.email || '',
+            orgId,
+            orgName: '',
+            role: 'OWNER',
+          }
+        }
+      }
+      return
     } catch (err) {
       const auth = request.headers.authorization
       if (auth === 'Bearer demo-token' || auth === 'Bearer test') {

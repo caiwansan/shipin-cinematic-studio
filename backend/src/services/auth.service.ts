@@ -53,10 +53,13 @@ export const authService = {
     // 单设备登录：递增 tokenVersion，旧 token 失效
     const newVersion = (user.tokenVersion || 1) + 1
     await prisma.user.update({ where: { id: user.id }, data: { tokenVersion: newVersion } })
-    const token = (fastify as any).jwt.sign({ id: user.id, email: user.email, tokenVersion: newVersion } as any)
+    // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: JWT 注入 organizationId（昆仑镜身份链）
+    const { getOrganizationIdForUser } = await import('./enterprise/organization/identity-bootstrap.service.js')
+    const organizationId = (await getOrganizationIdForUser(user.id)) || undefined
+    const token = (fastify as any).jwt.sign({ id: user.id, email: user.email, tokenVersion: newVersion, organizationId } as any)
     return {
       accessToken: token,
-      user: { id: user.id, email: user.email, username: user.username, memberTier: user.memberTier, credits: (user as any).membership?.credits ?? 0, agentStatus: user.agentStatus, agentLevel: user.agentLevel },
+      user: { id: user.id, email: user.email, username: user.username, memberTier: user.memberTier, credits: (user as any).membership?.credits ?? 0, agentStatus: user.agentStatus, agentLevel: user.agentLevel, organizationId: organizationId || null },
     }
   },
 }

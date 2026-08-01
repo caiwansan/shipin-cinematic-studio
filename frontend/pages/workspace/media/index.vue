@@ -17,6 +17,12 @@
       </template>
     </MediaPageHeader>
 
+    <!-- ═══ 无企业身份引导（SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 401 边界体验）═══ -->
+    <div v-if="identityError" class="dash-identity-error">
+      <b>⚠️ 未找到企业身份</b>
+      <span>当前账号尚未创建或加入企业，无法加载运营数据。请先在「企业中心」创建企业空间后再进入新媒体运营部。</span>
+    </div>
+
     <!-- ═══ 产品定位（30 秒理解：这是什么产品）═══ -->
     <div class="dash-position">
       <span class="dash-pos-label">这是你的 AI 新媒体运营部</span>
@@ -377,6 +383,7 @@ const teamRoster = [
 ]
 
 const showSubscribe = ref(false)
+const identityError = ref(false)
 
 onMounted(async () => {
   try {
@@ -387,6 +394,9 @@ onMounted(async () => {
     const data = await res.json()
     if (data?.code === 0 && data?.data) {
       overview.value = data.data
+    } else if (res.status === 401 || data?.message?.includes('企业身份')) {
+      // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 无企业身份 → 引导而非裸报错
+      identityError.value = true
     } else {
       $toast?.error?.(data?.message || '加载驾驶舱失败')
     }
@@ -439,6 +449,22 @@ function stateClass(s: string) {
 }
 
 /* ─── 产品定位条 ─── */
+.dash-identity-error {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-warning, #f59e0b);
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+.dash-identity-error b {
+  color: var(--color-warning);
+  font-size: 13px;
+}
 .dash-position {
   display: flex;
   align-items: center;

@@ -39,6 +39,16 @@
           <div class="mws-foot-sub">{{ agentsOnline }}/{{ agentsTotal }} 在线</div>
         </div>
       </div>
+
+      <!-- SPRINT-MEDIA-IDENTITY-ALIGN-01 T02/T04: 复用昆仑镜统一用户身份卡（短剧/招聘同款，禁止新建 Media 系） -->
+      <WorkspaceUserCard
+        :username="identity.username"
+        :display-name="identity.displayName"
+        :org-name="identity.orgName"
+        :plan-name="identity.planName"
+        @open-model-settings="showModelSettings = true"
+        @open-billing="router.push('/workspace/enterprise/billing')"
+      />
     </aside>
 
     <!-- ═══ 主区 ═══ -->
@@ -64,14 +74,29 @@
         <slot />
       </main>
     </div>
+
+    <!-- SPRINT-MEDIA-IDENTITY-ALIGN-01 T05: 复用统一 ModelSettingsModal（禁 MediaModelSettings/WechatLLMSettings） -->
+    <ModelSettingsModal
+      :visible="showModelSettings"
+      filterCapability="llm"
+      @close="showModelSettings = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import WorkspaceSwitcher from '~/components/WorkspaceSwitcher.vue'
+import WorkspaceUserCard from '~/components/workspace/shared/WorkspaceUserCard.vue'
+import ModelSettingsModal from '~/components/director/ModelSettingsModal.vue'
 
 const route = useRoute()
 const router = useRouter()
+
+const showModelSettings = ref(false)
+
+// SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 身份上下文（auth/me 单一权威）
+const identity = ref({ username: '…', displayName: '', orgName: '', planName: '' })
 
 const goHome = () => router.push('/')
 
@@ -119,7 +144,7 @@ function isActive(path: string) {
   return route.path === p || route.path.startsWith(p + '/')
 }
 
-// 员工在线状态（真实数据：overview agents）
+// 员工在线状态（真实数据：overview agents）+ 身份上下文（auth/me + subscription/current）
 onMounted(async () => {
   try {
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || ''
@@ -135,6 +160,27 @@ onMounted(async () => {
     }
   } catch {
     // 静默：状态徽章保持默认
+  }
+
+  // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 用户身份卡数据（复用短剧/招聘同款链）
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || ''
+    if (!token) return
+    const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    const meData = await meRes.json()
+    const u = meData?.data?.user
+    if (u) {
+      identity.value.username = u.username || u.email || '用户'
+      identity.value.displayName = u.displayName || u.nickname || u.username || ''
+      identity.value.orgName = u.organizationName || ''
+    }
+    const subRes = await fetch('/api/enterprise/subscription/current', { headers: { Authorization: `Bearer ${token}` } })
+    const subData = await subRes.json()
+    if (subData?.data?.hasSubscription && subData?.data?.planName) {
+      identity.value.planName = subData.data.planName
+    }
+  } catch {
+    // 身份加载失败不阻塞工作台
   }
 })
 </script>

@@ -151,11 +151,17 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
 
     const u = user as any
-    const accessToken = fastify.jwt.sign({ id: user.id, email: user.email, tokenVersion: 1 })
+    // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: register 登录态同样注入 organizationId
+    let registerOrgId: string | undefined
+    try {
+      const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+      registerOrgId = (await getOrganizationIdForUser(user.id)) || undefined
+    } catch { /* non-fatal */ }
+    const accessToken = fastify.jwt.sign({ id: user.id, email: user.email, tokenVersion: 1, organizationId: registerOrgId })
 
     return {
       accessToken,
-      user: { id: u.id, email: u.email, username: u.username, phone: maskPhone(u.phone), memberTier: u.memberTier, credits: u.membership?.credits ?? 0, agentStatus: u.agentStatus, agentLevel: u.agentLevel },
+      user: { id: u.id, email: u.email, username: u.username, phone: maskPhone(u.phone), memberTier: u.memberTier, credits: u.membership?.credits ?? 0, agentStatus: u.agentStatus, agentLevel: u.agentLevel, organizationId: registerOrgId || null },
     }
   })
 
@@ -247,11 +253,14 @@ export default async function authRoutes(fastify: FastifyInstance) {
       if (!decoded || !decoded.id) {
         return reply.status(401).send({ error: '无效的 refreshToken' })
       }
-      // 生成新的 accessToken
+      // 生成新的 accessToken（注入 organizationId，兼容老 token 由后端读取处 fallback 查库）
+      const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+      const refreshOrgId = (await getOrganizationIdForUser(decoded.id)) || undefined
       const newAccessToken = fastify.jwt.sign({
         id: decoded.id,
         email: decoded.email,
         tokenVersion: (decoded.tokenVersion || 0) + 1,
+        organizationId: refreshOrgId,
       })
       // 生成新的 refreshToken（用 refreshSecret，更长过期时间）
       const newRefreshToken = jwt.default.sign(
@@ -331,6 +340,33 @@ export default async function authRoutes(fastify: FastifyInstance) {
     // displayName: 优先使用会话中的 displayName，否则 fallback 到 username
     // 允许用户通过 PATCH /api/user/profile 更新 displayName（存储在 username 字段）
     serialized.displayName = serialized.username
+
+    // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 统一身份链注入 — organizationId/orgName/tenantId
+    // 让所有 Workspace（短剧/招聘/新媒体）从 auth/me 单一权威获取企业上下文
+    try {
+      const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+      const orgId = jwtUser.organizationId || (await getOrganizationIdForUser(jwtUser.id))
+      serialized.organizationId = orgId || null
+      if (orgId) {
+        const govOrg = await prisma.govOrganization.findUnique({
+          where: { id: orgId },
+          select: { name: true },
+        })
+        serialized.organizationName = govOrg?.name || null
+      } else {
+        serialized.organizationName = null
+      }
+      // tenantId（governance_user 关联）
+      const govUser = await prisma.govUser.findFirst({
+        where: { email: dbUser.email },
+        select: { tenantId: true },
+      })
+      serialized.tenantId = govUser?.tenantId || null
+    } catch (e) {
+      serialized.organizationId = null
+      serialized.organizationName = null
+      serialized.tenantId = null
+    }
     return toApiResponse({user: serialized}) satisfies ApiResponse<unknown>;
   })
 
