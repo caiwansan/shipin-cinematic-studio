@@ -40,7 +40,7 @@ export const navCategories: NavCategory[] = [
   {
     title: '第三排',
     items: [
-      { label: 'AI新媒体运营中心', icon: '📱', to: '/workspace/media', desc: '我的 AI 员工团队 · 账号连接 · 内容生产 · 客户运营' },
+      { label: 'AI全渠道运营中心', icon: '📱', to: '/workspace/media', desc: '我的 AI 员工团队 · 内容平台 · 电商店铺 · 客户渠道' },
       { label: '电商图片', icon: '🖼️', to: '/workspace/ecom-image', desc: '商品图、营销视觉、电商素材' },
       { label: '广告制作', icon: '📢', to: '/workspace/ad-create' },
       { label: '🪞 镜心 · AI 职业伙伴', icon: '🪞', to: '/workspace/job', badge: '⭐新', desc: '认识自己 · 规划方向 · 发现机会 · 提升竞争力' },

@@ -64,7 +64,7 @@
     <!-- 订阅提示条 -->
     <div class="ii-cta">
       <span>订阅 AI 员工后：行业雷达自动扫描热点、竞品与规则，内容机会持续流入选题池。</span>
-      <NuxtLink to="/workspace/media" class="ii-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
+      <NuxtLink to="/workspace/media" class="ii-cta-btn">解锁 AI 运营团队 →</NuxtLink>
     </div>
   </MediaWorkspaceShell>
 </template>

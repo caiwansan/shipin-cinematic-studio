@@ -31,7 +31,7 @@
     <!-- 订阅提示条 -->
     <div class="an-cta">
       <span>订阅 AI 员工后：数据自动回流、每周自动复盘，产出增长建议驱动下一轮内容。</span>
-      <NuxtLink to="/workspace/media" class="an-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
+      <NuxtLink to="/workspace/media" class="an-cta-btn">解锁 AI 运营团队 →</NuxtLink>
     </div>
   </MediaWorkspaceShell>
 </template>

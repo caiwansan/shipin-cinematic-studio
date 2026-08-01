@@ -62,7 +62,7 @@
     <!-- 订阅提示条 -->
     <div class="ci-cta">
       <span>订阅 AI 员工后：AI 客服自动识别客户价值、分级沉淀资产，高价值客户立即转真人接管。</span>
-      <NuxtLink to="/workspace/media" class="ci-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
+      <NuxtLink to="/workspace/media" class="ci-cta-btn">解锁 AI 运营团队 →</NuxtLink>
     </div>
   </MediaWorkspaceShell>
 </template>

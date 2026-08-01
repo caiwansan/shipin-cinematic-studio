@@ -1,8 +1,8 @@
 <!--
-  Sprint-MEDIA-DESIGN-LOCALIZATION-04 — 首页 = 我的 AI 新媒体公司总部
-  中国企业用户产品语言：无英文技术词 / 卡片三问（这是什么·能帮我什么·下一步）
-  结构：总部头(使命+双CTA) → 我的 AI 员工 → 我的新媒体渠道(9平台) → 运营情况
-  数据：全部复用 /api/enterprise/media/overview（零新 API）
+  Sprint-MEDIA-CHANNEL-EXPANSION-05 — 首页 = AI 全渠道运营中心
+  产品定位：AI 新媒体运营中心 → AI 全渠道运营中心（内容/电商/客户/数据 全线上生意）
+  结构：总部头(使命+双CTA) → 我的 AI 员工 → 我的运营渠道(四大类) → 我的线上生意 → 运营情况
+  纪律：只做产品表达；渠道/生意全部诚实「未连接/等待连接」，零假数据；零新 API（复用 /api/enterprise/media/overview）
 -->
 <template>
   <MediaWorkspaceShell>
@@ -14,8 +14,8 @@
     </div>
     <div v-else-if="identityState === 'personal-space'" class="dash-identity dash-identity-ok">
       <b>✅ 个人空间已就绪</b>
-      <span>这里是你个人的 AI 新媒体运营中心。连接新媒体账号、解锁 AI 员工后，你的 AI 新媒体部门将开始自动工作。</span>
-      <NuxtLink to="/workspace/media/accounts" class="dash-identity-btn">连接新媒体账号 →</NuxtLink>
+      <span>这里是你个人的 AI 全渠道运营中心。连接内容平台、电商店铺和客户渠道，解锁 AI 员工后，你的 AI 运营团队将开始自动工作。</span>
+      <NuxtLink to="/workspace/media/accounts" class="dash-identity-btn">连接你的运营渠道 →</NuxtLink>
     </div>
 
     <!-- ═══════ 总部头 · 我是谁 + 下一步 ═══════ -->
@@ -23,11 +23,12 @@
       <div class="hq-hero-grid"></div>
       <div class="hq-hero-glow"></div>
       <div class="hq-hero-inner">
-        <h1 class="hq-title">AI 新媒体运营中心</h1>
-        <p class="hq-mission">让 AI 员工帮你持续做好内容、运营客户、提升品牌影响力</p>
+        <h1 class="hq-title">AI 全渠道运营中心</h1>
+        <p class="hq-mission">让 AI 员工帮你运营内容、客户和线上生意</p>
+        <p class="hq-desc">连接你的内容平台、电商店铺和客户渠道，让 AI 员工协助完成日常运营。</p>
         <div class="hq-cta">
           <NuxtLink to="/workspace/media/accounts" class="hq-btn hq-btn-primary">
-            连接新媒体账号 <span class="hq-btn-arrow">→</span>
+            连接你的运营渠道 <span class="hq-btn-arrow">→</span>
           </NuxtLink>
           <button v-if="!agents.length" class="hq-btn hq-btn-ghost" @click="showSubscribe = true">
             解锁 AI 员工团队 <span class="hq-btn-arrow">→</span>
@@ -38,7 +39,7 @@
         </div>
         <div class="hq-why">
           <span class="hq-why-item">🤖 5 名智能员工，解锁后自动工作</span>
-          <span class="hq-why-item">📱 支持 9 大新媒体平台</span>
+          <span class="hq-why-item">🌐 内容平台 · 电商店铺 · 客户渠道</span>
           <span class="hq-why-item">📊 运营成果自动汇总</span>
         </div>
       </div>
@@ -94,40 +95,166 @@
       <p class="hq-sec-note">解锁后自动工作：AI 员工将按你的业务自动规划内容、制作素材、运营客户、分析数据。</p>
     </section>
 
-    <!-- ═══════ 我的新媒体渠道 · 入口 ═══════ -->
+    <!-- ═══════ 我的运营渠道 · 四大类 ═══════ -->
     <section class="hq-section">
       <div class="hq-sec-head">
         <div>
-          <div class="hq-sec-kicker">我的新媒体渠道</div>
-          <h2 class="hq-sec-title">连接你的内容渠道，AI 员工才能帮你运营</h2>
+          <div class="hq-sec-kicker">我的运营渠道</div>
+          <h2 class="hq-sec-title">连接你的线上生意渠道，AI 员工才能帮你运营</h2>
         </div>
-        <NuxtLink to="/workspace/media/accounts" class="hq-sec-link">账号管理 →</NuxtLink>
+        <NuxtLink to="/workspace/media/accounts" class="hq-sec-link">渠道管理 →</NuxtLink>
       </div>
 
-      <div class="hq-channel-grid">
-        <div
-          v-for="ch in channelBlueprints"
-          :key="ch.name"
-          class="hq-channel"
-          :class="ch.connected ? 'connected' : ''"
-          @click="onChannelClick(ch)"
-        >
-          <span class="hq-channel-ico">{{ ch.icon }}</span>
-          <div class="hq-channel-meta">
-            <span class="hq-channel-name">{{ ch.name }}</span>
-            <span class="hq-channel-plan">{{ ch.plan }}</span>
+      <!-- 内容平台 -->
+      <div class="hq-cat">
+        <div class="hq-cat-head">
+          <span class="hq-cat-ico">📱</span>
+          <div class="hq-cat-meta">
+            <b>内容平台</b>
+            <span>用于品牌曝光 · 内容发布</span>
           </div>
-          <span class="hq-channel-state">
-            <span class="hq-channel-dot" :class="ch.connected ? 'on' : 'off'"></span>
-            {{ ch.connected ? '已连接' : '未连接' }}
-          </span>
+          <span class="hq-cat-count">{{ contentPlatforms.length }} 个平台 · 未连接</span>
+        </div>
+        <div class="hq-channel-grid">
+          <div v-for="ch in contentPlatforms" :key="ch.name" class="hq-channel" @click="onChannelClick(ch)">
+            <span class="hq-channel-ico">{{ ch.icon }}</span>
+            <div class="hq-channel-meta">
+              <span class="hq-channel-name">{{ ch.name }}</span>
+              <span class="hq-channel-plan">{{ ch.plan }}</span>
+            </div>
+            <span class="hq-channel-state">
+              <span class="hq-channel-dot off"></span>
+              未连接
+            </span>
+          </div>
         </div>
       </div>
+
+      <!-- 电商店铺 -->
+      <div class="hq-cat">
+        <div class="hq-cat-head">
+          <span class="hq-cat-ico">🛒</span>
+          <div class="hq-cat-meta">
+            <b>电商店铺</b>
+            <span>用于商品销售 · 店铺运营</span>
+          </div>
+          <span class="hq-cat-count">{{ shopPlatforms.length }} 个平台 · 未连接</span>
+        </div>
+        <div class="hq-channel-grid">
+          <div v-for="ch in shopPlatforms" :key="ch.name" class="hq-channel" @click="onChannelClick(ch)">
+            <span class="hq-channel-ico">{{ ch.icon }}</span>
+            <div class="hq-channel-meta">
+              <span class="hq-channel-name">{{ ch.name }}</span>
+              <span class="hq-channel-plan">{{ ch.plan }}</span>
+            </div>
+            <span class="hq-channel-state">
+              <span class="hq-channel-dot off"></span>
+              未连接
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 客户运营 -->
+      <div class="hq-cat">
+        <div class="hq-cat-head">
+          <span class="hq-cat-ico">💬</span>
+          <div class="hq-cat-meta">
+            <b>客户运营</b>
+            <span>用于客户沟通 · 私域维护</span>
+          </div>
+          <span class="hq-cat-count">{{ customerPlatforms.length }} 个渠道 · 未连接</span>
+        </div>
+        <div class="hq-channel-grid">
+          <div v-for="ch in customerPlatforms" :key="ch.name" class="hq-channel" @click="onChannelClick(ch)">
+            <span class="hq-channel-ico">{{ ch.icon }}</span>
+            <div class="hq-channel-meta">
+              <span class="hq-channel-name">{{ ch.name }}</span>
+              <span class="hq-channel-plan">{{ ch.plan }}</span>
+            </div>
+            <span class="hq-channel-state">
+              <span class="hq-channel-dot off"></span>
+              未连接
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 数据渠道 -->
+      <div class="hq-cat">
+        <div class="hq-cat-head">
+          <span class="hq-cat-ico">📊</span>
+          <div class="hq-cat-meta">
+            <b>数据渠道</b>
+            <span>用于数据回流 · 效果分析</span>
+          </div>
+          <span class="hq-cat-count">{{ dataPlatforms.length }} 个渠道 · 未连接</span>
+        </div>
+        <div class="hq-channel-grid">
+          <div v-for="ch in dataPlatforms" :key="ch.name" class="hq-channel" @click="onChannelClick(ch)">
+            <span class="hq-channel-ico">{{ ch.icon }}</span>
+            <div class="hq-channel-meta">
+              <span class="hq-channel-name">{{ ch.name }}</span>
+              <span class="hq-channel-plan">{{ ch.plan }}</span>
+            </div>
+            <span class="hq-channel-state">
+              <span class="hq-channel-dot off"></span>
+              未连接
+            </span>
+          </div>
+        </div>
+      </div>
+
       <p class="hq-sec-note">
-        {{ channels.connected > 0
-          ? `已连接 ${channels.connected} 个账号——AI 员工可以开始帮你发布内容、回复客户。`
-          : '连接账号后，AI 员工才能帮你发布内容、回复客户、读取数据。' }}
+        连接渠道后，AI 员工才能帮你发布内容、运营店铺、回复客户、读取数据。当前全部渠道均未连接——真实接入将按：用户授权 → 渠道连接服务 → AI 员工 Runtime 推进。
       </p>
+    </section>
+
+    <!-- ═══════ 我的线上生意 · 商业成果 ═══════ -->
+    <section class="hq-section">
+      <div class="hq-sec-head">
+        <div>
+          <div class="hq-sec-kicker">我的线上生意</div>
+          <h2 class="hq-sec-title">你的线上生意，AI 帮你一起打理</h2>
+        </div>
+        <NuxtLink to="/workspace/media/shop" class="hq-sec-link">商品运营 →</NuxtLink>
+      </div>
+
+      <div class="hq-biz-grid">
+        <div class="hq-biz-card">
+          <div class="hq-biz-ico">🛍️</div>
+          <div class="hq-biz-meta">
+            <span class="hq-biz-label">商品店铺</span>
+            <span class="hq-biz-num">0 个已连接</span>
+          </div>
+          <span class="hq-biz-sub">连接电商店铺后显示</span>
+        </div>
+        <div class="hq-biz-card">
+          <div class="hq-biz-ico">🧾</div>
+          <div class="hq-biz-meta">
+            <span class="hq-biz-label">今日订单</span>
+            <span class="hq-biz-num hq-biz-num--text">等待连接</span>
+          </div>
+          <span class="hq-biz-sub">连接电商店铺后统计</span>
+        </div>
+        <div class="hq-biz-card">
+          <div class="hq-biz-ico">💬</div>
+          <div class="hq-biz-meta">
+            <span class="hq-biz-label">客户咨询</span>
+            <span class="hq-biz-num hq-biz-num--text">等待连接</span>
+          </div>
+          <span class="hq-biz-sub">连接客服渠道后统计</span>
+        </div>
+        <div class="hq-biz-card">
+          <div class="hq-biz-ico">📈</div>
+          <div class="hq-biz-meta">
+            <span class="hq-biz-label">销售数据</span>
+            <span class="hq-biz-num hq-biz-num--text">等待连接</span>
+          </div>
+          <span class="hq-biz-sub">连接数据渠道后统计</span>
+        </div>
+      </div>
+      <p class="hq-sec-note">连接电商店铺与客户渠道后，这里将展示你的真实生意数据——AI 员工会帮你分析商品表现、关注客户反馈、发现销售机会。</p>
     </section>
 
     <!-- ═══════ 运营情况 · 成果 ═══════ -->
@@ -135,7 +262,7 @@
       <div class="hq-sec-head">
         <div>
           <div class="hq-sec-kicker">运营情况</div>
-          <h2 class="hq-sec-title">你的 AI 新媒体部门做了多少事</h2>
+          <h2 class="hq-sec-title">你的 AI 运营团队做了多少事</h2>
         </div>
       </div>
 
@@ -204,7 +331,7 @@
             </div>
           </div>
           <div class="sub-modal-foot">
-            <div class="sub-modal-note">解锁后：自动部署 AI 员工 → 绑定新媒体账号 → 开始自动运营 → 成果汇总到运营情况</div>
+            <div class="sub-modal-note">解锁后：自动部署 AI 员工 → 连接你的运营渠道 → 开始自动运营 → 成果汇总到运营情况</div>
             <div class="sub-modal-actions">
               <NuxtLink to="/workspace/media/accounts" class="sub-modal-secondary" @click="showSubscribe = false">先去连接账号 →</NuxtLink>
               <button class="sub-modal-primary" @click="showSubscribe = false">知道了</button>
@@ -249,28 +376,41 @@ const reportText = computed(() => {
   if (usage.value.executions > 0 || recentOutcomes.value.length > 0) {
     return `${usage.value.executions || 0} 次执行`
   }
-  return '等待连接账号'
+  return '等待连接渠道'
 })
 
-// 9 大新媒体平台（产品蓝图；连接状态：微信公众号真实接入后点亮，其余待接入诚实展示）
-const channelBlueprints = computed(() => {
-  const connected = channels.value.connected || 0
-  const defs = [
-    { icon: '📱', name: '抖音', plan: '短视频 · 直播' },
-    { icon: '📱', name: '快手', plan: '短视频 · 直播' },
-    { icon: '📕', name: '小红书', plan: '种草图文 · 视频' },
-    { icon: '🎬', name: '视频号', plan: '微信生态分发' },
-    { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务' },
-    { icon: '🌐', name: '微博', plan: '话题 · 图文' },
-    { icon: '📰', name: '百家号', plan: '图文 · 视频' },
-    { icon: '📰', name: '今日头条', plan: '图文 · 视频' },
-    { icon: '🏢', name: '企业微信', plan: '私域客户运营' },
-  ]
-  return defs.map((d, i) => ({ ...d, connected: i === 4 && connected > 0 }))
-})
+// 四大类运营渠道（产品蓝图；全部未连接——真实接入按：用户授权 → 渠道连接服务 → AI 员工 Runtime）
+// ① 内容平台：品牌曝光  ② 电商店铺：商品销售  ③ 客户运营：客户沟通  ④ 数据渠道：数据回流
+const contentPlatforms = [
+  { icon: '📱', name: '抖音', plan: '短视频 · 直播' },
+  { icon: '📱', name: '快手', plan: '短视频 · 直播' },
+  { icon: '📕', name: '小红书', plan: '种草图文 · 视频' },
+  { icon: '🎬', name: '视频号', plan: '微信生态分发' },
+  { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务' },
+  { icon: '🌐', name: '微博', plan: '话题 · 图文' },
+  { icon: '📰', name: '百家号', plan: '图文 · 视频' },
+  { icon: '📰', name: '今日头条', plan: '图文 · 视频' },
+]
+const shopPlatforms = [
+  { icon: '🛒', name: '淘宝店', plan: '商品销售 · 店铺运营' },
+  { icon: '🛒', name: '京东店', plan: '商品销售 · 店铺运营' },
+  { icon: '🛒', name: '拼多多店', plan: '商品销售 · 店铺运营' },
+  { icon: '🛒', name: '抖音商城', plan: '短视频电商 · 直播带货' },
+  { icon: '🛒', name: '美团店铺', plan: '本地生活 · 门店运营' },
+  { icon: '🛒', name: '小红书店铺', plan: '种草转化 · 商品销售' },
+]
+const customerPlatforms = [
+  { icon: '🏢', name: '企业微信', plan: '私域客户运营' },
+  { icon: '💬', name: '微信客户', plan: '客户沟通 · 跟进' },
+  { icon: '📞', name: '客服渠道', plan: '咨询接待 · 售后' },
+]
+const dataPlatforms = [
+  { icon: '🌍', name: '网站', plan: '流量 · 转化数据' },
+  { icon: '📱', name: '小程序', plan: '用户行为数据' },
+  { icon: '📣', name: '广告平台', plan: '投放效果数据' },
+]
 
 function onChannelClick(ch: any) {
-  if (ch.connected) return
   if (ch.name === '微信公众号') {
     window.location.href = '/workspace/media/accounts'
   } else {
@@ -280,11 +420,11 @@ function onChannelClick(ch: any) {
 
 // 5 名 AI 员工（产品语言：职位 + 帮你做什么 + 解锁后自动工作）
 const teamRoster = [
-  { name: 'Alice', role: 'AI 运营总监', avatar: '👩‍💼', helps: ['制定内容计划', '安排发布节奏', '规划全年运营方向'], auto: '自动制定内容计划与发布排期，指挥团队执行' },
-  { name: 'Bob', role: 'AI 内容策划', avatar: '🧑‍💻', helps: ['发现热门内容', '规划每日选题'], auto: '每天发现热门内容方向，选题自动排满内容日历' },
-  { name: 'Carol', role: 'AI 内容制作', avatar: '👩‍🎨', helps: ['生成文章', '生成图片', '生成视频'], auto: '按选题自动生成文章、图片、视频初稿，交人工审核' },
-  { name: 'David', role: 'AI 客户管家', avatar: '🧑‍💼', helps: ['自动回复客户咨询', '发现销售机会'], auto: '自动回复客户消息，发现销售机会并提醒你跟进' },
-  { name: 'Eve', role: 'AI 数据分析师', avatar: '👩‍🔬', helps: ['分析运营效果', '优化运营方向'], auto: '每天分析运营效果，自动产出报告与增长建议' },
+  { name: 'Alice', role: 'AI 运营总监', avatar: '👩‍💼', helps: ['制定内容计划', '规划营销活动', '管理运营节奏'], auto: '统筹内容计划与营销节奏，指挥团队执行' },
+  { name: 'Bob', role: 'AI 内容策划', avatar: '🧑‍💻', helps: ['发现热点', '策划商品推广内容', '生成营销主题'], auto: '每天发现热点，选题与营销主题自动排满内容日历' },
+  { name: 'Carol', role: 'AI 内容制作', avatar: '👩‍🎨', helps: ['制作图片', '制作视频', '制作商品宣传素材'], auto: '按选题自动制作图片、视频与商品素材，交人工审核' },
+  { name: 'David', role: 'AI 客户管家', avatar: '🧑‍💼', helps: ['回复客户咨询', '维护客户关系', '发现购买机会'], auto: '自动回复客户消息，维护客户关系并发现购买机会提醒你跟进' },
+  { name: 'Eve', role: 'AI 数据分析师', avatar: '👩‍🔬', helps: ['分析内容效果', '分析商品销售', '优化运营策略'], auto: '每天分析内容与销售数据，自动产出报告与运营策略建议' },
 ]
 
 const showSubscribe = ref(false)
@@ -355,6 +495,12 @@ onMounted(async () => {
   line-height: 1.8;
   color: #94a3b8;
   margin: 0 0 24px;
+}
+.hq-desc {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #64748b;
+  margin: -14px 0 22px;
 }
 .hq-cta { display: flex; gap: 12px; flex-wrap: wrap; }
 .hq-btn {
@@ -480,10 +626,38 @@ onMounted(async () => {
 }
 .hq-view:hover { background: rgba(99, 102, 241, 0.1); }
 
-/* ═══ 我的新媒体渠道 ═══ */
+/* ═══ 我的运营渠道 · 四大类 ═══ */
+.hq-cat { margin-bottom: 22px; }
+.hq-cat:last-child { margin-bottom: 0; }
+.hq-cat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.hq-cat-ico {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  border-radius: 9px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+.hq-cat-meta { display: flex; flex-direction: column; flex: 1; }
+.hq-cat-meta b { font-size: 12.5px; font-weight: 800; color: #e2e8f0; }
+.hq-cat-meta span { font-size: 10px; color: #64748b; margin-top: 1px; }
+.hq-cat-count {
+  font-size: 9.5px; font-weight: 700;
+  color: #64748b;
+  background: rgba(71, 85, 105, 0.14);
+  border: 1px solid rgba(71, 85, 105, 0.28);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
 .hq-channel-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 .hq-channel {
@@ -511,6 +685,27 @@ onMounted(async () => {
 .hq-channel-dot { width: 6px; height: 6px; border-radius: 50%; }
 .hq-channel-dot.on { background: #34d399; box-shadow: 0 0 6px #34d399; }
 .hq-channel-dot.off { background: #475569; }
+
+/* ═══ 我的线上生意 ═══ */
+.hq-biz-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.hq-biz-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px;
+  border-radius: 15px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(71, 85, 105, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.hq-biz-ico { font-size: 20px; }
+.hq-biz-meta { display: flex; flex-direction: column; flex: 1; }
+.hq-biz-label { font-size: 11px; color: #94a3b8; }
+.hq-biz-num { font-size: 20px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.02em; }
+.hq-biz-num--text { font-size: 14px; line-height: 1.6; }
+.hq-biz-sub { font-size: 9.5px; color: #64748b; align-self: flex-end; }
 
 /* ═══ 运营情况 ═══ */
 .hq-ops-grid {
@@ -607,6 +802,7 @@ onMounted(async () => {
 @media (max-width: 1180px) {
   .hq-team-grid { grid-template-columns: repeat(3, 1fr); }
   .hq-ops-grid { grid-template-columns: repeat(2, 1fr); }
+  .hq-biz-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 900px) {
   .hq-channel-grid { grid-template-columns: repeat(2, 1fr); }

@@ -125,12 +125,12 @@ export const workspaces: WorkspaceConfig[] = [
   // ===== media =====
   {
     id: 'media',
-    name: '新媒体运营',
+    name: '全渠道运营',
     status: 'preview',
     visibleOnHome: true,
     routeAccessible: true,
-    completion: 15,
-    note: 'AI 员工新媒体运营工作台（产品壳，等微信资产接入）',
+    completion: 20,
+    note: 'AI 全渠道运营中心（产品壳：内容/电商/客户/数据 四类渠道，等真实接入）',
   },
 
   // ===== hidden =====

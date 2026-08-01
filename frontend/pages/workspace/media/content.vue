@@ -85,7 +85,7 @@
           <div class="cf-cta-sub">选题自动填充 → 内容自动生产 → 合规自动审核 → 排期自动发布 → 数据自动复盘</div>
         </div>
       </div>
-      <NuxtLink to="/workspace/media" class="cf-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
+      <NuxtLink to="/workspace/media" class="cf-cta-btn">解锁 AI 运营团队 →</NuxtLink>
     </div>
   </MediaWorkspaceShell>
 </template>

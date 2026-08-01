@@ -10,7 +10,7 @@
       kicker="我的 AI 员工"
       title="我的 AI 员工"
       :status="{ text: '解锁后自动工作', type: 'off' }"
-      desc="一支为你运营新媒体业务的 AI 团队——每名员工职责清晰，解锁后自动部署并开始工作。"
+      desc="一支为你运营线上生意的 AI 团队——每名员工职责清晰，解锁后自动部署并开始工作。"
     />
 
     <div class="to-layout">
@@ -54,7 +54,7 @@
             </div>
             <button class="to-lock-btn" @click.stop="showSubscribe = true">🔓 解锁</button>
           </div>
-          <div class="to-list-note">解锁后自动部署 · 绑定新媒体账号 · 开始自动运营</div>
+          <div class="to-list-note">解锁后自动部署 · 连接你的运营渠道 · 开始自动运营</div>
         </div>
       </div>
 
@@ -170,7 +170,7 @@
             </div>
           </div>
           <div class="unlock-foot">
-            <div class="unlock-note">解锁后：自动部署 AI 员工 → 绑定新媒体账号 → 开始自动运营 → 成果汇总到运营情况</div>
+            <div class="unlock-note">解锁后：自动部署 AI 员工 → 连接你的运营渠道 → 开始自动运营 → 成果汇总到运营情况</div>
             <div class="unlock-actions">
               <NuxtLink to="/workspace/media/accounts" class="unlock-secondary" @click="showSubscribe = false">先去连接账号 →</NuxtLink>
               <button class="unlock-primary" @click="showSubscribe = false">知道了</button>
@@ -201,42 +201,42 @@ const roster = [
   {
     name: 'Alice', role: 'AI 运营总监', avatar: '👩‍💼',
     mission: '帮助企业规划全年运营方向',
-    helps: ['制定每月内容计划', '安排每天发布内容', '分析行业热点'],
-    capabilities: ['战略规划', '内容排期', '增长分析'],
-    duty: '统筹内容计划与发布节奏，制定月度运营策略',
-    auto: '自动制定内容计划与发布排期，指挥团队执行',
+    helps: ['制定内容计划', '规划营销活动', '管理运营节奏'],
+    capabilities: ['战略规划', '营销策划', '节奏管理'],
+    duty: '统筹内容计划与营销节奏，制定月度运营策略',
+    auto: '统筹内容计划与营销节奏，指挥团队执行',
   },
   {
     name: 'Bob', role: 'AI 内容策划', avatar: '🧑‍💻',
-    mission: '每天发现热门内容方向',
-    helps: ['发现热门内容', '规划每日选题'],
-    capabilities: ['热点追踪', '选题挖掘', '竞品分析'],
-    duty: '追踪行业热点与竞品动态，产出选题池与内容建议',
-    auto: '每天发现热门内容方向，选题自动排满内容日历',
+    mission: '每天发现热点，策划推广内容',
+    helps: ['发现热点', '策划商品推广内容', '生成营销主题'],
+    capabilities: ['热点追踪', '商品推广策划', '营销主题生成'],
+    duty: '追踪热点与商品卖点，产出选题池与营销主题',
+    auto: '每天发现热点，选题与营销主题自动排满内容日历',
   },
   {
     name: 'Carol', role: 'AI 内容制作', avatar: '👩‍🎨',
-    mission: '自动生成文章、图片、视频',
-    helps: ['生成文章', '生成图片', '生成视频'],
-    capabilities: ['图文创作', '视频脚本', '素材制作'],
-    duty: '按选题生产图文与视频内容，AI 辅助创作输出成品',
-    auto: '按选题自动生成文章、图片、视频初稿，交人工审核',
+    mission: '制作图片、视频与商品宣传素材',
+    helps: ['制作图片', '制作视频', '制作商品宣传素材'],
+    capabilities: ['图片制作', '视频制作', '商品素材'],
+    duty: '按选题制作图文、视频与商品宣传素材',
+    auto: '按选题自动制作图片、视频与商品素材，交人工审核',
   },
   {
     name: 'David', role: 'AI 客户管家', avatar: '🧑‍💼',
-    mission: '自动回复客户咨询，发现销售机会',
-    helps: ['自动回复客户咨询', '发现销售机会'],
-    capabilities: ['自动回复', '意向判断', '客户分级'],
-    duty: '接待客户消息，识别高价值客户并提醒你跟进',
-    auto: '自动回复客户消息，发现销售机会并提醒你跟进',
+    mission: '回复客户咨询，维护客户关系',
+    helps: ['回复客户咨询', '维护客户关系', '发现购买机会'],
+    capabilities: ['自动回复', '关系维护', '购买机会识别'],
+    duty: '接待客户消息，维护客户关系并发现购买机会',
+    auto: '自动回复客户消息，维护客户关系并发现购买机会提醒你跟进',
   },
   {
     name: 'Eve', role: 'AI 数据分析师', avatar: '👩‍🔬',
-    mission: '每天分析运营效果，优化方向',
-    helps: ['分析运营效果', '优化运营方向'],
-    capabilities: ['数据回流', '报告生成', '增长建议'],
-    duty: '回流账号数据，产出运营报告与增长建议',
-    auto: '每天分析运营效果，自动产出报告与增长建议',
+    mission: '分析内容与销售，优化运营策略',
+    helps: ['分析内容效果', '分析商品销售', '优化运营策略'],
+    capabilities: ['内容分析', '销售分析', '策略建议'],
+    duty: '回流内容与销售数据，产出运营报告与策略建议',
+    auto: '每天分析内容与销售数据，自动产出报告与运营策略建议',
   },
 ]
 
@@ -246,7 +246,7 @@ function rosterByRole(role: string) {
 
 // 员工卡使命（真实 agent 用标准编制使命兜底）
 function memberDuty(role: string) {
-  return rosterByRole(role)?.mission || (role === '未分配角色' ? '角色待分配，请先完成岗位配置' : `${role}：负责新媒体运营线对应环节`)
+  return rosterByRole(role)?.mission || (role === '未分配角色' ? '角色待分配，请先完成岗位配置' : `${role}：负责全渠道运营线对应环节`)
 }
 
 const selectedDuty = computed(() => {
@@ -256,7 +256,7 @@ const selectedDuty = computed(() => {
 })
 const selectedHelps = computed(() => {
   if (!selected.value) return []
-  return selected.value.helps || rosterByRole(selected.value.role)?.helps || ['执行新媒体运营任务']
+  return selected.value.helps || rosterByRole(selected.value.role)?.helps || ['执行全渠道运营任务']
 })
 const selectedCaps = computed(() => {
   if (!selected.value) return []

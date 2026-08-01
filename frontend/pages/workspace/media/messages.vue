@@ -56,7 +56,7 @@
     <!-- 订阅提示条 -->
     <div class="mg-cta">
       <span>订阅 AI 员工后，AI 客服自动接待私信、判断价值、提醒销售机会。</span>
-      <NuxtLink to="/workspace/media" class="mg-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
+      <NuxtLink to="/workspace/media" class="mg-cta-btn">解锁 AI 运营团队 →</NuxtLink>
     </div>
   </MediaWorkspaceShell>
 </template>
