@@ -395,7 +395,24 @@ export default async function memberRoutes(fastify: FastifyInstance) {
       where: { enabled: true },
       orderBy: { sortOrder: "asc" },
     })
-    return plans
+    // SPRINT-COMMERCE-SSOT-02: 商品权威 = SubscriptionPlan（Product Catalog SSOT）
+    // MemberPlan 仅承载权益参数（storageLimit/dailyQuota 等），价格/周期以目录商品为准
+    const vipProducts = await prisma.subscriptionPlan.findMany({
+      where: { code: { startsWith: 'vip_' }, status: 'active' },
+    })
+    const merged = plans.map((p: any) => {
+      const prod = vipProducts.find((v: any) => v.code === `vip_${p.level}`)
+      return {
+        ...p,
+        productCode: prod?.code || `vip_${p.level}`,
+        price: prod?.price ?? p.price,
+        originalPrice: prod?.price ? Number(prod.price) * 1.5 : p.originalPrice,
+        billingCycle: prod?.billingCycle || 'monthly',
+        commerceRegistered: !!prod,
+        capabilities: (() => { try { return JSON.parse(prod?.capabilities || '[]') } catch { return [] } })(),
+      }
+    })
+    return merged
   })
 
   /** 购买/升级 VIP 套餐
@@ -490,24 +507,32 @@ export default async function memberRoutes(fastify: FastifyInstance) {
         where: { userId, couponId, usedAt: null },
         data: { usedAt: new Date(), orderNo },
       })
-      // 直接激活 VIP
+      // SPRINT-COMMERCE-SSOT-02: 统一 Provision（commerce-provision 唯一入口，禁旁路激活）
+      const { provisionFromPayment } = await import('../services/commerce/commerce-provision.service.js')
       const now = new Date()
-      const expiresAt = new Date(now.getTime() + plan.months * 24 * 60 * 60 * 1000)
-      await prisma.$transaction([
-        prisma.rechargeOrder.create({
-          data: { userId, planLevel: plan.level, coins: 0, amount: 0, status: 'paid', payMethod: 'coupon', orderNo, payTime: now },
-        }),
-        prisma.user.update({
-          where: { id: userId },
-          data: { memberTier: plan.level, memberExpiresAt: expiresAt },
-        }),
-        prisma.membership.upsert({
-          where: { userId },
-          update: { tier: plan.level, expiresAt, credits: { increment: plan.coins || 0 } },
-          create: { userId, tier: plan.level, expiresAt, credits: plan.coins || 0 },
-        }),
-      ])
-      console.log(`[upgrade-vip] ✅ 代金券全额抵扣: user=${userId.substring(0,8)} plan=${plan.level}`)
+      const fakeOrder = await prisma.paymentOrder.create({
+        data: {
+          userId,
+          orderNo,
+          type: 'subscription',
+          amount: 0,
+          coins: 0,
+          method: 'coupon',
+          status: 'paid',
+          planType: `vip_${plan.level}`,
+          payTime: now,
+          remark: `代金券全额抵扣（${plan.name}）`,
+        },
+      })
+      const result = await provisionFromPayment(
+        { id: fakeOrder.id, userId, orderNo, amount: 0, planType: `vip_${plan.level}`, status: 'paid' },
+        `COUPON-${orderNo}`,
+        now,
+      )
+      if (!result.provisioned) {
+        return reply.status(500).send({ error: `权益激活失败: ${result.reason}` })
+      }
+      console.log(`[upgrade-vip] ✅ 代金券全额抵扣: user=${userId.substring(0,8)} plan=${plan.level} (Commerce Provision)`)
       return { needPay: false, success: true, message: `已使用代金券全额抵扣，成功升级为「${plan.name}」！` }
     }
 
@@ -518,17 +543,25 @@ export default async function memberRoutes(fastify: FastifyInstance) {
     // 生成订单号
     const orderNo = `VIP${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
-    // 创建订单（返回支付方式列表让用户选择）
-    const order = await prisma.rechargeOrder.create({
+    // ── SPRINT-COMMERCE-SSOT-02: 统一 PaymentOrder（Commerce Authority 链，禁 rechargeOrder 新订单）──
+    // 商品 = SubscriptionPlan(vip_<level>)，支付成功 → provisionFromPayment → Subscription + PersonalEntitlement + 兼容层
+    const vipProduct = await prisma.subscriptionPlan.findUnique({ where: { code: `vip_${plan.level}` } })
+    if (!vipProduct) {
+      return reply.status(400).send({ error: `该套餐未在商品目录注册（vip_${plan.level}），暂不支持线上支付，请联系管理员` })
+    }
+
+    // 创建订单（统一 PaymentOrder，planType = 商品 code）
+    const order = await prisma.paymentOrder.create({
       data: {
         userId,
-        planLevel: plan.level,
-        coins: 0,
-        amount: finalAmount,
-        status: "pending",
-        payMethod: "auto",
         orderNo,
-        remark: vipCouponDiscount > 0 ? `代金券抵扣 ¥${vipCouponDiscount}` : undefined,
+        type: 'subscription',
+        amount: finalAmount,
+        coins: Math.floor(finalAmount * 100),
+        method: 'auto',
+        status: 'pending',
+        planType: vipProduct.code,
+        remark: vipCouponDiscount > 0 ? `会员「${plan.name}」代金券抵扣 ¥${vipCouponDiscount}` : `会员「${plan.name}」`,
       },
     })
 
@@ -574,12 +607,70 @@ export default async function memberRoutes(fastify: FastifyInstance) {
   })
 
   // 用户选择支付方式后，生成具体支付凭据
+  // SPRINT-COMMERCE-SSOT-02: 优先统一 PaymentOrder（Commerce Authority 链，同一套 provider + notify）
+  // 存量 rechargeOrder 兼容（代理 AGT 订单 / 历史 VIP 订单），新订单禁建 rechargeOrder
   fastify.post("/api/member/create-payment", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id: userId } = request.user as any
     const { orderId, channel } = request.body as any
     if (!orderId || !channel) return reply.status(400).send({ error: 'orderId 和 channel 必填' })
     if (!['wechat', 'alipay'].includes(channel)) return reply.status(400).send({ error: '无效的支付方式' })
 
+    // ── 新链：统一 PaymentOrder（Commerce Authority） ──
+    const payOrder = await prisma.paymentOrder.findUnique({ where: { id: orderId } })
+    if (payOrder) {
+      if (payOrder.userId !== userId) return reply.status(403).send({ error: '无权操作' })
+      if (payOrder.status !== 'pending') return reply.status(400).send({ error: '订单状态异常' })
+
+      if (channel === 'alipay') {
+        const secret = await prisma.paymentSecret.findUnique({ where: { channel: 'alipay' } })
+        if (!secret || !secret.enabled) return reply.status(400).send({ error: '支付宝通道未配置' })
+        const config = typeof secret.config === 'string' ? JSON.parse(secret.config) : secret.config
+        if (!config.appId || !config.privateKey) return reply.status(400).send({ error: '支付宝通道未配置' })
+        let privateKey = config.privateKey
+        if (privateKey && !privateKey.includes('-----BEGIN')) {
+          privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`
+        }
+        const { AlipayProvider } = await import('../payment/providers/alipay/index.js')
+        const provider = new AlipayProvider({
+          appId: config.appId,
+          privateKey,
+          alipayPublicKey: config.publicKey || config.alipayPublicKey || '',
+          gateway: 'https://openapi.alipay.com/gateway.do',
+          notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
+          returnUrl: 'https://aigc.fushtn.com/user/center',
+        })
+        const result = await provider.createOrder({
+          outTradeNo: payOrder.orderNo,
+          description: `${payOrder.planType || 'VIP'} ¥${payOrder.amount}`,
+          amount: payOrder.amount,
+          notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
+          returnUrl: 'https://aigc.fushtn.com/user/center',
+        })
+        await prisma.paymentOrder.update({ where: { id: orderId }, data: { method: 'alipay' } })
+        if (result.qrCode) return { paymentType: 'alipay_qr', qrCode: result.qrCode }
+        if (result.payUrl) return { paymentType: 'alipay_page', payUrl: result.payUrl }
+        return reply.status(500).send({ error: '支付宝支付链接生成失败' })
+      }
+
+      if (channel === 'wechat') {
+        const secret = await prisma.paymentSecret.findUnique({ where: { channel: 'wechat' } })
+        if (!secret || !secret.enabled) return reply.status(400).send({ error: '微信支付通道未配置' })
+        const config = typeof secret.config === 'string' ? JSON.parse(secret.config) : secret.config
+        if (!config.appId || !config.mchId || !config.apiV3Key || !config.keyPem) return reply.status(400).send({ error: '微信支付通道未配置' })
+        const { createWxpayNativeQrCode } = await import('../services/wxpay.service.js')
+        const result = await createWxpayNativeQrCode({
+          outTradeNo: payOrder.orderNo,
+          description: `${payOrder.planType || 'VIP'} ¥${payOrder.amount}`,
+          totalAmount: payOrder.amount,
+          notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
+        })
+        await prisma.paymentOrder.update({ where: { id: orderId }, data: { method: 'wechat' } })
+        if (result.codeUrl) return { paymentType: 'wxpay_qr', codeUrl: result.codeUrl }
+        return reply.status(500).send({ error: '微信支付链接生成失败' })
+      }
+    }
+
+    // ── 存量链：rechargeOrder 兼容（代理 AGT / 历史 VIP 订单） ──
     const order = await prisma.rechargeOrder.findUnique({ where: { id: orderId } })
     if (!order) return reply.status(404).send({ error: '订单不存在' })
     if (order.userId !== userId) return reply.status(403).send({ error: '无权操作' })
@@ -1082,6 +1173,17 @@ fastify.get("/api/payment/alipay/status/:orderId", { preHandler: [fastify.authen
   const { orderId } = request.params as any
 
   if (!orderId) return reply.status(400).send({ error: "orderId 不能为空" })
+
+  // SPRINT-COMMERCE-SSOT-02: 优先统一 PaymentOrder（新 VIP 链），fallback rechargeOrder（存量）
+  const payOrder = await prisma.paymentOrder.findUnique({ where: { id: orderId } })
+  if (payOrder) {
+    if (payOrder.userId !== userId) return reply.status(403).send({ error: "无权访问" })
+    return {
+      status: payOrder.status,
+      planLevel: payOrder.planType,
+      payTime: payOrder.payTime,
+    }
+  }
 
   const order = await prisma.rechargeOrder.findUnique({ where: { id: orderId } })
   if (!order) return reply.status(404).send({ error: "订单不存在" })

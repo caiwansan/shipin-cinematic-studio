@@ -92,6 +92,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       todayCalls, monthCalls, todayCost, monthCost, todayTokens, monthTokens,
       enterpriseSubs, paymentPaid, paymentMonth, paymentYear,
       winNewUsers, winActiveUsers, winCalls, winCost, winTokens, winPay, winSubs,
+      subscriptions, activeEnts,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: startOfDay } } }),
@@ -125,6 +126,9 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       prisma.$queryRawUnsafe(`SELECT COALESCE(SUM(CASE WHEN tokens ~ '^[0-9]+$' THEN CAST(tokens AS BIGINT) ELSE 0 END),0) AS total FROM usage_logs WHERE "createdAt" >= $1 AND provider NOT IN ($2) AND "taskType" NOT IN ($3)`, rangeStart, ...DIRTY_PROVIDERS, ...DIRTY_TASKS) as Promise<{ total: bigint }[]>,
       prisma.paymentOrder.aggregate({ where: { status: 'paid', payTime: { gte: rangeStart } }, _sum: { amount: true } }),
       prisma.enterpriseSubscription.findMany({ where: { startAt: { gte: rangeStart } }, select: { snapshotPrice: true, status: true } }).catch(() => []),
+      // SPRINT-COMMERCE-SSOT-02: 权益权威指标（个人订阅 + Entitlement）
+      prisma.subscription.findMany({ select: { endDate: true } }).catch(() => []),
+      prisma.personalEntitlement.findMany({ where: { status: 'active' }, select: { productType: true, effectiveUntil: true } }).catch(() => []),
     ])
 
     const subRevenue = enterpriseSubs.reduce((s, x) => s + ((x.snapshotPrice || 0) / 100), 0)
@@ -144,6 +148,13 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
     const winSubRevenue = (winSubs as { snapshotPrice: number | null }[]).reduce((s, x) => s + ((x.snapshotPrice || 0) / 100), 0)
     const winRevenue = round2((winPay._sum.amount || 0) + winSubRevenue)
 
+    // ── SPRINT-COMMERCE-SSOT-02: 权益活跃指标（Entitlement 权威） ──
+    const entNow = Date.now()
+    const validEnts = activeEnts.filter((e: any) => !e.effectiveUntil || new Date(e.effectiveUntil).getTime() > entNow)
+    const vipEntitlementCount = validEnts.filter((e: any) => e.productType === 'VIP').length
+    const agentEntitlementCount = validEnts.filter((e: any) => e.productType === 'AI_AGENT').length
+    const expiringSubs30d = subscriptions.filter((s2: any) => s2.endDate && s2.endDate > new Date() && s2.endDate <= new Date(entNow + 30 * 24 * 3600 * 1000)).length
+
     return {
       code: 0,
       data: {
@@ -162,7 +173,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
         // ── CEO 核心指标大卡 ──
         metrics: {
           users: { total: totalUsers, todayNew: todayNewUsers, weekNew: weekNewUsers, monthNew: monthNewUsers, growthRate7d, dau, active7, active30 },
-          vip: { total: vipCount, monthNew: vipMonthNew },
+          vip: { total: vipCount, monthNew: vipMonthNew, entitlementActive: vipEntitlementCount, agentEntitlementActive: agentEntitlementCount, expiringSubs30d },
           enterprises: { total: totalEnterprises, active: activeEnterprises, subscriptions: subActive, autoRenew: subAutoRenew },
           agents: { total: totalAgents, active: activeAgents },
           workspaces: { total: 0, note: 'workspace 表为空，生态规模见 /workspace 端点' },
@@ -425,7 +436,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       { stage: '注册用户', key: 'register', value: totalUsers },
       { stage: '创建项目', key: 'project', value: num(usersWithProject?.[0]?.c) },
       { stage: '调用 AI', key: 'usage', value: num(usersWithUsage?.[0]?.c) },
-      { stage: '购买 VIP', key: 'vip', value: vipCount },
+      { stage: '购买 VIP', key: 'vip', value: vipEntitlementCount },
       { stage: '企业订阅', key: 'enterprise', value: enterpriseCount },
     ]
 
@@ -465,6 +476,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
 
     const [todayOrders, monthOrders, allOrders, yearOrders, vipUsers,
       subscriptions, plans, enterpriseSubs, memberPlans, orgs, totalUsers,
+      activeEntitlements,
     ] = await Promise.all([
       prisma.paymentOrder.findMany({ where: { status: 'paid', payTime: { gte: startOfDay } }, select: { amount: true, type: true, planType: true } }),
       prisma.paymentOrder.findMany({ where: { status: 'paid', payTime: { gte: startOfMonth } }, select: { amount: true, type: true, planType: true } }),
@@ -479,7 +491,34 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       prisma.memberPlan.findMany({ where: { enabled: true }, select: { level: true, name: true, price: true } }).catch(() => []),
       prisma.organization.findMany({ select: { id: true, name: true, plan: true } }).catch(() => []),
       prisma.user.count(),
+      // SPRINT-COMMERCE-SSOT-02: Entitlement 活跃权益（权益权威指标）
+      prisma.personalEntitlement.findMany({ where: { status: 'active' }, select: { userId: true, planCode: true, productType: true, effectiveUntil: true } }).catch(() => []),
     ])
+
+    // ── SPRINT-COMMERCE-SSOT-02: 商品分类（Product Catalog 权威，metadata.productType） ──
+    const productTypeByCode = new Map<string, string>()
+    for (const pl of plans) {
+      let md: Record<string, any> = {}
+      try { md = JSON.parse((pl as any).metadata || '{}') } catch {}
+      productTypeByCode.set(pl.code, md.productType || 'GENERIC')
+    }
+    const classifyOrder = (o: { planType?: string | null; type?: string | null }) => {
+      if (o.type === 'mall') return 'mall'
+      if (o.type === 'enterprise_subscription') return 'enterprise'
+      const pt = o.planType
+      if (pt) {
+        const t = productTypeByCode.get(pt)
+        if (t === 'VIP') return 'vip'
+        if (t === 'AI_AGENT') return 'agent'
+        return 'vip' // 未知商品订单归 VIP 旧口径（兼容存量）
+      }
+      return 'vip' // 旧版无 planType 订单 = VIP 充值
+    }
+    const nowTs = Date.now()
+    const validEnts = activeEntitlements.filter(e => !e.effectiveUntil || new Date(e.effectiveUntil).getTime() > nowTs)
+    const vipEntitlementCount = validEnts.filter(e => e.productType === 'VIP').length
+    const agentEntitlementCount = validEnts.filter(e => e.productType === 'AI_AGENT').length
+    const expiringSubs30d = subscriptions.filter(s => s.endDate && s.endDate > new Date() && s.endDate <= new Date(nowTs + 30 * 24 * 3600 * 1000)).length
 
     const sum = (rows: { amount: number }[]) => rows.reduce((s, r) => s + r.amount, 0)
     const todayRevenue = sum(todayOrders)
@@ -496,12 +535,12 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
     const monthRevenue = round2(monthOrderRevenue + subRevenueActive)
     const yearRevenue = round2(yearOrderRevenue + subRevenueTotal)
 
-    // 收入来源构成（真实分类）
+    // 收入来源构成（真实分类，SPRINT-COMMERCE-SSOT-02: 按 Product Catalog 商品类型分类）
     const sources = [
       { name: '企业订阅', key: 'enterprise', amount: round2(subRevenueTotal), desc: `${enterpriseSubs.length} 个订阅` },
-      { name: 'VIP 会员', key: 'vip', amount: round2(allOrders.filter((o) => !o.planType && o.type !== 'enterprise_subscription' && o.type !== 'mall').reduce((s, o) => s + o.amount, 0)), desc: 'PaymentOrder' },
-      { name: 'AI 员工', key: 'agent', amount: round2(allOrders.filter((o) => o.planType === 'career_agent').reduce((s, o) => s + o.amount, 0)), desc: 'Career Agent 订阅' },
-      { name: '商城', key: 'mall', amount: round2(allOrders.filter((o) => o.type === 'mall').reduce((s, o) => s + o.amount, 0)), desc: '积分/道具' },
+      { name: 'VIP 会员', key: 'vip', amount: round2(allOrders.filter((o) => classifyOrder(o) === 'vip').reduce((s, o) => s + o.amount, 0)), desc: `活跃权益 ${vipEntitlementCount} 个` },
+      { name: 'AI 员工', key: 'agent', amount: round2(allOrders.filter((o) => classifyOrder(o) === 'agent').reduce((s, o) => s + o.amount, 0)), desc: `活跃权益 ${agentEntitlementCount} 个` },
+      { name: '商城', key: 'mall', amount: round2(allOrders.filter((o) => classifyOrder(o) === 'mall').reduce((s, o) => s + o.amount, 0)), desc: '积分/道具' },
     ]
 
     // 近 6 月收入趋势（订单 + 订阅）

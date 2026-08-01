@@ -1,5 +1,5 @@
 /**
- * services/commerce/commerce-provision.service.ts — SPRINT-COMMERCE-UNIFICATION-CAREER-01
+ * services/commerce/commerce-provision.service.ts — SPRINT-COMMERCE-UNIFICATION-CAREER-01 / COMMERCE-SSOT-02
  *
  * 昆仑镜统一 Provision 服务（Commerce Authority 唯一激活入口）
  *
@@ -11,29 +11,52 @@
  *
  * 禁止：业务线自建激活函数（原 payment.ts handleCareerSubscriptionFromPayment 已废除）
  * 禁止：业务线自建商业表（career_order / career_payment / career_subscription）
+ * 禁止：业务线专属 checkout（/payment/{workspace}/checkout）
  *
- * 商品目录 = SubscriptionPlan（Product + CapabilityBundle 合一）
- *   productCode = plan.code（career_agent | vip_basic | ...）
- *   productType 映射：AI_AGENT（部署员工实例）/ VIP（权益授予）
+ * 商品目录 = SubscriptionPlan（Product + CapabilityBundle 合一，SSOT）
+ *   商品自描述（metadata JSON，代码零分支）：
+ *     {
+ *       productType: 'AI_AGENT' | 'VIP' | 'ORGANIZATION',
+ *       provision: 'agent' | 'entitlement_only',
+ *       months: 30,            // 订阅周期（天）
+ *       memberPlanLevel: null, // VIP 商品 → 兼容层同步的 user.memberTier 值（basic/vips/director/pro）
+ *       coins: 0               // 赠送积分（VIP 兼容层）
+ *     }
  */
 import { PrismaClient } from '@prisma/client'
 import { CareerAgentService } from '../enterprise/workflow/career-agent.service.js'
 
 const prisma = new PrismaClient()
 
-/** Product 类型 → 预配置动作 */
-export const PRODUCT_TYPES: Record<string, { productType: string; provision: 'agent' | 'entitlement_only' }> = {
-  career_agent: { productType: 'AI_AGENT', provision: 'agent' },
-  // 未来：vip_basic / vip_advanced → { productType: 'VIP', provision: 'entitlement_only' }
+/** 解析商品元数据（Product Catalog 自描述，禁止代码硬编码商品分支） */
+export function resolveProductMeta(plan: { metadata?: string | null }): {
+  productType: string
+  provision: 'agent' | 'entitlement_only'
+  months: number
+  memberPlanLevel: string | null
+  coins: number
+} {
+  let md: Record<string, any> = {}
+  try { md = JSON.parse(plan.metadata || '{}') } catch {}
+  const productType = md.productType || 'GENERIC'
+  const provision = md.provision === 'agent' ? 'agent' : 'entitlement_only'
+  const months = Number(md.months) || 30
+  const memberPlanLevel = md.memberPlanLevel ? String(md.memberPlanLevel) : null
+  const coins = Number(md.coins) || 0
+  return { productType, provision, months, memberPlanLevel, coins }
 }
 
 export async function getProductByCode(productCode: string) {
   return prisma.subscriptionPlan.findUnique({ where: { code: productCode } })
 }
 
+function calcEndDate(start: Date, months: number): Date {
+  return new Date(start.getTime() + Math.max(1, months) * 24 * 60 * 60 * 1000)
+}
+
 /**
  * 统一支付成功 Provision 入口
- * 所有支付成功来源（验签回调 / 管理员确认）必须走这里，禁止旁路激活
+ * 所有支付成功来源（验签回调 / 管理员确认 / 代金券免支付）必须走这里，禁止旁路激活
  */
 export async function provisionFromPayment(payOrder: {
   id: string
@@ -50,24 +73,19 @@ export async function provisionFromPayment(payOrder: {
     return { provisioned: false, reason: 'missing_product_code' }
   }
 
-  const productMeta = PRODUCT_TYPES[productCode]
-  if (!productMeta) {
+  const plan = await prisma.subscriptionPlan.findUnique({ where: { code: productCode } })
+  if (!plan) {
     console.error(`[commerce-provision] 未知商品 ${productCode}（订单 ${payOrder.orderNo}），跳过 Provision`)
     return { provisioned: false, reason: 'unknown_product' }
   }
 
-  console.log(`[commerce-provision] 订单 ${payOrder.orderNo} → 商品 ${productCode} (${productMeta.productType}) 开始 Provision`)
-
-  // ─── Step 1: 订阅落库（统一 Subscription，个人线 tenantId = userId） ───
-  const plan = await prisma.subscriptionPlan.findUnique({ where: { code: productCode } })
-  if (!plan) {
-    console.error(`[commerce-provision] 套餐 ${productCode} 未配置`)
-    return { provisioned: false, reason: 'plan_not_configured' }
-  }
+  const productMeta = resolveProductMeta(plan)
+  console.log(`[commerce-provision] 订单 ${payOrder.orderNo} → 商品 ${productCode} (${productMeta.productType}/${productMeta.provision}) 开始 Provision`)
 
   const userId = payOrder.userId
   const now = new Date()
 
+  // ─── Step 1: 订阅落库（统一 Subscription，个人线 tenantId = userId） ───
   // 1a. 个人 Tenant（Commerce Authority 租户锚点）
   let tenant = await prisma.tenant.findUnique({ where: { id: userId } })
   if (!tenant) {
@@ -93,7 +111,7 @@ export async function provisionFromPayment(payOrder: {
         data: {
           status: 'active',
           startDate: now,
-          endDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+          endDate: calcEndDate(now, productMeta.months),
           metadata: mergeMetadata(existingSub.metadata, { provisioningStatus: 'pending', provisioningUpdatedAt: now.toISOString() }),
         },
       })
@@ -106,7 +124,7 @@ export async function provisionFromPayment(payOrder: {
         planId: plan.id,
         status: 'active',
         startDate: now,
-        endDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        endDate: calcEndDate(now, productMeta.months),
         autoRenew: false,
         metadata: JSON.stringify({
           source: 'payment',
@@ -135,6 +153,7 @@ export async function provisionFromPayment(payOrder: {
     where: { userId, subscriptionId: sub.id, planCode: productCode },
   })
   let entitlement: any
+  const effectiveUntil = calcEndDate(now, productMeta.months)
   if (existingEnt) {
     entitlement = await prisma.personalEntitlement.update({
       where: { id: existingEnt.id },
@@ -142,7 +161,7 @@ export async function provisionFromPayment(payOrder: {
         status: 'active',
         capabilityCodes: capabilityCodes as any,
         effectiveFrom: now,
-        effectiveUntil: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        effectiveUntil,
         source: 'payment',
         orderNo: payOrder.orderNo,
       },
@@ -158,7 +177,7 @@ export async function provisionFromPayment(payOrder: {
         capabilityCodes: capabilityCodes as any,
         status: 'active',
         effectiveFrom: now,
-        effectiveUntil: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        effectiveUntil,
         source: 'payment',
         orderNo: payOrder.orderNo,
       },
@@ -166,7 +185,7 @@ export async function provisionFromPayment(payOrder: {
     console.log(`[commerce-provision] 权益已授予: userId=${userId.slice(0, 8)}, entId=${entitlement.id.slice(0, 8)}, capabilities=${capabilityCodes.length}`)
   }
 
-  // ─── Step 3: Agent Provision（统一部署） ───
+  // ─── Step 3: Provision 动作（agent 部署 / entitlement_only 权益类） ───
   await setSubProvisioningStatus(sub.id, 'provisioning')
 
   if (productMeta.provision === 'agent') {
@@ -199,14 +218,37 @@ export async function provisionFromPayment(payOrder: {
       return { provisioned: false, reason: 'agent_provision_failed', error: errMsg, entitlementId: entitlement.id }
     }
   } else {
-    // 纯权益类商品（未来 VIP）：无需部署 Agent
+    // 纯权益类商品（VIP / 未来增值包）：无需部署 Agent
     await setSubProvisioningStatus(sub.id, 'active', { provisionedVia: 'entitlement_only', entitlementId: entitlement.id })
+
+    // VIP 兼容层：同步 user.memberTier / membership / coinLog（存量判定链依赖，Entitlement 为权威）
+    if (productMeta.productType === 'VIP' && productMeta.memberPlanLevel) {
+      const tier = productMeta.memberPlanLevel
+      const user = await prisma.user.findUnique({ where: { id: userId } })
+      if (user) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { memberTier: tier, memberExpiresAt: effectiveUntil },
+        })
+        await prisma.membership.upsert({
+          where: { userId },
+          update: { tier, expiresAt: effectiveUntil },
+          create: { userId, tier, expiresAt: effectiveUntil, credits: 0 },
+        })
+        if (productMeta.coins > 0) {
+          await prisma.coinLog.create({
+            data: { userId, amount: productMeta.coins, type: 'recharge', remark: `会员商品「${plan.name}」赠送`, relatedId: payOrder.id },
+          })
+        }
+        console.log(`[commerce-provision] VIP 兼容层同步: userId=${userId.slice(0, 8)}, tier=${tier}`)
+      }
+    }
   }
 
   return { provisioned: true, subscriptionId: sub.id, entitlementId: entitlement.id, planCode: productCode }
 }
 
-/** 查询个人当前有效权益（Entitlement 权威：Subscription active + PersonalEntitlement active） */
+/** 查询个人当前有效权益（Entitlement 权威：Subscription active + PersonalEntitlement active + 未过期） */
 export async function getPersonalEntitlement(userId: string, planCode: string) {
   const entitlement = await prisma.personalEntitlement.findFirst({
     where: { userId, planCode, status: 'active' },
@@ -216,7 +258,31 @@ export async function getPersonalEntitlement(userId: string, planCode: string) {
   // 校验订阅仍 active（权益生命周期跟随订阅）
   const sub = await prisma.subscription.findUnique({ where: { id: entitlement.subscriptionId } })
   if (!sub || sub.status !== 'active') return null
+  // 校验未过期
+  if (entitlement.effectiveUntil && entitlement.effectiveUntil < new Date()) return null
   return entitlement
+}
+
+/** 查询用户所有有效个人权益（VIP / AI 员工） */
+export async function getActiveEntitlements(userId: string) {
+  const ents = await prisma.personalEntitlement.findMany({
+    where: { userId, status: 'active' },
+    orderBy: { createdAt: 'desc' },
+  })
+  const now = new Date()
+  const valid: typeof ents = []
+  for (const ent of ents) {
+    if (ent.effectiveUntil && ent.effectiveUntil < now) continue
+    const sub = await prisma.subscription.findUnique({ where: { id: ent.subscriptionId } })
+    if (sub && sub.status === 'active') valid.push(ent)
+  }
+  return valid
+}
+
+/** 当前有效 VIP 权益（判定链权威：Entitlement → membership/memberTier 兼容） */
+export async function getActiveVipEntitlement(userId: string) {
+  const ents = await getActiveEntitlements(userId)
+  return ents.find(e => e.productType === 'VIP') || null
 }
 
 async function setSubProvisioningStatus(subId: string, status: string, extra: Record<string, any> = {}) {

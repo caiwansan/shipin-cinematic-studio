@@ -42,7 +42,10 @@ export function createRequireMemberTier(minTier: MemberTier) {
     if (!user) {
       return reply.status(401).send({ error: 'Unauthorized' })
     }
-    const userTier = toMemberTier(user.memberTier)
+    // SPRINT-COMMERCE-SSOT-02: Entitlement 优先判定（PersonalEntitlement 权威 → 存量兼容）
+    const { resolveEffectiveTierAsync } = await import('../utils/membership-tier.js')
+    const userId = user.id || user.userId || user.sub
+    const userTier = userId ? toMemberTier(await resolveEffectiveTierAsync(userId)) : toMemberTier(user.memberTier)
     if (userTier < minTier) {
       return reply.status(403).send({
         error: 'Membership tier insufficient',

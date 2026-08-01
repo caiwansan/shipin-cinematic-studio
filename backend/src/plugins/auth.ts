@@ -123,14 +123,9 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
     if (!userId) return
 
     // 查询用户等级
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { memberTier: true, membership: { select: { tier: true } } },
-    })
-    if (!dbUser) return
-
-    const { getEffectiveTier } = await import('../utils/membership-tier.js')
-    const tier = getEffectiveTier({ membership: dbUser.membership, memberTier: dbUser.memberTier })
+    // SPRINT-COMMERCE-SSOT-02: Entitlement 优先判定（PersonalEntitlement 权威 → 存量兼容）
+    const { resolveEffectiveTierAsync } = await import('../utils/membership-tier.js')
+    const tier = await resolveEffectiveTierAsync(userId)
     // 只有 VIP 会员需要检查私有 key
     if (tier === 'free' || tier === 'basic') return
 
