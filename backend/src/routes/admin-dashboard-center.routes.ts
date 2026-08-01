@@ -431,6 +431,13 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
     }
 
     // 生命周期漏斗（真实数据；访问网站暂无埋点 → 显示暂无）
+    // SPRINT-COMMERCE-SSOT-02: 活跃 VIP 权益（Entitlement 权威）— 修复复制粘贴漏定义 bug
+    const activeVipEnts = await prisma.personalEntitlement.findMany({
+      where: { status: 'active' },
+      select: { productType: true, effectiveUntil: true },
+    })
+    const vipEntitlementCount = activeVipEnts.filter((e: any) => e.productType === 'VIP' && (!e.effectiveUntil || new Date(e.effectiveUntil).getTime() > Date.now())).length
+
     const funnel = [
       { stage: '访问网站', key: 'visit', value: null, note: '暂无埋点数据' },
       { stage: '注册用户', key: 'register', value: totalUsers },
