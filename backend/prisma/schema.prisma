@@ -9443,3 +9443,18 @@ model AgentAiProfile {
   @@index([agentType])
   @@map("agent_ai_profile")
 }
+
+// AI-CENTER-03A AI 团队协作编排观察层：任务模板（只识别/建议，不自动执行）
+model AgentWorkflowTemplate {
+  id           String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  name         String   @db.VarChar(200) // 任务名称：招聘高级前端工程师
+  businessType String   @db.VarChar(50) @map("business_type") // job / shortdrama / novel ...
+  taskType     String   @db.VarChar(100) @map("task_type") // hire_frontend_engineer ...
+  agents       String   @default("[]") @db.Text // JSON [{agentType, order, task}] 有序协作
+  status       String   @default("active") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([businessType, status])
+  @@map("agent_workflow_template")
+}

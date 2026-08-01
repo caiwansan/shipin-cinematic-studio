@@ -72,6 +72,36 @@
           <RecruitmentStatCard :value="summary.taskCompletionRate ? summary.taskCompletionRate + '%' : '—'" label="任务完成率" />
         </div>
 
+        <!-- AI 团队协作建议 (AI-CENTER-03A 观察层：仅识别/建议/展示，不自动执行) -->
+        <div v-if="workflowTemplates.length" class="wf-section">
+          <div class="wf-head">
+            <span class="wf-title">🧠 团队协作建议</span>
+            <span class="wf-badge">观察层 · 仅建议</span>
+            <span class="wf-sub">一个任务不再是一个 AI 在工作——而是 AI 团队协作。系统只识别与建议，由你确认发起</span>
+          </div>
+          <div class="wf-grid">
+            <div v-for="t in workflowTemplates" :key="t.taskType" class="wf-card">
+              <div class="wf-card-head">
+                <span class="wf-task">{{ t.name }}</span>
+              </div>
+              <div class="wf-team">
+                <div v-for="a in t.team" :key="a.agentType" class="wf-step">
+                  <div class="wf-step-no">{{ a.order }}</div>
+                  <div class="wf-step-body">
+                    <div class="wf-step-role">
+                      {{ a.roleName }}
+                      <span v-if="a.model" class="wf-step-model">{{ a.model.name }} · {{ a.model.score }}分</span>
+                    </div>
+                    <div class="wf-step-task">{{ a.task }}</div>
+                  </div>
+                  <div v-if="a.order < t.team.length" class="wf-arrow">→</div>
+                </div>
+              </div>
+              <button class="wf-create" @click="goToJobs">创建任务 → 职位管理</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Agent Cards -->
         <div class="cc-agent-list">
           <div v-for="agent in agents" :key="agent.id" class="cc-agent-card">
@@ -236,6 +266,7 @@ const error = ref<string | null>(null)
 const hasSubscription = ref(false)
 const agents = ref<AgentData[]>([])
 const recommendations = ref<Record<string, any>>({})
+const workflowTemplates = ref<any[]>([])
 const summary = ref({ totalAgents: 0, totalMonthlyTasks: 0, totalAnalyzedCandidates: 0, taskCompletionRate: 0 })
 
 const statusLabels: Record<string, string> = {
@@ -329,6 +360,8 @@ async function loadData() {
     }
     // AI 大脑建议（AI-CENTER-02C，只建议不切换）
     await loadAgentRecommendations()
+    // AI 团队协作建议（AI-CENTER-03A 观察层，不自动执行）
+    await loadWorkflowTemplates()
   } catch (e: any) {
     console.error('Failed to load capability data:', e)
     if (!error.value) error.value = '网络错误，请稍后重试'
@@ -343,6 +376,35 @@ function goToBilling() {
 
 function goToModelSettings() {
   window.location.href = '/workspace/enterprise/model-settings'
+}
+
+function goToJobs() {
+  // 03A 红线：不自动创建任务，跳到职位管理由用户人工发起
+  window.location.href = '/workspace/enterprise/jobs'
+}
+
+async function loadWorkflowTemplates() {
+  try {
+    const res = await fetch('/api/ai/agent-workflow-templates?businessType=job')
+    if (!res.ok) return
+    const json = await res.json()
+    if (json.code !== 0 || !json.data?.length) return
+    const details = await Promise.all(
+      json.data.map(async (t: any) => {
+        try {
+          const r = await fetch(`/api/ai/agent-workflow-templates/${t.taskType}`)
+          if (!r.ok) return null
+          const j = await r.json()
+          return j.code === 0 ? j.data : null
+        } catch (e) {
+          return null
+        }
+      }),
+    )
+    workflowTemplates.value = details.filter(Boolean)
+  } catch (e) {
+    // 观察层失败不阻断员工页
+  }
 }
 
 async function loadAgentRecommendations() {
@@ -991,6 +1053,162 @@ onMounted(loadData)
 
 .cc-action-btn--primary:hover {
   background: rgba(99, 102, 241, 0.15);
+}
+
+/* ─── AI 团队协作建议 (AI-CENTER-03A 观察层) ─── */
+.wf-section {
+  margin: 18px 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wf-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.wf-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.wf-badge {
+  font-size: 10px;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+  padding: 2px 9px;
+  border-radius: 99px;
+}
+
+.wf-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.wf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.wf-card {
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s;
+}
+
+.wf-card:hover {
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.wf-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wf-task {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.wf-team {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wf-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  position: relative;
+}
+
+.wf-step-no {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.wf-step-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wf-step-role {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-step-model {
+  font-size: 10px;
+  font-weight: 500;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.wf-step-task {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.wf-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(168, 85, 247, 0.5);
+  font-size: 13px;
+}
+
+.wf-create {
+  align-self: flex-end;
+  font-size: 12px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.12);
+  color: #ddd6fe;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: all 0.12s;
+}
+
+.wf-create:hover {
+  background: rgba(168, 85, 247, 0.22);
+  border-color: rgba(168, 85, 247, 0.7);
 }
 
 /* ─── AI 大脑建议 (AI-CENTER-02C) ─── */

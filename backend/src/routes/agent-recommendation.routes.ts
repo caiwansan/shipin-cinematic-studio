@@ -70,6 +70,47 @@ function buildAgentWeight(
   return { weights, costLabel: COST_MULTIPLIER[costPreference]?.label || '均衡策略' }
 }
 
+/**
+ * 02C 共享引擎：按画像完整推荐（avoid×0.3 + costPreference×1.6 + 归一化）
+ * 供 02C 路由 / 03A 团队协作观察层复用——保证 Bob 在团队卡片仍是 GPT/Claude
+ */
+export async function recommendForAgentType(agentType: string) {
+  const profile = await prisma.agentAiProfile.findUnique({ where: { agentType } })
+  if (!profile) return null
+  const ws = profile.workspace || 'job'
+  const providers = await prisma.aiProviderDirectory.findMany({ where: { status: 'active', apiEnabled: true } })
+
+  let weights: Record<DimKey, number>
+  let costLabel = '均衡策略'
+  const preferred = parseJson<Record<string, number>>(profile.preferredCapabilities, {})
+  const avoid = parseJson<Record<string, number>>(profile.avoidCapabilities, {})
+  const fused = buildAgentWeight(preferred, avoid, profile.costPreference)
+  weights = fused.weights
+  costLabel = fused.costLabel
+
+  const scored: Array<{ provider: string; name: string; score: number; reasons: string[] }> = []
+  const rankMap: Record<DimKey, Map<string, number>> = {} as Record<DimKey, Map<string, number>>
+  for (const d of DIM_KEYS) {
+    const sorted = providers
+      .filter((p) => p.capabilityScore && typeof p.capabilityScore === 'object')
+      .sort((a, b) => (Number((b.capabilityScore as any)?.[d]) || 0) - (Number((a.capabilityScore as any)?.[d]) || 0))
+    rankMap[d] = new Map(sorted.map((p, i) => [p.code, i + 1]))
+  }
+  for (const p of providers) {
+    const caps = p.capabilityScore as Record<string, number> | null
+    if (!caps || typeof caps !== 'object') continue
+    let total = 0
+    for (const d of DIM_KEYS) total += (Number(caps[d]) || 0) * (weights[d] || 0)
+    const score = Math.round((total / 100) * 10) / 10
+    const rankOf: Record<DimKey, number> = {} as Record<DimKey, number>
+    for (const d of DIM_KEYS) rankOf[d] = rankMap[d].get(p.code) || 99
+    scored.push({ provider: p.code, name: p.name, score, reasons: buildReasons(caps, weights, rankOf) })
+  }
+  scored.sort((a, b) => b.score - a.score)
+  const [primary, secondary] = scored
+  return { primary, secondary, costLabel }
+}
+
 export default async function agentRecommendationRoutes(app: FastifyInstance) {
   app.get('/api/ai/agent-recommendation', async (req, reply) => {
     const { agentType, workspace } = req.query as { agentType?: string; workspace?: string }
