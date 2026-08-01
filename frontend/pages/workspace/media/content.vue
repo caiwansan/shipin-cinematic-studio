@@ -56,7 +56,7 @@
     <!-- 订阅提示条 -->
     <div class="cf-cta">
       <span>订阅 AI 员工后，这六个节点将由 AI 自动执行，成果回流驾驶舱。</span>
-      <NuxtLink to="/workspace/media" class="cf-cta-btn">回驾驶舱了解订阅 →</NuxtLink>
+      <NuxtLink to="/workspace/media" class="cf-cta-btn">解锁 AI 新媒体团队 →</NuxtLink>
     </div>
   </MediaWorkspaceShell>
 </template>

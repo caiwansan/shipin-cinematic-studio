@@ -9,7 +9,7 @@
     <MediaPageHeader
       kicker="AI Team Operating Center"
       title="AI 员工团队"
-      desc="管理你的 AI 新媒体运营部门——状态、任务与能力一屏掌握。"
+      desc="管理你的 AI 新媒体运营部门——每名员工：职责清晰、价值明确，订阅后自动部署并开始工作。"
     />
 
     <div class="to-layout">
@@ -43,15 +43,17 @@
 
         <!-- 标准编制（未部署时的组织架构） -->
         <div class="to-roster">
-          <div class="to-roster-title">标准编制</div>
+          <div class="to-roster-title">标准编制 · 订阅后自动部署</div>
           <div v-for="r in roster" :key="r.role" class="to-roster-item">
             <span>{{ r.avatar }}</span>
-            <div>
-              <b>{{ r.name }}</b>
-              <span class="to-roster-role">{{ r.role }}</span>
+            <div class="to-roster-meta">
+              <div><b>{{ r.name }}</b><span class="to-roster-role">{{ r.role }}</span></div>
+              <div class="to-roster-value">{{ r.value }}</div>
             </div>
-            <span class="to-roster-tag">接入后部署</span>
+            <span class="to-roster-tag">🔒 订阅解锁</span>
           </div>
+          <NuxtLink to="/workspace/media" class="to-roster-cta">解锁 AI 新媒体团队 →</NuxtLink>
+          <div class="to-roster-note">订阅后：自动部署 AI 员工 → 绑定渠道资产 → 开始自动运营 → 成果回流 CEO 驾驶舱</div>
         </div>
       </div>
 
@@ -135,11 +137,11 @@ const outcomes = ref<any[]>([])
 const { $toast } = useNuxtApp() as any
 
 const roster = [
-  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略，指挥团队执行' },
-  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与内容策略建议' },
-  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作并输出成品' },
-  { name: 'David', role: '客服互动', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进' },
-  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察' },
+  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略，指挥团队执行', value: '减少人工策划成本：战略与排期自动生成' },
+  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与内容策略建议', value: '持续产生内容方向：选题自动排满日历' },
+  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作并输出成品', value: '提高生产效率：图文视频批量产出' },
+  { name: 'David', role: '客服互动', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '减少人工客服压力：私信秒回自动接待' },
+  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '持续优化运营：每周自动复盘' },
 ]
 
 // 岗位职责：优先真实档案（暂无 desc 字段）→ 标准编制职责兜底
@@ -322,23 +324,54 @@ function stateClass(s: string) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 0;
+  padding: 8px 0;
   font-size: 12px;
   color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border-primary);
 }
-.to-roster-item b { color: var(--color-text-primary); }
+.to-roster-item:last-of-type { border-bottom: none; }
+.to-roster-meta { flex: 1; min-width: 0; }
+.to-roster-meta b { color: var(--color-text-primary); }
 .to-roster-role {
   font-size: 10px;
   color: var(--color-text-muted);
   margin-left: 6px;
 }
+.to-roster-value {
+  font-size: 10px;
+  color: var(--color-decision);
+  margin-top: 2px;
+  line-height: 1.4;
+}
 .to-roster-tag {
   margin-left: auto;
   font-size: 9px;
-  color: var(--color-text-disabled);
-  border: 1px dashed var(--color-border-secondary);
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.12);
   border-radius: 8px;
-  padding: 1px 8px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.to-roster-cta {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
+  border-radius: 10px;
+  padding: 10px 16px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px var(--color-intelligence-glow);
+}
+.to-roster-cta:hover { filter: brightness(1.1); }
+.to-roster-note {
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.5;
 }
 
 /* 详情 */

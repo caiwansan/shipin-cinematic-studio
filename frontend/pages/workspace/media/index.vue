@@ -10,12 +10,24 @@
     <MediaPageHeader
       kicker="AI Media Ops · SaaS"
       title="AI 新媒体运营中心"
-      desc="你的 AI 新媒体运营团队：免费使用运营基础设施，订阅解锁 AI 员工，启动自动运营闭环。"
+      desc="帮助企业管理渠道、生产内容、运营客户——免费使用运营基础设施，订阅解锁 AI 员工自动执行。"
     >
       <template #actions>
         <NuxtLink to="/workspace/media/intelligence" class="mph-btn">📡 行业智能</NuxtLink>
       </template>
     </MediaPageHeader>
+
+    <!-- ═══ 产品定位（30 秒理解：这是什么产品）═══ -->
+    <div class="dash-position">
+      <span class="dash-pos-label">这是你的 AI 新媒体运营部</span>
+      <span class="dash-pos-item">📢 管理渠道</span>
+      <span class="dash-pos-arrow">→</span>
+      <span class="dash-pos-item">📝 生产内容</span>
+      <span class="dash-pos-arrow">→</span>
+      <span class="dash-pos-item">💬 运营客户</span>
+      <span class="dash-pos-arrow">→</span>
+      <span class="dash-pos-item dash-pos-ai">🤖 由 AI 员工自动执行</span>
+    </div>
 
     <!-- ═══ ① CEO 驾驶舱 · 部门状态卡 ═══ -->
     <div class="dash-dept">
@@ -69,12 +81,13 @@
               <div class="team-card-role">{{ m.role }}</div>
             </div>
             <div class="team-card-duty">{{ m.duty }}</div>
+            <div class="team-card-value">{{ m.value }}</div>
             <span class="team-card-lock">🔒 订阅解锁</span>
           </button>
         </div>
         <div class="team-cta-row">
-          <button class="team-cta" @click="showSubscribe = true">了解 AI 员工订阅 →</button>
-          <span class="team-cta-note">订阅后自动部署 5 名 AI 员工并启动运营</span>
+          <button class="team-cta" @click="showSubscribe = true">解锁 AI 新媒体团队</button>
+          <span class="team-cta-note">订阅后：自动部署 AI 员工 · 绑定渠道资产 · 开始自动运营 · 成果回流 CEO 驾驶舱</span>
         </div>
       </template>
     </MediaPanel>
@@ -199,7 +212,7 @@
         <div class="sub-modal">
           <div class="sub-modal-head">
             <div>
-              <div class="sub-modal-title">🤖 订阅 AI 新媒体团队</div>
+              <div class="sub-modal-title">🤖 解锁 AI 新媒体团队</div>
               <div class="sub-modal-sub">一份订阅 · 5 名 AI 员工 · 自动部署自动工作</div>
             </div>
             <button class="sub-modal-close" @click="showSubscribe = false">✕</button>
@@ -215,7 +228,7 @@
             </div>
           </div>
           <div class="sub-modal-foot">
-            <div class="sub-modal-note">订阅后：自动部署 → 绑定账号 → 自动执行 → 成果回流驾驶舱</div>
+            <div class="sub-modal-note">订阅后：自动部署 AI 员工 → 绑定渠道资产 → 开始自动运营 → 成果回流 CEO 驾驶舱</div>
             <div class="sub-modal-actions">
               <NuxtLink to="/workspace/media/accounts" class="sub-modal-secondary" @click="showSubscribe = false">先去连接公众号 →</NuxtLink>
               <button class="sub-modal-primary" @click="showSubscribe = false">知道了</button>
@@ -313,11 +326,11 @@ const channelBlueprints = computed(() => {
 
 // 标准编制（免费可见价值 · 订阅解锁）
 const teamRoster = [
-  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略', value: '部门围绕目标运转，每周一份清晰运营计划' },
-  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与策略建议', value: '不再为“今天发什么”发愁，选题自动排满内容日历' },
-  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作输出成品', value: '图文视频批量产出，发布前可人工审核把关' },
-  { name: 'David', role: 'AI 客服', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '私信秒回，客户线索自动分类，不错过潜在客户' },
-  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '每周自动复盘：什么有效、粉丝从哪来、下一步做什么' },
+  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略', value: '减少人工策划成本：运营策略与排期自动生成，每周一份清晰运营计划' },
+  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与策略建议', value: '持续产生内容方向：选题自动排满内容日历，不再为“今天发什么”发愁' },
+  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作输出成品', value: '提高生产效率：图文视频批量产出，发布前可人工审核把关' },
+  { name: 'David', role: 'AI 客服', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', value: '减少人工客服压力：私信秒回，客户线索自动分类，不错过潜在客户' },
+  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', value: '持续优化运营：每周自动复盘，什么有效、粉丝从哪来、下一步做什么' },
 ]
 
 const showSubscribe = ref(false)
@@ -380,6 +393,42 @@ function stateClass(s: string) {
 }
 .mph-btn:hover {
   opacity: 0.92;
+}
+
+/* ─── 产品定位条 ─── */
+.dash-position {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 10px 18px;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.dash-pos-label {
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin-right: 4px;
+}
+.dash-pos-item {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+.dash-pos-ai {
+  color: var(--color-warning);
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+}
+.dash-pos-arrow {
+  color: var(--color-text-disabled);
 }
 
 /* ─── ① 部门状态卡 ─── */
@@ -490,6 +539,15 @@ function stateClass(s: string) {
   color: var(--color-text-muted);
   line-height: 1.5;
   min-height: 34px;
+}
+.team-card-value {
+  font-size: 11px;
+  color: var(--color-decision);
+  line-height: 1.5;
+  background: var(--color-decision-glow);
+  border-radius: 8px;
+  padding: 5px 8px;
+  min-height: 32px;
 }
 .team-card-lock {
   font-size: 10px;
