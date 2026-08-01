@@ -41,10 +41,84 @@ export interface ChannelHealth {
 }
 
 /**
- * 企业渠道适配器接口 — 所有渠道必须实现
+ * ────────────────────────────────────────────────────────────────
+ * SPRINT-MEDIA-CHANNEL-01 Task02 — Media Channel Runtime v1.0 冻结
+ *
+ * EnterpriseChannelAdapter = 唯一渠道执行接口（Channel Runtime Layer）
+ * - 官方 OAuth 到位后只替换执行层（DouyinBrowserAdapter → DouyinOAuthAdapter）
+ * - 禁止每个平台单独开发接口；所有渠道必须实现此接口
+ * - v1.0 冻结方法：connect / refreshCredential / publish / fetchMetrics / fetchComments / healthCheck
+ * - 兼容保留：schedule / fetchInteractions / reply / getAccountInfo（历史实现不破坏）
+ * ────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * 连接结果（扫码/登录会话）
+ */
+export interface ConnectResult {
+  sessionId: string
+  status: 'waiting_login' | 'connected' | 'expired' | 'failed'
+  loginUrl?: string
+  accountName?: string
+  externalAccountId?: string
+  message?: string
+}
+
+/**
+ * 账号核心指标（真实数据，禁止 mock）
+ */
+export interface ChannelMetrics {
+  followerCount: number
+  videoCount: number
+  totalViews: number
+  totalLikes: number
+  totalComments: number
+  totalShares: number
+  // 近期表现（可选，便于 AI 分析员工消费）
+  recentViews?: number
+  recentLikes?: number
+  interactionRate?: number
+  collectedAt: Date
+  rawData?: Record<string, any>
+}
+
+/**
+ * 评论/互动列表项
+ */
+export interface ChannelComment {
+  commentId: string
+  authorName: string
+  content: string
+  likeCount?: number
+  createdAt: Date
+  rawData?: Record<string, any>
+}
+
+/**
+ * 企业渠道适配器接口 — 所有渠道必须实现（v1.0 冻结）
  */
 export interface EnterpriseChannelAdapter {
   readonly platform: string
+
+  /**
+   * [v1.0] 连接渠道（浏览器自动化：启动会话进入登录页 / OAuth：发起授权）
+   */
+  connect(accountId?: string): Promise<ConnectResult>
+
+  /**
+   * [v1.0] 刷新凭证（cookie 续期 / OAuth refresh_token）
+   */
+  refreshCredential(accountId: string): Promise<{ ok: boolean; error?: string }>
+
+  /**
+   * [v1.0] 读取账号真实核心指标（粉丝/播放/互动，AI 分析员工数据源）
+   */
+  fetchMetrics(accountId: string): Promise<ChannelMetrics>
+
+  /**
+   * [v1.0] 拉取评论列表
+   */
+  fetchComments(accountId: string, postId?: string): Promise<ChannelComment[]>
 
   /**
    * 发布内容

@@ -8,13 +8,30 @@ import type {
   PublishResult,
   PlatformInteraction,
   ChannelHealth,
+  ConnectResult,
+  ChannelMetrics,
+  ChannelComment,
   EnterpriseChannelAdapter,
 } from './channel.adapter.js'
 
+// SPRINT-MEDIA-CHANNEL-01 Task02: v1.0 接口冻结适配（stub，开发测试用，Task07 复制渠道时统一真实实现）
+
+// 视频号适配器
 // 视频号适配器
 export class VideoAccountAdapter implements EnterpriseChannelAdapter {
   readonly platform = 'video_account'
   private postCounter = 0
+
+  async connect(accountId?: string): Promise<ConnectResult> {
+    return { sessionId: `va_${Date.now()}`, status: 'connected', accountName: '企业视频号' }
+  }
+  async refreshCredential(accountId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true } }
+  async fetchMetrics(accountId: string): Promise<ChannelMetrics> {
+    return { followerCount: 8500, videoCount: 68, totalViews: 420000, totalLikes: 21800, totalComments: 1650, totalShares: 920, collectedAt: new Date() }
+  }
+  async fetchComments(accountId: string, postId?: string): Promise<ChannelComment[]> {
+    return [{ commentId: 'va_1', authorName: '用户', content: '视频很实用', createdAt: new Date() }]
+  }
 
   async publish(content: ChannelContent): Promise<PublishResult> {
     this.postCounter++
@@ -38,6 +55,17 @@ export class WeiboAdapter implements EnterpriseChannelAdapter {
   readonly platform = 'weibo'
   private postCounter = 0
 
+  async connect(accountId?: string): Promise<ConnectResult> {
+    return { sessionId: `wb_${Date.now()}`, status: 'connected', accountName: '企业微博' }
+  }
+  async refreshCredential(accountId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true } }
+  async fetchMetrics(accountId: string): Promise<ChannelMetrics> {
+    return { followerCount: 25600, videoCount: 210, totalViews: 1800000, totalLikes: 96000, totalComments: 8200, totalShares: 4100, collectedAt: new Date() }
+  }
+  async fetchComments(accountId: string, postId?: string): Promise<ChannelComment[]> {
+    return [{ commentId: 'wb_1', authorName: '用户', content: '已转发', createdAt: new Date() }]
+  }
+
   async publish(content: ChannelContent): Promise<PublishResult> {
     this.postCounter++
     const id = `wb_${Date.now()}_${this.postCounter}`
@@ -60,6 +88,17 @@ export class BilibiliAdapter implements EnterpriseChannelAdapter {
   readonly platform = 'bilibili'
   private postCounter = 0
 
+  async connect(accountId?: string): Promise<ConnectResult> {
+    return { sessionId: `bv_${Date.now()}`, status: 'connected', accountName: '企业B站' }
+  }
+  async refreshCredential(accountId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true } }
+  async fetchMetrics(accountId: string): Promise<ChannelMetrics> {
+    return { followerCount: 12000, videoCount: 156, totalViews: 980000, totalLikes: 51200, totalComments: 4300, totalShares: 2100, collectedAt: new Date() }
+  }
+  async fetchComments(accountId: string, postId?: string): Promise<ChannelComment[]> {
+    return [{ commentId: 'bv_1', authorName: '用户', content: '已三连', createdAt: new Date() }]
+  }
+
   async publish(content: ChannelContent): Promise<PublishResult> {
     this.postCounter++
     const id = `bv_${Date.now()}_${this.postCounter}`
@@ -81,6 +120,17 @@ export class BilibiliAdapter implements EnterpriseChannelAdapter {
 export class QQAdapter implements EnterpriseChannelAdapter {
   readonly platform = 'qq'
   private postCounter = 0
+
+  async connect(accountId?: string): Promise<ConnectResult> {
+    return { sessionId: `qq_${Date.now()}`, status: 'connected', accountName: '企业QQ' }
+  }
+  async refreshCredential(accountId: string): Promise<{ ok: boolean; error?: string }> { return { ok: true } }
+  async fetchMetrics(accountId: string): Promise<ChannelMetrics> {
+    return { followerCount: 6800, videoCount: 45, totalViews: 260000, totalLikes: 13800, totalComments: 1100, totalShares: 480, collectedAt: new Date() }
+  }
+  async fetchComments(accountId: string, postId?: string): Promise<ChannelComment[]> {
+    return [{ commentId: 'qq_1', authorName: '用户', content: '加群讨论', createdAt: new Date() }]
+  }
 
   async publish(content: ChannelContent): Promise<PublishResult> {
     this.postCounter++

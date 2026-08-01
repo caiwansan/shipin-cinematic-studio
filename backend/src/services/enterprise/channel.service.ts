@@ -7,6 +7,7 @@
  */
 import { prisma } from '../../utils/index.js'
 import { randomUUID } from 'crypto'
+import { encryptKey, decryptKey } from '../crypto.service.js'
 import type {
   ChannelContent,
   PublishResult,
@@ -29,24 +30,50 @@ export class ChannelService {
 
   /**
    * 连接渠道账号
+   *
+   * SPRINT-MEDIA-CHANNEL-01 Task02 — 凭证层冻结修复：
+   * - 修复前：credential 明文 JSON 落库（security TODO），且字段名与模型不匹配（platform/encryptedCred/status 不存在）
+   * - 修复后：AES-256-GCM 加密（crypto.service encryptKey，格式 iv:tag:ciphertext）写入 credentialEncrypted
+   * - 规则：never plaintext / never frontend exposed（解密仅服务端适配器内部使用）
    */
   async connectAccount(input: {
     tenantId: string
+    organizationId?: string
     platform: string
     accountName: string
+    externalAccountId?: string
     credential: Record<string, string>
   }) {
-    const encryptedCred = JSON.stringify(input.credential) // TODO: 使用 crypto 加密
+    const encryptedCred = encryptKey(JSON.stringify(input.credential))
     return prisma.enterpriseChannelAccount.create({
       data: {
         id: randomUUID(),
         tenantId: input.tenantId,
-        platform: input.platform,
-        accountName: input.accountName,
-        encryptedCred,
-        status: 'connected',
+        organizationId: input.organizationId ?? null,
+        channelType: input.platform,
+        channelName: input.accountName,
+        externalAccountId: input.externalAccountId ?? null,
+        credentialEncrypted: { cipher: 'aes-256-gcm', payload: encryptedCred } as any,
+        connectionStatus: 'connected',
+        connectedAt: new Date(),
+        ownerId: '',
+        ownerType: 'org',
       },
     })
+  }
+
+  /**
+   * 解密渠道凭证（仅服务端适配器/运行时内部调用，禁止暴露到前端）
+   */
+  async getCredential(accountId: string): Promise<Record<string, string>> {
+    const account = await prisma.enterpriseChannelAccount.findUnique({
+      where: { id: accountId },
+      select: { credentialEncrypted: true },
+    })
+    if (!account) throw new Error('Channel account not found')
+    const enc = (account.credentialEncrypted as any)?.payload
+    if (!enc) throw new Error('Channel credential is empty')
+    return JSON.parse(decryptKey(enc))
   }
 
   /**
