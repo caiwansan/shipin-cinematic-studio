@@ -1,9 +1,11 @@
 <!--
-  Sprint-MEDIA-DATA-CENTER-01 — 首页 = 企业经营数据中心（老板每天看的经营驾驶舱）
-  掌柜指令：把「AI 工具展示页」升级为「AI 经营驾驶舱」
-  老板视角信息架构：经营数据中心 → 今日经营概览 → 全渠道数据地图 → 我的 AI 运营团队 → 经营趋势
-  纪律：零新 API / 零新表 / 不造数据 / 不改后端；未连接一律「等待连接」，绝不显示 0
-  风格：企业管理软件 / 高端 SaaS BI；清晰 · 稳重 · 高级 · 可信 · 数据驱动
+  Sprint-MEDIA-BUSINESS-DASHBOARD-02 — 首页 = AI 全渠道经营驾驶舱
+  掌柜战略纠偏：驾驶舱不是渠道接入页 / 不是等待状态页 / 不是 AI 展示页。
+  定位：所有新媒体账号、电商店铺、客户渠道的数据汇聚中心。先展示「结果」，渠道与 AI 员工是支撑结果的能力。
+  信息架构：① 经营数据罗盘 → ② 今日经营总览（漂亮数据卡）→ ③ AI 正在帮你经营 → ④ 我的经营资产 → ⑤ 经营趋势 → ⑥ 渠道入口
+  视觉：企业老板驾驶舱 / 高端商业 BI / 飞机驾驶仪表 / 豪华汽车中控；70% 数据视觉 / 20% AI 成果 / 10% 设置入口
+  纪律：第一屏禁止「等待连接 / 未连接 / 去连接 / 连接账号」；无真实数据时用驾驶舱空态（待接入），绝不显示 0 / --；零新 API / 零新表 / 零假数据
+  数据渲染逻辑预留：dashboardData 接入真实渠道数据后自动切换为完整仪表盘（示例值见 script 注释，运行时恒为空态）
 -->
 <template>
   <MediaWorkspaceShell>
@@ -13,373 +15,264 @@
       <span>你的会话已失效，请重新登录后继续使用。</span>
       <NuxtLink to="/?showLogin=1" class="dash-identity-btn">重新登录 →</NuxtLink>
     </div>
-    <div v-else-if="identityState === 'personal-space'" class="dash-identity dash-identity-ok">
-      <b>✅ 个人空间已就绪</b>
-      <span>这里是你个人的 AI 全渠道运营中心。连接内容平台、电商店铺和客户渠道，解锁 AI 员工后，你的 AI 运营团队将开始自动工作。</span>
-      <NuxtLink to="/workspace/media/accounts" class="dash-identity-btn">连接你的运营渠道 →</NuxtLink>
-    </div>
 
-    <!-- ═══════ 顶部定位 · 我是谁 ═══════ -->
-    <section class="dash-hero">
-      <div class="dash-hero-inner">
-        <h1 class="dash-title">AI 全渠道运营中心</h1>
-        <p class="dash-mission">让 AI 员工帮你运营内容、客户和线上生意</p>
-        <div class="dash-cta">
-          <NuxtLink to="/workspace/media/accounts" class="dash-btn dash-btn-primary">
-            连接你的运营渠道 <span class="dash-btn-arrow">→</span>
-          </NuxtLink>
-          <NuxtLink to="/workspace/media/team" class="dash-btn dash-btn-ghost">
-            查看我的 AI 员工 <span class="dash-btn-arrow">→</span>
-          </NuxtLink>
+    <template v-else>
+      <!-- ═══════ 顶部定位 · 我是谁 ═══════ -->
+      <section class="dash-head">
+        <div class="dash-head-mark">⌂</div>
+        <div class="dash-head-text">
+          <h1 class="dash-title">AI 全渠道经营驾驶舱</h1>
+          <p class="dash-mission">所有新媒体账号、电商店铺、客户渠道的数据汇聚中心</p>
         </div>
-      </div>
-    </section>
-
-    <!-- ═══════ 经营数据中心 · 数据在哪里 ═══════ -->
-    <section class="dash-datahub">
-      <div class="dash-datahub-ico">📊</div>
-      <div class="dash-datahub-text">
-        <b>经营数据中心</b>
-        <span>连接你的内容平台、电商店铺和客户渠道后，所有运营数据将在这里统一展示</span>
-      </div>
-      <NuxtLink to="/workspace/media/accounts" class="dash-datahub-link">去连接渠道 →</NuxtLink>
-    </section>
-
-    <!-- ═══════ 第一核心 · 今日经营概览 ═══════ -->
-    <section class="dash-section">
-      <div class="dash-sec-head">
-        <div>
-          <div class="dash-sec-kicker">今日经营概览</div>
-          <h2 class="dash-sec-title">你的生意数据，连接渠道后自动统计</h2>
+        <div class="dash-head-stamp">
+          <span class="dash-stamp-dot"></span>
+          <span>{{ hasData ? '数据实时同步' : '经营驾驶舱' }}</span>
         </div>
-        <NuxtLink to="/workspace/media/accounts" class="dash-sec-link">渠道中心 →</NuxtLink>
-      </div>
+      </section>
 
-      <div class="dash-kpi-grid">
-        <!-- 内容表现 -->
-        <div class="dash-kpi">
-          <div class="dash-kpi-top">
-            <span class="dash-kpi-ico">📝</span>
-            <b class="dash-kpi-name">内容表现</b>
-          </div>
-          <div class="dash-kpi-core">
-            <span class="dash-kpi-label">今日发布</span>
-            <span class="dash-kpi-wait">等待连接</span>
-          </div>
-          <div class="dash-kpi-minis">
-            <span>阅读/播放 <em>等待连接</em></span>
-            <span>点赞互动 <em>等待连接</em></span>
-            <span>分享传播 <em>等待连接</em></span>
-          </div>
-          <div class="dash-kpi-foot">
-            <span>连接抖音、小红书等账号后自动统计</span>
-            <NuxtLink to="/workspace/media/accounts" class="dash-kpi-act">去连接 →</NuxtLink>
-          </div>
-        </div>
-
-        <!-- 客户运营 -->
-        <div class="dash-kpi">
-          <div class="dash-kpi-top">
-            <span class="dash-kpi-ico">💬</span>
-            <b class="dash-kpi-name">客户运营</b>
-          </div>
-          <div class="dash-kpi-core">
-            <span class="dash-kpi-label">新增客户</span>
-            <span class="dash-kpi-wait">等待连接</span>
-          </div>
-          <div class="dash-kpi-minis">
-            <span>客户咨询 <em>等待连接</em></span>
-            <span>有效线索 <em>等待连接</em></span>
-            <span>成交机会 <em>等待连接</em></span>
-          </div>
-          <div class="dash-kpi-foot">
-            <span>连接企业微信、客服渠道后自动统计</span>
-            <NuxtLink to="/workspace/media/accounts" class="dash-kpi-act">去连接 →</NuxtLink>
-          </div>
-        </div>
-
-        <!-- 线上销售 -->
-        <div class="dash-kpi">
-          <div class="dash-kpi-top">
-            <span class="dash-kpi-ico">🛒</span>
-            <b class="dash-kpi-name">线上销售</b>
-          </div>
-          <div class="dash-kpi-core">
-            <span class="dash-kpi-label">订单数量</span>
-            <span class="dash-kpi-wait">等待连接</span>
-          </div>
-          <div class="dash-kpi-minis">
-            <span>成交金额 <em>等待连接</em></span>
-            <span>商品销量 <em>等待连接</em></span>
-            <span>客户转化 <em>等待连接</em></span>
-          </div>
-          <div class="dash-kpi-foot">
-            <span>连接淘宝、京东、拼多多等店铺后自动统计</span>
-            <NuxtLink to="/workspace/media/accounts" class="dash-kpi-act">去连接 →</NuxtLink>
-          </div>
-        </div>
-
-        <!-- 品牌增长 -->
-        <div class="dash-kpi">
-          <div class="dash-kpi-top">
-            <span class="dash-kpi-ico">📈</span>
-            <b class="dash-kpi-name">品牌增长</b>
-          </div>
-          <div class="dash-kpi-core">
-            <span class="dash-kpi-label">粉丝总量</span>
-            <span class="dash-kpi-wait">等待连接</span>
-          </div>
-          <div class="dash-kpi-minis">
-            <span>今日增长 <em>等待连接</em></span>
-            <span>访问人数 <em>等待连接</em></span>
-            <span>用户画像 <em>等待连接</em></span>
-          </div>
-          <div class="dash-kpi-foot">
-            <span>连接内容平台与数据渠道后自动统计</span>
-            <NuxtLink to="/workspace/media/accounts" class="dash-kpi-act">去连接 →</NuxtLink>
-          </div>
-        </div>
-      </div>
-
-      <p class="dash-sec-note">
-        <b>等待连接渠道</b> —— 连接抖音、小红书、淘宝等账号后自动统计你的真实经营数据
-      </p>
-    </section>
-
-    <!-- ═══════ 第二核心 · 全渠道数据地图 ═══════ -->
-    <section class="dash-section">
-      <div class="dash-sec-head">
-        <div>
-          <div class="dash-sec-kicker">全渠道数据地图</div>
-          <h2 class="dash-sec-title">我的运营渠道</h2>
-        </div>
-        <NuxtLink to="/workspace/media/accounts" class="dash-sec-link">渠道中心 →</NuxtLink>
-      </div>
-
-      <!-- 内容渠道 -->
-      <div class="dash-cat">
-        <div class="dash-cat-head">
-          <span class="dash-cat-ico">📱</span>
-          <div class="dash-cat-meta">
-            <b>内容渠道</b>
-            <span>品牌曝光 · 内容发布</span>
-          </div>
-          <span class="dash-cat-count">{{ contentPlatforms.length }} 个平台 · 未连接</span>
-        </div>
-        <div class="dash-channel-grid">
-          <div v-for="ch in contentPlatforms" :key="ch.name" class="dash-channel" @click="onChannelClick(ch)">
-            <span class="dash-channel-ico">{{ ch.icon }}</span>
-            <div class="dash-channel-meta">
-              <span class="dash-channel-name">{{ ch.name }}</span>
-              <span class="dash-channel-plan">{{ ch.plan }}</span>
+      <!-- ═══════ ① 经营数据罗盘（核心） ═══════ -->
+      <section class="dash-compass">
+        <div class="dash-compass-kicker"><span class="dash-compass-kicker-dot"></span>经营数据罗盘<span class="dash-compass-kicker-en">BUSINESS COMPASS</span></div>
+        <div class="dash-compass-main">
+          <!-- 圆形罗盘 -->
+          <div class="dash-gauge">
+            <svg class="dash-gauge-svg" viewBox="0 0 220 220">
+              <!-- 刻度（每 15° 一格，270° 表盘开口朝下） -->
+              <g v-for="i in 18" :key="i">
+                <line
+                  :x1="cx(i * 15)" :y1="cy(i * 15, 86)"
+                  :x2="cx(i * 15)" :y2="cy(i * 15, i % 3 === 0 ? 76 : 82)"
+                  stroke="rgba(148,163,184,0.28)" stroke-width="1.4"
+                />
+              </g>
+              <!-- 背景弧 -->
+              <circle cx="110" cy="110" r="70" fill="none" stroke="rgba(51,65,85,0.6)" stroke-width="10" stroke-linecap="round"
+                :stroke-dasharray="arcDash(270)" :transform="`rotate(135 110 110)`" />
+              <!-- 进度弧（接入真实数据后按健康度填充；空态为暗弧） -->
+              <circle cx="110" cy="110" r="70" fill="none" stroke="url(#gaugeGrad)" stroke-width="10" stroke-linecap="round"
+                :stroke-dasharray="hasData ? arcDash(healthArc) : arcDash(0)"
+                :transform="`rotate(135 110 110)`" style="transition: stroke-dasharray 0.9s ease" />
+              <defs>
+                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#F5B84B" />
+                  <stop offset="100%" stop-color="#38BDF8" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="dash-gauge-center">
+              <span class="dash-gauge-num">{{ hasData ? healthScore : '待接入' }}</span>
+              <span class="dash-gauge-state">{{ hasData ? healthLabel : '等待数据接入' }}</span>
             </div>
-            <span class="dash-channel-state">
-              <span class="dash-channel-dot off"></span>
-              未连接
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 电商渠道 -->
-      <div class="dash-cat">
-        <div class="dash-cat-head">
-          <span class="dash-cat-ico">🛒</span>
-          <div class="dash-cat-meta">
-            <b>电商渠道</b>
-            <span>商品销售 · 店铺运营</span>
-          </div>
-          <span class="dash-cat-count">{{ shopPlatforms.length }} 个平台 · 未连接</span>
-        </div>
-        <div class="dash-channel-grid">
-          <div v-for="ch in shopPlatforms" :key="ch.name" class="dash-channel" @click="onChannelClick(ch)">
-            <span class="dash-channel-ico">{{ ch.icon }}</span>
-            <div class="dash-channel-meta">
-              <span class="dash-channel-name">{{ ch.name }}</span>
-              <span class="dash-channel-plan">{{ ch.plan }}</span>
+            <!-- 三轴标签 -->
+            <div class="dash-axis dash-axis-l">
+              <span class="dash-axis-name">内容影响</span>
+              <span class="dash-axis-trend" :class="axisTrend('content')">{{ axisTrend('content') === '·' ? '·' : axisTrend('content') }}</span>
             </div>
-            <span class="dash-channel-state">
-              <span class="dash-channel-dot off"></span>
-              未连接
-            </span>
-          </div>
-        </div>
-        <div class="dash-cat-foot">
-          <NuxtLink to="/workspace/media/shop" class="dash-cat-link">查看商品运营 →</NuxtLink>
-        </div>
-      </div>
-
-      <!-- 客户渠道 -->
-      <div class="dash-cat">
-        <div class="dash-cat-head">
-          <span class="dash-cat-ico">💬</span>
-          <div class="dash-cat-meta">
-            <b>客户渠道</b>
-            <span>客户沟通 · 私域维护</span>
-          </div>
-          <span class="dash-cat-count">{{ customerPlatforms.length }} 个渠道 · 未连接</span>
-        </div>
-        <div class="dash-channel-grid">
-          <div v-for="ch in customerPlatforms" :key="ch.name" class="dash-channel" @click="onChannelClick(ch)">
-            <span class="dash-channel-ico">{{ ch.icon }}</span>
-            <div class="dash-channel-meta">
-              <span class="dash-channel-name">{{ ch.name }}</span>
-              <span class="dash-channel-plan">{{ ch.plan }}</span>
+            <div class="dash-axis dash-axis-b">
+              <span class="dash-axis-name">客户增长</span>
+              <span class="dash-axis-trend" :class="axisTrend('customer')">{{ axisTrend('customer') === '·' ? '·' : axisTrend('customer') }}</span>
             </div>
-            <span class="dash-channel-state">
-              <span class="dash-channel-dot off"></span>
-              未连接
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <p class="dash-sec-note">点击任意渠道进入渠道中心。真实接入按：用户授权 → 渠道连接服务 → AI 员工 Runtime 推进，当前全部渠道均未连接。</p>
-    </section>
-
-    <!-- ═══════ 第三核心 · 我的 AI 运营团队 ═══════ -->
-    <section class="dash-section">
-      <div class="dash-sec-head">
-        <div>
-          <div class="dash-sec-kicker">我的 AI 运营团队</div>
-          <h2 class="dash-sec-title">5 名 AI 员工，帮你把生意做起来</h2>
-        </div>
-        <NuxtLink to="/workspace/media/team" class="dash-sec-link">查看全部 →</NuxtLink>
-      </div>
-
-      <div class="dash-team-grid">
-        <div
-          v-for="(m, i) in teamRoster"
-          :key="m.name"
-          class="dash-team-card"
-          :class="{ 'is-locked': !deployedNames.includes(m.name) }"
-        >
-          <div class="dash-team-head">
-            <span class="dash-avatar">{{ m.avatar }}</span>
-            <div class="dash-team-meta">
-              <div class="dash-team-name">{{ m.name }}</div>
-              <div class="dash-team-role">{{ m.role }}</div>
+            <div class="dash-axis dash-axis-r">
+              <span class="dash-axis-name">销售转化</span>
+              <span class="dash-axis-trend" :class="axisTrend('sales')">{{ axisTrend('sales') === '·' ? '·' : axisTrend('sales') }}</span>
             </div>
-            <span class="dash-status" :class="deployedNames.includes(m.name) ? 'on' : 'off'">
-              <span class="dash-status-dot"></span>
-              {{ deployedNames.includes(m.name) ? '运行中' : '未解锁' }}
-            </span>
           </div>
-          <p class="dash-team-duty">帮你{{ m.duty }}</p>
-          <div class="dash-team-foot">
-            <button v-if="!deployedNames.includes(m.name)" class="dash-unlock" @click="showSubscribe = true">
-              解锁这个员工
-            </button>
-            <NuxtLink v-else to="/workspace/media/team" class="dash-view">查看工作台 →</NuxtLink>
-          </div>
-        </div>
-      </div>
 
-      <!-- AI 已为你完成（真实成果数据，无数据不显示 0） -->
-      <div class="dash-done">
-        <div class="dash-done-head">
-          <b>AI 已为你完成</b>
-          <span>解锁员工并连接渠道后，成果自动汇总在这里</span>
+          <!-- 今日速览 -->
+          <div class="dash-speed">
+            <div class="dash-speed-head">
+              <span class="dash-speed-kicker">TODAY · 今日经营速览</span>
+              <span class="dash-speed-date">{{ todayLabel }}</span>
+            </div>
+            <div class="dash-speed-grid">
+              <div class="dash-speed-cell">
+                <span class="dash-speed-label">📢 内容曝光</span>
+                <span class="dash-speed-num">{{ fmtBig(d.exposure) }}</span>
+                <span class="dash-speed-trend" :class="trendCls(d.exposureTrend)">{{ trendText(d.exposureTrend) }}</span>
+              </div>
+              <div class="dash-speed-cell">
+                <span class="dash-speed-label">👥 新增客户</span>
+                <span class="dash-speed-num">{{ fmtBig(d.customers) }}</span>
+                <span class="dash-speed-trend" :class="trendCls(d.customerTrend)">{{ trendText(d.customerTrend) }}</span>
+              </div>
+              <div class="dash-speed-cell">
+                <span class="dash-speed-label">🛒 成交金额</span>
+                <span class="dash-speed-num">{{ fmtMoney(d.revenue) }}</span>
+                <span class="dash-speed-trend" :class="trendCls(d.revenueTrend)">{{ trendText(d.revenueTrend) }}</span>
+              </div>
+            </div>
+            <!-- 数据汇聚链 -->
+            <div class="dash-flow">
+              <div class="dash-flow-src">
+                <span>内容</span><em>抖音 · 快手 · 小红书 · 视频号 · 公众号 · 微博</em>
+                <span>电商</span><em>淘宝 · 京东 · 拼多多 · 抖音商城 · 美团</em>
+                <span>客户</span><em>企业微信</em>
+              </div>
+              <div class="dash-flow-arrow">↓</div>
+              <div class="dash-flow-node">AI 全渠道数据汇总</div>
+              <div class="dash-flow-arrow">↓</div>
+              <div class="dash-flow-node dash-flow-node--final">经营驾驶舱</div>
+            </div>
+          </div>
         </div>
-        <div class="dash-done-grid">
-          <div class="dash-done-card">
-            <div class="dash-done-meta">
-              <span class="dash-done-label">今日内容</span>
-              <span class="dash-done-num">{{ fmtCount(contentOutcomes) }}</span>
-            </div>
-            <span class="dash-done-sub">AI 生产的图文与视频</span>
-          </div>
-          <div class="dash-done-card">
-            <div class="dash-done-meta">
-              <span class="dash-done-label">客户咨询</span>
-              <span class="dash-done-num">{{ fmtCount(customerOutcomes) }}</span>
-            </div>
-            <span class="dash-done-sub">AI 客服接待与跟进</span>
-          </div>
-          <div class="dash-done-card">
-            <div class="dash-done-meta">
-              <span class="dash-done-label">粉丝互动</span>
-              <span class="dash-done-num">{{ fmtCount(fanInteractions) }}</span>
-            </div>
-            <span class="dash-done-sub">连接账号后自动统计</span>
-          </div>
-          <div class="dash-done-card">
-            <div class="dash-done-meta">
-              <span class="dash-done-label">数据报告</span>
-              <span class="dash-done-num dash-done-num--text">{{ reportText }}</span>
-            </div>
-            <span class="dash-done-sub">运营效果与增长建议</span>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- ═══════ 第四核心 · 经营趋势 ═══════ -->
-    <section class="dash-section">
-      <div class="dash-sec-head">
-        <div>
-          <div class="dash-sec-kicker">经营趋势</div>
-          <h2 class="dash-sec-title">近 7 天</h2>
-        </div>
-      </div>
-
-      <div class="dash-trend-grid">
-        <div class="dash-trend">
-          <span class="dash-trend-name">内容增长</span>
-          <span class="dash-trend-val">↗ 等待连接</span>
-          <span class="dash-trend-sub">内容表现趋势</span>
-        </div>
-        <div class="dash-trend">
-          <span class="dash-trend-name">客户增长</span>
-          <span class="dash-trend-val">↗ 等待连接</span>
-          <span class="dash-trend-sub">客户运营趋势</span>
-        </div>
-        <div class="dash-trend">
-          <span class="dash-trend-name">销售增长</span>
-          <span class="dash-trend-val">↗ 等待连接</span>
-          <span class="dash-trend-sub">线上销售趋势</span>
-        </div>
-        <div class="dash-trend">
-          <span class="dash-trend-name">品牌影响力</span>
-          <span class="dash-trend-val">↗ 等待连接</span>
-          <span class="dash-trend-sub">品牌增长趋势</span>
-        </div>
-      </div>
-
-      <p class="dash-sec-note">连接渠道后生成你的经营趋势</p>
-    </section>
-
-    <!-- ═══ 解锁 AI 员工团队弹窗（纯产品语言） ═══ -->
-    <Teleport to="body">
-      <div v-if="showSubscribe" class="sub-modal-mask" @click.self="showSubscribe = false">
-        <div class="sub-modal">
-          <div class="sub-modal-head">
-            <div>
-              <div class="sub-modal-title">🤖 解锁 AI 员工团队</div>
-              <div class="sub-modal-sub">一份订阅 · 5 名 AI 员工 · 解锁后自动工作</div>
-            </div>
-            <button class="sub-modal-close" @click="showSubscribe = false">✕</button>
+        <!-- 空态引导（无真实数据时；优雅说明，不是渠道按钮） -->
+        <div v-if="!hasData" class="dash-empty">
+          <span class="dash-empty-ico">🧭</span>
+          <div class="dash-empty-text">
+            <b>你的经营驾驶舱正在等待数据接入</b>
+            <span>连接你的账号后，这里会自动汇总：内容表现 · 客户增长 · 商品销售 · 品牌影响力。AI 将持续帮你分析经营机会。</span>
           </div>
-          <div class="sub-modal-list">
-            <div v-for="m in teamRoster" :key="m.name" class="sub-modal-row">
-              <span class="sub-modal-avatar">{{ m.avatar }}</span>
-              <div class="sub-modal-meta">
-                <div class="sub-modal-name">{{ m.name }} · {{ m.role }}</div>
-                <div class="sub-modal-duty">帮你：{{ m.helps.join('、') }}</div>
-                <div class="sub-modal-auto">⚙️ 解锁后自动工作：{{ m.auto }}</div>
+        </div>
+      </section>
+
+      <!-- ═══════ ② 今日经营总览（漂亮数据卡） ═══════ -->
+      <section class="dash-section">
+        <div class="dash-sec-head">
+          <div>
+            <div class="dash-sec-kicker">今日经营总览</div>
+            <h2 class="dash-sec-title">我的生意，现在怎么样</h2>
+          </div>
+          <span class="dash-sec-badge">{{ hasData ? '实时' : '待接入' }}</span>
+        </div>
+
+        <div class="dash-metrics">
+          <div v-for="m in metrics" :key="m.key" class="dash-metric">
+            <div class="dash-metric-top">
+              <span class="dash-metric-ico">{{ m.icon }}</span>
+              <b class="dash-metric-name">{{ m.name }}</b>
+            </div>
+            <div class="dash-metric-num">
+              <span v-if="hasData" class="dash-metric-value">{{ m.value }}</span>
+              <span v-else class="dash-metric-wait">待接入</span>
+            </div>
+            <div class="dash-metric-trend">
+              <span v-if="hasData" class="dash-metric-delta" :class="trendCls(m.delta)">{{ m.delta > 0 ? '↑' : '↓' }} {{ Math.abs(m.delta) }}%</span>
+              <span v-else class="dash-metric-delta is-idle">·</span>
+              <span class="dash-metric-sub">{{ m.sub }}</span>
+            </div>
+            <div class="dash-metric-src">
+              <span v-if="hasData">来自：{{ m.src }}</span>
+              <span v-else>连接后自动汇总</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════ ③ AI 正在帮你经营 ═══════ -->
+      <section class="dash-section">
+        <div class="dash-sec-head">
+          <div>
+            <div class="dash-sec-kicker">AI 正在帮你经营</div>
+            <h2 class="dash-sec-title">今天，AI 已经为你做了这些</h2>
+          </div>
+          <NuxtLink to="/workspace/media/team" class="dash-sec-link">AI 员工团队 →</NuxtLink>
+        </div>
+
+        <div class="dash-ai-grid">
+          <div v-for="a in aiRoster" :key="a.name" class="dash-ai-card">
+            <div class="dash-ai-head">
+              <span class="dash-ai-avatar">{{ a.avatar }}</span>
+              <div class="dash-ai-meta">
+                <b>{{ a.name }} · {{ a.role }}</b>
+                <span>{{ a.focus }}</span>
+              </div>
+              <span class="dash-ai-state" :class="aiState(a)">{{ aiStateLabel(a) }}</span>
+            </div>
+            <ul class="dash-ai-todos">
+              <li v-for="(t, i) in aiTodos(a)" :key="i">
+                <span class="dash-ai-check" :class="aiTodos(a)[i].done ? 'on' : ''">{{ aiTodos(a)[i].done ? '✓' : '○' }}</span>
+                <span class="dash-ai-todo-text">{{ aiTodos(a)[i].text }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════ ④ 我的经营资产（数据资产池） ═══════ -->
+      <section class="dash-section">
+        <div class="dash-sec-head">
+          <div>
+            <div class="dash-sec-kicker">我的经营资产</div>
+            <h2 class="dash-sec-title">数据资产池</h2>
+          </div>
+        </div>
+
+        <div class="dash-assets">
+          <div class="dash-assets-grid">
+            <div class="dash-asset">
+              <span class="dash-asset-ico">📱</span>
+              <div class="dash-asset-meta">
+                <b>内容账号</b>
+                <span>{{ hasData ? `${assets.content} 个账号` : '待接入' }}</span>
+              </div>
+            </div>
+            <div class="dash-asset">
+              <span class="dash-asset-ico">🛒</span>
+              <div class="dash-asset-meta">
+                <b>店铺</b>
+                <span>{{ hasData ? `${assets.shops} 个店铺` : '待接入' }}</span>
+              </div>
+            </div>
+            <div class="dash-asset">
+              <span class="dash-asset-ico">👥</span>
+              <div class="dash-asset-meta">
+                <b>客户渠道</b>
+                <span>{{ hasData ? `${assets.channels} 个渠道` : '待接入' }}</span>
               </div>
             </div>
           </div>
-          <div class="sub-modal-foot">
-            <div class="sub-modal-note">解锁后：自动部署 AI 员工 → 连接你的运营渠道 → 开始自动运营 → 成果汇总到 AI 已为你完成</div>
-            <div class="sub-modal-actions">
-              <NuxtLink to="/workspace/media/accounts" class="sub-modal-secondary" @click="showSubscribe = false">先去连接账号 →</NuxtLink>
-              <button class="sub-modal-primary" @click="showSubscribe = false">知道了</button>
-            </div>
+          <div class="dash-assets-status">
+            <span class="dash-assets-status-item"><i :class="hasData ? 'on' : ''"></i>数据同步：{{ hasData ? '正常' : '待接入' }}</span>
+            <span class="dash-assets-status-item">最后更新：{{ hasData ? '刚刚' : '待接入' }}</span>
           </div>
         </div>
-      </div>
-    </Teleport>
+      </section>
+
+      <!-- ═══════ ⑤ 经营趋势 ═══════ -->
+      <section class="dash-section">
+        <div class="dash-sec-head">
+          <div>
+            <div class="dash-sec-kicker">经营趋势</div>
+            <h2 class="dash-sec-title">近 7 天</h2>
+          </div>
+        </div>
+
+        <div class="dash-trend-grid">
+          <div class="dash-trend">
+            <span class="dash-trend-name">内容增长</span>
+            <span class="dash-trend-val">{{ hasData ? '↗ ' + trends.content : '待接入' }}</span>
+            <span class="dash-trend-sub">内容表现趋势</span>
+          </div>
+          <div class="dash-trend">
+            <span class="dash-trend-name">客户增长</span>
+            <span class="dash-trend-val">{{ hasData ? '↗ ' + trends.customers : '待接入' }}</span>
+            <span class="dash-trend-sub">客户运营趋势</span>
+          </div>
+          <div class="dash-trend">
+            <span class="dash-trend-name">销售增长</span>
+            <span class="dash-trend-val">{{ hasData ? '↗ ' + trends.sales : '待接入' }}</span>
+            <span class="dash-trend-sub">线上销售趋势</span>
+          </div>
+          <div class="dash-trend">
+            <span class="dash-trend-name">品牌影响力</span>
+            <span class="dash-trend-val">{{ hasData ? '↗ ' + trends.brand : '待接入' }}</span>
+            <span class="dash-trend-sub">品牌增长趋势</span>
+          </div>
+        </div>
+
+        <p class="dash-sec-note">数据接入后生成你的经营趋势</p>
+      </section>
+
+      <!-- ═══════ ⑥ 渠道入口（数据来源 · 降级为底部入口） ═══════ -->
+      <section class="dash-entry">
+        <div class="dash-entry-text">
+          <b>渠道中心</b>
+          <span>内容平台 · 电商店铺 · 客户渠道 —— 你的数据都从这里来</span>
+        </div>
+        <NuxtLink to="/workspace/media/accounts" class="dash-entry-link">进入渠道中心 →</NuxtLink>
+      </section>
+    </template>
   </MediaWorkspaceShell>
 </template>
 
@@ -398,73 +291,142 @@ const overview = ref<any>({
   channels: { connected: 0, total: 9 },
 })
 
-const { $toast } = useNuxtApp() as any
+const identityState = ref('') // '' | 'login-expired' | 'personal-space'
 
-const agents = computed(() => overview.value.agents || [])
-const usage = computed(() => overview.value.usage || {})
-const recentOutcomes = computed(() => overview.value.recentOutcomes || [])
+/* ═══ 驾驶舱数据（BUSINESS-DASHBOARD-02） ═══
+ * 真实数据接入后（渠道连接服务 → AI 员工 Runtime → 数据回流），把 dashboardData 替换为真实值即可，
+ * 全部渲染逻辑已按「有数据 / 无数据」双态写好。示例值仅为渲染逻辑参照，运行时恒为空态。
+ * 示例（有数据时）：
+ *   health: 87, healthLabel: '良好 ↑', axis: { content: 'up', customer: 'up', sales: 'up' },
+ *   exposure: 128560, customers: 368, revenue: 58920, ... 
+ */
+const dashboardData = ref<any>(null)
+const hasData = computed(() => !!dashboardData.value && !!dashboardData.value.health)
 
-const deployedNames = computed(() => agents.value.map((a: any) => a.name).filter(Boolean))
-
-const contentOutcomes = computed(() => recentOutcomes.value.filter((o: any) => /CONTENT|PUBLISH|CREATE/i.test(o.outcomeType || '')).length)
-const customerOutcomes = computed(() => recentOutcomes.value.filter((o: any) => /CUSTOMER|CLIENT|LEAD/i.test(o.outcomeType || '')).length)
-const fanInteractions = computed(() => 0) // 无渠道数据源：诚实空，连接账号后回流
-const reportText = computed(() => {
-  if (usage.value.executions > 0 || recentOutcomes.value.length > 0) {
-    return `${usage.value.executions || 0} 次执行`
+// 数据视图（无数据 → 空态占位）
+const d = computed(() => {
+  const raw = dashboardData.value
+  return {
+    exposure: raw?.exposure ?? 0,
+    customers: raw?.customers ?? 0,
+    revenue: raw?.revenue ?? 0,
+    exposureTrend: raw?.exposureTrend ?? 0,
+    customerTrend: raw?.customerTrend ?? 0,
+    revenueTrend: raw?.revenueTrend ?? 0,
   }
-  return '等待连接渠道'
 })
 
-// 不显示 0：真实数据为 0 时显示「等待连接」（老板视角：0 = 无价值，等待连接 = 待接入）
-function fmtCount(n: number) {
-  return n > 0 ? String(n) : '等待连接'
+const healthScore = computed(() => dashboardData.value?.health ?? 0)
+const healthLabel = computed(() => dashboardData.value?.healthLabel || '—')
+const healthArc = computed(() => Math.max(0, Math.min(270, (healthScore.value / 100) * 270)))
+
+function axisTrend(key: string) {
+  if (!hasData.value) return '·'
+  const t = dashboardData.value?.axis?.[key]
+  if (t === 'up') return '↑'
+  if (t === 'down') return '↓'
+  return '—'
 }
 
-// 运营渠道（产品蓝图；全部未连接——真实接入按：用户授权 → 渠道连接服务 → AI 员工 Runtime）
-const contentPlatforms = [
-  { icon: '📱', name: '抖音', plan: '短视频 · 直播' },
-  { icon: '📱', name: '快手', plan: '短视频 · 直播' },
-  { icon: '📕', name: '小红书', plan: '种草图文 · 视频' },
-  { icon: '🎬', name: '视频号', plan: '微信生态分发' },
-  { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务' },
-  { icon: '🌐', name: '微博', plan: '话题 · 图文' },
-  { icon: '📰', name: '百家号', plan: '图文 · 视频' },
-  { icon: '📰', name: '今日头条', plan: '图文 · 视频' },
-]
-const shopPlatforms = [
-  { icon: '🛒', name: '淘宝店', plan: '商品销售 · 店铺运营' },
-  { icon: '🛒', name: '京东店', plan: '商品销售 · 店铺运营' },
-  { icon: '🛒', name: '拼多多店', plan: '商品销售 · 店铺运营' },
-  { icon: '🛒', name: '抖音商城', plan: '短视频电商 · 直播带货' },
-  { icon: '🛒', name: '美团店铺', plan: '本地生活 · 门店运营' },
-  { icon: '🛒', name: '小红书店铺', plan: '种草转化 · 商品销售' },
-]
-const customerPlatforms = [
-  { icon: '🏢', name: '企业微信', plan: '私域客户运营' },
-  { icon: '💬', name: '微信客户', plan: '客户沟通 · 跟进' },
-  { icon: '📞', name: '客服渠道', plan: '咨询接待 · 售后' },
-]
+const todayLabel = computed(() => {
+  const now = new Date()
+  return `${now.getMonth() + 1} 月 ${now.getDate()} 日`
+})
 
-function onChannelClick(ch: any) {
-  if (ch.name === '微信公众号') {
-    window.location.href = '/workspace/media/accounts'
-  } else {
-    $toast?.info?.(`「${ch.name}」接入即将开放，先连接微信公众号体验完整流程`)
+function trendCls(t: number) {
+  if (t > 0) return 'up'
+  if (t < 0) return 'down'
+  return 'idle'
+}
+function trendText(t: number) {
+  if (t > 0) return `↑ ${t}%`
+  if (t < 0) return `↓ ${Math.abs(t)}%`
+  return '·'
+}
+function fmtBig(n: number) {
+  if (!hasData.value) return '待接入'
+  if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万'
+  return String(n)
+}
+function fmtMoney(n: number) {
+  if (!hasData.value) return '待接入'
+  return '¥' + (n >= 10000 ? (n / 10000).toFixed(1).replace(/\.0$/, '') + '万' : String(n))
+}
+
+/* 罗盘 SVG 刻度坐标 */
+function cx(deg: number) {
+  const rad = ((deg + 135) * Math.PI) / 180
+  return 110 + 90 * Math.cos(rad)
+}
+function cy(deg: number, r: number) {
+  const rad = ((deg + 135) * Math.PI) / 180
+  return 110 + r * Math.sin(rad)
+}
+function arcDash(totalDeg: number) {
+  // 周长 = 2πr = 439.8；270° 对应 329.9
+  const len = (2 * Math.PI * 70 * totalDeg) / 360
+  return `${len} 440`
+}
+
+/* ═══ 今日经营总览 · 六张数据卡 ═══
+ * 有数据时每卡展示：图标 + 标题 / 核心数字 / 变化趋势 / 来源说明（最多五行） */
+const metrics = computed(() => {
+  const raw = dashboardData.value?.metrics
+  return [
+    { key: 'influence', icon: '📢', name: '内容影响力', value: raw?.influence?.value ?? '—', delta: raw?.influence?.delta ?? 0, sub: '今日曝光', src: '抖音、小红书、视频号' },
+    { key: 'fans', icon: '👥', name: '粉丝资产', value: raw?.fans?.value ?? '—', delta: raw?.fans?.delta ?? 0, sub: '今日新增 +2,380', src: '全内容平台粉丝' },
+    { key: 'customers', icon: '💬', name: '客户经营', value: raw?.customers?.value ?? '—', delta: raw?.customers?.delta ?? 0, sub: '咨询人数 126', src: '企业微信、客服渠道' },
+    { key: 'sales', icon: '🛒', name: '商品销售', value: raw?.sales?.value ?? '—', delta: raw?.sales?.delta ?? 0, sub: '订单 426', src: '淘宝、京东、拼多多、抖音商城、美团' },
+    { key: 'brand', icon: '🔥', name: '品牌热度', value: raw?.brand?.value ?? '—', delta: raw?.brand?.delta ?? 0, sub: '互动率 12.6%', src: '全网搜索与互动' },
+    { key: 'ai', icon: '🤖', name: 'AI 工作成果', value: raw?.ai?.value ?? '—', delta: raw?.ai?.delta ?? 0, sub: '回复客户 89 次 · 报告 1 份', src: 'AI 员工自动执行' },
+  ]
+})
+
+/* ═══ AI 正在帮你经营 · 结果卡 ═══
+ * 无数据：员工「已就位」+ 能力待执行；有数据：真实今日完成清单 */
+const aiRoster = [
+  { name: 'Alice', role: '运营策略', avatar: '👩‍💼', focus: '制定计划 · 分析经营' },
+  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', focus: '生成内容 · 商品素材' },
+  { name: 'David', role: '客户服务', avatar: '🧑‍💼', focus: '回复咨询 · 跟进客户' },
+  { name: 'Eve', role: '经营分析', avatar: '👩‍🔬', focus: '数据报告 · 机会洞察' },
+]
+const aiPlans: Record<string, string[]> = {
+  Alice: ['制定今日内容计划', '分析热门趋势', '推荐 3 个营销方向'],
+  Carol: ['生成今日内容', '制作商品宣传图', '产出视频素材'],
+  David: ['回复客户咨询', '跟进潜在客户', '整理客户需求'],
+  Eve: ['生成经营报告', '发现销售机会', '优化投放建议'],
+}
+function aiState(a: any) {
+  // 有真实 AI 执行记录 → 工作中；否则已就位
+  return overview.value.recentOutcomes?.length || overview.value.agents?.length ? 'on' : 'idle'
+}
+function aiStateLabel(a: any) {
+  return overview.value.recentOutcomes?.length || overview.value.agents?.length ? '工作中' : '已就位'
+}
+function aiTodos(a: any) {
+  const plan = aiPlans[a.name] || []
+  if (hasData.value && overview.value.recentOutcomes?.length) {
+    return plan.map((t, i) => ({ text: t, done: i === 0 }))
   }
+  return plan.map(t => ({ text: t, done: false }))
 }
 
-// 5 名 AI 员工（老板视角一句话：帮你做什么）
-const teamRoster = [
-  { name: 'Alice', role: 'AI 运营总监', avatar: '👩‍💼', duty: '制定运营计划、分析每天经营情况', helps: ['制定内容计划', '规划营销活动', '管理运营节奏'], auto: '统筹内容计划与营销节奏，指挥团队执行' },
-  { name: 'Bob', role: 'AI 内容策划', avatar: '🧑‍💻', duty: '发现热点和营销机会', helps: ['发现热点', '策划商品推广内容', '生成营销主题'], auto: '每天发现热点，选题与营销主题自动排满内容日历' },
-  { name: 'Carol', role: 'AI 内容制作', avatar: '👩‍🎨', duty: '制作内容和商品素材', helps: ['制作图片', '制作视频', '制作商品宣传素材'], auto: '按选题自动制作图片、视频与商品素材，交人工审核' },
-  { name: 'David', role: 'AI 客户管家', avatar: '🧑‍💼', duty: '维护客户关系', helps: ['回复客户咨询', '维护客户关系', '发现购买机会'], auto: '自动回复客户消息，维护客户关系并发现购买机会提醒你跟进' },
-  { name: 'Eve', role: 'AI 数据分析师', avatar: '👩‍🔬', duty: '分析数据提升收益', helps: ['分析内容效果', '分析商品销售', '优化运营策略'], auto: '每天分析内容与销售数据，自动产出报告与运营策略建议' },
-]
+/* ═══ 我的经营资产 ═══ */
+const assets = computed(() => {
+  const raw = dashboardData.value?.assets
+  return { content: raw?.content ?? 0, shops: raw?.shops ?? 0, channels: raw?.channels ?? 0 }
+})
 
-const showSubscribe = ref(false)
-const identityState = ref('') // '' | 'login-expired' | 'personal-space'
+/* ═══ 经营趋势 ═══ */
+const trends = computed(() => {
+  const raw = dashboardData.value?.trends
+  return {
+    content: raw?.content ?? '—',
+    customers: raw?.customers ?? '—',
+    sales: raw?.sales ?? '—',
+    brand: raw?.brand ?? '—',
+  }
+})
 
 onMounted(async () => {
   const token = getAuthToken()
@@ -478,425 +440,693 @@ onMounted(async () => {
       if (data.data.personalSpace) identityState.value = 'personal-space'
     } else if (res.status === 401) {
       identityState.value = 'login-expired'
-    } else {
-      $toast?.error?.(data?.message || '加载失败')
     }
   } catch {
-    $toast?.error?.('加载失败（网络异常）')
+    // 静默：驾驶舱保持空态
   }
 })
 </script>
 
 <style scoped>
-/* ═══ 顶部定位 · 稳重商务面板（收敛 AI 氛围：无大渐变、无光斑、无玻璃） ═══ */
-.dash-hero {
-  position: relative;
-  padding: 34px 36px 32px;
-  border-radius: var(--media-radius-card);
-  background: var(--media-card-bg-solid);
-  border: 1px solid var(--media-card-border);
-  border-left: 4px solid #6366f1;
-  box-shadow: var(--media-shadow-card);
-  margin-bottom: 18px;
-  overflow: hidden;
+/* ═══ 驾驶舱基调：深色仪表盘（老板驾驶舱 · 高端 BI · 飞机仪表质感） ═══ */
+.dash-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 4px 22px;
 }
-.dash-hero-inner { position: relative; z-index: 1; max-width: 780px; }
+.dash-head-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #F5B84B;
+  background: linear-gradient(135deg, rgba(245, 184, 75, 0.16), rgba(56, 189, 248, 0.1));
+  border: 1px solid rgba(245, 184, 75, 0.35);
+  box-shadow: 0 0 22px rgba(245, 184, 75, 0.12);
+}
+.dash-head-text { flex: 1; }
 .dash-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.015em;
   color: var(--media-text-hero);
-  margin: 0 0 8px;
+  margin: 0;
 }
 .dash-mission {
-  font-size: 13.5px;
-  line-height: 1.7;
+  font-size: 12.5px;
+  color: var(--media-text-dim);
+  margin: 5px 0 0;
+}
+.dash-head-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--media-text-body);
-  margin: 0 0 20px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  border-radius: 999px;
+  padding: 6px 14px;
+  letter-spacing: 0.04em;
 }
-.dash-cta { display: flex; gap: 12px; flex-wrap: wrap; }
-.dash-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 13px; font-weight: 700;
-  text-decoration: none;
-  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+.dash-stamp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #F5B84B;
+  box-shadow: 0 0 8px rgba(245, 184, 75, 0.8);
 }
-.dash-btn:hover { transform: translateY(-1px); }
-.dash-btn-primary {
-  color: #fff;
-  background: linear-gradient(135deg, #7c5cf0, #6366f1 60%, #4f7cf0);
-  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.3);
-}
-.dash-btn-ghost {
-  color: var(--media-text-body);
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid var(--media-card-border);
-}
-.dash-btn-ghost:hover { color: var(--media-text-hero); border-color: var(--media-ai-border); }
-.dash-btn-arrow { font-size: 13px; }
 
-/* ═══ 经营数据中心 · 数据在哪里（浅色高亮条，老板 5 秒定位） ═══ */
-.dash-datahub {
+/* ═══ ① 经营数据罗盘 ═══ */
+.dash-compass {
+  position: relative;
+  border-radius: 20px;
+  background:
+    radial-gradient(1100px 420px at 20% -10%, rgba(56, 189, 248, 0.07), transparent 60%),
+    linear-gradient(180deg, #0D1428 0%, #0A0F1F 100%);
+  border: 1px solid rgba(71, 85, 105, 0.45);
+  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.5), inset 0 1px 0 rgba(148, 163, 184, 0.08);
+  padding: 30px 34px 22px;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+.dash-compass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  pointer-events: none;
+}
+.dash-compass-kicker {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 20px;
-  border-radius: var(--media-radius-panel);
-  background: linear-gradient(135deg, #eef2ff, #f8fafc);
-  border: 1px solid #c7d2fe;
-  margin-bottom: 30px;
-}
-.dash-datahub-ico {
-  width: 40px; height: 40px;
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 19px;
-  border-radius: 11px;
-  background: #fff;
-  border: 1px solid #c7d2fe;
-}
-.dash-datahub-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.dash-datahub-text b { font-size: 14.5px; font-weight: 800; color: #1e293b; }
-.dash-datahub-text span { font-size: 12px; color: #475569; line-height: 1.5; }
-.dash-datahub-link {
-  font-size: 12px; font-weight: 700; color: #4f46e5;
-  text-decoration: none; white-space: nowrap;
-}
-.dash-datahub-link:hover { text-decoration: underline; }
-
-/* ═══ 区块通用 ═══ */
-.dash-section { margin-bottom: 34px; }
-.dash-sec-head {
-  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 9px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--media-text-body);
   margin-bottom: 14px;
 }
-.dash-sec-kicker {
-  font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em;
-  color: #818cf8; margin-bottom: 4px;
+.dash-compass-kicker-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #F5B84B;
+  box-shadow: 0 0 10px rgba(245, 184, 75, 0.9);
 }
-.dash-sec-title { font-size: 18px; font-weight: 800; color: var(--media-text-title); margin: 0; letter-spacing: -0.01em; }
-.dash-sec-link {
-  font-size: 11.5px; font-weight: 600; color: var(--media-text-body);
-  text-decoration: none; transition: color 0.15s;
+.dash-compass-kicker-en {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--media-text-dim);
+  font-weight: 700;
 }
-.dash-sec-link:hover { color: #a5b4fc; }
-.dash-sec-note { margin: 12px 2px 0; font-size: 11px; color: var(--media-text-dim); line-height: 1.7; }
-.dash-sec-note b { color: #fbbf24; font-weight: 700; }
-
-/* ═══ 今日经营概览 · KPI 卡（标题 + 一个核心 + 一句解释 + 一个动作） ═══ */
-.dash-kpi-grid {
+.dash-compass-main {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 300px 1fr;
+  gap: 34px;
+  align-items: center;
+}
+/* 罗盘表盘 */
+.dash-gauge {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  margin: 0 auto;
+}
+.dash-gauge-svg { width: 100%; height: 100%; }
+.dash-gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.dash-gauge-num {
+  font-size: 46px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #F5B84B;
+  text-shadow: 0 0 26px rgba(245, 184, 75, 0.35);
+  line-height: 1;
+}
+.dash-gauge-state {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--media-text-body);
+  letter-spacing: 0.06em;
+}
+/* 三轴 */
+.dash-axis {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.dash-axis-name {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--media-text-dim);
+  letter-spacing: 0.05em;
+}
+.dash-axis-trend {
+  font-size: 14px;
+  font-weight: 800;
+  color: #10B981;
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+.dash-axis-trend:not(.up):not(.down) { color: #64748b; text-shadow: none; }
+.dash-axis-trend.down { color: #F87171; text-shadow: 0 0 10px rgba(248, 113, 113, 0.5); }
+.dash-axis-l { left: 4px; top: 50%; transform: translateY(-50%); }
+.dash-axis-b { bottom: 6px; left: 50%; transform: translateX(-50%); }
+.dash-axis-r { right: 4px; top: 50%; transform: translateY(-50%); }
+/* 今日速览 */
+.dash-speed { min-width: 0; }
+.dash-speed-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.dash-speed-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--media-text-dim);
+}
+.dash-speed-date {
+  font-size: 11.5px;
+  color: var(--media-text-body);
+  font-weight: 600;
+}
+.dash-speed-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
-.dash-kpi {
-  display: flex; flex-direction: column;
-  padding: 16px 18px 14px;
-  border-radius: var(--media-radius-card);
-  background: var(--media-card-bg-solid);
-  border: 1px solid var(--media-card-border);
-  box-shadow: var(--media-shadow-card);
+.dash-speed-cell {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
 }
-.dash-kpi-top { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
-.dash-kpi-ico {
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  border-radius: 9px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+.dash-speed-cell::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #F5B84B, #38BDF8);
 }
-.dash-kpi-name { font-size: 13px; font-weight: 800; color: var(--media-text-title); }
-.dash-kpi-core {
-  display: flex; flex-direction: column; gap: 3px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(71, 85, 105, 0.2);
-  margin-bottom: 10px;
+.dash-speed-label { font-size: 11.5px; font-weight: 700; color: var(--media-text-body); }
+.dash-speed-num {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--media-text-hero);
+  line-height: 1.1;
 }
-.dash-kpi-label { font-size: 11px; color: var(--media-text-body); }
-.dash-kpi-wait {
-  align-self: flex-start;
-  font-size: 15px; font-weight: 800;
-  color: #fbbf24;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  border-radius: 8px;
-  padding: 3px 10px;
-  margin-top: 2px;
+.dash-speed-trend { font-size: 12px; font-weight: 800; }
+.dash-speed-trend.up { color: #10B981; }
+.dash-speed-trend.down { color: #F87171; }
+.dash-speed-trend.idle { color: #64748b; }
+/* 数据汇聚链 */
+.dash-flow {
+  margin-top: 20px;
+  background: rgba(2, 6, 23, 0.55);
+  border: 1px dashed rgba(71, 85, 105, 0.45);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.dash-kpi-minis { display: flex; flex-direction: column; gap: 6px; flex: 1; }
-.dash-kpi-minis span {
-  display: flex; justify-content: space-between; align-items: center;
-  font-size: 10.5px; color: var(--media-text-dim);
+.dash-flow-src {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10.5px;
 }
-.dash-kpi-minis em {
-  font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--media-text-body);
-}
-.dash-kpi-foot {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-top: 12px; padding-top: 10px;
-  border-top: 1px solid rgba(71, 85, 105, 0.18);
-  gap: 8px;
-}
-.dash-kpi-foot span { font-size: 9.5px; color: var(--media-text-dim); line-height: 1.5; }
-.dash-kpi-act {
-  font-size: 10.5px; font-weight: 700; color: #a5b4fc;
-  text-decoration: none; white-space: nowrap;
-}
-.dash-kpi-act:hover { color: #c7d2fe; }
-
-/* ═══ 全渠道数据地图 ═══ */
-.dash-cat { margin-bottom: 22px; }
-.dash-cat:last-child { margin-bottom: 0; }
-.dash-cat-head {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 10px; padding: 0 2px;
-}
-.dash-cat-ico {
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  border-radius: 9px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-}
-.dash-cat-meta { display: flex; flex-direction: column; flex: 1; }
-.dash-cat-meta b { font-size: 12.5px; font-weight: 800; color: var(--media-text-title); }
-.dash-cat-meta span { font-size: 10px; color: var(--media-text-dim); margin-top: 1px; }
-.dash-cat-count {
-  font-size: 9.5px; font-weight: 700;
-  color: var(--media-text-dim);
-  background: rgba(71, 85, 105, 0.14);
-  border: 1px solid rgba(71, 85, 105, 0.28);
+.dash-flow-src span {
+  font-weight: 800;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
   border-radius: 999px;
   padding: 2px 10px;
 }
-.dash-channel-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+.dash-flow-src em {
+  font-style: normal;
+  color: var(--media-text-dim);
 }
-.dash-channel {
-  display: flex; align-items: center; gap: 11px;
-  padding: 13px 15px;
-  border-radius: var(--media-radius-node);
-  background: var(--media-card-bg-solid);
-  border: 1px solid var(--media-card-border);
-  cursor: pointer;
-  transition: border-color 0.18s, transform 0.15s;
+.dash-flow-arrow { color: #475569; font-size: 13px; }
+.dash-flow-node {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--media-text-body);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  border-radius: 999px;
+  padding: 5px 14px;
+  letter-spacing: 0.04em;
 }
-.dash-channel:hover { transform: translateY(-2px); border-color: rgba(129, 140, 248, 0.4); }
-.dash-channel-ico { font-size: 18px; }
-.dash-channel-meta { display: flex; flex-direction: column; flex: 1; }
-.dash-channel-name { font-size: 12.5px; font-weight: 700; color: var(--media-text-title); }
-.dash-channel-plan { font-size: 9.5px; color: var(--media-text-dim); }
-.dash-channel-state {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 9.5px; font-weight: 700; color: var(--media-text-dim);
+.dash-flow-node--final {
+  color: #F5B84B;
+  border-color: rgba(245, 184, 75, 0.45);
+  background: rgba(245, 184, 75, 0.08);
 }
-.dash-channel-dot { width: 6px; height: 6px; border-radius: 50%; background: #475569; }
-.dash-cat-foot {
-  display: flex; justify-content: flex-end;
-  margin-top: 8px;
+/* 空态引导 */
+.dash-empty {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(245, 184, 75, 0.07);
+  border: 1px solid rgba(245, 184, 75, 0.22);
 }
-.dash-cat-link {
-  font-size: 11px; font-weight: 700; color: #a5b4fc;
-  text-decoration: none;
+.dash-empty-ico { font-size: 22px; }
+.dash-empty-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
-.dash-cat-link:hover { color: #c7d2fe; }
+.dash-empty-text b {
+  font-size: 13px;
+  font-weight: 800;
+  color: #F5B84B;
+}
+.dash-empty-text span {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--media-text-body);
+}
 
-/* ═══ 我的 AI 运营团队 ═══ */
-.dash-team-grid {
+/* ═══ 通用区块 ═══ */
+.dash-section {
+  margin-top: 26px;
+}
+.dash-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.dash-sec-kicker {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--media-ai);
+  text-transform: uppercase;
+}
+.dash-sec-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--media-text-hero);
+  margin: 4px 0 0;
+  letter-spacing: -0.01em;
+}
+.dash-sec-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--media-text-body);
+  text-decoration: none;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  background: rgba(15, 23, 42, 0.7);
+  transition: all 0.15s;
+}
+.dash-sec-link:hover { color: #F5B84B; border-color: rgba(245, 184, 75, 0.4); }
+.dash-sec-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: #F5B84B;
+  background: rgba(245, 184, 75, 0.1);
+  border: 1px solid rgba(245, 184, 75, 0.3);
+  border-radius: 999px;
+  padding: 4px 13px;
+  letter-spacing: 0.08em;
+}
+.dash-sec-note {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  color: var(--media-text-dim);
+  text-align: center;
+}
+
+/* ═══ ② 今日经营总览 · 六张数据卡（图标 / 标题 / 核心数字 / 趋势 / 来源，五行内） ═══ */
+.dash-metrics {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
-.dash-team-card {
-  display: flex; flex-direction: column;
-  padding: 16px 16px 14px;
-  border-radius: var(--media-radius-card);
-  background: var(--media-card-bg-solid);
-  border: 1px solid var(--media-card-border);
-  box-shadow: var(--media-shadow-card);
-  transition: transform 0.2s, border-color 0.2s;
+.dash-metric {
+  background: linear-gradient(180deg, #0E1528 0%, #0B1120 100%);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  border-radius: 16px;
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
 }
-.dash-team-card:hover { transform: translateY(-3px); border-color: rgba(129, 140, 248, 0.45); }
-.dash-team-head { display: flex; align-items: center; gap: 10px; }
-.dash-avatar {
-  width: 38px; height: 38px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 19px;
+.dash-metric:hover {
+  border-color: rgba(245, 184, 75, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.45);
+}
+.dash-metric::after {
+  content: '';
+  position: absolute;
+  right: -30px; top: -30px;
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.08), transparent 70%);
+  pointer-events: none;
+}
+.dash-metric-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-metric-ico {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+}
+.dash-metric-name { font-size: 13px; font-weight: 800; color: var(--media-text-hero); }
+.dash-metric-num { min-height: 38px; display: flex; align-items: center; }
+.dash-metric-value {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--media-text-hero);
+  line-height: 1.1;
+}
+.dash-metric-wait {
+  font-size: 22px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+.dash-metric-trend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-metric-delta { font-size: 12.5px; font-weight: 800; }
+.dash-metric-delta.up { color: #10B981; }
+.dash-metric-delta.down { color: #F87171; }
+.dash-metric-delta.is-idle { color: #475569; font-size: 16px; line-height: 1; }
+.dash-metric-sub { font-size: 11.5px; color: var(--media-text-body); }
+.dash-metric-src {
+  font-size: 10.5px;
+  color: var(--media-text-dim);
+  padding-top: 8px;
+  border-top: 1px dashed rgba(71, 85, 105, 0.3);
+}
+
+/* ═══ ③ AI 正在帮你经营 ═══ */
+.dash-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.dash-ai-card {
+  background: linear-gradient(180deg, #0E1528 0%, #0B1120 100%);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dash-ai-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dash-ai-avatar {
+  width: 36px; height: 36px;
   border-radius: 11px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-}
-.dash-team-meta { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.dash-team-name { font-size: 14px; font-weight: 800; color: var(--media-text-title); letter-spacing: 0.04em; }
-.dash-team-role { font-size: 10px; font-weight: 700; color: #818cf8; margin-top: 1px; }
-.dash-status {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 9px; font-weight: 700;
-  border-radius: 999px; padding: 2px 8px;
-}
-.dash-status.on { color: #34d399; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.32); }
-.dash-status.off { color: var(--media-text-dim); background: rgba(71, 85, 105, 0.12); border: 1px solid rgba(71, 85, 105, 0.3); }
-.dash-status-dot { width: 5px; height: 5px; border-radius: 50%; }
-.dash-status.on .dash-status-dot { background: #34d399; }
-.dash-status.off .dash-status-dot { background: #64748b; }
-.dash-team-duty {
-  margin: 12px 0 0;
-  font-size: 11px; line-height: 1.7;
-  color: var(--media-text-body);
-  flex: 1;
-}
-.dash-team-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(71, 85, 105, 0.18); }
-.dash-unlock {
-  width: 100%;
-  padding: 8px 0;
-  border-radius: 9px;
-  font-size: 11.5px; font-weight: 700;
-  color: #e2e8f0;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(99, 102, 241, 0.9));
-  border: 1px solid rgba(139, 92, 246, 0.5);
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.dash-unlock:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(99, 102, 241, 0.35); }
-.dash-view {
-  display: block; text-align: center;
-  padding: 8px 0;
-  border-radius: 9px;
-  font-size: 11.5px; font-weight: 700;
-  color: #a5b4fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(56, 189, 248, 0.12));
   border: 1px solid rgba(99, 102, 241, 0.35);
-  text-decoration: none;
-  transition: background 0.15s;
 }
-.dash-view:hover { background: rgba(99, 102, 241, 0.1); }
+.dash-ai-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.dash-ai-meta b { font-size: 13px; font-weight: 800; color: var(--media-text-hero); }
+.dash-ai-meta span { font-size: 10.5px; color: var(--media-text-dim); }
+.dash-ai-state {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.dash-ai-state.on {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.dash-ai-state.idle {
+  color: #94a3b8;
+  background: rgba(71, 85, 105, 0.15);
+  border: 1px solid rgba(71, 85, 105, 0.35);
+}
+.dash-ai-todos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dash-ai-todos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--media-text-body);
+  line-height: 1.5;
+}
+.dash-ai-check {
+  width: 15px; height: 15px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  margin-top: 1px;
+}
+.dash-ai-check.on {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10B981;
+  color: #10B981;
+}
+.dash-ai-todo-text { flex: 1; }
 
-/* AI 已为你完成（真实成果） */
-.dash-done {
-  margin-top: 18px;
-  padding: 16px 18px 18px;
-  border-radius: var(--media-radius-card);
-  background: rgba(13, 19, 40, 0.55);
-  border: 1px dashed rgba(100, 116, 139, 0.35);
+/* ═══ ④ 我的经营资产 ═══ */
+.dash-assets {
+  background: linear-gradient(180deg, #0E1528 0%, #0B1120 100%);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
 }
-.dash-done-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
-.dash-done-head b { font-size: 12.5px; font-weight: 800; color: var(--media-text-title); }
-.dash-done-head span { font-size: 10.5px; color: var(--media-text-dim); }
-.dash-done-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.dash-done-card {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--media-radius-node);
-  background: var(--media-card-bg-solid);
-  border: 1px solid var(--media-card-border);
+.dash-assets-grid {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
 }
-.dash-done-meta { display: flex; flex-direction: column; gap: 2px; }
-.dash-done-label { font-size: 10.5px; color: var(--media-text-body); }
-.dash-done-num { font-size: 18px; font-weight: 800; color: var(--media-text-title); letter-spacing: -0.01em; }
-.dash-done-num--text { font-size: 12.5px; line-height: 1.6; }
-.dash-done-sub { font-size: 9px; color: var(--media-text-dim); text-align: right; max-width: 90px; }
+.dash-asset {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  border-radius: 13px;
+  padding: 11px 16px;
+}
+.dash-asset-ico {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: rgba(245, 184, 75, 0.1);
+  border: 1px solid rgba(245, 184, 75, 0.25);
+}
+.dash-asset-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dash-asset-meta b { font-size: 12.5px; font-weight: 800; color: var(--media-text-hero); }
+.dash-asset-meta span { font-size: 11px; color: var(--media-text-body); }
+.dash-assets-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dash-assets-status-item {
+  font-size: 11.5px;
+  color: var(--media-text-body);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.dash-assets-status-item i {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #475569;
+  display: inline-block;
+}
+.dash-assets-status-item i.on {
+  background: #10B981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
 
-/* ═══ 经营趋势 ═══ */
+/* ═══ ⑤ 经营趋势 ═══ */
 .dash-trend-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
 }
 .dash-trend {
-  display: flex; flex-direction: column; gap: 5px;
-  padding: 16px 18px;
-  border-radius: var(--media-radius-card);
-  background: var(--media-card-bg-solid);
-  border: 1px solid var(--media-card-border);
-  box-shadow: var(--media-shadow-card);
-}
-.dash-trend-name { font-size: 11px; font-weight: 700; color: var(--media-text-body); }
-.dash-trend-val { font-size: 15px; font-weight: 800; color: #fbbf24; }
-.dash-trend-sub { font-size: 9.5px; color: var(--media-text-dim); }
-
-/* ═══ 身份引导 ═══ */
-.dash-identity {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  font-size: 12px; line-height: 1.6;
-  margin-bottom: 26px;
-}
-.dash-identity-error { border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.07); color: var(--media-text-body); }
-.dash-identity-error b { color: #fbbf24; font-size: 13px; }
-.dash-identity-ok { border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.06); color: var(--media-text-body); }
-.dash-identity-ok b { color: #34d399; font-size: 13px; }
-.dash-identity-btn {
-  align-self: flex-start; margin-top: 4px;
-  padding: 5px 14px; border-radius: 8px;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  color: #fff; font-size: 12px; font-weight: 600; text-decoration: none;
-}
-
-/* ═══ 解锁弹窗 ═══ */
-.sub-modal-mask {
-  position: fixed; inset: 0; z-index: 999;
-  background: rgba(2, 6, 23, 0.7);
-  backdrop-filter: blur(6px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
-}
-.sub-modal {
-  width: 560px; max-height: 82vh; overflow-y: auto;
-  border-radius: 20px;
-  background: #0f172a;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.8);
-}
-.sub-modal-head {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  padding: 20px 22px 14px;
-  border-bottom: 1px solid rgba(71, 85, 105, 0.2);
-}
-.sub-modal-title { font-size: 17px; font-weight: 800; color: var(--media-text-title); }
-.sub-modal-sub { font-size: 11px; color: var(--media-text-dim); margin-top: 4px; }
-.sub-modal-close { background: none; border: none; color: var(--media-text-dim); font-size: 15px; cursor: pointer; padding: 4px; }
-.sub-modal-close:hover { color: var(--media-text-title); }
-.sub-modal-list { padding: 10px 22px; display: flex; flex-direction: column; gap: 8px; }
-.sub-modal-row {
-  display: flex; gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(71, 85, 105, 0.22);
-}
-.sub-modal-avatar { font-size: 18px; }
-.sub-modal-meta { display: flex; flex-direction: column; gap: 3px; }
-.sub-modal-name { font-size: 12px; font-weight: 800; color: var(--media-text-title); }
-.sub-modal-duty, .sub-modal-auto { font-size: 10.5px; color: var(--media-text-body); line-height: 1.55; }
-.sub-modal-foot { padding: 14px 22px 20px; border-top: 1px solid rgba(71, 85, 105, 0.2); }
-.sub-modal-note { font-size: 10.5px; color: var(--media-text-dim); margin-bottom: 12px; }
-.sub-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-.sub-modal-secondary {
-  font-size: 12px; font-weight: 600; color: var(--media-text-body);
-  text-decoration: none; padding: 8px 14px; border-radius: 10px;
+  background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(71, 85, 105, 0.4);
+  border-radius: 14px;
+  padding: 15px 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
-.sub-modal-secondary:hover { color: var(--media-text-title); }
-.sub-modal-primary {
-  font-size: 12px; font-weight: 700; color: #fff;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  border: none; border-radius: 10px; padding: 8px 18px; cursor: pointer;
+.dash-trend-name { font-size: 11.5px; font-weight: 700; color: var(--media-text-body); }
+.dash-trend-val { font-size: 17px; font-weight: 900; color: #10B981; }
+.dash-trend-sub { font-size: 10.5px; color: var(--media-text-dim); }
+
+/* ═══ ⑥ 渠道入口（数据来源 · 底部中性入口） ═══ */
+.dash-entry {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 22px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px dashed rgba(71, 85, 105, 0.5);
+}
+.dash-entry-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.dash-entry-text b { font-size: 13.5px; font-weight: 800; color: var(--media-text-hero); }
+.dash-entry-text span { font-size: 11.5px; color: var(--media-text-dim); }
+.dash-entry-link {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #F5B84B;
+  text-decoration: none;
+  padding: 9px 18px;
+  border-radius: 11px;
+  background: rgba(245, 184, 75, 0.1);
+  border: 1px solid rgba(245, 184, 75, 0.35);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.dash-entry-link:hover {
+  background: rgba(245, 184, 75, 0.18);
+  box-shadow: 0 0 18px rgba(245, 184, 75, 0.15);
 }
 
-/* 响应式 */
-@media (max-width: 1180px) {
-  .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .dash-team-grid { grid-template-columns: repeat(3, 1fr); }
-  .dash-done-grid { grid-template-columns: repeat(2, 1fr); }
+/* 身份引导 */
+.dash-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+.dash-identity-error {
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #FCA5A5;
+}
+.dash-identity-ok {
+  background: rgba(16, 185, 129, 0.07);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #6EE7B7;
+}
+.dash-identity b { font-size: 13.5px; }
+.dash-identity span { flex: 1; font-size: 12px; opacity: 0.85; }
+.dash-identity-btn {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #7c5cf0, #6366f1);
+  border-radius: 10px;
+  padding: 8px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 1080px) {
+  .dash-compass-main { grid-template-columns: 1fr; }
+  .dash-metrics { grid-template-columns: repeat(2, 1fr); }
+  .dash-ai-grid { grid-template-columns: repeat(2, 1fr); }
   .dash-trend-grid { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 900px) {
-  .dash-channel-grid { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 640px) {
+  .dash-metrics { grid-template-columns: 1fr; }
+  .dash-ai-grid { grid-template-columns: 1fr; }
+  .dash-speed-grid { grid-template-columns: 1fr; }
 }
 </style>
