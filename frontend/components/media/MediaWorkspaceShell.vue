@@ -37,13 +37,13 @@
         </NuxtLink>
       </nav>
 
-      <!-- 底部：系统入口（模型/渠道/会员/首页） + 用户卡 -->
+      <!-- 底部：系统入口（模型/渠道/会员/首页，单一入口）+ 用户卡 -->
       <div class="mws-side-foot">
         <div class="mws-side-ops">
-          <button class="mws-op" @click="showModelSettings = true">🧠 模型中心</button>
-          <NuxtLink to="/workspace/media/accounts" class="mws-op">🔗 渠道中心</NuxtLink>
-          <NuxtLink to="/user/membership" class="mws-op">⭐ 会员中心</NuxtLink>
-          <NuxtLink to="/" class="mws-op">🏠 返回昆仑镜首页</NuxtLink>
+          <button class="mws-op" @click="showModelSettings = true"><span class="mws-op-ico">⚙</span>模型中心</button>
+          <NuxtLink to="/workspace/media/accounts" class="mws-op"><span class="mws-op-ico">⇄</span>渠道中心</NuxtLink>
+          <NuxtLink to="/user/membership" class="mws-op"><span class="mws-op-ico">★</span>会员中心</NuxtLink>
+          <NuxtLink to="/" class="mws-op"><span class="mws-op-ico">←</span>昆仑镜首页</NuxtLink>
         </div>
         <div class="mws-side-glow"></div>
         <WorkspaceUserCard
@@ -51,7 +51,7 @@
           :display-name="displayName"
           :org-name="orgName"
           :plan-name="planName"
-          @open-model-settings="showModelSettings = true"
+          hide-model-entry
           @open-billing="goMembership"
         />
       </div>
@@ -59,14 +59,9 @@
 
     <!-- ═══ 主区 ═══ -->
     <div class="mws-main">
-      <!-- 顶栏（返回首页 + 当前模块 + 状态 + 模型快捷入口） -->
+      <!-- 顶栏（当前模块 + 状态；返回/模型/工作空间已收敛至左栏，单一入口） -->
       <header class="mws-topbar">
         <div class="mws-topbar-left">
-          <NuxtLink to="/" class="mws-back">
-            <span class="mws-back-arrow">←</span>
-            <span class="mws-back-text">昆仑镜首页</span>
-          </NuxtLink>
-          <span class="mws-topbar-divider"></span>
           <span class="mws-module-icon">{{ currentModule.icon }}</span>
           <div class="mws-module-text">
             <span class="mws-module-name">{{ currentModule.name }}</span>
@@ -74,15 +69,10 @@
           </div>
         </div>
         <div class="mws-topbar-right">
-          <button class="mws-model-btn" @click="showModelSettings = true">
-            <span class="mws-model-dot"></span>
-            模型设置
-          </button>
           <span class="mws-live">
             <span class="mws-live-dot"></span>
             {{ badgeText }}
           </span>
-          <WorkspaceSwitcher />
         </div>
       </header>
 
@@ -103,7 +93,6 @@
 <script setup lang="ts">
 import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
-import WorkspaceSwitcher from '~/components/WorkspaceSwitcher.vue'
 import WorkspaceUserCard from '~/components/workspace/shared/WorkspaceUserCard.vue'
 import ModelSettingsModal from '~/components/director/ModelSettingsModal.vue'
 
@@ -145,24 +134,24 @@ onMounted(async () => {
 })
 
 const navItems = [
-  { icon: '🏠', label: '经营总部', hint: '我的生意 · AI 经营状态', path: '/workspace/media/' },
-  { icon: '👥', label: 'AI员工', hint: '5 名智能员工 · 正在工作', path: '/workspace/media/team' },
-  { icon: '✍', label: '内容工厂', hint: '选题 → 创作 → 发布 → 复盘', path: '/workspace/media/content' },
-  { icon: '💬', label: '客户中心', hint: '自动回复客户 · 发现销售机会', path: '/workspace/media/messages' },
-  { icon: '🛒', label: '商品经营', hint: '我的线上生意 · 商品与店铺', path: '/workspace/media/shop', tag: '新' },
-  { icon: '📊', label: '数据洞察', hint: '内容效果 · 商品销售 · 运营策略', path: '/workspace/media/analytics' },
-  { icon: '🌎', label: '行业机会', hint: '热点 · 竞品 · 平台规则', path: '/workspace/media/intelligence' },
+  { icon: '⌂', label: '经营总部', hint: '我的生意 · AI 经营状态', path: '/workspace/media/' },
+  { icon: '♙', label: 'AI员工', hint: '5 名智能员工 · 正在工作', path: '/workspace/media/team' },
+  { icon: '✎', label: '内容工厂', hint: '选题 → 创作 → 发布 → 复盘', path: '/workspace/media/content' },
+  { icon: '♡', label: '客户中心', hint: '自动回复客户 · 发现销售机会', path: '/workspace/media/messages' },
+  { icon: '□', label: '商品经营', hint: '我的线上生意 · 商品与店铺', path: '/workspace/media/shop', tag: '新' },
+  { icon: '◫', label: '数据洞察', hint: '内容效果 · 商品销售 · 运营策略', path: '/workspace/media/analytics' },
+  { icon: '◌', label: '行业机会', hint: '热点 · 竞品 · 平台规则', path: '/workspace/media/intelligence' },
 ]
 
 const moduleMap: Record<string, { icon: string; name: string; sub: string }> = {
-  '/workspace/media': { icon: '🏠', name: '经营总部', sub: '我的生意 · AI 经营状态' },
-  '/workspace/media/team': { icon: '👥', name: 'AI员工', sub: '5 名智能员工 · 正在工作' },
-  '/workspace/media/content': { icon: '✍', name: '内容工厂', sub: '选题到发布的内容生产中心' },
-  '/workspace/media/messages': { icon: '💬', name: '客户中心', sub: '自动回复客户 · 发现销售机会' },
-  '/workspace/media/accounts': { icon: '🔗', name: '渠道中心', sub: '内容平台 · 电商店铺 · 客户渠道' },
-  '/workspace/media/shop': { icon: '🛒', name: '商品经营', sub: '我的线上生意 · 商品与店铺' },
-  '/workspace/media/analytics': { icon: '📊', name: '数据洞察', sub: '内容效果 · 商品销售 · 运营策略' },
-  '/workspace/media/intelligence': { icon: '🌎', name: '行业机会', sub: '热点 · 竞品 · 平台规则' },
+  '/workspace/media': { icon: '⌂', name: '经营总部', sub: '我的生意 · AI 经营状态' },
+  '/workspace/media/team': { icon: '♙', name: 'AI员工', sub: '5 名智能员工 · 正在工作' },
+  '/workspace/media/content': { icon: '✎', name: '内容工厂', sub: '选题到发布的内容生产中心' },
+  '/workspace/media/messages': { icon: '♡', name: '客户中心', sub: '自动回复客户 · 发现销售机会' },
+  '/workspace/media/accounts': { icon: '⇄', name: '渠道中心', sub: '内容平台 · 电商店铺 · 客户渠道' },
+  '/workspace/media/shop': { icon: '□', name: '商品经营', sub: '我的线上生意 · 商品与店铺' },
+  '/workspace/media/analytics': { icon: '◫', name: '数据洞察', sub: '内容效果 · 商品销售 · 运营策略' },
+  '/workspace/media/intelligence': { icon: '◌', name: '行业机会', sub: '热点 · 竞品 · 平台规则' },
 }
 
 const currentModule = computed(() => {
@@ -205,12 +194,12 @@ onMounted(async () => {
   color: var(--media-text-title);
 }
 
-/* ── 左栏 · AI 工作空间 ── */
+/* ── 左栏 · AI 工作空间（白天：白底 + 细边框） ── */
 .mws-side {
   width: 232px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #0B1020 0%, var(--color-bg-secondary) 60%, #0A0E1E 100%);
-  border-right: 1px solid var(--color-border-primary);
+  background: #FFFFFF;
+  border-right: 1px solid #E5E7EB;
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -282,15 +271,14 @@ onMounted(async () => {
   border: 1px solid transparent;
 }
 .mws-nav-item:hover {
-  background: rgba(51, 65, 85, 0.35);
+  background: #F3F4F6;
   color: var(--media-text-title);
-  transform: translateX(2px);
 }
 .mws-nav-item.is-active {
-  background: linear-gradient(90deg, var(--media-ai-glow), rgba(59, 130, 246, 0.08));
-  border-color: var(--media-ai-border);
-  color: var(--media-text-hero);
-  box-shadow: 0 4px 16px rgba(2, 6, 23, 0.35);
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.22);
+  color: #4F46E5;
+  box-shadow: none;
 }
 .mws-nav-item.is-active::before {
   content: '';
@@ -300,8 +288,7 @@ onMounted(async () => {
   bottom: 20%;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: var(--media-brand-gradient);
-  box-shadow: 0 0 10px var(--media-brand-glow);
+  background: #6366F1;
 }
 .mws-nav-text {
   flex: 1;
@@ -314,14 +301,13 @@ onMounted(async () => {
   font-size: 15px;
   width: 20px;
   text-align: center;
-  color: #64748b;
+  color: #94A3B8;
   font-weight: 400;
   transition: color 0.18s;
 }
-.mws-nav-item:hover .mws-nav-icon { color: var(--media-text-body); }
+.mws-nav-item:hover .mws-nav-icon { color: #64748B; }
 .mws-nav-item.is-active .mws-nav-icon {
-  color: var(--media-ai);
-  text-shadow: 0 0 8px rgba(167, 139, 250, 0.8);
+  color: #6366F1;
 }
 .mws-nav-label {
   font-size: 13.5px;
@@ -347,9 +333,9 @@ onMounted(async () => {
 .mws-nav-tag {
   font-size: 9px;
   font-weight: 800;
-  color: var(--media-ai);
-  background: var(--media-ai-glow);
-  border: 1px solid var(--media-ai-border);
+  color: #6366F1;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.28);
   border-radius: 8px;
   padding: 1px 7px;
   letter-spacing: 0.08em;
@@ -360,7 +346,7 @@ onMounted(async () => {
 .mws-side-foot {
   position: relative;
   padding: 10px 10px 14px;
-  border-top: 1px solid rgba(71, 85, 105, 0.25);
+  border-top: 1px solid #EEF0F3;
   overflow: hidden;
   z-index: 2;
 }
@@ -375,12 +361,12 @@ onMounted(async () => {
 .mws-op {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  border-radius: 9px;
+  gap: 9px;
+  padding: 6px 12px;
+  border-radius: 8px;
   border: none;
   background: transparent;
-  color: var(--media-text-body);
+  color: #64748B;
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
@@ -388,9 +374,15 @@ onMounted(async () => {
   text-align: left;
   transition: background 0.15s, color 0.15s;
 }
+.mws-op-ico {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #94A3B8;
+}
 .mws-op:hover {
-  background: rgba(51, 65, 85, 0.4);
-  color: var(--media-text-hero);
+  background: #F3F4F6;
+  color: #111827;
 }
 .mws-side-foot :deep(.w-user-card) {
   position: relative;
@@ -403,36 +395,39 @@ onMounted(async () => {
   height: 34px;
   border-radius: 10px;
   font-size: 14px;
+  background: linear-gradient(135deg, #6366F1, #4F46E5);
+}
+.mws-side-foot :deep(.wuc-name) {
+  color: #111827;
+}
+.mws-side-foot :deep(.wuc-org) {
+  color: #9CA3AF;
 }
 .mws-side-foot :deep(.wuc-plan-row) {
-  background: var(--media-ai-glow);
-  border: 1px solid var(--media-ai-border);
+  background: rgba(99, 102, 241, 0.07);
+  border: 1px solid rgba(99, 102, 241, 0.22);
   border-radius: var(--media-radius-pill);
   padding: 3px 12px;
 }
 .mws-side-foot :deep(.wuc-plan-dot) {
-  background: var(--media-ai);
-  box-shadow: 0 0 6px var(--media-ai);
+  background: #6366F1;
+}
+.mws-side-foot :deep(.wuc-plan-name) {
+  color: #4F46E5;
 }
 .mws-side-foot :deep(.wuc-btn) {
-  border: 1px solid var(--color-border-primary);
-  background: var(--color-bg-secondary);
-  color: var(--media-text-body);
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  color: #64748B;
   border-radius: var(--media-radius-node);
 }
 .mws-side-foot :deep(.wuc-btn:hover) {
-  border-color: var(--media-ai-border);
-  color: var(--media-text-hero);
-  background: var(--media-ai-glow);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #4F46E5;
+  background: rgba(99, 102, 241, 0.06);
 }
 .mws-side-glow {
-  position: absolute;
-  top: -30px;
-  left: 20%;
-  width: 200px;
-  height: 90px;
-  background: radial-gradient(ellipse, var(--media-hero-glow-1), transparent 70%);
-  pointer-events: none;
+  display: none;
 }
 
 /* ── 主区 ── */
@@ -446,10 +441,10 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 32px;
-  background: rgba(5, 8, 22, 0.85);
+  padding: 10px 32px;
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--color-border-primary);
+  border-bottom: 1px solid #E5E7EB;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -459,54 +454,29 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
 }
-.mws-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 13px;
-  border-radius: 10px;
-  border: 1px solid rgba(71, 85, 105, 0.35);
-  background: rgba(15, 23, 42, 0.7);
-  color: var(--media-text-body);
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-.mws-back:hover {
-  color: var(--media-text-hero);
-  border-color: rgba(129, 140, 248, 0.5);
-  background: rgba(30, 41, 59, 0.8);
-}
-.mws-back-arrow { font-size: 13px; line-height: 1; }
-.mws-topbar-divider {
-  width: 1px;
-  height: 22px;
-  background: rgba(71, 85, 105, 0.35);
-}
 .mws-module-icon {
-  font-size: 18px;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: var(--media-brand-soft);
-  border: 1px solid var(--media-ai-border);
+  font-size: 15px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(2, 6, 23, 0.4);
+  color: #6366F1;
 }
 .mws-module-name {
   display: block;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
-  color: var(--media-text-hero);
+  color: #111827;
   letter-spacing: -0.01em;
 }
 .mws-module-sub {
   display: block;
   font-size: 11px;
-  color: var(--media-text-dim);
+  color: #9CA3AF;
   margin-top: 1px;
 }
 .mws-topbar-right {
@@ -514,51 +484,24 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
 }
-.mws-model-btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--media-text-body);
-  background: var(--color-bg-hover);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--media-radius-pill);
-  padding: 7px 14px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.mws-model-btn:hover {
-  color: var(--media-text-title);
-  border-color: var(--media-ai-border);
-  background: var(--media-ai-glow);
-}
-.mws-model-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--media-ai);
-  box-shadow: 0 0 8px var(--media-ai);
-}
 .mws-live {
   display: flex;
   align-items: center;
   gap: 7px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--color-execution);
+  color: #059669;
   letter-spacing: 0.06em;
-  background: var(--color-execution-glow);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: rgba(5, 150, 105, 0.07);
+  border: 1px solid rgba(5, 150, 105, 0.22);
   border-radius: var(--media-radius-pill);
-  padding: 5px 12px;
+  padding: 4px 12px;
 }
 .mws-live-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-execution);
-  box-shadow: 0 0 8px var(--color-execution);
+  background: #10B981;
   animation: mws-breathe 1.8s infinite;
 }
 @keyframes mws-breathe {

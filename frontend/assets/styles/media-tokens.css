@@ -1,67 +1,68 @@
 /* ═══════════════════════════════════════════════════════════
-   Media Design Language v2.0 — AI 企业经营总部专属 Design Token
-   Sprint-MEDIA-EXECUTIVE-EXPERIENCE-03
-   掌柜设计纪律（EXECUTIVE-EXPERIENCE-03）：
-   - 禁止：数据大屏风 / 仪表盘模板风 / 卡片堆叠风 / 科技蓝炫技风 / 金色廉价感
-   - 方向：高级 · 克制 · 可信 · 未来企业 · AI 助理（Apple 发布页 / Notion / Linear / Stripe）
-   - 色彩：深墨灰 #0B1020 基础 / 昆仑紫 #7C3AED 主色 / 智能蓝 #3B82F6 辅助 / 成长绿 #22C55E 强调
-   - 金色退场：不再使用暖金高亮（黄金 = 交易系统廉价感）
+   Media Design Language v3.0 — 昆仑镜统一 Workspace · 白天模式
+   Sprint-MEDIA-UX-CONSOLIDATION-04（UX 收敛治理）
+   掌柜设计纪律（UX-CONSOLIDATION-04）：
+   - 定位：不是「AI 科技」，是「企业经营软件」
+   - 色彩比例：90% 中性色（白/雾灰/深灰）+ 8% 蓝色 + 2% 紫色（只做激活态/CTA/AI标识）
+   - 深紫大面积使用清零（紫色大面积 = AI 模板网站廉价感）
+   - 白天模式优先：#F7F8FA 背景 / #FFFFFF 卡片 / #111827 文字 / #64748B 辅助 / #6366F1 AI强调只点缀
+   - 参考：Stripe / Linear / Notion 商业 SaaS
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── 品牌（昆仑紫 → 智能蓝）── */
-  --media-brand-gradient: linear-gradient(135deg, #7C3AED 0%, #6D28D9 55%, #3B82F6 100%);
-  --media-brand-soft: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(59, 130, 246, 0.14));
-  --media-brand-glow: rgba(124, 58, 237, 0.30);
-  --media-brand-text: #C4B5FD;
+  /* ── 品牌（indigo 系 · 只用于 logo / 激活态 / CTA，不做大面积背景）── */
+  --media-brand-gradient: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  --media-brand-soft: rgba(99, 102, 241, 0.08);
+  --media-brand-glow: rgba(99, 102, 241, 0.18);
+  --media-brand-text: #6366F1;
 
-  /* ── AI 高亮（昆仑紫系，克制使用）── */
-  --media-ai: #A78BFA;
-  --media-ai-soft: #7C3AED;
-  --media-ai-glow: rgba(124, 58, 237, 0.14);
-  --media-ai-border: rgba(167, 139, 250, 0.32);
+  /* ── AI 强调（#6366F1 只点缀，取代大面积紫）── */
+  --media-ai: #6366F1;
+  --media-ai-soft: #4F46E5;
+  --media-ai-glow: rgba(99, 102, 241, 0.07);
+  --media-ai-border: rgba(99, 102, 241, 0.28);
 
-  /* ── 经营语义色（EXECUTIVE-EXPERIENCE-03）── */
-  --media-primary: #7C3AED;   /* 昆仑紫 · 主色 */
-  --media-info: #3B82F6;      /* 智能蓝 · 辅助 */
-  --media-success: #22C55E;   /* 成长绿 · 强调 */
-  --media-warn: #F59E0B;      /* 预警（极少用） */
-  --media-danger: #EF4444;    /* 下降 */
+  /* ── 经营语义色（白天模式）── */
+  --media-primary: #4F46E5;   /* CTA / 激活 */
+  --media-info: #2563EB;      /* 辅助蓝 */
+  --media-success: #16A34A;   /* 成长绿 */
+  --media-warn: #D97706;      /* 预警 */
+  --media-danger: #DC2626;    /* 下降 */
 
-  /* ── 背景氛围（深墨灰基础 #0B1020）── */
-  --media-bg-deep: #0B1020;
-  --media-bg-surface: #101830;
-  --media-hero-grid-line: rgba(124, 58, 237, 0.06);
-  --media-hero-glow-1: rgba(124, 58, 237, 0.10);
-  --media-hero-glow-2: rgba(59, 130, 246, 0.07);
+  /* ── 背景（白天模式：#F7F8FA 雾灰）── */
+  --media-bg-deep: #F7F8FA;
+  --media-bg-surface: #FFFFFF;
+  --media-hero-grid-line: rgba(99, 102, 241, 0.04);
+  --media-hero-glow-1: rgba(99, 102, 241, 0.05);
+  --media-hero-glow-2: rgba(37, 99, 235, 0.04);
 
-  /* ── 卡片（克制深色面板，细边框 + 微投影，不做玻璃炫技）── */
-  --media-card-bg: linear-gradient(180deg, #101830 0%, #0C1326 100%);
-  --media-card-bg-solid: rgba(16, 24, 48, 0.85);
-  --media-card-border: rgba(71, 85, 105, 0.30);
-  --media-card-border-hover: rgba(124, 58, 237, 0.45);
-  --media-card-shadow: 0 6px 24px rgba(2, 6, 23, 0.35);
+  /* ── 卡片（白卡 + 细边框 + 微投影）── */
+  --media-card-bg: #FFFFFF;
+  --media-card-bg-solid: rgba(255, 255, 255, 0.92);
+  --media-card-border: #E5E7EB;
+  --media-card-border-hover: rgba(99, 102, 241, 0.45);
+  --media-card-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 
   /* ── 文字 ── */
-  --media-text-hero: #F8FAFC;
-  --media-text-title: #F1F5F9;
-  --media-text-body: #94A3B8;
-  --media-text-dim: #64748B;
+  --media-text-hero: #111827;
+  --media-text-title: #111827;
+  --media-text-body: #64748B;
+  --media-text-dim: #9CA3AF;
 
   /* ── 圆角 ── */
-  --media-radius-card: 16px;
-  --media-radius-panel: 14px;
-  --media-radius-node: 12px;
+  --media-radius-card: 12px;
+  --media-radius-panel: 10px;
+  --media-radius-node: 9px;
   --media-radius-pill: 999px;
 
-  /* ── 间距（页面节奏）── */
-  --media-gap-page: 28px;
-  --media-gap-section: 24px;
-  --media-gap-card: 16px;
-  --media-pad-page: 32px;
+  /* ── 间距（SaaS 紧凑节奏）── */
+  --media-gap-page: 20px;
+  --media-gap-section: 18px;
+  --media-gap-card: 12px;
+  --media-pad-page: 24px;
 
-  /* ── 阴影（克制）── */
-  --media-shadow-float: 0 12px 36px rgba(2, 6, 23, 0.45), 0 0 0 1px rgba(124, 58, 237, 0.05);
-  --media-shadow-hover: 0 14px 40px rgba(2, 6, 23, 0.5), 0 0 0 1px rgba(124, 58, 237, 0.12);
-  --media-shadow-card: 0 4px 18px rgba(2, 6, 23, 0.3);
+  /* ── 阴影（白天克制）── */
+  --media-shadow-float: 0 4px 16px rgba(16, 24, 40, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.04);
+  --media-shadow-hover: 0 8px 24px rgba(16, 24, 40, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.10);
+  --media-shadow-card: 0 1px 3px rgba(16, 24, 40, 0.06);
 }
