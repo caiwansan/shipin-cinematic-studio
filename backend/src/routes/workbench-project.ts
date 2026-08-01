@@ -146,6 +146,21 @@ export default async function (app: FastifyInstance) {
       })
       ;(project as any).pipelineStages = normalizedStages
 
+      // ⭐ visualDesc 兼容（SHORTDRAMA-DISPLAY-FIX）: 旧项目 executionResults.segments 存的是 visualDesc（V2 派生字段）
+      //    新前端统一读 visualDescription，返回前归一化，避免分镜卡片画面描述空白
+      try {
+        const er = (project as any).executionResults
+        if (er && typeof er === 'object' && Array.isArray(er.segments)) {
+          ;(project as any).executionResults = {
+            ...er,
+            segments: er.segments.map((s: any) => ({
+              ...s,
+              visualDescription: s.visualDescription || s.visualDesc || s.fullText || s.narrativePurpose || '',
+            })),
+          }
+        }
+      } catch { /* 归一化失败不影响主链路 */ }
+
       reply.send({ success: true, data: project })
     } catch (err: any) {
       console.error("[workbench-project] GET /:id 错误:", err.message, err.stack?.slice(0, 500));

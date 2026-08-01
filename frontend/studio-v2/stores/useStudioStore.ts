@@ -926,6 +926,8 @@ export function useStudioStore() {
             scenes,
             narrativePurpose: seg.fullText || seg.narrativePurpose || seg.narrative || seg.description || '',
             fullText: seg.fullText || seg.narrative || '',  // ⭐ 保留完整文本
+            // ⭐ visualDesc 兼容（旧项目 V2 字段）→ 统一 visualDescription
+            visualDescription: seg.visualDescription || seg.visualDesc || seg.fullText || seg.narrative || seg.narrativePurpose || '',
             shotPattern: seg.shotPattern || '',
             emotionArc: seg.emotionArc || seg.emotionalTone || '',
             // ⭐ 回填 imagePrompt（优先使用 seg 自带的，否则用 frameDesign 的 firstFramePrompt 填到第一个 segment）
@@ -945,8 +947,10 @@ export function useStudioStore() {
           timeline: seg.timeline || [],
           characters: seg.characters || [],
           scenes: seg.scenes || [],
-          narrativePurpose: seg.narrativePurpose || '',
-          fullText: seg.fullText || '',
+          narrativePurpose: seg.narrativePurpose || seg.visualDescription || seg.visualDesc || '',
+          fullText: seg.fullText || seg.visualDescription || seg.visualDesc || '',
+          // ⭐ visualDesc 兼容（旧项目 V2 字段）→ 统一 visualDescription
+          visualDescription: seg.visualDescription || seg.visualDesc || seg.fullText || seg.narrativePurpose || '',
           shotPattern: seg.shotPattern || '',
           emotionArc: seg.emotionArc || '',
           imagePrompt: seg.imagePrompt || '',

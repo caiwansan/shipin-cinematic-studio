@@ -59,7 +59,7 @@
         <div class="sb-card-text">
           <details class="sb-details">
             <summary class="sb-details-summary">🎬 画面描述</summary>
-            <p class="sb-full-text sb-visual-desc">{{ seg.visualDescription || prompts[segIdx] || '⚠️ 尚未生成画面描述' }}</p>
+            <p class="sb-full-text sb-visual-desc">{{ seg.visualDescription || (seg as any).visualDesc || prompts[segIdx] || '⚠️ 尚未生成画面描述' }}</p>
             <div v-if="seg.shotPattern || seg.emotion" class="sb-shot-tags">
               <span v-if="seg.shotPattern" class="sb-tag">📷 {{ seg.shotPattern }}</span>
               <span v-if="seg.emotion" class="sb-tag">🎭 {{ seg.emotion }}</span>
@@ -693,7 +693,7 @@ function initPrompts() {
     const seg = segments.value[i]
     if (prompts.value[i] === undefined) {
       // ⭐ SSOT: 优先使用后端 adapter 统一提供的 visualDescription
-      const vd = seg.visualDescription || (seg as any).fullText || (seg as any).narrativePurpose || ''
+      const vd = seg.visualDescription || (seg as any).visualDesc || (seg as any).fullText || (seg as any).narrativePurpose || ''
       prompts.value[i] = vd
     }
     if (negativePrompts.value[i] === undefined) {
