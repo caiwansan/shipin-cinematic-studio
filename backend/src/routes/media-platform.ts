@@ -38,14 +38,14 @@ export async function registerMediaPlatformRoutes(app: FastifyInstance) {
             orgId = (await getOrganizationIdForUser(jwtUser.id)) || undefined
           } catch { /* non-fatal */ }
         }
-        if (orgId) {
-          (request as any).tenantContext = {
-            userId: jwtUser.id,
-            email: jwtUser.email || '',
-            orgId,
-            orgName: '',
-            role: 'OWNER',
-          }
+        // SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 新媒体 = 个人运营空间
+        // 无企业身份用户也可注入 ctx（orgId 空 = 个人空间），禁止再阻断普通用户
+        ;(request as any).tenantContext = {
+          userId: jwtUser.id,
+          email: jwtUser.email || '',
+          orgId: orgId || '',
+          orgName: '',
+          role: 'OWNER',
         }
       }
       return
@@ -66,13 +66,10 @@ export async function registerMediaPlatformRoutes(app: FastifyInstance) {
     }
   })
 
-  /** BETA-06.9.6: 从 Tenant Guard 提取 orgId，统一错误处理 */
+  /** BETA-06.9.6: 从 Tenant Guard 提取 orgId。SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 空 = 个人空间（不抛） */
   function _getOrgId(request: any): string {
     const ctx = request.tenantContext
-    if (!ctx) {
-      throw { statusCode: 403, codeKey: 'NO_TENANT', message: 'Requires organization membership' }
-    }
-    return ctx.orgId
+    return ctx?.orgId || ''
   }
 
   // BETA-06.9.6: 在所有业务路由前注入 orgId，捕获权限错误
@@ -398,10 +395,10 @@ export async function registerMediaPlatformRoutes(app: FastifyInstance) {
 
   app.get('/media/accounts/health', async (request, reply) => {
     try {
-      // BETA-06.9.6: orgId 来自 Tenant Guard，不再从 query 获取
+      // SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 个人空间（无企业身份）→ 未连接状态，不阻断
       const ctx = (request as any).tenantContext
       const orgId = ctx?.orgId
-      if (!orgId) return reply.status(403).send({ code: 403, codeKey: 'NO_TENANT', message: 'Requires organization membership' })
+      if (!orgId) return reply.send({ code: 0, data: { connected: false, checkedAt: new Date().toISOString(), reason: 'personal-space' } })
       
       const { platform } = request.query as any
       const health = await mediaPlatformService.checkAccountHealth(orgId, platform || 'xiaohongshu')
@@ -416,10 +413,10 @@ export async function registerMediaPlatformRoutes(app: FastifyInstance) {
   // Step 1: 创建授权任务，打开浏览器等待登录
   app.post('/media/accounts/connect', async (request, reply) => {
     try {
-      // BETA-06.9.6: orgId 来自 Tenant Guard，不再从 body 获取
+      // SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 绑定账号需数据归属（个人空间），无企业身份时引导创建运营空间
       const ctx = (request as any).tenantContext
       const orgId = ctx?.orgId
-      if (!orgId) return reply.status(403).send({ code: 403, codeKey: 'NO_TENANT', message: 'Requires organization membership' })
+      if (!orgId) return reply.status(400).send({ code: 400, codeKey: 'ORG_REQUIRED_FOR_CONNECT', message: '绑定平台账号前请先创建你的运营空间（企业中心 → 创建企业）' })
 
       const { platform } = request.body as any
       if (!platform) {
@@ -486,10 +483,10 @@ export async function registerMediaPlatformRoutes(app: FastifyInstance) {
   app.post('/media/accounts/connect/:sessionId/confirm', async (request, reply) => {
     try {
       const { sessionId } = request.params as any
-      // BETA-06.9.6: orgId 来自 Tenant Guard
+      // SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 同 connect，无归属时引导创建运营空间
       const ctx = (request as any).tenantContext
       const orgId = ctx?.orgId
-      if (!orgId) return reply.status(403).send({ code: 403, codeKey: 'NO_TENANT', message: 'Requires organization membership' })
+      if (!orgId) return reply.status(400).send({ code: 400, codeKey: 'ORG_REQUIRED_FOR_CONNECT', message: '绑定平台账号前请先创建你的运营空间（企业中心 → 创建企业）' })
 
       const { platform, accountName } = request.body as any
       if (!platform) {

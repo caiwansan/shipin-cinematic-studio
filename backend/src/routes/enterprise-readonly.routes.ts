@@ -141,7 +141,33 @@ export async function registerMediaOverviewRoutes(app: FastifyInstance) {
     try {
       const organizationId = await resolveOrgId(request)
       if (!organizationId) {
-        return reply.code(401).send({ code: 401, message: '无企业身份，无法查询运营中心' })
+        // SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 新媒体 = 个人运营空间（非企业部门）
+        // 普通昆仑镜用户无企业身份也可进入：返回个人空间空数据（结构同构），不阻断
+        const now = new Date()
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const calendar: any[] = []
+        for (let d = 0; d < 7; d++) {
+          const dayStart = new Date(startOfToday.getTime() + d * 24 * 60 * 60 * 1000)
+          calendar.push({ date: dayStart.toISOString().slice(0, 10), isToday: d === 0, items: [] })
+        }
+        return reply.send({
+          code: 0,
+          data: {
+            generatedAt: now.toISOString(),
+            agents: [],
+            today: { completed: 0, byType: [], pendingSchedules: 0, scheduleItems: [] },
+            calendar,
+            recentOutcomes: [],
+            usage: { todayCost: 0, executions: 0 },
+            channels: { connected: 0, total: 4, platforms: ['wechat', 'douyin', 'xiaohongshu', 'video'] },
+            industryRadar: {
+              supported: false,
+              reason: '热点/竞品/规则数据源未接入。真实雷达将于数据源就绪后启用。',
+              hot: [], competitor: [], rule: [], suggestion: [],
+            },
+            personalSpace: true,
+          },
+        })
       }
 
       const now = new Date()

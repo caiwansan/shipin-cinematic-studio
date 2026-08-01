@@ -8,8 +8,8 @@
   <MediaWorkspaceShell>
     <MediaPageHeader
       kicker="AI Team Operating Center"
-      title="AI 员工团队"
-      desc="管理你的 AI 新媒体运营部门——每名员工：职责清晰、价值明确，订阅后自动部署并开始工作。"
+      title="AI 团队"
+      desc="管理你的 AI 新媒体运营团队——每名员工：职责清晰、价值明确，订阅后自动部署并开始工作。"
     />
 
     <div class="to-layout">

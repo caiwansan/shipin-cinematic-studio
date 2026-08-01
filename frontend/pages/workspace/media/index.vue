@@ -17,20 +17,20 @@
       </template>
     </MediaPageHeader>
 
-    <!-- ═══ 身份引导（SPRINT-MEDIA-IDENTITY-ALIGN-01 T03 + 401 修复: 区分登录过期/无企业）═══ -->
+    <!-- ═══ 身份引导（SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 登录过期 → 弹窗登录；个人空间 → 欢迎引导）═══ -->
     <div v-if="identityState === 'login-expired'" class="dash-identity-error">
       <b>🔐 登录已过期</b>
-      <span>当前会话已失效，请重新登录后再进入新媒体运营部。</span>
-      <NuxtLink to="/login?redirect=/workspace/media" class="dash-identity-btn">去登录 →</NuxtLink>
+      <span>当前会话已失效，请重新登录后再进入你的新媒体运营空间。</span>
+      <NuxtLink to="/?showLogin=1&redirect=/workspace/media" class="dash-identity-btn">去登录 →</NuxtLink>
     </div>
-    <div v-else-if="identityState === 'no-org'" class="dash-identity-error">
-      <b>⚠️ 未找到企业身份</b>
-      <span>当前账号尚未创建或加入企业，无法加载运营数据。请先在「企业中心」创建企业空间后再进入新媒体运营部。</span>
+    <div v-else-if="identityState === 'personal-space'" class="dash-identity-ok">
+      <b>🚀 欢迎，这是你的个人 AI 新媒体运营空间</b>
+      <span>无需企业身份，绑定你的平台账号（小红书 / 抖音 / 视频号 / 公众号）即可开始 AI 运营。</span>
     </div>
 
     <!-- ═══ 产品定位（30 秒理解：这是什么产品）═══ -->
     <div class="dash-position">
-      <span class="dash-pos-label">这是你的 AI 新媒体运营部</span>
+      <span class="dash-pos-label">这是你的 AI 新媒体运营空间</span>
       <span class="dash-pos-item">📢 管理渠道</span>
       <span class="dash-pos-arrow">→</span>
       <span class="dash-pos-item">📝 生产内容</span>
@@ -391,7 +391,7 @@ const teamRoster = [
 ]
 
 const showSubscribe = ref(false)
-const identityState = ref('') // '' | 'login-expired' | 'no-org'
+const identityState = ref('') // '' | 'login-expired' | 'personal-space'
 
 onMounted(async () => {
   const token = getAuthToken()
@@ -402,11 +402,11 @@ onMounted(async () => {
     const data = await res.json()
     if (data?.code === 0 && data?.data) {
       overview.value = data.data
+      // SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 个人空间（无企业身份）→ 欢迎引导而非报错
+      if (data.data.personalSpace) identityState.value = 'personal-space'
     } else if (res.status === 401) {
       // 有 token 但 401 = 会话失效（token 过期/被吊销）→ 引导重新登录
-      identityState.value = token ? 'login-expired' : 'login-expired'
-    } else if (data?.message?.includes('企业身份')) {
-      identityState.value = 'no-org'
+      identityState.value = 'login-expired'
     } else {
       $toast?.error?.(data?.message || '加载驾驶舱失败')
     }
@@ -473,6 +473,22 @@ function stateClass(s: string) {
 }
 .dash-identity-error b {
   color: var(--color-warning);
+  font-size: 13px;
+}
+.dash-identity-ok {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-success, #22c55e);
+  background: rgba(34, 197, 94, 0.08);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+.dash-identity-ok b {
+  color: var(--color-success);
   font-size: 13px;
 }
 .dash-identity-btn {

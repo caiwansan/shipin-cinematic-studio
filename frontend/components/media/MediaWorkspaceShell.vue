@@ -10,7 +10,7 @@
       <div class="mws-brand">
         <div class="mws-brand-logo">📣</div>
         <div class="mws-brand-text">
-          <div class="mws-brand-name">新媒体运营部</div>
+          <div class="mws-brand-name">AI 新媒体运营中心</div>
           <div class="mws-brand-sub">AI Media Ops</div>
         </div>
       </div>
@@ -33,22 +33,9 @@
       </nav>
 
       <div class="mws-side-foot">
-        <div class="mws-foot-dot" :class="{ online: teamOnline }"></div>
-        <div class="mws-foot-text">
-          <div class="mws-foot-title">{{ teamOnline ? 'AI 员工工作中' : 'AI 员工待部署' }}</div>
-          <div class="mws-foot-sub">{{ agentsOnline }}/{{ agentsTotal }} 在线</div>
-        </div>
+        <!-- SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 个人运营空间（短剧同款 VIP 卡 + 完整模型设置入口） -->
+        <WorkspaceVipCard @open-model-settings="showModelSettings = true" />
       </div>
-
-      <!-- SPRINT-MEDIA-IDENTITY-ALIGN-01 T02/T04: 复用昆仑镜统一用户身份卡（短剧/招聘同款，禁止新建 Media 系） -->
-      <WorkspaceUserCard
-        :username="identity.username"
-        :display-name="identity.displayName"
-        :org-name="identity.orgName"
-        :plan-name="identity.planName"
-        @open-model-settings="showModelSettings = true"
-        @open-billing="router.push('/workspace/enterprise/billing')"
-      />
     </aside>
 
     <!-- ═══ 主区 ═══ -->
@@ -75,10 +62,10 @@
       </main>
     </div>
 
-    <!-- SPRINT-MEDIA-IDENTITY-ALIGN-01 T05: 复用统一 ModelSettingsModal（禁 MediaModelSettings/WechatLLMSettings） -->
+    <!-- SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 完整复用短剧 ModelSettingsModal（不传 filterCapability）
+         支持语言/图片/视觉理解/视频/TTS/音乐全能力 —— 新媒体不是只有 LLM -->
     <ModelSettingsModal
       :visible="showModelSettings"
-      filterCapability="llm"
       @close="showModelSettings = false"
     />
   </div>
@@ -88,7 +75,7 @@
 import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import WorkspaceSwitcher from '~/components/WorkspaceSwitcher.vue'
-import WorkspaceUserCard from '~/components/workspace/shared/WorkspaceUserCard.vue'
+import WorkspaceVipCard from '~/components/workspace/shared/WorkspaceVipCard.vue'
 import ModelSettingsModal from '~/components/director/ModelSettingsModal.vue'
 
 const route = useRoute()
@@ -96,47 +83,41 @@ const router = useRouter()
 
 const showModelSettings = ref(false)
 
-// SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 身份上下文（auth/me 单一权威）
-const identity = ref({ username: '…', displayName: '', orgName: '', planName: '' })
-
 const goHome = () => router.push('/')
 
 const badgeText = ref('运营中心')
-const agentsTotal = ref(0)
-const agentsOnline = ref(0)
-const teamOnline = computed(() => agentsOnline.value > 0)
 
-// 分组导航：对应产品结构（AI员工团队 → 账号资产 → 内容生产 → 客户运营 → 商业结果）
+// SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 导航对齐个人运营空间产品结构（首页/AI团队/内容车间/客户运营/渠道资产/数据分析/行业智能）
 const navGroups = [
   {
     label: '运营',
-    items: [{ icon: '🏠', label: '运营总览', path: '/workspace/media/', tag: '' }],
+    items: [{ icon: '🏠', label: '首页', path: '/workspace/media/', tag: '' }],
+  },
+  {
+    label: '团队',
+    items: [{ icon: '🧑‍💼', label: 'AI 团队', path: '/workspace/media/team', tag: '' }],
   },
   {
     label: '内容',
-    items: [{ icon: '🏭', label: '内容工厂', path: '/workspace/media/content', tag: '' }],
+    items: [{ icon: '🏭', label: '内容车间', path: '/workspace/media/content', tag: '' }],
   },
   {
     label: '客户',
     items: [
-      { icon: '💬', label: '消息互动', path: '/workspace/media/messages', tag: '' },
+      { icon: '💬', label: '客户运营', path: '/workspace/media/messages', tag: '' },
       { icon: '👥', label: '客户资产', path: '/workspace/media/customers', tag: '' },
+    ],
+  },
+  {
+    label: '资产',
+    items: [
+      { icon: '🔗', label: '渠道资产', path: '/workspace/media/accounts', tag: '' },
+      { icon: '📊', label: '数据分析', path: '/workspace/media/analytics', tag: '' },
     ],
   },
   {
     label: '智能',
     items: [{ icon: '📡', label: '行业智能', path: '/workspace/media/intelligence', tag: 'NEW' }],
-  },
-  {
-    label: '组织',
-    items: [
-      { icon: '🧑‍💼', label: 'AI 员工团队', path: '/workspace/media/team', tag: '' },
-      { icon: '🔗', label: '新媒体资产', path: '/workspace/media/accounts', tag: '' },
-    ],
-  },
-  {
-    label: '数据',
-    items: [{ icon: '📊', label: '数据分析', path: '/workspace/media/analytics', tag: '' }],
   },
 ]
 
@@ -145,43 +126,22 @@ function isActive(path: string) {
   return route.path === p || route.path.startsWith(p + '/')
 }
 
-// 员工在线状态（真实数据：overview agents）+ 身份上下文（auth/me + subscription/current）
+// 员工在线状态（真实数据：overview agents；个人空间=空数组→默认徽章）
+// SPRINT-MEDIA-IDENTITY-REALITY-FIX-02: 身份/会员由 WorkspaceVipCard 自加载（短剧同款链），Shell 不再拉企业订阅
 onMounted(async () => {
   try {
     const token = getAuthToken()
+    if (!token) return
     const res = await fetch('/api/enterprise/media/overview', {
       headers: { Authorization: `Bearer ${token}` },
     })
     const data = await res.json()
     if (data?.code === 0 && data?.data) {
       const agents = data.data.agents || []
-      agentsTotal.value = agents.length
-      agentsOnline.value = agents.filter((a: any) => a.lifecycleState === 'ACTIVE').length
-      badgeText.value = agents.length ? 'AI 部门运行中' : '待部署 AI 员工'
+      badgeText.value = agents.length ? `AI 团队 ${agents.length} 人` : '个人运营空间'
     }
   } catch {
     // 静默：状态徽章保持默认
-  }
-
-  // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 用户身份卡数据（复用短剧/招聘同款链）
-  try {
-    const token = getAuthToken()
-    if (!token) return
-    const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-    const meData = await meRes.json()
-    const u = meData?.data?.user
-    if (u) {
-      identity.value.username = u.username || u.email || '用户'
-      identity.value.displayName = u.displayName || u.nickname || u.username || ''
-      identity.value.orgName = u.organizationName || ''
-    }
-    const subRes = await fetch('/api/enterprise/subscription/current', { headers: { Authorization: `Bearer ${token}` } })
-    const subData = await subRes.json()
-    if (subData?.data?.hasSubscription && subData?.data?.planName) {
-      identity.value.planName = subData.data.planName
-    }
-  } catch {
-    // 身份加载失败不阻塞工作台
   }
 })
 </script>
@@ -288,36 +248,8 @@ onMounted(async () => {
   letter-spacing: 0.06em;
 }
 .mws-side-foot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+  padding: 0;
   border-top: 1px solid var(--color-border-primary);
-}
-.mws-foot-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--color-text-disabled);
-  box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.15);
-}
-.mws-foot-dot.online {
-  background: var(--color-execution);
-  box-shadow: 0 0 0 3px var(--color-execution-glow);
-  animation: breathe 2.4s infinite;
-}
-@keyframes breathe {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-.mws-foot-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-.mws-foot-sub {
-  font-size: 10px;
-  color: var(--color-text-muted);
 }
 
 /* ── 主区 ── */
