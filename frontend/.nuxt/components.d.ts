@@ -199,6 +199,11 @@ interface _GlobalComponents {
     'KunlunScenesWenquxingScene': typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']
     'KunlunScenesWorkbenchUniverseScene': typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']
     'MediaAgentRoster': typeof import("../components/media/MediaAgentRoster.vue")['default']
+    'MediaEmptyState': typeof import("../components/media/MediaEmptyState.vue")['default']
+    'MediaHealthRing': typeof import("../components/media/MediaHealthRing.vue")['default']
+    'MediaKpiCard': typeof import("../components/media/MediaKpiCard.vue")['default']
+    'MediaPageHeader': typeof import("../components/media/MediaPageHeader.vue")['default']
+    'MediaPanel': typeof import("../components/media/MediaPanel.vue")['default']
     'MediaPlannedPage': typeof import("../components/media/MediaPlannedPage.vue")['default']
     'MediaWorkspaceShell': typeof import("../components/media/MediaWorkspaceShell.vue")['default']
     'R11CausePanel': typeof import("../components/r11/CausePanel.vue")['default']
@@ -437,6 +442,11 @@ interface _GlobalComponents {
     'LazyKunlunScenesWenquxingScene': LazyComponent<typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']>
     'LazyKunlunScenesWorkbenchUniverseScene': LazyComponent<typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']>
     'LazyMediaAgentRoster': LazyComponent<typeof import("../components/media/MediaAgentRoster.vue")['default']>
+    'LazyMediaEmptyState': LazyComponent<typeof import("../components/media/MediaEmptyState.vue")['default']>
+    'LazyMediaHealthRing': LazyComponent<typeof import("../components/media/MediaHealthRing.vue")['default']>
+    'LazyMediaKpiCard': LazyComponent<typeof import("../components/media/MediaKpiCard.vue")['default']>
+    'LazyMediaPageHeader': LazyComponent<typeof import("../components/media/MediaPageHeader.vue")['default']>
+    'LazyMediaPanel': LazyComponent<typeof import("../components/media/MediaPanel.vue")['default']>
     'LazyMediaPlannedPage': LazyComponent<typeof import("../components/media/MediaPlannedPage.vue")['default']>
     'LazyMediaWorkspaceShell': LazyComponent<typeof import("../components/media/MediaWorkspaceShell.vue")['default']>
     'LazyR11CausePanel': LazyComponent<typeof import("../components/r11/CausePanel.vue")['default']>
@@ -681,6 +691,11 @@ export const KunlunScenesHeroScene: typeof import("../components/kunlun/scenes/H
 export const KunlunScenesWenquxingScene: typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']
 export const KunlunScenesWorkbenchUniverseScene: typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']
 export const MediaAgentRoster: typeof import("../components/media/MediaAgentRoster.vue")['default']
+export const MediaEmptyState: typeof import("../components/media/MediaEmptyState.vue")['default']
+export const MediaHealthRing: typeof import("../components/media/MediaHealthRing.vue")['default']
+export const MediaKpiCard: typeof import("../components/media/MediaKpiCard.vue")['default']
+export const MediaPageHeader: typeof import("../components/media/MediaPageHeader.vue")['default']
+export const MediaPanel: typeof import("../components/media/MediaPanel.vue")['default']
 export const MediaPlannedPage: typeof import("../components/media/MediaPlannedPage.vue")['default']
 export const MediaWorkspaceShell: typeof import("../components/media/MediaWorkspaceShell.vue")['default']
 export const R11CausePanel: typeof import("../components/r11/CausePanel.vue")['default']
@@ -919,6 +934,11 @@ export const LazyKunlunScenesHeroScene: LazyComponent<typeof import("../componen
 export const LazyKunlunScenesWenquxingScene: LazyComponent<typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']>
 export const LazyKunlunScenesWorkbenchUniverseScene: LazyComponent<typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']>
 export const LazyMediaAgentRoster: LazyComponent<typeof import("../components/media/MediaAgentRoster.vue")['default']>
+export const LazyMediaEmptyState: LazyComponent<typeof import("../components/media/MediaEmptyState.vue")['default']>
+export const LazyMediaHealthRing: LazyComponent<typeof import("../components/media/MediaHealthRing.vue")['default']>
+export const LazyMediaKpiCard: LazyComponent<typeof import("../components/media/MediaKpiCard.vue")['default']>
+export const LazyMediaPageHeader: LazyComponent<typeof import("../components/media/MediaPageHeader.vue")['default']>
+export const LazyMediaPanel: LazyComponent<typeof import("../components/media/MediaPanel.vue")['default']>
 export const LazyMediaPlannedPage: LazyComponent<typeof import("../components/media/MediaPlannedPage.vue")['default']>
 export const LazyMediaWorkspaceShell: LazyComponent<typeof import("../components/media/MediaWorkspaceShell.vue")['default']>
 export const LazyR11CausePanel: LazyComponent<typeof import("../components/r11/CausePanel.vue")['default']>

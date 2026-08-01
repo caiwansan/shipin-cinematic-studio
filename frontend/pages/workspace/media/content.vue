@@ -1,57 +1,46 @@
 <!--
-  Sprint-MEDIA-UX-02 — 内容生产中心
-  四阶段流水线: AI策划 → AI生产 → 审核 → 发布
-  纪律: 真实数据 + 空态；微信发布回流（Sprint-MEDIA-01）后自动填充
+  Sprint-MEDIA-UX-03 — AI Content Factory 内容工厂
+  六层结构: 内容战略 → 选题池 → 生产队列 → 审核中心 → 发布记录 → 效果反馈
+  纪律: 真实空态；SocialPost 接入（Sprint-MEDIA-01）后自动点亮
 -->
 <template>
   <MediaWorkspaceShell>
-    <div class="cc">
-      <div class="cc-head">
-        <div>
-          <h2 class="cc-title">📝 内容生产中心</h2>
-          <p class="cc-sub">AI 策划选题 → AI 生产稿件 → 合规审核 → 发布回流，全流程真实闭环</p>
-        </div>
-        <div class="cc-stages">
-          <div v-for="(s, i) in stages" :key="s.key" class="cc-stage" :class="{ 'is-current': i === 0 }">
-            <span class="cc-stage-ico">{{ s.icon }}</span>
-            <span class="cc-stage-name">{{ s.name }}</span>
-            <span class="cc-stage-count">{{ s.count }}</span>
-          </div>
-        </div>
-      </div>
+    <MediaPageHeader
+      kicker="AI Content Factory"
+      title="内容工厂"
+      desc="从内容战略到效果反馈的完整生产管线——AI 员工在这里选题、生产、审核、发布并回收数据。"
+    />
 
-      <!-- 四阶段面板 -->
-      <div class="cc-grid">
-        <div v-for="s in stages" :key="s.key" class="cc-panel">
-          <div class="cc-panel-head">
-            <span class="cc-panel-title">{{ s.icon }} {{ s.name }}</span>
-            <span class="cc-panel-note">{{ s.note }}</span>
-          </div>
-          <div class="cc-panel-body">
-            <template v-if="s.count > 0">
-              <div v-for="(it, i) in s.items" :key="i" class="cc-item">
-                <span class="cc-item-dot"></span>
-                <span class="cc-item-text">{{ it.title }}</span>
-                <span class="cc-item-time">{{ it.time }}</span>
-              </div>
-            </template>
-            <div v-else class="cc-empty">
-              <p>{{ s.emptyText }}</p>
-              <p class="cc-empty-sub">{{ s.emptySub }}</p>
+    <!-- 工厂管线横幅 -->
+    <div class="cf-pipeline">
+      <div v-for="(s, i) in stages" :key="s.key" class="cf-stage" :class="{ 'is-current': i === 0 }">
+        <div class="cf-stage-node">
+          <span class="cf-stage-ico">{{ s.icon }}</span>
+          <span class="cf-stage-num">{{ i + 1 }}</span>
+        </div>
+        <div class="cf-stage-name">{{ s.name }}</div>
+        <div class="cf-stage-count">{{ s.count }} 项</div>
+      </div>
+    </div>
+
+    <!-- 六层生产面板 -->
+    <div class="cf-layers">
+      <div v-for="(s, i) in stages" :key="s.key" class="cf-layer" :class="{ 'is-core': i >= 1 && i <= 4 }">
+        <div class="cf-layer-head">
+          <div class="cf-layer-title">
+            <span class="cf-layer-ico">{{ s.icon }}</span>
+            <div>
+              <div class="cf-layer-name">{{ s.name }}</div>
+              <div class="cf-layer-desc">{{ s.desc }}</div>
             </div>
           </div>
+          <span class="cf-layer-badge">{{ s.badge }}</span>
         </div>
-      </div>
-
-      <!-- 流程说明（真实链路，非 mock） -->
-      <div class="cc-flow">
-        <h3 class="cc-flow-title">🔁 真实生产链路</h3>
-        <div class="cc-flow-steps">
-          <div class="cc-flow-step"><b>1</b> AI 员工选题策划<span class="cc-flow-tag">AgentSchedule · content</span></div>
-          <div class="cc-flow-step"><b>2</b> AI 生产稿件（文章/视频文案）<span class="cc-flow-tag">BYOK 模型真实生成</span></div>
-          <div class="cc-flow-step"><b>3</b> 合规审核（平台规则）<span class="cc-flow-tag">审核队列</span></div>
-          <div class="cc-flow-step"><b>4</b> 发布到微信<span class="cc-flow-tag">Sprint-MEDIA-01 接入后启用</span></div>
-          <div class="cc-flow-step"><b>5</b> 数据回流（阅读/互动）<span class="cc-flow-tag">datacube 回流后启用</span></div>
+        <div class="cf-layer-body">
+          <MediaEmptyState
+            :icon="s.icon" :title="s.emptyTitle" :desc="s.emptyDesc"
+            :source="s.source"
+          />
         </div>
       </div>
     </div>
@@ -60,193 +49,175 @@
 
 <script setup lang="ts">
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
+import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
+import MediaEmptyState from '~/components/media/MediaEmptyState.vue'
 
-// 真实数据源: 当前 media 业务线 outcomes 为空 → 空态
-// 接入后: 策划(PLAN_CREATED) / 生产(PUBLISH_READY) / 审核(REVIEW_PENDING) / 发布(PUBLISHED)
 const stages = ref([
   {
-    key: 'plan', icon: '💡', name: 'AI 策划', count: 0, note: '选题 · 排期',
-    emptyText: '今日暂无策划选题', emptySub: 'AI 员工执行策划任务后真实展示', items: [],
+    key: 'strategy', icon: '🎯', name: '内容战略', badge: 'AI 规划',
+    desc: 'AI 运营总监制定内容方向与排期',
+    emptyTitle: '战略待制定', emptyDesc: 'AI 总监部署后，将生成内容方向、目标与排期计划。',
+    source: 'AgentSchedule · strategy · Sprint-MEDIA-03', count: 0,
   },
   {
-    key: 'produce', icon: '✍️', name: 'AI 生产', count: 0, note: '文章 · 视频文案',
-    emptyText: '暂无生产中的稿件', emptySub: '策划确认后自动进入生产', items: [],
+    key: 'ideas', icon: '💡', name: '选题池', badge: '热点驱动',
+    desc: '行业热点扫描产生的选题候选',
+    emptyTitle: '选题池为空', emptyDesc: '行业智能数据源接入后，AI 将从热点/竞品中挖掘选题。',
+    source: '行业智能 · Sprint-MEDIA-03', count: 0,
   },
   {
-    key: 'review', icon: '🔍', name: '合规审核', count: 0, note: '平台规则检查',
-    emptyText: '审核队列为空', emptySub: '生产完成的稿件待审核', items: [],
+    key: 'produce', icon: '✍️', name: '生产队列', badge: 'BYOK 生成',
+    desc: 'AI 员工撰写文章/视频文案',
+    emptyTitle: '队列空闲', emptyDesc: '选题确认后进入生产队列，由 AI 员工真实生成稿件。',
+    source: 'AgentTask · content · BYOK 模型', count: 0,
   },
   {
-    key: 'publish', icon: '🚀', name: '发布', count: 0, note: '微信 · 后续多平台',
-    emptyText: '暂无待发布/已发布内容', emptySub: '微信账号连接（Sprint-MEDIA-01）后真实发布', items: [],
+    key: 'review', icon: '🔍', name: '审核中心', badge: '合规检查',
+    desc: '平台规则与合规审核',
+    emptyTitle: '审核队列为空', emptyDesc: '生产完成的稿件进入合规审核，通过后进入发布队列。',
+    source: '审核队列 · 平台规则', count: 0,
+  },
+  {
+    key: 'publish', icon: '🚀', name: '发布记录', badge: '微信首发',
+    desc: '已发布内容与平台状态',
+    emptyTitle: '暂无发布记录', emptyDesc: '微信资产连接（Sprint-MEDIA-01）后，真实发布记录将回流至此。',
+    source: 'SocialPost · Sprint-MEDIA-01', count: 0,
+  },
+  {
+    key: 'feedback', icon: '📈', name: '效果反馈', badge: 'datacube',
+    desc: '阅读/互动/转化数据回收',
+    emptyTitle: '暂无效果数据', emptyDesc: '微信 datacube 回流后，每篇内容的真实效果将在这里展示。',
+    source: 'SocialMetricsSnapshot · Sprint-MEDIA-01', count: 0,
   },
 ])
 </script>
 
 <style scoped>
-.cc-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 20px;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.cc-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0;
-}
-.cc-sub {
-  font-size: 12px;
-  color: #8a8a9e;
-  margin: 4px 0 0;
-}
-.cc-stages {
-  display: flex;
-  gap: 8px;
-}
-.cc-stage {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #fff;
-  border: 1px solid #ececf1;
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: #5a5a70;
-}
-.cc-stage.is-current {
-  border-color: #2563eb;
-  color: #2563eb;
-  background: #f4f7ff;
-}
-.cc-stage-ico { font-size: 13px; }
-.cc-stage-count {
-  background: #2563eb;
-  color: #fff;
-  border-radius: 10px;
-  font-size: 11px;
-  padding: 0 7px;
-  font-weight: 700;
-}
-.cc-grid {
+.cf-pipeline {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 20px;
-}
-.cc-panel {
-  background: #fff;
-  border: 1px solid #ececf1;
-  border-radius: 12px;
-  overflow: hidden;
-}
-.cc-panel-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  border-bottom: 1px solid #f1f1f5;
-  background: #fafafc;
-}
-.cc-panel-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #333;
-}
-.cc-panel-note {
-  font-size: 11px;
-  color: #9a9aad;
-}
-.cc-panel-body {
-  padding: 12px 14px;
-  min-height: 130px;
-}
-.cc-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #444;
-  padding: 6px 0;
-  border-bottom: 1px dashed #f1f1f5;
-}
-.cc-item:last-child { border-bottom: none; }
-.cc-item-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #2563eb;
-  flex-shrink: 0;
-}
-.cc-item-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cc-item-time {
-  margin-left: auto;
-  font-size: 11px;
-  color: #9a9aad;
-  white-space: nowrap;
-}
-.cc-empty {
-  text-align: center;
-  padding: 26px 10px;
-  color: #8a8a9e;
-  font-size: 13px;
-}
-.cc-empty-sub {
-  font-size: 11px;
-  color: #b0b0c0;
-  margin-top: 4px;
-  line-height: 1.5;
-}
-.cc-flow {
-  background: #fff;
-  border: 1px solid #ececf1;
-  border-radius: 12px;
-  padding: 16px 18px;
-}
-.cc-flow-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 12px;
-}
-.cc-flow-steps {
-  display: flex;
+  grid-template-columns: repeat(6, 1fr);
   gap: 10px;
-  flex-wrap: wrap;
+  margin-bottom: 22px;
 }
-.cc-flow-step {
-  flex: 1;
-  min-width: 160px;
+.cf-stage {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 14px 10px;
+  text-align: center;
+  position: relative;
+}
+.cf-stage.is-current {
+  border-color: var(--color-intelligence);
+  background: linear-gradient(180deg, var(--color-intelligence-glow), var(--color-bg-elevated));
+}
+.cf-stage-node {
+  position: relative;
+  display: inline-flex;
+  margin-bottom: 8px;
+}
+.cf-stage-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--color-bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.cf-stage.is-current .cf-stage-ico {
+  background: linear-gradient(135deg, var(--color-intelligence), var(--color-decision));
+  box-shadow: 0 4px 14px var(--color-intelligence-glow);
+}
+.cf-stage-num {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-text-disabled);
+  color: var(--color-bg-primary);
+  font-size: 9px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cf-stage.is-current .cf-stage-num {
+  background: var(--color-execution);
+}
+.cf-stage-name {
   font-size: 12px;
-  color: #444;
-  background: #fafafc;
-  border-radius: 8px;
-  padding: 10px 12px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.cf-stage-count {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+}
+
+.cf-layers {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 14px;
 }
-.cc-flow-step b {
-  color: #2563eb;
+.cf-layer {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.cf-layer.is-core {
+  border-left: 3px solid var(--color-decision);
+}
+.cf-layer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-border-primary);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.04), transparent);
+}
+.cf-layer-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cf-layer-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--color-bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 15px;
 }
-.cc-flow-tag {
+.cf-layer-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.cf-layer-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 1px;
+}
+.cf-layer-badge {
   font-size: 10px;
-  color: #9a9aad;
-  background: #f1f1f5;
-  border-radius: 8px;
-  padding: 2px 8px;
-  align-self: flex-start;
+  font-weight: 700;
+  color: var(--color-decision);
+  background: var(--color-decision-glow);
+  border-radius: 10px;
+  padding: 3px 10px;
+}
+.cf-layer-body {
+  padding: 8px 16px;
 }
 @media (max-width: 900px) {
-  .cc-grid { grid-template-columns: repeat(2, 1fr); }
+  .cf-pipeline { grid-template-columns: repeat(3, 1fr); }
 }
 </style>

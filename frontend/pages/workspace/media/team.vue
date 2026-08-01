@@ -1,55 +1,99 @@
 <!--
-  Sprint-MEDIA-UX-02 — AI 员工团队（新媒体部门）
-  真实数据源: GET /api/enterprise/media/overview → agents（EnterpriseAgentInstance + Profile）
-  角色编排: 总监/策划/生产/客服/分析；无员工时显示模板阵容（标注待注册，非 mock 数据）
+  Sprint-MEDIA-UX-03 — AI Team Operating Center 员工运营中心
+  布局: 员工列表（左） + 员工详情面板（右：状态/今日任务/能力）
+  真实数据: GET /api/enterprise/media/overview（AgentInstance+Profile）+ AgentSchedule（今日任务）
+  能力清单: CapabilityContract（能力目录，后续绑定后展示）
 -->
 <template>
   <MediaWorkspaceShell>
-    <div class="tm">
-      <div class="tm-head">
-        <div>
-          <h2 class="tm-title">🧑‍💼 AI 员工团队</h2>
-          <p class="tm-sub">新媒体部门 · 真实 Runtime 实例状态（Hermes 绑定）</p>
-        </div>
-        <div class="tm-summary">
-          <span class="tm-pill">{{ agents.length }} 名已部署</span>
-          <span class="tm-pill tm-pill-active">{{ activeCount }} 名工作中</span>
-        </div>
-      </div>
+    <MediaPageHeader
+      kicker="AI Team Operating Center"
+      title="AI 员工团队"
+      desc="管理你的 AI 新媒体运营部门——状态、任务与能力一屏掌握。"
+    />
 
-      <div v-if="agents.length" class="tm-grid">
-        <div v-for="a in agents" :key="a.instanceId" class="tm-card">
-          <div class="tm-card-top">
-            <span class="tm-avatar">{{ (a.avatar || a.name[0] || '👤') }}</span>
-            <div class="tm-meta">
-              <div class="tm-name">{{ a.name }}</div>
-              <div class="tm-role">{{ a.role }}</div>
+    <div class="to-layout">
+      <!-- 员工列表 -->
+      <div class="to-list">
+        <div class="to-list-head">
+          <span>部门成员</span>
+          <span class="to-list-count">{{ agents.length ? agents.length + ' 名' : '0 名' }}</span>
+        </div>
+        <div v-if="agents.length" class="to-list-body">
+          <button
+            v-for="a in agents" :key="a.instanceId"
+            class="to-member" :class="{ 'is-selected': selected?.instanceId === a.instanceId }"
+            @click="selected = a"
+          >
+            <span class="to-avatar">{{ a.avatar || a.name[0] }}</span>
+            <div class="to-member-meta">
+              <div class="to-member-name">{{ a.name }}</div>
+              <div class="to-member-role">{{ a.role }}</div>
             </div>
-            <span class="tm-state" :class="stateClass(a.lifecycleState)">{{ stateText(a.lifecycleState) }}</span>
-          </div>
-          <div class="tm-stats">
-            <div class="tm-stat"><b>{{ a.totalTasks }}</b><span>累计任务</span></div>
-            <div class="tm-stat"><b>{{ a.totalErrors }}</b><span>错误</span></div>
-            <div class="tm-stat"><b>{{ a.lastActiveAt ? fmtTime(a.lastActiveAt) : '—' }}</b><span>最近活跃</span></div>
+            <span class="to-dot" :class="stateClass(a.lifecycleState)"></span>
+          </button>
+        </div>
+        <div v-else class="to-list-empty">
+          <MediaEmptyState icon="🤖" title="部门待组建" desc="部署 AI 员工后在此管理" source="EnterpriseAgentInstance" />
+        </div>
+
+        <!-- 标准编制（未部署时的组织架构） -->
+        <div class="to-roster">
+          <div class="to-roster-title">标准编制</div>
+          <div v-for="r in roster" :key="r.role" class="to-roster-item">
+            <span>{{ r.avatar }}</span>
+            <div>
+              <b>{{ r.name }}</b>
+              <span class="to-roster-role">{{ r.role }}</span>
+            </div>
+            <span class="to-roster-tag">待注册</span>
           </div>
         </div>
       </div>
 
-      <!-- 无部署: 模板阵容（明确标注待注册） -->
-      <div v-else class="tm-roster">
-        <div class="tm-roster-note">📌 以下为新媒体部门标准编制。当前无已部署实例，模板注册将在 Sprint-MEDIA-02 启用。</div>
-        <div class="tm-grid">
-          <div v-for="r in roster" :key="r.role" class="tm-card tm-card-planned">
-            <div class="tm-card-top">
-              <span class="tm-avatar tm-avatar-planned">{{ r.avatar }}</span>
-              <div class="tm-meta">
-                <div class="tm-name">{{ r.name }}</div>
-                <div class="tm-role">{{ r.role }}</div>
+      <!-- 详情面板 -->
+      <div class="to-detail">
+        <template v-if="selected">
+          <div class="to-detail-head">
+            <span class="to-detail-avatar">{{ selected.avatar || selected.name[0] }}</span>
+            <div>
+              <div class="to-detail-name">{{ selected.name }}</div>
+              <div class="to-detail-role">{{ selected.role }}</div>
+            </div>
+            <span class="to-detail-state" :class="stateClass(selected.lifecycleState)">{{ stateText(selected.lifecycleState) }}</span>
+          </div>
+
+          <div class="to-detail-stats">
+            <div class="to-dstat"><b>{{ selected.totalTasks }}</b><span>累计任务</span></div>
+            <div class="to-dstat"><b>{{ selected.totalErrors }}</b><span>错误</span></div>
+            <div class="to-dstat"><b>{{ selected.lastActiveAt ? fmtTime(selected.lastActiveAt) : '—' }}</b><span>最近活跃</span></div>
+          </div>
+
+          <!-- 今日任务 -->
+          <div class="to-detail-block">
+            <div class="to-block-title">📋 今日任务 <span class="to-block-src">AgentSchedule</span></div>
+            <div v-if="selectedTasks.length" class="to-tasks">
+              <div v-for="t in selectedTasks" :key="t.id" class="to-task">
+                <span class="to-task-dot"></span>
+                <span>{{ taskTypeLabel(t.taskType) }}</span>
+                <span class="to-task-time">{{ fmtTime(t.nextRunAt) }}</span>
               </div>
-              <span class="tm-state s-stopped">⚪ 未部署</span>
             </div>
-            <div class="tm-desc">{{ r.desc }}</div>
+            <div v-else class="to-block-empty">今日暂无排程任务</div>
           </div>
+
+          <!-- 能力清单 -->
+          <div class="to-detail-block">
+            <div class="to-block-title">⚡ 能力 <span class="to-block-src">CapabilityContract</span></div>
+            <div v-if="selectedCapabilities.length" class="to-caps">
+              <span v-for="c in selectedCapabilities" :key="c" class="to-cap">{{ c }}</span>
+            </div>
+            <div v-else class="to-block-empty">能力绑定后将在此展示</div>
+          </div>
+        </template>
+
+        <div v-else class="to-detail-placeholder">
+          <MediaEmptyState icon="🧑‍💼" title="选择一名 AI 员工" desc="查看运行状态、今日任务与能力清单" source="AgentInstance + AgentProfile + AgentSchedule + CapabilityContract" />
         </div>
       </div>
     </div>
@@ -58,173 +102,337 @@
 
 <script setup lang="ts">
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
+import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
+import MediaEmptyState from '~/components/media/MediaEmptyState.vue'
 
 const agents = ref<any[]>([])
+const selected = ref<any>(null)
+const schedules = ref<any[]>([])
 const { $toast } = useNuxtApp() as any
 
 const roster = [
-  { name: 'Alice', role: '运营总监', avatar: '👩‍💼', desc: '统筹内容策略、排期与发布节奏' },
-  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻', desc: '选题挖掘、热点追踪、内容规划' },
-  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨', desc: '稿件撰写、图文与视频文案生产' },
-  { name: 'David', role: '客服互动', avatar: '🧑‍💼', desc: '粉丝消息回复、高价值客户识别' },
-  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬', desc: '阅读/互动数据追踪与周报分析' },
+  { name: 'Alice', role: '运营总监', avatar: '👩‍💼' },
+  { name: 'Bob', role: '内容策划', avatar: '🧑‍💻' },
+  { name: 'Carol', role: '内容生产', avatar: '👩‍🎨' },
+  { name: 'David', role: '客服互动', avatar: '🧑‍💼' },
+  { name: 'Eve', role: '数据分析', avatar: '👩‍🔬' },
 ]
 
-const activeCount = computed(() => agents.value.filter((a: any) => a.lifecycleState === 'ACTIVE').length)
+const selectedTasks = computed(() => {
+  if (!selected.value) return []
+  return (schedules.value || []).filter((s: any) => s.agentId === selected.value.employeeId || s.agentId === selected.value.instanceId)
+})
+
+const selectedCapabilities = computed(() => {
+  // 能力来自 CapabilityContract 绑定（后续接入）；当前无绑定 → 空
+  return [] as string[]
+})
 
 onMounted(async () => {
   try {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || ''
     const res = await fetch('/api/enterprise/media/overview', {
-      headers: { Authorization: `Bearer ${token()}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
     const data = await res.json()
     if (data?.code === 0 && data?.data) {
       agents.value = data.data.agents || []
+      schedules.value = data.data.today?.scheduleItems || []
+      if (agents.value.length) selected.value = agents.value[0]
     }
   } catch {
     $toast?.error?.('加载团队失败')
   }
 })
 
-function token() {
-  if (typeof window !== 'undefined') return localStorage.getItem('token') || localStorage.getItem('accessToken') || ''
-  return ''
+function taskTypeLabel(t: string) {
+  const map: Record<string, string> = { content: '内容生成', scan: '热点扫描', analysis: '数据分析', report: '日报生成', outreach: '粉丝触达', auto: '自动任务' }
+  return map[t] || t
 }
 function fmtTime(iso: string) {
-  const d = new Date(iso)
-  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 function stateText(s: string) {
-  const map: Record<string, string> = { ACTIVE: '🟢 Working', PAUSED: '🟡 Paused', STOPPED: '⚪ Stopped', EMERGENCY_STOP: '🔴 紧急停止', RECOVERING: '🔄 恢复中' }
+  const map: Record<string, string> = { ACTIVE: 'Working', PAUSED: 'Paused', STOPPED: 'Stopped', EMERGENCY_STOP: '紧急停止', RECOVERING: '恢复中' }
   return map[s] || s
 }
 function stateClass(s: string) {
-  if (s === 'ACTIVE') return 's-active'
-  if (s === 'PAUSED') return 's-paused'
-  if (s === 'RECOVERING') return 's-recovering'
-  return 's-stopped'
+  if (s === 'ACTIVE') return 'st-active'
+  if (s === 'PAUSED') return 'st-paused'
+  if (s === 'RECOVERING') return 'st-recovering'
+  return 'st-stopped'
 }
 </script>
 
 <style scoped>
-.tm-head {
+.to-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.to-list {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.to-list-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.tm-title {
-  font-size: 18px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border-primary);
+  font-size: 13px;
   font-weight: 700;
-  color: #1a1a2e;
-  margin: 0;
+  color: var(--color-text-primary);
 }
-.tm-sub {
-  font-size: 12px;
-  color: #8a8a9e;
-  margin: 4px 0 0;
+.to-list-count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 400;
 }
-.tm-summary {
-  display: flex;
-  gap: 8px;
+.to-list-body {
+  padding: 10px;
 }
-.tm-pill {
-  font-size: 12px;
-  background: #fff;
-  border: 1px solid #ececf1;
-  color: #5a5a70;
-  border-radius: 20px;
-  padding: 5px 12px;
-  font-weight: 600;
-}
-.tm-pill-active {
-  background: #e8f7ee;
-  border-color: #c9ecd6;
-  color: #16a34a;
-}
-.tm-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 14px;
-}
-.tm-card {
-  background: #fff;
-  border: 1px solid #ececf1;
-  border-radius: 12px;
-  padding: 16px;
-}
-.tm-card-planned {
-  border-style: dashed;
-  background: #fcfcfd;
-}
-.tm-card-top {
+.to-member {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 4px;
 }
-.tm-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: #eef2ff;
-  color: #2563eb;
+.to-member:hover {
+  background: var(--color-bg-hover);
+}
+.to-member.is-selected {
+  background: var(--color-intelligence-glow);
+  border-color: var(--color-intelligence);
+}
+.to-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--color-bg-hover);
+  color: var(--color-intelligence);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 19px;
+  font-weight: 800;
+  font-size: 15px;
+}
+.to-member-meta {
+  flex: 1;
+  min-width: 0;
+}
+.to-member-name {
+  font-size: 13px;
   font-weight: 700;
+  color: var(--color-text-primary);
 }
-.tm-avatar-planned {
-  background: #f1f1f5;
-  color: #9a9aad;
-}
-.tm-meta { flex: 1; }
-.tm-name { font-size: 14px; font-weight: 700; color: #1a1a2e; }
-.tm-role { font-size: 12px; color: #8a8a9e; }
-.tm-state {
+.to-member-role {
   font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-weight: 600;
-  white-space: nowrap;
+  color: var(--color-text-muted);
 }
-.s-active { background: #e8f7ee; color: #16a34a; }
-.s-paused { background: #fdf3e3; color: #d97706; }
-.s-recovering { background: #e8f1fd; color: #2563eb; }
-.s-stopped { background: #f1f1f4; color: #6b7280; }
-.tm-stats {
+.to-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.to-list-empty {
+  padding: 10px;
+}
+.to-roster {
+  border-top: 1px solid var(--color-border-primary);
+  padding: 14px 18px;
+}
+.to-roster-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-disabled);
+  margin-bottom: 10px;
+}
+.to-roster-item {
   display: flex;
-  gap: 16px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid #f1f1f5;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
-.tm-stat {
+.to-roster-item b { color: var(--color-text-primary); }
+.to-roster-role {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-left: 6px;
+}
+.to-roster-tag {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--color-text-disabled);
+  border: 1px dashed var(--color-border-secondary);
+  border-radius: 8px;
+  padding: 1px 8px;
+}
+
+/* 详情 */
+.to-detail {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  min-height: 480px;
+  padding: 24px;
+}
+.to-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+.to-detail-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-intelligence-glow), var(--color-decision-glow));
+  color: var(--color-intelligence);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+}
+.to-detail-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+.to-detail-role {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.to-detail-state {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 4px 12px;
+}
+.st-active { background: var(--color-execution-glow); color: var(--color-execution); }
+.st-paused { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
+.st-recovering { background: var(--color-decision-glow); color: var(--color-decision); }
+.st-stopped { background: var(--color-bg-hover); color: var(--color-text-muted); }
+.to-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+.to-dstat {
+  background: var(--color-bg-secondary);
+  border-radius: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+}
+.to-dstat b {
+  font-size: 17px;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.to-dstat span {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.to-detail-block {
+  padding: 16px 0 0;
+}
+.to-block-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.to-block-src {
+  font-size: 9px;
+  color: var(--color-text-disabled);
+  border: 1px dashed var(--color-border-secondary);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-weight: 400;
+}
+.to-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.to-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+.to-task-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-warning);
+}
+.to-task-time {
+  margin-left: auto;
   font-size: 11px;
-  color: #9a9aad;
+  color: var(--color-text-muted);
 }
-.tm-stat b {
-  font-size: 15px;
-  color: #1a1a2e;
-}
-.tm-desc {
+.to-block-empty {
   font-size: 12px;
-  color: #9a9aad;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #f1f1f5;
+  color: var(--color-text-muted);
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border-primary);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
 }
-.tm-roster-note {
-  background: #fff8e8;
-  border: 1px solid #ffe2ae;
-  color: #b26a00;
-  font-size: 12px;
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
+.to-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.to-cap {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-decision);
+  background: var(--color-decision-glow);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+.to-detail-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 440px;
+}
+@media (max-width: 900px) {
+  .to-layout { grid-template-columns: 1fr; }
 }
 </style>

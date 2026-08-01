@@ -1,46 +1,61 @@
 <!--
-  Sprint-MEDIA-UX-02 — 客户资产池
-  分级框架: A级(购买意向强) / B级(持续关注) / C级(普通互动)
-  纪律: 无真实客户数据 → 空态；AI 客服识别（Sprint-MEDIA-04）后自动填充
+  Sprint-MEDIA-UX-03 — Customer Intelligence 客户智能中心
+  管线: 客户池 → AI 价值判断 → 销售机会 → 真人接管
+  分级规则（已冻结）: A级购买意向强 / B级持续关注 / C级普通互动
+  纪律: 无真实客户 → 空态；Sprint-MEDIA-04 客服识别后点亮
 -->
 <template>
   <MediaWorkspaceShell>
-    <div class="cu">
-      <div class="cu-head">
-        <div>
-          <h2 class="cu-title">👥 客户资产池</h2>
-          <p class="cu-sub">AI 客服聊差不多后真人接管，并按用户价值分类沉淀</p>
-        </div>
-        <span class="cu-badge">识别待启动</span>
-      </div>
+    <MediaPageHeader
+      kicker="Customer Intelligence"
+      title="客户资产"
+      desc="AI 客服识别客户价值，分级沉淀资产，高价值客户立即转真人接管。"
+    />
 
-      <!-- 分级漏斗 -->
-      <div class="cu-funnel">
-        <div v-for="tier in tiers" :key="tier.key" class="cu-tier" :class="'tier-' + tier.key">
-          <div class="cu-tier-head">
-            <span class="cu-tier-badge">{{ tier.badge }}</span>
-            <span class="cu-tier-name">{{ tier.name }}</span>
-            <span class="cu-tier-count">{{ tier.count }}</span>
+    <!-- 管线 -->
+    <div class="ci-pipeline">
+      <div v-for="(s, i) in pipeline" :key="s.key" class="ci-pnode">
+        <span class="ci-pnode-ico">{{ s.icon }}</span>
+        <span class="ci-pnode-name">{{ s.name }}</span>
+        <span v-if="i < pipeline.length - 1" class="ci-pnode-arrow">→</span>
+      </div>
+    </div>
+
+    <!-- 客户分级池 -->
+    <div class="ci-tiers">
+      <div v-for="tier in tiers" :key="tier.key" class="ci-tier" :class="'ct-' + tier.key">
+        <div class="ci-tier-head">
+          <span class="ci-tier-badge">{{ tier.badge }}</span>
+          <div class="ci-tier-meta">
+            <div class="ci-tier-name">{{ tier.name }}</div>
+            <div class="ci-tier-desc">{{ tier.desc }}</div>
           </div>
-          <div class="cu-tier-desc">{{ tier.desc }}</div>
-          <div v-if="tier.customers.length" class="cu-tier-list">
-            <div v-for="c in tier.customers" :key="c.id" class="cu-cust">
-              <span class="cu-cust-avatar">{{ c.avatar }}</span>
-              <span class="cu-cust-name">{{ c.name }}</span>
-              <span class="cu-cust-note">{{ c.note }}</span>
+          <span class="ci-tier-count">{{ tier.customers.length }}</span>
+        </div>
+        <div class="ci-tier-body">
+          <template v-if="tier.customers.length">
+            <div v-for="c in tier.customers" :key="c.id" class="ci-cust">
+              <span class="ci-cust-avatar">{{ c.avatar }}</span>
+              <span class="ci-cust-name">{{ c.name }}</span>
+              <span class="ci-cust-note">{{ c.note }}</span>
+              <button v-if="tier.key === 'a'" class="ci-takeover">真人接管</button>
             </div>
-          </div>
-          <div v-else class="cu-tier-empty">{{ tier.empty }}</div>
+          </template>
+          <MediaEmptyState
+            v-else :icon="tier.icon" :title="tier.emptyTitle" :desc="tier.emptyDesc"
+            :source="tier.source"
+          />
         </div>
       </div>
+    </div>
 
-      <div class="cu-rule">
-        <h3 class="cu-rule-title">📐 分级规则（已冻结）</h3>
-        <ul class="cu-rule-list">
-          <li><b>A 级 · 购买意向强</b>：咨询购买/合作、明确留资 → 真人第一时间接管</li>
-          <li><b>B 级 · 持续关注</b>：多次互动、收藏内容 → AI 持续跟进</li>
-          <li><b>C 级 · 普通互动</b>：一般留言/点赞 → AI 标准回复</li>
-        </ul>
+    <!-- 分级规则（冻结） -->
+    <div class="ci-rule">
+      <div class="ci-rule-title">📐 分级规则（已冻结）</div>
+      <div class="ci-rule-grid">
+        <div class="ci-rule-item"><b class="r-a">A 级</b><span>咨询购买/合作、明确留资 → 真人第一时间接管</span></div>
+        <div class="ci-rule-item"><b class="r-b">B 级</b><span>多次互动、收藏内容 → AI 持续跟进</span></div>
+        <div class="ci-rule-item"><b class="r-c">C 级</b><span>一般留言/点赞 → AI 标准回复</span></div>
       </div>
     </div>
   </MediaWorkspaceShell>
@@ -48,65 +63,100 @@
 
 <script setup lang="ts">
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
+import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
+import MediaEmptyState from '~/components/media/MediaEmptyState.vue'
 
-// 真实数据源待接入（Sprint-MEDIA-04 微信消息 + AI 价值识别）
+const pipeline = [
+  { key: 'pool', icon: '🗂️', name: '客户池' },
+  { key: 'judge', icon: '🧠', name: 'AI 价值判断' },
+  { key: 'opp', icon: '💼', name: '销售机会' },
+  { key: 'human', icon: '🤝', name: '真人接管' },
+]
+
 const tiers = ref([
-  { key: 'a', badge: 'A', name: 'A级 · 购买意向强', count: 0, desc: '咨询购买/合作，真人第一时间接管', empty: '暂无 A 级客户', customers: [] as any[] },
-  { key: 'b', badge: 'B', name: 'B级 · 持续关注', count: 0, desc: '多次互动/收藏内容，AI 持续跟进', empty: '暂无 B 级客户', customers: [] as any[] },
-  { key: 'c', badge: 'C', name: 'C级 · 普通互动', count: 0, desc: '一般留言/点赞，AI 标准回复', empty: '暂无 C 级客户', customers: [] as any[] },
+  {
+    key: 'a', badge: 'A', icon: '🔴', name: '购买意向强', desc: '咨询购买/合作，真人第一时间接管',
+    emptyTitle: '暂无 A 级客户', emptyDesc: 'AI 客服识别出高价值客户后，将立即转真人接管。',
+    source: 'AI 价值判断 · Sprint-MEDIA-04', customers: [] as any[],
+  },
+  {
+    key: 'b', badge: 'B', icon: '🟠', name: '持续关注', desc: '多次互动/收藏内容，AI 持续跟进',
+    emptyTitle: '暂无 B 级客户', emptyDesc: '持续互动客户由 AI 员工跟进维护。',
+    source: 'AI 价值判断 · Sprint-MEDIA-04', customers: [] as any[],
+  },
+  {
+    key: 'c', badge: 'C', icon: '⚪', name: '普通互动', desc: '一般留言/点赞，AI 标准回复',
+    emptyTitle: '暂无 C 级客户', emptyDesc: '普通互动客户由 AI 标准回复服务。',
+    source: 'AI 价值判断 · Sprint-MEDIA-04', customers: [] as any[],
+  },
 ])
 </script>
 
 <style scoped>
-.cu-head {
+.ci-pipeline {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 20px;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  padding: 16px 22px;
+  margin-bottom: 18px;
+  overflow-x: auto;
 }
-.cu-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0;
+.ci-pnode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
 }
-.cu-sub {
+.ci-pnode-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--color-bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.ci-pnode-name {
   font-size: 12px;
-  color: #8a8a9e;
-  margin: 4px 0 0;
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
-.cu-badge {
-  font-size: 11px;
-  background: #f0f0f5;
-  color: #9a9aad;
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-weight: 600;
+.ci-pnode-arrow {
+  color: var(--color-text-disabled);
+  font-size: 14px;
+  margin: 0 8px;
 }
-.cu-funnel {
+
+.ci-tiers {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
-.cu-tier {
-  background: #fff;
-  border: 1px solid #ececf1;
-  border-radius: 12px;
-  padding: 16px 18px;
+.ci-tier {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  overflow: hidden;
   border-left-width: 4px;
 }
-.tier-a { border-left-color: #dc2626; }
-.tier-b { border-left-color: #d97706; }
-.tier-c { border-left-color: #6b7280; }
-.cu-tier-head {
+.ct-a { border-left-color: var(--color-danger); }
+.ct-b { border-left-color: var(--color-warning); }
+.ct-c { border-left-color: var(--color-text-muted); }
+.ci-tier-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-border-primary);
 }
-.cu-tier-badge {
-  width: 28px;
-  height: 28px;
+.ci-tier-badge {
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -114,83 +164,102 @@ const tiers = ref([
   font-weight: 800;
   font-size: 14px;
   color: #fff;
+  flex-shrink: 0;
 }
-.tier-a .cu-tier-badge { background: #dc2626; }
-.tier-b .cu-tier-badge { background: #d97706; }
-.tier-c .cu-tier-badge { background: #6b7280; }
-.cu-tier-name {
+.ct-a .ci-tier-badge { background: var(--color-danger); }
+.ct-b .ci-tier-badge { background: var(--color-warning); }
+.ct-c .ci-tier-badge { background: var(--color-text-muted); }
+.ci-tier-meta { flex: 1; }
+.ci-tier-name {
   font-size: 14px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
 }
-.cu-tier-count {
-  margin-left: auto;
+.ci-tier-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.ci-tier-count {
   font-size: 13px;
   font-weight: 800;
-  color: #333;
-  background: #f4f4f8;
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
   border-radius: 12px;
-  padding: 2px 10px;
+  padding: 3px 12px;
+  font-variant-numeric: tabular-nums;
 }
-.cu-tier-desc {
-  font-size: 12px;
-  color: #8a8a9e;
-  margin: 6px 0 0 38px;
+.ci-tier-body {
+  padding: 10px 16px;
 }
-.cu-tier-list {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.cu-cust {
+.ci-cust {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #fafafc;
-  border-radius: 8px;
-  padding: 8px 12px;
+  gap: 10px;
+  background: var(--color-bg-secondary);
+  border-radius: 9px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
   font-size: 13px;
 }
-.cu-cust-avatar {
-  width: 26px;
-  height: 26px;
+.ci-cust:last-child { margin-bottom: 0; }
+.ci-cust-avatar {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: #eef2ff;
-  color: #2563eb;
+  background: var(--color-intelligence-glow);
+  color: var(--color-intelligence);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 13px;
 }
-.cu-cust-name { font-weight: 600; color: #333; }
-.cu-cust-note { margin-left: auto; font-size: 11px; color: #9a9aad; }
-.cu-tier-empty {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #b0b0c0;
-  text-align: center;
-  padding: 16px;
-  border: 1px dashed #e2e2ea;
+.ci-cust-name { font-weight: 600; color: var(--color-text-primary); }
+.ci-cust-note { font-size: 11px; color: var(--color-text-muted); }
+.ci-takeover {
+  margin-left: auto;
+  background: var(--color-danger);
+  color: #fff;
+  border: none;
   border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
 }
-.cu-rule {
-  background: #fff8e8;
-  border: 1px solid #ffe2ae;
-  border-radius: 12px;
-  padding: 16px 18px;
+.ci-rule {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 14px;
+  padding: 18px 20px;
 }
-.cu-rule-title {
+.ci-rule-title {
   font-size: 13px;
   font-weight: 700;
-  color: #b26a00;
-  margin: 0 0 10px;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
 }
-.cu-rule-list {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 12px;
-  color: #7a5a1e;
-  line-height: 2;
+.ci-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.ci-rule-item {
+  background: var(--color-bg-secondary);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.ci-rule-item b { font-size: 13px; }
+.r-a { color: var(--color-danger); }
+.r-b { color: var(--color-warning); }
+.r-c { color: var(--color-text-muted); }
+@media (max-width: 900px) {
+  .ci-rule-grid { grid-template-columns: 1fr; }
 }
 </style>
