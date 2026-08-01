@@ -191,12 +191,16 @@
                   <div class="purchase-qr-tip">请使用微信「扫一扫」完成支付</div>
                 </div>
 
-                <!-- 支付宝：新窗口 + 手动链接兑底（防浏览器拦截） -->
+                <!-- 支付宝：二维码扫码（对齐昆仑镜 VIP 支付体验）+ 手动链接兑底 -->
                 <div v-else class="purchase-alipay">
+                  <div class="purchase-qr">
+                    <img v-if="alipayQrDataUrl" :src="alipayQrDataUrl" class="purchase-qr-img" alt="支付宝扫码支付" />
+                    <div v-else class="purchase-qr-placeholder">二维码生成中...</div>
+                    <div class="purchase-qr-tip">请使用支付宝「扫一扫」完成支付</div>
+                  </div>
                   <a v-if="purchasePaymentUrl" :href="purchasePaymentUrl" target="_blank" rel="noopener" class="purchase-open-link">
-                    若支付页面未自动打开，点击此处前往支付宝支付 →
+                    若扫码不便，点击此处前往支付宝支付 →
                   </a>
-                  <div v-else class="purchase-qr-tip">支付链接生成中...</div>
                 </div>
 
                 <!-- 轮询状态 -->
@@ -562,6 +566,7 @@ const purchaseOrderNo = ref('')
 const selectedMethod = ref('alipay')
 const purchaseMethod = ref('')
 const purchasePaymentUrl = ref('')
+const alipayQrDataUrl = ref('')
 const purchaseQrCode = ref('')
 
 // 聊天历史持久化
@@ -963,6 +968,7 @@ function openPurchaseModal() {
   purchaseOrderNo.value = ''
   purchaseMethod.value = ''
   purchasePaymentUrl.value = ''
+  alipayQrDataUrl.value = ''
   purchaseQrCode.value = ''
   wechatQrDataUrl.value = ''
   selectedMethod.value = 'alipay'
@@ -1006,8 +1012,9 @@ async function confirmPurchase() {
     purchaseQrCode.value = payload.qrCode || ''
     if (payload.amount) purchaseAmount.value = payload.amount
 
-    // 支付宝：自动打开支付页面（被拦截时用户可点手动链接）
+    // 支付宝：渲染扫码二维码（对齐 VIP 支付体验）+ 新窗口（被拦截时扫码/手动链接兑底）
     if (payload.method === 'alipay' && payload.paymentUrl) {
+      renderAlipayQr(payload.paymentUrl)
       window.open(payload.paymentUrl, '_blank')
     }
 
@@ -1022,6 +1029,20 @@ async function confirmPurchase() {
     purchaseError.value = err.message || '创建订单失败，请稍后重试'
   } finally {
     purchasing.value = false
+  }
+}
+
+// 支付宝二维码渲染（qrcode 库，与 VIP membership.vue generatePayment 同一实现）
+async function renderAlipayQr(payUrl: string) {
+  try {
+    const QRCode = (await import('qrcode')).default
+    alipayQrDataUrl.value = await QRCode.toDataURL(payUrl, {
+      width: 210,
+      margin: 1,
+      color: { dark: '#0b0f14', light: '#ffffff' },
+    })
+  } catch {
+    // 渲染失败则仅保留手动链接，不影响支付主链路
   }
 }
 

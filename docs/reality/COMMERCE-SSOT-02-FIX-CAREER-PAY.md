@@ -41,3 +41,21 @@
 | 报错（缺 productCode） | ✅ 消失 |
 
 截图：COMMERCE-SSOT-02-career-pay-{modal,created,guide}.png
+
+## 补充修复：支付宝支付体验对齐 VIP（掌柜实操反馈「还不行」）
+
+掌柜实操反馈：求职管家点「确认支付」后无法完成支付。逐环节对比两条链条：
+
+| 环节 | 昆仑镜 VIP（membership） | 求职管家（修复前） | 差异 |
+|------|------------------------|-------------------|------|
+| 下单 | /api/member/upgrade-vip | /api/payment/checkout（统一链） | ✅ |
+| 支付宝呈现 | **二维码扫码**（qrcode 库编码 payUrl） | window.open 跳转（**浏览器必拦**）+ 手动链接 | ❌ 不一致 |
+| 微信呈现 | 二维码 NATIVE | 二维码 | ✅ |
+| 轮询 | /api/payment/alipay/status | /api/career/agent/status | ✅ |
+
+**根因**：window.open 弹支付宝被浏览器广告拦截策略拦截，页面只剩一个不显眼的手动链接 → 掌柜实操「点了没反应」。
+
+**修复**：JobWorkspaceLayout.vue 支付宝分支渲染二维码（与 membership.vue generatePayment 同一 qrcode 实现），保留新窗口 + 手动链接兜底。产品级对齐：确认支付 → 弹窗内出支付宝二维码 + 「请使用支付宝扫一扫完成支付」→ 轮询 → 到账自动开通。
+
+**验收**（生产域）：订单 CZ20260801465WVR → 二维码 data:image 渲染 ✅ 扫码文案 ✅ 手动链接兜底 ✅ 轮询 ✅
+截图：COMMERCE-SSOT-02-career-alipay-qr.png
