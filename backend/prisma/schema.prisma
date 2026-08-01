@@ -9367,3 +9367,35 @@ model EmployeeTemplate {
   @@index([isPublic, department])
   @@map("employee_template")
 }
+
+// ══════════════════════════════════════════════════════════════════
+// AI Provider Center — 大模型注册中心（模型供应商目录）
+// 掌柜指令 2026-08-01：前台模型生态入口聚合（官方注册/充值/教程/推广链接）
+// 定位：面向用户的「模型供应商目录」，非运行时模型配置（运行时走 AiProvider/OrgModelConfig/UserModelConfigV2）
+// BYOK：不保存用户 Key、不代理充值；affiliateUrl 为管理员配置的官方推广注册链接
+// ══════════════════════════════════════════════════════════════════
+model AiProviderDirectory {
+  id                   String   @id @default(uuid()) @db.Uuid
+  code                 String   @unique @db.VarChar(50) // deepseek / openai / glm / volcengine ...
+  name                 String   @db.VarChar(100) // DeepSeek
+  logo                 String   @default("") @db.VarChar(500) // Logo URL（空则前端用首字母/品牌色块）
+  description          String?  @db.Text // 模型简介
+  category             String   @default("domestic") @db.VarChar(20) // domestic 国产 | overseas 海外
+  country              String   @default("") @db.VarChar(50) // 国家/地区
+  tags                 String[] @default([]) // 能力标签：推理/代码/Agent/多模态...
+  officialWebsite      String   @default("") @db.VarChar(500)
+  registerUrl          String   @default("") @db.VarChar(500) // 官方注册页
+  billingUrl           String   @default("") @db.VarChar(500) // 充值入口
+  documentationUrl     String   @default("") @db.VarChar(500) // 配置教程
+  affiliateUrl         String   @default("") @db.VarChar(500) // 官方推广注册链接（前台优先）
+  affiliateEnabled     Boolean  @default(false)
+  affiliateDescription String?  @db.Text // 推广说明（如：通过推荐链接注册享额度）
+  recommended          Int      @default(3) // 推荐等级 1-5
+  sort                 Int      @default(0)
+  status               String   @default("active") @db.VarChar(20) // active | disabled
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([category, status])
+  @@map("ai_provider_directory")
+}

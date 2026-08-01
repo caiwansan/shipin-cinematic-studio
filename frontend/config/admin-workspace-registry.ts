@@ -189,6 +189,8 @@ export const ADMIN_LLM_GROUP: AdminPlatformGroup = {
   icon: '🤖',
   children: [
     { id: 'llm-models', label: '模型列表', to: '/admin/aigc/models' },
+    // AI Provider Center：模型供应商目录（掌柜指令 2026-08-01）
+    { id: 'llm-providers', label: 'AI模型供应商目录', to: '/admin/ai-providers' },
     // P2: Provider管理 / 平台模型配置 / 调用统计
   ],
 }

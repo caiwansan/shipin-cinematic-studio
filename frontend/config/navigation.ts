@@ -52,4 +52,6 @@ export const navCategories: NavCategory[] = [
 export const primaryNav: NavItem[] = [
   { label: '商城', icon: '🛍️', to: '/mall' },
   { label: '社区', icon: '🌐', to: '/community' },
+  // AI Provider Center：大模型注册中心（掌柜指令 2026-08-01）
+  { label: '大模型注册', icon: '🧠', to: '/models/providers' },
 ]
