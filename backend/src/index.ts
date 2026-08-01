@@ -370,6 +370,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise-agent-profiles.js')).registerEnterpriseAgentProfileRoutes, { prefix: '/api/enterprise/agent-profiles' })
   // Sprint-MEDIA-UX-01: 企业侧只读执行结果/成本（agent_outcome + usage_logs 真实数据源）
   await app.register((await import('./routes/enterprise-readonly.routes.js')).registerEnterpriseOutcomeRoutes, { prefix: '/api/enterprise/outcomes' })
+  // Sprint-MEDIA-UX-02: 新媒体运营中心聚合视图（AgentInstance + AgentSchedule + Outcome + Usage 真实数据源）
+  await app.register((await import('./routes/enterprise-readonly.routes.js')).registerMediaOverviewRoutes, { prefix: '/api/enterprise/media/overview' })
   // Enterprise AI 员工实例管理 (media-department)
   // Phase 1: 路由前缀统一为 /api/enterprise，与 enterprise domain 保持一致
   await app.register((await import('./routes/enterprise-agents.js')).default, { prefix: '/api/enterprise' })

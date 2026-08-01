@@ -1,158 +1,252 @@
 <!--
-  新媒体运营工作台 — 内容中心
-
-  Sprint-MEDIA-UX-01: 内容发布框架（真实空态）
-  - 展示发布流程设计（AI生成→合规→草稿→发布→回流），纯结构说明
-  - 无内容：账号未接入，真实内容列表为空（禁 mock 内容）
+  Sprint-MEDIA-UX-02 — 内容生产中心
+  四阶段流水线: AI策划 → AI生产 → 审核 → 发布
+  纪律: 真实数据 + 空态；微信发布回流（Sprint-MEDIA-01）后自动填充
 -->
 <template>
   <MediaWorkspaceShell>
-    <!-- ═══ 发布流程框架 ═══ -->
-    <section class="mc-section">
-      <div class="mc-section-head">
-        <h2 class="mc-section-title">📤 内容发布流程</h2>
-        <span class="mc-section-meta">设计框架 · 账号接入后启用</span>
-      </div>
-      <div class="mc-flow">
-        <div v-for="(step, i) in FLOW" :key="i" class="mc-flow-step">
-          <div class="mc-flow-icon">{{ step.icon }}</div>
-          <div class="mc-flow-body">
-            <div class="mc-flow-title">{{ step.title }}</div>
-            <div class="mc-flow-desc">{{ step.desc }}</div>
+    <div class="cc">
+      <div class="cc-head">
+        <div>
+          <h2 class="cc-title">📝 内容生产中心</h2>
+          <p class="cc-sub">AI 策划选题 → AI 生产稿件 → 合规审核 → 发布回流，全流程真实闭环</p>
+        </div>
+        <div class="cc-stages">
+          <div v-for="(s, i) in stages" :key="s.key" class="cc-stage" :class="{ 'is-current': i === 0 }">
+            <span class="cc-stage-ico">{{ s.icon }}</span>
+            <span class="cc-stage-name">{{ s.name }}</span>
+            <span class="cc-stage-count">{{ s.count }}</span>
           </div>
-          <span v-if="i < FLOW.length - 1" class="mc-flow-arrow">→</span>
         </div>
       </div>
-    </section>
 
-    <!-- ═══ 内容列表（真实空态）═══ -->
-    <section class="mc-section">
-      <div class="mc-section-head">
-        <h2 class="mc-section-title">📚 内容列表</h2>
-        <span class="mc-section-meta">真实发布记录（无 mock）</span>
+      <!-- 四阶段面板 -->
+      <div class="cc-grid">
+        <div v-for="s in stages" :key="s.key" class="cc-panel">
+          <div class="cc-panel-head">
+            <span class="cc-panel-title">{{ s.icon }} {{ s.name }}</span>
+            <span class="cc-panel-note">{{ s.note }}</span>
+          </div>
+          <div class="cc-panel-body">
+            <template v-if="s.count > 0">
+              <div v-for="(it, i) in s.items" :key="i" class="cc-item">
+                <span class="cc-item-dot"></span>
+                <span class="cc-item-text">{{ it.title }}</span>
+                <span class="cc-item-time">{{ it.time }}</span>
+              </div>
+            </template>
+            <div v-else class="cc-empty">
+              <p>{{ s.emptyText }}</p>
+              <p class="cc-empty-sub">{{ s.emptySub }}</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="mc-empty">
-        <span class="mc-empty-icon">📝</span>
-        <p class="mc-empty-title">暂无内容</p>
-        <p class="mc-empty-desc">
-          微信公众平台账号接入后，这里展示 AI 员工真实生成、发布的内容及平台回执状态
-          （publish_id / 微信后台可见），不会出现任何模拟发布记录。
-        </p>
-      </div>
-    </section>
 
-    <!-- ═══ 合规说明 ═══ -->
-    <section class="mc-section">
-      <div class="mc-section-head">
-        <h2 class="mc-section-title">🛡️ 发布合规</h2>
+      <!-- 流程说明（真实链路，非 mock） -->
+      <div class="cc-flow">
+        <h3 class="cc-flow-title">🔁 真实生产链路</h3>
+        <div class="cc-flow-steps">
+          <div class="cc-flow-step"><b>1</b> AI 员工选题策划<span class="cc-flow-tag">AgentSchedule · content</span></div>
+          <div class="cc-flow-step"><b>2</b> AI 生产稿件（文章/视频文案）<span class="cc-flow-tag">BYOK 模型真实生成</span></div>
+          <div class="cc-flow-step"><b>3</b> 合规审核（平台规则）<span class="cc-flow-tag">审核队列</span></div>
+          <div class="cc-flow-step"><b>4</b> 发布到微信<span class="cc-flow-tag">Sprint-MEDIA-01 接入后启用</span></div>
+          <div class="cc-flow-step"><b>5</b> 数据回流（阅读/互动）<span class="cc-flow-tag">datacube 回流后启用</span></div>
+        </div>
       </div>
-      <ul class="mc-rules">
-        <li>所有内容发布必须经过官方 API（freepublish），禁止伪造发布状态</li>
-        <li>发布频控遵守平台规则，adapter 层实现退避重试，不触发封号风险</li>
-        <li>账号属于企业资产，操作全程可追溯（agent_outcome + usage_logs）</li>
-        <li>合规检查（media.compliance.check）将在能力注册后接入发布链路</li>
-      </ul>
-    </section>
+    </div>
   </MediaWorkspaceShell>
 </template>
 
 <script setup lang="ts">
-const FLOW = [
-  { icon: '🧠', title: 'AI 内容生成', desc: 'Media Producer 基于选题生成图文内容（BYOK 企业模型）' },
-  { icon: '🛡️', title: '合规检查', desc: 'media.compliance.check 内容合规 + 敏感词校验' },
-  { icon: '📄', title: '草稿箱', desc: '官方 draft/add 写入公众号草稿箱' },
-  { icon: '🚀', title: '真实发布', desc: '官方 freepublish/submit 发布，微信后台可见' },
-  { icon: '📊', title: '数据回流', desc: 'datacube 拉取阅读/分享数据 → SocialMetricsSnapshot → 运营日报' },
-]
+import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
+
+// 真实数据源: 当前 media 业务线 outcomes 为空 → 空态
+// 接入后: 策划(PLAN_CREATED) / 生产(PUBLISH_READY) / 审核(REVIEW_PENDING) / 发布(PUBLISHED)
+const stages = ref([
+  {
+    key: 'plan', icon: '💡', name: 'AI 策划', count: 0, note: '选题 · 排期',
+    emptyText: '今日暂无策划选题', emptySub: 'AI 员工执行策划任务后真实展示', items: [],
+  },
+  {
+    key: 'produce', icon: '✍️', name: 'AI 生产', count: 0, note: '文章 · 视频文案',
+    emptyText: '暂无生产中的稿件', emptySub: '策划确认后自动进入生产', items: [],
+  },
+  {
+    key: 'review', icon: '🔍', name: '合规审核', count: 0, note: '平台规则检查',
+    emptyText: '审核队列为空', emptySub: '生产完成的稿件待审核', items: [],
+  },
+  {
+    key: 'publish', icon: '🚀', name: '发布', count: 0, note: '微信 · 后续多平台',
+    emptyText: '暂无待发布/已发布内容', emptySub: '微信账号连接（Sprint-MEDIA-01）后真实发布', items: [],
+  },
+])
 </script>
 
 <style scoped>
-.mc-section {
-  background: #fff;
-  border: 1px solid #ececf1;
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-.mc-section-head {
+.cc-head {
   display: flex;
-  align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
-.mc-section-title {
-  margin: 0;
-  font-size: 15px;
+.cc-title {
+  font-size: 18px;
   font-weight: 700;
   color: #1a1a2e;
+  margin: 0;
 }
-.mc-section-meta {
-  font-size: 11px;
-  color: #b0b0c0;
+.cc-sub {
+  font-size: 12px;
+  color: #8a8a9e;
+  margin: 4px 0 0;
 }
-.mc-flow {
+.cc-stages {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
-.mc-flow-step {
+.cc-stage {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #f7f8fa;
+  gap: 6px;
+  background: #fff;
   border: 1px solid #ececf1;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #5a5a70;
+}
+.cc-stage.is-current {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #f4f7ff;
+}
+.cc-stage-ico { font-size: 13px; }
+.cc-stage-count {
+  background: #2563eb;
+  color: #fff;
   border-radius: 10px;
-  padding: 12px 14px;
-  position: relative;
-  flex: 1;
-  min-width: 170px;
-}
-.mc-flow-icon {
-  font-size: 22px;
-}
-.mc-flow-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a2e;
-}
-.mc-flow-desc {
   font-size: 11px;
+  padding: 0 7px;
+  font-weight: 700;
+}
+.cc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.cc-panel {
+  background: #fff;
+  border: 1px solid #ececf1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.cc-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f1f5;
+  background: #fafafc;
+}
+.cc-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+}
+.cc-panel-note {
+  font-size: 11px;
+  color: #9a9aad;
+}
+.cc-panel-body {
+  padding: 12px 14px;
+  min-height: 130px;
+}
+.cc-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #444;
+  padding: 6px 0;
+  border-bottom: 1px dashed #f1f1f5;
+}
+.cc-item:last-child { border-bottom: none; }
+.cc-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+  flex-shrink: 0;
+}
+.cc-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cc-item-time {
+  margin-left: auto;
+  font-size: 11px;
+  color: #9a9aad;
+  white-space: nowrap;
+}
+.cc-empty {
+  text-align: center;
+  padding: 26px 10px;
   color: #8a8a9e;
-  margin-top: 3px;
+  font-size: 13px;
+}
+.cc-empty-sub {
+  font-size: 11px;
+  color: #b0b0c0;
+  margin-top: 4px;
   line-height: 1.5;
 }
-.mc-flow-arrow {
-  color: #c5c5d0;
-  font-size: 16px;
-  position: absolute;
-  right: -12px;
-  z-index: 1;
+.cc-flow {
+  background: #fff;
+  border: 1px solid #ececf1;
+  border-radius: 12px;
+  padding: 16px 18px;
 }
-.mc-empty {
-  text-align: center;
-  padding: 32px 0 20px;
+.cc-flow-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 12px;
 }
-.mc-empty-icon {
-  font-size: 34px;
+.cc-flow-steps {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
-.mc-empty-title {
-  font-weight: 600;
-  color: #5a5a70;
-  margin: 10px 0 4px;
+.cc-flow-step {
+  flex: 1;
+  min-width: 160px;
+  font-size: 12px;
+  color: #444;
+  background: #fafafc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cc-flow-step b {
+  color: #2563eb;
   font-size: 15px;
 }
-.mc-empty-desc {
-  font-size: 12px;
+.cc-flow-tag {
+  font-size: 10px;
   color: #9a9aad;
-  max-width: 460px;
-  margin: 0 auto;
-  line-height: 1.7;
+  background: #f1f1f5;
+  border-radius: 8px;
+  padding: 2px 8px;
+  align-self: flex-start;
 }
-.mc-rules {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 13px;
-  color: #6b6b80;
-  line-height: 2.1;
+@media (max-width: 900px) {
+  .cc-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

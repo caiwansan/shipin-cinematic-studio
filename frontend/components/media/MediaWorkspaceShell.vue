@@ -18,7 +18,7 @@
         </div>
       </div>
       <div class="mws-header-right">
-        <span class="mws-badge mws-badge-preview">预览版 · 产品壳</span>
+        <span class="mws-badge mws-badge-preview">运营中心 · 真实数据</span>
         <WorkspaceSwitcher />
       </div>
     </div>
@@ -60,7 +60,7 @@ const subNavItems = [
   { icon: '💬', label: '消息互动', path: '/workspace/media/messages', planned: true },
   { icon: '👥', label: '客户管理', path: '/workspace/media/customers', planned: true },
   { icon: '📊', label: '数据分析', path: '/workspace/media/analytics', planned: true },
-  { icon: '🧑‍💼', label: '团队管理', path: '/workspace/media/team', planned: true },
+  { icon: '🧑‍💼', label: '团队管理', path: '/workspace/media/team', planned: false },
 ]
 
 function isActive(path: string) {
