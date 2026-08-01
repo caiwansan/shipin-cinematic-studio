@@ -1,6 +1,6 @@
 <!--
-  Sprint-MEDIA-CHANNEL-EXPANSION-05 — 渠道管理（连接你的线上运营渠道 · 纯产品语言）
-  升级：账号管理 → 渠道管理；9 平台 → 内容/电商/客户 三类 Tabs
+  Sprint-MEDIA-CHANNEL-EXPANSION-05 + MEDIA-DATA-CENTER-01 — 渠道中心（连接你的线上运营渠道 · 纯产品语言）
+  升级：账号管理 → 渠道管理 → 渠道中心；内容/电商/客户 三类 Tabs
   纪律: 未连接态真实展示；不出现 API/Webhook/Token/OAuth/SDK 等技术词；零假数据
   微信: 真实接入流程保留（授权绑定 → 勾选权限 → 授权 AI 员工 → 完成连接）
   电商/客户渠道: 即将开放（诚实展示，不造假连接）
@@ -9,7 +9,7 @@
   <MediaWorkspaceShell>
     <MediaPageHeader
       kicker="我的运营渠道"
-      title="渠道管理"
+      title="渠道中心"
       :status="{ text: '未连接', type: 'warn' }"
       desc="连接你的线上运营渠道，AI 员工才能帮你运营——发布内容、运营店铺、回复客户、读取数据。"
     />

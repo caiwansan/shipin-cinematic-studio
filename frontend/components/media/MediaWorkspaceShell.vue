@@ -13,8 +13,8 @@
       <div class="mws-brand">
         <div class="mws-brand-logo">AI</div>
         <div class="mws-brand-text">
-          <div class="mws-brand-name">AI OMNI</div>
-          <div class="mws-brand-sub">CHANNEL OPS</div>
+          <div class="mws-brand-name">全渠道运营中心</div>
+          <div class="mws-brand-sub">AI 经营驾驶舱</div>
         </div>
       </div>
 
@@ -144,22 +144,22 @@ onMounted(async () => {
 })
 
 const navItems = [
-  { icon: '⌂', label: '首页驾驶舱', hint: '我的 AI 全渠道运营中心', path: '/workspace/media/', tag: '' },
+  { icon: '⌂', label: '经营驾驶舱', hint: '我的生意 · 经营数据中心', path: '/workspace/media/', tag: '⭐' },
   { icon: '◉', label: 'AI员工团队', hint: '5 名智能员工 · 解锁后自动工作', path: '/workspace/media/team', tag: '' },
   { icon: '✦', label: '内容生产', hint: '选题 → 创作 → 发布 → 复盘', path: '/workspace/media/content', tag: '' },
   { icon: '◌', label: '客户运营', hint: '自动回复客户 · 发现销售机会', path: '/workspace/media/messages', tag: '' },
-  { icon: '◎', label: '渠道管理', hint: '内容平台 · 电商店铺 · 客户渠道', path: '/workspace/media/accounts', tag: '' },
+  { icon: '◎', label: '渠道中心', hint: '内容平台 · 电商店铺 · 客户渠道', path: '/workspace/media/accounts', tag: '' },
   { icon: '🛒', label: '商品运营', hint: '我的线上生意 · 商品与店铺', path: '/workspace/media/shop', tag: '新' },
   { icon: '◌', label: '数据分析', hint: '内容效果 · 商品销售 · 运营策略', path: '/workspace/media/analytics', tag: '' },
   { icon: '◌', label: '行业机会', hint: '热点 · 竞品 · 平台规则', path: '/workspace/media/intelligence', tag: '' },
 ]
 
 const moduleMap: Record<string, { icon: string; name: string; sub: string }> = {
-  '/workspace/media': { icon: '⌂', name: '首页驾驶舱', sub: '我的 AI 全渠道运营中心' },
+  '/workspace/media': { icon: '⌂', name: '经营驾驶舱', sub: '我的生意 · 经营数据中心' },
   '/workspace/media/team': { icon: '◉', name: 'AI员工团队', sub: '5 名智能员工 · 解锁后自动工作' },
   '/workspace/media/content': { icon: '✦', name: '内容生产', sub: '选题到发布的内容生产中心' },
   '/workspace/media/messages': { icon: '◌', name: '客户运营', sub: '自动回复客户 · 发现销售机会' },
-  '/workspace/media/accounts': { icon: '◎', name: '渠道管理', sub: '内容平台 · 电商店铺 · 客户渠道' },
+  '/workspace/media/accounts': { icon: '◎', name: '渠道中心', sub: '内容平台 · 电商店铺 · 客户渠道' },
   '/workspace/media/shop': { icon: '🛒', name: '商品运营', sub: '我的线上生意 · 商品与店铺' },
   '/workspace/media/analytics': { icon: '◌', name: '数据分析', sub: '内容效果 · 商品销售 · 运营策略' },
   '/workspace/media/intelligence': { icon: '◌', name: '行业机会', sub: '热点 · 竞品 · 平台规则' },
@@ -249,19 +249,17 @@ onMounted(async () => {
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
 .mws-brand-name {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.02em;
   color: var(--media-text-hero);
-  font-family: var(--font-mono);
 }
 .mws-brand-sub {
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.34em;
+  letter-spacing: 0.08em;
   color: var(--media-brand-text);
   margin-top: 2px;
-  font-family: var(--font-mono);
 }
 /* 导航（平铺） */
 .mws-nav {

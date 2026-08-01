@@ -76,7 +76,7 @@
     <div class="sp-sec">
       <div class="sp-sec-head">
         <div class="sp-sec-title">🛒 可连接的电商店铺</div>
-        <NuxtLink to="/workspace/media/accounts" class="sp-sec-link">渠道管理 →</NuxtLink>
+        <NuxtLink to="/workspace/media/accounts" class="sp-sec-link">渠道中心 →</NuxtLink>
       </div>
       <div class="sp-shop-grid">
         <div v-for="s in shops" :key="s.name" class="sp-shop" @click="goChannels">
