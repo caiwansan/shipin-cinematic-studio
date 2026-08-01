@@ -6,7 +6,7 @@
 <template>
   <MediaWorkspaceShell>
     <MediaPageHeader
-      kicker="Media Analytics"
+      kicker="经营数据分析"
       title="数据分析"
       :status="{ text: '等待数据回流', type: 'off' }"
       desc="微信 datacube 官方数据回流后，内容、粉丝与互动数据将在这里形成图表。"
@@ -83,7 +83,7 @@ const dims = [
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(37, 99, 235, 0.1));
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(59, 130, 246, 0.1));
   border: 1px solid var(--media-ai-border);
   border-radius: var(--media-radius-card);
   padding: 16px 22px;

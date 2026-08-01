@@ -1,14 +1,14 @@
 <!--
-  Sprint-MEDIA-UX-PRODUCT-DESIGN-05 — 首页 = 老板桌面（Design System v1）
-  掌柜纠偏：不是换颜色，是建立世界级 AI 企业产品视觉。
-  老板每天打开想知道「今天公司怎么样？」→ 第一屏就是经营结果：
-    ① 问候条：「早上好，老板」+ 日期 + AI 团队状态
-    ② 经营状态：健康指数 / 收入趋势 / 客户增长 三卡（紧凑 80-120px）
-    ③ 今天 AI 已完成：✓ 清单（真实数据，空态说明）
-    ④ 本周经营表现：苹果式摘要（大数字 + 三指标 + AI 判断）
+  Sprint-MEDIA-DESIGN-DARK-THEME-06 — 首页 = AI 经营总部夜间模式（Design System v1 Dark Variant）
+  掌柜纠偏：高级感 = 深色（AI 企业经营指挥中心），但深色 ≠ 深紫。
+  结构/信息架构/卡片尺寸完全保留 Design System v1（Dark Theme Variant，不推翻重做）：
+    ① 问候条：「AI经营总部」+「早上好，老板」+ 日期 + AI 团队状态
+    ② 经营状态：内容影响 / 客户增长 / 销售转化 三小型模块（非巨大卡片）
+    ③ 今天 AI 已经为你完成：✓ 清单（真实数据，空态说明）
+    ④ 本周经营表现：数据浮岛（↑12% + 三指标 + AI分析，Apple Watch 信息密度）
     ⑤ 我的业务地图：内容 / 客户 / 商品 / 渠道 四入口
-  视觉：90% 中性（#F4F6FA/#FFFFFF/#111827）+ 昆仑蓝 #2563EB 点缀 + 青蓝 #06B6D4 AI 态
-  纪律：零禁止词；无数据全「待接入」；双态渲染；零新 API/零新表/零假数据
+  视觉：80% 深色空间（#0B1220 夜晚办公室）+ 15% 蓝青数据（#3B82F6/#22D3EE）+ 5% AI 紫 #8B5CF6
+  纪律：零禁止词（API/Token/Runtime/Dashboard 等英文技术词不出现）；无数据全「待接入」；双态渲染
 -->
 <template>
   <MediaWorkspaceShell>
@@ -23,29 +23,22 @@
       <!-- ① 问候条 -->
       <div class="hq-greet">
         <div class="hq-greet-text">
+          <span class="hq-greet-kicker">AI 经营总部</span>
           <h1 class="hq-greet-title">{{ greetWord }}，老板</h1>
           <p class="hq-greet-sub">今天是 {{ todayLabel }}，{{ greetSub }}</p>
         </div>
         <span class="hq-gm-state"><i :class="hasData ? 'on' : ''"></i>AI 团队{{ hasData ? '运行中' : '已就位' }} · 5 名 AI 员工</span>
       </div>
 
-      <!-- ② 经营状态三卡 -->
+      <!-- ② 经营状态三小型模块 -->
       <div class="hq-stats">
         <div class="hq-stat">
-          <div class="hq-stat-head"><span class="hq-kicker">经营健康</span><span class="hq-stat-src">综合</span></div>
+          <div class="hq-stat-head"><span class="hq-kicker">内容影响</span><span class="hq-stat-src">近 7 天</span></div>
           <div class="hq-stat-row">
-            <b class="hq-stat-num hl">{{ hasData ? healthScore : '待接入' }}</b>
-            <span v-if="hasData" class="hq-stat-trend up">↑ {{ healthTrend }}%</span>
+            <b class="hq-stat-num hl">{{ fmtBig(d.exposure) }}</b>
+            <span class="hq-stat-trend" :class="trendCls(d.exposureTrend)">{{ trendText(d.exposureTrend) }}</span>
           </div>
-          <div class="hq-stat-foot">本周{{ hasData ? '增长 ' + healthTrend + '%' : '等待数据接入' }}</div>
-        </div>
-        <div class="hq-stat">
-          <div class="hq-stat-head"><span class="hq-kicker">收入趋势</span><span class="hq-stat-src">近 7 天</span></div>
-          <div class="hq-stat-row">
-            <b class="hq-stat-num">{{ fmtMoney(d.revenue) }}</b>
-            <span class="hq-stat-trend" :class="trendCls(d.revenueTrend)">{{ trendText(d.revenueTrend) }}</span>
-          </div>
-          <div class="hq-stat-foot">{{ hasData ? '成交金额 · 全渠道' : '等待数据接入' }}</div>
+          <div class="hq-stat-foot">{{ hasData ? '全渠道内容曝光' : '等待数据接入' }}</div>
         </div>
         <div class="hq-stat">
           <div class="hq-stat-head"><span class="hq-kicker">客户增长</span><span class="hq-stat-src">近 7 天</span></div>
@@ -55,12 +48,20 @@
           </div>
           <div class="hq-stat-foot">{{ hasData ? '新增客户 · 全渠道' : '等待数据接入' }}</div>
         </div>
+        <div class="hq-stat">
+          <div class="hq-stat-head"><span class="hq-kicker">销售转化</span><span class="hq-stat-src">近 7 天</span></div>
+          <div class="hq-stat-row">
+            <b class="hq-stat-num">{{ fmtMoney(d.revenue) }}</b>
+            <span class="hq-stat-trend" :class="trendCls(d.revenueTrend)">{{ trendText(d.revenueTrend) }}</span>
+          </div>
+          <div class="hq-stat-foot">{{ hasData ? '成交金额 · 全渠道' : '等待数据接入' }}</div>
+        </div>
       </div>
 
-      <!-- ③ 今天 AI 已完成 -->
+      <!-- ③ 今天 AI 已经为你完成 -->
       <div class="hq-sec">
         <div class="hq-sec-head">
-          <span class="hq-sec-title">今天 AI 已完成</span>
+          <span class="hq-sec-title">今天 AI 已经为你完成</span>
           <NuxtLink to="/workspace/media/team" class="hq-sec-link">我的 AI 管理团队 →</NuxtLink>
         </div>
         <div class="hq-done">
@@ -77,7 +78,7 @@
         </div>
       </div>
 
-      <!-- ④ 本周经营表现（苹果式摘要） -->
+      <!-- ④ 本周经营表现（数据浮岛） -->
       <div class="hq-sec">
         <div class="hq-sec-head">
           <span class="hq-sec-title">本周经营表现</span>
@@ -96,7 +97,7 @@
           <div class="hq-week-judge">
             <span class="hq-week-judge-ico">AI</span>
             <div class="hq-week-judge-text">
-              <b>AI 判断</b>
+              <b>AI 分析</b>
               <span>{{ hasData ? aiJudge : '数据接入后，AI 将给出本周经营判断与建议。' }}</span>
             </div>
           </div>
@@ -153,8 +154,7 @@ const overview = ref<any>({
 
 const identityState = ref('') // '' | 'login-expired' | 'personal-space'
 
-/* ═══ 经营数据（Design System v1） ═══
- * 真实数据接入后把 dashboardData 替换为真实值即可（双态渲染已就绪）；示例值仅注释参照，运行时恒空态 */
+/* ═══ 经营数据（双态渲染：真实数据接入后替换 dashboardData 即点亮） ═══ */
 const dashboardData = ref<any>(null)
 const hasData = computed(() => !!dashboardData.value && !!dashboardData.value.health)
 
@@ -247,14 +247,14 @@ onMounted(async () => {
       identityState.value = 'login-expired'
     }
   } catch {
-    // 静默：经营总部保持空态
+    // 静默
   }
 })
 </script>
 
 <style scoped>
-/* ═══════ 老板桌面 · Design System v1 ═══════
-   90% 中性 + 昆仑蓝点缀 + 青蓝 AI 态；卡片 80-120px；信息密度高；无大 Hero */
+/* ═══════ AI 经营总部夜间模式 · Dark Variant ═══════
+   80% 深色空间 + 15% 蓝青数据 + 5% AI 紫；卡片 #F1F5F9 / 层次 #162033 / 边框 rgba(255,255,255,0.08) */
 
 /* ① 问候条 */
 .hq-greet {
@@ -264,10 +264,29 @@ onMounted(async () => {
   gap: 16px;
   margin-bottom: 18px;
 }
+.hq-greet-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #22D3EE;
+  margin-bottom: 6px;
+}
+.hq-greet-kicker::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #22D3EE;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+}
 .hq-greet-title {
   font-size: 24px;
   font-weight: 800;
-  color: #111827;
+  color: #162033;
   margin: 0;
   letter-spacing: -0.02em;
 }
@@ -282,9 +301,9 @@ onMounted(async () => {
   gap: 7px;
   font-size: 11.5px;
   font-weight: 600;
-  color: #64748B;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  color: #94A3B8;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
   padding: 6px 13px;
   white-space: nowrap;
@@ -293,25 +312,26 @@ onMounted(async () => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #CBD5E1;
+  background: #475569;
   display: inline-block;
 }
 .hq-gm-state i.on {
-  background: #10B981;
+  background: #34D399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.7);
 }
 
-/* ② 经营状态三卡（紧凑） */
+/* ② 经营状态三小型模块（紧凑，非巨大卡片） */
 .hq-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 .hq-stat {
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 13px 16px 12px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 .hq-stat-head {
   display: flex;
@@ -324,11 +344,11 @@ onMounted(async () => {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #9CA3AF;
+  color: #64748B;
 }
 .hq-stat-src {
   font-size: 10px;
-  color: #CBD5E1;
+  color: #475569;
   font-weight: 600;
 }
 .hq-stat-row {
@@ -340,32 +360,23 @@ onMounted(async () => {
   font-size: 26px;
   font-weight: 900;
   letter-spacing: -0.02em;
-  color: #111827;
+  color: #162033;
   line-height: 1.1;
 }
 .hq-stat-num.hl {
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  background: linear-gradient(135deg, #60A5FA, #22D3EE);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-.hq-stat-trend {
-  font-size: 12px;
-  font-weight: 800;
-}
-.hq-stat-trend.up { color: #10B981; }
-.hq-stat-trend.down { color: #DC2626; }
-.hq-stat-trend.idle { color: #9CA3AF; }
-.hq-stat-foot {
-  margin-top: 7px;
-  font-size: 11px;
-  color: #9CA3AF;
-}
+.hq-stat-trend { font-size: 12px; font-weight: 800; }
+.hq-stat-trend.up { color: #34D399; }
+.hq-stat-trend.down { color: #F87171; }
+.hq-stat-trend.idle { color: #64748B; }
+.hq-stat-foot { margin-top: 7px; font-size: 11px; color: #64748B; }
 
 /* 区块 */
-.hq-sec {
-  margin-top: 20px;
-}
+.hq-sec { margin-top: 20px; }
 .hq-sec-head {
   display: flex;
   align-items: center;
@@ -375,28 +386,25 @@ onMounted(async () => {
 .hq-sec-title {
   font-size: 14.5px;
   font-weight: 800;
-  color: #111827;
+  color: #F1F5F9;
   letter-spacing: -0.01em;
 }
 .hq-sec-link {
   font-size: 11.5px;
   font-weight: 600;
-  color: #2563EB;
+  color: #60A5FA;
   text-decoration: none;
 }
-.hq-sec-link:hover { color: #1D4ED8; }
-.hq-sec-note {
-  font-size: 11px;
-  color: #9CA3AF;
-}
+.hq-sec-link:hover { color: #93C5FD; }
+.hq-sec-note { font-size: 11px; color: #64748B; }
 
-/* ③ 今天 AI 已完成 */
+/* ③ 今天 AI 已经为你完成 */
 .hq-done {
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 14px 16px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -407,19 +415,19 @@ onMounted(async () => {
   gap: 8px;
   padding: 8px 14px;
   border-radius: 10px;
-  background: #F8FAFC;
-  border: 1px solid #EEF0F3;
+  background: #162033;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 12.5px;
   font-weight: 600;
-  color: #475569;
+  color: #CBD5E1;
 }
 .hq-done-check {
   width: 17px;
   height: 17px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: rgba(16, 185, 129, 0.12);
-  color: #10B981;
+  background: rgba(52, 211, 153, 0.14);
+  color: #34D399;
   font-size: 10px;
   font-weight: 900;
   display: flex;
@@ -432,23 +440,15 @@ onMounted(async () => {
   gap: 5px;
   padding: 6px 10px;
 }
-.hq-done-empty b {
-  font-size: 12.5px;
-  font-weight: 800;
-  color: #475569;
-}
-.hq-done-empty span {
-  font-size: 11.5px;
-  color: #9CA3AF;
-  line-height: 1.6;
-}
+.hq-done-empty b { font-size: 12.5px; font-weight: 800; color: #CBD5E1; }
+.hq-done-empty span { font-size: 11.5px; color: #64748B; line-height: 1.6; }
 
-/* ④ 本周经营表现（苹果式摘要） */
+/* ④ 本周经营表现（数据浮岛） */
 .hq-week {
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   display: grid;
   grid-template-columns: 200px 1fr 1.3fr;
   gap: 0;
@@ -456,7 +456,7 @@ onMounted(async () => {
 }
 .hq-week-main {
   padding: 18px 20px;
-  border-right: 1px solid #EEF0F3;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -466,22 +466,18 @@ onMounted(async () => {
   font-size: 30px;
   font-weight: 900;
   letter-spacing: -0.03em;
-  color: #9CA3AF;
+  color: #475569;
 }
 .hq-week-num.up {
-  background: linear-gradient(135deg, #2563EB, #06B6D4);
+  background: linear-gradient(135deg, #3B82F6, #22D3EE);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-.hq-week-label {
-  font-size: 11.5px;
-  color: #9CA3AF;
-  font-weight: 600;
-}
+.hq-week-label { font-size: 11.5px; color: #64748B; font-weight: 600; }
 .hq-week-metrics {
   padding: 18px 20px;
-  border-right: 1px solid #EEF0F3;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -493,29 +489,21 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 10px;
 }
-.hq-week-metric span {
-  font-size: 12px;
-  color: #64748B;
-  font-weight: 600;
-}
-.hq-week-metric b {
-  font-size: 17px;
-  font-weight: 800;
-  color: #111827;
-}
+.hq-week-metric span { font-size: 12px; color: #94A3B8; font-weight: 600; }
+.hq-week-metric b { font-size: 17px; font-weight: 800; color: #162033; }
 .hq-week-judge {
   padding: 18px 20px;
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: rgba(6, 182, 212, 0.035);
+  background: rgba(34, 211, 238, 0.04);
 }
 .hq-week-judge-ico {
   width: 26px;
   height: 26px;
   flex-shrink: 0;
   border-radius: 8px;
-  background: linear-gradient(135deg, #2563EB, #06B6D4);
+  background: linear-gradient(135deg, #3B82F6, #22D3EE);
   color: #fff;
   font-size: 10px;
   font-weight: 900;
@@ -523,22 +511,11 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.35);
 }
-.hq-week-judge-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.hq-week-judge-text b {
-  font-size: 12px;
-  font-weight: 800;
-  color: #0E7490;
-}
-.hq-week-judge-text span {
-  font-size: 12px;
-  color: #64748B;
-  line-height: 1.6;
-}
+.hq-week-judge-text { display: flex; flex-direction: column; gap: 3px; }
+.hq-week-judge-text b { font-size: 12px; font-weight: 800; color: #22D3EE; }
+.hq-week-judge-text span { font-size: 12px; color: #94A3B8; line-height: 1.6; }
 
 /* ⑤ 我的业务地图 */
 .hq-map {
@@ -550,17 +527,17 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 11px;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 13px 15px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   text-decoration: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .hq-map-card:hover {
-  border-color: rgba(37, 99, 235, 0.4);
-  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.07);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .hq-map-ico {
   width: 34px;
@@ -570,40 +547,22 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2563EB;
-  background: rgba(37, 99, 235, 0.07);
-  border: 1px solid rgba(37, 99, 235, 0.18);
+  color: #3B82F6;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 .hq-map-ico :deep(svg) { display: block; }
-.hq-map-meta {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.hq-map-meta b {
-  font-size: 13px;
-  font-weight: 800;
-  color: #111827;
-}
+.hq-map-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hq-map-meta b { font-size: 13px; font-weight: 800; color: #F1F5F9; }
 .hq-map-meta span {
   font-size: 10.5px;
-  color: #9CA3AF;
+  color: #64748B;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.hq-map-go {
-  font-size: 13px;
-  color: #CBD5E1;
-  font-weight: 700;
-  transition: color 0.15s, transform 0.15s;
-}
-.hq-map-card:hover .hq-map-go {
-  color: #2563EB;
-  transform: translateX(2px);
-}
+.hq-map-go { font-size: 13px; color: #475569; font-weight: 700; transition: color 0.15s, transform 0.15s; }
+.hq-map-card:hover .hq-map-go { color: #3B82F6; transform: translateX(2px); }
 
 /* 身份引导 */
 .hq-identity {
@@ -615,9 +574,9 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 .hq-identity-error {
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  color: #B91C1C;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #FCA5A5;
 }
 .hq-identity b { font-size: 13px; }
 .hq-identity span { flex: 1; font-size: 12px; opacity: 0.85; }
@@ -625,7 +584,7 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  background: linear-gradient(135deg, #3B82F6, #3B82F6);
   border-radius: 9px;
   padding: 7px 14px;
   text-decoration: none;
@@ -635,7 +594,7 @@ onMounted(async () => {
 @media (max-width: 1080px) {
   .hq-stats { grid-template-columns: 1fr; }
   .hq-week { grid-template-columns: 1fr; }
-  .hq-week-main, .hq-week-metrics { border-right: none; border-bottom: 1px solid #EEF0F3; }
+  .hq-week-main, .hq-week-metrics { border-right: none; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
   .hq-map { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 720px) {

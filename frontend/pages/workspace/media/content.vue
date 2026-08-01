@@ -7,7 +7,7 @@
 <template>
   <MediaWorkspaceShell>
     <MediaPageHeader
-      kicker="AI Content Factory"
+      kicker="AI 内容生产车间"
       title="AI 内容生产车间"
       :status="{ text: '生产线待启动', type: 'off' }"
       desc="从战略到效果分析的自动化内容生产线——免费查看完整流程，订阅 AI 员工后自动选题、生产、审核、发布并复盘。"
@@ -29,7 +29,7 @@
       </div>
       <div class="cf-line-foot">
         <span class="cf-line-dot"></span>
-        AI Content Factory · 六道工序 · 订阅后全自动
+        AI 内容生产车间 · 六道工序 · 订阅后全自动
       </div>
     </div>
 
@@ -105,7 +105,7 @@ const stages = ref([
     ai: 'AI 运营总监自动制定内容战略：结合行业热点与企业目标，输出月度内容方向与排期计划。',
     emptyTitle: '战略待制定',
     emptyDesc: 'AI 运营总监部署后，将生成内容方向、目标与排期计划并真实展示在这里。',
-    source: 'AgentSchedule · strategy',
+    source: 'AI 排期 · 策略',
   },
   {
     key: 'ideas', icon: '💡', name: '选题池', badge: 'Bob · AI 内容策划',
@@ -119,11 +119,11 @@ const stages = ref([
   {
     key: 'produce', icon: '✍️', name: '内容创作', badge: 'Carol · AI 内容生产',
     desc: '从选题到成稿的生产环节',
-    free: '查看生产流程：理解 AI 员工如何按选题撰写文章、脚本与营销素材（BYOK 模型）。',
+    free: '查看生产流程：理解 AI 员工如何按选题撰写文章、脚本与营销素材（自带模型能力）。',
     ai: 'AI 内容生产按选题自动生成：文章 / 短视频脚本 / 营销素材，发布前可人工审核。',
     emptyTitle: '生产队列空闲',
-    emptyDesc: '选题确认后进入生产队列，由 AI 员工使用 BYOK 模型真实生成稿件。',
-    source: 'AgentTask · content · BYOK',
+    emptyDesc: '选题确认后进入生产队列，由 AI 员工使用 AI 员工自带模型能力真实生成稿件。',
+    source: 'AI 任务 · 内容生产',
   },
   {
     key: 'review', icon: '🔍', name: '审核中心', badge: '合规检查 · AI 审核',
@@ -141,7 +141,7 @@ const stages = ref([
     ai: 'AI 自动发布：按排期把审核通过的稿件自动发布到已连接渠道。',
     emptyTitle: '暂无发布记录',
     emptyDesc: '渠道连接后，真实发布记录将回流至此。',
-    source: 'SocialPost',
+    source: '内容发布',
   },
   {
     key: 'feedback', icon: '📈', name: '效果分析', badge: 'Eve · AI 数据分析',
@@ -240,7 +240,7 @@ const stages = ref([
 .cf-line-arrow {
   font-size: 13px;
   color: var(--media-text-dim);
-  text-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
 }
 .cf-line-foot {
   display: flex;
@@ -294,7 +294,7 @@ const stages = ref([
   flex-direction: column;
   align-items: center;
   padding: 24px 16px;
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.08), rgba(244, 246, 250, 0.4));
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.08), rgba(11, 18, 32, 0.4));
   border-right: 1px solid var(--media-card-border);
 }
 .cf-station-num {
@@ -318,7 +318,7 @@ const stages = ref([
   justify-content: center;
   font-size: 23px;
   margin-bottom: 10px;
-  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 .cf-station-name {
   font-size: 14px;
@@ -380,7 +380,7 @@ const stages = ref([
   border: 1px solid var(--color-border-primary);
 }
 .cf-station-cap.ai {
-  background: linear-gradient(160deg, var(--media-ai-glow), rgba(244, 246, 250, 0.4));
+  background: linear-gradient(160deg, var(--media-ai-glow), rgba(11, 18, 32, 0.4));
   border: 1px solid var(--media-ai-border);
 }
 .cf-cap-label {
@@ -412,7 +412,7 @@ const stages = ref([
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(37, 99, 235, 0.1));
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(59, 130, 246, 0.1));
   border: 1px solid var(--media-ai-border);
   border-radius: var(--media-radius-card);
   padding: 18px 24px;

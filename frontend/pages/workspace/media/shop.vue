@@ -149,14 +149,14 @@ const path = ['用户授权', '渠道连接服务', 'AI 员工 Runtime']
   display: flex; align-items: center; gap: 12px;
   padding: 16px 18px;
   border-radius: 15px;
-  background: rgba(248, 250, 252, 0.72);
+  background: rgba(22, 32, 51, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 .sp-biz-ico { font-size: 20px; }
 .sp-biz-meta { display: flex; flex-direction: column; flex: 1; }
 .sp-biz-label { font-size: 11px; color: #94a3b8; }
-.sp-biz-num { font-size: 20px; font-weight: 800; color: #111827; letter-spacing: -0.02em; }
+.sp-biz-num { font-size: 20px; font-weight: 800; color: #F1F5F9; letter-spacing: -0.02em; }
 .sp-biz-num--text { font-size: 14px; line-height: 1.6; }
 .sp-biz-sub { font-size: 9.5px; color: #64748b; align-self: flex-end; }
 
@@ -180,7 +180,7 @@ const path = ['用户授权', '渠道连接服务', 'AI 员工 Runtime']
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 14px;
 }
-.sp-sec-title { font-size: 14px; font-weight: 800; color: #111827; margin-bottom: 14px; }
+.sp-sec-title { font-size: 14px; font-weight: 800; color: #F1F5F9; margin-bottom: 14px; }
 .sp-sec-head .sp-sec-title { margin-bottom: 0; }
 .sp-sec-link { font-size: 11.5px; font-weight: 600; color: #94a3b8; text-decoration: none; }
 .sp-sec-link:hover { color: #a5b4fc; }
@@ -195,11 +195,11 @@ const path = ['用户授权', '渠道连接服务', 'AI 员工 Runtime']
   display: flex; gap: 10px; align-items: flex-start;
   padding: 13px 14px;
   border-radius: 13px;
-  background: rgba(248, 250, 252, 0.65);
+  background: rgba(22, 32, 51, 0.65);
   border: 1px solid rgba(148, 163, 184, 0.26);
 }
 .sp-help-ico { font-size: 17px; }
-.sp-help b { display: block; font-size: 12px; color: #111827; margin-bottom: 3px; }
+.sp-help b { display: block; font-size: 12px; color: #F1F5F9; margin-bottom: 3px; }
 .sp-help-desc { font-size: 10px; color: #64748b; line-height: 1.6; }
 
 /* ═══ 电商店铺 ═══ */
@@ -212,7 +212,7 @@ const path = ['用户授权', '渠道连接服务', 'AI 员工 Runtime']
   display: flex; align-items: center; gap: 11px;
   padding: 14px 16px;
   border-radius: 14px;
-  background: rgba(248, 250, 252, 0.72);
+  background: rgba(22, 32, 51, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.28);
   cursor: pointer;
   transition: border-color 0.18s, transform 0.15s;
@@ -220,7 +220,7 @@ const path = ['用户授权', '渠道连接服务', 'AI 员工 Runtime']
 .sp-shop:hover { transform: translateY(-2px); border-color: rgba(245, 158, 11, 0.5); }
 .sp-shop-ico { font-size: 20px; }
 .sp-shop-meta { display: flex; flex-direction: column; flex: 1; }
-.sp-shop-name { font-size: 12.5px; font-weight: 700; color: #111827; }
+.sp-shop-name { font-size: 12.5px; font-weight: 700; color: #F1F5F9; }
 .sp-shop-plan { font-size: 9.5px; color: #64748b; }
 .sp-shop-state {
   display: inline-flex; align-items: center; gap: 5px;
@@ -233,10 +233,10 @@ const path = ['用户授权', '渠道连接服务', 'AI 员工 Runtime']
 .sp-path {
   padding: 18px 20px;
   border-radius: 16px;
-  background: rgba(248, 250, 252, 0.6);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(22, 32, 51, 0.6);
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
-.sp-path-title { font-size: 13px; font-weight: 800; color: #111827; margin-bottom: 12px; }
+.sp-path-title { font-size: 13px; font-weight: 800; color: #F1F5F9; margin-bottom: 12px; }
 .sp-path-steps { display: flex; gap: 10px; flex-wrap: wrap; }
 .sp-path-step {
   display: inline-flex; align-items: center; gap: 8px;
@@ -252,7 +252,7 @@ const path = ['用户授权', '渠道连接服务', 'AI 员工 Runtime']
   border-radius: 50%;
   font-size: 9px; font-weight: 800;
   color: #fff;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
 }
 .sp-path-note {
   margin: 12px 0 0;

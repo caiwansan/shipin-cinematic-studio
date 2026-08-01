@@ -7,7 +7,7 @@
 <template>
   <MediaWorkspaceShell>
     <MediaPageHeader
-      kicker="AI Inbox · Customer Ops"
+      kicker="AI 客户服务台"
       title="AI 私信空间"
       :status="{ text: '等待渠道连接', type: 'warn' }"
       desc="AI 客户运营中心——客户从这里进入你的私信：AI 客服员工理解需求、判断价值、自动回复，关键时刻转人工接管。"
@@ -74,7 +74,7 @@ const flow = [
   { key: 'enter', name: '客户进入', desc: '粉丝从已连接渠道发来私信' },
   { key: 'understand', name: 'AI 理解需求', desc: '识别客户意图与问题' },
   { key: 'value', name: '客户价值判断', desc: 'A/B/C 三级自动分级' },
-  { key: 'reply', name: '自动回复', desc: 'BYOK 模型真实生成回复' },
+  { key: 'reply', name: '自动回复', desc: 'AI 员工自带模型能力真实生成回复' },
   { key: 'opp', name: '销售机会', desc: '高意向客户标记提醒' },
   { key: 'human', name: '人工接管', desc: 'A 级客户转真人跟进' },
 ]
@@ -198,7 +198,7 @@ const sessions = ref<any[]>([])
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(37, 99, 235, 0.1));
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(59, 130, 246, 0.1));
   border: 1px solid var(--media-ai-border);
   border-radius: var(--media-radius-card);
   padding: 18px 24px;

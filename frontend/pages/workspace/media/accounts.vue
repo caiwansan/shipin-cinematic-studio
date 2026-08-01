@@ -201,17 +201,17 @@ function connect() {
   font-size: 12px;
   font-weight: 700;
   color: #94a3b8;
-  background: rgba(248, 250, 252, 0.6);
+  background: rgba(22, 32, 51, 0.6);
   border: 1px solid rgba(148, 163, 184, 0.3);
   cursor: pointer;
   transition: all 0.16s;
 }
-.ac-tab:hover { color: #111827; border-color: rgba(37, 99, 235, 0.4); }
+.ac-tab:hover { color: #F1F5F9; border-color: rgba(59, 130, 246, 0.4); }
 .ac-tab.active {
   color: #fff;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(37, 99, 235, 0.95));
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(59, 130, 246, 0.95));
   border-color: transparent;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.3);
 }
 .ac-tab-ico { font-size: 12px; }
 .ac-tab-count {
@@ -236,13 +236,13 @@ function connect() {
   gap: 4px;
   padding: 17px 18px;
   border-radius: 15px;
-  background: rgba(248, 250, 252, 0.72);
+  background: rgba(22, 32, 51, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   cursor: pointer;
   transition: transform 0.15s, border-color 0.18s;
 }
-.ac-card:hover { transform: translateY(-2px); border-color: rgba(37, 99, 235, 0.4); }
+.ac-card:hover { transform: translateY(-2px); border-color: rgba(59, 130, 246, 0.4); }
 .ac-card--shop { border-color: rgba(245, 158, 11, 0.22); }
 .ac-card--shop:hover { border-color: rgba(245, 158, 11, 0.5); }
 .ac-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
@@ -252,12 +252,12 @@ function connect() {
   font-size: 9.5px; font-weight: 700;
   border-radius: 999px; padding: 2px 9px;
 }
-.ac-state.on { color: #059669; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); }
+.ac-state.on { color: #34D399; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); }
 .ac-state.off { color: #94a3b8; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.3); }
 .ac-dot { width: 6px; height: 6px; border-radius: 50%; }
-.ac-dot.on { background: #059669; box-shadow: 0 0 6px #059669; }
+.ac-dot.on { background: #34D399; box-shadow: 0 0 6px #34D399; }
 .ac-dot.off { background: #64748b; }
-.ac-name { font-size: 14px; font-weight: 800; color: #111827; }
+.ac-name { font-size: 14px; font-weight: 800; color: #F1F5F9; }
 .ac-plan { font-size: 10px; color: #64748b; }
 
 /* 连接后 AI 可以帮助 */
@@ -274,17 +274,17 @@ function connect() {
   display: flex; align-items: center; gap: 6px;
   font-size: 10.5px; color: #94a3b8;
 }
-.ac-help-check { color: #059669; font-weight: 800; }
+.ac-help-check { color: #34D399; font-weight: 800; }
 
 .ac-cta {
   margin-top: 10px;
   font-size: 11px; font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
   border: none; border-radius: 9px; padding: 7px 0;
   cursor: pointer;
 }
-.ac-card.connected .ac-cta { background: rgba(16, 185, 129, 0.15); color: #059669; cursor: default; }
+.ac-card.connected .ac-cta { background: rgba(52, 211, 153, 0.15); color: #34D399; cursor: default; }
 .ac-soon {
   margin-top: 10px;
   font-size: 10px; font-weight: 600;
@@ -299,8 +299,8 @@ function connect() {
   display: flex; gap: 10px; align-items: flex-start;
   padding: 13px 16px;
   border-radius: 13px;
-  background: rgba(248, 250, 252, 0.6);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(22, 32, 51, 0.6);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   font-size: 11.5px; color: #94a3b8; line-height: 1.7;
   margin-bottom: 16px;
 }
@@ -311,14 +311,14 @@ function connect() {
 .ac-flow {
   padding: 18px 20px;
   border-radius: 16px;
-  background: rgba(248, 250, 252, 0.72);
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: rgba(22, 32, 51, 0.72);
+  border: 1px solid rgba(59, 130, 246, 0.25);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   margin-bottom: 16px;
 }
 .ac-flow-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .ac-flow-ico { font-size: 22px; }
-.ac-flow-title { font-size: 14px; font-weight: 800; color: #111827; }
+.ac-flow-title { font-size: 14px; font-weight: 800; color: #F1F5F9; }
 .ac-flow-sub { font-size: 10px; color: #64748b; margin-top: 1px; }
 .ac-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
 .ac-step {
@@ -334,31 +334,31 @@ function connect() {
   border-radius: 50%;
   font-size: 10px; font-weight: 800;
   color: #fff;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
 }
-.ac-step b { display: block; font-size: 11.5px; color: #111827; margin-bottom: 2px; }
+.ac-step b { display: block; font-size: 11.5px; color: #F1F5F9; margin-bottom: 2px; }
 .ac-step-desc { font-size: 9.5px; color: #64748b; line-height: 1.55; }
 .ac-connect-btn {
   width: 100%;
   font-size: 12.5px; font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8 55%, #3b82f6);
+  background: linear-gradient(135deg, #3B82F6, #2563EB 55%, #3b82f6);
   border: none; border-radius: 11px; padding: 11px 0;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.3);
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.ac-connect-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(37, 99, 235, 0.45); }
+.ac-connect-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(59, 130, 246, 0.45); }
 
 /* ═══ AI 权限说明 ═══ */
 .ac-perms {
   padding: 18px 20px;
   border-radius: 16px;
-  background: rgba(248, 250, 252, 0.72);
+  background: rgba(22, 32, 51, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
-.ac-perms-title { font-size: 13px; font-weight: 800; color: #111827; margin-bottom: 12px; }
+.ac-perms-title { font-size: 13px; font-weight: 800; color: #F1F5F9; margin-bottom: 12px; }
 .ac-perms-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .ac-perm {
   display: flex; gap: 10px; align-items: flex-start;
@@ -368,7 +368,7 @@ function connect() {
   border: 1px solid rgba(148, 163, 184, 0.22);
 }
 .ac-perm-ico { font-size: 16px; }
-.ac-perm b { display: block; font-size: 11.5px; color: #111827; margin-bottom: 2px; }
+.ac-perm b { display: block; font-size: 11.5px; color: #F1F5F9; margin-bottom: 2px; }
 .ac-perm-sub { font-size: 9.5px; color: #64748b; line-height: 1.55; }
 
 @media (max-width: 900px) {

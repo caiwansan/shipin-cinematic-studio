@@ -344,7 +344,7 @@ function stateClass(s: string) {
   font-size: 13px;
   font-weight: 800;
   color: var(--media-text-title);
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), transparent);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.05), transparent);
 }
 .to-list-count {
   font-size: 11px;
@@ -395,7 +395,7 @@ function stateClass(s: string) {
   font-size: 17px;
   flex-shrink: 0;
 }
-.to-avatar.st-active { border-color: rgba(16, 185, 129, 0.45); }
+.to-avatar.st-active { border-color: rgba(52, 211, 153, 0.45); }
 .to-avatar.roster { background: rgba(100, 116, 139, 0.12); border-color: var(--media-card-border); }
 .to-member-meta {
   flex: 1;
@@ -443,15 +443,15 @@ function stateClass(s: string) {
   align-self: center;
   font-size: 10.5px;
   font-weight: 700;
-  color: #111827;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(37, 99, 235, 0.9));
-  border: 1px solid rgba(37, 99, 235, 0.5);
+  color: #F1F5F9;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(59, 130, 246, 0.9));
+  border: 1px solid rgba(59, 130, 246, 0.5);
   border-radius: 9px;
   padding: 6px 12px;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.to-lock-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35); }
+.to-lock-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35); }
 .to-state {
   font-size: 9.5px;
   font-weight: 700;
@@ -509,7 +509,7 @@ function stateClass(s: string) {
   padding: 9px 13px;
 }
 .to-help-check {
-  color: #059669;
+  color: #34D399;
   font-weight: 800;
   flex-shrink: 0;
 }
@@ -531,7 +531,7 @@ function stateClass(s: string) {
 /* ═══ 解锁弹窗 ═══ */
 .unlock-mask {
   position: fixed; inset: 0; z-index: 999;
-  background: rgba(16, 24, 40, 0.35);
+  background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
@@ -540,29 +540,29 @@ function stateClass(s: string) {
   width: 560px; max-height: 82vh; overflow-y: auto;
   border-radius: 20px;
   background: #FFFFFF;
-  border: 1px solid rgba(37, 99, 235, 0.3);
-  box-shadow: 0 30px 80px rgba(16, 24, 40, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.16);
 }
 .unlock-head {
   display: flex; justify-content: space-between; align-items: flex-start;
   padding: 20px 22px 14px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
-.unlock-title { font-size: 17px; font-weight: 800; color: #111827; }
+.unlock-title { font-size: 17px; font-weight: 800; color: #F1F5F9; }
 .unlock-sub { font-size: 11px; color: #64748b; margin-top: 4px; }
 .unlock-close { background: none; border: none; color: #64748b; font-size: 15px; cursor: pointer; padding: 4px; }
-.unlock-close:hover { color: #111827; }
+.unlock-close:hover { color: #F1F5F9; }
 .unlock-list { padding: 10px 22px; display: flex; flex-direction: column; gap: 8px; }
 .unlock-row {
   display: flex; gap: 10px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(248, 250, 252, 0.6);
+  background: rgba(22, 32, 51, 0.6);
   border: 1px solid rgba(148, 163, 184, 0.22);
 }
 .unlock-avatar { font-size: 18px; }
 .unlock-meta { display: flex; flex-direction: column; gap: 3px; }
-.unlock-name { font-size: 12px; font-weight: 800; color: #111827; }
+.unlock-name { font-size: 12px; font-weight: 800; color: #F1F5F9; }
 .unlock-duty, .unlock-auto { font-size: 10.5px; color: #94a3b8; line-height: 1.55; }
 .unlock-foot { padding: 14px 22px 20px; border-top: 1px solid rgba(148, 163, 184, 0.2); }
 .unlock-note { font-size: 10.5px; color: #64748b; margin-bottom: 12px; }
@@ -572,10 +572,10 @@ function stateClass(s: string) {
   text-decoration: none; padding: 8px 14px; border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.4);
 }
-.unlock-secondary:hover { color: #111827; }
+.unlock-secondary:hover { color: #F1F5F9; }
 .unlock-primary {
   font-size: 12px; font-weight: 700; color: #fff;
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
   border: none; border-radius: 10px; padding: 8px 18px; cursor: pointer;
 }
 
@@ -609,7 +609,7 @@ function stateClass(s: string) {
   font-weight: 800;
   flex-shrink: 0;
 }
-.to-detail-avatar.st-active { border-color: rgba(16, 185, 129, 0.45); }
+.to-detail-avatar.st-active { border-color: rgba(52, 211, 153, 0.45); }
 .to-detail-name {
   font-size: 19px;
   font-weight: 900;

@@ -6,7 +6,7 @@
 <template>
   <MediaWorkspaceShell>
     <MediaPageHeader
-      kicker="Industry Intelligence"
+      kicker="行业机会洞察"
       title="行业智能中心"
       desc="AI 员工持续扫描行业热点、竞品动态与平台规则，转化为内容机会。"
     >
@@ -257,7 +257,7 @@ const quads = computed(() => [
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(37, 99, 235, 0.1));
+  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(59, 130, 246, 0.1));
   border: 1px solid var(--media-ai-border);
   border-radius: var(--media-radius-card);
   padding: 16px 22px;
