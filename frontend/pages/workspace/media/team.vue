@@ -9,6 +9,7 @@
     <MediaPageHeader
       kicker="AI Team Workspace"
       title="我的 AI 团队"
+      :status="{ text: '订阅后自动部署', type: 'off' }"
       desc="一支为你运营新媒体业务的 AI 团队——每名员工：职责清晰、使命明确、订阅后自动部署并开始工作。"
     />
 

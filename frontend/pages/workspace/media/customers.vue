@@ -9,6 +9,7 @@
     <MediaPageHeader
       kicker="Customer Intelligence"
       title="客户资产"
+      :status="{ text: '等待客户进入', type: 'off' }"
       desc="AI 客服识别客户价值，分级沉淀资产，高价值客户立即转真人接管。"
     />
 

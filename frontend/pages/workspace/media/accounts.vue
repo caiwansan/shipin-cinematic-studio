@@ -8,6 +8,7 @@
     <MediaPageHeader
       kicker="Media Assets"
       title="新媒体资产"
+      :status="{ text: '接入准备中', type: 'warn' }"
       desc="企业真实账号资产，AI 员工通过授权执行发布、回复与数据读取。"
     />
 

@@ -1,13 +1,19 @@
 <!--
-  MediaPageHeader — 产品级页面头（Sprint-MEDIA-UX-03）
-  世界级 SaaS 页面头：标题 + 描述 + 右侧操作区
-  全部使用 Enterprise Design Tokens（CTO Frozen）
+  MediaPageHeader — 产品级页面头（Sprint-MEDIA-UX-03 + GOVERNANCE-02）
+  四要素：页面名称 + 一句 AI 产品解释 + 当前状态 + 快捷操作
+  全部使用 Kunlun Design Token（CTO Frozen）
 -->
 <template>
   <div class="mph">
     <div class="mph-left">
       <div class="mph-kicker">{{ kicker }}</div>
-      <h1 class="mph-title">{{ title }}</h1>
+      <h1 class="mph-title">
+        {{ title }}
+        <span v-if="status" class="mph-status" :class="`mph-status--${status.type || 'off'}`">
+          <span class="mph-status-dot"></span>
+          {{ status.text }}
+        </span>
+      </h1>
       <p v-if="desc" class="mph-desc">{{ desc }}</p>
     </div>
     <div v-if="$slots.actions" class="mph-actions">
@@ -21,6 +27,7 @@ defineProps<{
   kicker: string
   title: string
   desc?: string
+  status?: { text: string; type?: 'ok' | 'warn' | 'off' }
 }>()
 </script>
 
@@ -47,13 +54,59 @@ defineProps<{
   color: var(--color-text-primary);
   margin: 0;
   letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.mph-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--media-radius-pill);
+  padding: 3px 12px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.mph-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.mph-status--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.mph-status--ok .mph-status-dot {
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+}
+.mph-status--warn {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.mph-status--warn .mph-status-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+}
+.mph-status--off {
+  background: var(--color-bg-hover);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-primary);
+}
+.mph-status--off .mph-status-dot {
+  background: var(--color-text-disabled);
 }
 .mph-desc {
   font-size: 13px;
   color: var(--color-text-secondary);
-  margin: 6px 0 0;
-  max-width: 560px;
-  line-height: 1.6;
+  margin: 8px 0 0;
+  max-width: 600px;
+  line-height: 1.7;
 }
 .mph-actions {
   display: flex;

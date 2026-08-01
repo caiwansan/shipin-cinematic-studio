@@ -8,6 +8,7 @@
     <MediaPageHeader
       kicker="Media Analytics"
       title="数据分析"
+      :status="{ text: '等待数据回流', type: 'off' }"
       desc="微信 datacube 官方数据回流后，内容、粉丝与互动数据将在这里形成图表。"
     />
 

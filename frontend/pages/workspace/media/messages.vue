@@ -9,6 +9,7 @@
     <MediaPageHeader
       kicker="AI Inbox · Customer Ops"
       title="AI 私信空间"
+      :status="{ text: '等待渠道连接', type: 'warn' }"
       desc="AI 客户运营中心——客户从这里进入你的私信：AI 客服员工理解需求、判断价值、自动回复，关键时刻转人工接管。"
     />
 

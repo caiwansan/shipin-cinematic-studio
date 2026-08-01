@@ -18,7 +18,7 @@
         </div>
       </div>
 
-      <!-- 导航（平铺 · 产品化） -->
+      <!-- 导航（平铺 · 产品化 · 每项带 AI 能力提示） -->
       <nav class="mws-nav">
         <NuxtLink
           v-for="item in navItems"
@@ -26,17 +26,28 @@
           :to="item.path"
           class="mws-nav-item"
           :class="{ 'is-active': isActive(item.path) }"
+          :title="item.hint"
         >
           <span class="mws-nav-icon">{{ item.icon }}</span>
-          <span class="mws-nav-label">{{ item.label }}</span>
+          <span class="mws-nav-text">
+            <span class="mws-nav-label">{{ item.label }}</span>
+            <span class="mws-nav-hint">{{ item.hint }}</span>
+          </span>
           <span v-if="item.tag" class="mws-nav-tag">{{ item.tag }}</span>
         </NuxtLink>
       </nav>
 
-      <!-- 底部氛围 + 用户卡 -->
+      <!-- 底部氛围 + 用户卡（复用短剧工作台 WorkspaceUserCard） -->
       <div class="mws-side-foot">
         <div class="mws-side-glow"></div>
-        <WorkspaceVipCard @open-model-settings="showModelSettings = true" />
+        <WorkspaceUserCard
+          :username="userName"
+          :display-name="displayName"
+          :org-name="orgName"
+          :plan-name="planName"
+          @open-model-settings="showModelSettings = true"
+          @open-billing="goMembership"
+        />
       </div>
     </aside>
 
@@ -82,7 +93,7 @@
 import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import WorkspaceSwitcher from '~/components/WorkspaceSwitcher.vue'
-import WorkspaceVipCard from '~/components/workspace/shared/WorkspaceVipCard.vue'
+import WorkspaceUserCard from '~/components/workspace/shared/WorkspaceUserCard.vue'
 import ModelSettingsModal from '~/components/director/ModelSettingsModal.vue'
 
 const route = useRoute()
@@ -91,14 +102,45 @@ const router = useRouter()
 const showModelSettings = ref(false)
 const badgeText = ref('Live')
 
+// 用户身份（复用 /api/member/profile + /api/user/profile，与短剧工作台同源）
+const userName = ref('昆仑镜用户')
+const displayName = ref('')
+const orgName = ref('')
+const planName = ref('')
+
+function goMembership() {
+  router.push('/user/membership')
+}
+
+onMounted(async () => {
+  try {
+    const token = getAuthToken()
+    if (!token) return
+    const [memberRes, userRes] = await Promise.all([
+      fetch('/api/member/profile', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/user/profile', { headers: { Authorization: `Bearer ${token}` } }),
+    ])
+    const member = await memberRes.json()
+    const user = await userRes.json()
+    const m = member?.data || member || {}
+    const u = user?.data || user || {}
+    planName.value = m.membership?.tierLabel || m.tierLabel || m.memberTierLabel || ''
+    userName.value = u.username || m.email?.split('@')[0] || '昆仑镜用户'
+    displayName.value = u.name || u.username || userName.value
+    orgName.value = u.organizationName || u.orgName || ''
+  } catch {
+    // 静默：用户卡保持默认
+  }
+})
+
 const navItems = [
-  { icon: '🏠', label: '首页', path: '/workspace/media/', tag: '' },
-  { icon: '🤖', label: 'AI 团队', path: '/workspace/media/team', tag: '' },
-  { icon: '🏭', label: '内容车间', path: '/workspace/media/content', tag: '' },
-  { icon: '💬', label: '客户运营', path: '/workspace/media/messages', tag: '' },
-  { icon: '🌐', label: '渠道资产', path: '/workspace/media/accounts', tag: '' },
-  { icon: '📊', label: '数据分析', path: '/workspace/media/analytics', tag: '' },
-  { icon: '🧠', label: '行业智能', path: '/workspace/media/intelligence', tag: 'NEW' },
+  { icon: '🏠', label: '总控中心', hint: 'AI 团队 · 生产 · 客户 · 数据全景', path: '/workspace/media/', tag: '' },
+  { icon: '🤖', label: 'AI 团队', hint: 'AI 员工编排与激活', path: '/workspace/media/team', tag: '' },
+  { icon: '🏭', label: '内容车间', hint: '选题 → 创作 → 发布流水线', path: '/workspace/media/content', tag: '' },
+  { icon: '💬', label: '客户运营', hint: 'AI 客服接待与价值分级', path: '/workspace/media/messages', tag: '' },
+  { icon: '🌐', label: '渠道资产', hint: '公众号 / 抖音 / 小红书接入', path: '/workspace/media/accounts', tag: '' },
+  { icon: '📊', label: '数据分析', hint: '内容 · 粉丝 · 互动回流', path: '/workspace/media/analytics', tag: '' },
+  { icon: '🧠', label: '行业智能', hint: '热点 · 竞品 · 规则扫描', path: '/workspace/media/intelligence', tag: 'NEW' },
 ]
 
 const moduleMap: Record<string, { icon: string; name: string; sub: string }> = {
@@ -221,10 +263,9 @@ onMounted(async () => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
+  gap: 11px;
+  padding: 9px 13px;
   border-radius: var(--media-radius-node);
-  font-size: 13.5px;
   color: var(--media-text-body);
   text-decoration: none;
   transition: background 0.18s, color 0.18s, transform 0.12s;
@@ -239,7 +280,6 @@ onMounted(async () => {
   background: linear-gradient(90deg, var(--media-ai-glow), rgba(59, 130, 246, 0.08));
   border-color: var(--media-ai-border);
   color: var(--media-text-hero);
-  font-weight: 700;
   box-shadow: 0 4px 16px rgba(2, 6, 23, 0.35);
 }
 .mws-nav-item.is-active::before {
@@ -253,17 +293,33 @@ onMounted(async () => {
   background: var(--media-brand-gradient);
   box-shadow: 0 0 10px var(--media-brand-glow);
 }
-.mws-nav-icon {
-  font-size: 15px;
-  width: 22px;
-  text-align: center;
-  filter: saturate(0.9);
-}
-.mws-nav-item.is-active .mws-nav-icon {
-  filter: saturate(1.2) drop-shadow(0 0 6px var(--media-brand-glow));
+.mws-nav-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 .mws-nav-label {
-  flex: 1;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.mws-nav-item.is-active .mws-nav-label {
+  font-weight: 800;
+}
+.mws-nav-hint {
+  font-size: 9.5px;
+  color: var(--media-text-dim);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.18s;
+}
+.mws-nav-item:hover .mws-nav-hint,
+.mws-nav-item.is-active .mws-nav-hint {
+  color: var(--media-ai);
 }
 .mws-nav-tag {
   font-size: 9px;
@@ -274,13 +330,49 @@ onMounted(async () => {
   border-radius: 8px;
   padding: 1px 7px;
   letter-spacing: 0.08em;
+  align-self: flex-start;
+  margin-top: 4px;
 }
 /* 底部 */
 .mws-side-foot {
   position: relative;
-  padding: 12px 10px 14px;
+  padding: 10px 10px 14px;
   border-top: 1px solid rgba(71, 85, 105, 0.25);
   overflow: hidden;
+  z-index: 2;
+}
+.mws-side-foot :deep(.w-user-card) {
+  position: relative;
+  z-index: 2;
+  border-top: none;
+  padding: 10px 4px 2px;
+}
+.mws-side-foot :deep(.wuc-avatar) {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.mws-side-foot :deep(.wuc-plan-row) {
+  background: var(--media-ai-glow);
+  border: 1px solid var(--media-ai-border);
+  border-radius: var(--media-radius-pill);
+  padding: 3px 12px;
+}
+.mws-side-foot :deep(.wuc-plan-dot) {
+  background: var(--media-ai);
+  box-shadow: 0 0 6px var(--media-ai);
+}
+.mws-side-foot :deep(.wuc-btn) {
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
+  color: var(--media-text-body);
+  border-radius: var(--media-radius-node);
+}
+.mws-side-foot :deep(.wuc-btn:hover) {
+  border-color: var(--media-ai-border);
+  color: var(--media-text-hero);
+  background: var(--media-ai-glow);
 }
 .mws-side-glow {
   position: absolute;

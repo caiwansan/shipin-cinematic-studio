@@ -9,6 +9,7 @@
     <MediaPageHeader
       kicker="AI Content Factory"
       title="AI 内容生产车间"
+      :status="{ text: '生产线待启动', type: 'off' }"
       desc="从战略到效果分析的自动化内容生产线——免费查看完整流程，订阅 AI 员工后自动选题、生产、审核、发布并复盘。"
     />
 
