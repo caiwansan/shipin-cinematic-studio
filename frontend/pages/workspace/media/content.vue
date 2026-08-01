@@ -62,6 +62,8 @@
 </template>
 
 <script setup lang="ts">
+
+definePageMeta({ middleware: 'auth' })
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
 import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
 import MediaEmptyState from '~/components/media/MediaEmptyState.vue'

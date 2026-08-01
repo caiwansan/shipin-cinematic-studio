@@ -173,6 +173,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted, onUnmounted } from 'vue'
 
 // ─── Types ───
@@ -207,7 +208,7 @@ const saving = ref(false)
 
 // ─── Helpers ───
 function getAuthToken(): string {
-  return localStorage.getItem('token') || ''
+  return getAuthToken()
 }
 
 // ─── Data Loading ───

@@ -165,6 +165,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, onMounted, onUnmounted } from 'vue'
 
 // ─── Types ───
@@ -209,7 +210,7 @@ function getHealthColor(score: number): string {
 }
 
 function getAuthToken(): string {
-  return localStorage.getItem('token') || ''
+  return getAuthToken()
 }
 
 // ─── Data Loading ───

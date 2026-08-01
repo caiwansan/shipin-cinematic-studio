@@ -85,6 +85,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted } from 'vue'
 import WorkspaceSwitcher from '~/components/WorkspaceSwitcher.vue'
 import WorkspaceUserCard from '~/components/workspace/shared/WorkspaceUserCard.vue'
@@ -147,7 +148,7 @@ function isActive(path: string) {
 // 员工在线状态（真实数据：overview agents）+ 身份上下文（auth/me + subscription/current）
 onMounted(async () => {
   try {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken()
     const res = await fetch('/api/enterprise/media/overview', {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -164,7 +165,7 @@ onMounted(async () => {
 
   // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 用户身份卡数据（复用短剧/招聘同款链）
   try {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken()
     if (!token) return
     const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
     const meData = await meRes.json()

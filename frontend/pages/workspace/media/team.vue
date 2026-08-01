@@ -128,6 +128,9 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
+
+definePageMeta({ middleware: 'auth' })
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
 import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
 import MediaEmptyState from '~/components/media/MediaEmptyState.vue'
@@ -173,7 +176,7 @@ const selectedCapabilities = computed(() => {
 
 onMounted(async () => {
   try {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || ''
+    const token = getAuthToken()
     const res = await fetch('/api/enterprise/media/overview', {
       headers: { Authorization: `Bearer ${token}` },
     })

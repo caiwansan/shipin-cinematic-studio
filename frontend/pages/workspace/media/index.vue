@@ -17,8 +17,13 @@
       </template>
     </MediaPageHeader>
 
-    <!-- ═══ 无企业身份引导（SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 401 边界体验）═══ -->
-    <div v-if="identityError" class="dash-identity-error">
+    <!-- ═══ 身份引导（SPRINT-MEDIA-IDENTITY-ALIGN-01 T03 + 401 修复: 区分登录过期/无企业）═══ -->
+    <div v-if="identityState === 'login-expired'" class="dash-identity-error">
+      <b>🔐 登录已过期</b>
+      <span>当前会话已失效，请重新登录后再进入新媒体运营部。</span>
+      <NuxtLink to="/login?redirect=/workspace/media" class="dash-identity-btn">去登录 →</NuxtLink>
+    </div>
+    <div v-else-if="identityState === 'no-org'" class="dash-identity-error">
       <b>⚠️ 未找到企业身份</b>
       <span>当前账号尚未创建或加入企业，无法加载运营数据。请先在「企业中心」创建企业空间后再进入新媒体运营部。</span>
     </div>
@@ -290,6 +295,9 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
+
+definePageMeta({ middleware: 'auth' })
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
 import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
 import MediaKpiCard from '~/components/media/MediaKpiCard.vue'
@@ -383,20 +391,22 @@ const teamRoster = [
 ]
 
 const showSubscribe = ref(false)
-const identityError = ref(false)
+const identityState = ref('') // '' | 'login-expired' | 'no-org'
 
 onMounted(async () => {
+  const token = getAuthToken()
   try {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || ''
     const res = await fetch('/api/enterprise/media/overview', {
       headers: { Authorization: `Bearer ${token}` },
     })
     const data = await res.json()
     if (data?.code === 0 && data?.data) {
       overview.value = data.data
-    } else if (res.status === 401 || data?.message?.includes('企业身份')) {
-      // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 无企业身份 → 引导而非裸报错
-      identityError.value = true
+    } else if (res.status === 401) {
+      // 有 token 但 401 = 会话失效（token 过期/被吊销）→ 引导重新登录
+      identityState.value = token ? 'login-expired' : 'login-expired'
+    } else if (data?.message?.includes('企业身份')) {
+      identityState.value = 'no-org'
     } else {
       $toast?.error?.(data?.message || '加载驾驶舱失败')
     }
@@ -464,6 +474,17 @@ function stateClass(s: string) {
 .dash-identity-error b {
   color: var(--color-warning);
   font-size: 13px;
+}
+.dash-identity-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 5px 14px;
+  border-radius: 8px;
+  background: var(--color-intelligence);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
 }
 .dash-position {
   display: flex;

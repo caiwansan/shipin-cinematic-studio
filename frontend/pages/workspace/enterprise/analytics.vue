@@ -216,6 +216,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '~/utils/auth/token'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 // ─── Types ───
@@ -302,7 +303,7 @@ function getTrendHeight(value: number, max: number): number {
 }
 
 function getAuthToken(): string {
-  return localStorage.getItem('token') || ''
+  return getAuthToken()
 }
 
 // ─── Data Loading ───

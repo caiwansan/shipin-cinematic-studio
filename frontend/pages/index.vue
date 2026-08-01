@@ -191,6 +191,17 @@ import { useRegions } from '~/composables/useRegions'
 
 const router = useRouter()
 const showLogin = ref(false)
+
+// SPRINT-MEDIA-IDENTITY-ALIGN-01 401-FIX: 登录/注册成功后回跳 redirect query（auth middleware 携带）
+function redirectAfterAuth() {
+  const p = new URLSearchParams(window.location.search)
+  const target = p.get('redirect')
+  if (target && target.startsWith('/')) {
+    setTimeout(() => { window.location.href = target }, 200)
+  } else {
+    setTimeout(() => router.push('/'), 200)
+  }
+}
 const userDropdownOpen = ref(false)
 const isRegisterMode = ref(false)
 const isLoggedIn = ref(false)
@@ -626,7 +637,7 @@ async function doAuth() {
         authSuccess.value = '注册成功！'
         isLoggedIn.value = true
         showLogin.value = false
-        setTimeout(() => router.push('/'), 200)
+        redirectAfterAuth()
       }
     } else {
       const body: any = { password: authPassword.value }
@@ -647,7 +658,7 @@ async function doAuth() {
         authSuccess.value = '登录成功！'
         isLoggedIn.value = true
         showLogin.value = false
-        setTimeout(() => router.push('/'), 200)
+        redirectAfterAuth()
       }
     }
   } catch (e: any) {

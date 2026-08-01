@@ -31,6 +31,8 @@
 </template>
 
 <script setup lang="ts">
+
+definePageMeta({ middleware: 'auth' })
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
 import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
 import MediaPanel from '~/components/media/MediaPanel.vue'

@@ -29,7 +29,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
     // Try to restore from cookie/localStorage before redirecting
     await auth.restoreSession()
     if (!auth.isAuthenticated) {
-      return navigateTo('/login?redirect=' + encodeURIComponent(to.fullPath))
+      // SPRINT-MEDIA-IDENTITY-ALIGN-01 401-FIX: /login 路由已废弃（routeRules 301→/）
+      // 登录入口 = 首页弹窗（?showLogin=1），redirect 参数登录成功后回跳
+      return navigateTo('/?showLogin=1&redirect=' + encodeURIComponent(to.fullPath))
     }
   } else if (isProtected && auth.isAuthenticated) {
     // 已登录用户，从 API 刷新用户数据（确保会员级别同步）
