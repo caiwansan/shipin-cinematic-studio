@@ -30,10 +30,7 @@
         >
           <span class="mws-nav-icon">{{ item.icon }}</span>
           <span class="mws-nav-text">
-            <span class="mws-nav-label">
-              {{ item.label }}
-              <span class="mws-nav-en">{{ item.en }}</span>
-            </span>
+            <span class="mws-nav-label">{{ item.label }}</span>
             <span class="mws-nav-hint">{{ item.hint }}</span>
           </span>
           <span v-if="item.tag" class="mws-nav-tag">{{ item.tag }}</span>
@@ -43,9 +40,9 @@
       <!-- 底部：工作空间操作 + 用户卡 -->
       <div class="mws-side-foot">
         <div class="mws-side-ops">
-          <button class="mws-op" @click="showModelSettings = true">⚙️ 模型中心</button>
+          <button class="mws-op" @click="showModelSettings = true">⚙️ 模型设置</button>
           <NuxtLink to="/user/membership" class="mws-op">💳 会员中心</NuxtLink>
-          <NuxtLink to="/" class="mws-op">🏠 返回首页</NuxtLink>
+          <NuxtLink to="/" class="mws-op">🏠 返回昆仑镜首页</NuxtLink>
         </div>
         <div class="mws-side-glow"></div>
         <WorkspaceUserCard
@@ -147,23 +144,23 @@ onMounted(async () => {
 })
 
 const navItems = [
-  { icon: '⌂', label: '总控中心', en: 'CEO Dashboard', hint: 'AI 团队 · 生产 · 客户 · 数据全景', path: '/workspace/media/', tag: '' },
-  { icon: '◉', label: 'AI 团队', en: 'Digital Workforce', hint: '我的数字员工 · 编排与激活', path: '/workspace/media/team', tag: '' },
-  { icon: '✦', label: '内容车间', en: 'Content Factory', hint: '选题 → 创作 → 发布 → 复盘', path: '/workspace/media/content', tag: '' },
-  { icon: '◌', label: '客户运营', en: 'AI CRM', hint: '私信接待 · 价值分级 · 转化', path: '/workspace/media/messages', tag: '' },
-  { icon: '◎', label: '渠道资产', en: 'Social Assets', hint: '公众号 / 抖音 / 小红书接入', path: '/workspace/media/accounts', tag: '' },
-  { icon: '◌', label: '数据智能', en: 'Growth Intelligence', hint: '内容 · 粉丝 · 互动回流分析', path: '/workspace/media/analytics', tag: '' },
-  { icon: '◌', label: '行业雷达', en: 'Market Intelligence', hint: '热点 · 竞品 · 平台规则扫描', path: '/workspace/media/intelligence', tag: 'NEW' },
+  { icon: '⌂', label: '首页驾驶舱', hint: '我的 AI 新媒体公司总部', path: '/workspace/media/', tag: '' },
+  { icon: '◉', label: '我的 AI 员工', hint: '5 名智能员工 · 解锁后自动工作', path: '/workspace/media/team', tag: '' },
+  { icon: '✦', label: '内容生产', hint: '选题 → 创作 → 发布 → 复盘', path: '/workspace/media/content', tag: '' },
+  { icon: '◌', label: '客户运营', hint: '自动回复客户 · 发现销售机会', path: '/workspace/media/messages', tag: '' },
+  { icon: '◎', label: '账号管理', hint: '抖音 / 快手 / 小红书 / 公众号', path: '/workspace/media/accounts', tag: '' },
+  { icon: '◌', label: '数据分析', hint: '运营效果 · 粉丝 · 互动', path: '/workspace/media/analytics', tag: '' },
+  { icon: '◌', label: '行业机会', hint: '热点 · 竞品 · 平台规则', path: '/workspace/media/intelligence', tag: '' },
 ]
 
 const moduleMap: Record<string, { icon: string; name: string; sub: string }> = {
-  '/workspace/media': { icon: '⌂', name: '总控中心', sub: 'CEO Dashboard · AI 新媒体运营总控中心' },
-  '/workspace/media/team': { icon: '◉', name: 'AI 团队', sub: 'Digital Workforce · 我的数字员工' },
-  '/workspace/media/content': { icon: '✦', name: '内容车间', sub: 'Content Factory · 选题到发布流水线' },
-  '/workspace/media/messages': { icon: '◌', name: '客户运营', sub: 'AI CRM · 私信接待与价值分级' },
-  '/workspace/media/accounts': { icon: '◎', name: '渠道资产', sub: 'Social Assets · 媒体账号资产管理' },
-  '/workspace/media/analytics': { icon: '◌', name: '数据智能', sub: 'Growth Intelligence · 内容粉丝互动回流' },
-  '/workspace/media/intelligence': { icon: '◌', name: '行业雷达', sub: 'Market Intelligence · 热点竞品规则' },
+  '/workspace/media': { icon: '⌂', name: '首页驾驶舱', sub: '我的 AI 新媒体公司总部' },
+  '/workspace/media/team': { icon: '◉', name: '我的 AI 员工', sub: '5 名智能员工 · 解锁后自动工作' },
+  '/workspace/media/content': { icon: '✦', name: '内容生产', sub: '选题到发布的内容生产中心' },
+  '/workspace/media/messages': { icon: '◌', name: '客户运营', sub: '自动回复客户 · 发现销售机会' },
+  '/workspace/media/accounts': { icon: '◎', name: '账号管理', sub: '抖音 / 快手 / 小红书 / 公众号' },
+  '/workspace/media/analytics': { icon: '◌', name: '数据分析', sub: '运营效果 · 粉丝 · 互动' },
+  '/workspace/media/intelligence': { icon: '◌', name: '行业机会', sub: '热点 · 竞品 · 平台规则' },
 }
 
 const currentModule = computed(() => {
@@ -330,23 +327,9 @@ onMounted(async () => {
   font-size: 13.5px;
   font-weight: 600;
   line-height: 1.3;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.mws-nav-en {
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--media-text-dim);
-  opacity: 0.8;
 }
 .mws-nav-item.is-active .mws-nav-label {
   font-weight: 800;
-}
-.mws-nav-item.is-active .mws-nav-en {
-  color: var(--media-ai);
-  opacity: 1;
 }
 .mws-nav-hint {
   font-size: 9.5px;

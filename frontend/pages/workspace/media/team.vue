@@ -7,10 +7,10 @@
 <template>
   <MediaWorkspaceShell>
     <MediaPageHeader
-      kicker="AI Team Workspace"
-      title="我的 AI 团队"
-      :status="{ text: '订阅后自动部署', type: 'off' }"
-      desc="一支为你运营新媒体业务的 AI 团队——每名员工：职责清晰、使命明确、订阅后自动部署并开始工作。"
+      kicker="我的 AI 员工"
+      title="我的 AI 员工"
+      :status="{ text: '解锁后自动工作', type: 'off' }"
+      desc="一支为你运营新媒体业务的 AI 团队——每名员工职责清晰，解锁后自动部署并开始工作。"
     />
 
     <div class="to-layout">
@@ -37,26 +37,24 @@
           </button>
         </div>
 
-        <!-- 标准编制（未部署） -->
+        <!-- 标准编制（未解锁） -->
         <div v-else class="to-list-body">
           <div
             v-for="m in roster" :key="m.name"
             class="to-member is-roster" :class="{ 'is-selected': selected?.name === m.name }"
             @click="selected = m"
-          >
-            <span class="to-avatar roster">{{ m.avatar }}</span>
+          >            <span class="to-avatar roster">{{ m.avatar }}</span>
             <div class="to-member-meta">
               <div class="to-member-name">{{ m.name }}</div>
               <div class="to-member-role">{{ m.role }}</div>
               <div class="to-member-duty">“{{ m.mission }}”</div>
-              <div class="to-member-caps">
-                <span v-for="c in m.capabilities" :key="c" class="to-mini-cap">{{ c }}</span>
+              <div class="to-member-helps">
+                <span v-for="h in m.helps" :key="h" class="to-help">✓ {{ h }}</span>
               </div>
             </div>
-            <span class="to-lock">🔒</span>
+            <button class="to-lock-btn" @click.stop="showSubscribe = true">🔓 解锁</button>
           </div>
-          <NuxtLink to="/workspace/media" class="to-list-cta">解锁 AI 新媒体团队 →</NuxtLink>
-          <div class="to-list-note">订阅后自动部署 · 绑定渠道资产 · 开始自动运营</div>
+          <div class="to-list-note">解锁后自动部署 · 绑定新媒体账号 · 开始自动运营</div>
         </div>
       </div>
 
@@ -74,18 +72,20 @@
               <div v-if="selected.mission || selectedDuty" class="to-detail-mission">“{{ selected.mission || selectedDuty }}”</div>
             </div>
             <span v-if="selected.lifecycleState" class="to-detail-state" :class="stateClass(selected.lifecycleState)">{{ stateText(selected.lifecycleState) }}</span>
-            <span v-else class="to-detail-state locked">🔒 订阅解锁</span>
+            <span v-else class="to-detail-state locked">🔒 未解锁</span>
           </div>
 
-          <!-- 解决的问题 -->
+          <!-- 帮你做什么 -->
           <div class="to-detail-block">
-            <div class="to-block-title">💡 解决的问题</div>
-            <div class="to-value">{{ selectedValue }}</div>
+            <div class="to-block-title">💡 帮你做什么</div>
+            <div class="to-helps">
+              <div v-for="h in selectedHelps" :key="h" class="to-help-row"><span class="to-help-check">✓</span>{{ h }}</div>
+            </div>
           </div>
 
           <!-- 能力标签 -->
           <div class="to-detail-block">
-            <div class="to-block-title">⚡ 能力 <span class="to-block-src">CapabilityContract</span></div>
+            <div class="to-block-title">⚡ 能力</div>
             <div class="to-caps">
               <span v-for="c in selectedCaps" :key="c" class="to-cap">{{ c }}</span>
             </div>
@@ -100,7 +100,7 @@
             </div>
 
             <div class="to-detail-block">
-              <div class="to-block-title">📋 今日任务 <span class="to-block-src">AgentSchedule</span></div>
+              <div class="to-block-title">📋 今日任务</div>
               <div v-if="selectedTasks.length" class="to-tasks">
                 <div v-for="t in selectedTasks" :key="t.id" class="to-task">
                   <span class="to-task-dot"></span>
@@ -112,7 +112,7 @@
             </div>
 
             <div class="to-detail-block">
-              <div class="to-block-title">🏆 最近产出 <span class="to-block-src">AgentOutcome · 近 7 天</span></div>
+              <div class="to-block-title">🏆 最近产出 <span class="to-block-src">近 7 天</span></div>
               <div v-if="selectedOutcomes.length" class="to-outcomes">
                 <div v-for="o in selectedOutcomes" :key="o.id" class="to-outcome">
                   <span class="to-outcome-type">{{ o.outcomeType }}</span>
@@ -124,16 +124,17 @@
             </div>
           </template>
 
-          <!-- 订阅后自动执行（未部署时） -->
+          <!-- 解锁后自动工作（未部署时） -->
           <template v-else>
             <div class="to-detail-block">
-              <div class="to-block-title">⚙️ 订阅后自动执行</div>
+              <div class="to-block-title">⚙️ 解锁后自动工作</div>
               <div class="to-auto">{{ selected.auto }}</div>
             </div>
             <div class="to-detail-block">
               <div class="to-block-title">📌 岗位职责</div>
               <div class="to-duty">{{ selectedDuty }}</div>
             </div>
+            <button class="to-unlock-cta" @click="showSubscribe = true">🔓 解锁这个员工</button>
           </template>
         </template>
 
@@ -141,11 +142,43 @@
           <div class="tdp-card">
             <span class="tdp-ico">🤖</span>
             <div class="tdp-title">选择一名 AI 员工</div>
-            <div class="tdp-desc">查看岗位使命、能力清单与运行状态——这是你将拥有的 AI 运营团队。</div>
+            <div class="tdp-desc">查看岗位职责、能力清单与运行情况——这是你将拥有的 AI 运营团队。</div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- ═══ 解锁弹窗 ═══ -->
+    <Teleport to="body">
+      <div v-if="showSubscribe" class="unlock-mask" @click.self="showSubscribe = false">
+        <div class="unlock-modal">
+          <div class="unlock-head">
+            <div>
+              <div class="unlock-title">🤖 解锁 AI 员工团队</div>
+              <div class="unlock-sub">一份订阅 · 5 名 AI 员工 · 解锁后自动工作</div>
+            </div>
+            <button class="unlock-close" @click="showSubscribe = false">✕</button>
+          </div>
+          <div class="unlock-list">
+            <div v-for="m in roster" :key="m.name" class="unlock-row">
+              <span class="unlock-avatar">{{ m.avatar }}</span>
+              <div class="unlock-meta">
+                <div class="unlock-name">{{ m.name }} · {{ m.role }}</div>
+                <div class="unlock-duty">帮你：{{ m.helps.join('、') }}</div>
+                <div class="unlock-auto">⚙️ 解锁后自动工作：{{ m.auto }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="unlock-foot">
+            <div class="unlock-note">解锁后：自动部署 AI 员工 → 绑定新媒体账号 → 开始自动运营 → 成果汇总到运营情况</div>
+            <div class="unlock-actions">
+              <NuxtLink to="/workspace/media/accounts" class="unlock-secondary" @click="showSubscribe = false">先去连接账号 →</NuxtLink>
+              <button class="unlock-primary" @click="showSubscribe = false">知道了</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </MediaWorkspaceShell>
 </template>
 
@@ -160,49 +193,50 @@ const agents = ref<any[]>([])
 const selected = ref<any>(null)
 const schedules = ref<any[]>([])
 const outcomes = ref<any[]>([])
+const showSubscribe = ref(false)
 const { $toast } = useNuxtApp() as any
 
-// 标准编制：使命 + 解决的问题 + 能力标签 + 订阅后自动执行
+// 标准编制：帮你做什么（产品语言）+ 解锁后自动工作
 const roster = [
   {
-    name: 'Alice', role: '运营总监', avatar: '👩‍💼',
-    mission: '负责你的内容增长战略',
-    value: '减少人工策划成本：战略与排期自动生成，每周一份清晰运营计划',
+    name: 'Alice', role: 'AI 运营总监', avatar: '👩‍💼',
+    mission: '帮助企业规划全年运营方向',
+    helps: ['制定每月内容计划', '安排每天发布内容', '分析行业热点'],
     capabilities: ['战略规划', '内容排期', '增长分析'],
-    duty: '统筹内容日历与发布节奏，制定月度运营策略，指挥团队执行',
-    auto: '自动制定内容战略与月度排期，指挥团队执行',
+    duty: '统筹内容计划与发布节奏，制定月度运营策略',
+    auto: '自动制定内容计划与发布排期，指挥团队执行',
   },
   {
-    name: 'Bob', role: '内容策划', avatar: '🧑‍💻',
-    mission: '让选题永远不缺灵感',
-    value: '持续产生内容方向：选题自动排满内容日历，不再为“今天发什么”发愁',
+    name: 'Bob', role: 'AI 内容策划', avatar: '🧑‍💻',
+    mission: '每天发现热门内容方向',
+    helps: ['发现热门内容', '规划每日选题'],
     capabilities: ['热点追踪', '选题挖掘', '竞品分析'],
-    duty: '追踪行业热点与竞品动态，产出选题池与内容策略建议',
-    auto: '每日扫描热点与竞品，选题池自动填充',
+    duty: '追踪行业热点与竞品动态，产出选题池与内容建议',
+    auto: '每天发现热门内容方向，选题自动排满内容日历',
   },
   {
-    name: 'Carol', role: '内容生产', avatar: '👩‍🎨',
-    mission: '把选题变成看得见的成品',
-    value: '提高生产效率：图文视频批量产出，发布前可人工审核把关',
+    name: 'Carol', role: 'AI 内容制作', avatar: '👩‍🎨',
+    mission: '自动生成文章、图片、视频',
+    helps: ['生成文章', '生成图片', '生成视频'],
     capabilities: ['图文创作', '视频脚本', '素材制作'],
-    duty: '按选题生产图文与视频内容，AI 辅助创作并输出成品',
-    auto: '按选题自动生成图文与视频初稿，交人工审核',
+    duty: '按选题生产图文与视频内容，AI 辅助创作输出成品',
+    auto: '按选题自动生成文章、图片、视频初稿，交人工审核',
   },
   {
-    name: 'David', role: 'AI 客服', avatar: '🧑‍💼',
-    mission: '不错过任何一位客户',
-    value: '减少人工客服压力：私信秒回，客户线索自动分类，高价值客户及时转真人',
+    name: 'David', role: 'AI 客户管家', avatar: '🧑‍💼',
+    mission: '自动回复客户咨询，发现销售机会',
+    helps: ['自动回复客户咨询', '发现销售机会'],
     capabilities: ['自动回复', '意向判断', '客户分级'],
-    duty: '接待粉丝消息，识别高价值客户并转交真人跟进',
-    auto: '自动回复粉丝私信，A/B/C 分级并提醒销售机会',
+    duty: '接待客户消息，识别高价值客户并提醒你跟进',
+    auto: '自动回复客户消息，发现销售机会并提醒你跟进',
   },
   {
-    name: 'Eve', role: '数据分析', avatar: '👩‍🔬',
-    mission: '让每次运营都有据可依',
-    value: '持续优化运营：每周自动复盘，什么有效、粉丝从哪来、下一步做什么',
-    capabilities: ['数据回流', '周报生成', '增长洞察'],
-    duty: '回流账号数据，产出运营周报与增长洞察',
-    auto: '每周自动产出运营周报与增长建议',
+    name: 'Eve', role: 'AI 数据分析师', avatar: '👩‍🔬',
+    mission: '每天分析运营效果，优化方向',
+    helps: ['分析运营效果', '优化运营方向'],
+    capabilities: ['数据回流', '报告生成', '增长建议'],
+    duty: '回流账号数据，产出运营报告与增长建议',
+    auto: '每天分析运营效果，自动产出报告与增长建议',
   },
 ]
 
@@ -220,9 +254,9 @@ const selectedDuty = computed(() => {
   if (selected.value.duty) return selected.value.duty
   return memberDuty(selected.value.role)
 })
-const selectedValue = computed(() => {
-  if (!selected.value) return ''
-  return selected.value.value || rosterByRole(selected.value.role)?.value || '运行中：执行新媒体运营任务并如实记录成果'
+const selectedHelps = computed(() => {
+  if (!selected.value) return []
+  return selected.value.helps || rosterByRole(selected.value.role)?.helps || ['执行新媒体运营任务']
 })
 const selectedCaps = computed(() => {
   if (!selected.value) return []
@@ -274,7 +308,7 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
 }
 function stateText(s: string) {
-  const map: Record<string, string> = { ACTIVE: 'Working', PAUSED: 'Paused', STOPPED: 'Stopped', EMERGENCY_STOP: '紧急停止', RECOVERING: '恢复中' }
+  const map: Record<string, string> = { ACTIVE: '运行中', PAUSED: '已暂停', STOPPED: '已停止', EMERGENCY_STOP: '紧急停止', RECOVERING: '恢复中' }
   return map[s] || s
 }
 function stateClass(s: string) {
@@ -391,14 +425,33 @@ function stateClass(s: string) {
   gap: 5px;
   margin-top: 7px;
 }
-.to-mini-cap {
+.to-member-helps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+.to-help {
   font-size: 9.5px;
-  font-weight: 600;
-  color: var(--color-decision);
-  background: var(--color-decision-glow);
+  color: var(--media-text-body);
+  background: var(--color-bg-hover);
   border-radius: 6px;
   padding: 2px 8px;
 }
+.to-lock-btn {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(99, 102, 241, 0.9));
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 9px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.to-lock-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35); }
 .to-state {
   font-size: 9.5px;
   font-weight: 700;
@@ -436,6 +489,94 @@ function stateClass(s: string) {
   color: var(--media-text-dim);
   line-height: 1.5;
   margin-top: 8px;
+}
+
+/* 详情：帮你做什么 */
+.to-helps {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.to-help-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--media-text-body);
+  line-height: 1.6;
+  background: var(--color-bg-hover);
+  border-radius: var(--media-radius-node);
+  padding: 9px 13px;
+}
+.to-help-check {
+  color: #34d399;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.to-unlock-cta {
+  width: 100%;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--media-brand-gradient);
+  border: none;
+  border-radius: var(--media-radius-node);
+  padding: 12px 16px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px var(--media-brand-glow);
+  transition: filter 0.15s, transform 0.15s;
+}
+.to-unlock-cta:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+/* ═══ 解锁弹窗 ═══ */
+.unlock-mask {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.unlock-modal {
+  width: 560px; max-height: 82vh; overflow-y: auto;
+  border-radius: 20px;
+  background: #0f172a;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.8);
+}
+.unlock-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+}
+.unlock-title { font-size: 17px; font-weight: 800; color: #f1f5f9; }
+.unlock-sub { font-size: 11px; color: #64748b; margin-top: 4px; }
+.unlock-close { background: none; border: none; color: #64748b; font-size: 15px; cursor: pointer; padding: 4px; }
+.unlock-close:hover { color: #f1f5f9; }
+.unlock-list { padding: 10px 22px; display: flex; flex-direction: column; gap: 8px; }
+.unlock-row {
+  display: flex; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(71, 85, 105, 0.22);
+}
+.unlock-avatar { font-size: 18px; }
+.unlock-meta { display: flex; flex-direction: column; gap: 3px; }
+.unlock-name { font-size: 12px; font-weight: 800; color: #e2e8f0; }
+.unlock-duty, .unlock-auto { font-size: 10.5px; color: #94a3b8; line-height: 1.55; }
+.unlock-foot { padding: 14px 22px 20px; border-top: 1px solid rgba(71, 85, 105, 0.2); }
+.unlock-note { font-size: 10.5px; color: #64748b; margin-bottom: 12px; }
+.unlock-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.unlock-secondary {
+  font-size: 12px; font-weight: 600; color: #94a3b8;
+  text-decoration: none; padding: 8px 14px; border-radius: 10px;
+  border: 1px solid rgba(71, 85, 105, 0.4);
+}
+.unlock-secondary:hover { color: #e2e8f0; }
+.unlock-primary {
+  font-size: 12px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border: none; border-radius: 10px; padding: 8px 18px; cursor: pointer;
 }
 
 /* ── 详情面板 ── */

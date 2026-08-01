@@ -1,8 +1,7 @@
 <!--
-  AI 新媒体运营中心 · CEO 驾驶舱
-  Sprint-MEDIA-DESIGN-REFINEMENT-03（掌柜 Design Direction）
-  叙事：Hero(我是谁+能力+AI部门) → AI TEAM CONTENT ENGINE(我拥有) → CHANNEL INTELLIGENCE(入口) → OPERATION MEMORY(记忆/成果)
-  视觉：深空黑 #050816 + 玻璃面板 #0F172A + 紫蓝渐变仅用于 激活/AI状态/CTA
+  Sprint-MEDIA-DESIGN-LOCALIZATION-04 — 首页 = 我的 AI 新媒体公司总部
+  中国企业用户产品语言：无英文技术词 / 卡片三问（这是什么·能帮我什么·下一步）
+  结构：总部头(使命+双CTA) → 我的 AI 员工 → 我的新媒体渠道(9平台) → 运营情况
   数据：全部复用 /api/enterprise/media/overview（零新 API）
 -->
 <template>
@@ -10,283 +9,187 @@
     <!-- 身份引导（login-expired / personal-space） -->
     <div v-if="identityState === 'login-expired'" class="dash-identity dash-identity-error">
       <b>⚠️ 登录已过期</b>
-      <span>你的会话已失效，请重新登录后继续使用 AI 新媒体运营中心。</span>
+      <span>你的会话已失效，请重新登录后继续使用。</span>
       <NuxtLink to="/?showLogin=1" class="dash-identity-btn">重新登录 →</NuxtLink>
     </div>
     <div v-else-if="identityState === 'personal-space'" class="dash-identity dash-identity-ok">
       <b>✅ 个人空间已就绪</b>
-      <span>这里是你个人的 AI 新媒体运营中心。连接渠道资产、部署 AI 员工后，你的 AI 新媒体部门将开始全自动工作。</span>
-      <NuxtLink to="/workspace/media/accounts" class="dash-identity-btn">连接渠道资产 →</NuxtLink>
+      <span>这里是你个人的 AI 新媒体运营中心。连接新媒体账号、解锁 AI 员工后，你的 AI 新媒体部门将开始自动工作。</span>
+      <NuxtLink to="/workspace/media/accounts" class="dash-identity-btn">连接新媒体账号 →</NuxtLink>
     </div>
 
-    <!-- ═══════════ HERO · 驾驶舱头 ═══════════ -->
-    <section class="cockpit-hero">
-      <div class="cockpit-hero-grid"></div>
-      <div class="cockpit-hero-glow"></div>
-
-      <!-- 左：身份 + 使命 + 能力 -->
-      <div class="cockpit-hero-left">
-        <div class="cockpit-kicker">
-          <span class="cockpit-kicker-dot"></span>
-          AI 新媒体运营中心
-        </div>
-        <h1 class="cockpit-title">
-          让 AI 员工成为你的<br />
-          <span class="cockpit-title-accent">全天候内容运营团队</span>
-        </h1>
-        <p class="cockpit-sub">你的 AI 新媒体部门正在等待启动——内容生产、客户运营、增长分析，交给 5 名 AI 员工，24 小时自动执行。</p>
-
-        <!-- 三大能力（icon + 标签 + 动态状态） -->
-        <div class="cockpit-caps">
-          <div class="cockpit-cap">
-            <span class="cockpit-cap-ico">🏭</span>
-            <div class="cockpit-cap-meta">
-              <span class="cockpit-cap-name">内容生产</span>
-              <span class="cockpit-cap-sub">选题 · 创作 · 发布</span>
-            </div>
-            <span class="cockpit-cap-state" :class="systemReady ? 'on' : 'off'">
-              <span class="cockpit-cap-dot"></span>{{ systemReady ? 'AI 运行中' : 'AI 待启动' }}
-            </span>
-          </div>
-          <div class="cockpit-cap">
-            <span class="cockpit-cap-ico">💬</span>
-            <div class="cockpit-cap-meta">
-              <span class="cockpit-cap-name">客户运营</span>
-              <span class="cockpit-cap-sub">私信 · 分级 · 转化</span>
-            </div>
-            <span class="cockpit-cap-state" :class="systemReady ? 'on' : 'off'">
-              <span class="cockpit-cap-dot"></span>{{ systemReady ? 'AI 运行中' : 'AI 待启动' }}
-            </span>
-          </div>
-          <div class="cockpit-cap">
-            <span class="cockpit-cap-ico">📈</span>
-            <div class="cockpit-cap-meta">
-              <span class="cockpit-cap-name">增长分析</span>
-              <span class="cockpit-cap-sub">数据 · 复盘 · 洞察</span>
-            </div>
-            <span class="cockpit-cap-state" :class="systemReady ? 'on' : 'off'">
-              <span class="cockpit-cap-dot"></span>{{ systemReady ? 'AI 运行中' : 'AI 待启动' }}
-            </span>
-          </div>
-        </div>
-
-        <!-- 双 CTA：下一步 -->
-        <div class="cockpit-cta">
-          <NuxtLink to="/workspace/media/accounts" class="cockpit-btn cockpit-btn-primary">
-            连接渠道资产 <span class="cockpit-btn-arrow">→</span>
+    <!-- ═══════ 总部头 · 我是谁 + 下一步 ═══════ -->
+    <section class="hq-hero">
+      <div class="hq-hero-grid"></div>
+      <div class="hq-hero-glow"></div>
+      <div class="hq-hero-inner">
+        <h1 class="hq-title">AI 新媒体运营中心</h1>
+        <p class="hq-mission">让 AI 员工帮你持续做好内容、运营客户、提升品牌影响力</p>
+        <div class="hq-cta">
+          <NuxtLink to="/workspace/media/accounts" class="hq-btn hq-btn-primary">
+            连接新媒体账号 <span class="hq-btn-arrow">→</span>
           </NuxtLink>
-          <button v-if="!agents.length" class="cockpit-btn cockpit-btn-ghost" @click="showSubscribe = true">
-            部署 AI 团队 <span class="cockpit-btn-arrow">→</span>
+          <button v-if="!agents.length" class="hq-btn hq-btn-ghost" @click="showSubscribe = true">
+            解锁 AI 员工团队 <span class="hq-btn-arrow">→</span>
           </button>
-          <NuxtLink v-else to="/workspace/media/team" class="cockpit-btn cockpit-btn-ghost">
-            查看 AI 团队 <span class="cockpit-btn-arrow">→</span>
+          <NuxtLink v-else to="/workspace/media/team" class="hq-btn hq-btn-ghost">
+            查看我的 AI 员工 <span class="hq-btn-arrow">→</span>
           </NuxtLink>
         </div>
-      </div>
-
-      <!-- 右：AI Department Visualization -->
-      <div class="cockpit-hero-right">
-        <div class="ai-dept">
-          <div class="ai-dept-head">
-            <span class="ai-dept-title">AI DEPARTMENT</span>
-            <span class="ai-dept-sys" :class="systemReady ? 'ready' : 'standby'">
-              <span class="ai-dept-sys-dot"></span>
-              {{ systemReady ? 'SYSTEM ACTIVE' : 'SYSTEM STANDBY' }}
-            </span>
-          </div>
-          <div class="ai-dept-body">
-            <div
-              v-for="(m, i) in teamRoster"
-              :key="m.name"
-              class="ai-dept-node"
-              :class="{ 'is-locked': !deployedNames.includes(m.name) }"
-            >
-              <span class="ai-dept-node-dot" :class="deployedNames.includes(m.name) ? 'on' : 'off'"></span>
-              <span class="ai-dept-node-avatar">{{ m.avatar }}</span>
-              <div class="ai-dept-node-meta">
-                <span class="ai-dept-node-name">{{ m.name }}</span>
-                <span class="ai-dept-node-role">{{ m.eng }}</span>
-              </div>
-              <span class="ai-dept-node-state">
-                {{ deployedNames.includes(m.name) ? 'READY' : 'STANDBY' }}
-              </span>
-              <span v-if="i < teamRoster.length - 1" class="ai-dept-node-link"></span>
-            </div>
-          </div>
-          <div class="ai-dept-foot">
-            <span class="ai-dept-foot-ico">◈</span>
-            <span>5 名 AI 员工 · 一支属于你的新媒体部门</span>
-          </div>
+        <div class="hq-why">
+          <span class="hq-why-item">🤖 5 名智能员工，解锁后自动工作</span>
+          <span class="hq-why-item">📱 支持 9 大新媒体平台</span>
+          <span class="hq-why-item">📊 运营成果自动汇总</span>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════ AI TEAM CONTENT ENGINE · 我拥有 ═══════════ -->
-    <section class="cockpit-section">
-      <div class="cockpit-sec-head">
+    <!-- ═══════ 我的 AI 员工 · 我拥有 ═══════ -->
+    <section class="hq-section">
+      <div class="hq-sec-head">
         <div>
-          <div class="cockpit-sec-kicker">AI TEAM CONTENT ENGINE</div>
-          <h2 class="cockpit-sec-title">我的 AI 运营团队</h2>
+          <div class="hq-sec-kicker">我的 AI 员工</div>
+          <h2 class="hq-sec-title">5 名智能员工，等待为你工作</h2>
         </div>
-        <NuxtLink to="/workspace/media/team" class="cockpit-sec-link">团队工作台 →</NuxtLink>
+        <NuxtLink to="/workspace/media/team" class="hq-sec-link">查看全部 →</NuxtLink>
       </div>
 
-      <div class="ce-grid">
+      <div class="hq-team-grid">
         <div
           v-for="(m, i) in teamRoster"
           :key="m.name"
-          class="ce-card"
+          class="hq-team-card"
           :class="{ 'is-locked': !deployedNames.includes(m.name) }"
         >
-          <!-- 顶部：状态灯 -->
-          <div class="ce-card-top">
-            <span class="ce-status" :class="deployedNames.includes(m.name) ? 'ready' : 'locked'">
-              <span class="ce-status-dot"></span>
-              {{ deployedNames.includes(m.name) ? 'READY' : 'LOCKED' }}
+          <!-- 卡片三问 1：这是什么 -->
+          <div class="hq-card-top">
+            <span class="hq-status" :class="deployedNames.includes(m.name) ? 'on' : 'off'">
+              <span class="hq-status-dot"></span>
+              {{ deployedNames.includes(m.name) ? '运行中' : '未解锁' }}
             </span>
-            <span class="ce-no">0{{ i + 1 }}</span>
+            <span class="hq-card-no">0{{ i + 1 }}</span>
           </div>
 
-          <!-- 中间：核心信息 -->
-          <div class="ce-card-core">
-            <div class="ce-card-avatar">{{ m.avatar }}</div>
-            <div class="ce-card-name">{{ m.name }}</div>
-            <div class="ce-card-role">{{ m.eng }}</div>
-            <div class="ce-card-duty">{{ m.duty }}</div>
-            <div class="ce-card-caps">
-              <span v-for="c in m.caps" :key="c" class="ce-cap">{{ c }}</span>
+          <div class="hq-card-body">
+            <div class="hq-avatar">{{ m.avatar }}</div>
+            <div class="hq-name">{{ m.name }}</div>
+            <div class="hq-role">{{ m.role }}</div>
+            <!-- 卡片三问 2：能帮我什么 -->
+            <div class="hq-helps">
+              <div v-for="h in m.helps" :key="h" class="hq-help">
+                <span class="hq-help-check">✓</span>{{ h }}
+              </div>
             </div>
           </div>
 
-          <!-- 底部：行动入口 -->
-          <div class="ce-card-foot">
-            <button
-              v-if="!deployedNames.includes(m.name)"
-              class="ce-deploy-btn"
-              @click="showSubscribe = true"
-            >
-              🔓 部署员工
+          <!-- 卡片三问 3：下一步 -->
+          <div class="hq-card-foot">
+            <button v-if="!deployedNames.includes(m.name)" class="hq-unlock" @click="showSubscribe = true">
+              🔓 解锁这个员工
             </button>
-            <NuxtLink v-else to="/workspace/media/team" class="ce-view-link">查看工作台 →</NuxtLink>
+            <NuxtLink v-else to="/workspace/media/team" class="hq-view">查看工作台 →</NuxtLink>
           </div>
         </div>
       </div>
+      <p class="hq-sec-note">解锁后自动工作：AI 员工将按你的业务自动规划内容、制作素材、运营客户、分析数据。</p>
     </section>
 
-    <!-- ═══════════ CHANNEL INTELLIGENCE · 入口 ═══════════ -->
-    <section class="cockpit-section">
-      <div class="cockpit-sec-head">
+    <!-- ═══════ 我的新媒体渠道 · 入口 ═══════ -->
+    <section class="hq-section">
+      <div class="hq-sec-head">
         <div>
-          <div class="cockpit-sec-kicker">CHANNEL INTELLIGENCE</div>
-          <h2 class="cockpit-sec-title">渠道智能</h2>
+          <div class="hq-sec-kicker">我的新媒体渠道</div>
+          <h2 class="hq-sec-title">连接你的内容渠道，AI 员工才能帮你运营</h2>
         </div>
-        <NuxtLink to="/workspace/media/accounts" class="cockpit-sec-link">渠道资产 →</NuxtLink>
+        <NuxtLink to="/workspace/media/accounts" class="hq-sec-link">账号管理 →</NuxtLink>
       </div>
 
-      <div class="ci-strip">
+      <div class="hq-channel-grid">
         <div
           v-for="ch in channelBlueprints"
-          :key="ch.key"
-          class="ci-node"
+          :key="ch.name"
+          class="hq-channel"
           :class="ch.connected ? 'connected' : ''"
+          @click="onChannelClick(ch)"
         >
-          <span class="ci-node-ico">{{ ch.icon }}</span>
-          <div class="ci-node-meta">
-            <span class="ci-node-name">{{ ch.name }}</span>
-            <span class="ci-node-plan">{{ ch.plan }}</span>
+          <span class="hq-channel-ico">{{ ch.icon }}</span>
+          <div class="hq-channel-meta">
+            <span class="hq-channel-name">{{ ch.name }}</span>
+            <span class="hq-channel-plan">{{ ch.plan }}</span>
           </div>
-          <span class="ci-node-state">
-            <span class="ci-node-dot" :class="ch.connected ? 'on' : 'off'"></span>
-            {{ ch.connected ? '已连接' : '待接入' }}
+          <span class="hq-channel-state">
+            <span class="hq-channel-dot" :class="ch.connected ? 'on' : 'off'"></span>
+            {{ ch.connected ? '已连接' : '未连接' }}
           </span>
         </div>
       </div>
-      <p class="ci-note">
+      <p class="hq-sec-note">
         {{ channels.connected > 0
-          ? `已连接 ${channels.connected} 个渠道——AI 员工可开始执行发布、回复与数据读取。`
-          : '连接渠道资产后，AI 员工将自动开始发布与运营——渠道是 AI 部门的双手。' }}
+          ? `已连接 ${channels.connected} 个账号——AI 员工可以开始帮你发布内容、回复客户。`
+          : '连接账号后，AI 员工才能帮你发布内容、回复客户、读取数据。' }}
       </p>
     </section>
 
-    <!-- ═══════════ OPERATION MEMORY · 记忆与成果 ═══════════ -->
-    <section class="cockpit-section">
-      <div class="cockpit-sec-head">
+    <!-- ═══════ 运营情况 · 成果 ═══════ -->
+    <section class="hq-section">
+      <div class="hq-sec-head">
         <div>
-          <div class="cockpit-sec-kicker">OPERATION MEMORY</div>
-          <h2 class="cockpit-sec-title">运营记忆</h2>
+          <div class="hq-sec-kicker">运营情况</div>
+          <h2 class="hq-sec-title">你的 AI 新媒体部门做了多少事</h2>
         </div>
       </div>
 
-      <div class="om-grid">
-        <!-- 今日任务（真实数据） -->
-        <div class="om-card om-card--tasks">
-          <div class="om-card-head">
-            <span class="om-card-ico">📋</span>
-            <span class="om-card-title">今日任务</span>
-            <span class="om-card-badge">{{ today.completed || 0 }} 完成 · {{ today.pendingSchedules || 0 }} 待执行</span>
+      <div class="hq-ops-grid">
+        <!-- 今日内容 -->
+        <div class="hq-ops-card">
+          <div class="hq-ops-ico">📝</div>
+          <div class="hq-ops-meta">
+            <span class="hq-ops-label">今日内容</span>
+            <span class="hq-ops-num">{{ contentOutcomes }}</span>
           </div>
-          <div v-if="timeline.length" class="om-list">
-            <div v-for="(t, i) in timeline" :key="i" class="om-row">
-              <span class="om-row-dot"></span>
-              <span class="om-row-title">{{ t.title }}</span>
-              <span class="om-row-time">{{ t.time }}</span>
-            </div>
-          </div>
-          <div v-else class="om-empty">
-            <span class="om-empty-ico">⏳</span>
-            <span class="om-empty-text">AI 员工部署后，今日任务将在这里实时滚动</span>
-          </div>
+          <span class="hq-ops-sub">AI 生产的图文与视频</span>
         </div>
 
-        <!-- 内容资产 -->
-        <div class="om-card">
-          <div class="om-card-head">
-            <span class="om-card-ico">📦</span>
-            <span class="om-card-title">内容资产</span>
-            <span class="om-card-badge">{{ contentOutcomes }} 条成果</span>
+        <!-- 客户咨询 -->
+        <div class="hq-ops-card">
+          <div class="hq-ops-ico">💬</div>
+          <div class="hq-ops-meta">
+            <span class="hq-ops-label">客户咨询</span>
+            <span class="hq-ops-num">{{ customerOutcomes }}</span>
           </div>
-          <div class="om-empty">
-            <span class="om-empty-ico">🎬</span>
-            <span class="om-empty-text">AI 生产的图文与视频将沉淀为你的内容资产库</span>
-          </div>
+          <span class="hq-ops-sub">AI 客服接待与跟进</span>
         </div>
 
-        <!-- 客户洞察 -->
-        <div class="om-card">
-          <div class="om-card-head">
-            <span class="om-card-ico">💎</span>
-            <span class="om-card-title">客户洞察</span>
-            <span class="om-card-badge">{{ customerOutcomes }} 条线索</span>
+        <!-- 粉丝互动 -->
+        <div class="hq-ops-card">
+          <div class="hq-ops-ico">❤️</div>
+          <div class="hq-ops-meta">
+            <span class="hq-ops-label">粉丝互动</span>
+            <span class="hq-ops-num">{{ fanInteractions }}</span>
           </div>
-          <div class="om-empty">
-            <span class="om-empty-ico">👥</span>
-            <span class="om-empty-text">AI 客服识别的客户价值分级将在这里沉淀</span>
-          </div>
+          <span class="hq-ops-sub">连接账号后自动统计</span>
         </div>
 
-        <!-- 数据复盘 -->
-        <div class="om-card">
-          <div class="om-card-head">
-            <span class="om-card-ico">📊</span>
-            <span class="om-card-title">数据复盘</span>
-            <span class="om-card-badge">{{ usage.executions || 0 }} 次执行</span>
+        <!-- 数据报告 -->
+        <div class="hq-ops-card">
+          <div class="hq-ops-ico">📊</div>
+          <div class="hq-ops-meta">
+            <span class="hq-ops-label">数据报告</span>
+            <span class="hq-ops-num hq-ops-num--text">{{ reportText }}</span>
           </div>
-          <div class="om-cost">
-            <div class="om-cost-num">${{ usage.todayCost ? usage.todayCost.toFixed(4) : '0.0000' }}</div>
-            <div class="om-cost-label">今日 AI 运营成本（真实归因）</div>
-          </div>
+          <span class="hq-ops-sub">运营效果与增长建议</span>
         </div>
       </div>
     </section>
 
-    <!-- ═══ 解锁 AI 团队弹窗（复用） ═══ -->
+    <!-- ═══ 解锁 AI 员工团队弹窗（纯产品语言） ═══ -->
     <Teleport to="body">
       <div v-if="showSubscribe" class="sub-modal-mask" @click.self="showSubscribe = false">
         <div class="sub-modal">
           <div class="sub-modal-head">
             <div>
-              <div class="sub-modal-title">🤖 解锁 AI 新媒体团队</div>
-              <div class="sub-modal-sub">一份订阅 · 5 名 AI 员工 · 自动部署自动工作</div>
+              <div class="sub-modal-title">🤖 解锁 AI 员工团队</div>
+              <div class="sub-modal-sub">一份订阅 · 5 名 AI 员工 · 解锁后自动工作</div>
             </div>
             <button class="sub-modal-close" @click="showSubscribe = false">✕</button>
           </div>
@@ -295,16 +198,15 @@
               <span class="sub-modal-avatar">{{ m.avatar }}</span>
               <div class="sub-modal-meta">
                 <div class="sub-modal-name">{{ m.name }} · {{ m.role }}</div>
-                <div class="sub-modal-duty">📌 {{ m.duty }}</div>
-                <div class="sub-modal-value">→ {{ m.value }}</div>
-                <div class="sub-modal-auto">⚙️ 订阅后自动执行：{{ m.auto }}</div>
+                <div class="sub-modal-duty">帮你：{{ m.helps.join('、') }}</div>
+                <div class="sub-modal-auto">⚙️ 解锁后自动工作：{{ m.auto }}</div>
               </div>
             </div>
           </div>
           <div class="sub-modal-foot">
-            <div class="sub-modal-note">订阅后：自动部署 AI 员工 → 绑定渠道资产 → 开始自动运营 → 成果回流总控中心</div>
+            <div class="sub-modal-note">解锁后：自动部署 AI 员工 → 绑定新媒体账号 → 开始自动运营 → 成果汇总到运营情况</div>
             <div class="sub-modal-actions">
-              <NuxtLink to="/workspace/media/accounts" class="sub-modal-secondary" @click="showSubscribe = false">先去连接公众号 →</NuxtLink>
+              <NuxtLink to="/workspace/media/accounts" class="sub-modal-secondary" @click="showSubscribe = false">先去连接账号 →</NuxtLink>
               <button class="sub-modal-primary" @click="showSubscribe = false">知道了</button>
             </div>
           </div>
@@ -326,8 +228,7 @@ const overview = ref<any>({
   calendar: [],
   recentOutcomes: [],
   usage: { todayCost: 0, executions: 0 },
-  channels: { connected: 0, total: 4 },
-  industryRadar: { supported: false, reason: '' },
+  channels: { connected: 0, total: 9 },
 })
 
 const { $toast } = useNuxtApp() as any
@@ -335,62 +236,55 @@ const { $toast } = useNuxtApp() as any
 const agents = computed(() => overview.value.agents || [])
 const today = computed(() => overview.value.today || {})
 const usage = computed(() => overview.value.usage || {})
-const channels = computed(() => overview.value.channels || { connected: 0, total: 4 })
+const channels = computed(() => overview.value.channels || { connected: 0, total: 9 })
 const recentOutcomes = computed(() => overview.value.recentOutcomes || [])
-const industryRadar = computed(() => overview.value.industryRadar || {})
 
 const activeCount = computed(() => agents.value.filter((a: any) => a.lifecycleState === 'ACTIVE').length)
-const systemReady = computed(() => activeCount.value > 0)
 const deployedNames = computed(() => agents.value.map((a: any) => a.name).filter(Boolean))
 
 const contentOutcomes = computed(() => recentOutcomes.value.filter((o: any) => /CONTENT|PUBLISH|CREATE/i.test(o.outcomeType || '')).length)
 const customerOutcomes = computed(() => recentOutcomes.value.filter((o: any) => /CUSTOMER|CLIENT|LEAD/i.test(o.outcomeType || '')).length)
-
-function taskTypeLabel(t: string) {
-  const map: Record<string, string> = {
-    content: '内容生成', scan: '热点扫描', analysis: '数据分析',
-    report: '日报生成', outreach: '粉丝触达', auto: '自动任务',
+const fanInteractions = computed(() => 0) // 无渠道数据源：诚实 0，连接账号后回流
+const reportText = computed(() => {
+  if (usage.value.executions > 0 || recentOutcomes.value.length > 0) {
+    return `${usage.value.executions || 0} 次执行`
   }
-  return map[t] || t
-}
-function fmtTime(iso: string) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-}
-
-const timeline = computed(() => {
-  const items: { kind: 'schedule' | 'outcome'; title: string; time: string }[] = []
-  for (const s of today.value.scheduleItems || []) {
-    items.push({ kind: 'schedule', title: taskTypeLabel(s.taskType), time: fmtTime(s.nextRunAt) })
-  }
-  for (const o of overview.value.recentOutcomes || []) {
-    const d = new Date(o.createdAt)
-    if (d.toDateString() === new Date().toDateString()) {
-      items.push({ kind: 'outcome', title: o.outcomeType + (o.title ? ' · ' + o.title : ''), time: fmtTime(o.createdAt) })
-    }
-  }
-  return items.sort((a, b) => a.time.localeCompare(b.time)).slice(0, 6)
+  return '等待连接账号'
 })
 
-// 渠道资产蓝图（产品 4 平台；连接状态由 overview.channels 真实计数）
+// 9 大新媒体平台（产品蓝图；连接状态：微信公众号真实接入后点亮，其余待接入诚实展示）
 const channelBlueprints = computed(() => {
   const connected = channels.value.connected || 0
   const defs = [
-    { key: 'wechat', icon: '🟢', name: '微信公众号', plan: '企业认证服务号' },
-    { key: 'douyin', icon: '📱', name: '抖音', plan: '企业号' },
-    { key: 'xiaohongshu', icon: '📕', name: '小红书', plan: '企业号' },
-    { key: 'video', icon: '📺', name: '视频号', plan: '企业认证' },
+    { icon: '📱', name: '抖音', plan: '短视频 · 直播' },
+    { icon: '📱', name: '快手', plan: '短视频 · 直播' },
+    { icon: '📕', name: '小红书', plan: '种草图文 · 视频' },
+    { icon: '🎬', name: '视频号', plan: '微信生态分发' },
+    { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务' },
+    { icon: '🌐', name: '微博', plan: '话题 · 图文' },
+    { icon: '📰', name: '百家号', plan: '图文 · 视频' },
+    { icon: '📰', name: '今日头条', plan: '图文 · 视频' },
+    { icon: '🏢', name: '企业微信', plan: '私域客户运营' },
   ]
-  return defs.map((d, i) => ({ ...d, connected: i < connected }))
+  return defs.map((d, i) => ({ ...d, connected: i === 4 && connected > 0 }))
 })
 
-// 标准编制（免费可见价值 · 订阅解锁）· eng=英文职能 · caps=能力标签
+function onChannelClick(ch: any) {
+  if (ch.connected) return
+  if (ch.name === '微信公众号') {
+    window.location.href = '/workspace/media/accounts'
+  } else {
+    $toast?.info?.(`「${ch.name}」接入即将开放，先连接微信公众号体验完整流程`)
+  }
+}
+
+// 5 名 AI 员工（产品语言：职位 + 帮你做什么 + 解锁后自动工作）
 const teamRoster = [
-  { name: 'Alice', role: '运营总监', eng: 'Strategy Director', avatar: '👩‍💼', duty: '统筹内容日历与发布节奏，制定月度运营策略', caps: ['战略规划', '内容日历', '增长分析'], value: '减少人工策划成本：运营策略与排期自动生成，每周一份清晰运营计划', auto: '自动制定内容战略与月度排期，指挥团队执行' },
-  { name: 'Bob', role: '内容策划', eng: 'Content Planner', avatar: '🧑‍💻', duty: '追踪行业热点与竞品动态，产出选题池与策略建议', caps: ['热点追踪', '选题池', '竞品分析'], value: '持续产生内容方向：选题自动排满内容日历，不再为“今天发什么”发愁', auto: '每日扫描热点与竞品，选题池自动填充' },
-  { name: 'Carol', role: '内容生产', eng: 'Content Producer', avatar: '👩‍🎨', duty: '按选题生产图文与视频内容，AI 辅助创作输出成品', caps: ['图文创作', '视频生产', 'AI 初稿'], value: '提高生产效率：图文视频批量产出，发布前可人工审核把关', auto: '按选题自动生成图文与视频初稿，交人工审核' },
-  { name: 'David', role: 'AI 客服', eng: 'Customer Ops', avatar: '🧑‍💼', duty: '接待粉丝消息，识别高价值客户并转交真人跟进', caps: ['私信秒回', 'A/B/C 分级', '线索提醒'], value: '减少人工客服压力：私信秒回，客户线索自动分类，不错过潜在客户', auto: '自动回复粉丝私信，A/B/C 分级并提醒销售机会' },
-  { name: 'Eve', role: '数据分析', eng: 'Analytics Lead', avatar: '👩‍🔬', duty: '回流账号数据，产出运营周报与增长洞察', caps: ['数据回流', '运营周报', '增长建议'], value: '持续优化运营：每周自动复盘，什么有效、粉丝从哪来、下一步做什么', auto: '每周自动产出运营周报与增长建议' },
+  { name: 'Alice', role: 'AI 运营总监', avatar: '👩‍💼', helps: ['制定内容计划', '安排发布节奏', '规划全年运营方向'], auto: '自动制定内容计划与发布排期，指挥团队执行' },
+  { name: 'Bob', role: 'AI 内容策划', avatar: '🧑‍💻', helps: ['发现热门内容', '规划每日选题'], auto: '每天发现热门内容方向，选题自动排满内容日历' },
+  { name: 'Carol', role: 'AI 内容制作', avatar: '👩‍🎨', helps: ['生成文章', '生成图片', '生成视频'], auto: '按选题自动生成文章、图片、视频初稿，交人工审核' },
+  { name: 'David', role: 'AI 客户管家', avatar: '🧑‍💼', helps: ['自动回复客户咨询', '发现销售机会'], auto: '自动回复客户消息，发现销售机会并提醒你跟进' },
+  { name: 'Eve', role: 'AI 数据分析师', avatar: '👩‍🔬', helps: ['分析运营效果', '优化运营方向'], auto: '每天分析运营效果，自动产出报告与增长建议' },
 ]
 
 const showSubscribe = ref(false)
@@ -409,22 +303,19 @@ onMounted(async () => {
     } else if (res.status === 401) {
       identityState.value = 'login-expired'
     } else {
-      $toast?.error?.(data?.message || '加载驾驶舱失败')
+      $toast?.error?.(data?.message || '加载失败')
     }
   } catch {
-    $toast?.error?.('加载驾驶舱失败（网络异常）')
+    $toast?.error?.('加载失败（网络异常）')
   }
 })
 </script>
 
 <style scoped>
-/* ═══ 深空黑基底（掌柜 Design Direction：Base #050816 / Surface #0F172A） ═══ */
-.cockpit-hero {
+/* ═══ 总部头（视觉保持 DESIGN-REFINEMENT-03：深空黑 + 玻璃 + AI 氛围） ═══ */
+.hq-hero {
   position: relative;
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 28px;
-  padding: 34px 36px;
+  padding: 44px 40px 36px;
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(5, 8, 22, 0.96));
   border: 1px solid rgba(99, 102, 241, 0.18);
@@ -432,7 +323,7 @@ onMounted(async () => {
   overflow: hidden;
   margin-bottom: 34px;
 }
-.cockpit-hero-grid {
+.hq-hero-grid {
   position: absolute;
   inset: 0;
   background-image:
@@ -442,248 +333,130 @@ onMounted(async () => {
   mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 40%, transparent 100%);
   pointer-events: none;
 }
-.cockpit-hero-glow {
+.hq-hero-glow {
   position: absolute;
-  top: -180px;
+  top: -200px;
   right: -120px;
-  width: 520px;
-  height: 520px;
+  width: 560px;
+  height: 560px;
   background: radial-gradient(circle, rgba(99, 102, 241, 0.16), transparent 65%);
   pointer-events: none;
 }
-.cockpit-hero-left, .cockpit-hero-right { position: relative; z-index: 1; }
-
-/* Hero 左 */
-.cockpit-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: #a5b4fc;
-  margin-bottom: 14px;
-}
-.cockpit-kicker-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: linear-gradient(135deg, #a78bfa, #6366f1);
-  box-shadow: 0 0 10px rgba(129, 140, 248, 0.9);
-}
-.cockpit-title {
+.hq-hero-inner { position: relative; z-index: 1; max-width: 760px; }
+.hq-title {
   font-size: 34px;
   font-weight: 800;
-  line-height: 1.22;
   letter-spacing: -0.02em;
   color: #f8fafc;
-  margin: 0 0 14px;
+  margin: 0 0 12px;
 }
-.cockpit-title-accent {
-  background: linear-gradient(120deg, #c7d2fe 0%, #a5b4fc 45%, #818cf8 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.cockpit-sub {
-  font-size: 13px;
-  color: #94a3b8;
+.hq-mission {
+  font-size: 15px;
   line-height: 1.8;
-  margin: 0 0 20px;
-  max-width: 480px;
+  color: #94a3b8;
+  margin: 0 0 24px;
 }
-
-/* 三大能力标签 */
-.cockpit-caps {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-.cockpit-cap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
-  border-radius: 13px;
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(71, 85, 105, 0.35);
-  transition: border-color 0.18s;
-}
-.cockpit-cap:hover { border-color: rgba(129, 140, 248, 0.45); }
-.cockpit-cap-ico { font-size: 15px; }
-.cockpit-cap-meta { display: flex; flex-direction: column; flex: 1; }
-.cockpit-cap-name { font-size: 12.5px; font-weight: 700; color: #e2e8f0; }
-.cockpit-cap-sub { font-size: 10px; color: #64748b; }
-.cockpit-cap-state {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
-  border-radius: 999px; padding: 2px 10px;
-}
-.cockpit-cap-state.on { color: #34d399; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); }
-.cockpit-cap-state.off { color: #94a3b8; background: rgba(71, 85, 105, 0.15); border: 1px solid rgba(71, 85, 105, 0.3); }
-.cockpit-cap-dot { width: 6px; height: 6px; border-radius: 50%; }
-.cockpit-cap-state.on .cockpit-cap-dot { background: #34d399; box-shadow: 0 0 6px #34d399; animation: pulse 2s infinite; }
-.cockpit-cap-state.off .cockpit-cap-dot { background: #64748b; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-/* 双 CTA */
-.cockpit-cta { display: flex; gap: 12px; }
-.cockpit-btn {
+.hq-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.hq-btn {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 20px;
+  padding: 11px 22px;
   border-radius: 12px;
-  font-size: 13px; font-weight: 700;
+  font-size: 13.5px; font-weight: 700;
   text-decoration: none;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.cockpit-btn:hover { transform: translateY(-1px); }
-.cockpit-btn-primary {
+.hq-btn:hover { transform: translateY(-1px); }
+.hq-btn-primary {
   color: #fff;
   background: linear-gradient(135deg, #8b5cf6, #6366f1 55%, #3b82f6);
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
 }
-.cockpit-btn-primary:hover { box-shadow: 0 10px 28px rgba(99, 102, 241, 0.5); }
-.cockpit-btn-ghost {
+.hq-btn-primary:hover { box-shadow: 0 10px 28px rgba(99, 102, 241, 0.5); }
+.hq-btn-ghost {
   color: #cbd5e1;
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(71, 85, 105, 0.4);
 }
-.cockpit-btn-ghost:hover { color: #fff; border-color: rgba(129, 140, 248, 0.5); }
-.cockpit-btn-arrow { font-size: 14px; }
-
-/* ═══ Hero 右 · AI Department Visualization ═══ */
-.ai-dept {
-  position: relative;
-  border-radius: 18px;
-  background: rgba(5, 8, 22, 0.72);
-  border: 1px solid rgba(99, 102, 241, 0.22);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 44px rgba(2, 6, 23, 0.5);
-  overflow: hidden;
+.hq-btn-ghost:hover { color: #fff; border-color: rgba(129, 140, 248, 0.5); }
+.hq-btn-arrow { font-size: 14px; }
+.hq-why {
+  display: flex; flex-wrap: wrap; gap: 10px 20px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(71, 85, 105, 0.22);
 }
-.ai-dept-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 13px 16px;
-  border-bottom: 1px solid rgba(71, 85, 105, 0.25);
-}
-.ai-dept-title {
-  font-size: 10.5px; font-weight: 800; letter-spacing: 0.18em;
-  color: #94a3b8;
-}
-.ai-dept-sys {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 9.5px; font-weight: 800; letter-spacing: 0.08em;
-  border-radius: 999px; padding: 3px 10px;
-}
-.ai-dept-sys.ready { color: #34d399; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.32); }
-.ai-dept-sys.standby { color: #fbbf24; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.28); }
-.ai-dept-sys-dot { width: 6px; height: 6px; border-radius: 50%; }
-.ai-dept-sys.ready .ai-dept-sys-dot { background: #34d399; box-shadow: 0 0 7px #34d399; animation: pulse 2s infinite; }
-.ai-dept-sys.standby .ai-dept-sys-dot { background: #fbbf24; box-shadow: 0 0 7px #fbbf24; animation: pulse 2.4s infinite; }
-
-.ai-dept-body { position: relative; padding: 14px 16px 6px; }
-.ai-dept-node {
-  position: relative;
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px;
-  border-radius: 11px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(71, 85, 105, 0.25);
-  margin-bottom: 8px;
-  transition: border-color 0.18s;
-}
-.ai-dept-node:hover { border-color: rgba(129, 140, 248, 0.4); }
-.ai-dept-node.is-locked { opacity: 0.75; }
-.ai-dept-node-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.ai-dept-node-dot.on { background: #34d399; box-shadow: 0 0 8px #34d399; }
-.ai-dept-node-dot.off { background: #475569; }
-.ai-dept-node-avatar { font-size: 15px; }
-.ai-dept-node-meta { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.ai-dept-node-name { font-size: 12px; font-weight: 800; color: #e2e8f0; letter-spacing: 0.04em; }
-.ai-dept-node-role { font-size: 9.5px; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
-.ai-dept-node-state {
-  font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
-  color: #34d399;
-}
-.ai-dept-node.is-locked .ai-dept-node-state { color: #64748b; }
-.ai-dept-foot {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 16px 14px;
-  font-size: 10.5px; color: #64748b;
-}
-.ai-dept-foot-ico { color: #818cf8; }
+.hq-why-item { font-size: 11.5px; color: #64748b; }
 
 /* ═══ 区块通用 ═══ */
-.cockpit-section { margin-bottom: 34px; }
-.cockpit-sec-head {
+.hq-section { margin-bottom: 34px; }
+.hq-sec-head {
   display: flex; align-items: flex-end; justify-content: space-between;
   margin-bottom: 16px;
 }
-.cockpit-sec-kicker {
-  font-size: 10px; font-weight: 800; letter-spacing: 0.2em;
+.hq-sec-kicker {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
   color: #818cf8; margin-bottom: 4px;
 }
-.cockpit-sec-title { font-size: 19px; font-weight: 800; color: #f1f5f9; margin: 0; letter-spacing: -0.01em; }
-.cockpit-sec-link {
+.hq-sec-title { font-size: 19px; font-weight: 800; color: #f1f5f9; margin: 0; letter-spacing: -0.01em; }
+.hq-sec-link {
   font-size: 11.5px; font-weight: 600; color: #94a3b8;
-  text-decoration: none;
-  transition: color 0.15s;
+  text-decoration: none; transition: color 0.15s;
 }
-.cockpit-sec-link:hover { color: #a5b4fc; }
+.hq-sec-link:hover { color: #a5b4fc; }
+.hq-sec-note { margin: 12px 2px 0; font-size: 11px; color: #64748b; line-height: 1.7; }
 
-/* ═══ AI Glass Card · 员工 ═══ */
-.ce-grid {
+/* ═══ 我的 AI 员工 ═══ */
+.hq-team-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 14px;
 }
-.ce-card {
+.hq-team-card {
   display: flex; flex-direction: column;
   border-radius: 17px;
   background: rgba(15, 23, 42, 0.78);
   border: 1px solid rgba(71, 85, 105, 0.3);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 30px rgba(2, 6, 23, 0.35);
   overflow: hidden;
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, border-color 0.2s;
 }
-.ce-card:hover {
+.hq-team-card:hover {
   transform: translateY(-3px);
   border-color: rgba(129, 140, 248, 0.45);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 44px rgba(2, 6, 23, 0.55), 0 0 0 1px rgba(129, 140, 248, 0.12);
 }
-.ce-card.is-locked { opacity: 0.85; }
-.ce-card-top {
+.hq-card-top {
   display: flex; align-items: center; justify-content: space-between;
   padding: 11px 14px 0;
 }
-.ce-status {
+.hq-status {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 9px; font-weight: 800; letter-spacing: 0.12em;
-  border-radius: 999px; padding: 2px 9px;
+  font-size: 9.5px; font-weight: 700;
+  border-radius: 999px; padding: 2px 10px;
 }
-.ce-status.ready { color: #34d399; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.32); }
-.ce-status.locked { color: #94a3b8; background: rgba(71, 85, 105, 0.12); border: 1px solid rgba(71, 85, 105, 0.3); }
-.ce-status-dot { width: 6px; height: 6px; border-radius: 50%; }
-.ce-status.ready .ce-status-dot { background: #34d399; box-shadow: 0 0 6px #34d399; animation: pulse 2s infinite; }
-.ce-status.locked .ce-status-dot { background: #64748b; }
-.ce-no { font-size: 10px; font-weight: 800; color: #334155; letter-spacing: 0.1em; }
-.ce-card-core { padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
-.ce-card-avatar { font-size: 26px; margin-bottom: 2px; }
-.ce-card-name { font-size: 17px; font-weight: 800; color: #f1f5f9; letter-spacing: 0.06em; }
-.ce-card-role { font-size: 9.5px; font-weight: 700; color: #818cf8; letter-spacing: 0.1em; text-transform: uppercase; }
-.ce-card-duty { font-size: 11px; color: #94a3b8; line-height: 1.6; margin-top: 3px; min-height: 36px; }
-.ce-card-caps { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
-.ce-cap {
-  font-size: 9px; font-weight: 600; color: #a5b4fc;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.22);
-  border-radius: 7px; padding: 2px 7px;
+.hq-status.on { color: #34d399; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.32); }
+.hq-status.off { color: #94a3b8; background: rgba(71, 85, 105, 0.12); border: 1px solid rgba(71, 85, 105, 0.3); }
+.hq-status-dot { width: 6px; height: 6px; border-radius: 50%; }
+.hq-status.on .hq-status-dot { background: #34d399; box-shadow: 0 0 6px #34d399; animation: pulse 2s infinite; }
+.hq-status.off .hq-status-dot { background: #64748b; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.hq-card-no { font-size: 10px; font-weight: 800; color: #334155; }
+.hq-card-body { padding: 12px 14px 10px; display: flex; flex-direction: column; }
+.hq-avatar { font-size: 26px; margin-bottom: 4px; }
+.hq-name { font-size: 17px; font-weight: 800; color: #f1f5f9; letter-spacing: 0.06em; }
+.hq-role { font-size: 11px; font-weight: 700; color: #818cf8; margin-top: 2px; }
+.hq-helps { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.hq-help {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px; color: #94a3b8;
 }
-.ce-card-foot {
+.hq-help-check { color: #34d399; font-weight: 800; }
+.hq-card-foot {
   margin-top: auto;
   padding: 10px 14px 14px;
   border-top: 1px solid rgba(71, 85, 105, 0.18);
 }
-.ce-deploy-btn {
+.hq-unlock {
   width: 100%;
   padding: 8px 0;
   border-radius: 10px;
@@ -694,8 +467,8 @@ onMounted(async () => {
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.ce-deploy-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(99, 102, 241, 0.35); }
-.ce-view-link {
+.hq-unlock:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(99, 102, 241, 0.35); }
+.hq-view {
   display: block; text-align: center;
   padding: 8px 0;
   border-radius: 10px;
@@ -705,79 +478,60 @@ onMounted(async () => {
   text-decoration: none;
   transition: background 0.15s;
 }
-.ce-view-link:hover { background: rgba(99, 102, 241, 0.1); }
+.hq-view:hover { background: rgba(99, 102, 241, 0.1); }
 
-/* ═══ CHANNEL INTELLIGENCE ═══ */
-.ci-strip {
+/* ═══ 我的新媒体渠道 ═══ */
+.hq-channel-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
-.ci-node {
+.hq-channel {
   display: flex; align-items: center; gap: 11px;
-  padding: 15px 16px;
-  border-radius: 15px;
+  padding: 14px 16px;
+  border-radius: 14px;
   background: rgba(15, 23, 42, 0.72);
   border: 1px solid rgba(71, 85, 105, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  cursor: pointer;
   transition: border-color 0.18s, transform 0.15s;
 }
-.ci-node:hover { transform: translateY(-2px); border-color: rgba(129, 140, 248, 0.4); }
-.ci-node.connected { border-color: rgba(16, 185, 129, 0.35); }
-.ci-node-ico { font-size: 20px; }
-.ci-node-meta { display: flex; flex-direction: column; flex: 1; }
-.ci-node-name { font-size: 12.5px; font-weight: 700; color: #e2e8f0; }
-.ci-node-plan { font-size: 9.5px; color: #64748b; }
-.ci-node-state {
+.hq-channel:hover { transform: translateY(-2px); border-color: rgba(129, 140, 248, 0.4); }
+.hq-channel.connected { border-color: rgba(16, 185, 129, 0.35); cursor: default; }
+.hq-channel-ico { font-size: 20px; }
+.hq-channel-meta { display: flex; flex-direction: column; flex: 1; }
+.hq-channel-name { font-size: 12.5px; font-weight: 700; color: #e2e8f0; }
+.hq-channel-plan { font-size: 9.5px; color: #64748b; }
+.hq-channel-state {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 9.5px; font-weight: 700;
   color: #64748b;
 }
-.ci-node.connected .ci-node-state { color: #34d399; }
-.ci-node-dot { width: 6px; height: 6px; border-radius: 50%; }
-.ci-node-dot.on { background: #34d399; box-shadow: 0 0 6px #34d399; }
-.ci-node-dot.off { background: #475569; }
-.ci-note {
-  margin: 12px 2px 0;
-  font-size: 11px; color: #64748b;
-}
+.hq-channel.connected .hq-channel-state { color: #34d399; }
+.hq-channel-dot { width: 6px; height: 6px; border-radius: 50%; }
+.hq-channel-dot.on { background: #34d399; box-shadow: 0 0 6px #34d399; }
+.hq-channel-dot.off { background: #475569; }
 
-/* ═══ OPERATION MEMORY ═══ */
-.om-grid {
+/* ═══ 运营情况 ═══ */
+.hq-ops-grid {
   display: grid;
-  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
 }
-.om-card {
-  display: flex; flex-direction: column;
-  min-height: 138px;
+.hq-ops-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px;
   border-radius: 15px;
-  padding: 15px 16px;
   background: rgba(15, 23, 42, 0.72);
   border: 1px solid rgba(71, 85, 105, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
-.om-card-head {
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 10px;
-}
-.om-card-ico { font-size: 14px; }
-.om-card-title { font-size: 12.5px; font-weight: 800; color: #e2e8f0; flex: 1; }
-.om-card-badge { font-size: 9px; font-weight: 700; color: #818cf8; background: rgba(99, 102, 241, 0.1); border-radius: 999px; padding: 2px 9px; }
-.om-list { display: flex; flex-direction: column; gap: 6px; }
-.om-row {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 11px;
-}
-.om-row-dot { width: 5px; height: 5px; border-radius: 50%; background: #818cf8; box-shadow: 0 0 5px rgba(129, 140, 248, 0.7); flex-shrink: 0; }
-.om-row-title { color: #cbd5e1; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.om-row-time { color: #64748b; font-size: 10px; }
-.om-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; flex: 1; padding: 8px 0; }
-.om-empty-ico { font-size: 20px; opacity: 0.7; }
-.om-empty-text { font-size: 10.5px; color: #64748b; text-align: center; line-height: 1.6; }
-.om-cost { display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1; gap: 4px; }
-.om-cost-num { font-size: 21px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.02em; }
-.om-cost-label { font-size: 9.5px; color: #64748b; }
+.hq-ops-ico { font-size: 20px; }
+.hq-ops-meta { display: flex; flex-direction: column; flex: 1; }
+.hq-ops-label { font-size: 11px; color: #94a3b8; }
+.hq-ops-num { font-size: 22px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.02em; }
+.hq-ops-num--text { font-size: 15px; line-height: 1.6; }
+.hq-ops-sub { font-size: 9.5px; color: #64748b; align-self: flex-end; }
 
 /* ═══ 身份引导 ═══ */
 .dash-identity {
@@ -798,7 +552,7 @@ onMounted(async () => {
   color: #fff; font-size: 12px; font-weight: 600; text-decoration: none;
 }
 
-/* ═══ 订阅弹窗 ═══ */
+/* ═══ 解锁弹窗 ═══ */
 .sub-modal-mask {
   position: fixed; inset: 0; z-index: 999;
   background: rgba(2, 6, 23, 0.7);
@@ -820,10 +574,7 @@ onMounted(async () => {
 }
 .sub-modal-title { font-size: 17px; font-weight: 800; color: #f1f5f9; }
 .sub-modal-sub { font-size: 11px; color: #64748b; margin-top: 4px; }
-.sub-modal-close {
-  background: none; border: none; color: #64748b;
-  font-size: 15px; cursor: pointer; padding: 4px;
-}
+.sub-modal-close { background: none; border: none; color: #64748b; font-size: 15px; cursor: pointer; padding: 4px; }
 .sub-modal-close:hover { color: #f1f5f9; }
 .sub-modal-list { padding: 10px 22px; display: flex; flex-direction: column; gap: 8px; }
 .sub-modal-row {
@@ -836,7 +587,7 @@ onMounted(async () => {
 .sub-modal-avatar { font-size: 18px; }
 .sub-modal-meta { display: flex; flex-direction: column; gap: 3px; }
 .sub-modal-name { font-size: 12px; font-weight: 800; color: #e2e8f0; }
-.sub-modal-duty, .sub-modal-value, .sub-modal-auto { font-size: 10.5px; color: #94a3b8; line-height: 1.55; }
+.sub-modal-duty, .sub-modal-auto { font-size: 10.5px; color: #94a3b8; line-height: 1.55; }
 .sub-modal-foot { padding: 14px 22px 20px; border-top: 1px solid rgba(71, 85, 105, 0.2); }
 .sub-modal-note { font-size: 10.5px; color: #64748b; margin-bottom: 12px; }
 .sub-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
@@ -854,11 +605,10 @@ onMounted(async () => {
 
 /* 响应式 */
 @media (max-width: 1180px) {
-  .ce-grid { grid-template-columns: repeat(3, 1fr); }
-  .om-grid { grid-template-columns: repeat(2, 1fr); }
+  .hq-team-grid { grid-template-columns: repeat(3, 1fr); }
+  .hq-ops-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 900px) {
-  .cockpit-hero { grid-template-columns: 1fr; }
-  .ci-strip { grid-template-columns: repeat(2, 1fr); }
+  .hq-channel-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

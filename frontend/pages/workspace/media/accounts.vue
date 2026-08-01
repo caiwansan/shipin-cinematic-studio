@@ -1,82 +1,81 @@
 <!--
-  Sprint-MEDIA-UX-03 — 新媒体资产（账号管理，暗色产品级）
-  资产卡 + AI 权限清单（发布/回复/数据读取）+ 连接流程
-  纪律: 未连接态真实展示；Sprint-MEDIA-01 微信资产接入后点亮
+  Sprint-MEDIA-DESIGN-LOCALIZATION-04 — 新媒体账号（9 大平台 · 纯产品语言）
+  纪律: 未连接态真实展示；不出现 API/Webhook/Token/OAuth/SDK 等技术词
+  微信: 真实接入流程保留（授权绑定 → 勾选权限 → 授权 AI 员工 → 完成连接）
+  其他 8 平台: 即将开放（诚实展示，不造假连接）
 -->
 <template>
   <MediaWorkspaceShell>
     <MediaPageHeader
-      kicker="Media Assets"
-      title="新媒体资产"
-      :status="{ text: '接入准备中', type: 'warn' }"
-      desc="企业真实账号资产，AI 员工通过授权执行发布、回复与数据读取。"
+      kicker="我的新媒体账号"
+      title="新媒体账号"
+      :status="{ text: '未连接', type: 'warn' }"
+      desc="连接你的内容渠道，AI 员工才能帮你运营——发布内容、回复客户、读取数据。"
     />
 
-    <!-- 微信公众号资产卡 -->
-    <div class="as-asset">
-      <div class="as-asset-left">
-        <span class="as-logo">🟢</span>
-        <div class="as-asset-meta">
-          <div class="as-asset-name">微信公众号</div>
-          <div class="as-asset-sub">企业认证服务号</div>
+    <!-- 9 大平台账号 -->
+    <div class="ac-grid">
+      <div
+        v-for="p in platforms"
+        :key="p.name"
+        class="ac-card"
+        :class="{ connected: p.connected }"
+        @click="onClick(p)"
+      >
+        <div class="ac-card-top">
+          <span class="ac-ico">{{ p.icon }}</span>
+          <span class="ac-state" :class="p.connected ? 'on' : 'off'">
+            <span class="ac-dot" :class="p.connected ? 'on' : 'off'"></span>
+            {{ p.connected ? '已连接' : '未连接' }}
+          </span>
         </div>
-        <div class="as-asset-status">
-          <span class="as-status-dot off"></span>
-          未连接
-        </div>
+        <div class="ac-name">{{ p.name }}</div>
+        <div class="ac-plan">{{ p.plan }}</div>
+        <button v-if="p.connectable" class="ac-cta">{{ p.connected ? '已接入 AI 员工' : '去连接' }}</button>
+        <span v-else class="ac-soon">即将开放</span>
       </div>
-      <div class="as-asset-stats">
-        <div class="as-stat"><b>—</b><span>粉丝</span></div>
-        <div class="as-stat"><b>—</b><span>内容</span></div>
-        <div class="as-stat"><b>—</b><span>互动</span></div>
-      </div>
-
-      <!-- AI 权限 -->
-      <div class="as-perms">
-        <div class="as-perms-title">🤖 AI 权限</div>
-        <div v-for="p in perms" :key="p.key" class="as-perm">
-          <span class="as-check" :class="{ off: !p.on }"></span>
-          <div>
-            <b>{{ p.name }}</b>
-            <span class="as-perm-sub">{{ p.desc }}</span>
-          </div>
-        </div>
-      </div>
-
-      <button class="as-cta" @click="connect">连接微信公众平台</button>
     </div>
 
-    <!-- 连接价值说明（未连接 ≠ 不可用：连接后 AI 员工才能执行运营任务） -->
-    <div class="as-note">
-      <span class="as-note-ico">🔗</span>
-      <span><b>未连接不是不可用</b>——连接账号后，AI 员工才能基于授权执行运营任务：发布内容、回复粉丝、读取数据。连接流程见下方 4 步。</span>
+    <!-- 连接价值说明 -->
+    <div class="ac-note">
+      <span class="ac-note-ico">🔗</span>
+      <span><b>连接账号后，AI 员工才能帮你运营</b>——自动发布内容、回复客户消息、读取运营数据。每个平台的连接方式不同，微信已支持，其余平台正在接入。</span>
     </div>
 
-    <!-- 连接流程 -->
-    <div class="as-steps">
-      <div v-for="(s, i) in steps" :key="i" class="as-step">
-        <span class="as-step-num">{{ i + 1 }}</span>
+    <!-- 微信连接流程（真实接入） -->
+    <div class="ac-flow">
+      <div class="ac-flow-head">
+        <span class="ac-flow-ico">💬</span>
         <div>
-          <b>{{ s.title }}</b>
-          <span class="as-step-desc">{{ s.desc }}</span>
+          <div class="ac-flow-title">连接微信公众号</div>
+          <div class="ac-flow-sub">企业认证服务号 · 4 步完成连接</div>
+        </div>
+      </div>
+      <div class="ac-steps">
+        <div v-for="(s, i) in steps" :key="i" class="ac-step">
+          <span class="ac-step-num">{{ i + 1 }}</span>
+          <div>
+            <b>{{ s.title }}</b>
+            <span class="ac-step-desc">{{ s.desc }}</span>
+          </div>
+        </div>
+      </div>
+      <button class="ac-connect-btn" @click="connect">开始连接 →</button>
+    </div>
+
+    <!-- AI 权限说明 -->
+    <div class="ac-perms">
+      <div class="ac-perms-title">🤖 AI 员工获得的权限</div>
+      <div class="ac-perms-grid">
+        <div v-for="p in perms" :key="p.key" class="ac-perm">
+          <span class="ac-perm-ico">{{ p.ico }}</span>
+          <div>
+            <b>{{ p.name }}</b>
+            <span class="ac-perm-sub">{{ p.desc }}</span>
+          </div>
         </div>
       </div>
     </div>
-
-    <!-- 多平台规划（统一「未连接」表达：接入准备中，非不可用） -->
-    <MediaPanel icon="🌐" title="多平台规划" sub="企业新媒体矩阵扩展方向 · 均未连接">
-      <div class="as-planned">
-        <div v-for="p in planned" :key="p.name" class="as-planned-item">
-          <span class="as-planned-ico">{{ p.icon }}</span>
-          <div>
-            <b>{{ p.name }}</b>
-            <span class="as-planned-sub">{{ p.note }}</span>
-          </div>
-          <span class="as-planned-tag">未连接</span>
-        </div>
-      </div>
-      <div class="as-planned-foot">各平台接入后统一走同一套流程：获取凭证 → 配置白名单 → 授权 AI 员工 → 验证连接。连接后 AI 员工才能执行对应平台的运营任务。</div>
-    </MediaPanel>
   </MediaWorkspaceShell>
 </template>
 
@@ -85,248 +84,181 @@
 definePageMeta({ middleware: 'auth' })
 import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
 import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
-import MediaPanel from '~/components/media/MediaPanel.vue'
 
 const { $toast } = useNuxtApp() as any
 
-const perms = ref([
-  { key: 'publish', name: '发布', desc: 'AI 代发图文/文章', on: false },
-  { key: 'reply', name: '回复', desc: 'AI 接待粉丝消息', on: false },
-  { key: 'data', name: '数据读取', desc: '阅读/粉丝/互动统计', on: false },
+const platforms = ref([
+  { icon: '📱', name: '抖音', plan: '短视频 · 直播', connectable: false, connected: false },
+  { icon: '📱', name: '快手', plan: '短视频 · 直播', connectable: false, connected: false },
+  { icon: '📕', name: '小红书', plan: '种草图文 · 视频', connectable: false, connected: false },
+  { icon: '🎬', name: '视频号', plan: '微信生态分发', connectable: false, connected: false },
+  { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务', connectable: true, connected: false },
+  { icon: '🌐', name: '微博', plan: '话题 · 图文', connectable: false, connected: false },
+  { icon: '📰', name: '百家号', plan: '图文 · 视频', connectable: false, connected: false },
+  { icon: '📰', name: '今日头条', plan: '图文 · 视频', connectable: false, connected: false },
+  { icon: '🏢', name: '企业微信', plan: '私域客户运营', connectable: false, connected: false },
 ])
 
-const steps = [
-  { title: '获取凭证', desc: '企业认证服务号 appid + secret' },
-  { title: '配置白名单', desc: '服务器 IP 加入微信 IP 白名单' },
-  { title: '授权 AI 员工', desc: '勾选发布/回复/数据权限' },
-  { title: '验证连接', desc: '测试连接成功后资产卡点亮' },
+const perms = [
+  { key: 'publish', ico: '📤', name: '发布内容', desc: 'AI 员工代发图文与视频' },
+  { key: 'reply', ico: '💬', name: '回复客户', desc: 'AI 员工接待客户消息' },
+  { key: 'data', ico: '📊', name: '读取数据', desc: '阅读量、粉丝、互动统计' },
 ]
 
-const planned = [
-  { icon: '📱', name: '抖音', note: '企业号 · 视频内容分发' },
-  { icon: '📕', name: '小红书', note: '企业号 · 种草图文' },
-  { icon: '📺', name: '视频号', note: '企业认证 · 微信生态分发' },
+const steps = [
+  { title: '授权绑定', desc: '填写公众号授权信息，完成账号绑定' },
+  { title: '勾选权限', desc: '选择发布内容、回复客户、读取数据' },
+  { title: '授权 AI 员工', desc: '你的 AI 团队开始接管对应工作' },
+  { title: '完成连接', desc: '连接成功，账号状态点亮' },
 ]
+
+function onClick(p: any) {
+  if (p.connected) return
+  if (p.connectable) {
+    connect()
+  } else {
+    $toast?.info?.(`「${p.name}」接入即将开放，先连接微信公众号体验完整流程`)
+  }
+}
 
 function connect() {
-  $toast?.info?.('微信资产接入等待掌柜提供 appid/secret（Sprint-MEDIA-01）')
+  $toast?.info?.('微信资产接入等待掌柜提供授权信息（Sprint-MEDIA-01 遗留）')
 }
 </script>
 
 <style scoped>
-.as-asset {
-  background: var(--media-card-bg);
-  border: 1px solid var(--media-card-border);
-  border-radius: var(--media-radius-card);
-  padding: 24px 26px;
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr auto auto;
-  gap: 22px;
-  align-items: center;
-  margin-bottom: var(--media-gap-card);
-  box-shadow: var(--media-card-shadow);
-}
-.as-asset-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.as-logo {
-  font-size: 36px;
-}
-.as-asset-meta { flex: 1; }
-.as-asset-name {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-}
-.as-asset-sub {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-.as-asset-status {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  background: var(--color-bg-hover);
-  border-radius: 16px;
-  padding: 5px 12px;
-}
-.as-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-.as-status-dot.off { background: var(--color-text-disabled); }
-.as-asset-stats {
-  display: flex;
-  gap: 22px;
-}
-.as-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  font-size: 10px;
-  color: var(--color-text-muted);
-}
-.as-stat b {
-  font-size: 18px;
-  color: var(--color-text-primary);
-}
-.as-perms {
-  border-left: 1px solid var(--color-border-primary);
-  padding-left: 22px;
-}
-.as-perms-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  margin-bottom: 10px;
-}
-.as-perm {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 0;
-  font-size: 12px;
-  color: var(--color-text-primary);
-}
-.as-perm b { display: block; font-size: 12px; }
-.as-perm-sub { font-size: 10px; color: var(--color-text-muted); }
-.as-check {
-  width: 15px;
-  height: 15px;
-  border-radius: 4px;
-  border: 2px solid var(--color-decision);
-  background: var(--color-decision);
-  position: relative;
-  flex-shrink: 0;
-}
-.as-check::after {
-  content: '✓';
-  color: #fff;
-  font-size: 10px;
-  position: absolute;
-  top: -2px;
-  left: 2px;
-  font-weight: 800;
-}
-.as-check.off {
-  background: transparent;
-  border-color: var(--color-border-secondary);
-}
-.as-check.off::after { content: '—'; color: var(--color-text-disabled); }
-.as-cta {
-  background: #07c160;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 13px 18px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(7, 193, 96, 0.25);
-}
-.as-cta:hover { opacity: 0.92; }
-
-.as-steps {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.as-step {
-  background: var(--media-card-bg);
-  border: 1px solid var(--media-card-border);
-  border-radius: var(--media-radius-panel);
-  padding: 15px 16px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  box-shadow: var(--media-card-shadow);
-}
-.as-step-num {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--color-intelligence-glow);
-  color: var(--color-intelligence);
-  font-size: 12px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.as-step b {
-  display: block;
-  font-size: 12px;
-  color: var(--color-text-primary);
-}
-.as-step-desc {
-  font-size: 10px;
-  color: var(--color-text-muted);
-}
-.as-planned {
+/* ═══ 9 平台账号网格 ═══ */
+.ac-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
-.as-planned-item {
+.ac-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--media-card-bg);
-  border: 1px solid var(--media-card-border);
-  border-radius: var(--media-radius-panel);
-  padding: 15px;
-  box-shadow: var(--media-card-shadow);
+  flex-direction: column;
+  gap: 4px;
+  padding: 17px 18px;
+  border-radius: 15px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(71, 85, 105, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.18s;
 }
-.as-planned-ico { font-size: 22px; }
-.as-planned-item b { display: block; font-size: 13px; color: var(--color-text-primary); }
-.as-planned-sub { font-size: 10px; color: var(--color-text-muted); }
-.as-planned-tag {
-  margin-left: auto;
-  font-size: 9px;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 8px;
-  padding: 2px 8px;
-  white-space: nowrap;
+.ac-card:hover { transform: translateY(-2px); border-color: rgba(129, 140, 248, 0.4); }
+.ac-card.connected { border-color: rgba(16, 185, 129, 0.35); }
+.ac-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.ac-ico { font-size: 24px; }
+.ac-state {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 9.5px; font-weight: 700;
+  border-radius: 999px; padding: 2px 9px;
 }
-.as-planned-foot {
-  margin-top: 12px;
-  font-size: 11px;
-  color: var(--color-text-muted);
-  line-height: 1.6;
+.ac-state.on { color: #34d399; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); }
+.ac-state.off { color: #94a3b8; background: rgba(71, 85, 105, 0.12); border: 1px solid rgba(71, 85, 105, 0.3); }
+.ac-dot { width: 6px; height: 6px; border-radius: 50%; }
+.ac-dot.on { background: #34d399; box-shadow: 0 0 6px #34d399; }
+.ac-dot.off { background: #64748b; }
+.ac-name { font-size: 14px; font-weight: 800; color: #f1f5f9; }
+.ac-plan { font-size: 10px; color: #64748b; }
+.ac-cta {
+  margin-top: 10px;
+  font-size: 11px; font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border: none; border-radius: 9px; padding: 7px 0;
+  cursor: pointer;
 }
-.as-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  background: linear-gradient(90deg, var(--media-card-bg-solid), rgba(139, 92, 246, 0.06));
-  border: 1px solid var(--media-card-border);
-  border-radius: var(--media-radius-panel);
-  padding: 14px 18px;
-  margin-bottom: var(--media-gap-card);
-  font-size: 12px;
-  color: var(--media-text-body);
-  line-height: 1.6;
+.ac-card.connected .ac-cta { background: rgba(16, 185, 129, 0.15); color: #34d399; cursor: default; }
+.ac-soon {
+  margin-top: 10px;
+  font-size: 10px; font-weight: 600;
+  color: #64748b;
+  text-align: center;
+  border: 1px dashed rgba(71, 85, 105, 0.4);
+  border-radius: 9px; padding: 6px 0;
 }
-.as-note-ico { font-size: 15px; }
-.as-note b { color: var(--color-text-primary); }
-@media (max-width: 1000px) {
-  .as-asset { grid-template-columns: 1fr; }
-  .as-perms { border-left: none; padding-left: 0; border-top: 1px solid var(--color-border-primary); padding-top: 14px; }
-  .as-steps { grid-template-columns: 1fr 1fr; }
-  .as-planned { grid-template-columns: 1fr; }
+
+/* ═══ 价值说明 ═══ */
+.ac-note {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 13px 16px;
+  border-radius: 13px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  font-size: 11.5px; color: #94a3b8; line-height: 1.7;
+  margin-bottom: 16px;
+}
+.ac-note b { color: #cbd5e1; }
+.ac-note-ico { font-size: 14px; }
+
+/* ═══ 微信连接流程 ═══ */
+.ac-flow {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  margin-bottom: 16px;
+}
+.ac-flow-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ac-flow-ico { font-size: 22px; }
+.ac-flow-title { font-size: 14px; font-weight: 800; color: #f1f5f9; }
+.ac-flow-sub { font-size: 10px; color: #64748b; margin-top: 1px; }
+.ac-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.ac-step {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: rgba(5, 8, 22, 0.5);
+  border: 1px solid rgba(71, 85, 105, 0.22);
+}
+.ac-step-num {
+  width: 20px; height: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 10px; font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+}
+.ac-step b { display: block; font-size: 11.5px; color: #e2e8f0; margin-bottom: 2px; }
+.ac-step-desc { font-size: 9.5px; color: #64748b; line-height: 1.55; }
+.ac-connect-btn {
+  width: 100%;
+  font-size: 12.5px; font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1 55%, #3b82f6);
+  border: none; border-radius: 11px; padding: 11px 0;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.ac-connect-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(99, 102, 241, 0.45); }
+
+/* ═══ AI 权限说明 ═══ */
+.ac-perms {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(71, 85, 105, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.ac-perms-title { font-size: 13px; font-weight: 800; color: #e2e8f0; margin-bottom: 12px; }
+.ac-perms-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ac-perm {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: rgba(5, 8, 22, 0.5);
+  border: 1px solid rgba(71, 85, 105, 0.22);
+}
+.ac-perm-ico { font-size: 16px; }
+.ac-perm b { display: block; font-size: 11.5px; color: #e2e8f0; margin-bottom: 2px; }
+.ac-perm-sub { font-size: 9.5px; color: #64748b; line-height: 1.55; }
+
+@media (max-width: 900px) {
+  .ac-grid, .ac-perms-grid { grid-template-columns: repeat(2, 1fr); }
+  .ac-steps { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
