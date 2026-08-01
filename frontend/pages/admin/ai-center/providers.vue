@@ -55,6 +55,7 @@
               <th class="px-4 py-3 font-medium">标签</th>
               <th class="px-4 py-3 font-medium">推荐</th>
               <th class="px-4 py-3 font-medium">能力</th>
+              <th class="px-4 py-3 font-medium">能力评分</th>
               <th class="px-4 py-3 font-medium">推广链接</th>
               <th class="px-4 py-3 font-medium">状态</th>
               <th class="px-4 py-3 font-medium text-right">操作</th>
@@ -95,6 +96,18 @@
                   <span v-if="p.apiEnabled" class="text-[10px] px-1.5 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 border border-cyan-500/20" title="提供 API（BYOK 接入）">🔌 API</span>
                   <span v-if="!p.browserEnabled && !p.apiEnabled" class="text-[10px] text-gray-600">—</span>
                 </div>
+              </td>
+              <td class="px-4 py-3">
+                <template v-if="scoreOf(p)">
+                  <div class="text-amber-400 text-[11px]">{{ starsOf(p) }}</div>
+                  <div class="flex items-center gap-1 mt-1">
+                    <span class="text-[10px] text-gray-400 w-7">综合</span>
+                    <div class="w-16 h-1 rounded-full bg-white/[0.06]"><div class="h-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-400" :style="{ width: avgScore(p) + '%' }"></div></div>
+                    <span class="text-[10px] text-amber-300">{{ avgScore(p) }}</span>
+                  </div>
+                  <div class="text-[9px] text-gray-600 mt-0.5">成本{{ scoreOf(p).cost }} · 速度{{ scoreOf(p).speed }} · 质量{{ scoreOf(p).quality }} · 中文{{ scoreOf(p).chinese }} · 代码{{ scoreOf(p).coding }} · 推理{{ scoreOf(p).reasoning }}</div>
+                </template>
+                <span v-else class="text-[10px] text-gray-600">未评分</span>
               </td>
               <td class="px-4 py-3">
                 <span v-if="p.affiliateEnabled && p.affiliateUrl" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20" title="前台注册按钮将优先使用推广链接">✅ 已启用</span>
@@ -177,6 +190,27 @@
               </div>
             </div>
 
+            <!-- AI能力评分（AI-CENTER-02A） -->
+            <div class="rounded-xl border border-amber-500/20 bg-amber-500/[0.03] p-4">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <div class="text-xs text-amber-300 font-medium">⭐ AI能力评分（0-100）</div>
+                  <div class="text-[10px] text-gray-500 mt-0.5">六维评分，供后续 Workspace / AI员工推荐使用；基于公开基准与社区反馈维护</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-amber-400 text-sm font-semibold">{{ avgScore(form) }}</div>
+                  <div class="text-[10px] text-gray-500">综合分</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-x-6 gap-y-2.5">
+                <div v-for="dim in scoreDims" :key="dim.key" class="flex items-center gap-3">
+                  <span class="text-[11px] text-gray-400 w-10 shrink-0">{{ dim.label }}</span>
+                  <input type="range" min="0" max="100" step="1" v-model.number="form.capabilityScore[dim.key]" class="flex-1 accent-amber-500 h-1" />
+                  <span class="text-[11px] text-amber-300 w-7 text-right">{{ form.capabilityScore[dim.key] }}</span>
+                </div>
+              </div>
+            </div>
+
             <!-- AI中心能力开关 -->
             <div class="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-4 flex items-center gap-6">
               <label class="flex items-center gap-2 cursor-pointer">
@@ -251,11 +285,35 @@ const tagsText = ref('')
 
 const form = reactive({
   code: '', name: '', logo: '', description: '', category: 'domestic', country: '',
+  capabilityScore: { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 } as Record<string, number>,
   officialWebsite: '', registerUrl: '', billingUrl: '', documentationUrl: '', loginUrl: '',
   browserEnabled: true, apiEnabled: true,
   affiliateUrl: '', affiliateEnabled: false, affiliateDescription: '',
   recommended: 3, sort: 0, status: 'active',
 })
+
+const scoreDims = [
+  { key: 'cost', label: '成本' },
+  { key: 'speed', label: '速度' },
+  { key: 'quality', label: '质量' },
+  { key: 'chinese', label: '中文' },
+  { key: 'coding', label: '代码' },
+  { key: 'reasoning', label: '推理' },
+]
+function scoreOf(p: any): Record<string, number> | null {
+  if (!p?.capabilityScore || typeof p.capabilityScore !== 'object') return null
+  return p.capabilityScore
+}
+function avgScore(p: any): number {
+  const s = scoreOf(p)
+  if (!s) return 0
+  const vals = scoreDims.map(d => Number(s[d.key]) || 0)
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+}
+function starsOf(p: any): string {
+  const n = Math.round(avgScore(p) / 20)
+  return '★'.repeat(n) + '☆'.repeat(5 - n)
+}
 
 const sortedProviders = computed(() =>
   [...providers.value].sort((a, b) => (a.sort || 0) - (b.sort || 0) || (b.recommended || 0) - (a.recommended || 0))
@@ -299,7 +357,7 @@ async function load() {
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { code: '', name: '', logo: '', description: '', category: 'domestic', country: '', officialWebsite: '', registerUrl: '', billingUrl: '', documentationUrl: '', loginUrl: '', browserEnabled: true, apiEnabled: true, affiliateUrl: '', affiliateEnabled: false, affiliateDescription: '', recommended: 3, sort: 0, status: 'active' })
+  Object.assign(form, { code: '', name: '', logo: '', description: '', category: 'domestic', country: '', officialWebsite: '', registerUrl: '', billingUrl: '', documentationUrl: '', loginUrl: '', browserEnabled: true, apiEnabled: true, capabilityScore: { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 }, affiliateUrl: '', affiliateEnabled: false, affiliateDescription: '', recommended: 3, sort: 0, status: 'active' })
   tagsText.value = ''
   dialog.value = true
 }
@@ -310,7 +368,10 @@ function openEdit(p: any) {
     code: p.code, name: p.name, logo: p.logo || '', description: p.description || '', category: p.category || 'domestic',
     country: p.country || '', officialWebsite: p.officialWebsite || '', registerUrl: p.registerUrl || '',
     billingUrl: p.billingUrl || '', documentationUrl: p.documentationUrl || '', loginUrl: p.loginUrl || '',
-    browserEnabled: p.browserEnabled !== false, apiEnabled: p.apiEnabled !== false, affiliateUrl: p.affiliateUrl || '',
+    browserEnabled: p.browserEnabled !== false, apiEnabled: p.apiEnabled !== false,
+    capabilityScore: p.capabilityScore && typeof p.capabilityScore === 'object'
+      ? { cost: p.capabilityScore.cost || 0, speed: p.capabilityScore.speed || 0, quality: p.capabilityScore.quality || 0, chinese: p.capabilityScore.chinese || 0, coding: p.capabilityScore.coding || 0, reasoning: p.capabilityScore.reasoning || 0 }
+      : { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 }, affiliateUrl: p.affiliateUrl || '',
     affiliateEnabled: !!p.affiliateEnabled, affiliateDescription: p.affiliateDescription || '',
     recommended: p.recommended || 3, sort: p.sort || 0, status: p.status || 'active',
   })

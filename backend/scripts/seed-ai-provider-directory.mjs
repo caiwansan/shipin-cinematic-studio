@@ -20,6 +20,7 @@ const providers = [
     documentationUrl: 'https://api-docs.deepseek.com',
     loginUrl: 'https://chat.deepseek.com',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 95, speed: 85, quality: 88, chinese: 95, coding: 90, reasoning: 92 },
   },
   {
     code: 'zhipu', name: '智谱 GLM', category: 'domestic', country: '中国',
@@ -31,6 +32,7 @@ const providers = [
     documentationUrl: 'https://open.bigmodel.cn/dev/api',
     loginUrl: 'https://chatglm.cn',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 88, speed: 82, quality: 85, chinese: 93, coding: 85, reasoning: 86 },
   },
   {
     code: 'volcengine', name: '火山方舟', category: 'domestic', country: '中国',
@@ -42,6 +44,7 @@ const providers = [
     documentationUrl: 'https://www.volcengine.com/docs/82379',
     loginUrl: 'https://www.volcengine.com/product/ark',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 90, speed: 88, quality: 84, chinese: 92, coding: 80, reasoning: 82 },
   },
   {
     code: 'aliyun', name: '阿里百炼', category: 'domestic', country: '中国',
@@ -53,6 +56,7 @@ const providers = [
     documentationUrl: 'https://help.aliyun.com/zh/model-studio',
     loginUrl: 'https://bailian.aliyun.com',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 85, speed: 82, quality: 85, chinese: 93, coding: 86, reasoning: 84 },
   },
   {
     code: 'moonshot', name: '月之暗面 Kimi', category: 'domestic', country: '中国',
@@ -64,6 +68,7 @@ const providers = [
     documentationUrl: 'https://platform.moonshot.cn/docs',
     loginUrl: 'https://kimi.moonshot.cn',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 80, speed: 76, quality: 87, chinese: 94, coding: 85, reasoning: 88 },
   },
   {
     code: 'tencent', name: '腾讯混元', category: 'domestic', country: '中国',
@@ -75,6 +80,7 @@ const providers = [
     documentationUrl: 'https://cloud.tencent.com/document/product/1729',
     loginUrl: 'https://hunyuan.tencent.com',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 84, speed: 80, quality: 82, chinese: 90, coding: 78, reasoning: 80 },
   },
   {
     code: 'baidu', name: '文心一言', category: 'domestic', country: '中国',
@@ -86,6 +92,7 @@ const providers = [
     documentationUrl: 'https://cloud.baidu.com/doc/WENXINWORKSHOP/index.html',
     loginUrl: 'https://yiyan.baidu.com',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 82, speed: 78, quality: 82, chinese: 92, coding: 76, reasoning: 80 },
   },
   {
     code: 'iflytek', name: '科大讯飞星火', category: 'domestic', country: '中国',
@@ -97,6 +104,7 @@ const providers = [
     documentationUrl: 'https://www.xfyun.cn/doc/spark/Web.html',
     loginUrl: 'https://xinghuo.xfyun.cn',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 83, speed: 80, quality: 80, chinese: 90, coding: 74, reasoning: 78 },
   },
   {
     code: 'meituan', name: '美团龙猫', category: 'domestic', country: '中国',
@@ -108,6 +116,7 @@ const providers = [
     documentationUrl: 'https://longmao.meituan.com',
     loginUrl: 'https://longmao.meituan.com',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 86, speed: 78, quality: 78, chinese: 85, coding: 72, reasoning: 76 },
   },
   // ─────────────── 海外 3 家 ───────────────
   {
@@ -120,6 +129,7 @@ const providers = [
     documentationUrl: 'https://platform.openai.com/docs',
     loginUrl: 'https://chatgpt.com',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 62, speed: 88, quality: 95, chinese: 88, coding: 93, reasoning: 94 },
   },
   {
     code: 'google', name: 'Google Gemini', category: 'overseas', country: '美国',
@@ -131,6 +141,7 @@ const providers = [
     documentationUrl: 'https://ai.google.dev',
     loginUrl: 'https://gemini.google.com',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 70, speed: 90, quality: 91, chinese: 82, coding: 90, reasoning: 90 },
   },
   {
     code: 'anthropic', name: 'Anthropic Claude', category: 'overseas', country: '美国',
@@ -142,6 +153,7 @@ const providers = [
     documentationUrl: 'https://docs.anthropic.com',
     loginUrl: 'https://claude.ai',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 68, speed: 82, quality: 94, chinese: 84, coding: 94, reasoning: 95 },
   },
   // ─────────────── 非首批（停用保留） ───────────────
   {
@@ -154,6 +166,7 @@ const providers = [
     documentationUrl: 'https://www.llama.com/docs',
     loginUrl: 'https://www.llama.com',
     browserEnabled: true, apiEnabled: true,
+    capabilityScore: { cost: 75, speed: 80, quality: 82, chinese: 70, coding: 84, reasoning: 82 },
     status: 'disabled',
   },
 ]

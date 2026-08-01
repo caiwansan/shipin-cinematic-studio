@@ -25,6 +25,21 @@ import { requireAdmin } from '../middleware/require-admin.js'
 const frameCheckCache = new Map<string, { verdict: string; reason: string; ts: number }>()
 
 /**
+ * 能力评分清洗：仅保留六维 { cost, speed, quality, chinese, coding, reasoning }，钳制 0-100
+ * AI-CENTER-02A：运营维护数据，非法输入丢弃；非对象返回 null
+ */
+const SCORE_KEYS = ['cost', 'speed', 'quality', 'chinese', 'coding', 'reasoning'] as const
+function sanitizeCapabilityScore(raw: any): Record<string, number> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const out: Record<string, number> = {}
+  for (const k of SCORE_KEYS) {
+    const v = Number(raw[k])
+    out[k] = Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : 0
+  }
+  return out
+}
+
+/**
  * GET /api/ai-center/iframe-check?url=<encoded>
  * 探测第三方站点是否允许 iframe 内嵌（X-Frame-Options / CSP frame-ancestors）
  * 安全边界：
@@ -203,6 +218,7 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         loginUrl: body.loginUrl || '',
         browserEnabled: body.browserEnabled !== undefined ? !!body.browserEnabled : true,
         apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : true,
+        capabilityScore: sanitizeCapabilityScore(body.capabilityScore),
         affiliateUrl: body.affiliateUrl || '',
         affiliateEnabled: !!body.affiliateEnabled,
         affiliateDescription: body.affiliateDescription || null,
@@ -236,6 +252,7 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         loginUrl: body.loginUrl ?? exist.loginUrl,
         browserEnabled: body.browserEnabled !== undefined ? !!body.browserEnabled : exist.browserEnabled,
         apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : exist.apiEnabled,
+        capabilityScore: body.capabilityScore !== undefined ? sanitizeCapabilityScore(body.capabilityScore) : exist.capabilityScore,
         affiliateUrl: body.affiliateUrl ?? exist.affiliateUrl,
         affiliateEnabled: body.affiliateEnabled ?? exist.affiliateEnabled,
         affiliateDescription: body.affiliateDescription ?? exist.affiliateDescription,
