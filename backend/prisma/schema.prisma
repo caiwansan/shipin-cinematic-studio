@@ -9411,9 +9411,67 @@ model AiProviderDirectory {
   priceSource          String   @default("官方公开价格") @db.VarChar(100) // 价格来源（前台展示，运营可改）
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+  models               AiModelDirectory[]
 
   @@index([category, status])
   @@map("ai_provider_directory")
+}
+
+// ══════════════════════════════════════════════════════════════════
+// AI-CENTER-06: 全球 AI 模型数据库（模型粒度）
+// 掌柜指令 2026-08-02：AIProvider（厂商）与 AIModel（具体模型）分离
+// 价格必须模型级可追溯：lastVerifiedAt/dataSource/verifiedBy 三要素
+// 不展示未经验证价格（dataStatus=pending → 前端显示「待验证」）
+// ══════════════════════════════════════════════════════════════════
+model AiModelDirectory {
+  id               Int      @id @default(autoincrement())
+  providerId       String   @db.Uuid
+  provider         AiProviderDirectory @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  code             String   @unique @db.VarChar(80) // gpt-5.6-sol / deepseek-v4-flash ...
+  name             String   @db.VarChar(120) // GPT-5.6 Sol
+  modelVersion     String?  @db.VarChar(50) // 版本/快照
+  modelTypes       String[] @default([]) // language / image / video / audio / multimodal / agent
+  contextWindow    Int? // 上下文 tokens
+  maxOutput        Int? // 最大输出 tokens
+  inputPrice       Float? // 输入价（USD/1M tokens，缓存未命中）
+  inputCacheHit    Float? // 输入价（缓存命中）
+  outputPrice      Float? // 输出价（USD/1M tokens）
+  currency         String   @default("USD") @db.VarChar(10)
+  priceModel       String   @default("token") @db.VarChar(20) // token 按量 | subscription 订阅 | credit 积分
+  capabilityScore  Json? // { cost, speed, quality, chinese, coding, reasoning } 0-100
+  capabilitySource String   @default("昆仑镜基于公开评测综合") @db.VarChar(200)
+  releaseDate      DateTime?
+  officialDocsUrl  String   @default("") @db.VarChar(500)
+  officialApiUrl   String   @default("") @db.VarChar(500)
+  lastVerifiedAt   DateTime? // 最后验证时间（可信度核心）
+  dataSource       String   @default("") @db.VarChar(200) // 数据来源：官方定价页 URL / OpenRouter 聚合
+  verifiedBy       String   @default("") @db.VarChar(50) // 验证人
+  dataStatus       String   @default("verified") @db.VarChar(20) // verified 已验证 | pending 待验证
+  description      String?  @db.Text
+  sort             Int      @default(0)
+  status           String   @default("active") @db.VarChar(20)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  priceHistory     AiModelPriceHistory[]
+
+  @@index([providerId, status])
+  @@map("ai_model_directory")
+}
+
+model AiModelPriceHistory {
+  id          Int      @id @default(autoincrement())
+  modelId     Int
+  model       AiModelDirectory @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  inputPrice  Float?
+  outputPrice Float?
+  currency    String   @default("USD") @db.VarChar(10)
+  verifiedAt  DateTime @default(now())
+  verifiedBy  String   @default("") @db.VarChar(50)
+  dataSource  String   @default("") @db.VarChar(200)
+  note        String?  @db.Text
+
+  @@index([modelId, verifiedAt])
+  @@map("ai_model_price_history")
 }
 
 /**

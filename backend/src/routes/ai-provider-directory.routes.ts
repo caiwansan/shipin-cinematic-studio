@@ -172,8 +172,332 @@ function priceOf(p: { pricingInfo: any }): number | null {
   return typeof v === 'number' ? v : null
 }
 
+// ════════════════════════════════════════════════════════════════
+// AI-CENTER-06：全球 AI 模型数据库（模型粒度）
+// 性价比 = 能力综合×60% + 价格优势×40%（纯计算，无 AI）
+// 真实性：verified 才参与价格排行；pending 不展示价格数字
+// ════════════════════════════════════════════════════════════════
+const MODEL_DIMS = ['cost', 'speed', 'quality', 'chinese', 'coding', 'reasoning'] as const
+
+/** 模型能力综合分（忽略 0 维度，图片/视频模型自然降维） */
+function modelAbility(cap: any): number {
+  if (!cap || typeof cap !== 'object') return 0
+  const vals = MODEL_DIMS.map((d) => Number(cap[d]) || 0).filter((v) => v > 0)
+  if (!vals.length) return 0
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+}
+
+/** 模型性价比 = 能力×60% + 价格优势分×40%（cap.cost 即价格优势 0-100） */
+function modelValueScore(m: { capabilityScore: any }): number | null {
+  const a = modelAbility(m.capabilityScore)
+  if (!a) return null
+  const cost = Number((m.capabilityScore as any)?.cost) || 50
+  return Math.round((a * 0.6 + cost * 0.4) * 10) / 10
+}
+
+/** 模型 → 前台 DTO（含性价比/状态） */
+function modelDto(m: any) {
+  const cap = m.capabilityScore as Record<string, number> | null
+  return {
+    id: m.id,
+    code: m.code,
+    name: m.name,
+    modelVersion: m.modelVersion,
+    providerCode: m.provider?.code,
+    providerName: m.provider?.name,
+    providerLogo: m.provider?.logo || '',
+    providerCountry: m.provider?.country || '',
+    modelTypes: m.modelTypes || [],
+    contextWindow: m.contextWindow,
+    maxOutput: m.maxOutput,
+    inputPrice: m.inputPrice,
+    inputCacheHit: m.inputCacheHit,
+    outputPrice: m.outputPrice,
+    currency: m.currency,
+    priceModel: m.priceModel,
+    capabilityScore: cap,
+    capabilitySource: m.capabilitySource,
+    ability: modelAbility(cap),
+    valueScore: modelValueScore(m),
+    officialDocsUrl: m.officialDocsUrl,
+    officialApiUrl: m.officialApiUrl,
+    lastVerifiedAt: m.lastVerifiedAt,
+    dataSource: m.dataSource,
+    verifiedBy: m.verifiedBy,
+    dataStatus: m.dataStatus,
+    description: m.description,
+    sort: m.sort,
+    registerUrl: m.provider?.affiliateEnabled && m.provider?.affiliateUrl ? m.provider.affiliateUrl : (m.provider?.registerUrl || ''),
+    registerViaAffiliate: !!(m.provider?.affiliateEnabled && m.provider?.affiliateUrl),
+  }
+}
+
 export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
   await iframeCheck(app)
+
+  // ── AI-CENTER-06 公开：模型列表（?type= 分类 + ?q= 搜索，模型粒度） ──
+  app.get('/api/ai-provider-directory/models', async (req) => {
+    const { type, q } = req.query as { type?: string; q?: string }
+    const where: any = { status: 'active', provider: { status: 'active' } }
+    if (type && type !== 'all') where.modelTypes = { has: type }
+    let list = await prisma.aiModelDirectory.findMany({
+      where,
+      include: { provider: true },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+    })
+    if (q && q.trim()) {
+      const kw = q.trim().toLowerCase()
+      list = list.filter((m) =>
+        m.name.toLowerCase().includes(kw) ||
+        m.code.toLowerCase().includes(kw) ||
+        (m.provider.name || '').toLowerCase().includes(kw) ||
+        (m.description || '').toLowerCase().includes(kw)
+      )
+    }
+    return { code: 0, data: list.map(modelDto) }
+  })
+
+  // ── AI-CENTER-06 公开：排行榜（三榜：综合性价比 / 最强能力·推理 / 最低成本） ──
+  app.get('/api/ai-provider-directory/leaderboards', async () => {
+    const list = await prisma.aiModelDirectory.findMany({
+      where: { status: 'active', dataStatus: 'verified', provider: { status: 'active' } },
+      include: { provider: true },
+    })
+    const ranked = list.map(modelDto).filter((m) => m.valueScore != null)
+    // 综合性价比榜
+    const value = [...ranked].sort((a: any, b: any) => b.valueScore - a.valueScore).slice(0, 10)
+      .map((m: any, i) => ({ rank: i + 1, ...m }))
+    // 最强能力榜（推理）：仅语言/Agent 模型，按 reasoning 降序
+    const reasoning = list
+      .filter((m) => (m.modelTypes as string[]).some((t) => ['language', 'agent'].includes(t)) && Number((m.capabilityScore as any)?.reasoning) > 0)
+      .map((m) => ({
+        ...modelDto(m),
+        reasoning: Number((m.capabilityScore as any)?.reasoning) || 0,
+        quality: Number((m.capabilityScore as any)?.quality) || 0,
+      }))
+      .sort((a: any, b: any) => b.reasoning - a.reasoning).slice(0, 10)
+      .map((m: any, i) => ({ rank: i + 1, ...m }))
+    // 最低成本榜（输入价升序，仅 verified 有价）
+    const cheapest = list
+      .filter((m) => m.inputPrice != null && (m.modelTypes as string[]).includes('language'))
+      .map((m) => ({ ...modelDto(m), inputPrice: m.inputPrice! }))
+      .sort((a: any, b: any) => a.inputPrice - b.inputPrice).slice(0, 10)
+      .map((m: any, i) => ({ rank: i + 1, ...m }))
+    return { code: 0, data: { value, reasoning, cheapest } }
+  })
+
+  // ── AI-CENTER-06 公开：模型对比（?codes=a,b,c） ──
+  app.get('/api/ai-provider-directory/compare', async (req) => {
+    const { codes } = req.query as { codes?: string }
+    const codeList = (codes || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 5)
+    if (!codeList.length) {
+      const def = await prisma.aiModelDirectory.findMany({
+        where: { status: 'active', dataStatus: 'verified', modelTypes: { has: 'language' }, provider: { status: 'active' } },
+        include: { provider: true },
+        orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+        take: 3,
+      })
+      return { code: 0, data: def.map(modelDto) }
+    }
+    const list = await prisma.aiModelDirectory.findMany({
+      where: { code: { in: codeList }, status: 'active' },
+      include: { provider: true },
+    })
+    return { code: 0, data: list.map(modelDto) }
+  })
+
+  // ── AI-CENTER-06 公开：价格变更时间线（可信度：可追溯） ──
+  app.get('/api/ai-provider-directory/price-history', async () => {
+    const rows = await prisma.aiModelPriceHistory.findMany({
+      include: { model: { include: { provider: true } } },
+      orderBy: { verifiedAt: 'desc' },
+      take: 30,
+    })
+    return {
+      code: 0,
+      data: rows.map((r) => ({
+        id: r.id,
+        modelCode: r.model.code,
+        modelName: r.model.name,
+        providerName: r.model.provider.name,
+        inputPrice: r.inputPrice,
+        outputPrice: r.outputPrice,
+        currency: r.currency,
+        verifiedAt: r.verifiedAt,
+        verifiedBy: r.verifiedBy,
+        dataSource: r.dataSource,
+        note: r.note,
+      })),
+    }
+  })
+
+  // ── AI-CENTER-06 公开：模型详情（含价格历史 + 同厂商其他模型） ──
+  app.get('/api/ai-provider-directory/models/:code', async (req, reply) => {
+    const { code } = req.params as { code: string }
+    const m = await prisma.aiModelDirectory.findUnique({ where: { code }, include: { provider: true } })
+    if (!m || m.status !== 'active' || m.provider.status !== 'active') {
+      return reply.status(404).send({ code: 1, error: '模型不存在或已下架' })
+    }
+    const [history, siblings] = await Promise.all([
+      prisma.aiModelPriceHistory.findMany({ where: { modelId: m.id }, orderBy: { verifiedAt: 'desc' }, take: 20 }),
+      prisma.aiModelDirectory.findMany({
+        where: { providerId: m.providerId, status: 'active', id: { not: m.id } },
+        include: { provider: true },
+        orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+      }),
+    ])
+    return {
+      code: 0,
+      data: {
+        ...modelDto(m),
+        provider: {
+          code: m.provider.code,
+          name: m.provider.name,
+          logo: m.provider.logo || '',
+          country: m.provider.country || '',
+          category: m.provider.category,
+          officialWebsite: m.provider.officialWebsite,
+          billingUrl: m.provider.billingUrl,
+          documentationUrl: m.provider.documentationUrl,
+          registerUrl: m.provider.affiliateEnabled && m.provider.affiliateUrl ? m.provider.affiliateUrl : m.provider.registerUrl,
+          registerViaAffiliate: !!(m.provider.affiliateEnabled && m.provider.affiliateUrl),
+          affiliateDescription: m.provider.affiliateDescription,
+        },
+        priceHistory: history.map((h) => ({ id: h.id, inputPrice: h.inputPrice, outputPrice: h.outputPrice, currency: h.currency, verifiedAt: h.verifiedAt, verifiedBy: h.verifiedBy, dataSource: h.dataSource, note: h.note })),
+        siblings: siblings.map(modelDto),
+      },
+    }
+  })
+
+  // ── AI-CENTER-06 公开：模型统计（40+ AI 模型等真实数字） ──
+  app.get('/api/ai-provider-directory/model-stats', async () => {
+    const [models, providers] = await Promise.all([
+      prisma.aiModelDirectory.count({ where: { status: 'active', provider: { status: 'active' } } }),
+      prisma.aiProviderDirectory.count({ where: { status: 'active' } }),
+    ])
+    const verified = await prisma.aiModelDirectory.count({ where: { status: 'active', dataStatus: 'verified' } })
+    return { code: 0, data: { modelCount: models, providerCount: providers, verifiedCount: verified, verifiedPrice: verified } }
+  })
+
+  // ── AI-CENTER-06 后台：模型管理列表 ──
+  app.get('/api/admin/ai-model-directory', { preHandler: [requireAdmin] }, async () => {
+    const list = await prisma.aiModelDirectory.findMany({
+      include: { provider: true, priceHistory: { orderBy: { verifiedAt: 'desc' }, take: 1 } },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+    })
+    return { code: 0, data: list.map((m) => ({ ...modelDto(m), provider: undefined, providerCode: m.provider.code, providerName: m.provider.name, lastHistory: m.priceHistory[0] || null })) }
+  })
+
+  // ── AI-CENTER-06 后台：新增模型 ──
+  app.post('/api/admin/ai-model-directory', { preHandler: [requireAdmin] }, async (req, reply) => {
+    const body = req.body as any
+    if (!body?.code || !body?.name || !body?.providerCode) {
+      return reply.status(400).send({ code: 1, error: 'code/name/providerCode 必填' })
+    }
+    const provider = await prisma.aiProviderDirectory.findUnique({ where: { code: body.providerCode } })
+    if (!provider) return reply.status(400).send({ code: 1, error: '厂商不存在' })
+    const exist = await prisma.aiModelDirectory.findUnique({ where: { code: body.code } })
+    if (exist) return reply.status(409).send({ code: 1, error: 'code 已存在' })
+    const cap = sanitizeCapabilityScore(body.capabilityScore) as any
+    const created = await prisma.aiModelDirectory.create({
+      data: {
+        providerId: provider.id,
+        code: body.code,
+        name: body.name,
+        modelVersion: body.modelVersion || null,
+        modelTypes: Array.isArray(body.modelTypes) ? body.modelTypes : [],
+        contextWindow: body.contextWindow != null ? Number(body.contextWindow) : null,
+        maxOutput: body.maxOutput != null ? Number(body.maxOutput) : null,
+        inputPrice: body.inputPrice != null ? Number(body.inputPrice) : null,
+        inputCacheHit: body.inputCacheHit != null ? Number(body.inputCacheHit) : null,
+        outputPrice: body.outputPrice != null ? Number(body.outputPrice) : null,
+        currency: body.currency || 'USD',
+        priceModel: body.priceModel || 'token',
+        capabilityScore: cap,
+        officialDocsUrl: body.officialDocsUrl || '',
+        officialApiUrl: body.officialApiUrl || '',
+        description: body.description || null,
+        sort: Number(body.sort) || 0,
+        status: body.status || 'active',
+        dataStatus: body.dataStatus || 'pending',
+        dataSource: body.dataSource || '',
+        verifiedBy: body.verifiedBy || '',
+        lastVerifiedAt: body.dataStatus === 'verified' ? new Date() : null,
+      },
+    })
+    return { code: 0, data: created }
+  })
+
+  // ── AI-CENTER-06 后台：更新模型 ──
+  app.put('/api/admin/ai-model-directory/:id', { preHandler: [requireAdmin] }, async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const body = req.body as any
+    const exist = await prisma.aiModelDirectory.findUnique({ where: { id: Number(id) } })
+    if (!exist) return reply.status(404).send({ code: 1, error: '模型不存在' })
+    const updated = await prisma.aiModelDirectory.update({
+      where: { id: Number(id) },
+      data: {
+        name: body.name ?? exist.name,
+        modelVersion: body.modelVersion !== undefined ? body.modelVersion : exist.modelVersion,
+        modelTypes: Array.isArray(body.modelTypes) ? body.modelTypes : exist.modelTypes,
+        contextWindow: body.contextWindow !== undefined ? (body.contextWindow != null ? Number(body.contextWindow) : null) : exist.contextWindow,
+        maxOutput: body.maxOutput !== undefined ? (body.maxOutput != null ? Number(body.maxOutput) : null) : exist.maxOutput,
+        inputPrice: body.inputPrice !== undefined ? (body.inputPrice != null ? Number(body.inputPrice) : null) : exist.inputPrice,
+        inputCacheHit: body.inputCacheHit !== undefined ? (body.inputCacheHit != null ? Number(body.inputCacheHit) : null) : exist.inputCacheHit,
+        outputPrice: body.outputPrice !== undefined ? (body.outputPrice != null ? Number(body.outputPrice) : null) : exist.outputPrice,
+        currency: body.currency ?? exist.currency,
+        priceModel: body.priceModel ?? exist.priceModel,
+        capabilityScore: body.capabilityScore !== undefined ? (sanitizeCapabilityScore(body.capabilityScore) as any) : exist.capabilityScore,
+        officialDocsUrl: body.officialDocsUrl ?? exist.officialDocsUrl,
+        officialApiUrl: body.officialApiUrl ?? exist.officialApiUrl,
+        description: body.description !== undefined ? body.description : exist.description,
+        sort: body.sort != null ? Number(body.sort) : exist.sort,
+        status: body.status ?? exist.status,
+      },
+    })
+    return { code: 0, data: updated }
+  })
+
+  // ── AI-CENTER-06 后台：标记已验证（可信度核心操作：更新三要素 + 写价格快照） ──
+  app.post('/api/admin/ai-model-directory/:id/verify', { preHandler: [requireAdmin] }, async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const body = req.body as any
+    const exist = await prisma.aiModelDirectory.findUnique({ where: { id: Number(id) } })
+    if (!exist) return reply.status(404).send({ code: 1, error: '模型不存在' })
+    const admin = (req as any).admin || { username: 'admin' }
+    const verifiedBy = body?.verifiedBy || admin.username || 'admin'
+    const dataSource = body?.dataSource || exist.dataSource || '后台人工验证'
+    const updated = await prisma.aiModelDirectory.update({
+      where: { id: Number(id) },
+      data: {
+        dataStatus: 'verified',
+        lastVerifiedAt: new Date(),
+        verifiedBy,
+        dataSource,
+      },
+    })
+    await prisma.aiModelPriceHistory.create({
+      data: {
+        modelId: Number(id),
+        inputPrice: exist.inputPrice,
+        outputPrice: exist.outputPrice,
+        currency: exist.currency,
+        verifiedBy,
+        dataSource,
+        note: body?.note || '人工验证',
+      },
+    })
+    return { code: 0, data: { id: updated.id, dataStatus: 'verified', lastVerifiedAt: updated.lastVerifiedAt, verifiedBy, dataSource } }
+  })
+
+  // ── AI-CENTER-06 后台：删除模型 ──
+  app.delete('/api/admin/ai-model-directory/:id', { preHandler: [requireAdmin] }, async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const exist = await prisma.aiModelDirectory.findUnique({ where: { id: Number(id) } })
+    if (!exist) return reply.status(404).send({ code: 1, error: '模型不存在' })
+    await prisma.aiModelDirectory.delete({ where: { id: Number(id) } })
+    return { code: 0, data: { deleted: true } }
+  })
 
   // ── 公开：目录列表（支持 ?type= 分类过滤 + ?q= 搜索） ──
   app.get('/api/ai-provider-directory', async (req) => {

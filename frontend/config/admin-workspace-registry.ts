@@ -191,6 +191,8 @@ export const ADMIN_LLM_GROUP: AdminPlatformGroup = {
     { id: 'llm-models', label: '模型列表', to: '/admin/aigc/models' },
     // AI Center：AI供应商管理（掌柜指令 2026-08-01）
     { id: 'llm-providers', label: 'AI供应商管理', to: '/admin/ai-center/providers' },
+    // AI-CENTER-06：AI模型数据库（模型粒度运营管理）
+    { id: 'llm-model-directory', label: 'AI模型数据库', to: '/admin/ai-center/models' },
     // P2: Provider管理 / 平台模型配置 / 调用统计
   ],
 }

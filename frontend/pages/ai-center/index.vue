@@ -1,484 +1,527 @@
 <template>
-  <div class="aic">
-    <!-- ═══ Hero ═══ -->
-    <section class="aic-hero">
-      <div class="aic-hero-inner">
-        <div class="aic-brand">AI中心</div>
-        <h1 class="aic-title">发现全球最佳 AI 模型</h1>
-        <p class="aic-sub">价格、能力、性价比，一站比较。</p>
+  <div class="aic" :class="theme">
+    <!-- ═══ 顶部：搜索 + 分类（紧凑，不占屏） ═══ -->
+    <header class="aic-head">
+      <div class="aic-head-inner">
+        <div class="aic-brand">
+          <div class="aic-brand-icon">🧭</div>
+          <div>
+            <div class="aic-brand-title">AI 模型中心</div>
+            <div class="aic-brand-sub">{{ stats.modelCount }}+ AI 模型 · 实时价格 | 能力 | 性价比</div>
+          </div>
+        </div>
         <div class="aic-search">
-          <span class="aic-search-ico">🔍</span>
-          <input v-model="keyword" class="aic-search-input" type="text"
-                 placeholder="搜索模型名称、厂商、能力…" />
-          <button v-if="keyword" class="aic-search-clear" @click="keyword = ''">✕</button>
+          <span class="aic-search-icon">🔍</span>
+          <input v-model="q" placeholder="搜索模型 / 厂商，如 DeepSeek、GPT-5.6、Claude…" />
+          <button v-if="q" class="aic-search-clear" @click="q = ''">✕</button>
         </div>
-        <div class="aic-stats">
-          <div class="aic-stat">
-            <div class="aic-stat-num">{{ stats.modelCount }}+</div>
-            <div class="aic-stat-label">全球模型</div>
+        <div class="aic-types">
+          <button v-for="t in TYPE_TABS" :key="t.key" class="aic-type" :class="{ on: type === t.key }" @click="type = t.key">
+            {{ t.label }}<span class="aic-type-count">{{ typeCount(t.key) }}</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══ 第二屏：排行榜 ═══ -->
+    <section class="aic-sec" id="boards">
+      <div class="aic-sec-title">
+        <h2>今日 AI 排名</h2>
+        <span class="aic-sec-note">基于已验证价格与公开评测能力分 · {{ verifiedLabel }}</span>
+      </div>
+      <div class="aic-boards">
+        <!-- 综合性价比 -->
+        <div class="aic-board">
+          <div class="aic-board-head"><span class="aic-board-icon">🏆</span>综合性价比</div>
+          <div class="aic-board-body">
+            <div v-for="m in boards.value" :key="m.code" class="aic-rank" :class="{ top: m.rank <= 3 }">
+              <span class="aic-rank-no" :class="{ gold: m.rank === 1, silver: m.rank === 2, bronze: m.rank === 3 }">{{ m.rank }}</span>
+              <span class="aic-rank-name">{{ m.name }}</span>
+              <span class="aic-rank-sub">{{ m.providerName }}</span>
+              <div class="aic-rank-bar"><i :style="{ width: Math.min(100, m.valueScore) + '%' }"></i></div>
+              <span class="aic-rank-score">{{ m.valueScore }}</span>
+            </div>
           </div>
-          <div class="aic-stat">
-            <div class="aic-stat-num">{{ stats.providerCount }}+</div>
-            <div class="aic-stat-label">支持厂商</div>
+        </div>
+        <!-- 最强能力（推理） -->
+        <div class="aic-board">
+          <div class="aic-board-head"><span class="aic-board-icon">🧠</span>最强能力 · 推理</div>
+          <div class="aic-board-body">
+            <div v-for="m in boards.reasoning" :key="m.code" class="aic-rank" :class="{ top: m.rank <= 3 }">
+              <span class="aic-rank-no" :class="{ gold: m.rank === 1, silver: m.rank === 2, bronze: m.rank === 3 }">{{ m.rank }}</span>
+              <span class="aic-rank-name">{{ m.name }}</span>
+              <span class="aic-rank-sub">{{ m.providerName }}</span>
+              <div class="aic-rank-bar"><i :style="{ width: m.reasoning + '%' }"></i></div>
+              <span class="aic-rank-score">{{ m.reasoning }}</span>
+            </div>
           </div>
-          <div class="aic-stat">
-            <div class="aic-stat-num">{{ stats.connectedCount }}</div>
-            <div class="aic-stat-label">已连接模型</div>
+        </div>
+        <!-- 最低成本 -->
+        <div class="aic-board">
+          <div class="aic-board-head"><span class="aic-board-icon">💸</span>最低成本 · 输入价</div>
+          <div class="aic-board-body">
+            <div v-for="m in boards.cheapest" :key="m.code" class="aic-rank" :class="{ top: m.rank <= 3 }">
+              <span class="aic-rank-no" :class="{ gold: m.rank === 1, silver: m.rank === 2, bronze: m.rank === 3 }">{{ m.rank }}</span>
+              <span class="aic-rank-name">{{ m.name }}</span>
+              <span class="aic-rank-sub">{{ m.providerName }}</span>
+              <div class="aic-rank-bar cheap"><i :style="{ width: cheapWidth(m.inputPrice) + '%' }"></i></div>
+              <span class="aic-rank-score">{{ fmtPrice(m.inputPrice, m.currency) }}</span>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══ 分类导航 ═══ -->
-    <nav class="aic-tabs">
-      <button v-for="t in tabs" :key="t.key" class="aic-tab" :class="{ on: activeTab === t.key }"
-              @click="activeTab = t.key">
-        {{ t.label }}<span class="aic-tab-count">{{ typeCount(t.key) }}</span>
-      </button>
-    </nav>
-
-    <!-- ═══ 价格中心横幅 ═══ -->
-    <div class="aic-pricebar">
-      <span class="aic-pricebar-dot"></span>
-      <span>价格更新时间：<b>{{ priceUpdated }}</b></span>
-      <span class="aic-pricebar-sep">·</span>
-      <span>来源：<b>官方公开价格</b>（参考价，以官方实时为准）</span>
-    </div>
-
-    <!-- ═══ 模型卡片网格 ═══ -->
-    <section class="aic-grid">
-      <div v-for="p in filtered" :key="p.code" class="aic-card" :class="{ connected: p.connected }"
-           @click="openDetail(p.code)">
-        <!-- 卡头 -->
-        <div class="aic-card-head">
-          <div class="aic-logo" :style="logoStyle(p)">{{ brandInitial(p.name) }}</div>
-          <div class="aic-card-title">
-            <div class="aic-card-name">{{ cardTitle(p) }}
-              <span v-if="p.recommendTag" class="aic-tag">{{ p.recommendTag }}</span>
-            </div>
-            <div class="aic-card-meta">{{ p.country }} · {{ typeLabel(p.modelTypes) }}</div>
-          </div>
-          <div class="aic-score" :title="'性价比 = 能力综合×60% + 价格优势×40%（纯计算）'">
-            <div class="aic-score-val">{{ p.valueScore ?? '—' }}</div>
-            <div class="aic-score-stars">{{ stars(p.valueScore) }}</div>
-            <div class="aic-score-label">综合性价比</div>
-          </div>
-        </div>
-        <!-- 能力 -->
-        <div class="aic-caps">
-          <div class="aic-cap" v-for="c in capBars(p)" :key="c.label">
-            <span class="aic-cap-label">{{ c.label }}</span>
-            <div class="aic-cap-track"><div class="aic-cap-fill" :style="{ width: c.value + '%' }"></div></div>
-            <span class="aic-cap-val">{{ c.value }}</span>
-          </div>
-        </div>
-        <!-- 价格 -->
-        <div class="aic-price">
-          <div class="aic-price-row">
-            <span class="aic-price-k">输入</span>
-            <span class="aic-price-v">{{ priceText(p, 'input') }}</span>
-            <span class="aic-price-k">输出</span>
-            <span class="aic-price-v">{{ priceText(p, 'output') }}</span>
-            <span v-if="p.contextLength" class="aic-ctx">上下文 {{ ctxText(p.contextLength) }}</span>
-          </div>
-        </div>
-        <!-- 我的状态 -->
-        <div class="aic-state">
-          <div class="aic-state-left">
-            <span class="aic-state-dot" :class="{ on: p.connected }"></span>
-            <span>{{ p.connected ? '已连接' : '未连接' }}</span>
-          </div>
-          <div class="aic-state-right">
-            <span class="aic-state-mini">余额：<b>{{ p.balanceText || '—' }}</b></span>
-            <span class="aic-state-mini" v-if="p.lastCostText">最近消耗：{{ p.lastCostText }}</span>
-          </div>
-        </div>
-        <!-- 操作 -->
-        <div class="aic-actions" @click.stop>
-          <a class="aic-btn primary" :href="p.registerUrl" target="_blank" rel="noopener">注册API账号</a>
-          <a v-if="p.billingUrl" class="aic-btn" :href="p.billingUrl" target="_blank" rel="noopener">充值</a>
-          <button v-if="p.officialBalanceApi" class="aic-btn ghost" @click="openBalance(p)">查询余额</button>
-        </div>
+    <!-- ═══ 第三屏：模型比较（对比表） ═══ -->
+    <section class="aic-sec" id="compare">
+      <div class="aic-sec-title">
+        <h2>模型对比</h2>
+        <span class="aic-sec-note">同维度横评，支持增删对比模型</span>
       </div>
-      <div v-if="!filtered.length" class="aic-empty">没有匹配的模型，换个关键词试试 🔍</div>
-    </section>
-
-    <!-- ═══ AI Compare 二维对比 ═══ -->
-    <section class="aic-compare-sec">
-      <div class="aic-sec-head">
-        <h2>AI Compare <span class="aic-sec-sub">能力 × 价格 二维对比</span></h2>
-        <p class="aic-sec-desc">横轴价格（左低右高），纵轴能力（下低上高），气泡大小 = 性价比。一目了然谁最划算。</p>
-      </div>
-      <div class="aic-compare">
-        <div class="aic-compare-axis-y">能力高 ▲</div>
-        <svg class="aic-compare-svg" :viewBox="`0 0 ${CW} ${CH}`" @click="onCompareClick">
-          <!-- 网格 -->
-          <g v-for="gy in [0.25, 0.5, 0.75]" :key="'gy' + gy">
-            <line :x1="PX" :y1="PY - gy * PH" :x2="PX + PW" :y2="PY - gy * PH" class="grid" />
-          </g>
-          <g v-for="gx in [0.25, 0.5, 0.75]" :key="'gx' + gx">
-            <line :x1="PX + gx * PW" :y1="PY" :x2="PX + gx * PW" :y2="PY - PH" class="grid" />
-          </g>
-          <!-- 轴标签 -->
-          <text :x="PX + PW / 2" :y="CH - 8" class="axis-label" text-anchor="middle">价格低 ────────── 价格高</text>
-          <!-- 散点 -->
-          <g v-for="(pt, i) in comparePts" :key="pt.code">
-            <circle :cx="pt.x" :cy="pt.y" :r="pt.r" class="bubble" :class="pt.hot ? 'hot' : ''"
-                    :fill="pt.color" :opacity="pt.hot ? 0.95 : 0.55"
-                    @mouseenter="hoverPt = pt.code" @mouseleave="hoverPt = ''" />
-            <text v-if="hoverPt === pt.code || pt.hot" :x="pt.x" :y="pt.y - pt.r - 6"
-                  class="bubble-label" text-anchor="middle" :class="{ hot: pt.hot }">{{ pt.label }}</text>
-          </g>
-        </svg>
-        <div class="aic-compare-axis-x">▲ 性价比 = 能力×60% + 价格×40%</div>
-      </div>
-      <div class="aic-compare-legend">
-        <span v-for="l in compareLegend" :key="l.name" class="aic-legend-item">
-          <span class="aic-legend-dot" :style="{ background: l.color }"></span>{{ l.name }}
-        </span>
+      <div class="aic-cmp">
+        <div class="aic-cmp-add">
+          <select v-model="pendingAdd" @change="addModel">
+            <option value="" disabled>＋ 添加对比模型…</option>
+            <option v-for="m in addCandidates" :key="m.code" :value="m.code">{{ m.providerName }} {{ m.name }}</option>
+          </select>
+        </div>
+        <table class="aic-cmp-table">
+          <thead>
+            <tr>
+              <th class="aic-cmp-dim">维度</th>
+              <th v-for="m in compare" :key="m.code" class="aic-cmp-col">
+                <div class="aic-cmp-head">
+                  <div class="aic-cmp-name">{{ m.name }}</div>
+                  <div class="aic-cmp-sub">{{ m.providerName }}</div>
+                  <button class="aic-cmp-rm" title="移除" @click="removeModel(m.code)">✕</button>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in compareRows" :key="row.key" :class="{ dimgroup: row.group }">
+              <td class="aic-cmp-dim">{{ row.label }}<span v-if="row.unit" class="aic-cmp-unit">{{ row.unit }}</span></td>
+              <td v-for="m in row.models" :key="m.code" class="aic-cmp-val">
+                <template v-if="row.kind === 'score'">
+                  <span class="aic-stars">{{ stars(m.value) }}</span><span class="aic-cmp-num">{{ m.value }}</span>
+                </template>
+                <template v-else-if="row.kind === 'price'">
+                  <span class="aic-cmp-price">{{ fmtPrice(m.value, m.currency) }}</span>
+                  <span v-if="m.value != null && row.best != null" class="aic-cmp-best" :class="{ win: m.value === row.best }">{{ m.value === row.best ? '最低' : '' }}</span>
+                </template>
+                <template v-else>
+                  <span v-if="m.value != null">{{ fmtCtx(m.value) }}</span>
+                  <span v-else class="aic-cmp-na">—</span>
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
-    <!-- ═══ 余额查询弹窗（BYOK：实时请求官方接口 → 展示 → 立即释放，不落库） ═══ -->
-    <Teleport to="body">
-      <div v-if="balance.open" class="aic-modal-mask" @click.self="balance.open = false">
-        <div class="aic-modal">
-          <div class="aic-modal-head">
-            <div class="aic-logo sm" :style="logoStyle(balance.providerObj)">{{ brandInitial(balance.providerObj?.name || '') }}</div>
-            <div>
-              <div class="aic-modal-title">{{ balance.providerObj?.name }} · 余额查询</div>
-              <div class="aic-modal-sub">BYOK：Key 实时请求官方接口，展示后立即释放，绝不落库</div>
+    <!-- ═══ 第四屏：模型市场（高密度卡片） ═══ -->
+    <section class="aic-sec" id="market">
+      <div class="aic-sec-title">
+        <h2>模型市场</h2>
+        <span class="aic-sec-note">信息密度优先 · 价格已验证才展示数字</span>
+      </div>
+      <div class="aic-market">
+        <div v-for="m in filtered" :key="m.code" class="aic-mcard">
+          <div class="aic-mcard-top">
+            <span class="aic-mcard-brand" :style="{ background: brandBg(m.providerName) }">{{ brandChar(m.providerName) }}</span>
+            <div class="aic-mcard-id">
+              <NuxtLink :to="'/ai-center/model/' + m.code" class="aic-mcard-name">{{ m.name }}</NuxtLink>
+              <div class="aic-mcard-sub">{{ m.providerName }} · {{ typeLabel(m.modelTypes) }}</div>
             </div>
-            <button class="aic-modal-x" @click="balance.open = false">✕</button>
+            <span v-if="m.dataStatus === 'pending'" class="aic-badge pending">待验证</span>
+            <span v-else class="aic-badge ok">已验证</span>
           </div>
-          <div class="aic-modal-body">
-            <label class="aic-field-label">API Key（官方接口临时使用）</label>
-            <input v-model="balance.apiKey" class="aic-input" type="password" placeholder="sk-…"
-                   @keyup.enter="queryBalance" />
-            <div v-if="balance.error" class="aic-balance-err">{{ balance.error }}</div>
-            <div v-if="balance.result" class="aic-balance-ok">
-              <div class="aic-balance-big">¥{{ balance.result.balance ?? '—' }}</div>
-              <div class="aic-balance-note">{{ balance.result.note || '官方实时余额' }}</div>
+          <div class="aic-mcard-meta">
+            <span v-if="m.contextWindow" class="aic-chip">🪟 {{ fmtCtx(m.contextWindow) }}</span>
+            <span v-if="m.maxOutput" class="aic-chip">↗ {{ fmtCtx(m.maxOutput) }} 输出</span>
+            <span v-if="m.currency === 'CNY'" class="aic-chip">🇨🇳 人民币计价</span>
+          </div>
+          <div class="aic-mcard-caps">
+            <div v-for="d in capDims(m)" :key="d.k" class="aic-cap">
+              <span class="aic-cap-label">{{ d.label }}</span>
+              <div class="aic-cap-bar"><i :style="{ width: d.v + '%' }"></i></div>
+              <span class="aic-cap-val">{{ d.v }}</span>
             </div>
-            <button class="aic-btn primary block" :disabled="balance.loading" @click="queryBalance">
-              {{ balance.loading ? '查询中…' : '查询余额' }}
-            </button>
+          </div>
+          <div class="aic-mcard-price">
+            <template v-if="m.inputPrice != null">
+              <div class="aic-mcard-p">
+                <span class="aic-mcard-pl">输入</span><b>{{ fmtPrice(m.inputPrice, m.currency) }}</b>
+                <span v-if="m.inputCacheHit != null" class="aic-mcard-cache">缓存 {{ fmtPrice(m.inputCacheHit, m.currency) }}</span>
+              </div>
+              <div class="aic-mcard-p"><span class="aic-mcard-pl">输出</span><b>{{ fmtPrice(m.outputPrice, m.currency) }}</b></div>
+            </template>
+            <div v-else class="aic-mcard-na">价格待验证（订阅制/按量）</div>
+          </div>
+          <div class="aic-mcard-foot">
+            <span class="aic-mcard-value">性价比 <b>{{ m.valueScore ?? '—' }}</b></span>
+            <NuxtLink :to="'/ai-center/model/' + m.code" class="aic-mcard-detail">详情 →</NuxtLink>
+          </div>
+        </div>
+        <div v-if="!filtered.length" class="aic-empty">没有匹配的模型</div>
+      </div>
+    </section>
+
+    <!-- ═══ 第五屏：价格趋势 ═══ -->
+    <section class="aic-sec" id="trend">
+      <div class="aic-sec-title">
+        <h2>价格趋势</h2>
+        <span class="aic-sec-note">当前输入价横向对比（对数轴）· 每次官方验证自动留痕</span>
+      </div>
+      <div class="aic-trend">
+        <div class="aic-trend-chart">
+          <div v-for="m in priceSorted" :key="m.code" class="aic-trend-row">
+            <span class="aic-trend-name" :title="m.name">{{ m.name }}</span>
+            <div class="aic-trend-track">
+              <i class="aic-trend-bar" :style="{ width: logWidth(m.inputPrice) + '%', background: brandBg(m.providerName) }"></i>
+            </div>
+            <span class="aic-trend-price">{{ fmtPrice(m.inputPrice, m.currency) }}</span>
+          </div>
+        </div>
+        <div class="aic-trend-side">
+          <div class="aic-trend-side-title">📋 官方价格验证记录</div>
+          <div v-for="h in history" :key="h.id" class="aic-hist">
+            <div class="aic-hist-row">
+              <span class="aic-hist-name">{{ h.modelName }}</span>
+              <span class="aic-hist-price">{{ fmtPrice(h.inputPrice, h.currency) }} / {{ fmtPrice(h.outputPrice, h.currency) }}</span>
+            </div>
+            <div class="aic-hist-meta">✅ {{ h.verifiedBy }} · {{ fmtDate(h.verifiedAt) }}</div>
+            <div class="aic-hist-src" :title="h.dataSource">{{ h.dataSource }}</div>
           </div>
         </div>
       </div>
-    </Teleport>
+    </section>
+
+    <footer class="aic-foot">
+      <div class="aic-foot-note">⚠️ 价格与能力分均来自官方公开信息（厂商定价页 / OpenRouter 官方聚合），由昆仑镜运营团队定期验证留痕，价格以厂商实时页面为准。</div>
+      <div class="aic-foot-note">BYOK：本中心不保存任何用户 API Key，余额查询为一次性实时查询，展示后立即释放。</div>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+// AI-CENTER-06：全球 AI 模型数据库 · 首页 V2
+// 布局（掌柜冻结）：搜索+分类 → 排行榜 → 模型比较 → 模型市场 → 价格趋势
+useHead({ title: 'AI模型中心 · 全球AI模型价格、能力、性价比对比' })
 
-const router = useRouter()
-const keyword = ref('')
-const activeTab = ref('all')
-const providers = ref<any[]>([])
-const stats = ref({ modelCount: 0, providerCount: 0, connectedCount: 0 })
-const compareData = ref<any[]>([])
-const hoverPt = ref('')
+const q = ref('')
+const type = ref('all')
+const models = ref<any[]>([])
+const boards = ref<{ value: any[]; reasoning: any[]; cheapest: any[] }>({ value: [], reasoning: [], cheapest: [] })
+const compare = ref<any[]>([])
+const history = ref<any[]>([])
+const stats = ref({ modelCount: 0, providerCount: 0, verifiedCount: 0 })
+const pendingAdd = ref('')
 
-interface DirectoryProvider {
-  code: string; name: string; modelName?: string; country: string; category: string
-  tags?: string[]; modelTypes?: string[]; description?: string | null
-  capabilityScore?: Record<string, number> | null; costScore?: number | null
-  pricingInfo?: { inputPrice?: number | null; outputPrice?: number | null; currency?: string } | null
-  contextLength?: number | null; priceSource?: string; pricingUpdatedAt?: string | null
-  registerUrl?: string; billingUrl?: string; officialBalanceApi?: string
-  supportedModels?: string[]; recommendTag?: string; valueScore?: number | null
-  connected?: boolean
-}
-
-const tabs = [
+const TYPE_TABS = [
   { key: 'all', label: '全部' },
-  { key: 'language', label: '💬 语言模型' },
-  { key: 'image', label: '🎨 图片模型' },
-  { key: 'video', label: '🎬 视频模型' },
-  { key: 'audio', label: '🎙️ 语音模型' },
-  { key: 'multimodal', label: '🌐 多模态模型' },
-  { key: 'agent', label: '🤖 Agent模型' },
+  { key: 'language', label: '💬 语言' },
+  { key: 'image', label: '🎨 图片' },
+  { key: 'video', label: '🎬 视频' },
+  { key: 'audio', label: '🎙️ 语音' },
+  { key: 'multimodal', label: '🌐 多模态' },
+  { key: 'agent', label: '🤖 Agent' },
+]
+const CAP_DIMS = [
+  { k: 'quality', label: '质量' }, { k: 'speed', label: '速度' }, { k: 'cost', label: '价格优势' },
+  { k: 'chinese', label: '中文' }, { k: 'coding', label: '代码' }, { k: 'reasoning', label: '推理' },
 ]
 
-const TYPE_LABEL: Record<string, string> = {
-  language: '语言模型', image: '图片模型', video: '视频模型',
-  audio: '语音模型', multimodal: '多模态模型', agent: 'Agent模型',
-}
+const theme = ref('dark')
+onMounted(() => {
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  theme.value = dark ? 'dark' : 'light'
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => { theme.value = e.matches ? 'dark' : 'light' })
+  load()
+})
 
-function cardTitle(p: DirectoryProvider): string {
-  return p.modelName ? `${p.name} ${p.modelName}` : p.name
-}
+const verifiedLabel = computed(() => {
+  const d = models.value.filter((m) => m.dataStatus === 'verified').length
+  return `${d}/${models.value.length} 个模型价格已验证`
+})
 
-function typeLabel(types: string[] | undefined): string {
-  if (!types?.length) return ''
-  return types.map((t) => TYPE_LABEL[t] || t).join(' / ')
-}
-
-function typeCount(key: string): number {
-  if (key === 'all') return providers.value.length
-  return providers.value.filter((p) => (p.modelTypes || []).includes(key)).length
+async function load() {
+  const [m, b, c, h, s] = await Promise.all([
+    fetch('/api/ai-provider-directory/models').then((r) => r.json()),
+    fetch('/api/ai-provider-directory/leaderboards').then((r) => r.json()),
+    fetch('/api/ai-provider-directory/compare').then((r) => r.json()),
+    fetch('/api/ai-provider-directory/price-history').then((r) => r.json()),
+    fetch('/api/ai-provider-directory/model-stats').then((r) => r.json()),
+  ])
+  models.value = m.data || []
+  boards.value = b.data || { value: [], reasoning: [], cheapest: [] }
+  compare.value = (c.data || []).slice(0, 4)
+  history.value = (h.data || []).slice(0, 8)
+  stats.value = s.data || stats.value
 }
 
 const filtered = computed(() => {
-  let list = providers.value
-  if (activeTab.value !== 'all') list = list.filter((p) => (p.modelTypes || []).includes(activeTab.value))
-  const kw = keyword.value.trim().toLowerCase()
-  if (kw) {
-    list = list.filter((p) =>
-      (p.name || '').toLowerCase().includes(kw) ||
-      (p.modelName || '').toLowerCase().includes(kw) ||
-      (p.description || '').toLowerCase().includes(kw) ||
-      (p.tags || []).some((t: string) => t.toLowerCase().includes(kw)) ||
-      (p.supportedModels || []).some((m: string) => m.toLowerCase().includes(kw))
+  let list = models.value
+  if (type.value !== 'all') list = list.filter((m) => (m.modelTypes || []).includes(type.value))
+  if (q.value.trim()) {
+    const kw = q.value.trim().toLowerCase()
+    list = list.filter((m) =>
+      m.name.toLowerCase().includes(kw) || m.code.toLowerCase().includes(kw) ||
+      (m.providerName || '').toLowerCase().includes(kw) || (m.description || '').toLowerCase().includes(kw)
     )
   }
   return list
 })
 
-/** 能力条：语言类显示 中文/推理/代码，视觉类显示 质量/速度/中文 */
-function capBars(p: DirectoryProvider): Array<{ label: string; value: number }> {
-  const c = p.capabilityScore || {}
-  const isVisual = (p.modelTypes || []).some((t) => ['image', 'video', 'audio'].includes(t))
-  const keys = isVisual
-    ? [['质量', c.quality], ['速度', c.speed], ['中文', c.chinese]] as const
-    : [['中文', c.chinese], ['推理', c.reasoning], ['代码', c.coding]] as const
-  return keys.map(([label, v]) => ({ label: label as string, value: Number(v) || 0 }))
+function typeCount(key: string) {
+  if (key === 'all') return models.value.length
+  return models.value.filter((m) => (m.modelTypes || []).includes(key)).length
 }
 
-function stars(v: number | null | undefined): string {
-  if (v == null) return '☆☆☆☆☆'
-  const n = Math.max(1, Math.min(5, Math.round(v / 20)))
-  return '★'.repeat(n) + '☆'.repeat(5 - n)
+const addCandidates = computed(() => {
+  const inCmp = new Set(compare.value.map((m) => m.code))
+  return models.value.filter((m) => !inCmp.has(m.code) && m.dataStatus === 'verified' && (m.modelTypes || []).includes('language'))
+})
+function addModel() {
+  if (!pendingAdd.value) return
+  const m = models.value.find((x) => x.code === pendingAdd.value)
+  if (m && compare.value.length < 5) compare.value.push(m)
+  pendingAdd.value = ''
 }
-
-function priceText(p: DirectoryProvider, kind: 'input' | 'output'): string {
-  const info = p.pricingInfo
-  const v = kind === 'input' ? info?.inputPrice : info?.outputPrice
-  if (v == null) return '按用量计费'
-  return `¥${v} / 百万tokens`
-}
-
-function ctxText(n: number): string {
-  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
-  if (n >= 1000) return Math.round(n / 1000) + 'K'
-  return String(n)
-}
-
-/** 品牌色（无 logo 时用首字母色块） */
-const BRAND_COLORS: Record<string, [string, string]> = {
-  deepseek: ['#4d6bfe', '#8ab4ff'], openai: ['#10a37f', '#74f2ce'], zhipu: ['#3859ff', '#93aaff'],
-  moonshot: ['#0d0d0d', '#888888'], volcengine: ['#0a7cff', '#8fd0ff'], aliyun: ['#ff6a00', '#ffc38a'],
-  baidu: ['#2932e1', '#8a90ff'], tencent: ['#0eaeff', '#8fe0ff'], iflytek: ['#0055ff', '#8ab4ff'],
-  google: ['#4285f4', '#a3c6ff'], anthropic: ['#d97757', '#ffb89a'], meta: ['#0668e1', '#8ab4ff'],
-  jimeng: ['#8a2be2', '#cba3ff'], midjourney: ['#0b0b0b', '#999999'], dalle: ['#10a37f', '#74f2ce'],
-  wanxiang: ['#ff6a00', '#ffc38a'], kling: ['#00d4ff', '#a3ecff'], runway: ['#111111', '#777777'],
-  pika: ['#e94e8f', '#ffa3c8'], luma: ['#7c3aed', '#c4a5ff'], elevenlabs: ['#1a1a1a', '#888888'],
-}
-function logoStyle(p: any) {
-  const [a, b] = BRAND_COLORS[p?.code] || ['#555', '#888']
-  return { background: `linear-gradient(135deg, ${a}, ${b})` }
-}
-function brandInitial(name: string): string {
-  return (name || '?').trim().charAt(0).toUpperCase()
-}
-
-/* ── Compare 二维散点 ── */
-const CW = 900, CH = 420, PX = 70, PY = 390, PW = 780, PH = 330
-const comparePts = computed(() => {
-  const withPrice = compareData.value.filter((d) => d.price != null)
-  const maxPrice = Math.max(...withPrice.map((d) => d.price), 1)
-  const logMax = Math.log10(maxPrice + 1)
-  const colorOf = (types: string[]) => {
-    if (types.includes('agent')) return '#a855f7'
-    if (types.includes('multimodal')) return '#22d3ee'
-    return '#f97316'
+function removeModel(code: string) {
+  compare.value = compare.value.filter((m) => m.code !== code)
+  if (compare.value.length < 3) {
+    const c = addCandidates.value[0]
+    if (c) compare.value.push(c)
   }
-  return withPrice.map((d) => ({
-    code: d.code, label: d.name,
-    x: PX + (Math.log10(d.price + 1) / logMax) * PW,
-    y: PY - (d.ability / 100) * PH,
-    r: 6 + (d.valueScore / 100) * 10,
-    color: colorOf(d.types || []),
-    hot: d.code === 'deepseek' || d.code === 'openai' || d.code === 'volcengine',
-  }))
-})
-const compareLegend = [
-  { name: '🟠 语言', color: '#f97316' }, { name: '🩵 多模态', color: '#22d3ee' }, { name: '🟣 Agent', color: '#a855f7' },
-]
-function onCompareClick() { /* 详情在卡片区进入 */ }
-
-/* ── 余额查询（BYOK） ── */
-const balance = reactive({
-  open: false, provider: '', providerObj: null as any, apiKey: '', loading: false, result: null as any, error: '',
-})
-function openBalance(p: DirectoryProvider) {
-  balance.open = true; balance.provider = p.code; balance.providerObj = p
-  balance.apiKey = ''; balance.result = null; balance.error = ''
-}
-async function queryBalance() {
-  if (!balance.apiKey.trim()) { balance.error = '请输入 API Key'; return }
-  balance.loading = true; balance.error = ''; balance.result = null
-  try {
-    const res: any = await $fetch('/api/ai/center/balance-query', {
-      method: 'POST',
-      body: { provider: balance.provider, apiKey: balance.apiKey.trim() },
-    }).catch((e: any) => ({ code: 1, error: e?.data?.error || '查询失败' }))
-    if (res.code === 0) balance.result = res.data
-    else balance.error = res.error || '查询失败'
-  } finally { balance.loading = false }
 }
 
-function openDetail(code: string) { router.push(`/ai-center/${code}`) }
-
-const priceUpdated = computed(() => {
-  const dates = providers.value.map((p) => p.pricingUpdatedAt).filter(Boolean).map((d) => new Date(d as string))
-  if (!dates.length) return '—'
-  const max = new Date(Math.max(...dates.map((d) => d.getTime())))
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${max.getFullYear()}-${pad(max.getMonth() + 1)}-${pad(max.getDate())}`
+const compareRows = computed(() => {
+  const rows: any[] = []
+  const num = (v: any) => (typeof v === 'number' ? v : null)
+  const priceBest = (key: string) => {
+    const vals = compare.value.map((m) => num(m[key])).filter((v) => v != null) as number[]
+    return vals.length ? Math.min(...vals) : null
+  }
+  const scoreRow = (key: string, label: string) => ({
+    key, label, kind: 'score', models: compare.value.map((m) => ({ code: m.code, value: num((m.capabilityScore || {})[key]), currency: m.currency })),
+  })
+  const priceRow = (key: string, label: string) => {
+    const best = priceBest(key)
+    return { key, label, unit: '/1M tokens', kind: 'price', best, models: compare.value.map((m) => ({ code: m.code, value: num(m[key]), currency: m.currency })) }
+  }
+  rows.push({ key: 'g1', label: '价格', group: true })
+  rows.push(priceRow('inputPrice', '输入'))
+  rows.push(priceRow('outputPrice', '输出'))
+  rows.push({ key: 'g2', label: '能力', group: true })
+  for (const d of CAP_DIMS) rows.push(scoreRow(d.k, d.label))
+  rows.push({ key: 'ctx', label: '上下文', kind: 'ctx', models: compare.value.map((m) => ({ code: m.code, value: num(m.contextWindow) })) })
+  rows.push({ key: 'value', label: '性价比', kind: 'score', models: compare.value.map((m) => ({ code: m.code, value: num(m.valueScore), currency: m.currency })) })
+  return rows
 })
 
-onMounted(async () => {
-  const [dir, st, cp] = await Promise.all([
-    $fetch('/api/ai-provider-directory').catch(() => ({ code: 1, data: [] })),
-    $fetch('/api/ai-provider-directory/stats').catch(() => ({ code: 1, data: null })),
-    $fetch('/api/ai/center/compare').catch(() => ({ code: 1, data: [] })),
-  ])
-  if (dir?.code === 0) providers.value = dir.data
-  if (st?.code === 0) stats.value = st.data
-  if (cp?.code === 0) compareData.value = cp.data
-})
+const priceSorted = computed(() =>
+  models.value.filter((m) => m.inputPrice != null).sort((a: any, b: any) => a.inputPrice - b.inputPrice).slice(0, 12)
+)
+const logWidth = (v: number) => {
+  // 对数轴：0.01 → 1% , 100 → 100%
+  const w = (Math.log10(v + 0.01) + 2) / 4 * 100
+  return Math.max(2, Math.min(100, Math.round(w)))
+}
+const cheapWidth = (v: number) => {
+  const pct = (0.5 / (v + 0.5)) * 100
+  return Math.max(4, Math.min(100, Math.round(pct)))
+}
+function stars(v: number | null): string {
+  if (v == null) return '—'
+  const n = Math.round(v / 20)
+  return '★'.repeat(Math.max(1, n)) + '☆'.repeat(5 - Math.max(1, n))
+}
+function capDims(m: any) {
+  const cap = m.capabilityScore || {}
+  const dims = (m.modelTypes || []).some((t: string) => ['image', 'video', 'audio'].includes(t))
+    ? CAP_DIMS.filter((d) => !['coding', 'reasoning'].includes(d.k))
+    : CAP_DIMS
+  return dims.map((d) => ({ ...d, v: Number(cap[d.k]) || 0 })).filter((d) => d.v > 0)
+}
+function typeLabel(types: string[]) {
+  const map: Record<string, string> = { language: '语言', image: '图片', video: '视频', audio: '语音', multimodal: '多模态', agent: 'Agent' }
+  return (types || []).map((t) => map[t] || t).join(' · ') || '模型'
+}
+function fmtPrice(v: number | null | undefined, cur?: string): string {
+  if (v == null) return '—'
+  const c = cur || 'USD'
+  const s = c === 'CNY' ? '¥' : '$'
+  const raw = v >= 10 ? v.toFixed(0) : v >= 1 ? v.toFixed(2) : v >= 0.1 ? v.toFixed(2) : v.toFixed(3)
+  // 只去小数尾零，整数不动（¥20 不能变 ¥2）
+  const out = raw.includes('.') ? raw.replace(/0+$/, '').replace(/\.$/, '') : raw
+  return s + out
+}
+function fmtCtx(v: number): string {
+  if (!v) return '—'
+  if (v >= 1000000) return (v / 1000000).toFixed(v % 1000000 === 0 ? 0 : 1) + 'M'
+  if (v >= 1000) return Math.round(v / 1000) + 'K'
+  return String(v)
+}
+function fmtDate(d: string): string {
+  if (!d) return ''
+  const dt = new Date(d)
+  if (isNaN(dt.getTime())) return d.slice(0, 10)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`
+}
+const BRAND_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1', '#14b8a6', '#a855f7']
+function brandChar(name: string): string { return (name || '?').charAt(0).toUpperCase() }
+function brandBg(name: string): string {
+  let h = 0
+  for (const ch of name || '') h = (h * 31 + ch.charCodeAt(0)) % 997
+  return BRAND_COLORS[h % BRAND_COLORS.length]
+}
 </script>
 
 <style scoped>
-.aic { max-width: 1240px; margin: 0 auto; padding: 0 24px 80px; color: var(--aic-txt, #1a1a2e); }
-.aic :deep(a) { text-decoration: none; }
+.aic { min-height: 100vh; background: #070b14; color: #e5e9f2; transition: background .3s, color .3s; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+.aic.light { background: #f7f8fb; color: #1a2233; }
 
-/* 亮暗自适应变量 */
-.aic { --aic-txt: #16161f; --aic-muted: #6b7280; --aic-card: rgba(255,255,255,0.72); --aic-border: rgba(0,0,0,0.08); --aic-glass: rgba(255,255,255,0.6); --aic-bg: #f7f8fb; }
-@media (prefers-color-scheme: dark) {
-  .aic { --aic-txt: #e8e8f0; --aic-muted: #9098b8; --aic-card: rgba(26,26,36,0.72); --aic-border: rgba(255,255,255,0.08); --aic-glass: rgba(26,26,36,0.55); --aic-bg: #0a0a0f; }
-}
-.aic { background: var(--aic-bg); border-radius: 24px; }
+/* ── 顶部 ── */
+.aic-head { position: sticky; top: 0; z-index: 50; background: rgba(7, 11, 20, .86); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.06); }
+.light .aic-head { background: rgba(247,248,251,.9); border-bottom-color: rgba(0,0,0,.08); }
+.aic-head-inner { max-width: 1280px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.aic-brand { display: flex; align-items: center; gap: 10px; }
+.aic-brand-icon { font-size: 24px; }
+.aic-brand-title { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
+.aic-brand-sub { font-size: 11px; color: #7a86a3; margin-top: 1px; }
+.light .aic-brand-sub { color: #6b7690; }
+.aic-search { flex: 1; min-width: 220px; position: relative; }
+.aic-search input { width: 100%; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 9px 34px 9px 34px; font-size: 13px; color: inherit; outline: none; transition: border .2s; }
+.aic-search input:focus { border-color: #3b82f6; }
+.light .aic-search input { background: #fff; border-color: #dde2ec; }
+.aic-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 13px; opacity: .6; }
+.aic-search-clear { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #7a86a3; cursor: pointer; font-size: 12px; }
+.aic-types { display: flex; gap: 6px; flex-wrap: wrap; }
+.aic-type { background: none; border: 1px solid rgba(255,255,255,.1); color: #a7b0c5; border-radius: 999px; padding: 6px 13px; font-size: 12px; cursor: pointer; transition: all .2s; }
+.aic-type:hover { color: #fff; border-color: rgba(255,255,255,.25); }
+.aic-type.on { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
+.light .aic-type { border-color: #dde2ec; color: #5a6478; }
+.light .aic-type.on { background: #3b82f6; color: #fff; }
+.aic-type-count { font-size: 10px; opacity: .65; margin-left: 4px; }
 
-/* ── Hero ── */
-.aic-hero { padding: 72px 24px 40px; text-align: center; position: relative; overflow: hidden; }
-.aic-hero::before { content: ''; position: absolute; inset: -40% -20% auto; height: 90%; background: radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.14), transparent 60%); pointer-events: none; }
-.aic-brand { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: 2px; color: #f97316; background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); padding: 6px 16px; border-radius: 999px; margin-bottom: 22px; }
-.aic-title { font-size: clamp(34px, 5vw, 56px); font-weight: 800; letter-spacing: -1.5px; margin: 0 0 14px; background: linear-gradient(120deg, #f97316, #a855f7 70%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.aic-sub { font-size: 17px; color: var(--aic-muted); margin: 0 0 28px; }
-.aic-search { max-width: 520px; margin: 0 auto 40px; display: flex; align-items: center; gap: 10px; background: var(--aic-card); border: 1px solid var(--aic-border); border-radius: 999px; padding: 8px 18px; backdrop-filter: blur(12px); box-shadow: 0 8px 32px rgba(0,0,0,0.08); transition: box-shadow .25s, transform .25s; }
-.aic-search:focus-within { box-shadow: 0 8px 40px rgba(249,115,22,0.18); transform: translateY(-1px); }
-.aic-search-input { flex: 1; border: none; outline: none; background: transparent; font-size: 15px; color: var(--aic-txt); padding: 6px 0; }
-.aic-search-clear { border: none; background: transparent; color: var(--aic-muted); cursor: pointer; font-size: 14px; }
-.aic-stats { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
-.aic-stat { min-width: 150px; padding: 22px 28px; border-radius: 20px; background: var(--aic-glass); border: 1px solid var(--aic-border); backdrop-filter: blur(14px); transition: transform .25s; }
-.aic-stat:hover { transform: translateY(-3px); }
-.aic-stat-num { font-size: 34px; font-weight: 800; background: linear-gradient(120deg, #f97316, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.aic-stat-label { font-size: 13px; color: var(--aic-muted); margin-top: 4px; }
+/* ── 区块 ── */
+.aic-sec { max-width: 1280px; margin: 0 auto; padding: 26px 20px 6px; }
+.aic-sec-title { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.aic-sec-title h2 { font-size: 19px; font-weight: 700; margin: 0; }
+.aic-sec-note { font-size: 11.5px; color: #7a86a3; }
+.light .aic-sec-note { color: #6b7690; }
 
-/* ── Tabs ── */
-.aic-tabs { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 8px 0 22px; position: sticky; top: 0; z-index: 20; background: var(--aic-bg); border-radius: 24px; }
-.aic-tab { border: 1px solid var(--aic-border); background: var(--aic-card); color: var(--aic-muted); padding: 9px 18px; border-radius: 999px; font-size: 14px; cursor: pointer; transition: all .2s; backdrop-filter: blur(8px); }
-.aic-tab:hover { transform: translateY(-1px); }
-.aic-tab.on { background: linear-gradient(120deg, #f97316, #a855f7); color: #fff; border-color: transparent; box-shadow: 0 6px 20px rgba(249,115,22,0.3); }
-.aic-tab-count { font-size: 11px; opacity: .75; margin-left: 5px; }
+/* ── 排行榜 ── */
+.aic-boards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 900px) { .aic-boards { grid-template-columns: 1fr; } }
+.aic-board { border: 1px solid rgba(255,255,255,.07); border-radius: 14px; background: rgba(255,255,255,.025); overflow: hidden; }
+.light .aic-board { border-color: #e3e7f0; background: #fff; box-shadow: 0 1px 3px rgba(16,24,40,.05); }
+.aic-board-head { padding: 11px 14px; font-size: 13px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; gap: 7px; }
+.light .aic-board-head { border-bottom-color: #eef1f6; }
+.aic-board-body { padding: 6px 10px 10px; }
+.aic-rank { display: grid; grid-template-columns: 22px 1fr auto; grid-template-areas: 'no name score' 'no sub score' 'bar bar bar'; align-items: center; gap: 2px 8px; padding: 6px 4px; border-radius: 8px; }
+.aic-rank.top { background: rgba(59,130,246,.06); }
+.aic-rank-no { grid-area: no; font-size: 13px; font-weight: 800; color: #5a6478; text-align: center; }
+.aic-rank-no.gold { color: #f59e0b; } .aic-rank-no.silver { color: #94a3b8; } .aic-rank-no.bronze { color: #d97706; }
+.aic-rank-name { grid-area: name; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aic-rank-sub { grid-area: sub; font-size: 10.5px; color: #7a86a3; }
+.aic-rank-score { grid-area: score; font-size: 12.5px; font-weight: 700; color: #3b82f6; }
+.aic-rank-bar { grid-area: bar; height: 3px; background: rgba(255,255,255,.07); border-radius: 2px; margin-top: 3px; overflow: hidden; }
+.light .aic-rank-bar { background: #eef1f6; }
+.aic-rank-bar i { display: block; height: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 2px; }
+.aic-rank-bar.cheap i { background: linear-gradient(90deg, #10b981, #84cc16); }
 
-/* ── 价格中心横幅 ── */
-.aic-pricebar { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 13px; color: var(--aic-muted); padding: 12px 18px; margin: 4px auto 28px; max-width: 640px; border-radius: 14px; background: var(--aic-glass); border: 1px solid var(--aic-border); }
-.aic-pricebar-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; animation: pulse 2s infinite; }
-@keyframes pulse { 50% { opacity: .4; } }
+/* ── 对比表 ── */
+.aic-cmp { border: 1px solid rgba(255,255,255,.07); border-radius: 14px; background: rgba(255,255,255,.025); overflow: hidden; }
+.light .aic-cmp { border-color: #e3e7f0; background: #fff; }
+.aic-cmp-add { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.light .aic-cmp-add { border-bottom-color: #eef1f6; }
+.aic-cmp-add select { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); color: inherit; border-radius: 8px; padding: 6px 10px; font-size: 12px; outline: none; }
+.light .aic-cmp-add select { background: #fff; border-color: #dde2ec; }
+.aic-cmp-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.aic-cmp-table th, .aic-cmp-table td { padding: 8px 10px; font-size: 12.5px; text-align: center; }
+.aic-cmp-table thead th { background: rgba(59,130,246,.05); border-bottom: 1px solid rgba(255,255,255,.06); }
+.light .aic-cmp-table thead th { border-bottom-color: #eef1f6; }
+.aic-cmp-table tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); }
+.light .aic-cmp-table tbody tr { border-bottom-color: #f2f4f9; }
+.aic-cmp-dim { text-align: left !important; font-weight: 600; color: #8b94ab; width: 130px; font-size: 12px; }
+.aic-cmp-table tr.dimgroup td { background: rgba(255,255,255,.02); color: #5a6478; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-align: left; padding: 6px 10px; }
+.light .aic-cmp-table tr.dimgroup td { background: #f8f9fc; }
+.aic-cmp-head { position: relative; }
+.aic-cmp-name { font-size: 12.5px; font-weight: 700; }
+.aic-cmp-sub { font-size: 10.5px; color: #7a86a3; margin-top: 1px; }
+.aic-cmp-rm { position: absolute; top: -6px; right: -6px; background: rgba(239,68,68,.12); border: none; color: #ef4444; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; line-height: 1; }
+.aic-cmp-val { font-size: 12.5px; }
+.aic-stars { color: #f59e0b; font-size: 10.5px; letter-spacing: 0; margin-right: 5px; }
+.aic-cmp-num { color: #8b94ab; font-size: 11px; }
+.aic-cmp-price { font-weight: 700; }
+.aic-cmp-best { font-size: 10px; color: #10b981; margin-left: 5px; }
+.aic-cmp-unit { display: block; font-size: 10px; color: #5a6478; font-weight: 400; }
+.aic-cmp-na { color: #5a6478; }
 
-/* ── 卡片网格 ── */
-.aic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
-.aic-card { border-radius: 20px; padding: 22px; background: var(--aic-card); border: 1px solid var(--aic-border); backdrop-filter: blur(14px); cursor: pointer; transition: transform .25s, box-shadow .25s, border-color .25s; animation: rise .5s ease both; }
-.aic-card:hover { transform: translateY(-4px); box-shadow: 0 18px 48px rgba(0,0,0,0.12); border-color: rgba(249,115,22,0.4); }
-.aic-card.connected { border-color: rgba(34,197,94,0.35); }
-.aic-card-head { display: flex; align-items: flex-start; gap: 12px; }
-.aic-logo { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 18px; flex-shrink: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.2); }
-.aic-logo.sm { width: 36px; height: 36px; font-size: 15px; }
-.aic-card-title { flex: 1; min-width: 0; }
-.aic-card-name { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.aic-tag { font-size: 10px; font-weight: 600; color: #f97316; background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
-.aic-card-meta { font-size: 12px; color: var(--aic-muted); margin-top: 3px; }
-.aic-score { text-align: right; flex-shrink: 0; }
-.aic-score-val { font-size: 26px; font-weight: 800; color: #f97316; line-height: 1; }
-.aic-score-stars { font-size: 11px; color: #f59e0b; letter-spacing: 1px; margin-top: 3px; }
-.aic-score-label { font-size: 10px; color: var(--aic-muted); margin-top: 2px; }
+/* ── 模型市场 ── */
+.aic-market { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.aic-mcard { border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: rgba(255,255,255,.025); padding: 13px; display: flex; flex-direction: column; gap: 9px; transition: border-color .2s, transform .15s; }
+.aic-mcard:hover { border-color: rgba(59,130,246,.45); transform: translateY(-1px); }
+.light .aic-mcard { border-color: #e3e7f0; background: #fff; box-shadow: 0 1px 3px rgba(16,24,40,.04); }
+.aic-mcard-top { display: flex; align-items: center; gap: 9px; }
+.aic-mcard-brand { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 15px; flex-shrink: 0; }
+.aic-mcard-id { flex: 1; min-width: 0; }
+.aic-mcard-name { font-size: 13.5px; font-weight: 700; text-decoration: none; color: inherit; }
+.aic-mcard-name:hover { color: #3b82f6; }
+.aic-mcard-sub { font-size: 11px; color: #7a86a3; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aic-badge { font-size: 10px; border-radius: 999px; padding: 2px 8px; font-weight: 600; flex-shrink: 0; }
+.aic-badge.ok { background: rgba(16,185,129,.12); color: #10b981; }
+.aic-badge.pending { background: rgba(245,158,11,.12); color: #f59e0b; }
+.aic-mcard-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.aic-chip { font-size: 10.5px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 6px; padding: 2px 7px; color: #a7b0c5; }
+.light .aic-chip { background: #f4f6fa; border-color: #e6eaf2; color: #5a6478; }
+.aic-mcard-caps { display: flex; flex-direction: column; gap: 4px; }
+.aic-cap { display: grid; grid-template-columns: 52px 1fr 22px; align-items: center; gap: 7px; }
+.aic-cap-label { font-size: 10.5px; color: #8b94ab; }
+.aic-cap-bar { height: 4px; background: rgba(255,255,255,.07); border-radius: 2px; overflow: hidden; }
+.light .aic-cap-bar { background: #eef1f6; }
+.aic-cap-bar i { display: block; height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 2px; }
+.aic-cap-val { font-size: 10.5px; color: #a7b0c5; text-align: right; }
+.aic-mcard-price { border-top: 1px dashed rgba(255,255,255,.09); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.light .aic-mcard-price { border-top-color: #e8ebf3; }
+.aic-mcard-p { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.aic-mcard-pl { font-size: 10.5px; color: #7a86a3; width: 26px; }
+.aic-mcard-p b { font-size: 13px; }
+.aic-mcard-cache { font-size: 10px; color: #10b981; }
+.aic-mcard-na { font-size: 11.5px; color: #f59e0b; padding: 4px 0; }
+.aic-mcard-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; }
+.light .aic-mcard-foot { border-top-color: #eef1f6; }
+.aic-mcard-value { font-size: 11px; color: #7a86a3; }
+.aic-mcard-value b { color: #3b82f6; font-size: 14px; }
+.aic-mcard-detail { font-size: 12px; color: #3b82f6; text-decoration: none; font-weight: 600; }
+.aic-empty { grid-column: 1 / -1; text-align: center; color: #7a86a3; padding: 40px 0; font-size: 13px; }
 
-/* 能力条 */
-.aic-caps { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 16px 0 12px; padding: 14px; border-radius: 14px; background: rgba(0,0,0,0.03); }
-@media (prefers-color-scheme: dark) { .aic-caps { background: rgba(255,255,255,0.04); } }
-.aic-cap { display: flex; flex-direction: column; gap: 4px; }
-.aic-cap-label { font-size: 10px; color: var(--aic-muted); }
-.aic-cap-track { height: 5px; border-radius: 999px; background: rgba(0,0,0,0.08); overflow: hidden; }
-@media (prefers-color-scheme: dark) { .aic-cap-track { background: rgba(255,255,255,0.1); } }
-.aic-cap-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f97316, #f59e0b); transition: width .8s ease; }
-.aic-cap-val { font-size: 11px; font-weight: 700; }
+/* ── 价格趋势 ── */
+.aic-trend { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+@media (max-width: 900px) { .aic-trend { grid-template-columns: 1fr; } }
+.aic-trend-chart, .aic-trend-side { border: 1px solid rgba(255,255,255,.07); border-radius: 14px; background: rgba(255,255,255,.025); padding: 14px; }
+.light .aic-trend-chart, .light .aic-trend-side { border-color: #e3e7f0; background: #fff; }
+.aic-trend-row { display: grid; grid-template-columns: 130px 1fr 70px; align-items: center; gap: 10px; padding: 4px 0; }
+.aic-trend-name { font-size: 11.5px; color: #a7b0c5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aic-trend-track { height: 14px; background: rgba(255,255,255,.05); border-radius: 4px; overflow: hidden; }
+.light .aic-trend-track { background: #eef1f6; }
+.aic-trend-bar { display: block; height: 100%; border-radius: 4px; opacity: .85; transition: width .4s; }
+.aic-trend-price { font-size: 11.5px; font-weight: 700; text-align: right; }
+.aic-trend-side-title { font-size: 12.5px; font-weight: 700; margin-bottom: 10px; }
+.aic-hist { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+.light .aic-hist { border-bottom-color: #eef1f6; }
+.aic-hist-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.aic-hist-name { font-size: 12px; font-weight: 600; }
+.aic-hist-price { font-size: 11.5px; color: #3b82f6; font-weight: 600; white-space: nowrap; }
+.aic-hist-meta { font-size: 10.5px; color: #7a86a3; margin-top: 2px; }
+.aic-hist-src { font-size: 10px; color: #5a6478; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* 价格 */
-.aic-price { padding: 10px 14px; border-radius: 12px; background: rgba(249,115,22,0.06); border: 1px dashed rgba(249,115,22,0.25); }
-.aic-price-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.aic-price-k { font-size: 11px; color: var(--aic-muted); }
-.aic-price-v { font-size: 14px; font-weight: 700; margin-right: 8px; }
-.aic-ctx { margin-left: auto; font-size: 11px; color: var(--aic-muted); background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 999px; }
-@media (prefers-color-scheme: dark) { .aic-ctx { background: rgba(255,255,255,0.08); } }
-
-/* 状态 */
-.aic-state { display: flex; justify-content: space-between; align-items: center; margin: 12px 2px; font-size: 12px; }
-.aic-state-left { display: flex; align-items: center; gap: 6px; font-weight: 600; }
-.aic-state-dot { width: 9px; height: 9px; border-radius: 50%; background: #9ca3af; }
-.aic-state-dot.on { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
-.aic-state-right { display: flex; gap: 12px; color: var(--aic-muted); }
-.aic-state-mini b { color: var(--aic-txt); }
-
-/* 操作 */
-.aic-actions { display: flex; gap: 8px; margin-top: 14px; }
-.aic-btn { flex: 1; text-align: center; padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; border: 1px solid var(--aic-border); background: var(--aic-card); color: var(--aic-txt); cursor: pointer; transition: all .2s; white-space: nowrap; }
-.aic-btn:hover { transform: translateY(-1px); }
-.aic-btn.primary { background: linear-gradient(120deg, #f97316, #a855f7); color: #fff; border-color: transparent; box-shadow: 0 6px 18px rgba(249,115,22,0.3); }
-.aic-btn.ghost { background: transparent; }
-.aic-btn.block { width: 100%; }
-.aic-empty { grid-column: 1 / -1; text-align: center; padding: 60px; color: var(--aic-muted); }
-
-/* ── Compare ── */
-.aic-compare-sec { margin-top: 64px; padding: 36px; border-radius: 24px; background: var(--aic-glass); border: 1px solid var(--aic-border); backdrop-filter: blur(14px); }
-.aic-sec-head h2 { margin: 0 0 6px; font-size: 24px; font-weight: 800; }
-.aic-sec-sub { font-size: 13px; color: var(--aic-muted); font-weight: 400; }
-.aic-sec-desc { margin: 0 0 22px; color: var(--aic-muted); font-size: 13px; }
-.aic-compare { display: flex; gap: 10px; align-items: flex-end; }
-.aic-compare-axis-y { writing-mode: vertical-rl; font-size: 11px; color: var(--aic-muted); padding: 4px 0; transform: rotate(180deg); }
-.aic-compare-svg { width: 100%; max-width: 860px; border-radius: 16px; background: rgba(0,0,0,0.02); }
-@media (prefers-color-scheme: dark) { .aic-compare-svg { background: rgba(255,255,255,0.02); } }
-.aic-compare-svg .grid { stroke: var(--aic-border); stroke-width: 1; stroke-dasharray: 4 4; }
-.aic-compare-svg .axis-label { fill: var(--aic-muted); font-size: 12px; }
-.aic-compare-svg .bubble { stroke: rgba(255,255,255,0.7); stroke-width: 1; cursor: pointer; transition: opacity .2s; }
-.aic-compare-svg .bubble.hot { stroke-width: 2; }
-.aic-compare-svg .bubble-label { fill: var(--aic-txt); font-size: 12px; font-weight: 700; }
-.aic-compare-axis-x { text-align: center; font-size: 11px; color: var(--aic-muted); padding-bottom: 4px; }
-.aic-compare-legend { display: flex; gap: 18px; justify-content: center; margin-top: 16px; font-size: 12px; color: var(--aic-muted); }
-.aic-legend-item { display: flex; align-items: center; gap: 6px; }
-.aic-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
-
-/* ── 余额弹窗 ── */
-.aic-modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 999; }
-.aic-modal { width: 420px; max-width: calc(100vw - 40px); border-radius: 20px; padding: 24px; background: var(--aic-card); border: 1px solid var(--aic-border); backdrop-filter: blur(20px); animation: rise .25s ease both; }
-.aic-modal-head { display: flex; gap: 12px; align-items: center; }
-.aic-modal-title { font-weight: 700; font-size: 16px; }
-.aic-modal-sub { font-size: 11px; color: var(--aic-muted); margin-top: 2px; }
-.aic-modal-x { margin-left: auto; border: none; background: transparent; color: var(--aic-muted); font-size: 16px; cursor: pointer; }
-.aic-modal-body { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; }
-.aic-field-label { font-size: 12px; color: var(--aic-muted); }
-.aic-input { padding: 11px 14px; border-radius: 12px; border: 1px solid var(--aic-border); background: rgba(0,0,0,0.04); color: var(--aic-txt); font-size: 14px; outline: none; }
-@media (prefers-color-scheme: dark) { .aic-input { background: rgba(255,255,255,0.06); } }
-.aic-input:focus { border-color: #f97316; }
-.aic-balance-err { color: #ef4444; font-size: 12px; }
-.aic-balance-ok { text-align: center; padding: 14px; border-radius: 14px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); }
-.aic-balance-big { font-size: 30px; font-weight: 800; color: #22c55e; }
-.aic-balance-note { font-size: 11px; color: var(--aic-muted); margin-top: 2px; }
-
-@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+/* ── 页脚 ── */
+.aic-foot { max-width: 1280px; margin: 30px auto 0; padding: 16px 20px 34px; border-top: 1px solid rgba(255,255,255,.06); }
+.light .aic-foot { border-top-color: #e6eaf2; }
+.aic-foot-note { font-size: 11px; color: #5a6478; line-height: 1.7; }
 </style>
