@@ -32,6 +32,12 @@
           <AiOutcomeValueCard class="lg:col-span-3" :data="outcomes" />
         </div>
 
+        <!-- ═══ Row 3.7：AI 员工运营闭环（SPRINT-AGENT-OPERATIONS-01）健康中心 | 生命周期 ═══ -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <AgentHealthCard :data="agentHealth" />
+          <LifecycleCard :data="lifecycle" />
+        </div>
+
         <!-- ═══ Bottom：实时事件流（横向紧凑条） ═══ -->
         <ActivityStrip :events="events?.events || []" />
 
@@ -102,6 +108,9 @@ import WorkspaceEcosystemCard from '~/components/admin/dashboard/WorkspaceEcosys
 import AgentMiniCard from '~/components/admin/dashboard/AgentMiniCard.vue'
 import AiHealthMiniCard from '~/components/admin/dashboard/AiHealthMiniCard.vue'
 import AiOutcomeValueCard from '~/components/admin/dashboard/AiOutcomeValueCard.vue'
+// SPRINT-AGENT-OPERATIONS-01: AI 员工运营闭环（健康中心 + 生命周期）
+import AgentHealthCard from '~/components/admin/dashboard/AgentHealthCard.vue'
+import LifecycleCard from '~/components/admin/dashboard/LifecycleCard.vue'
 import ActivityStrip from '~/components/admin/dashboard/ActivityStrip.vue'
 import DetailDrawer from '~/components/admin/dashboard/DetailDrawer.vue'
 // 详情抽屉复用（完整分析）
@@ -126,6 +135,8 @@ const vip = ref<any>(null)
 const workspace = ref<any>(null)
 const ecosystem = ref<any>(null)
 const outcomes = ref<any>(null)
+const agentHealth = ref<any>(null)
+const lifecycle = ref<any>(null)
 const geography = ref<any>(null)
 const agents = ref<any>(null)
 const infra = ref<any>(null)
@@ -162,7 +173,7 @@ async function loadAll() {
   error.value = ''
   const q = `?range=${range.value}`
   try {
-    const [ov, us, rv, vp, ws, eco, oc, geo, ag, inf, ev] = await Promise.all([
+    const [ov, us, rv, vp, ws, eco, oc, geo, ag, inf, ev, ah, lc] = await Promise.all([
       fetchJson(`/api/admin/dashboard/overview${q}`),
       fetchJson(`/api/admin/dashboard/users${q}`),
       fetchJson(`/api/admin/dashboard/revenue${q}`),
@@ -174,10 +185,12 @@ async function loadAll() {
       fetchJson('/api/admin/dashboard/agents'),
       fetchJson('/api/admin/dashboard/infrastructure'),
       fetchJson('/api/admin/dashboard/events'),
+      fetchJson('/api/admin/dashboard/agent-health'),
+      fetchJson('/api/admin/dashboard/lifecycle'),
     ])
     overview.value = ov; users.value = us; revenue.value = rv; vip.value = vp
     workspace.value = ws; ecosystem.value = eco; geography.value = geo; agents.value = ag; infra.value = inf; events.value = ev
-    outcomes.value = oc
+    outcomes.value = oc; agentHealth.value = ah; lifecycle.value = lc
   } catch (e: any) {
     error.value = e.message || String(e)
   } finally {

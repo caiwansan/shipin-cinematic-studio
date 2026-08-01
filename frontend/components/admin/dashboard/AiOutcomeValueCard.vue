@@ -26,14 +26,26 @@
         </div>
         <div v-if="cost(ws.workspace) > 0" class="mt-1.5 pt-1.5 border-t border-white/[0.05] flex items-center justify-between">
           <span class="text-[8px] text-gray-500">真实调用成本</span>
-          <span class="text-[9px] font-mono text-amber-400">${{ cost(ws.workspace).toFixed(4) }}</span>
+          <span class="text-[9px] font-mono text-amber-400">¥{{ cost(ws.workspace).toFixed(4) }}</span>
         </div>
       </div>
     </div>
 
     <div class="mt-2 pt-2 border-t border-white/[0.05] shrink-0">
-      <p class="text-[8px] text-gray-600 leading-relaxed">
-        ⚠️ ROI 待企业价值参数（如 HR 小时成本）配置后启用 —— 当前仅展示真实结果与真实成本，禁止估算
+      <!-- SPRINT-AGENT-OPERATIONS-01: 企业配置价值参数后的真实 ROI -->
+      <template v-if="rois.length > 0">
+        <p class="text-[8px] text-gray-500 mb-1">📐 企业配置价值参数后的真实 ROI（{{ rois.length }} 个员工）</p>
+        <div v-for="r in rois" :key="r.agentInstanceId" class="flex items-center justify-between text-[9px] py-0.5">
+          <span class="text-gray-400 truncate">{{ r.orgName }} · {{ r.agentInstanceId.slice(0, 6) }}</span>
+          <span class="font-mono">
+            <span class="text-emerald-400">¥{{ r.savedValue }}</span>
+            <span class="text-gray-600"> / ¥{{ r.aiCost }}</span>
+            <span class="text-cyan-400 ml-1">ROI {{ r.roi != null ? r.roi + '×' : '—' }}</span>
+          </span>
+        </div>
+      </template>
+      <p class="text-[8px] text-gray-600 leading-relaxed mt-1">
+        {{ roiNote }}
       </p>
     </div>
   </div>
@@ -78,6 +90,12 @@ const workspaces = computed(() => (props.data?.outcomes || []).map((ws: any) => 
   types: (ws.types || []).sort((a: any, b: any) => b.count - a.count),
 })))
 const costs = computed(() => props.data?.costs || {})
+const rois = computed(() => props.data?.roiStatus?.rois || [])
+const roiNote = computed(() => {
+  const rs = props.data?.roiStatus
+  if (rs?.configuredOrgs > 0) return `ROI 基于企业配置的价值参数计算（${rs.configuredOrgs} 家企业已配置），平台不估算`
+  return '⚠️ ROI 待企业价值参数（如 HR 小时成本）配置后启用 —— 当前仅展示真实结果与真实成本，禁止估算'
+})
 
 const workspaceLabel = (ws: string) => WS_LABELS[ws] || ws
 const outcomeLabel = (ws: string, t: string) => LABELS[ws]?.[t] || t

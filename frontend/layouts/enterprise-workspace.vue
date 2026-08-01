@@ -67,6 +67,8 @@ const subNavItems = [
   { label: 'AI 招聘团队', path: '/workspace/enterprise/ai-employees' },
   // SPRINT-IDENTITY-REALITY-FIX-01: AI 模型设置（BYOK，企业资产）
   { label: 'AI 模型设置', path: '/workspace/enterprise/model-settings' },
+  // SPRINT-AGENT-OPERATIONS-01 T01: AI 员工价值参数（ROI 前置，企业自定）
+  { label: '价值参数', path: '/workspace/enterprise/value-params' },
 ]
 
 function isActive(path: string): boolean {

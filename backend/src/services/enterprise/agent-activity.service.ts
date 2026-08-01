@@ -177,7 +177,9 @@ const MANUAL_MINUTES: Record<string, number> = {
 }
 const DEFAULT_MANUAL_MINUTES = 15
 
-/** HR 时薪估算（¥/小时）— 用于 ROI 换算，可按实际调整 */
+/** ⚠️ DEPRECATED（SPRINT-AGENT-OPERATIONS-01）：平台硬编码估算已废弃（掌柜冻结：企业输入参数，平台禁止估算）
+ *  本文件 getRoiReport 仍保留旧估算仅供历史调用方兼容；新 ROI 一律走 value-param.service / agent-operations.getRoiStatus
+ *  禁止再把平台估算值作为业务 ROI 展示 */
 const HR_HOURLY_RATE = 50
 
 function manualMinutesFor(taskType: string): number {

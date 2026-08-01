@@ -8217,6 +8217,29 @@ model AgentOutcome {
   @@map("agent_outcome")
 }
 
+// ============================================================
+// SPRINT-AGENT-OPERATIONS-01 T01 — 企业价值参数（ROI 前置）
+// AI 员工价值 = 企业自定参数（禁止平台估算）
+// 一个 AI 员工一条；未配置 → ROI 不展示（待企业配置）
+// ============================================================
+
+model EnterpriseValueParam {
+  id                   String   @id @default(uuid()) @db.Uuid
+  organizationId       String   @map("organization_id") @db.Uuid // FK → Organization.id
+  agentInstanceId      String   @map("agent_instance_id") @db.Text // EnterpriseAgentInstance.id（一个员工一条）
+  workspace            String   @default("recruitment") @db.VarChar(50)
+  laborHourlyCost      Float    @map("labor_hourly_cost") // 企业自定：HR/员工平均小时成本（¥/小时）
+  manualMinutesPerTask Float    @map("manual_minutes_per_task") // 企业自定：人工完成单次任务耗时（分钟）
+  aiSecondsPerTask     Float    @map("ai_seconds_per_task") // 企业自定：AI 完成单次任务耗时（秒）
+  note                 String?  @db.Text // 企业备注（可选）
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, agentInstanceId])
+  @@index([organizationId])
+  @@map("enterprise_value_param")
+}
+
 model RecruitmentChannel {
   id          String   @id @default(uuid()) @db.Uuid
   name        String

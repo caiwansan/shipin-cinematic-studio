@@ -354,6 +354,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise-report.js')).enterpriseReportRoutes)
   // Agent Activity（AI 员工工作日志 — Sprint 8）
   await app.register((await import('./routes/enterprise-agent-activity.js')).default)
+  // SPRINT-AGENT-OPERATIONS-01 T01: 企业价值参数（ROI 前置，企业自定，平台禁估算）
+  await app.register((await import('./routes/enterprise-value-params.js')).default)
   // Agent Schedule（定时任务 + 目标追踪）
   await app.register((await import('./routes/agent-schedule.js')).agentScheduleRoutes)
   // Enterprise Channel Gateway（渠道管理 + 内容发布 + 互动）

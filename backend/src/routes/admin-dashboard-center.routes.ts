@@ -266,11 +266,41 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
         },
         // 价值说明：ROI 需企业价值参数（如 HR 小时成本）真实配置后才可计算，禁止估算
         roiNote: 'ROI 待企业价值参数配置后启用（当前仅展示真实结果与真实成本）',
+        // SPRINT-AGENT-OPERATIONS-01: ROI 状态（企业配置价值参数后的真实 ROI）
+        roiStatus: await (await import('../services/enterprise/agent-operations.service.js')).getRoiStatus(),
         recent: recent.map(r => ({
           id: r.id, workspace: r.workspace, outcomeType: r.outcomeType,
           organizationId: r.organizationId, userId: r.userId, createdAt: r.createdAt,
         })),
       },
+    }
+  })
+
+  // ══════════════════════════════════════════════════════════════════
+  // SPRINT-AGENT-OPERATIONS-01 T02: AI 员工健康中心（真实数据判定）
+  // GET /api/admin/dashboard/agent-health
+  // ══════════════════════════════════════════════════════════════════
+  app.get('/api/admin/dashboard/agent-health', { preHandler: [requireAdmin] }, async () => {
+    try {
+      const { getAgentHealth } = await import('../services/enterprise/agent-operations.service.js')
+      const data = await getAgentHealth()
+      return { code: 0, data }
+    } catch (e: any) {
+      return { code: 500, message: e.message, data: null }
+    }
+  })
+
+  // ══════════════════════════════════════════════════════════════════
+  // SPRINT-AGENT-OPERATIONS-01 T03: 企业 AI 员工生命周期 + 流失风险
+  // GET /api/admin/dashboard/lifecycle
+  // ══════════════════════════════════════════════════════════════════
+  app.get('/api/admin/dashboard/lifecycle', { preHandler: [requireAdmin] }, async () => {
+    try {
+      const { getEnterpriseLifecycle } = await import('../services/enterprise/agent-operations.service.js')
+      const data = await getEnterpriseLifecycle()
+      return { code: 0, data }
+    } catch (e: any) {
+      return { code: 500, message: e.message, data: null }
     }
   })
 
@@ -309,7 +339,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       meta.taskPrefixes.length
         ? prisma.$queryRawUnsafe(`SELECT COUNT(DISTINCT "userId") AS users FROM usage_logs WHERE "createdAt" >= $1 AND "taskType" LIKE $2 AND "taskType" NOT IN ($3)`, rangeStart, `${meta.taskPrefixes[0]}%`, ...DIRTY_TASKS) as Promise<{ users: bigint }[]>
         : Promise.resolve([]),
-      meta.hasAgents ? prisma.enterpriseAgentInstance.findMany({ select: { id: true, name: true, agentType: true, runtimeStatus: true, updatedAt: true } }) : Promise.resolve([]),
+      meta.hasAgents ? prisma.enterpriseAgentInstance.findMany({ select: { id: true, employeeId: true, agentId: true, runtimeStatus: true, updatedAt: true } }) : Promise.resolve([]),
     ])
 
     return {
@@ -1035,14 +1065,19 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
   // 数据能力从 /api/admin/enterprise/* 移入 /api/admin/dashboard/*
   // ═══════════════════════════════════════════════════════════════════
 
-  // GET /api/admin/dashboard/roi — AI 员工 ROI（执行次数/Token/成本/时长）
-  app.get('/api/admin/dashboard/roi', { preHandler: [requireAdmin] }, async (request) => {
-    const q = (request.query || {}) as { days?: string; organizationId?: string }
-    const days = q.days ? Math.min(parseInt(q.days, 10) || 30, 365) : 30
+  // GET /api/admin/dashboard/roi — AI 员工 ROI（企业价值参数驱动，平台禁估算）
+  // SPRINT-AGENT-OPERATIONS-01: 废弃平台硬编码 HR_HOURLY_RATE 估算（agent-activity.getRoiReport）
+  app.get('/api/admin/dashboard/roi', { preHandler: [requireAdmin] }, async () => {
     try {
-      const { getRoiReport } = await import('../services/enterprise/agent-activity.service.js')
-      const result = await getRoiReport({ days, organizationId: q.organizationId || undefined })
-      return { code: 0, data: result }
+      const { getRoiStatus } = await import('../services/enterprise/agent-operations.service.js')
+      const roiStatus = await getRoiStatus()
+      return {
+        code: 0,
+        data: {
+          ...roiStatus,
+          note: 'ROI 由企业价值参数驱动（HR 小时成本/人工耗时/AI 耗时），平台不估算；平台硬编码估算已废弃',
+        },
+      }
     } catch (error: any) {
       return { code: 500, message: error.message, data: null }
     }
