@@ -43,4 +43,26 @@ export default defineNuxtRouteMiddleware((to) => {
     const newPath = to.path.replace(/^\/enterprise/, '/workspace/enterprise')
     return navigateTo(newPath, { redirectCode: 301 })
   }
+
+  // ─── Case 3: /media-department/* → /workspace/media/* ───
+  // SPRINT-MEDIA-ROUTE-MIGRATION-01 (2026-08-02, 掌柜指令)
+  // 旧媒体部门工作台入口收敛到 AI 新媒体运营中心；旧页面保留不删除。
+  // 保留 query + hash（例如 /media-department/content?id=xxx → /workspace/media/content?id=xxx）
+  if (to.path.startsWith('/media-department')) {
+    const legacyMap: Record<string, string> = {
+      '/media-department': '/workspace/media',
+      '/media-department/': '/workspace/media',
+      '/media-department/index': '/workspace/media',
+      '/media-department/workspace': '/workspace/media',
+      '/media-department/employees': '/workspace/media/team',
+      '/media-department/analytics': '/workspace/media/analytics',
+      '/media-department/settings': '/workspace/media/accounts',
+      '/media-department/settings/channels': '/workspace/media/accounts',
+    }
+    const target = legacyMap[to.path]
+    return navigateTo(
+      { path: target || '/workspace/media', query: to.query, hash: to.hash },
+      { redirectCode: 301 },
+    )
+  }
 })
