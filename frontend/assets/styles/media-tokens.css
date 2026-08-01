@@ -20,8 +20,8 @@
   --media-ai-glow: rgba(139, 92, 246, 0.16);
   --media-ai-border: rgba(167, 139, 250, 0.35);
 
-  /* ── 背景氛围 ── */
-  --media-bg-deep: #070B16;
+  /* ── 背景氛围（DESIGN-REFINEMENT-03：深空黑 Base #050816 / Surface #0F172A） ── */
+  --media-bg-deep: #050816;
   --media-hero-grid-line: rgba(99, 102, 241, 0.07);
   --media-hero-glow-1: rgba(139, 92, 246, 0.13);
   --media-hero-glow-2: rgba(59, 130, 246, 0.09);
