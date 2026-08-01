@@ -92,6 +92,7 @@ import adminModelRoutes from './routes/admin-models.js'
 import adminModelV2Routes from './routes/admin-models-v2.js'
 import adminAiProviderRoutes from './routes/admin-ai-provider.routes.js'
 import aiProviderDirectoryRoutes from './routes/ai-provider-directory.routes.js'
+import aiRecommendationsRoutes from './routes/ai-recommendations.routes.js'
 import adminPlatformDefaultModelsRoutes from './routes/admin-platform-default-models.routes.js'
 import adminUsageStatsRoutes from './routes/admin-usage-stats.routes.js'
 import adminDashboardCenterRoutes from './routes/admin-dashboard-center.routes.js'
@@ -550,6 +551,7 @@ await app.register(projectV2Routes)
   await app.register(adminModelV2Routes)
   await app.register(adminAiProviderRoutes)
   await app.register(aiProviderDirectoryRoutes)
+  await app.register(aiRecommendationsRoutes)
   await app.register(adminPlatformDefaultModelsRoutes)
   await app.register(adminUsageStatsRoutes)
   await app.register(adminDashboardCenterRoutes)

@@ -110,6 +110,27 @@
         </button>
       </div>
 
+      <!-- ═══ 1c. AI 大脑建议条（AI-CENTER-02B：规则+评分权重推荐，不自动切换）═══ -->
+      <div class="rec-ai-suggest" v-if="hasSubscription && recLoaded && recList.length">
+        <div class="rec-ai-suggest-main">
+          <span class="rec-ai-suggest-badge">🧠 AI建议</span>
+          <div class="rec-ai-suggest-block">
+            <span class="rec-ai-suggest-lbl">当前AI配置</span>
+            <strong class="rec-ai-suggest-val">{{ currentModelName }}</strong>
+          </div>
+          <span class="rec-ai-suggest-arrow">→</span>
+          <div class="rec-ai-suggest-block">
+            <span class="rec-ai-suggest-lbl">🔥 最适合招聘分析</span>
+            <strong class="rec-ai-suggest-val rec-ai-suggest-val--reco">{{ recList[0]?.name }}</strong>
+            <span class="rec-ai-suggest-score">{{ recList[0]?.score }}分</span>
+          </div>
+        </div>
+        <div class="rec-ai-suggest-reasons">
+          <span v-for="r in (recList[0]?.reasons || []).slice(0, 3)" :key="r" class="rec-ai-suggest-reason">{{ r }}</span>
+        </div>
+        <button class="rec-btn-outline rec-btn--sm" @click="navigateTo('/workspace/enterprise/model-settings')">切换模型</button>
+      </div>
+
       <!-- ═══ 2. 招聘概览 (4 key metrics) ═══ -->
       <section class="rec-section">
         <h2 class="rec-sec-title">招聘概览</h2>
@@ -481,6 +502,35 @@ const subscriptionInfo = ref<SubscriptionDTO | null>(null)
 
 /* ── P0: AI 模型配置引导（KMKI BYOK：首次使用需企业配置自己的模型 Key）── */
 const modelConfigured = ref(false)
+
+/* ── AI-CENTER-02B：AI 大脑建议条 ── */
+const recLoaded = ref(false)
+const recList = ref<Array<{ provider: string; name: string; score: number; reasons: string[] }>>([])
+const currentModelName = ref('未配置')
+const PROVIDER_NAMES: Record<string, string> = {
+  deepseek: 'DeepSeek', openai: 'ChatGPT', anthropic: 'Claude', google: 'Gemini',
+  zhipu: '智谱GLM', volcengine: '火山方舟', aliyun: '阿里百炼', moonshot: 'Kimi',
+  tencent: '腾讯混元', baidu: '文心一言', iflytek: '讯飞星火', meituan: '美团龙猫',
+}
+async function loadAiSuggest() {
+  try {
+    const token = getAuthToken()
+    if (!token) return
+    // 1) 当前企业模型配置（BYOK）
+    const mcRes = await fetch('/api/enterprise/model-config', { headers: { Authorization: `Bearer ${token}` } })
+    if (mcRes.ok) {
+      const settings: any[] = (await mcRes.json())?.data?.settings || []
+      const active = settings.find((s: any) => s.hasCredential && s.healthStatus === 'ok')
+      if (active) currentModelName.value = `${PROVIDER_NAMES[active.provider] || active.provider} · ${active.model}`
+    }
+    // 2) 招聘场景推荐（规则+权重，公开接口）
+    const recRes = await fetch('/api/ai/recommendations?workspace=job').catch(() => null)
+    if (recRes?.ok) {
+      recList.value = (await recRes.json())?.data?.recommendations || []
+    }
+  } catch { /* non-fatal */ }
+  recLoaded.value = true
+}
 const modelCheckDone = ref(false)
 
 /* ── Report State ── */
@@ -800,6 +850,7 @@ onMounted(async () => {
   loadData()
   loadSubscription()
   loadAgents()
+  loadAiSuggest()
 })
 
 /* ── Report Functions ── */
@@ -1984,5 +2035,73 @@ async function refreshReport() {
 
 .rec-carol-bar .rec-btn-ghost {
   flex-shrink: 0;
+}
+
+/* ── AI-CENTER-02B：AI 大脑建议条 ── */
+.rec-ai-suggest {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  margin-top: 12px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), rgba(245, 158, 11, 0.06));
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.rec-ai-suggest-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.rec-ai-suggest-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366F1, #8B5CF6);
+  flex-shrink: 0;
+}
+.rec-ai-suggest-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rec-ai-suggest-lbl {
+  font-size: 10px;
+  color: var(--color-text-muted, #9CA3AF);
+}
+.rec-ai-suggest-val {
+  font-size: 13px;
+  color: var(--color-text-primary, #F9FAFB);
+  font-weight: 600;
+}
+.rec-ai-suggest-val--reco {
+  color: #F59E0B;
+}
+.rec-ai-suggest-score {
+  font-size: 12px;
+  font-weight: 700;
+  color: #F97316;
+}
+.rec-ai-suggest-arrow {
+  color: rgba(245, 158, 11, 0.6);
+  font-size: 14px;
+}
+.rec-ai-suggest-reasons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.rec-ai-suggest-reason {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.10);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  color: #A5B4FC;
 }
 </style>

@@ -20,6 +20,7 @@ const providers = [
     documentationUrl: 'https://api-docs.deepseek.com',
     loginUrl: 'https://chat.deepseek.com',
     browserEnabled: true, apiEnabled: true,
+    browserMode: 'external_fallback',
     capabilityScore: { cost: 95, speed: 85, quality: 88, chinese: 95, coding: 90, reasoning: 92 },
   },
   {
@@ -129,6 +130,7 @@ const providers = [
     documentationUrl: 'https://platform.openai.com/docs',
     loginUrl: 'https://chatgpt.com',
     browserEnabled: true, apiEnabled: true,
+    browserMode: 'external_fallback',
     capabilityScore: { cost: 62, speed: 88, quality: 95, chinese: 88, coding: 93, reasoning: 94 },
   },
   {
@@ -141,6 +143,7 @@ const providers = [
     documentationUrl: 'https://ai.google.dev',
     loginUrl: 'https://gemini.google.com',
     browserEnabled: true, apiEnabled: true,
+    browserMode: 'external_fallback',
     capabilityScore: { cost: 70, speed: 90, quality: 91, chinese: 82, coding: 90, reasoning: 90 },
   },
   {
@@ -153,6 +156,7 @@ const providers = [
     documentationUrl: 'https://docs.anthropic.com',
     loginUrl: 'https://claude.ai',
     browserEnabled: true, apiEnabled: true,
+    browserMode: 'external_fallback',
     capabilityScore: { cost: 68, speed: 82, quality: 94, chinese: 84, coding: 94, reasoning: 95 },
   },
   // ─────────────── 非首批（停用保留） ───────────────
@@ -166,6 +170,7 @@ const providers = [
     documentationUrl: 'https://www.llama.com/docs',
     loginUrl: 'https://www.llama.com',
     browserEnabled: true, apiEnabled: true,
+    browserMode: 'disabled',
     capabilityScore: { cost: 75, speed: 80, quality: 82, chinese: 70, coding: 84, reasoning: 82 },
     status: 'disabled',
   },

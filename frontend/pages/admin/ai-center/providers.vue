@@ -211,8 +211,8 @@
               </div>
             </div>
 
-            <!-- AI中心能力开关 -->
-            <div class="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-4 flex items-center gap-6">
+            <!-- AI中心能力开关 + 浏览器能力状态层（AI-CENTER-02B） -->
+            <div class="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-4 flex items-center gap-6 flex-wrap">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" v-model="form.browserEnabled" class="accent-indigo-500" />
                 <span class="text-[11px] text-gray-300">🖥️ 支持 AI迷你浏览器打开</span>
@@ -221,7 +221,16 @@
                 <input type="checkbox" v-model="form.apiEnabled" class="accent-cyan-500" />
                 <span class="text-[11px] text-gray-300">🔌 提供 API（BYOK 接入）</span>
               </label>
-              <span class="text-[10px] text-gray-600 ml-auto">AI浏览器 = 在昆仑镜内打开该服务的官方页面（受厂商安全策略约束）</span>
+              <label class="flex items-center gap-2">
+                <span class="text-[11px] text-gray-400">浏览器模式</span>
+                <select v-model="form.browserMode" class="bg-white/[0.05] border border-white/10 rounded-lg text-[11px] px-2 py-1.5 text-gray-200">
+                  <option value="iframe">iframe（昆仑镜内嵌）</option>
+                  <option value="external_fallback">external_fallback（官方安全限制→外链）</option>
+                  <option value="desktop_webview">desktop_webview（桌面端预留）</option>
+                  <option value="disabled">disabled（禁用）</option>
+                </select>
+              </label>
+              <span class="text-[10px] text-gray-600 ml-auto">iframe = 昆仑镜内嵌；厂商拒绝内嵌（如 DeepSeek/ChatGPT/Claude/Gemini）→ external_fallback 显示 🟡 打开官方窗口</span>
             </div>
 
             <!-- 推广链接（affiliate） -->
@@ -287,7 +296,7 @@ const form = reactive({
   code: '', name: '', logo: '', description: '', category: 'domestic', country: '',
   capabilityScore: { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 } as Record<string, number>,
   officialWebsite: '', registerUrl: '', billingUrl: '', documentationUrl: '', loginUrl: '',
-  browserEnabled: true, apiEnabled: true,
+  browserEnabled: true, apiEnabled: true, browserMode: 'iframe',
   affiliateUrl: '', affiliateEnabled: false, affiliateDescription: '',
   recommended: 3, sort: 0, status: 'active',
 })
@@ -357,7 +366,7 @@ async function load() {
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { code: '', name: '', logo: '', description: '', category: 'domestic', country: '', officialWebsite: '', registerUrl: '', billingUrl: '', documentationUrl: '', loginUrl: '', browserEnabled: true, apiEnabled: true, capabilityScore: { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 }, affiliateUrl: '', affiliateEnabled: false, affiliateDescription: '', recommended: 3, sort: 0, status: 'active' })
+  Object.assign(form, { code: '', name: '', logo: '', description: '', category: 'domestic', country: '', officialWebsite: '', registerUrl: '', billingUrl: '', documentationUrl: '', loginUrl: '', browserEnabled: true, apiEnabled: true, browserMode: 'iframe', capabilityScore: { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 }, affiliateUrl: '', affiliateEnabled: false, affiliateDescription: '', recommended: 3, sort: 0, status: 'active' })
   tagsText.value = ''
   dialog.value = true
 }
@@ -368,7 +377,7 @@ function openEdit(p: any) {
     code: p.code, name: p.name, logo: p.logo || '', description: p.description || '', category: p.category || 'domestic',
     country: p.country || '', officialWebsite: p.officialWebsite || '', registerUrl: p.registerUrl || '',
     billingUrl: p.billingUrl || '', documentationUrl: p.documentationUrl || '', loginUrl: p.loginUrl || '',
-    browserEnabled: p.browserEnabled !== false, apiEnabled: p.apiEnabled !== false,
+    browserEnabled: p.browserEnabled !== false, apiEnabled: p.apiEnabled !== false, browserMode: p.browserMode || 'iframe',
     capabilityScore: p.capabilityScore && typeof p.capabilityScore === 'object'
       ? { cost: p.capabilityScore.cost || 0, speed: p.capabilityScore.speed || 0, quality: p.capabilityScore.quality || 0, chinese: p.capabilityScore.chinese || 0, coding: p.capabilityScore.coding || 0, reasoning: p.capabilityScore.reasoning || 0 }
       : { cost: 0, speed: 0, quality: 0, chinese: 0, coding: 0, reasoning: 0 }, affiliateUrl: p.affiliateUrl || '',

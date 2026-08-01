@@ -29,6 +29,10 @@ const frameCheckCache = new Map<string, { verdict: string; reason: string; ts: n
  * AI-CENTER-02A：运营维护数据，非法输入丢弃；非对象返回 null
  */
 const SCORE_KEYS = ['cost', 'speed', 'quality', 'chinese', 'coding', 'reasoning'] as const
+const BROWSER_MODES = ['iframe', 'external_fallback', 'desktop_webview', 'disabled'] as const
+function sanitizeBrowserMode(raw: any): string {
+  return BROWSER_MODES.includes(raw) ? raw : 'iframe'
+}
 function sanitizeCapabilityScore(raw: any): Record<string, number> | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
   const out: Record<string, number> = {}
@@ -217,6 +221,7 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         documentationUrl: body.documentationUrl || '',
         loginUrl: body.loginUrl || '',
         browserEnabled: body.browserEnabled !== undefined ? !!body.browserEnabled : true,
+        browserMode: sanitizeBrowserMode(body.browserMode),
         apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : true,
         capabilityScore: sanitizeCapabilityScore(body.capabilityScore),
         affiliateUrl: body.affiliateUrl || '',
@@ -251,6 +256,7 @@ export default async function aiProviderDirectoryRoutes(app: FastifyInstance) {
         documentationUrl: body.documentationUrl ?? exist.documentationUrl,
         loginUrl: body.loginUrl ?? exist.loginUrl,
         browserEnabled: body.browserEnabled !== undefined ? !!body.browserEnabled : exist.browserEnabled,
+        browserMode: body.browserMode !== undefined ? sanitizeBrowserMode(body.browserMode) : exist.browserMode,
         apiEnabled: body.apiEnabled !== undefined ? !!body.apiEnabled : exist.apiEnabled,
         capabilityScore: body.capabilityScore !== undefined ? sanitizeCapabilityScore(body.capabilityScore) : exist.capabilityScore,
         affiliateUrl: body.affiliateUrl ?? exist.affiliateUrl,

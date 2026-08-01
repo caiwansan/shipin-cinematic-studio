@@ -9389,6 +9389,7 @@ model AiProviderDirectory {
   documentationUrl     String   @default("") @db.VarChar(500) // 配置教程
   loginUrl             String   @default("") @db.VarChar(500) // AI迷你浏览器打开目标（官方登录/使用页）
   browserEnabled       Boolean  @default(true) // 是否支持 AI迷你浏览器打开
+  browserMode          String   @default("iframe") @db.VarChar(30) // iframe | external_fallback | desktop_webview | disabled（AI-CENTER-02B 浏览器能力状态层）
   apiEnabled           Boolean  @default(true) // 是否提供 API（BYOK 接入）
   capabilityScore      Json? // AI能力评分六维 { cost, speed, quality, chinese, coding, reasoning } 0-100（运营维护）
   affiliateUrl         String   @default("") @db.VarChar(500) // 官方推广注册链接（前台优先）
@@ -9402,4 +9403,20 @@ model AiProviderDirectory {
 
   @@index([category, status])
   @@map("ai_provider_directory")
+}
+
+/**
+ * Workspace AI 推荐权重规则（AI-CENTER-02B）
+ * weightConfig: { cost, speed, quality, chinese, coding, reasoning } 百分比权重（和为 100）
+ * 示例: { job: { chinese: 35, reasoning: 30, quality: 20, cost: 15 } }
+ */
+model WorkspaceAiWeight {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspace    String   @unique @db.VarChar(50) // job | shortdrama | novel | coding
+  weightConfig Json     // 六维权重（百分比）
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("workspace_ai_weight")
 }

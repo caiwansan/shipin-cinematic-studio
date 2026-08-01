@@ -110,10 +110,14 @@
               </div>
             </div>
             <div class="relative mt-5 flex items-center gap-2">
-              <button @click="openBrowser(p)" v-if="p.browserEnabled"
+              <button v-if="p.browserEnabled && browserModeOf(p) === 'iframe'" @click="openBrowser(p)"
                 class="flex-1 text-sm font-medium py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white transition shadow-lg shadow-indigo-950/50 cursor-pointer">
                 🖥️ 打开
               </button>
+              <a v-else-if="p.browserEnabled" :href="browserExternalUrl(p)" target="_blank" rel="noopener noreferrer"
+                class="flex-1 text-center text-sm font-medium py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white transition shadow-lg shadow-amber-950/50 no-underline">
+                🟡 打开官方窗口
+              </a>
               <a :href="p.registerUrl || '#'" target="_blank" rel="noopener noreferrer"
                 class="flex-1 text-center text-sm font-medium py-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-gray-300 hover:text-white hover:bg-white/[0.1] transition no-underline">
                 获取 API Key<span v-if="p.registerViaAffiliate" class="ml-1 text-[9px] text-indigo-300">推广</span>
@@ -122,15 +126,15 @@
           </div>
         </div>
 
-        <!-- 全部可浏览器打开的 AI -->
+        <!-- 全部可浏览器打开的 AI（external_fallback 显示 🟡 外链徽标） -->
         <div class="flex flex-wrap gap-2 mt-4">
-          <button v-for="p in browserableOthers" :key="p.code" @click="openBrowser(p)"
-            class="flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-gray-300 hover:text-white hover:border-indigo-500/40 hover:bg-white/[0.06] transition cursor-pointer">
+          <a v-for="p in browserableOthers" :key="p.code" :href="browserExternalUrl(p)" target="_blank" rel="noopener noreferrer"
+            class="flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-gray-300 hover:text-white hover:border-indigo-500/40 hover:bg-white/[0.06] transition no-underline">
             <span class="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold"
               :style="{ background: `linear-gradient(135deg, ${brandColors(p.code)[0]}, ${brandColors(p.code)[1]})` }">{{ brandInitial(p.name) }}</span>
             {{ p.name }}
-            <span class="text-[9px] text-gray-600">🖥️ 打开</span>
-          </button>
+            <span class="text-[9px]" :class="browserModeOf(p) === 'iframe' ? 'text-gray-600' : 'text-amber-500/80'">{{ browserModeOf(p) === 'iframe' ? '🖥️ 打开' : '🟡 官方窗口' }}</span>
+          </a>
         </div>
       </section>
 
@@ -197,10 +201,14 @@
             </div>
 
             <div class="grid grid-cols-2 gap-2 mt-4">
-              <button v-if="p.browserEnabled" @click="openBrowser(p)"
+              <button v-if="p.browserEnabled && browserModeOf(p) === 'iframe'" @click="openBrowser(p)"
                 class="col-span-2 text-center text-xs font-medium py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white transition shadow-lg shadow-indigo-950/50 cursor-pointer">
                 🖥️ AI浏览器打开
               </button>
+              <a v-else-if="p.browserEnabled" :href="browserExternalUrl(p)" target="_blank" rel="noopener noreferrer"
+                class="col-span-2 text-center text-xs font-medium py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white transition shadow-lg shadow-amber-950/50 no-underline">
+                🟡 官方安全限制 · 打开官方窗口
+              </a>
               <a :href="p.registerUrl || '#'" target="_blank" rel="noopener noreferrer"
                 :class="p.browserEnabled ? '' : 'col-span-2'"
                 class="text-center text-xs font-medium py-2 rounded-xl bg-white/[0.04] border border-white/10 text-gray-300 hover:text-white hover:bg-white/[0.08] transition no-underline">
@@ -325,6 +333,7 @@ interface DirectoryProvider {
   documentationUrl: string
   loginUrl: string
   browserEnabled: boolean
+  browserMode?: string
   apiEnabled: boolean
   registerViaAffiliate: boolean
   connected: boolean
@@ -433,6 +442,15 @@ const browserUrl = ref('')
 const browserName = ref('')
 const browserColors = ref<[string, string]>(['#4F46E5', '#1E40AF'])
 const browserInitial = ref('A')
+
+/** 浏览器能力状态层（AI-CENTER-02B）：iframe 内嵌 | external_fallback 官方安全限制外链 | desktop_webview 预留 | disabled */
+function browserModeOf(p: DirectoryProvider): string {
+  return p.browserMode || (p.browserEnabled ? 'iframe' : 'disabled')
+}
+/** external_fallback / desktop_webview 的统一外链目标 */
+function browserExternalUrl(p: DirectoryProvider): string {
+  return p.loginUrl || p.officialWebsite || p.registerUrl || '#'
+}
 
 function openBrowser(p: DirectoryProvider) {
   const target = p.loginUrl || p.officialWebsite || p.registerUrl
