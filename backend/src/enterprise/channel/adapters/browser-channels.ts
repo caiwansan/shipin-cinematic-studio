@@ -14,6 +14,7 @@ import { BrowserChannelAdapterBase, type BrowserChannelDeps } from './browser-ch
 import { BrowserChannelProbe } from './browser-channel.probe.js'
 import { identityProbeRegistry } from '../identity-probe.js'
 import { CHANNEL_META } from './browser-channel.meta.js'
+import { channelPlatformRegistry } from '../platform-registry.js'
 
 /** 浏览器渠道平台列表（meta 已配置 + 探针已注册） */
 export const BROWSER_CHANNEL_PLATFORMS = ['kuaishou', 'xiaohongshu', 'channels_wechat']
@@ -44,6 +45,9 @@ export function registerBrowserChannels(deps: BrowserChannelDeps): BrowserChanne
     if (!identityProbeRegistry.has(platform)) {
       identityProbeRegistry.register(new BrowserChannelProbe(platform))
     }
+    // REGISTRY-SSOT-01 — 同步平台注册状态（adapter + probe 双就绪 → connectable）
+    channelPlatformRegistry.markAdapterReady(platform)
+    channelPlatformRegistry.markProbeReady(platform)
   }
   return adapters
 }

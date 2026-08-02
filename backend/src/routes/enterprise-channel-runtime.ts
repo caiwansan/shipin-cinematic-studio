@@ -14,9 +14,28 @@
 import type { FastifyInstance } from 'fastify'
 import { channelService } from '../services/enterprise/channel.service.js'
 import { identityProbeRegistry } from '../enterprise/channel/identity-probe.js'
+import { channelPlatformRegistry } from '../enterprise/channel/platform-registry.js'
 
 export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
+
+  // ═══ REGISTRY-SSOT-01 — 平台注册中心（前端渠道中心唯一数据源）═══
+  // 前端禁止硬编码 connectable/platform；平台能力（登录方式/探针策略/扫码后行为/就绪状态）
+  // 全部从本接口拉取。新增平台 = meta 配置 + adapter 注册，前端零改动自动点亮。
+  app.get('/api/enterprise/channels/registry', async (_request, reply) => {
+    try {
+      const capabilities = channelPlatformRegistry.getCapabilities()
+      return reply.send({
+        code: 0,
+        data: {
+          platforms: capabilities,
+          connectable: channelPlatformRegistry.getConnectablePlatforms(),
+        },
+      })
+    } catch (e: any) {
+      return reply.status(500).send({ code: 1, message: e.message })
+    }
+  })
 
   // 连接渠道（打开浏览器会话 → 抖音创作者中心登录/恢复）
   app.post('/api/enterprise/channels/runtime/:id/connect', async (request, reply) => {
@@ -327,6 +346,22 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
       const sid = account.channelType + ':' + account.id
       const identity = await probe.probe(sid)
       return reply.send({ code: 0, data: identity })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
+  // KUAISHOU-QR-FIX-02 debug：查看登录页现场（URL/title/过期提示/扫码确认提示）
+  app.get('/api/enterprise/channels/runtime/browser/:sessionId/debug-page', async (request: any, reply: any) => {
+    try {
+      const { sessionId } = request.params
+      const { browserRuntime } = await import('../services/media/browser-runtime.service.js')
+      const info = await browserRuntime.withPage(sessionId, async (page) => {
+        const text = await page.evaluate(() => document.body ? document.body.innerText.slice(0, 1500) : '').catch(() => '')
+        const title = await page.title().catch(() => '')
+        return { url: page.url(), title, text }
+      })
+      return { code: 0, data: info }
     } catch (e: any) {
       return reply.status(400).send({ code: 1, message: e.message })
     }

@@ -490,6 +490,13 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
         accountType = identity.accountType
         debug = { ...debug, probeSignals: identity.signals, probeAuthenticated: identity.authenticated, probeAccount: identity.accountName || '' }
       }
+      // AUDIT-2026-08-03 — 登录成功后立即清 qr 缓存：
+      // 旧码 15s TTL 内仍会被前端展示，用户可能扫第二次旧码（passport 已作废）→ 无效确认循环。
+      // 登录成功 → 不再需要二维码，立即失效缓存，前端走 connected 分支不再展示旧码。
+      if (loggedIn) {
+        this.qrCache.delete(sessionId)
+        this.probeCache.delete(sessionId)
+      }
       console.log(`[KSQR-TIMING] identityProbe ${Date.now() - t2}ms loggedIn=${loggedIn}`)
 
       // Task05 统一登录状态机：探针结果驱动状态迁移
@@ -754,16 +761,11 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     const profilePath = browserRuntime.getProfilePath(this.platform, accountId)
     await browserRuntime.getOrCreatePersistent(sid, profilePath, { headless: false })
 
-    // fallback：持久化 profile 无登录态时注入凭证 cookie
-    try {
-      const cred = await this.deps.getCredential(accountId)
-      const cookieData = cred.cookieData
-      if (cookieData) {
-        await browserRuntime.restoreCookies(sid, JSON.parse(cookieData))
-      }
-    } catch (e: any) {
-      console.warn(`[${this.name}Adapter] fetchMetrics 凭证恢复失败（依赖持久化登录态）: ${e.message}`)
-    }
+    // AUDIT-2026-08-03 — 移除 restoreCookies 凭证注入：
+    // 1) persistent profile 本身持久化 cookie，无需注入；
+    // 2) 注入的 credentialEncrypted 是历史快照（数据中心 IP 风控下已失效），注入反而污染会话；
+    // 3) 与掌柜「不学 cookie 注入机器人」战略冲突。
+    // 登录态由 IdentityProbe 判定；未登录则数据页会跳登录，metrics 解析失败会诚实报错。
 
     const nav = await browserRuntime.navigate(sid, extraction.dataUrl, { headless: false })
     if (!nav.success) {

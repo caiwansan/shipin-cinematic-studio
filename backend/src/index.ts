@@ -473,6 +473,9 @@ await app.register(projectV2Routes)
   const { DouyinBrowserAdapter } = await import('./enterprise/channel/adapters/douyin-browser.adapter.js')
   // TASK03.2.2 — 注册抖音身份探针（ChannelIdentityProbe，模块加载即注册 registry）
   await import('./enterprise/channel/adapters/douyin-identity.probe.js')
+  // REGISTRY-SSOT-01 — 抖音探针就绪标记（探针模块加载即注册）
+  const { channelPlatformRegistry } = await import('./enterprise/channel/platform-registry.js')
+  channelPlatformRegistry.markProbeReady('douyin')
   // 2026-08-02 — 多平台浏览器渠道（快手/小红书/视频号）：同抖音范式，配置驱动
   const { registerBrowserChannels } = await import('./enterprise/channel/adapters/browser-channels.js')
   // P4.2.5.2: WeCom 不再使用 Mock（CTO: No Mock in Production）
@@ -487,6 +490,8 @@ await app.register(projectV2Routes)
     getCredential: (accountId) => channelService.getCredential(accountId),
     persistCredential: (accountId, credential) => channelService.updateCredential(accountId, credential),
   }))
+  // REGISTRY-SSOT-01 — 抖音 adapter 就绪标记（与探针就绪 → connectable=true）
+  channelPlatformRegistry.markAdapterReady('douyin')
   // 2026-08-02 — 多平台浏览器渠道注册（快手/小红书/视频号 + 探针）
   const browserAdapters = registerBrowserChannels({
     getCredential: (accountId) => channelService.getCredential(accountId),

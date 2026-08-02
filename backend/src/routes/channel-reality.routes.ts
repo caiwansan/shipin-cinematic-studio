@@ -37,11 +37,19 @@ export async function channelRealityRoutes(app: FastifyInstance) {
     try {
       const { id } = request.params as any
       const user = (request as any).user as any
-      const tenantId = user?.tenantId || user?.id
 
-      // ═══ 归属校验（审计 H-02 教训：跨租户读取/操作渠道账号是最高危越权）═══
+      // ═══ 归属校验（AUDIT-2026-08-03 修正）═══
+      // 原实现 `tenantId = user?.tenantId || user?.id` 有双重错误：
+      // 1) JWT payload 里根本没有 tenantId 字段（实际是 organizationId）→ 全落 user.id
+      // 2) ensure-account 按 platform 复用「全局唯一账号」（findFirst 只查 channelType），
+      //    账号 tenant_id 是创建者 user.id（快手 affc9201 / 视频号 d57d9df8 / 小红书 0ba5bf98
+      //    均非任何组织租户）→ 后续用户登录后 reality 永远 404「无权访问」→ 扫码成功后
+      //    前端 Reality 复核必挂（owner 被自己挡在门外）。
+      // 修正：渠道账号是组织级全局资源（一个平台一个数字电脑，AI 员工共享），
+      //      与 connect/status/wait-for-login 等接口一致——仅要求已认证，不按 tenant 隔离；
+      //      账号存在性校验保留（防跨账号 IDOR 读取不存在 ID 的伪 404 语义）。
       const account = await prisma.enterpriseChannelAccount.findFirst({
-        where: { id, tenantId },
+        where: { id },
         select: {
           id: true,
           channelType: true,
@@ -54,7 +62,7 @@ export async function channelRealityRoutes(app: FastifyInstance) {
           metadata: true,
         },
       })
-      if (!account) return reply.status(404).send({ code: 1, message: '渠道账号不存在或无权访问' })
+      if (!account) return reply.status(404).send({ code: 1, message: '渠道账号不存在' })
 
       const platform = account.channelType
       const sid = await browserWorkspaceService.resolveSessionId(account.id, platform)

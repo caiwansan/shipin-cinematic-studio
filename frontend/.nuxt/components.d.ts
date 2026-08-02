@@ -117,7 +117,6 @@ interface _GlobalComponents {
     'EnterpriseWorkspaceAgentModelCard': typeof import("../components/enterprise/workspace/AgentModelCard.vue")['default']
     'EnterpriseWorkspaceAgentRuntimeCard': typeof import("../components/enterprise/workspace/AgentRuntimeCard.vue")['default']
     'EnterpriseWorkspaceAgentTimeline': typeof import("../components/enterprise/workspace/AgentTimeline.vue")['default']
-    'EnterpriseWorkspaceChannelConnectCenter': typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']
     'EnterpriseWorkspaceCreateOrganizationModal': typeof import("../components/enterprise/workspace/CreateOrganizationModal.vue")['default']
     'EnterpriseWorkspaceEnterpriseIdentityHeader': typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']
     'EnterpriseWorkspaceEnterpriseModuleRenderer': typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']
@@ -362,7 +361,6 @@ interface _GlobalComponents {
     'LazyEnterpriseWorkspaceAgentModelCard': LazyComponent<typeof import("../components/enterprise/workspace/AgentModelCard.vue")['default']>
     'LazyEnterpriseWorkspaceAgentRuntimeCard': LazyComponent<typeof import("../components/enterprise/workspace/AgentRuntimeCard.vue")['default']>
     'LazyEnterpriseWorkspaceAgentTimeline': LazyComponent<typeof import("../components/enterprise/workspace/AgentTimeline.vue")['default']>
-    'LazyEnterpriseWorkspaceChannelConnectCenter': LazyComponent<typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']>
     'LazyEnterpriseWorkspaceCreateOrganizationModal': LazyComponent<typeof import("../components/enterprise/workspace/CreateOrganizationModal.vue")['default']>
     'LazyEnterpriseWorkspaceEnterpriseIdentityHeader': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']>
     'LazyEnterpriseWorkspaceEnterpriseModuleRenderer': LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']>
@@ -613,7 +611,6 @@ export const EnterpriseWorkspaceAgentHealthCard: typeof import("../components/en
 export const EnterpriseWorkspaceAgentModelCard: typeof import("../components/enterprise/workspace/AgentModelCard.vue")['default']
 export const EnterpriseWorkspaceAgentRuntimeCard: typeof import("../components/enterprise/workspace/AgentRuntimeCard.vue")['default']
 export const EnterpriseWorkspaceAgentTimeline: typeof import("../components/enterprise/workspace/AgentTimeline.vue")['default']
-export const EnterpriseWorkspaceChannelConnectCenter: typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']
 export const EnterpriseWorkspaceCreateOrganizationModal: typeof import("../components/enterprise/workspace/CreateOrganizationModal.vue")['default']
 export const EnterpriseWorkspaceEnterpriseIdentityHeader: typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']
 export const EnterpriseWorkspaceEnterpriseModuleRenderer: typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']
@@ -858,7 +855,6 @@ export const LazyEnterpriseWorkspaceAgentHealthCard: LazyComponent<typeof import
 export const LazyEnterpriseWorkspaceAgentModelCard: LazyComponent<typeof import("../components/enterprise/workspace/AgentModelCard.vue")['default']>
 export const LazyEnterpriseWorkspaceAgentRuntimeCard: LazyComponent<typeof import("../components/enterprise/workspace/AgentRuntimeCard.vue")['default']>
 export const LazyEnterpriseWorkspaceAgentTimeline: LazyComponent<typeof import("../components/enterprise/workspace/AgentTimeline.vue")['default']>
-export const LazyEnterpriseWorkspaceChannelConnectCenter: LazyComponent<typeof import("../components/enterprise/workspace/ChannelConnectCenter.vue")['default']>
 export const LazyEnterpriseWorkspaceCreateOrganizationModal: LazyComponent<typeof import("../components/enterprise/workspace/CreateOrganizationModal.vue")['default']>
 export const LazyEnterpriseWorkspaceEnterpriseIdentityHeader: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseIdentityHeader.vue")['default']>
 export const LazyEnterpriseWorkspaceEnterpriseModuleRenderer: LazyComponent<typeof import("../components/enterprise/workspace/EnterpriseModuleRenderer.vue")['default']>

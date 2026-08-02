@@ -21,6 +21,9 @@ import { channelOperationLogService } from '../../channel-operation-log.service.
 import { channelHealthGuardService } from '../channel-health-guard.service.js'
 import { metricsExtractorRegistry, type MetricExtractionResult } from './platform-metrics-extractor.js'
 import './douyin-metrics.extractor.js' // 注册抖音提取器（副作用）
+// LOGIN-REALITY-HARDENING-02 Task05 — 通用浏览器提取器（快手/小红书/视频号，配置驱动）
+import { registerBrowserMetricsExtractors } from './browser-metrics.extractor.js'
+registerBrowserMetricsExtractors()
 
 export interface MetricSnapshotView {
   id: string
@@ -125,7 +128,23 @@ export class ChannelMetricsService {
     const platform = account.channelType
     const extractor = metricsExtractorRegistry.get(platform)
     if (!extractor) {
-      throw new Error(`平台 ${platform} 的指标提取器未注册（当前支持: ${metricsExtractorRegistry.list().join(', ') || '无'}）`)
+      // LOGIN-REALITY-HARDENING-02 — 提取器未注册 = 该平台数据读取未实现 →
+      // 诚实 unavailable + reason 落库（绝不 throw 让上层看到 undefined/0）
+      const snap = await prisma.channelMetricSnapshot.create({
+        data: {
+          channelAccountId,
+          tenantId: opts.tenantId || account.tenantId,
+          organizationId: opts.organizationId || account.organizationId || null,
+          workspaceId: workspace.id,
+          agentId: agentInstanceId,
+          platform,
+          status: 'unavailable',
+          unavailableReason: `平台 ${platform} 的指标提取器未注册（当前支持: ${metricsExtractorRegistry.list().join(', ') || '无'}）`,
+          collectedAt: new Date(),
+          source: 'creator-center',
+        },
+      })
+      return { status: 'unavailable', unavailableReason: snap.unavailableReason, collectedAt: snap.collectedAt, snapshotId: snap.id } as any
     }
 
     // 数字电脑会话：与登录链路同一 sessionId（profile 复用，登录态共享）

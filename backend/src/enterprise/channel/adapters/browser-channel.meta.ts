@@ -41,6 +41,31 @@ export interface ChannelPlatformDefinition {
   loginUrl: string
   /** 工作台主 URL（导航/数据页基址） */
   workspaceUrl: string
+  /**
+   * LOGIN-CAPABILITY-V2 — 扫码后页面行为（Login Capability Model v2，掌柜蓝图）
+   * 不同平台扫码确认后的页面表现不同，探针/轮询据此调整行为：
+   *   redirect       扫码确认后自动跳转工作台（如抖音 creator.douyin.com）
+   *   stay_page      扫码后停留在登录/Passport 页面，session 在后台建立（如快手 passport）
+   *   manual_confirm 扫码后需手机端二次确认，页面等待确认结果（如视频号）
+   */
+  postScanBehavior?: 'redirect' | 'stay_page' | 'manual_confirm'
+  /**
+   * LOGIN-CAPABILITY-V2 — 身份探测策略（Identity Probe Strategy）
+   * 显式声明该平台的探测通道，禁止运行时 if(platform) 分支：
+   *   pageProbe      页面特征信号（工作台 URL 片段 + markers）
+   *   cookieProbe    关键登录 cookie 信号
+   *   networkCapture 刷新页面监听内部 API 响应提取官方身份（需签名平台，如快手）
+   *   allowReload    是否允许探针主动 reload 页面触发网络捕获。
+   *                  ⚠️ 扫码确认窗口期（扫码成功→手机确认→session 建立）reload 会把
+   *                  passport「已扫码待确认」状态刷掉 → 确认结果丢失 → 扫码成功不登录。
+   *                  所有平台默认 false；true 仅用于登录态稳定后（如恢复验证）
+   */
+  identityStrategy?: {
+    pageProbe: boolean
+    cookieProbe: boolean
+    networkCapture: boolean
+    allowReload: boolean
+  }
   /** KUAISHOU-QR-FIX-02 — 连接时清理残留缓存的平台域（cookie/localStorage 按域清，防旧会话干扰新扫码） */
   cookieDomains: string[]
   /** 支持的登录方式（qr 扫码 / sms 短信） */
@@ -121,6 +146,9 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     workspaceUrl: 'https://creator.douyin.com/creator-micro',
     cookieDomains: ['douyin.com', 'iesdouyin.com'],
     loginMethods: ['qr', 'sms'],
+    // LOGIN-CAPABILITY-V2 — 抖音扫码确认后自动跳转工作台；页面特征+凭证双信号足够，无需网络捕获
+    postScanBehavior: 'redirect',
+    identityStrategy: { pageProbe: true, cookieProbe: true, networkCapture: false, allowReload: false },
     smsTabLabel: '验证码登录',
     selectors: {
       loginPage: 'input[type="tel"], [class*="login"]',
@@ -152,6 +180,12 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     cookieDomains: ['kuaishou.com', 'gifshow.com'],
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '手机号登录',
+    // LOGIN-CAPABILITY-V2 — 快手扫码后停留 passport（stay_page），session 后台建立；
+    // body 无 UID 明文 + 内部 API 需 __NS_sig3 签名 → 必须 networkCapture；
+    // allowReload=false：扫码确认窗口期 reload 会把 passport「已扫码待确认」刷掉 → 确认丢失。
+    // networkCapture 在 passive 模式（只监听自然请求，不主动 reload）下工作。
+    postScanBehavior: 'stay_page',
+    identityStrategy: { pageProbe: true, cookieProbe: true, networkCapture: true, allowReload: false },
     // Task04：cp.kuaishou.com 未登录可能落到普通用户端/其他域 → 必须确认创作者登录入口
     loginEntry: {
       // KUAISHOU-QR-FIX-01：cp.kuaishou.com 未登录会自动 302 到 passport.kuaishou.com，
@@ -227,6 +261,9 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
       waitMs: 4000,
       clickSteps: ['登录'],
     },
+    // LOGIN-CAPABILITY-V2 — 小红书主站弹窗扫码（stay_page）；凭证 cookie + 页面特征双信号
+    postScanBehavior: 'stay_page',
+    identityStrategy: { pageProbe: true, cookieProbe: true, networkCapture: false, allowReload: false },
     // 二维码提取：img.qrcode-img（class 含 qrcode → Detector img 通道关键词命中）
     qrImgSelector: 'img.qrcode-img',
     selectors: {
@@ -271,6 +308,10 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     workspaceUrl: 'https://channels.weixin.qq.com/platform',
     cookieDomains: ['weixin.qq.com', 'qq.com'],
     loginMethods: ['qr'],
+    // LOGIN-CAPABILITY-V2 — 视频号扫码后需手机端确认（manual_confirm），确认后跳工作台；
+    // 页面特征（视频号助手/发布动态）+ 凭证 cookie 双信号足够
+    postScanBehavior: 'manual_confirm',
+    identityStrategy: { pageProbe: true, cookieProbe: true, networkCapture: false, allowReload: false },
     selectors: {
       loginPage: '[class*="login"], iframe[src*="qrconnect"]',
       workspace: '[class*="platform"]',

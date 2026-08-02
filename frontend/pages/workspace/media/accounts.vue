@@ -870,12 +870,14 @@ const tabs = computed(() => [
 ])
 
 // ① 内容平台（品牌曝光）
-// 2026-08-02 — 多平台浏览器渠道：抖音/快手/小红书/视频号已真实可连（connectable+platform）
+// REGISTRY-SSOT-01 — connectable 不再硬编码（前端禁止自己判断平台可连），
+// onMounted 从 GET /api/enterprise/channels/registry 拉取真实能力点亮；
+// 默认 false = 诚实（未确认后端 adapter/probe 就绪前不亮「去连接」）
 const contentPlatforms = [
-  { icon: '📱', name: '抖音', plan: '短视频 · 直播', category: 'content', platform: 'douyin', appName: '抖音', loginMethods: ['qr', 'sms'], connectable: true, connected: false },
-  { icon: '🎥', name: '快手', plan: '短视频 · 直播', category: 'content', platform: 'kuaishou', appName: '快手', loginMethods: ['qr', 'sms'], connectable: true, connected: false },
-  { icon: '📕', name: '小红书', plan: '种草图文 · 视频', category: 'content', platform: 'xiaohongshu', appName: '小红书', loginMethods: ['qr', 'sms'], connectable: true, connected: false },
-  { icon: '🎬', name: '视频号', plan: '微信生态分发', category: 'content', platform: 'channels_wechat', appName: '微信', loginMethods: ['qr'], connectable: true, connected: false },
+  { icon: '📱', name: '抖音', plan: '短视频 · 直播', category: 'content', platform: 'douyin', appName: '抖音', loginMethods: ['qr', 'sms'], connectable: false, connected: false },
+  { icon: '🎥', name: '快手', plan: '短视频 · 直播', category: 'content', platform: 'kuaishou', appName: '快手', loginMethods: ['qr', 'sms'], connectable: false, connected: false },
+  { icon: '📕', name: '小红书', plan: '种草图文 · 视频', category: 'content', platform: 'xiaohongshu', appName: '小红书', loginMethods: ['qr', 'sms'], connectable: false, connected: false },
+  { icon: '🎬', name: '视频号', plan: '微信生态分发', category: 'content', platform: 'channels_wechat', appName: '微信', loginMethods: ['qr'], connectable: false, connected: false },
   { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务', category: 'content', connectable: false, connected: false },
   { icon: '🌐', name: '微博', plan: '话题 · 图文', category: 'content', connectable: false, connected: false },
   { icon: '📰', name: '百家号', plan: '图文 · 视频', category: 'content', connectable: false, connected: false },
@@ -1020,7 +1022,18 @@ async function reloadOwnerViews() {
 }
 
 onMounted(async () => {
-  // 2026-08-02 — 多平台：循环加载全部可连接渠道的连接状态
+  // REGISTRY-SSOT-01 — 平台能力唯一来源 = 后端 registry（禁止前端硬编码 connectable）
+  // 拉取失败 → 保持默认 false（诚实：不确认就绪前不亮「去连接」）
+  try {
+    const reg = await api('/api/enterprise/channels/registry')
+    const connectableSet = new Set<string>(reg.data?.connectable || [])
+    for (const p of allPlatforms) {
+      if (p.platform) p.connectable = connectableSet.has(p.platform)
+    }
+  } catch (e: any) {
+    // registry 不可用时静默（连接按钮保持隐藏）
+  }
+  // 2026-08-02 — 多平台：循环加载全部可连接渠道的连接状态（registry 点亮后）
   const connectables = allPlatforms.filter((p: any) => p.connectable && p.platform)
   await Promise.all(connectables.map(async (p: any) => {
     try {

@@ -58,10 +58,13 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
   async probe(sessionId: string): Promise<ChannelIdentity> {
     const signals = { page: false, cookie: false, identity: false, loginPage: false, securityCheck: false, credential: false }
     const identity: { userId?: string; nickname?: string; avatar?: string; accountType?: string } = {}
+    // LOGIN-CAPABILITY-V2 — 探针通道按 identityStrategy 显式启用/禁用（禁止 if(platform) 分支）
+    const strategy = this.meta.identityStrategy ?? { pageProbe: true, cookieProbe: true, networkCapture: false, allowReload: false }
 
     // A 单次 withPage 收集：页面特征 + 登录页排除 + 安全验证页（减少浏览器操作，探针更快）
     // KUAISHOU-QR-FIX-01：fallbackUrl = workspaceUrl——实例重启/页面死后恢复导航到工作台，
     // cookie 有效则直接进入已登录视图，探针才能测到 page 信号（否则 about:blank 永远 miss）
+    if (strategy.pageProbe) {
     try {
       const pageRes = await browserRuntime.withPage(sessionId, async (page) => {
         await page.waitForTimeout(1500 + Math.random() * 800)
@@ -100,8 +103,10 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
     } catch (e: any) {
       console.warn(`[BrowserChannelProbe:${this.platform}] 页面特征探测异常: ${e.message}`)
     }
+    }
 
     // B Cookie 信号（平台关键 cookie ≥2；仅信号，不单独判定登录）
+    if (strategy.cookieProbe) {
     try {
       const cookies = await browserRuntime.getCookies(sessionId)
       const names = new Set((cookies || []).map(c => c.name))
@@ -109,10 +114,17 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
     } catch (e: any) {
       console.warn(`[BrowserChannelProbe:${this.platform}] Cookie 探测异常: ${e.message}`)
     }
+    }
 
     // C 身份提取：extractionRules 配置驱动（hydration / regex / url 三方法）
+    // AUDIT-2026-08-03 — 登录页短路：登录页不提取身份、不触发 network 捕获（reload）。
+    // 根因：captureIdentityFromNetwork 无条件 page.reload()，扫码确认窗口期（1-5s）
+    // reload 会把 passport「已扫码待确认」状态刷掉 → 确认结果丢失 → 三平台扫码成功不登录。
+    // LOGIN-CAPABILITY-V2 — networkCapture=false 的平台（抖音/小红书/视频号）完全跳过 network 通道；
+    // allowReload=false 时 network 捕获走 passive 模式（只监听自然请求，绝不主动 reload）
     try {
-      const extracted = await this.extractIdentity(sessionId)
+      const skipNetwork = signals.loginPage || signals.securityCheck || !strategy.networkCapture
+      const extracted = await this.extractIdentity(sessionId, { skipNetwork, allowReload: strategy.allowReload })
       if (extracted) {
         identity.userId = extracted.userId
         identity.nickname = extracted.nickname
@@ -148,7 +160,7 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
    * - regex:     页面 body 文本正则提取
    * - url:       当前 URL 正则提取
    */
-  private async extractIdentity(sessionId: string): Promise<{
+  private async extractIdentity(sessionId: string, opts?: { skipNetwork?: boolean; allowReload?: boolean }): Promise<{
     userId?: string
     nickname?: string
     avatar?: string
@@ -237,11 +249,13 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
       // 4) network：body 无 UID 明文 + 内部 API 需签名（如快手 cp.kuaishou.com）→
       //    刷新页面监听内部 API 响应捕获官方 userId/userName（页面自身请求自带签名）
       //    结果缓存 5 分钟，避免探针轮询期间反复刷新页面
+      //    AUDIT-2026-08-03 — skipNetwork=true（登录页/安全验证页）禁止 reload：
+      //    reload 会打断 passport 扫码确认窗口期 → 确认结果丢失（扫码成功不登录根因）
       const netCfg = this.meta.identityRules.networkApis
-      if (!out.userId && netCfg?.userApis?.length) {
+      if (!out.userId && netCfg?.userApis?.length && !opts?.skipNetwork) {
         const cache = this._networkIdentityCache
         const cached = cache && cache.sessionId === sessionId && Date.now() - cache.at < 5 * 60 * 1000 ? cache.data : null
-        const cap = cached ?? (await this.captureIdentityFromNetwork(page, netCfg, sessionId))
+        const cap = cached ?? (await this.captureIdentityFromNetwork(page, netCfg, sessionId, { allowReload: !!opts?.allowReload }))
         if (cap) {
           if (cap.userId && !out.userId) out.userId = cap.userId
           if (cap.nickname && !out.nickname) out.nickname = cap.nickname
@@ -261,17 +275,39 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
   private _networkIdentityCache: { sessionId: string; at: number; data: { userId?: string; nickname?: string; avatar?: string } } | null = null
 
   /**
-   * KUAISHOU-FIX-01 — 刷新页面监听内部 API 响应，捕获官方身份（页面自身请求自带 __NS_sig3 签名）
+   * KUAISHOU-FIX-01 — 监听内部 API 响应，捕获官方身份（页面自身请求自带 __NS_sig3 签名）
+   * LOGIN-CAPABILITY-V2 — passive/reload 双模式：
+   *   allowReload=true  → 监听 + 主动 reload 触发请求（登录态稳定后可用）
+   *   allowReload=false → passive 模式：只监听自然请求（SPA 轮询/跳转），绝不主动 reload。
+   *                       扫码确认窗口期 reload 会把 passport「已扫码待确认」状态刷掉 → 确认丢失。
+   *                       自然请求可能不立即出现（快手工作台首屏 API 在跳转后触发），监听窗口拉长。
    */
   private async captureIdentityFromNetwork(
     page: any,
     cfg: { userApis: string[]; userIdKeys: string[]; nicknameKeys: string[]; avatarKeys?: string[] },
     sessionId: string,
+    opts?: { allowReload?: boolean },
   ): Promise<{ userId?: string; nickname?: string; avatar?: string } | null> {
+    // AUDIT-2026-08-03 — 双保险：reload 前再次确认当前页面不是登录页/安全验证页。
+    // 登录页 reload = 扫码确认窗口期自杀（passport 已扫码待确认状态被刷掉 → 永不登录）
+    const allowReload = !!opts?.allowReload
+    try {
+      const url = page.url() || ''
+      if (/\/login|\/signin|\/passport|\/auth|\/sso|login\.html|login\.php/i.test(url)) {
+        console.log(`[BrowserChannelProbe:${this.platform}] 登录页跳过 network 捕获（保护扫码确认窗口期）`)
+        return null
+      }
+      const bodyText = await page.evaluate(() => document.body ? document.body.textContent || '' : '').catch(() => '')
+      if (this.meta.identityRules.loginPageMarkers.some(m => bodyText.includes(m))) {
+        console.log(`[BrowserChannelProbe:${this.platform}] 登录页 body 标记命中，跳过 network 捕获`)
+        return null
+      }
+    } catch {}
     try {
       return await new Promise<{ userId?: string; nickname?: string; avatar?: string } | null>((resolve) => {
         let settled = false
-        const timer = setTimeout(() => { if (!settled) { settled = true; resolve(null) } }, 9000)
+        // passive 模式监听窗口 12s（自然请求可能晚到）；reload 模式 9s（reload 触发后请求较快）
+        const timer = setTimeout(() => { if (!settled) { settled = true; resolve(null) } }, allowReload ? 9000 : 12000)
         const cleanup = () => { try { page.off('response', handler) } catch {} }
         const handler = async (resp: any) => {
           try {
@@ -313,7 +349,13 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
           } catch {}
         }
         page.on('response', handler)
-        page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})
+        // 仅 allowReload=true 时主动 reload 触发请求；passive 模式绝不 reload（保护扫码确认窗口期）
+        if (allowReload) {
+          console.log(`[BrowserChannelProbe:${this.platform}] network 捕获 reload 触发（allowReload=true）`)
+          page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})
+        } else {
+          console.log(`[BrowserChannelProbe:${this.platform}] network 捕获 passive 模式（不 reload，监听自然请求）`)
+        }
       })
     } catch (e: any) {
       console.warn(`[BrowserChannelProbe:${this.platform}] network 身份捕获失败: ${e.message}`)

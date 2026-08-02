@@ -121,7 +121,7 @@ async function step3(platform: string) {
 async function step4(platform: string) {
   console.log('── Step 4 服务重启恢复 ──')
   const logs = execSync('npx pm2 logs api-server --lines 500 --nostream 2>/dev/null', { encoding: 'utf8' })
-  const scan = logs.match(/BrowserWorkspaceRecovery\] 扫描到 \d+ 个/) || []
+  const scan = logs.match(/BrowserWorkspaceRecovery\] 扫描到 \d+ 个工作空间/) || []
   check('S4 RecoveryService 扫描 workspace', scan.length > 0, scan[0] || '')
   const acc = await prisma.enterpriseChannelAccount.findFirst({ where: { channelType: platform } })
   check('S4 CONNECTED 保持', acc?.connectionStatus === 'CONNECTED', `(${acc?.connectionStatus})`)
