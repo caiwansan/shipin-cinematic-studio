@@ -124,15 +124,25 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   })
 
   // 登录页状态（截图 base64 + 登录检测）——前端轮询
+  // TASK03.2.2-FIX — 串行化：探针执行 2-3s 而前端轮询 2.5s，并发会互相替换/关闭页面 → 登录检测失败
+  const statusLocks = new Map<string, Promise<any>>()
   app.get('/api/enterprise/channels/runtime/browser/:sessionId/status', async (request, reply) => {
     const { sessionId } = request.params as any
-    try {
-      const adapter = channelService.resolveAdapter('douyin') as any
-      const status = await adapter.getLoginStatus(sessionId)
-      return reply.send({ code: 0, data: status })
-    } catch (e: any) {
-      return reply.status(400).send({ code: 1, message: e.message })
-    }
+    const prev = statusLocks.get(sessionId) || Promise.resolve()
+    const run = prev.then(async () => {
+      try {
+        const adapter = channelService.resolveAdapter('douyin') as any
+        const status = await adapter.getLoginStatus(sessionId)
+        return { code: 0, data: status }
+      } catch (e: any) {
+        return reply.status(400).send({ code: 1, message: e.message })
+      }
+    }).finally(() => {
+      // 清理锁（避免 Map 无限增长）
+      setTimeout(() => { if (statusLocks.get(sessionId) === run) statusLocks.delete(sessionId) }, 100)
+    })
+    statusLocks.set(sessionId, run)
+    return run
   })
 
   // TASK03.2.1 — 等待登录完成并自动回写账号（登录成功闭环）

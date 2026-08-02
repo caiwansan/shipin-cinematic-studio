@@ -324,8 +324,10 @@ async function openDouyinConnect(p: any) {
 
 function startPolling() {
   stopPolling()
+  let pollingInFlight = false  // TASK03.2.2-FIX — 防重入：探针执行 2-3s > 轮询间隔，避免请求堆积并发
   pollTimer.value = setInterval(async () => {
-    if (!sessionId.value) return
+    if (!sessionId.value || pollingInFlight) return
+    pollingInFlight = true
     try {
       const res = await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/status`)
       const d = res.data || {}
@@ -365,8 +367,10 @@ function startPolling() {
       }
     } catch (e: any) {
       // 轮询失败静默，等下次
+    } finally {
+      pollingInFlight = false  // TASK03.2.2-FIX — 释放防重入标志
     }
-  }, 2500)
+  }, 3000)  // TASK03.2.2-FIX — 间隔 2.5s→3s（探针执行 2-3s，留余量）
 }
 
 function stopPolling() {

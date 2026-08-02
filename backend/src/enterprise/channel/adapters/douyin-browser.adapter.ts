@@ -276,6 +276,9 @@ canvas.save('${out}')
       let accountName: string | undefined
       let externalAccountId: string | undefined
       let avatar: string | undefined
+      let probeSignals: any = null
+      let probeAuthenticated = false
+      let probeAccount = ''
       try {
         // TASK03.2.2 — 升级为 ChannelIdentityProbe（独立探针，返回完整身份含 avatar）
         const identity = await identityProbeRegistry.get('douyin')!.probe(sessionId)
@@ -283,6 +286,9 @@ canvas.save('${out}')
         accountName = identity.accountName
         externalAccountId = identity.accountId
         avatar = identity.avatar
+        probeSignals = identity.signals
+        probeAuthenticated = identity.authenticated
+        probeAccount = identity.accountName || ''
         if (identity.authenticated) {
           loginStage = 'awaiting_confirmation'
         }
@@ -308,6 +314,8 @@ canvas.save('${out}')
           })
         })
       } catch {}
+      // TASK03.2.2-FIX — 透出探针 signals 供前端诊断（登录检测失败时可定位信号）
+      debug = { ...(debug || {}), probeSignals, probeAuthenticated, probeAccount }
       // TASK03.2.1 — 扫码确认阶段判定（未登录但页面出现确认过渡层）
       if (!loggedIn && debug?.scanConfirming) loginStage = 'scan_confirming'
       return { url: status.currentUrl, title: status.title, screenshotBase64, qrCodeBase64, loggedIn, loginStage, accountName, externalAccountId, avatar, debug }

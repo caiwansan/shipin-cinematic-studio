@@ -302,32 +302,49 @@ class BrowserRuntimeService {
   /**
    * 在当前 Session 执行页面操作（高级）
    * TASK03.2 — 页面被风控杀死后自动恢复：不再新建 about:blank，而是重新导航回最后已知 URL
+   * TASK03.2.2-FIX — 扫码成功 SPA 跳转会短暂经过 about:blank，绝不能因此重建页面（会把已登录页替换成登录页）
+   *   重建条件收紧为 page.isClosed()（真死页）；about:blank 时等待跳转完成，超时再处理
    */
   async withPage(sessionId: string, action: (page: Page) => Promise<any>, fallbackUrl?: string): Promise<any> {
     const { context } = await this.getOrCreate(sessionId)
     // 优先复用 navigate 打开的主页面（登录页必须保留，不能新建 about:blank / 不能关闭）
     const inst = this.instances.get(sessionId)
     let page = inst?.page
-    if (!page || page.isClosed() || page.url() === 'about:blank') {
-      // 页面被风控杀死 → 重新打开最后已知 URL（避免操作落在 about:blank 上）
+    if (page && !page.isClosed() && page.url() === 'about:blank') {
+      // SPA 跳转中间态：等 1.5s 看是否恢复（抖音扫码成功跳转 / 登录页路由切换）
       try {
-        page = await context.newPage()
-        if (inst) inst.page = page
-        const restoreUrl = fallbackUrl || inst?.lastUrl
-        console.log(`[BrowserRuntime] withPage 页面死亡(prev=${inst?.page?.url?.()?.slice(0,60) || 'none'}, closed=${page?.isClosed?.()})，恢复导航到 ${restoreUrl?.slice(0,60)}`)
-        if (restoreUrl) {
-          try {
-            await page.goto(restoreUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
-            await page.waitForTimeout(800 + Math.random() * 1200)
-            if (inst) inst.lastUrl = page.url()
-            console.log(`[BrowserRuntime] withPage 恢复成功 -> ${page.url().slice(0, 80)}`)
-          } catch (e: any) {
-            console.log(`[BrowserRuntime] withPage 恢复 goto 失败: ${e.message.slice(0, 120)}`)
+        await page.waitForLoadState('domcontentloaded', { timeout: 1500 }).catch(() => {})
+        await page.waitForTimeout(1500)
+      } catch {}
+    }
+    if (!page || page.isClosed()) {
+      // 真死页 → 重建（优先从 context 现有存活页面里挑，其次新建）
+      let rebuilt: Page | undefined
+      try {
+        const alive = context.pages().find((p: any) => !p.isClosed() && p.url() !== 'about:blank')
+        if (alive) {
+          rebuilt = alive
+          if (inst) inst.page = rebuilt
+        } else {
+          rebuilt = await context.newPage()
+          if (inst) inst.page = rebuilt
+          const restoreUrl = fallbackUrl || inst?.lastUrl
+          console.log(`[BrowserRuntime] withPage 页面死亡(prev=${inst?.lastUrl?.slice(0,60) || 'none'})，恢复导航到 ${restoreUrl?.slice(0,60)}`)
+          if (restoreUrl) {
+            try {
+              await rebuilt.goto(restoreUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+              await rebuilt.waitForTimeout(800 + Math.random() * 1200)
+              if (inst) inst.lastUrl = rebuilt.url()
+              console.log(`[BrowserRuntime] withPage 恢复成功 -> ${rebuilt.url().slice(0, 80)}`)
+            } catch (e: any) {
+              console.log(`[BrowserRuntime] withPage 恢复 goto 失败: ${e.message.slice(0, 120)}`)
+            }
           }
         }
       } catch (e: any) {
         console.warn(`[BrowserRuntime] withPage 恢复页面失败: ${e.message}`)
       }
+      if (rebuilt) page = rebuilt
     }
     if (!page) {
       throw new Error('BROWSER_PAGE_UNAVAILABLE')

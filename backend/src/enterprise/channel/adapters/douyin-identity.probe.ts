@@ -33,7 +33,9 @@ export class DouyinIdentityProbe implements ChannelIdentityProbe {
     // A 页面特征（创作者工作台菜单 ≥2）
     try {
       signals.page = await browserRuntime.withPage(sessionId, async (page) => {
-        await page.waitForTimeout(1500 + Math.random() * 1000)
+        // TASK03.2.2-FIX — 页面跳转/恢复期间等待稳定（扫码成功跳转 2-4s）
+        await page.waitForTimeout(2000 + Math.random() * 1000)
+        if (page.isClosed()) return false
         const url = page.url()
         if (/passport|login|qr|sso/i.test(url)) return false
         const bodyText = await page.locator('body').innerText().catch(() => '')
