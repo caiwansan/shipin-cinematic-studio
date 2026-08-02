@@ -471,6 +471,8 @@ await app.register(projectV2Routes)
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')
   const { DouyinBrowserAdapter } = await import('./enterprise/channel/adapters/douyin-browser.adapter.js')
+  // TASK03.2.2 — 注册抖音身份探针（ChannelIdentityProbe，模块加载即注册 registry）
+  await import('./enterprise/channel/adapters/douyin-identity.probe.js')
   // P4.2.5.2: WeCom 不再使用 Mock（CTO: No Mock in Production）
   // 其他渠道继续使用 Mock（开发测试用）
   channelService.registerAdapter(new VideoAccountAdapter())

@@ -18,6 +18,8 @@
  */
 import { browserRuntime } from '../../../services/media/browser-runtime.service.js'
 import type { CookieData } from '../../../services/media/browser-runtime.service.js'
+import type { ChannelIdentity } from '../identity-probe.js'
+import { identityProbeRegistry } from '../identity-probe.js'
 import type {
   EnterpriseChannelAdapter,
   ConnectResult,
@@ -50,7 +52,7 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
 
   constructor(private readonly deps: DouyinAdapterDeps) {}
 
-  private sessionIdFor(accountId: string): string {
+  sessionIdFor(accountId: string): string {
     return `douyin:${accountId}`
   }
 
@@ -95,19 +97,23 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
     }
 
     // 检测登录态（TASK03.2.1 多信号探针：页面特征 + Cookie + 身份接口）
-    let state: Awaited<ReturnType<typeof this.detectLoginState>> | null = null
+    // TASK03.2.2 — 升级为 ChannelIdentityProbe（独立探针，返回完整身份含 avatar/权限）
+    let identity: ChannelIdentity | null = null
     try {
-      state = await this.detectLoginState(sid)
+      identity = await identityProbeRegistry.get('douyin')!.probe(sid)
     } catch (e: any) {
       // 浏览器异常（反爬关闭）→ 降级为等待登录，由 waitForLogin 恢复
       console.warn(`[DouyinBrowserAdapter] connect 阶段登录态检测异常: ${e.message}`)
     }
-    if (state?.loggedIn) {
+    if (identity?.authenticated) {
+      // 返回真实身份（是否需人工确认由上层 service 根据绑定状态决定）
       return {
         sessionId: sid,
         status: 'connected',
-        accountName: state.accountName || '抖音创作者中心',
-        externalAccountId: state.externalAccountId,
+        accountName: identity.accountName || '抖音创作者中心',
+        externalAccountId: identity.accountId,
+        avatar: identity.avatar,
+        permissions: identity.permissions,
       }
     }
 
@@ -119,105 +125,18 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
     }
   }
   /**
-   * ── 登录成功探针（TASK03.2.1 Login Reality Fix）──
-   * 多信号判定，不再只靠 URL/页面特征：
-   *   A 页面特征（创作者工作台菜单）
-   *   B Cookie 信号（sessionid / sid_guard / uid_tt 关键登录 cookie）
-   *   C 身份接口（页面 hydration 数据提取账号昵称/ID）
-   * 返回 loggedIn + 真实账号身份（accountName / externalAccountId）
-   */
-  private async detectLoginState(sessionId: string): Promise<{
-    loggedIn: boolean
-    accountName?: string
-    externalAccountId?: string
-    signals: { page: boolean; cookie: boolean; identity: boolean }
-  }> {
-    const signals = { page: false, cookie: false, identity: false }
-    let accountName: string | undefined
-    let externalAccountId: string | undefined
-
-    // A 页面特征（现有工作台标记判定）
-    try {
-      signals.page = await browserRuntime.withPage(sessionId, async (page) => {
-        await page.waitForTimeout(1500 + Math.random() * 1000)
-        const url = page.url()
-        if (/passport|login|qr|sso/i.test(url)) return false
-        const bodyText = await page.locator('body').innerText().catch(() => '')
-        // 明确登录页营销文案排除
-        if (['扫码登录', '扫一扫', '验证码登录', '密码登录', '我是创作者', '我是MCN机构'].some(m => bodyText.includes(m))) return false
-        const workbenchMarkers = ['内容管理', '发布作品', '创作灵感', '作品管理', '数据概览', '创作者服务', '我的主页']
-        const hit = workbenchMarkers.filter(m => bodyText.includes(m)).length
-        return hit >= 2
-      })
-    } catch (e: any) {
-      console.warn(`[DouyinBrowserAdapter] 登录态检测-页面特征异常: ${e.message}`)
-    }
-
-    // B Cookie 信号：sessionid / sid_guard / uid_tt 是抖音登录态核心 cookie
-    try {
-      const cookies = await browserRuntime.getCookies(sessionId)
-      const names = new Set((cookies || []).map(c => c.name))
-      const keyCookies = ['sessionid', 'sid_guard', 'uid_tt']
-      signals.cookie = keyCookies.filter(k => names.has(k)).length >= 2
-    } catch (e: any) {
-      console.warn(`[DouyinBrowserAdapter] 登录态检测-Cookie异常: ${e.message}`)
-    }
-
-    // C 身份接口：页面 hydration 数据提取账号昵称/ID（登录成功才有）
-    try {
-      await browserRuntime.withPage(sessionId, async (page) => {
-        const identity = await page.evaluate(() => {
-          // 1) hydration 数据（creator 中心 SSR 注入 window._ROUTER_DATA / __NEXT_DATA__）
-          const candidates: any[] = []
-          const rd = (window as any)._ROUTER_DATA
-          if (rd) candidates.push(rd)
-          const nd = (window as any).__NEXT_DATA__
-          if (nd) candidates.push(nd)
-          const walk = (o: any, depth: number): any => {
-            if (!o || depth > 8 || typeof o !== 'object') return null
-            if (typeof o.user_name === 'string' && o.sec_uid) {
-              return { accountName: o.user_name, externalAccountId: o.sec_uid }
-            }
-            for (const k of Object.keys(o)) {
-              const r = walk(o[k], depth + 1)
-              if (r) return r
-            }
-            return null
-          }
-          for (const c of candidates) {
-            const r = walk(c, 0)
-            if (r) return r
-          }
-          // 2) 页面内用户接口（创作者中心个人信息）
-          return null
-        }).catch(() => null)
-        if (identity) {
-          accountName = identity.accountName
-          externalAccountId = identity.externalAccountId
-          signals.identity = true
-        }
-      })
-    } catch (e: any) {
-      console.warn(`[DouyinBrowserAdapter] 登录态检测-身份提取异常: ${e.message}`)
-    }
-
-    // 综合判定：页面特征 OR Cookie 信号（身份提取成功视为强信号）
-    const loggedIn = signals.page || signals.cookie || signals.identity
-    return { loggedIn, accountName, externalAccountId, signals }
-  }
-
-  /**
-   * [v1.0] 等待扫码登录完成（SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase A）
+   * ── 等待扫码登录完成（SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase A）──
    * 不刷新页面（避免打断扫码）；登录成功后由上层 refresh-credential 保存登录态
    * TASK03.2.1 — 使用多信号探针，返回真实账号身份（accountName/externalAccountId）
+   * TASK03.2.2 — 升级为 ChannelIdentityProbe；是否需人工确认由上层 service 决定
    */
   async waitForLogin(accountId: string, timeoutMs = 300000): Promise<ConnectResult> {
     const sid = this.sessionIdFor(accountId)
     const deadline = Date.now() + timeoutMs
     while (Date.now() < deadline) {
-      let state: Awaited<ReturnType<typeof this.detectLoginState>> | null = null
+      let identity: ChannelIdentity | null = null
       try {
-        state = await this.detectLoginState(sid)
+        identity = await identityProbeRegistry.get('douyin')!.probe(sid)
       } catch (e: any) {
         // 浏览器被反爬/异常关闭 → 重新 navigate 恢复（新二维码），不中断轮询
         console.warn(`[DouyinBrowserAdapter] 浏览器异常（${e.message}），重新打开登录页...`)
@@ -233,12 +152,14 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
           continue
         }
       }
-      if (state?.loggedIn) {
+      if (identity?.authenticated) {
         return {
           sessionId: sid,
           status: 'connected',
-          accountName: state.accountName || '抖音创作者中心',
-          externalAccountId: state.externalAccountId,
+          accountName: identity.accountName || '抖音创作者中心',
+          externalAccountId: identity.accountId,
+          avatar: identity.avatar,
+          permissions: identity.permissions,
         }
       }
       await new Promise(r => setTimeout(r, 8000))
@@ -283,9 +204,10 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
     screenshotBase64?: string
     qrCodeBase64?: string
     loggedIn: boolean
-    loginStage?: 'waiting_scan' | 'scan_confirming' | 'verifying' | 'connected'
+    loginStage?: 'waiting_scan' | 'scan_confirming' | 'verifying' | 'awaiting_confirmation' | 'connected'
     accountName?: string
     externalAccountId?: string
+    avatar?: string
     error?: string
     debug?: any
   }> {
@@ -350,16 +272,19 @@ canvas.save('${out}')
         })
       } catch { /* 二维码提取失败不影响主流程 */ }
       let loggedIn = false
-      let loginStage: 'waiting_scan' | 'scan_confirming' | 'verifying' | 'connected' = 'waiting_scan'
+      let loginStage: 'waiting_scan' | 'scan_confirming' | 'verifying' | 'awaiting_confirmation' | 'connected' = 'waiting_scan'
       let accountName: string | undefined
       let externalAccountId: string | undefined
+      let avatar: string | undefined
       try {
-        const state = await this.detectLoginState(sessionId)
-        loggedIn = state.loggedIn
-        accountName = state.accountName
-        externalAccountId = state.externalAccountId
-        if (state.loggedIn) {
-          loginStage = 'connected'
+        // TASK03.2.2 — 升级为 ChannelIdentityProbe（独立探针，返回完整身份含 avatar）
+        const identity = await identityProbeRegistry.get('douyin')!.probe(sessionId)
+        loggedIn = identity.authenticated
+        accountName = identity.accountName
+        externalAccountId = identity.accountId
+        avatar = identity.avatar
+        if (identity.authenticated) {
+          loginStage = 'awaiting_confirmation'
         }
       } catch { /* 浏览器异常时按未登录处理 */ }
       // debug：输入框状态（排查填充问题）
@@ -385,7 +310,7 @@ canvas.save('${out}')
       } catch {}
       // TASK03.2.1 — 扫码确认阶段判定（未登录但页面出现确认过渡层）
       if (!loggedIn && debug?.scanConfirming) loginStage = 'scan_confirming'
-      return { url: status.currentUrl, title: status.title, screenshotBase64, qrCodeBase64, loggedIn, loginStage, accountName, externalAccountId, debug }
+      return { url: status.currentUrl, title: status.title, screenshotBase64, qrCodeBase64, loggedIn, loginStage, accountName, externalAccountId, avatar, debug }
     } catch (e: any) {
       return { url: '', title: '', loggedIn: false, loginStage: 'waiting_scan', error: e.message }
     }
@@ -695,11 +620,6 @@ canvas.save('${out}')
   }
 
   // ─── 内部：登录态检测 ───
-
-  private async detectLoggedIn(sessionId: string): Promise<boolean> {
-    const state = await this.detectLoginState(sessionId)
-    return state.loggedIn
-  }
 
   // ─── 内部：指标抓取（容错，不 mock）───
 

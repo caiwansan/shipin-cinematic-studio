@@ -35,12 +35,16 @@
         v-for="p in visiblePlatforms"
         :key="p.name"
         class="ac-card"
-        :class="{ 'ac-card--shop': p.category === 'shop' }"
+        :class="{ 'ac-card--shop': p.category === 'shop', 'ac-card--connected': p.connected }"
         @click="onClick(p)"
       >
         <div class="ac-card-top">
           <span class="ac-ico">{{ p.icon }}</span>
-          <span class="ac-state off">
+          <span v-if="p.connected" class="ac-state on">
+            <span class="ac-dot on"></span>
+            已连接
+          </span>
+          <span v-else class="ac-state off">
             <span class="ac-dot off"></span>
             未连接
           </span>
@@ -48,15 +52,33 @@
         <div class="ac-name">{{ p.name }}</div>
         <div class="ac-plan">{{ p.plan }}</div>
 
+        <!-- TASK03.2.2 G4 — 已连接账号身份卡片（账号/头像/AI员工/权限） -->
+        <div v-if="p.connected" class="ac-bound">
+          <div class="ac-bound-row">
+            <div class="ac-bound-avatar">
+              <img v-if="p.boundAvatar" :src="p.boundAvatar" class="ac-bound-avatar-img" alt="账号头像" />
+              <span v-else class="ac-bound-avatar-fb">{{ (p.boundName || p.name)[0] }}</span>
+            </div>
+            <div class="ac-bound-info">
+              <div class="ac-bound-name">{{ p.boundName || p.name }}</div>
+              <div class="ac-bound-ai">🤖 AI 员工：Alice 运营总监</div>
+            </div>
+          </div>
+          <div class="ac-bound-tags">
+            <span class="ac-bound-tag">L1 观察权限</span>
+            <span class="ac-bound-tag">读取数据 · 分析</span>
+          </div>
+        </div>
+
         <!-- 连接后 AI 可以帮助（产品表达） -->
-        <div v-if="p.helps && p.helps.length" class="ac-helps">
+        <div v-else-if="p.helps && p.helps.length" class="ac-helps">
           <div class="ac-helps-title">连接后 AI 可以帮助</div>
           <div v-for="h in p.helps" :key="h" class="ac-help">
             <span class="ac-help-check">✓</span>{{ h }}
           </div>
         </div>
 
-        <button v-if="p.connectable" class="ac-cta">{{ p.connected ? '已接入 AI 员工' : '去连接' }}</button>
+        <button v-if="p.connectable" class="ac-cta" :class="{ 'ac-cta--bound': p.connected }">{{ p.connected ? '查看账号' : '去连接' }}</button>
         <span v-else class="ac-soon">即将开放</span>
       </div>
     </div>
@@ -120,6 +142,21 @@
             <div class="ac-success-sub">{{ statusMsg }}</div>
           </div>
 
+          <!-- TASK03.2.2 — 人工授权确认：探针已检测到登录态，等老板确认绑定（SaaS 授权确认事件） -->
+          <div v-else-if="awaitingConfirm" class="ac-confirm">
+            <div class="ac-confirm-avatar">
+              <img v-if="detectedAvatar" :src="detectedAvatar" class="ac-confirm-avatar-img" alt="账号头像" />
+              <div v-else class="ac-confirm-avatar-fallback">{{ (detectedName || '抖')[0] }}</div>
+            </div>
+            <div class="ac-confirm-title">已检测到抖音账号登录</div>
+            <div class="ac-confirm-account">{{ detectedName || '抖音账号' }}</div>
+            <div class="ac-confirm-desc">确认这是你要绑定的账号吗？绑定后 AI 员工（Alice 运营总监）将以 <strong>观察权限（L1）</strong> 读取该账号数据，不会自动发布任何内容。</div>
+            <div class="ac-confirm-actions">
+              <button class="ac-btn ac-btn-ghost" :disabled="connecting" @click="rejectBinding">不是这个账号</button>
+              <button class="ac-btn ac-btn-primary" :disabled="connecting" @click="confirmBinding">✓ 确认绑定</button>
+            </div>
+          </div>
+
           <template v-else>
             <!-- 扫码模式：优先显示放大的实时二维码（可直接扫）；无二维码时回退整页截图 -->
             <div v-if="loginMode === 'qr' && qrCode" class="ac-qr-wrap">
@@ -159,13 +196,14 @@
               用<strong>抖音 App</strong> 扫一扫上方二维码，确认登录后自动完成连接
             </div>
 
-            <!-- TASK03.2.1 — 登录阶段状态机（等待扫码 → 扫码确认 → 验证登录 → 已连接） -->
-            <div v-if="loginStage === 'scan_confirming' || loginStage === 'verifying' || loginStage === 'connected'" class="ac-stage">
-              <div class="ac-stage-item" :class="{ on: loginStage === 'scan_confirming' || loginStage === 'verifying' || loginStage === 'connected' }">
+            <!-- TASK03.2.1 — 登录阶段状态机（等待扫码 → 扫码确认 → 验证登录 → 已连接）
+                 TASK03.2.2 — 新增 awaiting_confirmation：探针已检测到登录态，等待人工确认绑定 -->
+            <div v-if="loginStage === 'scan_confirming' || loginStage === 'verifying' || loginStage === 'awaiting_confirmation' || loginStage === 'connected'" class="ac-stage">
+              <div class="ac-stage-item" :class="{ on: ['scan_confirming','verifying','awaiting_confirmation','connected'].includes(loginStage) }">
                 <span class="ac-stage-dot">①</span>扫码确认
               </div>
               <div class="ac-stage-arrow">→</div>
-              <div class="ac-stage-item" :class="{ on: loginStage === 'verifying' || loginStage === 'connected' }">
+              <div class="ac-stage-item" :class="{ on: ['verifying','awaiting_confirmation','connected'].includes(loginStage) }">
                 <span class="ac-stage-dot">②</span>验证登录
               </div>
               <div class="ac-stage-arrow">→</div>
@@ -210,9 +248,14 @@ const countdown = ref(0)
 const statusMsg = ref('')
 const connecting = ref(false)
 const loggedIn = ref(false)
-const loginStage = ref<'waiting_scan' | 'scan_confirming' | 'verifying' | 'connected'>('waiting_scan')
+const loginStage = ref<'waiting_scan' | 'scan_confirming' | 'verifying' | 'awaiting_confirmation' | 'connected'>('waiting_scan')
 const pollTimer = ref<any>(null)
 const codeSent = ref(false)
+// TASK03.2.2 — 人工授权确认（探针已检测到登录态，等老板确认绑定）
+const awaitingConfirm = ref(false)
+const detectedName = ref('')
+const detectedAvatar = ref('')
+const detectedAccountId = ref('')
 
 async function api(url: string, opts: any = {}) {
   const token = getAuthToken() || ''
@@ -241,6 +284,12 @@ async function openDouyinConnect(p: any) {
   phone.value = ''
   smsCode.value = ''
   qrCode.value = ''
+  // TASK03.2.2 — 重置人工确认状态
+  awaitingConfirm.value = false
+  detectedName.value = ''
+  detectedAvatar.value = ''
+  detectedAccountId.value = ''
+  loginStage.value = 'waiting_scan'
   try {
     // 1) 确保渠道账号存在
     const ensure = await api('/api/enterprise/channels/runtime/douyin/ensure-account', { method: 'POST', body: {} })
@@ -248,9 +297,23 @@ async function openDouyinConnect(p: any) {
     // 2) 打开登录浏览器
     const conn = await api(`/api/enterprise/channels/runtime/${accountId.value}/connect`, { method: 'POST', body: {} })
     sessionId.value = conn.data.sessionId
-    statusMsg.value = conn.data.status === 'connected' ? '登录态已恢复 ✓' : '请扫码或使用短信验证码登录'
-    loggedIn.value = conn.data.status === 'connected'
-    startPolling()
+    // TASK03.2.2 — 已绑定账号：直接 connected（维持登录）；首次登录：等人工确认
+    if (conn.data.status === 'connected') {
+      loggedIn.value = true
+      statusMsg.value = '登录态已恢复 ✓'
+      startPolling()
+    } else if (conn.data.status === 'awaiting_confirmation') {
+      awaitingConfirm.value = true
+      detectedName.value = conn.data.accountName || ''
+      detectedAvatar.value = conn.data.avatar || ''
+      detectedAccountId.value = conn.data.externalAccountId || ''
+      statusMsg.value = '已检测到账号，请确认绑定'
+      loginStage.value = 'awaiting_confirmation'
+      startPolling()
+    } else {
+      statusMsg.value = '请扫码或使用短信验证码登录'
+      startPolling()
+    }
   } catch (e: any) {
     statusMsg.value = '启动失败: ' + e.message
     $toast?.error?.(`连接启动失败: ${e.message}`)
@@ -267,16 +330,31 @@ function startPolling() {
       const res = await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/status`)
       const d = res.data || {}
       // TASK03.2.1 — 登录阶段状态机：等待扫码 → 扫码确认 → 验证中 → 已连接
+      // TASK03.2.2 — 探针检测到登录态 → awaiting_confirmation（等老板确认绑定，不再自动 connected）
       if (d.loginStage === 'connected' || d.loggedIn) {
-        loginStage.value = 'connected'
-        statusMsg.value = '登录成功！正在保存登录态...'
-        stopPolling()
-        await finishConnect()
+        // 已绑定账号维持登录态 → 直接 connected；未绑定 → 显示确认卡片
+        if (awaitingConfirm.value || !d.accountName) {
+          // 等待人工确认（探针已给身份，用户点确认绑定）
+          loginStage.value = 'awaiting_confirmation'
+          if (!awaitingConfirm.value) {
+            awaitingConfirm.value = true
+            detectedName.value = d.accountName || ''
+            detectedAvatar.value = d.avatar || ''
+            detectedAccountId.value = d.externalAccountId || ''
+            statusMsg.value = '已检测到账号，请确认绑定'
+          }
+          stopPolling()
+        } else {
+          loginStage.value = 'connected'
+          statusMsg.value = '登录成功！正在保存登录态...'
+          stopPolling()
+          await finishConnect()
+        }
         return
       } else if (d.loginStage === 'scan_confirming') {
         loginStage.value = 'scan_confirming'
         statusMsg.value = '扫码确认成功，正在验证登录...'
-      } else if (loginStage.value !== 'verifying') {
+      } else if (loginStage.value !== 'verifying' && loginStage.value !== 'awaiting_confirmation') {
         loginStage.value = 'waiting_scan'
       }
       // 优先放大二维码（工作台可直接扫码），回退整页截图
@@ -322,11 +400,55 @@ async function finishConnect() {
   }
 }
 
+// TASK03.2.2 — 人工授权确认：用户点「确认绑定」→ 探针复核 → 回写 DB + 保存凭证
+async function confirmBinding() {
+  connecting.value = true
+  statusMsg.value = '正在确认账号身份...'
+  try {
+    const res = await api(`/api/enterprise/channels/runtime/${accountId.value}/confirm-binding`, { method: 'POST', body: {} })
+    const d = res.data || {}
+    awaitingConfirm.value = false
+    loggedIn.value = true
+    loginStage.value = 'connected'
+    statusMsg.value = d.accountName
+      ? `已连接：${d.accountName}（L1 观察权限）✓`
+      : '连接成功！账号已点亮（L1 观察权限）✓'
+    if (connectPlatform.value) {
+      connectPlatform.value.connected = true
+      connectPlatform.value.name = d.accountName || connectPlatform.value.name
+      connectPlatform.value.boundName = d.accountName || connectPlatform.value.name
+      connectPlatform.value.boundAvatar = d.avatar || ''
+    }
+    $toast?.success?.('抖音账号绑定成功！')
+    setTimeout(() => { connectModal.value = false }, 2000)
+  } catch (e: any) {
+    statusMsg.value = '确认绑定失败: ' + e.message
+    $toast?.error?.(`确认绑定失败: ${e.message}`)
+  } finally {
+    connecting.value = false
+  }
+}
+
+// TASK03.2.2 — 拒绝绑定：关闭确认卡片，回到登录页（不写任何 DB 状态）
+async function rejectBinding() {
+  awaitingConfirm.value = false
+  detectedName.value = ''
+  detectedAvatar.value = ''
+  detectedAccountId.value = ''
+  loginStage.value = 'waiting_scan'
+  statusMsg.value = '已取消绑定，可重新扫码或切换账号'
+  startPolling()
+}
+
 function closeConnectModal() {
   stopPolling()
   connectModal.value = false
   qrCode.value = ''
   screenshot.value = ''
+  awaitingConfirm.value = false
+  detectedName.value = ''
+  detectedAvatar.value = ''
+  detectedAccountId.value = ''
 }
 
 async function switchLoginTab(mode: 'qr' | 'sms') {
@@ -425,6 +547,25 @@ const allPlatforms = [...contentPlatforms, ...shopPlatforms, ...customerPlatform
 const visiblePlatforms = computed(() => {
   if (activeTab.value === 'all') return allPlatforms
   return allPlatforms.filter((p: any) => p.category === activeTab.value)
+})
+
+// TASK03.2.2 G4 — 加载真实账号连接状态（已连接卡片：账号/头像/AI员工/权限）
+onMounted(async () => {
+  try {
+    const res = await api('/api/enterprise/channels/runtime/douyin/account-status')
+    const d = res.data || {}
+    if (d.connected) {
+      const douyin = allPlatforms.find((p: any) => p.platform === 'douyin')
+      if (douyin) {
+        douyin.connected = true
+        douyin.boundName = d.accountName || douyin.name
+        douyin.boundAvatar = d.avatar || ''
+        douyin.permissionLevel = d.permissionLevel || 1
+      }
+    }
+  } catch (e: any) {
+    // 账号状态加载失败静默（未连接态保持默认）
+  }
 })
 
 const perms = [
@@ -867,4 +1008,118 @@ function onClick(p: any) {
   justify-content: center;
 }
 .ac-success-sub { font-size: 12px; color: #64748b; font-weight: 400; margin-top: 6px; }
+
+.ac-card--connected {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.06), rgba(255,255,255,0.02) 40%);
+}
+.ac-bound {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.07);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.ac-bound-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ac-bound-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(139, 92, 246, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ac-bound-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.ac-bound-avatar-fb {
+  font-size: 16px;
+  font-weight: 800;
+  color: #a78bfa;
+}
+.ac-bound-info { min-width: 0; }
+.ac-bound-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-bound-ai {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+.ac-bound-tags {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ac-bound-tag {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.ac-cta--bound {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+/* TASK03.2.2 — 人工授权确认卡片（SaaS 授权确认事件） */
+.ac-confirm {
+  padding: 32px 24px;
+  text-align: center;
+  color: #f1f5f9;
+}
+.ac-confirm-avatar {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(139, 92, 246, 0.15);
+  border: 2px solid rgba(139, 92, 246, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ac-confirm-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.ac-confirm-avatar-fallback {
+  font-size: 26px;
+  font-weight: 800;
+  color: #a78bfa;
+}
+.ac-confirm-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+.ac-confirm-account {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+}
+.ac-confirm-desc {
+  margin: 14px auto 0;
+  max-width: 340px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #94a3b8;
+}
+.ac-confirm-actions {
+  margin-top: 22px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
 </style>

@@ -20,6 +20,7 @@ import { ContentStatus } from '../../enterprise/channel/channel.adapter.js'
 import { agentChannelBindingService } from './agent-channel-binding.service.js'
 import { channelBrowserSessionService } from './channel-browser-session.service.js'
 import { browserRuntime } from '../media/browser-runtime.service.js'
+import { identityProbeRegistry } from '../../enterprise/channel/identity-probe.js'
 
 export class ChannelService {
   private adapters: Map<string, EnterpriseChannelAdapter> = new Map()
@@ -61,6 +62,72 @@ export class ChannelService {
       throw err
     }
     return r
+  }
+
+  /**
+   * TASK03.2.2 — 三级权限模型（掌柜蓝图：不要马上开放 AI 操作）
+   *   L1 观察员工（默认）：读取数据 / 分析账号 / 生成建议
+   *   L2 运营助理：生成内容 / 生成回复 / 生成排期（需老板批准）
+   *   L3 运营经理：发布 / 回复 / 互动（明确授权 + 操作日志 + 可回滚）
+   *
+   * 权限等级持久化在 EnterpriseChannelAccount.metadata.permissionLevel（1/2/3）
+   * 操作放行矩阵（operation → 所需最低等级）：
+   *   read:metrics / read:comments / analyze → L1
+   *   generate / draft / schedule → L2
+   *   publish / reply / interact → L3
+   */
+  private readonly PERMISSION_MATRIX: Record<string, number> = {
+    'read:metrics': 1,
+    'read:comments': 1,
+    analyze: 1,
+    generate: 2,
+    draft: 2,
+    schedule: 2,
+    publish: 3,
+    reply: 3,
+    interact: 3,
+  }
+
+  /** 读取账号当前权限等级（默认 L1） */
+  async getPermissionLevel(accountId: string): Promise<number> {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    return (account.metadata as any)?.permissionLevel ?? 1
+  }
+
+  /** 设置账号权限等级（1/2/3），仅允许升级到掌柜批准的范围（当前冻结 L1，L2/L3 预留） */
+  async setPermissionLevel(accountId: string, level: number) {
+    if (![1, 2, 3].includes(level)) throw new Error('权限等级必须为 1/2/3')
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    await prisma.enterpriseChannelAccount.update({
+      where: { id: accountId },
+      data: { metadata: { ...((account.metadata as any) || {}), permissionLevel: level } },
+    })
+    return { accountId, permissionLevel: level }
+  }
+
+  /** 权限 Gate：校验账号等级是否满足操作所需最低等级（不满足抛 permission_denied） */
+  async requirePermissionLevel(accountId: string, operation: string) {
+    const required = this.PERMISSION_MATRIX[operation]
+    if (required === undefined) {
+      const err: any = new Error(`未知操作: ${operation}`)
+      err.code = 'permission_denied'
+      throw err
+    }
+    const level = await this.getPermissionLevel(accountId)
+    if (level < required) {
+      const err: any = new Error(
+        `当前为 L${level} 权限（${this.levelLabel(level)}），操作 ${operation} 需要 L${required}（${this.levelLabel(required)}）。升级权限请联系掌柜。`,
+      )
+      err.code = 'permission_denied'
+      throw err
+    }
+    return { level, required }
+  }
+
+  private levelLabel(level: number): string {
+    return level === 1 ? '观察员工' : level === 2 ? '运营助理' : '运营经理'
   }
 
   /**
@@ -129,6 +196,9 @@ export class ChannelService {
   /**
    * SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 编排：连接渠道
    * 企业渠道账号 → resolveAdapter(channelType) → adapter.connect（浏览器自动化登录）
+   * TASK03.2.2 — 人工授权确认事件：
+   *   探针检测到登录态 ≠ 自动 connected。首次登录需用户点「确认绑定」（SaaS 授权确认事件）；
+   *   已确认过的账号（connectionStatus=connected + externalAccountId）→ 维持登录直接 connected（G2）
    */
   async connectChannel(accountId: string) {
     const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
@@ -145,17 +215,28 @@ export class ChannelService {
 
     const result = await adapter.connect(account.id)
     if (result.status === 'connected') {
-      // TASK03.2.1 — 登录成功回写真实账号身份（externalAccountId + channelName + connectedAt）
-      await prisma.enterpriseChannelAccount.update({
-        where: { id: account.id },
-        data: {
-          connectionStatus: 'connected',
-          connectedAt: new Date(),
-          externalAccountId: result.externalAccountId ?? account.externalAccountId,
-          channelName: result.accountName ?? account.channelName,
-        },
-      })
-      await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
+      // 已确认账号（曾绑定）→ 维持登录态直接 connected；首次 → 需人工确认绑定
+      const alreadyBound = account.connectionStatus === 'connected' && !!account.externalAccountId
+      if (alreadyBound) {
+        // TASK03.2.1 — 回写最新身份（登录态维持，身份可能更新）
+        await prisma.enterpriseChannelAccount.update({
+          where: { id: account.id },
+          data: {
+            connectionStatus: 'connected',
+            connectedAt: account.connectedAt ?? new Date(),
+            externalAccountId: result.externalAccountId ?? account.externalAccountId,
+            channelName: result.accountName ?? account.channelName,
+          },
+        })
+        await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
+        return { ...result, status: 'connected' }
+      }
+      // 首次登录 → 等待用户人工确认绑定（不写 DB，探针身份暂存返回）
+      return {
+        ...result,
+        status: 'awaiting_confirmation',
+        message: '已检测到抖音账号登录，请确认绑定后完成连接',
+      }
     } else if (result.status === 'waiting_login' && account.connectionStatus === 'connected') {
       // SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase E — 登录态失效：connected → expired（不得一直显示在线）
       await prisma.enterpriseChannelAccount.update({
@@ -168,7 +249,8 @@ export class ChannelService {
 
   /**
    * SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase A — 等待扫码登录完成（大脑层编排）
-   * adapter.waitForLogin 轮询登录态（不刷新页面）→ 登录成功更新 connected + connectedAt
+   * adapter.waitForLogin 轮询登录态（不刷新页面）
+   * TASK03.2.2 — 登录成功但未确认 → 返回 awaiting_confirmation（等用户确认绑定）
    */
   async waitChannelLogin(accountId: string, timeoutMs?: number) {
     const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
@@ -179,27 +261,110 @@ export class ChannelService {
     }
     const result = await adapter.waitForLogin(account.id, timeoutMs)
     if (result.status === 'connected') {
-      // TASK03.2.1 — 登录成功回写真实账号身份（externalAccountId + channelName + connectedAt）
-      await prisma.enterpriseChannelAccount.update({
-        where: { id: account.id },
-        data: {
-          connectionStatus: 'connected',
-          connectedAt: new Date(),
-          externalAccountId: result.externalAccountId ?? account.externalAccountId,
-          channelName: result.accountName ?? account.channelName,
-        },
-      })
-      // TASK03.1.5 — 登录成功：记录运行环境健康检查
-      try {
-        const session = await channelBrowserSessionService.findByAccount(account.id)
-        if (session) {
-          await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
+      // 已确认账号 → 维持登录（G2 重启后仍 connected）
+      const alreadyBound = account.connectionStatus === 'connected' && !!account.externalAccountId
+      if (alreadyBound) {
+        await prisma.enterpriseChannelAccount.update({
+          where: { id: account.id },
+          data: {
+            connectionStatus: 'connected',
+            connectedAt: account.connectedAt ?? new Date(),
+            externalAccountId: result.externalAccountId ?? account.externalAccountId,
+            channelName: result.accountName ?? account.channelName,
+          },
+        })
+        try {
+          const session = await channelBrowserSessionService.findByAccount(account.id)
+          if (session) {
+            await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
+          }
+        } catch (e: any) {
+          console.warn(`[ChannelService] 浏览器会话健康检查记录失败: ${e.message}`)
         }
-      } catch (e: any) {
-        console.warn(`[ChannelService] 浏览器会话健康检查记录失败: ${e.message}`)
+        return { ...result, status: 'connected' }
+      }
+      // 首次登录 → 等待人工确认（不写 DB，身份暂存返回）
+      return {
+        ...result,
+        status: 'awaiting_confirmation',
+        message: '已检测到抖音账号登录，请确认绑定后完成连接',
       }
     }
     return result
+  }
+
+  /**
+   * TASK03.2.2 — 人工授权确认事件（SaaS 产品关键：不猜，用户点「确认绑定」）
+   * 流程：扫码成功 → 系统检测 → 显示账号身份 → 用户点确认 → 本方法执行：
+   *   1. 探针复核（登录态仍在）
+   *   2. 回写 EnterpriseChannelAccount（connected + externalAccountId + channelName + avatar）
+   *   3. 保存 cookie 凭证（AES 加密落库）
+   *   4. 记录浏览器会话健康
+   *   5. 默认权限 Level 1（观察员工：读取/分析）——L2/L3 后续掌柜批准后开放
+   */
+  async confirmChannelBinding(accountId: string) {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    const adapter = this.resolveAdapter(account.channelType)
+    const sid = adapter.sessionIdFor ? adapter.sessionIdFor(account.id) : `${account.channelType}:${account.id}`
+
+    // 1. 探针复核：登录态是否仍在 + 身份完整
+    const probe = identityProbeRegistry.get(account.channelType)
+    if (!probe) throw new Error(`渠道 ${account.channelType} 无身份探针`)
+    const identity = await probe.probe(sid)
+    if (!identity.authenticated) {
+      throw new Error('未检测到有效登录态，请重新扫码登录')
+    }
+
+    // 2. 回写账号身份（G1：externalAccountId + channelName + avatar + connected）
+    await prisma.enterpriseChannelAccount.update({
+      where: { id: account.id },
+      data: {
+        connectionStatus: 'connected',
+        connectedAt: new Date(),
+        externalAccountId: identity.accountId ?? account.externalAccountId,
+        channelName: identity.accountName ?? account.channelName,
+        metadata: {
+          ...(account.metadata as any || {}),
+          avatar: identity.avatar ?? (account.metadata as any)?.avatar,
+          permissionLevel: (account.metadata as any)?.permissionLevel ?? 1, // L1 观察员工（默认）
+          permissions: identity.permissions,
+          boundAt: new Date().toISOString(),
+        },
+      },
+    })
+
+    // 3. 保存 cookie 凭证（登录成功即续期落库）
+    try {
+      const result = await adapter.refreshCredential(account.id)
+      if (!result.ok) {
+        console.warn(`[ChannelService] 确认绑定凭证保存失败: ${result.error}`)
+      }
+    } catch (e: any) {
+      console.warn(`[ChannelService] 确认绑定凭证保存异常: ${e.message}`)
+    }
+
+    // 4. 浏览器会话健康记录
+    try {
+      const session = await channelBrowserSessionService.findByAccount(account.id)
+      if (session) {
+        await channelBrowserSessionService.markHealthCheck(session.id, {
+          loginState: 'connected',
+          confirmedAt: new Date().toISOString(),
+        })
+      }
+    } catch (e: any) {
+      console.warn(`[ChannelService] 浏览器会话健康检查记录失败: ${e.message}`)
+    }
+
+    return {
+      status: 'connected',
+      accountName: identity.accountName ?? account.channelName,
+      externalAccountId: identity.accountId ?? account.externalAccountId,
+      avatar: identity.avatar,
+      permissions: identity.permissions,
+      permissionLevel: 1,
+    }
   }
 
   /**
@@ -213,6 +378,8 @@ export class ChannelService {
     if (opts?.agentInstanceId) {
       await this.authorizeAgentAction(opts.agentInstanceId, accountId, 'analyze')
     }
+    // TASK03.2.2 — 三级权限 Gate：读取指标需要 L1（观察员工）
+    await this.requirePermissionLevel(accountId, 'read:metrics')
     const adapter = this.resolveAdapter(account.channelType)
     return adapter.fetchMetrics(account.id)
   }
@@ -246,6 +413,98 @@ export class ChannelService {
   }
 
   /**
+   * TASK03.2.2 — Runtime Health Agent（渠道运行健康三态）
+   * 掌柜蓝图：老板看到「我的 AI 员工办公室正常」，不是「cookie 有没有」
+   *
+   * {
+   *   browser:  'online' | 'offline' | 'degraded'   — Chromium 实例存活
+   *   session:  'valid' | 'invalid' | 'unknown'     — 持久化 profile 存在 + 最近健康检查
+   *   account:  'connected' | 'expired' | 'none'    — DB 账号绑定状态
+   *   permission: 'read/analyze' (L1)               — 当前授权等级
+   *   lastCheck: '3分钟前'                           — 最近健康检查
+   * }
+   */
+  async getRuntimeHealth(accountId: string) {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+
+    // account 态：DB 绑定状态（G3 验收核心）
+    const accountState = (() => {
+      if (account.connectionStatus === 'connected' && account.externalAccountId) return 'connected'
+      if (account.connectionStatus === 'expired') return 'expired'
+      return 'none'
+    })()
+
+    // browser 态：浏览器实例是否存活（内存态）+ Chromium 可启动性兜底
+    let browserState: 'online' | 'offline' | 'degraded' = 'offline'
+    const sid = this.adapterSessionId(account)
+    try {
+      const instances = browserRuntime.listInstances()
+      const inst = instances.find(i => i.sessionId === sid)
+      if (inst) {
+        browserState = 'online'
+      } else {
+        // 无活跃实例但 profile 存在 → degraded（可启动但未运行，按需拉起）
+        const fs = await import('fs')
+        const profilePath = browserRuntime.getProfilePath(account.channelType, account.id)
+        browserState = fs.existsSync(profilePath) ? 'degraded' : 'offline'
+      }
+    } catch (e: any) {
+      console.warn(`[RuntimeHealth] 浏览器状态探测异常: ${e.message}`)
+    }
+
+    // session 态：持久化 profile 存在 + 最近健康检查时间
+    let sessionState: 'valid' | 'invalid' | 'degraded' | 'unknown' = 'unknown'
+    let lastHealthAt: Date | null = null
+    try {
+      const session = await channelBrowserSessionService.findByAccount(account.id)
+      if (session) {
+        lastHealthAt = session.lastHealthCheckAt
+        const fs = await import('fs')
+        const profileExists = fs.existsSync(session.profilePath)
+        const fresh = session.lastHealthCheckAt && (Date.now() - session.lastHealthCheckAt.getTime()) < 7 * 24 * 3600 * 1000
+        sessionState = profileExists && fresh ? 'valid' : profileExists ? 'degraded' : 'unknown'
+      }
+    } catch (e: any) {
+      console.warn(`[RuntimeHealth] 会话状态探测异常: ${e.message}`)
+    }
+
+    // permission：当前授权等级（默认 L1 观察员工）
+    const permissionLevel = (account.metadata as any)?.permissionLevel ?? 1
+    const permissionLabel = permissionLevel === 1 ? 'read/analyze' : permissionLevel === 2 ? 'read/write (需批准)' : 'read/write/publish (明确授权)'
+
+    return {
+      browser: browserState,
+      session: sessionState,
+      account: accountState,
+      permission: permissionLabel,
+      permissionLevel,
+      accountName: account.channelName,
+      lastCheck: lastHealthAt ? this.relativeTime(lastHealthAt) : '从未检查',
+      lastCheckAt: lastHealthAt ? lastHealthAt.toISOString() : null,
+      checkedAt: new Date().toISOString(),
+    }
+  }
+
+  /** 统一会话 ID（adapter 有 sessionIdFor 用之，否则默认） */
+  private adapterSessionId(account: { channelType: string; id: string }): string {
+    const adapter = this.resolveAdapter(account.channelType)
+    if (adapter.sessionIdFor) return adapter.sessionIdFor(account.id)
+    return `${account.channelType}:${account.id}`
+  }
+
+  /** 相对时间（人类可读） */
+  private relativeTime(d: Date): string {
+    const diff = Date.now() - d.getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return '刚刚'
+    if (mins < 60) return `${mins}分钟前`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours}小时前`
+    return `${Math.floor(hours / 24)}天前`
+  }
+
+  /**
    * SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase D — 发布（权限层放行后进入 adapter 执行层）
    * adapter.publish 在 Task 03 阶段仍硬编码禁用（掌柜暂时禁止事项：❌ 自动发布），
    * 权限放行 ≠ 开放发布；本方法验证的是 AgentChannelBinding 权限隔离链路
@@ -256,6 +515,8 @@ export class ChannelService {
     if (opts?.agentInstanceId) {
       await this.authorizeAgentAction(opts.agentInstanceId, accountId, 'publish')
     }
+    // TASK03.2.2 — 三级权限 Gate：发布需要 L3（运营经理，明确授权）
+    await this.requirePermissionLevel(accountId, 'publish')
     const adapter = this.resolveAdapter(account.channelType)
     return adapter.publish(content)
   }
@@ -268,6 +529,13 @@ export class ChannelService {
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
     })
+  }
+
+  /** 获取单个渠道账号（含 metadata） */
+  async getAccountById(accountId: string) {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    return account
   }
 
   /**

@@ -13,6 +13,7 @@
  */
 import type { FastifyInstance } from 'fastify'
 import { channelService } from '../services/enterprise/channel.service.js'
+import { identityProbeRegistry } from '../enterprise/channel/identity-probe.js'
 
 export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
@@ -68,6 +69,32 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   // 浏览器登录交互（Task03.2 Phase A+：工作台可测扫码/短信登录）
   // 前端弹窗 → 轮询截图 → 掌柜扫码 / 填手机号+验证码 → 登录成功 → refresh-credential
   // ═══════════════════════════════════════════════════════
+
+  // TASK03.2.2 G4 — 抖音账号连接状态（前端卡片已连接态渲染）
+  app.get('/api/enterprise/channels/runtime/douyin/account-status', async (request, reply) => {
+    try {
+      const { prisma } = await import('../utils/index.js')
+      const account = await prisma.enterpriseChannelAccount.findFirst({
+        where: { channelType: 'douyin' },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, connectionStatus: true, channelName: true, externalAccountId: true, metadata: true },
+      })
+      if (!account) return reply.send({ code: 0, data: { connected: false } })
+      const meta = (account.metadata as any) || {}
+      return reply.send({
+        code: 0,
+        data: {
+          connected: account.connectionStatus === 'connected' && !!account.externalAccountId,
+          accountName: account.channelName,
+          avatar: meta.avatar || '',
+          permissionLevel: meta.permissionLevel ?? 1,
+          boundAt: meta.boundAt || null,
+        },
+      })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
 
   // 确保抖音渠道账号存在（查不到则自动创建），返回 accountId
   app.post('/api/enterprise/channels/runtime/douyin/ensure-account', async (request, reply) => {
@@ -178,6 +205,77 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
       const adapter = channelService.resolveAdapter('douyin') as any
       const result = await adapter.switchLoginTab(sessionId, tab)
       return reply.send({ code: 0, data: result })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
+  // ═══════════════════════════════════════════════════════
+  // TASK03.2.2 — Channel Runtime Identity System（渠道运行身份系统）
+  // 掌柜蓝图：人工授权确认事件 + Runtime Health Agent + 三级权限
+  // ═══════════════════════════════════════════════════════
+
+  // 人工授权确认（扫码成功后用户点「确认绑定」→ 探针复核 → 回写 DB + 保存凭证）
+  // G1 Identity：externalAccountId + channelName + avatar + connectionStatus=connected
+  app.post('/api/enterprise/channels/runtime/:id/confirm-binding', async (request, reply) => {
+    const { id } = request.params as any
+    try {
+      const result = await channelService.confirmChannelBinding(id)
+      return reply.send({ code: 0, data: result })
+    } catch (e: any) {
+      const status = e.code === 'permission_denied' ? 403 : 400
+      return reply.status(status).send({ code: e.code === 'permission_denied' ? 'permission_denied' : 1, message: e.message })
+    }
+  })
+
+  // Runtime Health Agent（三态：browser / session / account）
+  // G3 Health：老板看到「我的 AI 员工办公室正常」
+  app.get('/api/enterprise/channels/runtime/:id/runtime-health', async (request, reply) => {
+    const { id } = request.params as any
+    try {
+      const health = await channelService.getRuntimeHealth(id)
+      return reply.send({ code: 0, data: health })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
+  // 账号当前权限等级
+  app.get('/api/enterprise/channels/runtime/:id/permission', async (request, reply) => {
+    const { id } = request.params as any
+    try {
+      const level = await channelService.getPermissionLevel(id)
+      return reply.send({ code: 0, data: { accountId: id, permissionLevel: level } })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
+  // 设置权限等级（当前冻结 L1；L2/L3 掌柜批准后开放）
+  app.post('/api/enterprise/channels/runtime/:id/permission', async (request, reply) => {
+    const { id } = request.params as any
+    const { level } = request.body as any
+    if (![1, 2, 3].includes(Number(level))) {
+      return reply.status(400).send({ code: 400, message: 'level must be 1|2|3' })
+    }
+    try {
+      const result = await channelService.setPermissionLevel(id, Number(level))
+      return reply.send({ code: 0, data: result })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
+  // 身份探针（debug：查看当前浏览器会话的探测身份）
+  app.get('/api/enterprise/channels/runtime/:id/identity-probe', async (request, reply) => {
+    const { id } = request.params as any
+    try {
+      const account = await channelService.getAccountById(id)
+      const probe = identityProbeRegistry.get(account.channelType)
+      if (!probe) throw new Error(`渠道 ${account.channelType} 无身份探针`)
+      const sid = account.channelType + ':' + account.id
+      const identity = await probe.probe(sid)
+      return reply.send({ code: 0, data: identity })
     } catch (e: any) {
       return reply.status(400).send({ code: 1, message: e.message })
     }

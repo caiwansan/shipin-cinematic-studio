@@ -54,13 +54,16 @@ export interface ChannelHealth {
 
 /**
  * 连接结果（扫码/登录会话）
+ * TASK03.2.2 — 新增 awaiting_confirmation：探针已检测到登录态，但需用户人工确认绑定（SaaS 授权确认事件）
  */
 export interface ConnectResult {
   sessionId: string
-  status: 'waiting_login' | 'connected' | 'expired' | 'failed'
+  status: 'waiting_login' | 'awaiting_confirmation' | 'connected' | 'expired' | 'failed'
   loginUrl?: string
   accountName?: string
   externalAccountId?: string
+  avatar?: string
+  permissions?: string[]
   message?: string
 }
 
@@ -99,6 +102,11 @@ export interface ChannelComment {
  */
 export interface EnterpriseChannelAdapter {
   readonly platform: string
+
+  /**
+   * TASK03.2.2 — 会话 ID 生成规则（探针/健康检查用，默认 `${platform}:${accountId}`）
+   */
+  sessionIdFor?(accountId: string): string
 
   /**
    * [v1.0] 连接渠道（浏览器自动化：启动会话进入登录页 / OAuth：发起授权）
