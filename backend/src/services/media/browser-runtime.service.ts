@@ -648,19 +648,24 @@ class BrowserRuntimeService {
 
   /**
    * KUAISHOU-QR-FIX-02 — 按域清理 cookie（连接时清残留缓存用）。
-   * domainFilter 为空时清全部；传入平台域数组时仅清匹配域（保 profile 内其他数据）。
+   * 不用 clearCookies({domain})：它只精确匹配 host_key，带 . 前缀（.kuaishou.com）和子域
+   * （passport.kuaishou.com）全部漏网 → 旧登录 cookie 残留（实测 bUserId 清理后还在）。
+   * 正确姿势：读全部 → 按域包含过滤 → 逐个 name+domain+path 精确删除。
    */
   async clearCookies(sessionId: string, domainFilter?: string[]): Promise<void> {
     return this.withSessionLock(sessionId, async () => {
       const instance = this.instances.get(sessionId)
       if (!instance) throw new Error('BROWSER_NOT_RUNNING')
-      if (domainFilter?.length) {
-        for (const d of domainFilter) {
-          await instance.context.clearCookies({ domain: d }).catch(() => {})
-        }
-      } else {
-        await instance.context.clearCookies().catch(() => {})
+      const all = await instance.context.cookies()
+      const targets = domainFilter?.length
+        ? all.filter(c => domainFilter.some(d => c.domain.includes(d)))
+        : all
+      for (const c of targets) {
+        await instance.context
+          .clearCookies({ name: c.name, domain: c.domain, path: c.path })
+          .catch(() => {})
       }
+      console.log(`[BrowserRuntime] clearCookies: 删除 ${targets.length}/${all.length} 个 cookie`)
     })
   }
 
