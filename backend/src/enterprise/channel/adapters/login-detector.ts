@@ -33,6 +33,8 @@ export interface QrHit {
   y: number
   w: number
   h: number
+  /** 精确选择器命中的元素句柄（A0 通道） */
+  el?: any
 }
 
 export interface QrDetectionResult {
@@ -109,12 +111,33 @@ const TEXT_SAMPLE_FN = `(() => {
 
 export class BrowserLoginDetector {
   /** 主入口：A→B→C→D 顺序检测，任一命中即返回 */
-  async detect(page: Page): Promise<QrDetectionResult> {
+  async detect(page: Page, opts?: { qrImgSelector?: string }): Promise<QrDetectionResult> {
     const channels = {
       img: { found: false, count: 0, note: '' } as QrChannelState,
       canvas: { found: false, count: 0, note: '' } as QrChannelState,
       iframe: { found: false, count: 0, note: '', frames: 0 } as QrChannelState & { frames: number },
       screenshot: { found: false, count: 0, note: '', scanned: false } as QrChannelState & { scanned: boolean },
+    }
+
+    // A0. 精确选择器优先（平台配置 qrImgSelector，如小红书 img.qrcode-img）
+    // 防多弹窗实例/通用扫描歧义：直接命中平台指定的二维码元素
+    if (opts?.qrImgSelector) {
+      try {
+        const el = await page.$(opts.qrImgSelector)
+        if (el) {
+          channels.img.found = true
+          channels.img.count = 1
+          channels.img.note = `精确选择器命中 ${opts.qrImgSelector}`
+          const b64 = await this.imgToBase64(page, { src: '', x: 0, y: 0, w: 0, h: 0, el } as any)
+          if (b64 && (await this.b64IsQr(b64))) {
+            channels.img.note = `精确选择器命中 ${opts.qrImgSelector}，jsQR 验证通过`
+            return this.ok('img', b64, undefined, channels)
+          }
+          channels.img.note = `精确选择器命中但 jsQR 验证失败`
+        }
+      } catch (e: any) {
+        channels.img.note = `精确选择器异常: ${e?.message?.slice(0, 60)}`
+      }
     }
 
     try {
@@ -223,7 +246,7 @@ export class BrowserLoginDetector {
     return (await page.evaluate(TEXT_SAMPLE_FN).catch(() => '')) as string
   }
 
-  private ok(source: QrDetectionResult['source'], qrCode: string, detail: QrHit, channels: QrDetectionResult['channels']): QrDetectionResult {
+  private ok(source: QrDetectionResult['source'], qrCode: string, detail: QrHit | undefined, channels: QrDetectionResult['channels']): QrDetectionResult {
     return { loginMethod: 'qr', qrCode, source, detail, channels }
   }
 
@@ -242,7 +265,10 @@ export class BrowserLoginDetector {
   /** 图 → base64：data:image 直接取；https URL 从所在 frame fetch 转 base64；随后放大+白边 */
   private async imgToBase64(page: Page, hit: QrHit, frame?: Frame): Promise<string | undefined> {
     try {
-      const src = hit.src || ''
+      let src = hit.src || ''
+      if (!src && hit.el) {
+        src = (await hit.el.getAttribute('src').catch(() => null)) || ''
+      }
       let b64: string | undefined
       const mimeMatch = src.match(/^data:image\/(png|jpeg|jpg|webp);base64,/)
       if (mimeMatch) {

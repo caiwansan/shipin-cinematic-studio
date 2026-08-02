@@ -82,6 +82,8 @@ export interface ChannelPlatformDefinition {
     /** 进入登录面的按钮点击序列（如快手：先点「立即登录」进 passport，再点「扫码登录」tab）；找不到的标签自动跳过 */
     clickSteps?: string[]
   }
+  /** 精确二维码元素选择器（如小红书 img.qrcode-img）；配置后 Detector A0 通道优先命中 */
+  qrImgSelector?: string
   /** 数据读取配置（fetchMetrics 通用实现；未配置 → 诚实报未实现） */
   metricsExtraction?: {
     /** 数据中心页 URL（连接后打开抓取） */
@@ -172,19 +174,23 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
   xiaohongshu: {
     platform: 'xiaohongshu',
     displayName: '小红书',
-    loginUrl: 'https://creator.xiaohongshu.com/login',
+    // SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Hotfix：小红书真·扫码登录入口 = 主站弹窗
+    // 实测（2026-08-03）：creator.xiaohongshu.com/login 只有短信登录面（无扫码 tab，唯一 64x64 图是损坏 PNG）；
+    // 主站 www.xiaohongshu.com/explore 点「登录」→ 弹窗内 img.qrcode-img 即实时扫码登录二维码
+    // （jsQR 验证：https://www.xiaohongshu.com/mobile/login?qrId=...&ruleId=4&xhs_code=...&timestamp=...）
+    loginUrl: 'https://www.xiaohongshu.com/explore',
     workspaceUrl: 'https://creator.xiaohongshu.com/new/home',
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '短信登录',
-    // Task03：creator.xiaohongshu.com/login 可能重定向到 www.xiaohongshu.com 游客首页 → 必须回退登录入口
-    // Reality 验证（2026-08-03）：当前环境默认短信登录面（发送验证码/短信登录），无扫码 tab；
-    // 扫码 tab 探测失败时保持短信面（loginMethod=sms 如实报告）
+    // 登录入口：主站 → 点「登录」按钮 → 弹窗（qrcode-img 二维码与短信表单共存于 DOM）
     loginEntry: {
-      mustMatch: /creator\.xiaohongshu\.com/,
-      fallbackUrl: 'https://creator.xiaohongshu.com/login',
+      mustMatch: /xiaohongshu\.com/,
+      fallbackUrl: 'https://www.xiaohongshu.com',
       waitMs: 4000,
-      clickSteps: ['扫码登录'],
+      clickSteps: ['登录'],
     },
+    // 二维码提取：img.qrcode-img（class 含 qrcode → Detector img 通道关键词命中）
+    qrImgSelector: 'img.qrcode-img',
     selectors: {
       loginPage: 'input[type="tel"], [class*="login"]',
       workspace: '[class*="creator"]',

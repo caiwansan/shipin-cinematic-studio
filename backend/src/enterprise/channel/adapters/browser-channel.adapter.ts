@@ -302,7 +302,7 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
       let framesCount = 0
       try {
         const det = await browserRuntime.withPage(sessionId, async (page) => {
-          const res = await loginDetector.detect(page)
+          const res = await loginDetector.detect(page, { qrImgSelector: this.meta.qrImgSelector })
           pageTextSample = await loginDetector.pageTextSample(page).catch(() => '')
           framesCount = page.frames().length
           return res
