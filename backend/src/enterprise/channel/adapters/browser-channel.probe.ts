@@ -16,7 +16,7 @@
  * 禁止：仅页面特征算成功（游客页可能命中 markers，必须凭证伴随）。
  * 禁止在此文件写 if(platform==="xxx") 平台分支——差异全部走配置。
  */
-import type { ChannelIdentity, ChannelIdentityProbe } from '../identity-probe.js'
+import type { ChannelIdentity, ChannelIdentityProbe, LoginRealityState } from '../identity-probe.js'
 import { identityProbeRegistry } from '../identity-probe.js'
 import { browserRuntime } from '../../../services/media/browser-runtime.service.js'
 import { CHANNEL_META, type ChannelPlatformDefinition, type ExtractionRule } from './browser-channel.meta.js'
@@ -56,7 +56,7 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
   }
 
   async probe(sessionId: string): Promise<ChannelIdentity> {
-    const signals = { page: false, cookie: false, identity: false, loginPage: false, securityCheck: false, credential: false }
+    const signals = { page: false, cookie: false, identity: false, loginPage: false, securityCheck: false, credential: false, sessionAuthenticated: false, identityResolved: false, workspaceReady: false }
     const identity: { userId?: string; nickname?: string; avatar?: string; accountType?: string } = {}
     // LOGIN-CAPABILITY-V2 — 探针通道按 identityStrategy 显式启用/禁用（禁止 if(platform) 分支）
     const strategy = this.meta.identityStrategy ?? { pageProbe: true, cookieProbe: true, networkCapture: false, allowReload: false }
@@ -86,17 +86,28 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
         const securityByBody = this.meta.identityRules.securityCheckMarkers?.some(m => bodyText.includes(m)) || false
         const securityCheck = securityByUrl || securityByBody
 
-        if (loginPage) return { loginPage, securityCheck, page: false }
+        if (loginPage) return { loginPage, securityCheck, page: false, workspaceReady: false }
         // Task04：排除 URL 正则（命中 → 明确非工作台；如快手普通用户主页 v.kuaishou.com/profile）
-        if (this.meta.identityRules.excludeUrlPatterns?.some(re => re.test(url))) return { loginPage, securityCheck, page: false }
-        if (this.meta.identityRules.urlFragments.some(f => url.includes(f))) return { loginPage, securityCheck, page: true }
-        if (/passport|login|qr|sso|signin/i.test(url)) return { loginPage, securityCheck, page: false }
-        if (this.meta.identityRules.loginPageMarkers.some(m => bodyText.includes(m))) return { loginPage, securityCheck, page: false }
+        if (this.meta.identityRules.excludeUrlPatterns?.some(re => re.test(url))) return { loginPage, securityCheck, page: false, workspaceReady: false }
+        // MEDIA-LOGIN-CAPABILITY-V3 Task01 — workspaceReady 只认工作台专属 URL 片段（urlFragments），
+        // 与 page 信号（兼容层）解耦：markers 命中 ≥2 只能算 page，不算 workspace（防个人中心导航词误判）
+        if (this.meta.identityRules.urlFragments.some(f => url.includes(f))) return { loginPage, securityCheck, page: true, workspaceReady: true }
+        if (/passport|login|qr|sso|signin/i.test(url)) return { loginPage, securityCheck, page: false, workspaceReady: false }
+        if (this.meta.identityRules.loginPageMarkers.some(m => bodyText.includes(m))) return { loginPage, securityCheck, page: false, workspaceReady: false }
+        // MEDIA-LOGIN-CAPABILITY-V3 Task02 — 删除 markers≥2 → page=true（假成功根因）。
+        // 实证：快手 cp.kuaishou.com/profile（创作者个人中心）含「作品管理/创作服务/视频管理」等
+        // 工作台导航词 → markers 命中≥2 → page=true → authenticated=true（passport 会话+误判）→
+        // connect 返回 connected + displayName 假名 + extId 缺失（假成功）。
+        // markers 现在只作诊断日志，绝不参与认证；page 信号只认工作台 URL 片段（urlFragments）。
         const hit = this.meta.identityRules.markers.filter(m => bodyText.includes(m)).length
-        return { loginPage, securityCheck, page: hit >= 2 }
+        if (hit > 0) {
+          console.log(`[BrowserChannelProbe:${this.platform}] 非工作台页命中 markers=${hit}（仅诊断，不参与认证）url=${url.slice(0, 60)}`)
+        }
+        return { loginPage, securityCheck, page: false, workspaceReady: false }
       }, this.meta.workspaceUrl)
       if (pageRes) {
         signals.page = pageRes.page
+        signals.workspaceReady = !!pageRes.workspaceReady
         signals.loginPage = pageRes.loginPage
         signals.securityCheck = pageRes.securityCheck
       }
@@ -140,6 +151,38 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
     // IDENTITY-V2 — 三层信号综合判定（纯函数，可单测）
     const { authenticated, credential } = judgeIdentityV2(signals)
     signals.credential = credential
+    // MEDIA-LOGIN-CAPABILITY-V3 Task01 — 三信号拆分：
+    //   sessionAuthenticated = credential（session 层：真实登录凭证 + 非登录页）
+    //   identityResolved     = identity（身份层：userId/nickname 提取成功）
+    //   workspaceReady       = urlFragments 命中（工作台层，已在页面阶段计算；不含 markers 误判）
+    signals.sessionAuthenticated = credential
+    signals.identityResolved = signals.identity
+
+    // MEDIA-LOGIN-CAPABILITY-V3 Task01 — 三层认证现实（LoginRealityState）
+    // 上层（状态机/owner-view）以此为准；authenticated 兼容字段保留旧语义供存量调用方过渡
+    let reality: LoginRealityState = {
+      session: { authenticated: !!signals.sessionAuthenticated },
+      identity: { resolved: !!signals.identityResolved, accountId: identity.userId, accountName: identity.nickname },
+      workspace: { ready: !!signals.workspaceReady },
+    }
+
+    // LOGIN-REALITY-HARDENING-02 Task01 — 探针信号明细观测（每轮输出，还原登录状态链）：
+    // 记录 URL / 登录页判定 / cookie 命中 / 页面特征 / 身份提取 / 综合判定
+    try {
+      const url = await browserRuntime.withPage(sessionId, async (page) => page.url()).catch(() => '')
+      reality.identity.sourceUrl = url || undefined
+      reality.workspace.url = url || undefined
+      const cookieNames = await browserRuntime.getCookies(sessionId).catch(() => [])
+      const names = (cookieNames || []).map((c: any) => c.name)
+      console.log(
+        `[LOGIN-TIMELINE][${this.platform}] probe url=${url.slice(0, 80)} | ` +
+        `page=${signals.page} workspace=${signals.workspaceReady} loginPage=${signals.loginPage} securityCheck=${signals.securityCheck} | ` +
+        `cookie=${signals.cookie} (${this.keyCookies.filter(k => names.includes(k)).join(',') || 'none'} / have:${names.slice(0, 10).join(',')}) | ` +
+        `identity=${signals.identity} (${identity.userId || '-'}/${identity.nickname || '-'}) | ` +
+        `V3(session=${signals.sessionAuthenticated} identity=${signals.identityResolved} workspace=${signals.workspaceReady}) | ` +
+        `=> authenticated=${authenticated} credential=${credential}`
+      )
+    } catch {}
 
     return {
       authenticated,
@@ -150,6 +193,7 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
       permissions: authenticated ? ['read:metrics', 'read:comments', 'analyze'] : [],
       checkedAt: new Date().toISOString(),
       signals,
+      reality,
     }
   }
 

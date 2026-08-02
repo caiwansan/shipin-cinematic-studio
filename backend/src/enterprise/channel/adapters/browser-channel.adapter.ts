@@ -52,6 +52,8 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
   // 缓存后 3 次轮询中 1 次真跑 2 次命中缓存，平均 3-4s 刷新，扫码成功 5s 内可见。
   private readonly qrCache = new Map<string, { qrCode?: string; qrSource?: string; screenshot?: string; at: number }>()
   private readonly probeCache = new Map<string, { identity: any; at: number }>()
+  /** MEDIA-LOGIN-CAPABILITY-V3 Task03 — 登录后自动导航工作台节流（sessionId → 上次导航时间） */
+  private readonly _lastAutoNavigateAt = new Map<string, number>()
   private readonly QR_CACHE_TTL = 15000
   private readonly PROBE_CACHE_TTL = 5000
 
@@ -78,6 +80,21 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
    */
   protected async clearLoginCache(sid: string): Promise<void> {
     const domains = this.meta.cookieDomains?.length ? this.meta.cookieDomains : [new URL(this.meta.loginUrl).hostname]
+    // WECHAT-VIDEO-G6-DEBUG-01 Task04 — 清理守卫：页面已进工作台（urlFragments 命中）
+    // → 登录态有效，禁止清理（防自杀式清理：探针误判未登录 → 清掉真实登录 cookie → 扫码成功不登录）
+    // 双保险：keyCookies 命中 ≥2 也视为登录态存在（页面可能尚未跳转工作台，但会话有效）
+    try {
+      const [pageUrl, cookies] = await Promise.all([
+        browserRuntime.withPage(sid, async (page) => page.url()).catch(() => ''),
+        browserRuntime.getCookies(sid).catch(() => []),
+      ])
+      const names = new Set((cookies || []).map((c: any) => c.name))
+      const keyHit = this.meta.identityRules.cookies.filter(k => names.has(k)).length
+      if (this.meta.identityRules.urlFragments.some(f => pageUrl.includes(f)) || keyHit >= 2) {
+        console.log(`[${this.name}Adapter] 登录态存在（url=${pageUrl.slice(0, 50)} keyCookieHit=${keyHit}），跳过残留清理（保护有效会话）`)
+        return
+      }
+    } catch {}
     // 1) localStorage/sessionStorage：页面导航到平台根域后清（浏览器安全限制：仅当前域可访问）
     await browserRuntime.withPage(sid, async (page) => {
       const root = `https://${domains[0]}`
@@ -116,11 +133,16 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     } catch (e: any) {
       console.warn(`[${this.name}Adapter] connect 阶段登录态检测异常: ${e.message}`)
     }
-    if (identity?.authenticated) {
+    // MEDIA-LOGIN-CAPABILITY-V3 Task02 — 删除假成功路径：
+    // 1) 禁止 accountName || meta.displayName（平台名冒充账号名 —— 快手「快手」假名根因）
+    // 2) connected 硬条件：authenticated && accountId && identity.resolved && workspace.ready
+    //    （掌柜 CONNECTED 定义：externalAccountId != null + 身份来源可信 + 工作台就绪）
+    //    不满足 → 诚实 waiting_login（绝不假 connected）
+    if (identity?.authenticated && identity.accountId && identity.reality?.identity?.resolved && identity.reality?.workspace?.ready) {
       return {
         sessionId: sid,
         status: 'connected',
-        accountName: identity.accountName || meta.displayName,
+        accountName: identity.accountName,
         externalAccountId: identity.accountId,
         avatar: identity.avatar,
         permissions: identity.permissions,
@@ -161,11 +183,12 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     } catch (e: any) {
       console.warn(`[${this.name}Adapter] connect 阶段二次登录态检测异常: ${e.message}`)
     }
-    if (identity?.authenticated) {
+    // MEDIA-LOGIN-CAPABILITY-V3 Task02 — 同硬条件（见 connect 首段注释）
+    if (identity?.authenticated && identity.accountId && identity.reality?.identity?.resolved && identity.reality?.workspace?.ready) {
       return {
         sessionId: sid,
         status: 'connected',
-        accountName: identity.accountName || meta.displayName,
+        accountName: identity.accountName,
         externalAccountId: identity.accountId,
         avatar: identity.avatar,
         permissions: identity.permissions,
@@ -316,16 +339,60 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
           console.warn(`[${this.name}Adapter] 实例存活（扫码确认窗口期），跳过导航保护现场`)
         }
       }
-      if (identity?.authenticated) {
+      // MEDIA-LOGIN-CAPABILITY-V3 Task02 — 同硬条件（connected 必须 extId+身份+工作台全就绪）
+      // 快手实锤：authenticated=true（passport 会话）但 identity ✗ workspace ✗ → 绝不 connected
+      if (identity?.authenticated && identity.accountId && identity.reality?.identity?.resolved && identity.reality?.workspace?.ready) {
+        console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin ✅ 认证成功 account=${identity.accountName || '-'}/${identity.accountId || '-'}`)
         return {
           sessionId: sid,
           status: 'connected',
-          accountName: identity.accountName || meta.displayName,
+          accountName: identity.accountName,
           externalAccountId: identity.accountId,
           avatar: identity.avatar,
           permissions: identity.permissions,
         }
       }
+      // session 已成立但身份/工作台未确认 → 诚实日志（前端轮询 getLoginStatus 展示 LOGIN_PARTIAL）
+      if (identity?.reality?.session?.authenticated && !identity.reality?.workspace?.ready) {
+        // MEDIA-LOGIN-CAPABILITY-V3 Task03 — 登录后自动导航工作台：
+        // session 成立但未进工作台 + 平台配置 navigation.afterSessionAuthenticated
+        // （快手 passport 停留 /profile、小红书停留主站）→ 导航 workspaceUrl 后重新探针。
+        // 触发严格：仅 session✓ + workspace✗；扫码确认窗口期 session 未成立，绝不打断确认。
+        // 节流：同 session 20s 内至多导航一次，防死循环（导航后仍非工作台 → 下轮再试）
+        if (meta.navigation?.afterSessionAuthenticated) {
+          const last = this._lastAutoNavigateAt.get(sid) || 0
+          if (Date.now() - last > 20000) {
+            this._lastAutoNavigateAt.set(sid, Date.now())
+            console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin 自动导航工作台 ${meta.workspaceUrl}（session✓ workspace✗ url=${(identity.reality.workspace.url || '').slice(0, 60)}）`)
+            try {
+              const nav = await browserRuntime.navigate(sid, meta.workspaceUrl, { headless: false })
+              if (nav.success) {
+                await new Promise(r => setTimeout(r, 3500))
+                // 重新探针（工作台 DOM 提供 page+identity 信号）
+                identity = await identityProbeRegistry.get(this.platform)!.probe(sid).catch(() => null)
+                if (identity?.authenticated && identity.accountId && identity.reality?.identity?.resolved && identity.reality?.workspace?.ready) {
+                  console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin ✅ 导航后认证成功 account=${identity.accountName || '-'}/${identity.accountId || '-'}`)
+                  return {
+                    sessionId: sid,
+                    status: 'connected',
+                    accountName: identity.accountName,
+                    externalAccountId: identity.accountId,
+                    avatar: identity.avatar,
+                    permissions: identity.permissions,
+                  }
+                }
+              }
+            } catch (navErr: any) {
+              console.warn(`[${this.name}Adapter] 自动导航工作台失败: ${navErr.message}`)
+            }
+          } else {
+            console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin session✓ workspace✗（自动导航节流中，${Math.round(20 - (Date.now() - last) / 1000)}s 后重试）url=${(identity.reality.workspace.url || '').slice(0, 60)}`)
+          }
+        } else {
+          console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin session✓ 但 workspace✗（身份/工作台未确认，保持轮询）url=${(identity.reality.workspace.url || '').slice(0, 60)}`)
+        }
+      }
+      console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin 轮询未认证 (${new Date().toISOString()})`)
       await new Promise(r => setTimeout(r, 8000))
     }
     return {
@@ -488,7 +555,8 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
         externalAccountId = identity.accountId
         avatar = identity.avatar
         accountType = identity.accountType
-        debug = { ...debug, probeSignals: identity.signals, probeAuthenticated: identity.authenticated, probeAccount: identity.accountName || '' }
+        // MEDIA-LOGIN-CAPABILITY-V3 Task01 — debug 输出三层认证现实（session/identity/workspace）
+        debug = { ...debug, probeSignals: identity.signals, probeAuthenticated: identity.authenticated, probeAccount: identity.accountName || '', probeReality: identity.reality }
       }
       // AUDIT-2026-08-03 — 登录成功后立即清 qr 缓存：
       // 旧码 15s TTL 内仍会被前端展示，用户可能扫第二次旧码（passport 已作废）→ 无效确认循环。
@@ -511,9 +579,29 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
           userActionRequired = !!(status.currentUrl && /sms|code|verify|phone/i.test(status.currentUrl))
         } catch {}
       }
-      sm.derive({ authenticated: loggedIn, hasIdentity: !!externalAccountId, verifying, userActionRequired })
+      sm.derive({
+        authenticated: loggedIn,
+        hasIdentity: !!externalAccountId,
+        // MEDIA-LOGIN-CAPABILITY-V3 Task01 — 三信号驱动（探针 reality 层）
+        sessionAuthenticated: identity?.reality?.session?.authenticated,
+        identityResolved: identity?.reality?.identity?.resolved,
+        workspaceReady: identity?.reality?.workspace?.ready,
+        verifying,
+        userActionRequired,
+      })
       const state = sm.current
       const loginStage = (sm.toLegacy() as any)
+      // LOGIN-REALITY-HARDENING-02 Task01 — 状态机判定观测（还原扫码后状态推进链）
+      if (!loggedIn) {
+        console.log(
+          `[LOGIN-TIMELINE][${this.platform}] getLoginStatus state=${state} legacy=${loginStage} | ` +
+          `verifying=${verifying} (url=/scan_confirm|confirm|wait|qrcode_confirm/) userActionRequired=${userActionRequired} | ` +
+          `V3(session=${identity?.reality?.session?.authenticated} identity=${identity?.reality?.identity?.resolved} workspace=${identity?.reality?.workspace?.ready}) | ` +
+          `url=${status.currentUrl?.slice(0, 80)}`
+        )
+      } else {
+        console.log(`[LOGIN-TIMELINE][${this.platform}] getLoginStatus state=${state} legacy=${loginStage} loggedIn=true V3(session=${identity?.reality?.session?.authenticated} identity=${identity?.reality?.identity?.resolved} workspace=${identity?.reality?.workspace?.ready})`)
+      }
       if (loggedIn) {
         // 认证后：若尚未 connected 则推进 AUTHENTICATED（CONNECTED 由 wait-for-login 回写时置位）
       }

@@ -24,6 +24,12 @@ export interface PlatformCapability {
   loginMethods: LoginMethod[]
   /** 扫码后页面行为（Login Capability Model v2） */
   postScanBehavior: 'redirect' | 'stay_page' | 'manual_confirm' | undefined
+  /**
+   * MEDIA-LOGIN-CAPABILITY-V3 Task03 — 登录后导航能力（post-login navigation）
+   * afterSessionAuthenticated=true：session 成立但未进工作台 → 自动导航 workspaceUrl 再探针
+   * （快手/小红书 stay_page 平台；抖音/视频号自动跳转无需导航）
+   */
+  navigation: { afterSessionAuthenticated: boolean } | undefined
   /** 身份探针策略 */
   identityStrategy: { pageProbe: boolean; cookieProbe: boolean; networkCapture: boolean; allowReload: boolean } | undefined
   adapterReady: boolean
@@ -78,6 +84,7 @@ class ChannelPlatformRegistry {
       connectable,
       loginMethods: meta.loginMethods,
       postScanBehavior: meta.postScanBehavior,
+      navigation: meta.navigation ? { afterSessionAuthenticated: !!meta.navigation.afterSessionAuthenticated } : undefined,
       identityStrategy: meta.identityStrategy,
       adapterReady: aReady,
       probeReady: pReady,

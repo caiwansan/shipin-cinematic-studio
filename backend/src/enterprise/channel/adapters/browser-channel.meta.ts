@@ -50,6 +50,16 @@ export interface ChannelPlatformDefinition {
    */
   postScanBehavior?: 'redirect' | 'stay_page' | 'manual_confirm'
   /**
+   * MEDIA-LOGIN-CAPABILITY-V3 Task03 — 登录后导航（post-login navigation）
+   * afterSessionAuthenticated=true：探针发现 session 成立（loginPage=false + credential ✓）
+   * 但尚未进入工作台（workspace ✗）时，自动导航到 workspaceUrl，然后重新探针。
+   * 解决「平台扫码后停留原页（stay_page）」与「认证要求工作台 URL」的冲突：
+   *   - 快手 passport 登录后停留 /profile（非工作台）→ 导航 cp.kuaishou.com/article
+   *   - 小红书扫码确认后停留主站 → 导航 creator.xiaohongshu.com/new/home
+   * 触发时机严格：session 首次成立才导航（不打断扫码确认窗口期——确认窗口期 session 未成立）
+   */
+  navigation?: { afterSessionAuthenticated?: boolean }
+  /**
    * LOGIN-CAPABILITY-V2 — 身份探测策略（Identity Probe Strategy）
    * 显式声明该平台的探测通道，禁止运行时 if(platform) 分支：
    *   pageProbe      页面特征信号（工作台 URL 片段 + markers）
@@ -186,6 +196,9 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     // networkCapture 在 passive 模式（只监听自然请求，不主动 reload）下工作。
     postScanBehavior: 'stay_page',
     identityStrategy: { pageProbe: true, cookieProbe: true, networkCapture: true, allowReload: false },
+    // MEDIA-LOGIN-CAPABILITY-V3 Task03 — 快手 passport 登录后停留 /profile（非工作台）→
+    // session 成立后自动导航 cp.kuaishou.com/article（工作台）再探针（身份/工作台信号才成立）
+    navigation: { afterSessionAuthenticated: true },
     // Task04：cp.kuaishou.com 未登录可能落到普通用户端/其他域 → 必须确认创作者登录入口
     loginEntry: {
       // KUAISHOU-QR-FIX-01：cp.kuaishou.com 未登录会自动 302 到 passport.kuaishou.com，
@@ -264,6 +277,9 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     // LOGIN-CAPABILITY-V2 — 小红书主站弹窗扫码（stay_page）；凭证 cookie + 页面特征双信号
     postScanBehavior: 'stay_page',
     identityStrategy: { pageProbe: true, cookieProbe: true, networkCapture: false, allowReload: false },
+    // MEDIA-LOGIN-CAPABILITY-V3 Task03 — 小红书扫码确认后停留主站（www.xiaohongshu.com）→
+    // web_session 成立后自动导航 creator.xiaohongshu.com/new/home（工作台）再探针
+    navigation: { afterSessionAuthenticated: true },
     // 二维码提取：img.qrcode-img（class 含 qrcode → Detector img 通道关键词命中）
     qrImgSelector: 'img.qrcode-img',
     selectors: {
@@ -318,7 +334,11 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     },
     identityRules: {
       // ⚠️ 二维码成功 ≠ 登录成功：微信扫码后需手机确认，确认后才跳工作台（Task03）
-      cookies: ['wxuin', 'wxsid', 'rand_info', 'mm_lang'],
+      // WECHAT-VIDEO-G6-DEBUG-01 Task04 — 真实登录 cookie 实测（2026-08-03 直测）：
+      //   channels.weixin.qq.com 登录态 = sessionid + wxuin（2 个），
+      //   旧配置 wxsid/rand_info/mm_lang 是公众号 mp.weixin.qq.com 的 cookie（张冠李戴）→
+      //   只命中 wxuin 1 个永远凑不齐 ≥2 → 扫码成功永不认证（+ connect 误判未登录→清掉真实 cookie）。
+      cookies: ['wxuin', 'sessionid'],
       urlFragments: ['channels.weixin.qq.com/platform'],
       markers: ['视频号助手', '发布动态', '数据中心', '发表视频', '视频号'],
       loginPageMarkers: ['微信扫一扫', '扫码登录'],
