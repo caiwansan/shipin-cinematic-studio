@@ -501,6 +501,7 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/channel-reality.routes.js')).channelRealityRoutes)
   // SPRINT-MEDIA-AI-EMPLOYEE-OPERATION-REALITY-01 Task02/03/05 — Channel Metrics（AI 员工真实读取指标）
   await app.register((await import('./routes/channel-metrics.routes.js')).channelMetricsRoutes)
+  await app.register((await import('./routes/channel-health.routes.js')).channelHealthRoutes)
   // P1.7 — V3 Schema 三层审计系统（只读观测路由）
   await app.register(await import('./routes/v3-metrics.js').then(m => m.default))
   // P1.8 — 生产切换决策模型（只读评估，不修改任何系统状态）

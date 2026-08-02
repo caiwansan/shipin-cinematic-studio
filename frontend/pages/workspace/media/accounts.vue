@@ -74,6 +74,31 @@
                 </template>
               </span>
             </div>
+            <!-- AI-EMPLOYEE-REALITY-01 Task04 — AI 判断：置信度徽章 + 规则摘要（完整分析走 /metrics/analyze） -->
+            <div v-if="ov.aiInsight" class="ac-owner-row ac-owner-ai">
+              <span class="k">AI 判断</span>
+              <span class="v ac-ai-cell">
+                <span class="ac-conf-badge" :class="'lv-' + (ov.aiInsight.confidence?.level || 'warning')">
+                  {{ confidenceLabel(ov.aiInsight.confidence) }}
+                </span>
+                <span class="ac-ai-summary">{{ ov.aiInsight.summary || '暂无可用数据，无法生成 AI 判断' }}</span>
+              </span>
+            </div>
+            <!-- AI-EMPLOYEE-REALITY-01 Task01 — 账号健康（Channel Health Guard）：NEEDS_ATTENTION 展示保护 + 人工恢复 -->
+            <div v-if="ov.health && ov.health.state !== 'HEALTHY'" class="ac-owner-row ac-owner-health" :class="ov.health.state === 'NEEDS_ATTENTION' ? 'danger' : 'warn'">
+              <span class="k">账号健康</span>
+              <span class="v ac-health-cell">
+                <template v-if="ov.health.state === 'NEEDS_ATTENTION'">
+                  <span class="ac-health-tag danger">🔴 需要关注</span>
+                  <span class="ac-health-reason">{{ ov.health.pauseReason || '连续失败已暂停任务，保护账号资产' }}</span>
+                  <button class="ac-health-recover" @click.stop="recoverChannel(ov)">✓ 人工确认恢复</button>
+                </template>
+                <template v-else>
+                  <span class="ac-health-tag warn">🟡 注意</span>
+                  <span class="ac-health-reason">近期出现 {{ ov.health.failureCount }} 次失败，继续失败将自动保护</span>
+                </template>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -894,6 +919,7 @@ const WORKER_STATUS_LABEL: Record<string, string> = {
   error: '🔴 异常',
   pending: '⚪ 待连接',
   offline: '⚫ 离线',
+  attention: '🔴 账号保护中',
 }
 const WORKER_STATUS_DETAIL: Record<string, string> = {
   working: '电脑在线 · 账号已连接',
@@ -904,6 +930,7 @@ const WORKER_STATUS_DETAIL: Record<string, string> = {
   error: '电脑异常 · 请检查浏览器环境',
   pending: '电脑就绪 · 尚未发起连接',
   offline: '电脑离线',
+  attention: '账号保护中 · 连续失败已暂停任务，等待老板确认恢复',
 }
 function workerStatusLabel(ov: any): string {
   return WORKER_STATUS_LABEL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || '⚫ 离线'
@@ -943,6 +970,43 @@ function fmtCount(n: number | null | undefined): string {
   if (n >= 100000000) return (n / 100000000).toFixed(1) + ' 亿'
   if (n >= 10000) return (n / 10000).toFixed(1) + ' 万'
   return n.toLocaleString()
+}
+
+// AI-EMPLOYEE-REALITY-01 Task04 — 置信度徽章文案（AI 不虚报：数据不足必须如实展示）
+function confidenceLabel(c: any): string {
+  if (!c) return '数据不足'
+  const map: Record<string, string> = {
+    strong: 'AI 判断 · 高置信',
+    medium: 'AI 判断 · 中等置信',
+    weak: 'AI 判断 · 低置信',
+    warning: 'AI 判断 · 数据不足',
+  }
+  return map[c.level] || 'AI 判断'
+}
+
+// AI-EMPLOYEE-REALITY-01 Task01 — 人工确认恢复（老板确认后解除账号保护，恢复 AI 员工绑定）
+async function recoverChannel(ov: any) {
+  if (!ov?.channelAccountId) return
+  try {
+    const res = await api(`/api/enterprise/channels/${ov.channelAccountId}/health/recover`, { method: 'POST', body: { by: 'owner', reason: '老板人工确认账号正常' } })
+    if (res.code === 0) {
+      $toast?.success?.('账号已恢复，AI 员工可继续工作')
+      await reloadOwnerViews()
+    } else {
+      $toast?.error?.(res.message || '恢复失败')
+    }
+  } catch (e: any) {
+    $toast?.error?.('恢复失败: ' + e.message)
+  }
+}
+
+async function reloadOwnerViews() {
+  try {
+    const ov = await api('/api/enterprise/workspaces/owner-view')
+    ownerViews.value = (ov.data || []).filter((r: any) => r.agent)
+  } catch (e: any) {
+    // 静默
+  }
 }
 
 onMounted(async () => {
@@ -1151,6 +1215,53 @@ function onClick(p: any) {
 .ac-metric-line b { color: #111827; font-weight: 600; }
 .ac-metric-time { font-size: 10px; color: #94a3b8; }
 .ac-metric-unavailable { font-size: 12px; color: #94a3b8; }
+
+/* AI-EMPLOYEE-REALITY-01 Task04 — AI 判断（置信度徽章 + 摘要） */
+.ac-owner-ai .v { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ac-ai-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ac-conf-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.ac-conf-badge.lv-strong { color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; }
+.ac-conf-badge.lv-medium { color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; }
+.ac-conf-badge.lv-weak { color: #64748b; background: #f1f5f9; border: 1px solid #e2e8f0; }
+.ac-conf-badge.lv-warning { color: #d97706; background: #fffbeb; border: 1px solid #fde68a; }
+.ac-ai-summary { font-size: 11.5px; color: #475569; line-height: 1.55; white-space: normal; }
+
+/* AI-EMPLOYEE-REALITY-01 Task01 — 账号健康（Channel Health Guard） */
+.ac-owner-health .v { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ac-health-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ac-health-tag {
+  align-self: flex-start;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.ac-health-tag.danger { color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; }
+.ac-health-tag.warn { color: #d97706; background: #fffbeb; border: 1px solid #fde68a; }
+.ac-health-reason { font-size: 11px; color: #6b7280; line-height: 1.5; white-space: normal; }
+.ac-owner-health.danger .ac-health-reason { color: #b91c1c; }
+.ac-health-recover {
+  align-self: flex-start;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.ac-health-recover:hover { background: #d1fae5; }
 
 /* ═══ 分类 Tabs ═══ */
 .ac-tabs {

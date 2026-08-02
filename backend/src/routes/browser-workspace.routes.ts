@@ -281,8 +281,23 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         if (!latestMetricMap.has(s.channelAccountId)) latestMetricMap.set(s.channelAccountId, s)
       }
 
+      // AI-EMPLOYEE-REALITY-01 Task01/04 — 预取健康状态 + 30 天可用快照（AI 判断置信度）
+      const healthRows = await prisma.channelHealthState.findMany({ where: { channelAccountId: { in: accIds } } }).catch(() => [])
+      const healthMap = new Map<string, any>(healthRows.map((h: any) => [h.channelAccountId, h]))
+      const since30 = new Date(Date.now() - 30 * 86400000)
+      const availSnaps = await prisma.channelMetricSnapshot.findMany({
+        where: { channelAccountId: { in: accIds }, status: 'available', collectedAt: { gte: since30 } },
+        orderBy: { collectedAt: 'asc' },
+      }).catch(() => [])
+      const availByAccount = new Map<string, any[]>()
+      for (const s of availSnaps) {
+        if (!availByAccount.has(s.channelAccountId)) availByAccount.set(s.channelAccountId, [])
+        availByAccount.get(s.channelAccountId)!.push(s)
+      }
+      const { computeAnalysisConfidence, ruleBasedSummary } = await import('../services/enterprise/channel/metrics/channel-metrics.service.js')
+
       const bindings = await prisma.agentChannelBinding.findMany({
-        where: { status: 'active', browserWorkspaceId: { in: wsIds } },
+        where: { browserWorkspaceId: { in: wsIds } },
         orderBy: { updatedAt: 'desc' },
       })
       const rows: any[] = []
@@ -295,6 +310,11 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
           select: { id: true, channelType: true, channelName: true, accountName: true, avatarUrl: true, connectionStatus: true, externalAccountId: true, connectedAt: true, metadata: true },
         })
         if (!account) continue
+        // AI-EMPLOYEE-REALITY-01 Task01 — 被保护（NEEDS_ATTENTION）的 paused 绑定必须展示（老板要看到「需要关注」），
+        //   但普通 paused 绑定隐藏（不占用老板视野）
+        const healthRow = healthMap.get(account.id)
+        const bindingPaused = b.status !== 'active'
+        if (bindingPaused && (!healthRow || healthRow.state !== 'NEEDS_ATTENTION')) continue
         const agent = await prisma.enterpriseAgentInstance.findUnique({ where: { id: b.agentInstanceId } })
         // 域过滤第二层：AI 员工必须属于 media 域（防 Career/Recruitment Agent 混入）
         const profile = agent ? await prisma.enterpriseAgentProfile.findUnique({
@@ -338,6 +358,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         })()
         // 真实性状态推导：老板看到的状态 = 电脑 + 账号 + 最近动作 的组合，不是单一 workspace RUNNING
         const workerStatus = (() => {
+          if (bindingPaused && healthRow?.state === 'NEEDS_ATTENTION') return 'attention' // 账号保护中（老板需确认恢复）
           if (!workspaceRunning) return 'offline'
           if (accountConnected) return 'working'
           if (account.connectionStatus === ChannelConnectionStatus.WAITING_LOGIN) return 'waiting_scan'
@@ -350,6 +371,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         })()
         rows.push({
           workspaceId: ws.id,
+          channelAccountId: account.id,
           workspaceStatus: ws.status,
           online: workspaceRunning && accountConnected,
           workerStatus,
@@ -390,6 +412,43 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
                 recentFollowerDelta: snap.recentFollowerDelta,
                 interactionRate: snap.interactionRate,
               },
+            }
+          })(),
+          // AI-EMPLOYEE-REALITY-01 Task01/04 — 账号健康（Channel Health Guard）+
+          //   AI 判断（置信度 strong/medium/weak/warning + 规则摘要；完整 LLM 分析走 /metrics/analyze）
+          health: (() => {
+            const h = healthMap.get(account.id)
+            if (!h || h.state === 'HEALTHY') return { state: 'HEALTHY', failureCount: 0, pauseReason: null, pausedAt: null }
+            return {
+              state: h.state,
+              failureCount: h.failureCount ?? 0,
+              pauseReason: h.pauseReason || h.lastError || null,
+              pausedAt: h.pausedAt ? new Date(h.pausedAt).toISOString() : null,
+            }
+          })(),
+          aiInsight: (() => {
+            const availList = (availByAccount.get(account.id) || []).map((s: any) => ({
+              id: s.id, channelAccountId: s.channelAccountId, workspaceId: s.workspaceId, agentId: s.agentId,
+              platform: s.platform, status: 'available' as const, unavailableReason: null,
+              metrics: {
+                followerCount: s.followerCount, likeCount: s.likeCount, videoCount: s.videoCount,
+                recentViews: s.recentViews, recentFollowerDelta: s.recentFollowerDelta, interactionRate: s.interactionRate,
+              },
+              source: s.source, collectedAt: s.collectedAt?.toISOString?.() ?? s.collectedAt, createdAt: s.createdAt?.toISOString?.() ?? s.createdAt,
+            }))
+            const latestAvail = availList[availList.length - 1] || null
+            if (!latestAvail || !latestAvail.metrics) {
+              return {
+                confidence: { level: 'warning', label: '数据不足', reason: '暂无可用指标数据，无法生成 AI 判断', dataDays: 0, sampleSize: 0, metricsCoverage: { present: [], missing: [] } },
+                summary: null,
+                analysisSource: 'rules',
+              }
+            }
+            const confidence = computeAnalysisConfidence(availList, latestAvail)
+            return {
+              confidence,
+              summary: ruleBasedSummary(latestAvail.metrics, confidence),
+              analysisSource: 'rules',
             }
           })(),
           agent: profile ? { id: profile.id, name: profile.name, role: profile.role, agentType: profile.agentType, businessType: profile.businessType } : null,

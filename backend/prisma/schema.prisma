@@ -9748,3 +9748,40 @@ model ChannelMetricSnapshot {
   @@index([status])
   @@map("channel_metric_snapshot")
 }
+
+// ============================================================
+// SPRINT-MEDIA-AI-EMPLOYEE-REALITY-01 Task01 — ChannelHealthState
+// 渠道健康守卫（Channel Health Guard）— 账号执行侧保护（吸收 MatrixFlow FailureCoordinator 思想）
+// 掌柜定义：不是防任务失败，而是保护「企业账号资产健康」
+// 状态机：
+//   HEALTHY → (普通失败 1-2 次) DEGRADED → (≥3 次 或 致命信号) NEEDS_ATTENTION
+//   DEGRADED → (执行成功) HEALTHY
+//   NEEDS_ATTENTION → (owner/supervisor 确认) HEALTHY
+// 致命信号（一次即 NEEDS_ATTENTION）：验证码 / 安全验证 / 风控 / 封禁 / 登录失效 / 平台错误
+// 触发 NEEDS_ATTENTION 时：自动暂停 AgentChannelBinding（status=paused）→ 该 AI 员工禁止再操作该账号
+// 纪律：账号是资产，不是消耗品；失败不重试，先保护
+model ChannelHealthState {
+  id               String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId         String    @map("tenant_id") @db.Text
+  organizationId   String?   @map("organization_id") @db.Text
+  channelAccountId String    @unique @map("channel_account_id") @db.Text // EnterpriseChannelAccount.id
+  // HEALTHY / DEGRADED / NEEDS_ATTENTION
+  state            String    @default("HEALTHY") @map("state") @db.Text
+  // 当前 30 分钟窗口内失败计数（窗口滑动：window_started_at 超窗自动重置）
+  failureCount     Int       @default(0) @map("failure_count")
+  windowStartedAt  DateTime  @map("window_started_at")
+  lastFailureAt    DateTime? @map("last_failure_at")
+  lastError        String?   @map("last_error") @db.Text
+  // 致命信号记录（验证码/安全验证/风控/封禁/登录失效）
+  lastSignal       String?   @map("last_signal") @db.Text
+  pausedAt         DateTime? @map("paused_at")
+  pausedBy         String?   @map("paused_by") @db.Text // system / owner
+  pauseReason      String?   @map("pause_reason") @db.Text
+  recoveredAt      DateTime? @map("recovered_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([state])
+  @@map("channel_health_state")
+}
