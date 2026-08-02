@@ -19,6 +19,7 @@ import { identityProbeRegistry } from '../identity-probe.js'
 import type { ChannelIdentity } from '../identity-probe.js'
 import { CHANNEL_META, type ChannelPlatformDefinition } from './browser-channel.meta.js'
 import { LoginStateMachine } from '../login-state-machine.js'
+import { loginDetector } from './login-detector.js'
 import type {
   EnterpriseChannelAdapter,
   ConnectResult,
@@ -97,6 +98,11 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
       }
     }
 
+    // ═══ SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task03/04：登录入口确认 ═══
+    // 打开 loginUrl 后可能落到游客首页/普通用户端（小红书 www.xiaohongshu.com、快手 www.kuaishou.com）
+    // 必须确认当前 URL 命中登录入口，否则回退导航（禁止停留在非登录面）
+    await this.ensureLoginSurface(sid)
+
     // 检测登录态（多信号探针）
     let identity: ChannelIdentity | null = null
     try {
@@ -124,6 +130,55 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
   }
 
   /**
+   * ── 登录入口确认 + 导航（SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task03/04）──
+   * 1) URL 必须命中 loginEntry.mustMatch（否则回退 fallbackUrl，防游客首页/普通用户端）
+   * 2) 按 clickSteps 依次点击按钮进入真实登录面（如快手：立即登录 → passport → 扫码登录 tab）
+   * 找不到的标签自动跳过（如小红书无扫码 tab，保持短信登录面）
+   */
+  private async ensureLoginSurface(sessionId: string): Promise<{ url: string; steps: string[] }> {
+    const meta = this.meta
+    const loginEntry = meta.loginEntry
+    const steps: string[] = []
+    if (!loginEntry) return { url: '', steps }
+    const waitMs = loginEntry.waitMs ?? 3000
+    await new Promise(r => setTimeout(r, waitMs))
+    const cur = await browserRuntime.withPage(sessionId, async (p) => p.url()).catch(() => '')
+    if (cur && !loginEntry.mustMatch.test(cur)) {
+      console.warn(`[${this.name}Adapter] 登录入口未命中（${cur.slice(0, 60)}）→ 回退 ${loginEntry.fallbackUrl || meta.loginUrl}`)
+      await browserRuntime.navigate(sessionId, loginEntry.fallbackUrl || meta.loginUrl, { headless: false })
+      steps.push(`fallback:${loginEntry.fallbackUrl || meta.loginUrl}`)
+      await new Promise(r => setTimeout(r, 2500))
+    }
+    // 按钮点击序列（进入真实登录面）
+    if (loginEntry.clickSteps?.length) {
+      await browserRuntime.withPage(sessionId, async (page) => {
+        for (const label of loginEntry.clickSteps!) {
+          const r = await page.evaluate((lb) => {
+            const all = Array.from(document.querySelectorAll('button,a,span,div,li')) as HTMLElement[]
+            const el = all.find(e => (e.textContent || '').trim() === lb && e.offsetParent !== null)
+            if (!el) return 'SKIP:' + lb
+            const targets: HTMLElement[] = [el]
+            if (el.parentElement && el.parentElement !== el) targets.push(el.parentElement)
+            let fired = 0
+            for (const t of targets) {
+              for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+                try { t.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })) } catch {}
+                fired++
+              }
+            }
+            return 'CLICKED:' + lb
+          }, label).catch(() => 'ERR:' + label)
+          steps.push(r)
+          await page.waitForTimeout(3000)
+          if (r.startsWith('CLICKED')) await page.waitForTimeout(1000)
+        }
+      }).catch((e: any) => steps.push(`clickSteps 异常: ${e?.message?.slice(0, 40)}`))
+    }
+    const finalUrl = await browserRuntime.withPage(sessionId, async (p) => p.url()).catch(() => '')
+    return { url: finalUrl, steps }
+  }
+
+  /**
    * ── 等待扫码登录完成 ──
    */
   async waitForLogin(accountId: string, timeoutMs = 300000): Promise<ConnectResult> {
@@ -142,6 +197,8 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
             await new Promise(r => setTimeout(r, 5000))
             continue
           }
+          // 恢复后同样要过登录入口（防落游客首页/需点击进入登录面）
+          await this.ensureLoginSurface(sid).catch(() => {})
         } catch (navErr: any) {
           console.warn(`[${this.name}Adapter] 恢复失败: ${navErr.message}`)
           await new Promise(r => setTimeout(r, 5000))
@@ -210,6 +267,8 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     title: string
     screenshotBase64?: string
     qrCodeBase64?: string
+    /** SPRINT-MEDIA-LOGIN-REALITY-FIX-01：二维码来源 img|canvas|iframe|screenshot（Debug Panel） */
+    qrSource?: string
     loggedIn: boolean
     /** 统一登录状态（Task05 标准枚举；前端优先消费，禁止平台自定义） */
     state?: string
@@ -233,101 +292,24 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
         screenshotBase64 = buf.toString('base64')
       }
 
-      // 提取放大二维码（兼容三种形态，2026-08-02 多平台升级）：
-      // 1) data:image/png 且 ~120-260px（抖音/快手）
-      // 2) https URL 二维码图（视频号 iframe 内 open.weixin.qq.com/connect/qrcode/*）
-      // 3) iframe 内的二维码（视频号登录页 = 主页面 + open.weixin.qq.com 二维码 iframe）
+      // ═══ SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task02：统一 BrowserLoginDetector v2 ═══
+      // 检测顺序 A DOM img → B canvas(含 shadow DOM) → C iframe → D 截图 jsQR fallback
+      // 任何平台禁止自行写二维码提取；channels 供 Login Debug Panel 展示
       let qrCodeBase64: string | undefined
+      let qrSource: string | undefined
+      let detectorChannels: any = null
+      let pageTextSample: string | undefined
+      let framesCount = 0
       try {
-        qrCodeBase64 = await browserRuntime.withPage(sessionId, async (page) => {
-          // 跨 iframe 查二维码：主 frame + 所有子 frame（视频号二维码在 open.weixin.qq.com iframe）
-          // ⚠️ 不能用 contentDocument（跨域被拒），用 page.frames() 逐个 evaluate
-          const frames = [page.mainFrame(), ...page.frames().filter(f => f !== page.mainFrame())]
-          let qrInfo: any = null
-          let qrFrame: any = null
-          for (const f of frames) {
-            try {
-              const info = await f.evaluate(() => {
-                const imgs = Array.from(document.querySelectorAll('img'))
-                const hit =
-                  imgs.find((el: HTMLImageElement) => {
-                    const r = el.getBoundingClientRect()
-                    return (el.src || '').startsWith('data:image/png') && r.width >= 120 && r.width <= 260
-                  }) ||
-                  imgs.find((el: HTMLImageElement) => {
-                    const r = el.getBoundingClientRect()
-                    return (el.src || '').startsWith('data:image') && r.width >= 80 && r.width <= 400 && Math.abs(r.width - r.height) < 30
-                  }) ||
-                  // 视频号：open.weixin.qq.com/connect/qrcode/*（https 二维码图）
-                  imgs.find((el: HTMLImageElement) => {
-                    const r = el.getBoundingClientRect()
-                    return /qrcode|qr_|qrCode/i.test(el.src || '') && r.width >= 120 && r.width <= 400 && r.height >= 120 && r.height <= 400
-                  })
-                if (!hit) return null
-                const r = hit.getBoundingClientRect()
-                return {
-                  src: (hit as HTMLImageElement).src,
-                  x: Math.round(r.x),
-                  y: Math.round(r.y),
-                  w: Math.round(r.width),
-                  h: Math.round(r.height),
-                }
-              }).catch(() => null)
-              if (info) { qrInfo = info; qrFrame = f; break }
-            } catch { /* 单个 frame 失败跳过 */ }
-          }
-          if (!qrInfo) return undefined
-          // 方式1：data:image 原图 base64
-          const mimeMatch = qrInfo.src.match(/^data:image\/(png|jpeg|jpg|webp);base64,/)
-          let b64 = mimeMatch ? qrInfo.src.slice(mimeMatch[0].length) : qrInfo.src
-          // 方式2：https URL 二维码图 → 从所在 frame 上下文 fetch（带 referer/cookie）转 base64
-          if (!mimeMatch && /^https?:\/\//.test(qrInfo.src)) {
-            try {
-              const fetched = await (qrFrame || page.mainFrame()).evaluate(async (src: string) => {
-                try {
-                  const resp = await fetch(src, { credentials: 'include' })
-                  if (!resp.ok) return null
-                  const buf = await resp.arrayBuffer()
-                  const bytes = new Uint8Array(buf)
-                  let bin = ''
-                  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
-                  return btoa(bin)
-                } catch { return null }
-              }, qrInfo.src)
-              if (fetched) b64 = fetched
-              else return undefined
-            } catch {
-              return undefined
-            }
-          }
-          const raw = Buffer.from(b64, 'base64')
-          if (raw.length > 800) {
-            try {
-              const { execSync } = await import('child_process')
-              const fs = await import('fs')
-              const os = await import('os')
-              const path = await import('path')
-              const tmp = path.join(os.tmpdir(), `channel-qr-${Date.now()}.png`)
-              fs.writeFileSync(tmp, raw)
-              const out = path.join(os.tmpdir(), `channel-qr-out-${Date.now()}.png`)
-              execSync(`python3 -c "
-from PIL import Image
-img = Image.open('${tmp}').convert('RGB')
-big = img.resize((1024,1024), Image.LANCZOS)
-canvas = Image.new('RGB', (1154,1154), 'white')
-canvas.paste(big, (65,65))
-canvas.save('${out}')
-"`)
-              const outBuf = fs.readFileSync(out)
-              try { fs.unlinkSync(tmp) } catch {}
-              try { fs.unlinkSync(out) } catch {}
-              return outBuf.toString('base64')
-            } catch {
-              return b64
-            }
-          }
-          return undefined
+        const det = await browserRuntime.withPage(sessionId, async (page) => {
+          const res = await loginDetector.detect(page)
+          pageTextSample = await loginDetector.pageTextSample(page).catch(() => '')
+          framesCount = page.frames().length
+          return res
         })
+        qrCodeBase64 = det.qrCode
+        qrSource = det.source
+        detectorChannels = det.channels
       } catch { /* 二维码提取失败不影响主流程 */ }
 
       let loggedIn = false
@@ -370,6 +352,7 @@ canvas.save('${out}')
         title: status.title,
         screenshotBase64,
         qrCodeBase64,
+        qrSource,
         loggedIn,
         state,
         loginStage,
@@ -377,7 +360,18 @@ canvas.save('${out}')
         externalAccountId,
         avatar,
         accountType,
-        debug,
+        // SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task05：Login Debug Panel 数据
+        debug: {
+          ...debug,
+          detector: detectorChannels,
+          qrSource,
+          frames: framesCount,
+          pageTextSample,
+          loginSurface: {
+            url: status.currentUrl,
+            isLoginPage: !loggedIn && !!status.currentUrl,
+          },
+        },
       }
     } catch (e: any) {
       return { url: '', title: '', loggedIn: false, state: 'WAIT_LOGIN', loginStage: 'waiting_scan', error: e.message }

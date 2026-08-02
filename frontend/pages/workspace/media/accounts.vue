@@ -288,6 +288,32 @@
               </button>
               <div class="ac-verify-note">💡 完成本次验证后，昆仑镜将把此浏览器环境固化为可信设备，后续直接恢复登录态，无需重复验证</div>
             </div>
+
+            <!-- ═══ SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task05：Login Debug Panel ═══
+                 为什么二维码没有？——不再靠猜：URL / Frames / QR Detector 四通道 / Page Text 全展示 -->
+            <div class="ac-debug">
+              <button class="ac-debug-toggle" @click="showLoginDebug = !showLoginDebug">
+                🔍 登录诊断
+                <span class="ac-debug-arrow" :class="{ open: showLoginDebug }">▾</span>
+              </button>
+              <div v-if="showLoginDebug && loginDebug" class="ac-debug-body">
+                <div class="ac-debug-row"><span class="ac-debug-k">Status</span><span class="ac-debug-v">{{ loginStage }} / {{ loginDebug.qrSource || 'none' }}</span></div>
+                <div class="ac-debug-row"><span class="ac-debug-k">URL</span><span class="ac-debug-v ac-debug-url">{{ loginDebug.loginSurface?.url || '(未知)' }}</span></div>
+                <div class="ac-debug-row"><span class="ac-debug-k">Frames</span><span class="ac-debug-v">{{ loginDebug.frames ?? '—' }}</span></div>
+                <div class="ac-debug-row"><span class="ac-debug-k">QR Detector</span>
+                  <span class="ac-debug-v">
+                    <span class="ac-debug-chip" :class="{ ok: loginDebug.detector?.img?.found }">img {{ loginDebug.detector?.img?.found ? '✅' : '❌' }}</span>
+                    <span class="ac-debug-chip" :class="{ ok: loginDebug.detector?.canvas?.found }">canvas {{ loginDebug.detector?.canvas?.found ? '✅' : '❌' }}</span>
+                    <span class="ac-debug-chip" :class="{ ok: loginDebug.detector?.iframe?.found }">iframe {{ loginDebug.detector?.iframe?.found ? '✅' : '❌' }}</span>
+                    <span class="ac-debug-chip" :class="{ ok: loginDebug.detector?.screenshot?.found }">shot {{ loginDebug.detector?.screenshot?.found ? '✅' : '❌' }}</span>
+                  </span>
+                </div>
+                <div v-if="loginDebug.detector?.img?.note" class="ac-debug-row"><span class="ac-debug-k">img note</span><span class="ac-debug-v">{{ loginDebug.detector.img.note }}</span></div>
+                <div v-if="loginDebug.detector?.canvas?.note" class="ac-debug-row"><span class="ac-debug-k">canvas note</span><span class="ac-debug-v">{{ loginDebug.detector.canvas.note }}</span></div>
+                <div v-if="loginDebug.detector?.screenshot?.note" class="ac-debug-row"><span class="ac-debug-k">shot note</span><span class="ac-debug-v">{{ loginDebug.detector.screenshot.note }}</span></div>
+                <div class="ac-debug-row"><span class="ac-debug-k">Page Text</span><span class="ac-debug-v">{{ loginDebug.pageTextSample || '—' }}</span></div>
+              </div>
+            </div>
           </template>
         </div>
       </div>
@@ -313,6 +339,9 @@ const sessionId = ref('')
 const accountId = ref('')
 const screenshot = ref('')
 const qrCode = ref('')
+// SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task05：Login Debug Panel 数据
+const loginDebug = ref<any>(null)
+const showLoginDebug = ref(false)
 // TASK03.2.2-QRFIX — 裂图自修复：后端 JPEG 二维码提取 bug 时，前端用 jsQR 从整页截图定位+裁剪放大二维码
 const lastScreenshotBase64 = ref('')
 const qrFallbackTried = ref(false)
@@ -481,6 +510,8 @@ function startPolling() {
       // 优先放大二维码（工作台可直接扫码），回退整页截图
       // TASK03.2.2-QRFIX — 保留最新整页截图 base64（裂图时用于 jsQR 自修复）
       if (d.screenshotBase64) lastScreenshotBase64.value = d.screenshotBase64
+      // SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task05：Login Debug Panel 数据
+      if (d.debug) loginDebug.value = d.debug
       if (d.qrCodeBase64) {
         qrCode.value = 'data:image/png;base64,' + d.qrCodeBase64
         qrFallbackTried.value = false  // 新二维码到来，重置裂图修复标记
@@ -1442,6 +1473,56 @@ function onClick(p: any) {
   border-radius: 8px;
   background: rgba(139, 92, 246, 0.08);
   border: 1px dashed rgba(139, 92, 246, 0.3);
+}
+
+/* ── Login Debug Panel（SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task05） ── */
+.ac-debug {
+  margin-top: 12px;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.5);
+}
+.ac-debug-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+.ac-debug-toggle:hover { color: #e2e8f0; }
+.ac-debug-arrow { transition: transform 0.2s; font-size: 10px; }
+.ac-debug-arrow.open { transform: rotate(180deg); }
+.ac-debug-body {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(100, 116, 139, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ac-debug-row { display: flex; gap: 8px; font-size: 11px; line-height: 1.5; }
+.ac-debug-k { flex: 0 0 74px; color: #64748b; font-weight: 500; }
+.ac-debug-v { color: #cbd5e1; word-break: break-all; }
+.ac-debug-url { font-family: monospace; font-size: 10px; }
+.ac-debug-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-right: 4px;
+  border-radius: 6px;
+  font-size: 10px;
+  background: rgba(220, 38, 38, 0.15);
+  color: #fca5a5;
+}
+.ac-debug-chip.ok {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
 }
 .ac-modal-success {
   text-align: center;

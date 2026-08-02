@@ -41,6 +41,7 @@
     "ioredis": "^5.0.0",
     "js-yaml": "^5.2.0",
     "jsonwebtoken": "^9.0.3",
+    "jsqr": "^1.4.0",
     "mammoth": "^1.6.0",
     "playwright": "^1.62.1",
     "sharp": "^0.34.5",

@@ -69,6 +69,19 @@ export interface ChannelPlatformDefinition {
     /** 身份提取规则（userId/nickname/avatar/accountType） */
     extractionRules: ExtractionRule[]
   }
+  /** 登录入口确认（SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task03/04）：
+   *  打开 loginUrl 后可能落到游客首页/普通用户端（如 www.xiaohongshu.com、www.kuaishou.com），
+   *  此时必须回退导航到真正的登录入口，禁止停留在非登录面。 */
+  loginEntry?: {
+    /** navigate 后当前 URL 必须匹配（否则视为未进入登录入口） */
+    mustMatch: RegExp
+    /** 不匹配时回退导航的 URL（默认 loginUrl） */
+    fallbackUrl?: string
+    /** 等待登录入口渲染的毫秒数（默认 3000） */
+    waitMs?: number
+    /** 进入登录面的按钮点击序列（如快手：先点「立即登录」进 passport，再点「扫码登录」tab）；找不到的标签自动跳过 */
+    clickSteps?: string[]
+  }
   /** 数据读取配置（fetchMetrics 通用实现；未配置 → 诚实报未实现） */
   metricsExtraction?: {
     /** 数据中心页 URL（连接后打开抓取） */
@@ -115,6 +128,14 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     workspaceUrl: 'https://cp.kuaishou.com/article',
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '手机号登录',
+    // Task04：cp.kuaishou.com 未登录可能落到普通用户端/其他域 → 必须确认创作者登录入口
+    loginEntry: {
+      mustMatch: /cp\.kuaishou\.com/,
+      fallbackUrl: 'https://cp.kuaishou.com/',
+      waitMs: 4000,
+      // Reality 验证：立即登录 → passport.kuaishou.com → 扫码登录 tab → 真二维码（jsQR ✅）
+      clickSteps: ['立即登录', '扫码登录'],
+    },
     selectors: {
       loginPage: 'input[type="tel"], [class*="login"]',
       workspace: '[class*="workbench"], [class*="article"]',
@@ -155,6 +176,15 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     workspaceUrl: 'https://creator.xiaohongshu.com/new/home',
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '短信登录',
+    // Task03：creator.xiaohongshu.com/login 可能重定向到 www.xiaohongshu.com 游客首页 → 必须回退登录入口
+    // Reality 验证（2026-08-03）：当前环境默认短信登录面（发送验证码/短信登录），无扫码 tab；
+    // 扫码 tab 探测失败时保持短信面（loginMethod=sms 如实报告）
+    loginEntry: {
+      mustMatch: /creator\.xiaohongshu\.com/,
+      fallbackUrl: 'https://creator.xiaohongshu.com/login',
+      waitMs: 4000,
+      clickSteps: ['扫码登录'],
+    },
     selectors: {
       loginPage: 'input[type="tel"], [class*="login"]',
       workspace: '[class*="creator"]',
