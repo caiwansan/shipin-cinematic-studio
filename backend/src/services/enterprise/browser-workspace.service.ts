@@ -41,19 +41,48 @@ export interface BrowserWorkspaceRecord {
   updatedAt: Date
 }
 
-/** 工作空间根目录（env 可覆盖） */
+/** 工作空间根目录（env 可覆盖）——兼容存量目录，新路径统一走 browserRuntime 同源（见下） */
 const WORKSPACE_ROOT = process.env.BROWSER_WORKSPACE_ROOT || '/data/browser-workspaces'
 
 export class BrowserWorkspaceService {
   /**
-   * 计算 workspace 的持久化 profile 路径
-   * 目录结构：<ROOT>/<organizationId>/<channelAccountId>/profile
-   * 每企业每账号独立、永久、可备份
+   * SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 0 — Profile 路径统一（根因修复）
+   *
+   * ⚠️ 双轨 profile 是「电脑登录了但系统不知道」的物理根因：
+   *   登录链路（adapter）把登录态写入 /data/browser-profiles/<platform>/<accountId>，
+   *   而 workspace 启动的浏览器用 /data/browser-workspaces/<org>/<accountId>/profile（空电脑）
+   *   → 刷新/重启后 workspace 的浏览器与登录浏览器不是同一个 → 登录态不共享。
+   *
+   * 修复：workspace 的 profile 与 adapter 登录 profile 指向同一目录
+   *   （唯一事实源：BrowserRuntimeService.getProfilePath = /data/browser-profiles/<platform>/<accountId>）
+   * 掌柜原则：不改变 BrowserWorkspace 架构（记录/状态机/生命周期不变），只统一存储位置。
    */
-  getProfilePath(organizationId: string, channelAccountId: string): string {
-    const org = String(organizationId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_')
-    const acc = String(channelAccountId || 'new').replace(/[^a-zA-Z0-9_-]/g, '_')
-    return path.join(WORKSPACE_ROOT, org, acc, 'profile')
+  getProfilePath(platform: string, channelAccountId: string): string {
+    return path.join(WORKSPACE_ROOT.replace(/browser-workspaces$/, 'browser-profiles'), platform, String(channelAccountId || 'new').replace(/[^a-zA-Z0-9_-]/g, '_'))
+  }
+
+  /**
+   * SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 0 — 会话 ID 统一
+   * 浏览器实例 Map 按 sessionId 键控；登录链路（adapter）用 `${platform}:${accountId}`。
+   * workspace 生命周期操作必须使用同一 sessionId，否则同一 profile 会被两个实例打开（Chromium 锁冲突）
+   * 或探针（browserRuntime.withPage(sessionId)）找不到实例。
+   */
+  async resolveSessionId(channelAccountId: string, platform?: string | null): Promise<string> {
+    const p = platform || (await this.getChannelType(channelAccountId))
+    return `${p}:${channelAccountId}`
+  }
+
+  /** 查账号平台类型（channelType），查不到回退 douyin */
+  private async getChannelType(channelAccountId: string): Promise<string> {
+    try {
+      const acc = await prisma.enterpriseChannelAccount.findUnique({
+        where: { id: channelAccountId },
+        select: { channelType: true },
+      })
+      return acc?.channelType || 'douyin'
+    } catch {
+      return 'douyin'
+    }
   }
 
   /**
@@ -68,7 +97,8 @@ export class BrowserWorkspaceService {
     })
     if (existing) return this.map(existing)
 
-    const profilePath = this.getProfilePath(organizationId, channelAccountId)
+    const channelType = await this.getChannelType(channelAccountId)
+    const profilePath = this.getProfilePath(channelType, channelAccountId)
     const created = await prisma.browserWorkspace.create({
       data: {
         tenantId,

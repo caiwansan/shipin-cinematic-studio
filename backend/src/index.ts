@@ -497,6 +497,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise-channel-runtime.js')).enterpriseChannelRuntimeRoutes)
   // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 01/02 — Browser Workspace 生命周期（AI 员工数字办公环境）
   await app.register((await import('./routes/browser-workspace.routes.js')).browserWorkspaceRoutes)
+  // SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 05 — Channel Reality API（四层真实状态）
+  await app.register((await import('./routes/channel-reality.routes.js')).channelRealityRoutes)
   // P1.7 — V3 Schema 三层审计系统（只读观测路由）
   await app.register(await import('./routes/v3-metrics.js').then(m => m.default))
   // P1.8 — 生产切换决策模型（只读评估，不修改任何系统状态）
@@ -1402,6 +1404,19 @@ await app.register(projectV2Routes)
   } catch (err: any) {
     console.warn(`[Hardening-01] ⚠️ Startup Recovery failed: ${err.message}`)
   }
+
+  // SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 02 — Browser Workspace 启动恢复
+  // 后端重启后：重新拉起持久化 profile → IdentityProbe → 恢复/降级 ChannelAccount 状态
+  // （延迟 8s 执行：等待 HTTP 服务就绪 + 不阻塞启动路径；失败不影响主服务）
+  setTimeout(async () => {
+    try {
+      const { browserWorkspaceRecoveryService } = await import('./services/enterprise/browser-workspace-recovery.service.js')
+      const r = await browserWorkspaceRecoveryService.recoverAll({ businessType: 'media', verbose: true })
+      console.log(`[IdentityPersistence] ✅ 启动恢复完成: 扫描 ${r.scanned} / 保持连接 ${r.keptConnected} / 降级 ${r.demoted} / 失败 ${r.failed}`)
+    } catch (err: any) {
+      console.warn(`[IdentityPersistence] ⚠️ Browser Workspace 启动恢复失败: ${err.message}`)
+    }
+  }, 8000)
 
   // 启动统一 Worker Runtime（替代旧的 mock-worker）
   try {

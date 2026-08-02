@@ -23,6 +23,7 @@ import { channelService } from '../services/enterprise/channel.service.js'
 import { browserAuthSessionService } from '../services/enterprise/browser-auth-session.service.js'
 import { channelOperationLogService } from '../services/enterprise/channel-operation-log.service.js'
 import { browserTrajectoryService } from '../services/enterprise/browser-trajectory.service.js'
+import { browserWorkspaceRecoveryService } from '../services/enterprise/browser-workspace-recovery.service.js'
 
 export async function browserWorkspaceRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
@@ -34,6 +35,18 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       organizationId: user?.organizationId || user?.orgId || user?.tenantId || user?.id || 'default',
     }
   }
+
+  // SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 — 手动触发启动恢复流程（幂等）
+  // POST /api/enterprise/workspaces/recover?businessType=media
+  app.post('/api/enterprise/workspaces/recover', async (request, reply) => {
+    try {
+      const query: any = (request.query as any) || {}
+      const result = await browserWorkspaceRecoveryService.recoverAll({ businessType: query.businessType, verbose: true })
+      return reply.send({ code: 0, data: result })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
 
   // 列表（按组织隔离）
   app.get('/api/enterprise/workspaces', async (request, reply) => {
@@ -86,7 +99,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
-      const sessionId = `workspace:${ws.channelAccountId}`
+      const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       const health = await browserRuntime.healthCheckWorkspace(sessionId)
       return reply.send({ code: 0, data: { ...ws, runtime: health } })
     } catch (e: any) {
@@ -100,18 +113,22 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
-      const sessionId = `workspace:${ws.channelAccountId}`
+      const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       await browserWorkspaceService.transition(id, ['CREATED', 'READY', 'ERROR', 'RUNNING'], 'RUNNING')
       await browserRuntime.startWorkspace(sessionId, ws.profilePath, { headless: false })
       // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 02/04 — workspace 启动后导航到平台登录页/创作者中心
-      // （拿账号 channelType 决定目标；当前仅抖音真实接入）
+      // （拿账号 channelType 决定目标；IDENTITY-PERSISTENCE-FIX-01：所有已注册平台通用）
       try {
         const { prisma } = await import('../utils/index.js')
         const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: ws.channelAccountId } })
-        if (account?.channelType === 'douyin') {
-          const nav = await browserRuntime.navigate(sessionId, 'https://creator.douyin.com/', { headless: false })
-          if (nav.success) {
-            console.log(`[BrowserWorkspace] 已导航到抖音创作者中心 ${sessionId}`)
+        if (account?.channelType) {
+          const { CHANNEL_META } = await import('../enterprise/channel/adapters/browser-channel.meta.js')
+          const target = (CHANNEL_META[account.channelType as string] as any)?.loginUrl || (account.channelType === 'douyin' ? 'https://creator.douyin.com/' : null)
+          if (target) {
+            const nav = await browserRuntime.navigate(sessionId, target, { headless: false })
+            if (nav.success) {
+              console.log(`[BrowserWorkspace] 已导航到 ${account.channelType} 工作台 ${sessionId}`)
+            }
           }
         }
       } catch (e: any) {
@@ -131,7 +148,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
-      const sessionId = `workspace:${ws.channelAccountId}`
+      const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       await browserRuntime.stopWorkspace(sessionId)
       const updated = await browserWorkspaceService.transition(id, ['RUNNING', 'ERROR', 'READY'], 'READY')
       return reply.send({ code: 0, data: updated })
@@ -146,7 +163,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
-      const sessionId = `workspace:${ws.channelAccountId}`
+      const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       await browserRuntime.restartWorkspace(sessionId, ws.profilePath, { headless: false })
       await browserWorkspaceService.transition(id, ['CREATED', 'READY', 'RUNNING', 'ERROR'], 'RUNNING')
       await browserWorkspaceService.markHealthCheck(id)
@@ -163,7 +180,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
-      const sessionId = `workspace:${ws.channelAccountId}`
+      const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       const health = await browserRuntime.healthCheckWorkspace(sessionId)
       if (health.ok) {
         await browserWorkspaceService.markHealthCheck(id)
@@ -181,7 +198,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const query: any = (request.query as any) || {}
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
-      const sessionId = `workspace:${ws.channelAccountId}`
+      const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       await browserRuntime.destroyWorkspace(sessionId, ws.profilePath, query.deleteProfile === 'true')
       await browserWorkspaceService.transition(id, ['CREATED', 'READY', 'RUNNING', 'ERROR'], 'DESTROYED')
       return reply.send({ code: 0, data: { id, status: 'DESTROYED' } })
@@ -264,7 +281,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         if (!ws) continue
         const account = await prisma.enterpriseChannelAccount.findUnique({
           where: { id: ws.channelAccountId },
-          select: { id: true, channelType: true, channelName: true, connectionStatus: true, externalAccountId: true },
+          select: { id: true, channelType: true, channelName: true, connectionStatus: true, externalAccountId: true, metadata: true },
         })
         if (!account) continue
         const agent = await prisma.enterpriseAgentInstance.findUnique({ where: { id: b.agentInstanceId } })
@@ -282,6 +299,17 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         const trustedTraj = traj.filter((t: any) => TRUSTED_ACTIONS.has(t.action))
         const workspaceRunning = ['RUNNING', 'READY'].includes(ws.status)
         const accountConnected = isChannelConnected(account.connectionStatus) && !!account.externalAccountId
+        // SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 04 — 身份维度（刷新/重启后系统仍知道是谁登录的）：
+        //   verified = 有 externalAccountId 且最近探针/恢复在 24h 内（身份新鲜）
+        //   stale    = 有 externalAccountId 但身份快照超 24h（需要 Reality API 实时核验）
+        //   missing  = 从未获取到账号身份（即使 workspace RUNNING 也不算真在线）
+        const accMeta = (account.metadata as any) || {}
+        const lastVerifiedAt = accMeta.lastVerifiedAt || null
+        const identityStatus = !account.externalAccountId
+          ? 'missing'
+          : lastVerifiedAt && (Date.now() - new Date(lastVerifiedAt).getTime()) < 24 * 3600 * 1000
+            ? 'verified'
+            : 'stale'
         // 真实性状态推导：老板看到的状态 = 电脑 + 账号 + 最近动作 的组合，不是单一 workspace RUNNING
         const workerStatus = (() => {
           if (!workspaceRunning) return 'offline'
@@ -303,6 +331,16 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
           platform: account.channelType || null,
           platformName: account.channelName || null,
           accountConnection: account.connectionStatus || null,
+          // SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 04 — 身份块（owner-view 真实性核心）：
+          //   前端不得再根据 workspace.status 猜在线，必须结合 identity 维度
+          identity: {
+            status: identityStatus,
+            externalAccountId: account.externalAccountId || null,
+            accountName: account.channelName || null,
+            avatar: accMeta.avatar || null,
+            lastVerifiedAt,
+            verifiedBy: accMeta.identitySnapshot?.via || (accMeta.lastVerifiedAt ? 'manual_bind' : null),
+          },
           agent: profile ? { id: profile.id, name: profile.name, role: profile.role, agentType: profile.agentType, businessType: profile.businessType } : null,
           lastOperation: trustedTraj[0] ? { action: trustedTraj[0].action, description: trustedTraj[0].description, createdAt: trustedTraj[0].createdAt } : null,
         })

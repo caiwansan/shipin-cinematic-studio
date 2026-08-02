@@ -38,6 +38,7 @@
           </div>
           <div class="ac-owner-info">
             <div class="ac-owner-row"><span class="k">工作电脑</span><span class="v">🖥 {{ (ov.platformName || ov.platform || '运营空间') + '运营空间' }}</span></div>
+            <div class="ac-owner-row"><span class="k">账号身份</span><span class="v">{{ identityLabel(ov) }}</span></div>
             <div class="ac-owner-row"><span class="k">状态</span><span class="v">{{ workerStatusDetail(ov) }}</span></div>
             <div class="ac-owner-row"><span class="k">最近动作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '等待任务' }}</span></div>
           </div>
@@ -802,6 +803,15 @@ function workerStatusLabel(ov: any): string {
 }
 function workerStatusDetail(ov: any): string {
   return WORKER_STATUS_DETAIL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || ov.workspaceStatus || '—'
+}
+// SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 04 — 账号身份新鲜度展示
+// 后端 owner-view 返回 identity 块：verified（24h 内探针/恢复确认）/ stale（超期需核验）/ missing（从未获取）
+function identityLabel(ov: any): string {
+  const idn = ov.identity || {}
+  if (idn.status === 'verified') return `🟢 已验证 · ${idn.accountName || '已登录'}`
+  if (idn.status === 'stale') return `🟡 待核验 · ${idn.accountName || '已登录'}`
+  if (idn.status === 'missing') return '⚪ 未获取（登录后自动记录）'
+  return '—'
 }
 
 function timeAgo(iso: string): string {

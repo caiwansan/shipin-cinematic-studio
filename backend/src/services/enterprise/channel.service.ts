@@ -249,6 +249,10 @@ export class ChannelService {
           console.warn(`[ChannelService] 授权状态机恢复标记失败: ${e.message}`)
         }
         // TASK03.2.1 — 回写最新身份（登录态维持，身份可能更新）
+        // IDENTITY-PERSISTENCE-FIX-01 Task03 — 写完整身份（externalAccountId+nickname+avatar+lastVerifiedAt），
+        // 禁止只写 cookie 标记；owner-view 身份新鲜度依赖此快照
+        const nowIso = new Date().toISOString()
+        const accMeta = (account.metadata as any) || {}
         await prisma.enterpriseChannelAccount.update({
           where: { id: account.id },
           data: {
@@ -256,6 +260,18 @@ export class ChannelService {
             connectedAt: account.connectedAt ?? new Date(),
             externalAccountId: result.externalAccountId ?? account.externalAccountId,
             channelName: result.accountName ?? account.channelName,
+            metadata: {
+              ...accMeta,
+              avatar: result.avatar ?? accMeta.avatar,
+              lastVerifiedAt: nowIso,
+              identitySnapshot: {
+                externalAccountId: result.externalAccountId ?? account.externalAccountId,
+                accountName: result.accountName ?? account.channelName,
+                avatar: result.avatar ?? accMeta.avatar ?? null,
+                checkedAt: nowIso,
+                via: 'connect_keepalive',
+              },
+            },
           },
         })
         await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
@@ -302,6 +318,8 @@ export class ChannelService {
       // 已确认账号 → 维持登录（G2 重启后仍 connected）
       const alreadyBound = isChannelConnected(account.connectionStatus) && !!account.externalAccountId
       if (alreadyBound) {
+        const nowIso = new Date().toISOString()
+        const accMeta = (account.metadata as any) || {}
         await prisma.enterpriseChannelAccount.update({
           where: { id: account.id },
           data: {
@@ -309,6 +327,18 @@ export class ChannelService {
             connectedAt: account.connectedAt ?? new Date(),
             externalAccountId: result.externalAccountId ?? account.externalAccountId,
             channelName: result.accountName ?? account.channelName,
+            metadata: {
+              ...accMeta,
+              avatar: result.avatar ?? accMeta.avatar,
+              lastVerifiedAt: nowIso,
+              identitySnapshot: {
+                externalAccountId: result.externalAccountId ?? account.externalAccountId,
+                accountName: result.accountName ?? account.channelName,
+                avatar: result.avatar ?? accMeta.avatar ?? null,
+                checkedAt: nowIso,
+                via: 'wait_login_keepalive',
+              },
+            },
           },
         })
         try {
@@ -449,6 +479,22 @@ export class ChannelService {
       console.warn(`[ChannelService] 浏览器会话健康检查记录失败: ${e.message}`)
     }
 
+    // 5. SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 — 登录成功即确保数字电脑（BrowserWorkspace）存在
+    //    闭环：确认绑定（CONNECTED）→ 自动建 workspace（同一 profile）→ 启动恢复/owner-view 可发现
+    //    幂等：已存在则复用；失败不阻断绑定结果
+    try {
+      const { browserWorkspaceService } = await import('./browser-workspace.service.js')
+      await browserWorkspaceService.getOrCreate(
+        account.tenantId,
+        account.organizationId || account.tenantId || 'default',
+        account.id,
+        'media',
+      )
+      console.log(`[ChannelService] ✅ 确认绑定后数字电脑就绪: ${account.id}`)
+    } catch (e: any) {
+      console.warn(`[ChannelService] 数字电脑创建失败（不影响绑定）: ${e.message}`)
+    }
+
     return {
       status: 'connected',
       accountName: identity.accountName ?? account.channelName,
@@ -510,6 +556,8 @@ export class ChannelService {
       return result
     }
     // 探针确认真人 + 凭证落库成功 → CONNECTED（身份 + 凭证 + runtime 全部正常）
+    const nowIso = new Date().toISOString()
+    const accMeta = (account.metadata as any) || {}
     await prisma.enterpriseChannelAccount.update({
       where: { id: account.id },
       data: {
@@ -517,6 +565,18 @@ export class ChannelService {
         connectedAt: new Date(),
         externalAccountId: identity.accountId ?? account.externalAccountId,
         channelName: identity.accountName ?? account.channelName,
+        metadata: {
+          ...accMeta,
+          avatar: identity.avatar ?? accMeta.avatar,
+          lastVerifiedAt: nowIso,
+          identitySnapshot: {
+            externalAccountId: identity.accountId ?? account.externalAccountId,
+            accountName: identity.accountName ?? account.channelName,
+            avatar: identity.avatar ?? accMeta.avatar ?? null,
+            checkedAt: nowIso,
+            via: 'refresh_credential',
+          },
+        },
       },
     })
     return result
