@@ -164,7 +164,9 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     },
     identityRules: {
       // ⚠️ 登录页 URL 也是 cp.kuaishou.com（未登录跳 /profile），须用工作台专属路径片段
-      cookies: ['kuaishou.api_st', 'kuaishou.server_st', 'userId'],
+      // KUAISHOU-QR-FIX-01：快手实际登录 cookie 是 bUserId + kwssectoken（passport 会话），
+      // 旧配置 kuaishou.api_st/server_st 永不命中 → cookie 信号永远 false → 扫码成功也无法认证
+      cookies: ['bUserId', 'kwssectoken', 'did'],
       urlFragments: ['cp.kuaishou.com/article', 'cp.kuaishou.com/workbench', 'cp.kuaishou.com/data', 'cp.kuaishou.com/live', 'cp.kuaishou.com/workspace'],
       // Task04：登录成功但停留在普通用户主页（v.kuaishou.com/profile 等）≠ 创作者工作台，必须排除
       excludeUrlPatterns: [/v\.kuaishou\.com\/profile/, /www\.kuaishou\.com\/profile/, /v\.kuaishou\.com\/u\//],

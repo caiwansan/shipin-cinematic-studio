@@ -71,6 +71,25 @@ class BrowserRuntimeService {
   private instances = new Map<string, BrowserInstance>()
 
   /**
+   * KUAISHOU-QR-FIX-01 — per-session 串行锁：status 轮询 / wait-for-login 探针 / 二维码 detect
+   * 并发操作同一浏览器时互相踩（扫码确认窗口期被导航/点击打断 → 确认丢失 → 三平台扫码成功不登录）。
+   * withPage / navigate / getCookies 等浏览器操作全部过锁，同一 session 的操作严格串行。
+   */
+  private locks = new Map<string, Promise<any>>()
+
+  private withSessionLock<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.locks.get(sessionId) || Promise.resolve()
+    const run = prev.then(fn, fn)
+    // 链上挂 catch 防止前序失败污染后续（失败也继续放行下一个）
+    this.locks.set(sessionId, run.then(() => undefined, () => undefined))
+    // 清理：全部完成后的下一个微任务移除（避免 Map 无限增长）
+    run.then(() => undefined, () => undefined).then(() => {
+      if (this.locks.get(sessionId) === run) this.locks.delete(sessionId)
+    })
+    return run
+  }
+
+  /**
    * 按 sessionId 稳定分配调试端口（18800 + hash%100），多渠道账号共存不抢端口。
    * 仅当 BROWSER_CDP_PORT 设置（诊断模式）时启用 remote-debugging-port。
    */
@@ -376,8 +395,13 @@ class BrowserRuntimeService {
 
   /**
    * 创建新页面并导航（保持页面打开）
+   * KUAISHOU-QR-FIX-01 — 串行锁包装：与 withPage/getCookies 同 session 互斥，防扫码确认窗口期被并发导航打断
    */
   async navigate(sessionId: string, url: string, config: BrowserConfig = {}): Promise<NavigationResult> {
+    return this.withSessionLock(sessionId, () => this.navigateInner(sessionId, url, config))
+  }
+
+  private async navigateInner(sessionId: string, url: string, config: BrowserConfig = {}): Promise<NavigationResult> {
     try {
       // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 02 — navigate 感知持久化实例：
       // 已存在 persistent 实例时直接复用（不得用 getOrCreate 把持久化浏览器重启成临时模式）
@@ -494,11 +518,13 @@ class BrowserRuntimeService {
 
   /**
    * 在当前 Session 执行页面操作（高级）
-   * TASK03.2 — 页面被风控杀死后自动恢复：不再新建 about:blank，而是重新导航回最后已知 URL
-   * TASK03.2.2-FIX — 扫码成功 SPA 跳转会短暂经过 about:blank，绝不能因此重建页面（会把已登录页替换成登录页）
-   *   重建条件收紧为 page.isClosed()（真死页）；about:blank 时等待跳转完成，超时再处理
+   * KUAISHOU-QR-FIX-01 — 串行锁包装：同 session 与 navigate 互斥，防并发点击/导航打断扫码确认
    */
   async withPage(sessionId: string, action: (page: Page) => Promise<any>, fallbackUrl?: string): Promise<any> {
+    return this.withSessionLock(sessionId, () => this.withPageInner(sessionId, action, fallbackUrl))
+  }
+
+  private async withPageInner(sessionId: string, action: (page: Page) => Promise<any>, fallbackUrl?: string): Promise<any> {
     const { context } = { context: await this.ensureContext(sessionId) }
     // 优先复用 navigate 打开的主页面（登录页必须保留，不能新建 about:blank / 不能关闭）
     const inst = this.instances.get(sessionId)
@@ -613,9 +639,11 @@ class BrowserRuntimeService {
    * 获取当前 Cookie
    */
   async getCookies(sessionId: string): Promise<CookieData[]> {
-    const instance = this.instances.get(sessionId)
-    if (!instance) throw new Error('BROWSER_NOT_RUNNING')
-    return instance.context.cookies()
+    return this.withSessionLock(sessionId, async () => {
+      const instance = this.instances.get(sessionId)
+      if (!instance) throw new Error('BROWSER_NOT_RUNNING')
+      return instance.context.cookies()
+    })
   }
 
   /**

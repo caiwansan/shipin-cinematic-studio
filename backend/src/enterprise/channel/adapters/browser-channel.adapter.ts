@@ -266,19 +266,31 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
       try {
         identity = await identityProbeRegistry.get(this.platform)!.probe(sid)
       } catch (e: any) {
-        console.warn(`[${this.name}Adapter] 浏览器异常（${(e as Error).message}），重新打开登录页...`)
+        // KUAISHOU-QR-FIX-01 — 探针异常 ≠ 页面死了：扫码确认窗口期 passport 轮询 JS 活着，
+        // 盲目 navigate 会把登录页导航走 → 扫码确认结果丢失（掌柜实测三平台扫码成功不登录）。
+        // 只有实例彻底丢失（重启/崩溃）才恢复导航；实例活着 → 静默继续等，绝不破坏现场。
+        console.warn(`[${this.name}Adapter] 浏览器异常（${(e as Error).message}），检查实例状态...`)
+        let alive = false
         try {
-          const nav = await browserRuntime.navigate(sid, meta.loginUrl, { headless: false })
-          if (!nav.success) {
+          alive = (browserRuntime as any).instances?.get(sid)?.page && !(browserRuntime as any).instances.get(sid).page.isClosed()
+        } catch {}
+        if (!alive) {
+          console.warn(`[${this.name}Adapter] 实例已丢失，恢复导航到登录页...`)
+          try {
+            const nav = await browserRuntime.navigate(sid, meta.loginUrl, { headless: false })
+            if (!nav.success) {
+              await new Promise(r => setTimeout(r, 5000))
+              continue
+            }
+            // 恢复后同样要过登录入口（防落游客首页/需点击进入登录面）
+            await this.ensureLoginSurface(sid).catch(() => {})
+          } catch (navErr: any) {
+            console.warn(`[${this.name}Adapter] 恢复失败: ${navErr.message}`)
             await new Promise(r => setTimeout(r, 5000))
             continue
           }
-          // 恢复后同样要过登录入口（防落游客首页/需点击进入登录面）
-          await this.ensureLoginSurface(sid).catch(() => {})
-        } catch (navErr: any) {
-          console.warn(`[${this.name}Adapter] 恢复失败: ${navErr.message}`)
-          await new Promise(r => setTimeout(r, 5000))
-          continue
+        } else {
+          console.warn(`[${this.name}Adapter] 实例存活（扫码确认窗口期），跳过导航保护现场`)
         }
       }
       if (identity?.authenticated) {

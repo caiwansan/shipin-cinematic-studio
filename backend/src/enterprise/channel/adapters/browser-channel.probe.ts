@@ -60,6 +60,8 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
     const identity: { userId?: string; nickname?: string; avatar?: string; accountType?: string } = {}
 
     // A 单次 withPage 收集：页面特征 + 登录页排除 + 安全验证页（减少浏览器操作，探针更快）
+    // KUAISHOU-QR-FIX-01：fallbackUrl = workspaceUrl——实例重启/页面死后恢复导航到工作台，
+    // cookie 有效则直接进入已登录视图，探针才能测到 page 信号（否则 about:blank 永远 miss）
     try {
       const pageRes = await browserRuntime.withPage(sessionId, async (page) => {
         await page.waitForTimeout(1500 + Math.random() * 800)
@@ -89,7 +91,7 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
         if (this.meta.identityRules.loginPageMarkers.some(m => bodyText.includes(m))) return { loginPage, securityCheck, page: false }
         const hit = this.meta.identityRules.markers.filter(m => bodyText.includes(m)).length
         return { loginPage, securityCheck, page: hit >= 2 }
-      })
+      }, this.meta.workspaceUrl)
       if (pageRes) {
         signals.page = pageRes.page
         signals.loginPage = pageRes.loginPage
