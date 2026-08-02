@@ -47,6 +47,14 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
   /** 会话级登录状态机（统一状态，禁止平台自定义） */
   private readonly stateMachines = new Map<string, LoginStateMachine>()
 
+  // KUAISHOU-QR-FIX-01 — status 轮询缓存：detect（二维码提取）15s TTL + probe（探针）5s TTL。
+  // 实测单次 status 21s（withPage+detect 10s + identityProbe 11s），前端 3s 轮询根本跟不上；
+  // 缓存后 3 次轮询中 1 次真跑 2 次命中缓存，平均 3-4s 刷新，扫码成功 5s 内可见。
+  private readonly qrCache = new Map<string, { qrCode?: string; qrSource?: string; screenshot?: string; at: number }>()
+  private readonly probeCache = new Map<string, { identity: any; at: number }>()
+  private readonly QR_CACHE_TTL = 15000
+  private readonly PROBE_CACHE_TTL = 5000
+
   protected getStateMachine(sessionId: string): LoginStateMachine {
     let sm = this.stateMachines.get(sessionId)
     if (!sm) {
@@ -361,7 +369,9 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
       console.warn(`[${this.name}Adapter] getLoginStatus 持久实例启动失败: ${e.message}`)
     }
     try {
+      const t0 = Date.now()
       const status = await browserRuntime.getStatus(sessionId)
+      console.log(`[KSQR-TIMING] getStatus ${Date.now() - t0}ms`)
       let screenshotBase64: string | undefined
       if (status.screenshot) {
         const buf = await import('fs').then(fs => fs.promises.readFile(status.screenshot!))
@@ -376,6 +386,15 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
       let detectorChannels: any = null
       let pageTextSample: string | undefined
       let framesCount = 0
+      const t1 = Date.now()
+      // KUAISHOU-QR-FIX-01 — 二维码缓存：TTL 内直接复用，避免每次轮询都重跑 10s 的 detect
+      const qrHit = this.qrCache.get(sessionId)
+      if (qrHit && Date.now() - qrHit.at < this.QR_CACHE_TTL && qrHit.qrCode) {
+        qrCodeBase64 = qrHit.qrCode
+        qrSource = qrHit.qrSource
+        screenshotBase64 = qrHit.screenshot
+        console.log(`[KSQR-CACHE] qr hit (${Date.now() - qrHit.at}ms old)`)
+      } else {
       try {
         const det = await browserRuntime.withPage(sessionId, async (page) => {
           let res = await loginDetector.detect(page, { qrImgSelector: this.meta.qrImgSelector })
@@ -401,6 +420,12 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
         qrSource = det.source
         detectorChannels = det.channels
       } catch { /* 二维码提取失败不影响主流程 */ }
+      console.log(`[KSQR-TIMING] withPage+detect ${Date.now() - t1}ms qrSource=${qrSource}`)
+      // 写入二维码缓存（有码才缓存；无码不缓存，下次轮询继续尝试点击出码）
+      if (qrCodeBase64) {
+        this.qrCache.set(sessionId, { qrCode: qrCodeBase64, qrSource, screenshot: screenshotBase64, at: Date.now() })
+      }
+      }
 
       let loggedIn = false
       let accountName: string | undefined
@@ -408,15 +433,29 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
       let avatar: string | undefined
       let accountType: string | undefined
       let debug: any = {}
+      const t2 = Date.now()
+      // KUAISHOU-QR-FIX-01 — 探针缓存：5s TTL，轮询期间大部分请求直接命中缓存（快），
+      // 扫码成功后最迟 5s 内探针重跑 → 状态机推进（老板扫码 → 5s 内看到确认/已连接）
+      const probeHit = this.probeCache.get(sessionId)
+      let identity: any = null
+      if (probeHit && Date.now() - probeHit.at < this.PROBE_CACHE_TTL) {
+        identity = probeHit.identity
+        console.log(`[KSQR-CACHE] probe hit (${Date.now() - probeHit.at}ms old)`)
+      } else {
       try {
-        const identity = await identityProbeRegistry.get(this.platform)!.probe(sessionId)
+        identity = await identityProbeRegistry.get(this.platform)!.probe(sessionId)
+        this.probeCache.set(sessionId, { identity, at: Date.now() })
+      } catch { /* 浏览器异常时按未登录处理 */ }
+      }
+      if (identity) {
         loggedIn = identity.authenticated
         accountName = identity.accountName
         externalAccountId = identity.accountId
         avatar = identity.avatar
         accountType = identity.accountType
         debug = { ...debug, probeSignals: identity.signals, probeAuthenticated: identity.authenticated, probeAccount: identity.accountName || '' }
-      } catch { /* 浏览器异常时按未登录处理 */ }
+      }
+      console.log(`[KSQR-TIMING] identityProbe ${Date.now() - t2}ms loggedIn=${loggedIn}`)
 
       // Task05 统一登录状态机：探针结果驱动状态迁移
       const sm = this.getStateMachine(sessionId)
