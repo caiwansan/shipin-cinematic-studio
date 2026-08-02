@@ -150,7 +150,9 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     smsTabLabel: '手机号登录',
     // Task04：cp.kuaishou.com 未登录可能落到普通用户端/其他域 → 必须确认创作者登录入口
     loginEntry: {
-      mustMatch: /cp\.kuaishou\.com/,
+      // KUAISHOU-QR-FIX-01：cp.kuaishou.com 未登录会自动 302 到 passport.kuaishou.com，
+      // mustMatch 只认 cp 会把 passport 误判为未命中 → 回退导航死循环 + clickSteps 时序错乱
+      mustMatch: /(cp|passport)\.kuaishou\.com/,
       fallbackUrl: 'https://cp.kuaishou.com/',
       waitMs: 4000,
       // Reality 验证：立即登录 → passport.kuaishou.com → 扫码登录 tab → 真二维码（jsQR ✅）

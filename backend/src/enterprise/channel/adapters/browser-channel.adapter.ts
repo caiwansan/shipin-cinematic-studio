@@ -172,30 +172,78 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     // 按钮点击序列（进入真实登录面）
     if (loginEntry.clickSteps?.length) {
       await browserRuntime.withPage(sessionId, async (page) => {
-        for (const label of loginEntry.clickSteps!) {
-          const r = await page.evaluate((lb) => {
-            const all = Array.from(document.querySelectorAll('button,a,span,div,li')) as HTMLElement[]
-            const el = all.find(e => (e.textContent || '').trim() === lb && e.offsetParent !== null)
-            if (!el) return 'SKIP:' + lb
-            const targets: HTMLElement[] = [el]
-            if (el.parentElement && el.parentElement !== el) targets.push(el.parentElement)
-            let fired = 0
-            for (const t of targets) {
-              for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
-                try { t.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })) } catch {}
-                fired++
-              }
-            }
-            return 'CLICKED:' + lb
-          }, label).catch(() => 'ERR:' + label)
-          steps.push(r)
-          await page.waitForTimeout(3000)
-          if (r.startsWith('CLICKED')) await page.waitForTimeout(1000)
-        }
+        const clickRes = await this.clickLoginSteps(page)
+        steps.push(...clickRes)
+        // KUAISHOU-QR-FIX-01 — 点完「扫码登录」tab 后等二维码真正渲染（qr/start API + 图片加载），
+        // 否则 connect 返回 waiting_login 时登录页只有空 tab，前端永远看不到二维码
+        const qrReady = await this.waitForQrReady(page, 8000)
+        if (!qrReady) steps.push('QR_NOT_READY(8s 超时)')
+        else steps.push('QR_READY')
       }).catch((e: any) => steps.push(`clickSteps 异常: ${e?.message?.slice(0, 40)}`))
     }
     const finalUrl = await browserRuntime.withPage(sessionId, async (p) => p.url()).catch(() => '')
     return { url: finalUrl, steps }
+  }
+
+  /**
+   * KUAISHOU-QR-FIX-01 — 登录入口按钮点击序列（「立即登录」→「扫码登录」tab）
+   * 快手 passport 登录页默认 tab 是「扫码登录」但二维码组件不自动初始化，
+   * 必须真实点击才触发 qr/start API 渲染二维码。找不到的标签自动跳过（SKIP）。
+   */
+  private async clickLoginSteps(page: any): Promise<string[]> {
+    const steps: string[] = []
+    for (const label of this.meta.loginEntry?.clickSteps || []) {
+      // KUAISHOU-QR-FIX-01 — 点击前先等标签渲染（SPA 恢复导航后 tab 需要 2-4s 才出现），
+      // 否则 evaluate 找不到元素 → SKIP → 二维码永远点不出来
+      try {
+        await page.waitForSelector(`text=${label}`, { timeout: 5000 })
+      } catch {
+        steps.push('NOT_RENDERED:' + label)
+        continue
+      }
+      const r = await page.evaluate((lb: string) => {
+        const all = Array.from(document.querySelectorAll('button,a,span,div,li')) as HTMLElement[]
+        // 优先精确匹配叶子元素（textContent 完全相等且无子节点），再退回非空可见元素
+        const el = all.find(e => (e.textContent || '').trim() === lb && e.children.length === 0 && e.offsetParent !== null)
+          || all.find(e => (e.textContent || '').trim() === lb && e.offsetParent !== null)
+        if (!el) return 'SKIP:' + lb
+        // KUAISHOU-QR-FIX-01 — 用原生 el.click() 而非 dispatchEvent：
+        // 实测 Svelte（快手 passport）监听原生 click，dispatchEvent(new MouseEvent) 不触发 → 二维码永不渲染
+        let fired = 0
+        try { el.click(); fired++ } catch {}
+        // 兜底：原生 click 无效（某些框架只认组合事件）时再派发事件序列
+        if (fired === 0 || !document.images.length) {
+          const targets: HTMLElement[] = [el]
+          if (el.parentElement && el.parentElement !== el) targets.push(el.parentElement)
+          for (const t of targets) {
+            for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+              try { t.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })) } catch {}
+            }
+          }
+        }
+        return 'CLICKED:' + lb
+      }, label).catch(() => 'ERR:' + label)
+      steps.push(r)
+      await page.waitForTimeout(1500)
+      if (r.startsWith('CLICKED')) await page.waitForTimeout(1000)
+    }
+    return steps
+  }
+
+  /**
+   * KUAISHOU-QR-FIX-01 — 等待登录页二维码真正渲染（detect 轮询，幂等）
+   * 快手点击「扫码登录」后二维码走 qr/start API + data:image 渲染，需要 2-5s。
+   */
+  private async waitForQrReady(page: any, timeoutMs: number): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      try {
+        const det = await loginDetector.detect(page, { qrImgSelector: this.meta.qrImgSelector })
+        if (det.qrCode) return true
+      } catch {}
+      await page.waitForTimeout(800)
+    }
+    return false
   }
 
   /**
@@ -304,6 +352,14 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     error?: string
     debug?: any
   }> {
+    // KUAISHOU-QR-FIX-01 — 轮询前确保持久化实例存在（重启后 Map 清空，若用临时浏览器
+    // 扫码登录态会写进临时 profile，后续 connect 的持久浏览器看不到 → 登录闭环断裂）
+    const accountId = String(sessionId).replace(/^[^:]+:/, '')
+    try {
+      await browserRuntime.getOrCreatePersistent(sessionId, browserRuntime.getProfilePath(this.platform, accountId), { headless: false })
+    } catch (e: any) {
+      console.warn(`[${this.name}Adapter] getLoginStatus 持久实例启动失败: ${e.message}`)
+    }
     try {
       const status = await browserRuntime.getStatus(sessionId)
       let screenshotBase64: string | undefined
@@ -322,11 +378,25 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
       let framesCount = 0
       try {
         const det = await browserRuntime.withPage(sessionId, async (page) => {
-          const res = await loginDetector.detect(page, { qrImgSelector: this.meta.qrImgSelector })
+          let res = await loginDetector.detect(page, { qrImgSelector: this.meta.qrImgSelector })
+          // KUAISHOU-QR-FIX-01 — 登录页无二维码 → 兜底点击登录 tab（如「扫码登录」）再检测。
+          // 快手 passport 默认 tab 是扫码登录但组件不自动初始化，connect 阶段没点出来时
+          // 由轮询兜底：点击幂等（二维码已显示时再点无害），确保老板永远能看到二维码。
+          if (!res.qrCode && this.meta.loginEntry?.clickSteps?.length) {
+            const pageUrl = page.url()
+            const isLoginPage = this.meta.loginEntry.mustMatch.test(pageUrl) || this.meta.identityRules.loginPageMarkers.some(m => {
+              try { return pageUrl.includes(m) } catch { return false }
+            })
+            if (isLoginPage) {
+              await this.clickLoginSteps(page)
+              await page.waitForTimeout(2500)
+              res = await loginDetector.detect(page, { qrImgSelector: this.meta.qrImgSelector })
+            }
+          }
           pageTextSample = await loginDetector.pageTextSample(page).catch(() => '')
           framesCount = page.frames().length
           return res
-        })
+        }, this.meta.loginUrl)
         qrCodeBase64 = det.qrCode
         qrSource = det.source
         detectorChannels = det.channels

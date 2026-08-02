@@ -1,15 +1,5 @@
 [
   {
-    "timestamp": 1785233688874,
-    "sampleSize": 0,
-    "gsr": 0,
-    "csr": 0,
-    "failureRate": 0,
-    "ciWidth": null,
-    "convergenceState": "COLD_START",
-    "csipEligible": false
-  },
-  {
     "timestamp": 1785234288900,
     "sampleSize": 0,
     "gsr": 0,
@@ -9991,6 +9981,16 @@
   },
   {
     "timestamp": 1785701330406,
+    "sampleSize": 0,
+    "gsr": 0,
+    "csr": 0,
+    "failureRate": 0,
+    "ciWidth": null,
+    "convergenceState": "COLD_START",
+    "csipEligible": false
+  },
+  {
+    "timestamp": 1785703642039,
     "sampleSize": 0,
     "gsr": 0,
     "csr": 0,
