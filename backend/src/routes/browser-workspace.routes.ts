@@ -217,6 +217,50 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
     }
   })
 
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task08.1 — Browser Workspace Owner View（老板视角）
+  // AI员工 → 工作电脑（🟢在线/⚫离线）→ 平台 → 最近操作 → 状态
+  // GET /api/enterprise/workspaces/owner-view
+  app.get('/api/enterprise/workspaces/owner-view', async (request, reply) => {
+    try {
+      const { prisma } = await import('../utils/index.js')
+      const bindings = await prisma.agentChannelBinding.findMany({
+        where: { status: 'active', browserWorkspaceId: { not: null } },
+        orderBy: { updatedAt: 'desc' },
+      })
+      const rows: any[] = []
+      for (const b of bindings) {
+        if (!b.browserWorkspaceId) continue
+        const ws = await prisma.browserWorkspace.findUnique({
+          where: { id: b.browserWorkspaceId },
+          include: {
+            channelAccount: { select: { id: true, channelType: true, channelName: true, connectionStatus: true } },
+          },
+        })
+        if (!ws) continue
+        const agent = await prisma.enterpriseAgentInstance.findUnique({ where: { id: b.agentInstanceId } })
+        const profile = agent ? await prisma.enterpriseAgentProfile.findUnique({
+          where: { id: agent.employeeId },
+          select: { id: true, name: true, role: true },
+        }) : null
+        const traj = await browserTrajectoryService.listByWorkspace(ws.id, 1)
+        rows.push({
+          workspaceId: ws.id,
+          workspaceStatus: ws.status,
+          online: ['RUNNING', 'READY'].includes(ws.status),
+          lastHealthCheckAt: ws.lastHealthCheckAt,
+          platform: ws.channelAccount?.channelType || null,
+          platformName: ws.channelAccount?.channelName || null,
+          accountConnection: ws.channelAccount?.connectionStatus || null,
+          agent: agent && profile ? { id: agent.id, name: profile.name, role: profile.role } : null,
+          lastOperation: traj[0] ? { action: traj[0].action, description: traj[0].description, createdAt: traj[0].createdAt } : null,
+        })
+      }
+      return reply.send({ code: 0, data: rows })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
   // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 03 — 授权流程状态机查询
   // GET /api/enterprise/workspaces/auth-session/:channelAccountId
   // 返回最近一次 BrowserAuthSession（INIT/OPEN_BROWSER/WAIT_USER_LOGIN/PLATFORM_VERIFY/AUTH_SUCCESS/FAILED/EXPIRED）

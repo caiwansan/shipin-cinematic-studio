@@ -14,6 +14,35 @@
       desc="连接你的线上运营渠道，AI 员工才能帮你运营——发布内容、运营店铺、回复客户、读取数据。"
     />
 
+    <!-- SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task08.1 — Browser Workspace Owner View（老板视角）
+         AI员工 → 工作电脑（🟢在线）→ 平台 → 最近操作 → 状态 -->
+    <div v-if="ownerViews.length" class="ac-owner">
+      <div class="ac-owner-head">
+        <span class="ac-owner-title">AI 员工工作电脑</span>
+        <span class="ac-owner-sub">每一台都是真实浏览器环境 · 登录态长期保留</span>
+      </div>
+      <div class="ac-owner-grid">
+        <div v-for="ov in ownerViews" :key="ov.workspaceId" class="ac-owner-card">
+          <div class="ac-owner-top">
+            <span class="ac-owner-avatar">{{ (ov.agent?.name || 'AI')[0] }}</span>
+            <div class="ac-owner-meta">
+              <div class="ac-owner-name">{{ ov.agent?.name || 'AI 员工' }}</div>
+              <div class="ac-owner-role">{{ ov.agent?.role || '运营' }}</div>
+            </div>
+            <span class="ac-owner-state" :class="ov.online ? 'on' : 'off'">
+              <span class="ac-owner-dot" :class="ov.online ? 'on' : 'off'"></span>
+              {{ ov.online ? '🟢 在线' : '⚫ 离线' }}
+            </span>
+          </div>
+          <div class="ac-owner-info">
+            <div class="ac-owner-row"><span class="k">平台</span><span class="v">{{ ov.platformName || ov.platform || '—' }}</span></div>
+            <div class="ac-owner-row"><span class="k">状态</span><span class="v">{{ ov.workspaceStatus }}</span></div>
+            <div class="ac-owner-row"><span class="k">最近操作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '等待任务' }}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 分类 Tabs -->
     <div class="ac-tabs">
       <button
@@ -609,6 +638,19 @@ const visiblePlatforms = computed(() => {
 })
 
 // TASK03.2.2 G4 — 加载真实账号连接状态（已连接卡片：账号/头像/AI员工/权限）
+// SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task08.1 — 加载 AI 员工工作电脑 Owner View
+const ownerViews = ref<any[]>([])
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return '刚刚'
+  if (m < 60) return m + ' 分钟前'
+  const h = Math.floor(m / 60)
+  if (h < 24) return h + ' 小时前'
+  return Math.floor(h / 24) + ' 天前'
+}
+
 onMounted(async () => {
   try {
     const res = await api('/api/enterprise/channels/runtime/douyin/account-status')
@@ -625,6 +667,13 @@ onMounted(async () => {
     }
   } catch (e: any) {
     // 账号状态加载失败静默（未连接态保持默认）
+  }
+  // Task08.1 — Owner View（失败静默，不影响渠道列表）
+  try {
+    const ov = await api('/api/enterprise/workspaces/owner-view')
+    ownerViews.value = (ov.data || []).filter((r: any) => r.online || r.lastOperation)
+  } catch (e: any) {
+    // 静默
   }
 })
 
@@ -656,6 +705,124 @@ function onClick(p: any) {
 </script>
 
 <style scoped>
+/* ═══ SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task08.1 — AI 员工工作电脑 Owner View ═══ */
+.ac-owner {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border: 1px solid #e0e7ff;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.ac-owner-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ac-owner-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.ac-owner-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+.ac-owner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.ac-owner-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.ac-owner-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ac-owner-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ac-owner-meta {
+  flex: 1;
+  min-width: 0;
+}
+.ac-owner-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+.ac-owner-role {
+  font-size: 12px;
+  color: #64748b;
+}
+.ac-owner-state {
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+.ac-owner-state.on {
+  color: #059669;
+  background: #ecfdf5;
+}
+.ac-owner-state.off {
+  color: #64748b;
+  background: #f1f5f9;
+}
+.ac-owner-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.ac-owner-dot.on {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+.ac-owner-dot.off {
+  background: #94a3b8;
+}
+.ac-owner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ac-owner-row {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+.ac-owner-row .k {
+  color: #94a3b8;
+  width: 52px;
+  flex-shrink: 0;
+}
+.ac-owner-row .v {
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ═══ 分类 Tabs ═══ */
 .ac-tabs {
   display: flex;
