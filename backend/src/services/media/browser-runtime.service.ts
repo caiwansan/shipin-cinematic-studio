@@ -16,10 +16,16 @@ import fs from 'fs'
 
 const CHROME_PATH = '/usr/bin/google-chrome'
 const SESSION_DIR = path.resolve('/tmp/browser-sessions')
+/** TASK03.1.5 — 持久化浏览器 profile 根目录（每渠道账号独立 user-data-dir） */
+const PROFILE_ROOT = process.env.BROWSER_PROFILE_ROOT || path.resolve('/data/browser-profiles')
 
 // 确保 session 目录存在
 if (!fs.existsSync(SESSION_DIR)) {
   fs.mkdirSync(SESSION_DIR, { recursive: true })
+}
+// 确保 profile 根目录存在
+if (!fs.existsSync(PROFILE_ROOT)) {
+  fs.mkdirSync(PROFILE_ROOT, { recursive: true })
 }
 
 export interface BrowserConfig {
@@ -47,11 +53,36 @@ export interface CookieData {
   secure?: boolean
 }
 
+/** TASK03.1.5 — 浏览器实例描述（persistent = 持久化 profile 主路径；临时 = cookie 注入 fallback） */
+export interface BrowserInstance {
+  browser?: Browser
+  context: BrowserContext
+  page?: Page
+  headless: boolean
+  persistent: boolean
+  profilePath?: string
+}
+
 class BrowserRuntimeService {
-  private instances = new Map<string, { browser: Browser; context: BrowserContext; page?: Page }>()
+  private instances = new Map<string, BrowserInstance>()
 
   /**
-   * 启动浏览器实例
+   * TASK03.1.5 — 计算渠道账号的持久化 profile 路径
+   * 目录结构：<PROFILE_ROOT>/<platform>/<accountId>（账号身份与运行环境分离）
+   * 例：/data/browser-profiles/douyin/08a0f643-...
+   */
+  getProfilePath(platform: string, accountId: string): string {
+    const safeId = String(accountId || 'new').replace(/[^a-zA-Z0-9_-]/g, '_')
+    return path.join(PROFILE_ROOT, platform, safeId)
+  }
+
+  /** 当前实例是否持久化模式 */
+  isPersistent(sessionId: string): boolean {
+    return this.instances.get(sessionId)?.persistent ?? false
+  }
+
+  /**
+   * 启动浏览器实例（临时模式 — fallback）
    */
   async launch(sessionId: string, config: BrowserConfig = {}): Promise<void> {
     // 如果已存在，先关闭
@@ -71,16 +102,73 @@ class BrowserRuntimeService {
       viewport: config.viewport || { width: 1280, height: 800 },
     })
 
-    this.instances.set(sessionId, { browser, context, page: undefined })
+    this.instances.set(sessionId, { browser, context, page: undefined, headless: config.headless ?? true, persistent: false })
   }
 
   /**
-   * 获取或创建浏览器实例
+   * TASK03.1.5 — 启动持久化浏览器实例（主路径）
+   * launchPersistentContext(userDataDir)：真实 Chrome profile，登录一次长期有效
+   * 同一 profile 目录不可被两个实例同时打开（Chromium 自身锁保证同账号串行）
    */
-  async getOrCreate(sessionId: string, config: BrowserConfig = {}): Promise<{ browser: Browser; context: BrowserContext; page?: Page }> {
+  async launchPersistent(sessionId: string, profilePath: string, config: BrowserConfig = {}): Promise<void> {
+    // 如果已存在，先关闭
+    if (this.instances.has(sessionId)) {
+      await this.close(sessionId)
+    }
+    // 确保 profile 目录存在（launchPersistentContext 会自动创建，这里显式保证权限）
+    if (!fs.existsSync(profilePath)) {
+      fs.mkdirSync(profilePath, { recursive: true })
+    }
+
+    const context = await chromium.launchPersistentContext(profilePath, {
+      executablePath: CHROME_PATH,
+      headless: config.headless ?? true,
+      slowMo: config.slowMo ?? 0,
+      viewport: config.viewport || { width: 1280, height: 800 },
+      userAgent: config.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'],
+    })
+
+    this.instances.set(sessionId, { context, page: undefined, headless: config.headless ?? true, persistent: true, profilePath })
+  }
+
+  /**
+   * 获取或创建浏览器实例（临时模式；模式不匹配时按请求模式重启）
+   */
+  async getOrCreate(sessionId: string, config: BrowserConfig = {}): Promise<BrowserInstance> {
     let instance = this.instances.get(sessionId)
+    if (instance && config.headless !== undefined) {
+      // 仅当调用方显式指定 headless 模式且与现有实例不一致时重启（避免误杀现有浏览器）
+      if (config.headless !== instance.headless) {
+        await this.close(sessionId)
+        instance = undefined
+      }
+    }
     if (!instance) {
       await this.launch(sessionId, config)
+      instance = this.instances.get(sessionId)!
+    }
+    return instance
+  }
+
+  /**
+   * TASK03.1.5 — 获取或创建持久化实例（主路径）
+   * 复用规则：同 sessionId 已存在且同为 persistent 同 profile → 直接复用（保留登录态与页面）
+   */
+  async getOrCreatePersistent(sessionId: string, profilePath: string, config: BrowserConfig = {}): Promise<BrowserInstance> {
+    let instance = this.instances.get(sessionId)
+    if (instance) {
+      const sameProfile = instance.persistent && instance.profilePath === profilePath
+      const headlessOk = config.headless === undefined || config.headless === instance.headless
+      if (sameProfile && headlessOk) {
+        return instance
+      }
+      // 模式/profile 变化 → 重启
+      await this.close(sessionId)
+      instance = undefined
+    }
+    if (!instance) {
+      await this.launchPersistent(sessionId, profilePath, config)
       instance = this.instances.get(sessionId)!
     }
     return instance
@@ -172,11 +260,17 @@ class BrowserRuntimeService {
    */
   async withPage(sessionId: string, action: (page: Page) => Promise<any>): Promise<any> {
     const { context } = await this.getOrCreate(sessionId)
-    const page = await context.newPage()
+    // 优先复用 navigate 打开的主页面（登录页必须保留，不能新建 about:blank / 不能关闭）
+    const inst = this.instances.get(sessionId)
+    let page = inst?.page
+    if (!page || page.isClosed()) {
+      page = await context.newPage()
+      if (inst) inst.page = page
+    }
     try {
       return await action(page)
     } finally {
-      await page.close()
+      // 不关闭页面 — 登录页需要保持打开
     }
   }
 
@@ -258,11 +352,21 @@ class BrowserRuntimeService {
 
   /**
    * 关闭浏览器实例
+   * - 持久化模式：关闭 context（不删 profile 目录 — 登录态保留）
+   * - 临时模式：关闭 browser
    */
   async close(sessionId: string): Promise<void> {
     const instance = this.instances.get(sessionId)
     if (instance) {
-      await instance.browser.close()
+      try {
+        if (instance.persistent) {
+          await instance.context.close()
+        } else if (instance.browser) {
+          await instance.browser.close()
+        }
+      } catch (e: any) {
+        console.warn(`[BrowserRuntime] close ${sessionId} warning: ${e.message}`)
+      }
       this.instances.delete(sessionId)
     }
   }
@@ -274,6 +378,18 @@ class BrowserRuntimeService {
     for (const [sessionId] of this.instances) {
       await this.close(sessionId)
     }
+  }
+
+  /**
+   * TASK03.1.5 — 返回所有活跃实例（含 profile 信息，供 ChannelBrowserSession 维护）
+   */
+  listInstances(): { sessionId: string; persistent: boolean; profilePath?: string; headless: boolean }[] {
+    return Array.from(this.instances.entries()).map(([sessionId, inst]) => ({
+      sessionId,
+      persistent: inst.persistent,
+      profilePath: inst.profilePath,
+      headless: inst.headless,
+    }))
   }
 }
 

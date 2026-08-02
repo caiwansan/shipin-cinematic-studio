@@ -7554,6 +7554,7 @@ model EnterpriseChannelAccount {
 
   interactions          EnterpriseInteraction[]
   syncLogs              EnterpriseChannelSyncLog[]
+  browserSessions       ChannelBrowserSession[]
 
   @@unique([tenantId, channelType])
   @@index([tenantId])
@@ -7632,6 +7633,33 @@ model EnterpriseChannelSyncLog {
   @@index([status])
   @@index([startedAt])
   @@map("enterprise_channel_sync_log")
+}
+
+// TASK03.1.5 — Browser Runtime Upgrade：渠道账号的运行环境（浏览器会话）记录
+// 职责边界（掌柜批准）：账号身份（EnterpriseChannelAccount）与运行环境（ChannelBrowserSession）分离
+// - channelAccountId → 对应 EnterpriseChannelAccount（身份）
+// - profilePath → Chromium 持久化 user-data-dir（真实会话，登录一次长期有效）
+// - 不存储凭证/密码/cookie（凭证唯一源仍是 EnterpriseChannelAccount.credentialEncrypted）
+// - 不包含 AI 员工逻辑 / 操作日志（OperationLog 属 Task05，另行建模）
+model ChannelBrowserSession {
+  id                String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  channelAccountId  String    @map("channel_account_id") @db.Text
+  browserType       String    @default("chromium") @map("browser_type") @db.Text
+  profilePath       String    @map("profile_path") @db.Text
+  status            String    @default("IDLE") @db.Text // IDLE / RUNNING / ERROR
+  lastStartedAt     DateTime? @map("last_started_at")
+  lastHealthCheckAt DateTime? @map("last_health_check_at")
+  lastError         String?   @map("last_error") @db.Text
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  channelAccount     EnterpriseChannelAccount @relation(fields: [channelAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([channelAccountId, browserType])
+  @@index([channelAccountId])
+  @@index([status])
+  @@map("channel_browser_session")
 }
 
 model ChannelOutcomeMapping {

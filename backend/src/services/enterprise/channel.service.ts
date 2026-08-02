@@ -17,6 +17,9 @@ import type {
   EnterpriseChannelAdapter,
 } from '../../enterprise/channel/channel.adapter.js'
 import { ContentStatus } from '../../enterprise/channel/channel.adapter.js'
+import { agentChannelBindingService } from './agent-channel-binding.service.js'
+import { channelBrowserSessionService } from './channel-browser-session.service.js'
+import { browserRuntime } from '../media/browser-runtime.service.js'
 
 export class ChannelService {
   private adapters: Map<string, EnterpriseChannelAdapter> = new Map()
@@ -39,6 +42,25 @@ export class ChannelService {
       throw new Error(`未注册渠道适配器: ${platform}（请在 index.ts 注册 EnterpriseChannelAdapter 实现）`)
     }
     return adapter
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase D — AI 员工渠道操作授权（大脑层）
+   * Adapter = 手脚（纯执行）｜ ChannelService = 大脑（权限校验）｜ AgentChannelBinding = 权限系统
+   * 校验失败统一抛 code=permission_denied 错误
+   */
+  async authorizeAgentAction(agentInstanceId: string, channelAccountId: string, permission: string) {
+    const r = await agentChannelBindingService.authorize(agentInstanceId, channelAccountId, permission)
+    if (!r.allowed) {
+      const err: any = new Error(
+        r.reason === 'permission_denied'
+          ? `AI 员工无权执行 ${permission} 操作（AgentChannelBinding.permissions.${permission}=false）`
+          : `渠道绑定未就绪: ${r.reason}`,
+      )
+      err.code = 'permission_denied'
+      throw err
+    }
+    return r
   }
 
   /**
@@ -67,8 +89,8 @@ export class ChannelService {
         channelName: input.accountName,
         externalAccountId: input.externalAccountId ?? null,
         credentialEncrypted: { cipher: 'aes-256-gcm', payload: encryptedCred } as any,
-        connectionStatus: 'connected',
-        connectedAt: new Date(),
+        connectionStatus: 'pending',
+        connectedAt: null,
         ownerId: '',
         ownerType: 'org',
       },
@@ -112,12 +134,58 @@ export class ChannelService {
     const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
     if (!account) throw new Error('Channel account not found')
     const adapter = this.resolveAdapter(account.channelType)
+
+    // TASK03.1.5 — 记录运行环境（ChannelBrowserSession，账号身份与运行环境分离）
+    const profilePath = browserRuntime.getProfilePath(account.channelType, account.id)
+    const session = await channelBrowserSessionService.getOrCreate(account.id, {
+      browserType: 'chromium',
+      profilePath,
+    })
+    await channelBrowserSessionService.markStarted(session.id)
+
     const result = await adapter.connect(account.id)
     if (result.status === 'connected') {
       await prisma.enterpriseChannelAccount.update({
         where: { id: account.id },
         data: { connectionStatus: 'connected', connectedAt: new Date() },
       })
+      await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
+    } else if (result.status === 'waiting_login' && account.connectionStatus === 'connected') {
+      // SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase E — 登录态失效：connected → expired（不得一直显示在线）
+      await prisma.enterpriseChannelAccount.update({
+        where: { id: account.id },
+        data: { connectionStatus: 'expired' },
+      })
+    }
+    return result
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase A — 等待扫码登录完成（大脑层编排）
+   * adapter.waitForLogin 轮询登录态（不刷新页面）→ 登录成功更新 connected + connectedAt
+   */
+  async waitChannelLogin(accountId: string, timeoutMs?: number) {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    const adapter = this.resolveAdapter(account.channelType)
+    if (!adapter.waitForLogin) {
+      throw new Error('当前渠道不支持等待登录流程')
+    }
+    const result = await adapter.waitForLogin(account.id, timeoutMs)
+    if (result.status === 'connected') {
+      await prisma.enterpriseChannelAccount.update({
+        where: { id: account.id },
+        data: { connectionStatus: 'connected', connectedAt: new Date() },
+      })
+      // TASK03.1.5 — 登录成功：记录运行环境健康检查
+      try {
+        const session = await channelBrowserSessionService.findByAccount(account.id)
+        if (session) {
+          await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
+        }
+      } catch (e: any) {
+        console.warn(`[ChannelService] 浏览器会话健康检查记录失败: ${e.message}`)
+      }
     }
     return result
   }
@@ -125,10 +193,14 @@ export class ChannelService {
   /**
    * SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 编排：读取真实指标
    * 企业渠道账号 → resolveAdapter → adapter.fetchMetrics（粉丝/作品/获赞，禁止 mock）
+   * Task03.2 Phase D — 支持 AI 员工上下文：传入 agentInstanceId 时先做权限校验（analyze/read）
    */
-  async fetchMetrics(accountId: string): Promise<ChannelMetrics> {
+  async fetchMetrics(accountId: string, opts?: { agentInstanceId?: string }): Promise<ChannelMetrics> {
     const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
     if (!account) throw new Error('Channel account not found')
+    if (opts?.agentInstanceId) {
+      await this.authorizeAgentAction(opts.agentInstanceId, accountId, 'analyze')
+    }
     const adapter = this.resolveAdapter(account.channelType)
     return adapter.fetchMetrics(account.id)
   }
@@ -159,6 +231,21 @@ export class ChannelService {
     if (!account) throw new Error('Channel account not found')
     const adapter = this.resolveAdapter(account.channelType)
     return adapter.healthCheck()
+  }
+
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase D — 发布（权限层放行后进入 adapter 执行层）
+   * adapter.publish 在 Task 03 阶段仍硬编码禁用（掌柜暂时禁止事项：❌ 自动发布），
+   * 权限放行 ≠ 开放发布；本方法验证的是 AgentChannelBinding 权限隔离链路
+   */
+  async publishWithPermission(accountId: string, content: ChannelContent, opts?: { agentInstanceId?: string }): Promise<PublishResult> {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    if (opts?.agentInstanceId) {
+      await this.authorizeAgentAction(opts.agentInstanceId, accountId, 'publish')
+    }
+    const adapter = this.resolveAdapter(account.channelType)
+    return adapter.publish(content)
   }
 
   /**

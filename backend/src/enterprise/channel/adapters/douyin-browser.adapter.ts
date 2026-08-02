@@ -55,14 +55,21 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
   }
 
   /**
-   * [v1.0] 连接渠道账号
-   * - 已有凭证：解密 → 恢复 cookie → 打开创作者中心
+   * [v1.0] 连接渠道账号（TASK03.1.5 持久化 profile 主路径）
+   * - 主路径：launchPersistentContext(profilePath) — 真实 Chrome profile，登录一次长期有效
+   * - fallback：已有凭证（cookieData）→ restoreCookies 注入（兼容旧登录态/跨机迁移）
    * - 无凭证/登录态失效：打开登录页等待扫码（waiting_login）
    */
   async connect(accountId?: string): Promise<ConnectResult> {
     const sid = this.sessionIdFor(accountId ?? 'new')
 
-    // 恢复已保存登录态（凭证来自 EnterpriseChannelService，adapter 不落库）
+    // TASK03.1.5 — 持久化 profile 路径（账号身份 → 独立浏览器环境）
+    const profilePath = browserRuntime.getProfilePath('douyin', accountId ?? 'new')
+
+    // 主路径：持久化浏览器（同一 profile 已存在实例则复用，保留登录态）
+    await browserRuntime.getOrCreatePersistent(sid, profilePath, { headless: false })
+
+    // fallback：持久化 profile 无登录态时，尝试用已有凭证注入 cookie（旧登录态/跨机迁移）
     if (accountId) {
       try {
         const cred = await this.deps.getCredential(accountId)
@@ -76,10 +83,25 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
       }
     }
 
-    await browserRuntime.navigate(sid, CREATOR_CENTER_URL)
+    const nav = await browserRuntime.navigate(sid, CREATOR_CENTER_URL, { headless: false })
+    if (!nav.success) {
+      console.warn(`[DouyinBrowserAdapter] 浏览器启动/导航失败: ${nav.error}`)
+      return {
+        sessionId: sid,
+        status: 'waiting_login',
+        loginUrl: CREATOR_CENTER_URL,
+        message: `登录浏览器启动失败，请稍后重试（${nav.error}）`,
+      }
+    }
 
     // 检测登录态
-    const loggedIn = await this.detectLoggedIn(sid)
+    let loggedIn = false
+    try {
+      loggedIn = await this.detectLoggedIn(sid)
+    } catch (e: any) {
+      // 浏览器异常（反爬关闭）→ 降级为等待登录，由 waitForLogin 恢复
+      console.warn(`[DouyinBrowserAdapter] connect 阶段登录态检测异常: ${e.message}`)
+    }
     if (loggedIn) {
       return { sessionId: sid, status: 'connected', accountName: '抖音创作者中心' }
     }
@@ -89,6 +111,44 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
       status: 'waiting_login',
       loginUrl: CREATOR_CENTER_URL,
       message: '请在浏览器中扫码登录抖音创作者中心，登录成功后调用 refresh-credential 保存登录态',
+    }
+  }
+  /**
+   * [v1.0] 等待扫码登录完成（SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase A）
+   * 不刷新页面（避免打断扫码）；登录成功后由上层 refresh-credential 保存登录态
+   */
+  async waitForLogin(accountId: string, timeoutMs = 300000): Promise<ConnectResult> {
+    const sid = this.sessionIdFor(accountId)
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      let loggedIn = false
+      try {
+        loggedIn = await this.detectLoggedIn(sid)
+      } catch (e: any) {
+        // 浏览器被反爬/异常关闭 → 重新 navigate 恢复（新二维码），不中断轮询
+        console.warn(`[DouyinBrowserAdapter] 浏览器异常（${e.message}），重新打开登录页...`)
+        try {
+          const nav = await browserRuntime.navigate(sid, CREATOR_CENTER_URL, { headless: false })
+          if (!nav.success) {
+            await new Promise(r => setTimeout(r, 5000))
+            continue
+          }
+        } catch (navErr: any) {
+          console.warn(`[DouyinBrowserAdapter] 恢复失败: ${navErr.message}`)
+          await new Promise(r => setTimeout(r, 5000))
+          continue
+        }
+      }
+      if (loggedIn) {
+        return { sessionId: sid, status: 'connected', accountName: '抖音创作者中心' }
+      }
+      await new Promise(r => setTimeout(r, 8000))
+    }
+    return {
+      sessionId: sid,
+      status: 'waiting_login',
+      loginUrl: CREATOR_CENTER_URL,
+      message: '扫码超时，请重新连接',
     }
   }
 
@@ -113,21 +173,252 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
   }
 
   /**
+   * ── 浏览器登录交互（Task03.2 Phase A+：工作台可测扫码/短信登录）──
+   * 选择器用属性/文本定位（抖音 class 动态）；事件用原生 setter + 全事件触发
+   */
+
+  /** 登录页截图 + 状态（前端轮询） */
+  async getLoginStatus(sessionId: string): Promise<{
+    url: string
+    title: string
+    screenshotBase64?: string
+    loggedIn: boolean
+    error?: string
+    debug?: any
+  }> {
+    try {
+      const status = await browserRuntime.getStatus(sessionId)
+      let screenshotBase64: string | undefined
+      if (status.screenshot) {
+        const buf = await import('fs').then(fs => fs.promises.readFile(status.screenshot!))
+        screenshotBase64 = buf.toString('base64')
+      }
+      let loggedIn = false
+      try {
+        loggedIn = await this.detectLoggedIn(sessionId)
+      } catch { /* 浏览器异常时按未登录处理 */ }
+      // debug：输入框状态（排查填充问题）
+      let debug: any = null
+      try {
+        debug = await browserRuntime.withPage(sessionId, async (page) => {
+          return page.evaluate(() => {
+            const tel = Array.from(document.querySelectorAll('input[type="tel"]')) as HTMLInputElement[]
+            const telVals = tel.map(i => ({ w: Math.round(i.getBoundingClientRect().width), v: i.value }))
+            const codeInput = (Array.from(document.querySelectorAll('input')) as HTMLInputElement[]).find((i: HTMLInputElement) => /验证码|短信/.test(i.placeholder || '') && i.offsetParent !== null)
+            return {
+              telVals,
+              codeVal: codeInput ? codeInput.value : null,
+              hasGetCode: Array.from(document.querySelectorAll('span,div,button')).some(e => (e.textContent || '').trim() === '获取验证码'),
+              bodyText: (document.body ? document.body.innerText : '').replace(/\n+/g, ' | ').slice(0, 800),
+            }
+          })
+        })
+      } catch {}
+      return { url: status.currentUrl, title: status.title, screenshotBase64, loggedIn, debug }
+    } catch (e: any) {
+      return { url: '', title: '', loggedIn: false, error: e.message }
+    }
+  }
+
+  /** 填手机号（原生 setter + input/change 事件，兼容 React 受控组件） */
+  async fillPhone(sessionId: string, phone: string): Promise<{ ok: boolean; message?: string }> {
+    return browserRuntime.withPage(sessionId, async (page) => {
+      const r = await page.evaluate((p) => {
+        // 手机号框：优先 placeholder 含「手机」，否则取最靠上的 tel 输入框（验证码框也是 tel 类型）
+        const inputs = Array.from(document.querySelectorAll('input[type="tel"]')) as HTMLInputElement[]
+        const target = inputs.find(i => /手机/.test(i.placeholder || ''))
+          || inputs.slice().sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0]
+        if (!target) return 'NO_TEL_INPUT'
+        target.focus()
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+        setter.call(target, p)
+        target.dispatchEvent(new Event('input', { bubbles: true }))
+        target.dispatchEvent(new Event('change', { bubbles: true }))
+        target.blur()
+        return 'SET:' + target.value
+      }, phone)
+      return { ok: true, message: r }
+    })
+  }
+
+  /** 点「获取验证码」（全事件触发：pointerdown/mousedown/.../click + touch） */
+  async clickSendCode(sessionId: string): Promise<{ ok: boolean; message?: string; countdown?: string }> {
+    const fired = await browserRuntime.withPage(sessionId, async (page) => {
+      return page.evaluate(() => {
+        const all = Array.from(document.querySelectorAll('span,div,button')) as HTMLElement[]
+        // 优先 span/button（最小可点击元素），fallback 任意
+        const el = all.find(e => /^(span|button)$/i.test(e.tagName) && (e.textContent || '').trim() === '获取验证码')
+          || all.find(e => (e.textContent || '').trim() === '获取验证码')
+        if (!el) return 'NO_EL'
+        const targets: HTMLElement[] = [el]
+        const parent = el.closest('div')
+        if (parent && parent !== el) targets.push(parent as HTMLElement)
+        let fired = 0
+        for (const t of targets) {
+          for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'touchstart', 'touchend']) {
+            try {
+              t.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }))
+              fired++
+            } catch {}
+          }
+        }
+        return 'FIRED:' + fired
+      })
+    })
+    // 等倒计时出现（短信发出）
+    let countdown = ''
+    for (let i = 0; i < 6; i++) {
+      await new Promise(r => setTimeout(r, 1000))
+      try {
+        countdown = await browserRuntime.withPage(sessionId, async (page) => {
+          return page.evaluate(() => {
+            const el = Array.from(document.querySelectorAll('span,div,button')).find(e => /(重新发送|重新获取|秒后)/.test((e.textContent || '').trim()) && (e.textContent || '').trim().length < 20) as HTMLElement | undefined
+            return el ? (el.textContent || '').trim() : ''
+          })
+        })
+      } catch {}
+      if (countdown) break
+    }
+    return { ok: true, message: fired, countdown }
+  }
+
+  /** 填验证码 + 点登录（真实键盘输入 isTrusted=true + 坐标点击 + Enter 兜底 + URL 轮询） */
+  async fillCodeAndLogin(sessionId: string, code: string): Promise<{ ok: boolean; message?: string }> {
+    const msg = await browserRuntime.withPage(sessionId, async (page) => {
+      // 1. 定位验证码框（placeholder 含「验证码/短信」，可见）
+      const inputs = page.locator('input')
+      const count = await inputs.count()
+      let target: any = null
+      for (let i = 0; i < count; i++) {
+        const ph = await inputs.nth(i).getAttribute('placeholder').catch(() => '')
+        const visible = await inputs.nth(i).isVisible().catch(() => false)
+        if (/验证码|短信/.test(ph || '') && visible) { target = inputs.nth(i); break }
+      }
+      if (!target) return 'NO_CODE_INPUT'
+      // 2. React/Vue 受控组件官方模拟输入：native setter + input/change 事件（不依赖焦点，100% 触发 onChange）+ focus 保险
+      await target.evaluate((el: any, val: string) => {
+        const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')!.set!
+        setter.call(el, val)
+        el.dispatchEvent(new Event('input', { bubbles: true }))
+        el.dispatchEvent(new Event('change', { bubbles: true }))
+        el.focus()
+      }, code)
+      await page.waitForTimeout(800)
+      const val = await target.inputValue().catch(() => '')
+      // 3. 登录：坐标点击；URL 未变则 Enter 提交；监听网络请求 + 响应 body 定位提交结果
+      const responses: string[] = []
+      const respPromises: Promise<void>[] = []
+      const onResp = (r: any) => {
+        const u = String(r.url() || '')
+        if (/sms|verify|login|passport|check|code|phone|captcha/i.test(u)) {
+          const p = r
+            .text()
+            .then((t: string) => {
+              const snippet = String(t).slice(0, 250).replace(/\s+/g, ' ')
+              responses.push(`${r.status()} ${u.split('?')[0].slice(-55)} | ${snippet}`)
+            })
+            .catch(() => {})
+          respPromises.push(p)
+        }
+      }
+      page.on('response', onResp)
+      const before = page.url()
+      const loginMsg = await this.clickLogin(sessionId)
+      let step = String(loginMsg.message || '')
+      await page.waitForTimeout(4500)
+      if (page.url() === before) {
+        await page.keyboard.press('Enter')
+        await page.waitForTimeout(4500)
+        step += '+ENTER'
+      }
+      page.off('response', onResp)
+      await Promise.allSettled(respPromises)
+      return `TYPED:${val} | ${step} | resp:[${responses.slice(0, 4).join(' || ')}] | url:${page.url().slice(0, 70)}`
+    })
+    return { ok: true, message: msg }
+  }
+
+  /** 切换登录方式 tab：sms / qr / password */
+  async switchLoginTab(sessionId: string, tab: 'sms' | 'qr' | 'password'): Promise<{ ok: boolean; message?: string }> {
+    const label = tab === 'sms' ? '验证码登录' : tab === 'qr' ? '扫码登录' : '密码登录'
+    const msg = await browserRuntime.withPage(sessionId, async (page) => {
+      return page.evaluate((lb) => {
+        const all = Array.from(document.querySelectorAll('span,div,button')) as HTMLElement[]
+        const el = all.find(e => /^(span|button)$/i.test(e.tagName) && (e.textContent || '').trim() === lb)
+          || all.find(e => (e.textContent || '').trim() === lb)
+        if (!el) return 'NO_TAB:' + lb
+        const targets: HTMLElement[] = [el]
+        const parent = el.closest('div')
+        if (parent && parent !== el) targets.push(parent as HTMLElement)
+        let fired = 0
+        for (const t of targets) {
+          for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'touchstart', 'touchend']) {
+            try {
+              t.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }))
+              fired++
+            } catch {}
+          }
+        }
+        return 'FIRED:' + fired
+      }, label)
+    })
+    return { ok: true, message: msg }
+  }
+
+  /** 点「登录」按钮（Playwright 原生坐标点击，isTrusted=true；选最后一个可见「登录」= 表单提交按钮） */
+  async clickLogin(sessionId: string): Promise<{ ok: boolean; message?: string }> {
+    const msg = await browserRuntime.withPage(sessionId, async (page) => {
+      try {
+        const locs = page.locator('button, span, div').filter({ hasText: /^登录$/ })
+        const n = await locs.count()
+        let best: any = null
+        let bestY = -1
+        for (let i = 0; i < n; i++) {
+          const l = locs.nth(i)
+          if (!(await l.isVisible().catch(() => false))) continue
+          const box = await l.boundingBox().catch(() => null)
+          if (box && box.y > bestY && box.width > 30 && box.width < 500 && box.height > 20 && box.height < 90) {
+            bestY = box.y
+            best = l
+          }
+        }
+        if (!best) return 'NO_LOGIN_BTN'
+        const before = page.url()
+        await best.click({ timeout: 8000 })
+        // 点击后等 3s，确认页面是否开始跳转（登录提交成功）
+        await page.waitForTimeout(3000)
+        const after = page.url()
+        if (after !== before) return 'CLICKED_NAVIGATED:' + after.slice(0, 60)
+        return 'CLICKED'
+      } catch (e: any) {
+        return 'CLICK_FAIL:' + String(e.message).slice(0, 120)
+      }
+    })
+    return { ok: true, message: msg }
+  }
+
+  /**
    * [v1.0] 读取账号真实核心指标（粉丝/作品/获赞等，禁止 mock）
-   * 流程：getCredential → 恢复 cookie → 打开数据概览 → 抓取
+   * TASK03.1.5：优先持久化 profile（保留登录态），凭证 cookie 仅作 fallback
    */
   async fetchMetrics(accountId: string): Promise<ChannelMetrics> {
     const sid = this.sessionIdFor(accountId)
+    const profilePath = browserRuntime.getProfilePath('douyin', accountId)
+    await browserRuntime.getOrCreatePersistent(sid, profilePath, { headless: false })
 
-    // 恢复登录态
-    const cred = await this.deps.getCredential(accountId)
-    const cookieData = cred.cookieData
-    if (!cookieData) {
-      throw new Error('该渠道账号尚未保存登录凭证，请先 connect 并完成登录')
+    // fallback：持久化 profile 无登录态时注入凭证 cookie
+    try {
+      const cred = await this.deps.getCredential(accountId)
+      const cookieData = cred.cookieData
+      if (cookieData) {
+        await browserRuntime.restoreCookies(sid, JSON.parse(cookieData))
+      }
+    } catch (e: any) {
+      console.warn(`[DouyinBrowserAdapter] fetchMetrics 凭证恢复失败（依赖持久化登录态）: ${e.message}`)
     }
-    await browserRuntime.restoreCookies(sid, JSON.parse(cookieData))
 
-    const nav = await browserRuntime.navigate(sid, DATA_OVERVIEW_URL)
+    const nav = await browserRuntime.navigate(sid, DATA_OVERVIEW_URL, { headless: false })
     if (!nav.success) {
       throw new Error(`打开抖音数据概览失败: ${nav.error}`)
     }
@@ -143,20 +434,27 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
 
   /**
    * [v1.0] 拉取评论列表（尽力而为；Task 阶段禁止自动发布/回复，仅读取）
+   * TASK03.1.5：优先持久化 profile，凭证 cookie 仅作 fallback
    */
   async fetchComments(accountId: string, postId?: string): Promise<ChannelComment[]> {
     const sid = this.sessionIdFor(accountId)
-    const cred = await this.deps.getCredential(accountId)
-    const cookieData = cred.cookieData
-    if (!cookieData) {
-      throw new Error('该渠道账号尚未保存登录凭证，请先 connect 并完成登录')
+    const profilePath = browserRuntime.getProfilePath('douyin', accountId)
+    await browserRuntime.getOrCreatePersistent(sid, profilePath, { headless: false })
+
+    try {
+      const cred = await this.deps.getCredential(accountId)
+      const cookieData = cred.cookieData
+      if (cookieData) {
+        await browserRuntime.restoreCookies(sid, JSON.parse(cookieData))
+      }
+    } catch (e: any) {
+      console.warn(`[DouyinBrowserAdapter] fetchComments 凭证恢复失败（依赖持久化登录态）: ${e.message}`)
     }
-    await browserRuntime.restoreCookies(sid, JSON.parse(cookieData))
 
     const url = postId
       ? `https://creator.douyin.com/creator-micro/content/manage?filter=2&aid=${postId}`
       : 'https://creator.douyin.com/creator-micro/content/manage'
-    await browserRuntime.navigate(sid, url)
+    await browserRuntime.navigate(sid, url, { headless: false })
     await new Promise(r => setTimeout(r, 3000 + Math.random() * 2000))
 
     const comments: ChannelComment[] = []
@@ -232,18 +530,21 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
       return await browserRuntime.withPage(sessionId, async (page) => {
         await page.waitForTimeout(3000 + Math.random() * 2000)
         const url = page.url()
-        // 登录页特征：二维码/扫码登录/登录表单
-        const loginMarkers = ['login', 'passport', 'qr', '扫码', '登录']
-        const hasLoginMarker = loginMarkers.some(m => url.includes(m))
-        // 创作者工作台特征
-        const workbenchMarkers = ['[class*="header"]', '[class*="nav"]', '[class*="workspace"]', '[class*="creator"]']
         const bodyText = await page.locator('body').innerText().catch(() => '')
-        const hasWorkbenchText = bodyText.includes('内容管理') || bodyText.includes('数据') || bodyText.includes('创作灵感')
-        const hasQrLogin = await page.locator('img[src*="qr"], [class*="qrcode"], [class*="qr-code"]').count().then((c: number) => c > 0).catch(() => false)
-        if (hasQrLogin || hasLoginMarker) return false
-        return hasWorkbenchText
+        // 1. 明确的登录页特征（优先级最高）— 登录页营销文案可能含「数据」等宽泛词，必须先排除
+        const explicitLoginMarkers = ['扫码登录', '扫一扫', '验证码登录', '密码登录', '登录即代表同意', '我是创作者', '我是MCN机构']
+        const hasExplicitLogin = explicitLoginMarkers.some(m => bodyText.includes(m))
+        if (hasExplicitLogin) return false
+        // 2. 登录页 URL 特征
+        if (/passport|login|qr|sso/i.test(url)) return false
+        // 3. 工作台特征（组合判定：至少命中 2 个才认为已登录）
+        const workbenchMarkers = ['内容管理', '发布作品', '创作灵感', '作品管理', '数据概览', '创作者服务', '我的主页']
+        const hit = workbenchMarkers.filter(m => bodyText.includes(m)).length
+        return hit >= 2
       })
     } catch (e: any) {
+      // 浏览器已关闭/目标页销毁 → 上抛，由 waitForLogin/connect 恢复浏览器（抖音反爬可能杀页面）
+      if (/closed|Target page|crash/i.test(e.message)) throw e
       console.warn(`[DouyinBrowserAdapter] 登录态检测失败: ${e.message}`)
       return false
     }

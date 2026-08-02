@@ -141,6 +141,12 @@ export interface EnterpriseChannelAdapter {
   reply(interactionId: string, message: string): Promise<boolean>
 
   /**
+   * [v1.0] 等待扫码/验证码登录完成（SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase A）
+   * 浏览器自动化渠道实现（如 DouyinBrowserAdapter）；OAuth 渠道可返回已连接状态
+   */
+  waitForLogin?(accountId: string, timeoutMs?: number): Promise<ConnectResult>
+
+  /**
    * 健康检查
    */
   healthCheck(): Promise<ChannelHealth>
