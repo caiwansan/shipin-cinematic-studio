@@ -27,6 +27,7 @@ import { prisma } from '../utils/index.js'
 import { browserRuntime } from '../services/media/browser-runtime.service.js'
 import { identityProbeRegistry } from '../enterprise/channel/identity-probe.js'
 import { browserWorkspaceService } from '../services/enterprise/browser-workspace.service.js'
+import { channelService } from '../services/enterprise/channel.service.js'
 import { isChannelConnected } from '../constants/channel-connection-status.js'
 
 export async function channelRealityRoutes(app: FastifyInstance) {
@@ -98,13 +99,35 @@ export async function channelRealityRoutes(app: FastifyInstance) {
       const accMeta = (account.metadata as any) || {}
       const lastVerifiedAt = accMeta.lastVerifiedAt || null
       const hasIdentity = !!account.externalAccountId || !!account.accountName || !!accMeta.identitySnapshot
-      const identityStatus = probeIdentity.authenticated
-        ? 'verified'
-        : hasIdentity
-          ? 'stale'
-          : 'missing'
+      // IDENTITY-V2 Task03 — verifiedBy 标注验证来源：
+      //   probe = 最近一次真实浏览器探针（最可信）
+      //   fast  = FastIdentityValidator 快照验证（凭证+身份快照，浏览器未启动，懒加载）
+      //   none  = 未验证
+      let verifiedBy: 'probe' | 'fast' | 'none' = 'none'
+      let identityStatus: 'verified' | 'stale' | 'missing'
+      if (probeIdentity.authenticated) {
+        identityStatus = 'verified'
+        verifiedBy = 'probe'
+      } else if (!alive && hasIdentity && isChannelConnected(account.connectionStatus)) {
+        // 浏览器未运行但账号 CONNECTED → 快照验证（恢复服务 fast 路径）
+        try {
+          const { fastIdentityValidator } = await import('../enterprise/channel/fast-identity-validator.js')
+          const verdict = await fastIdentityValidator.verify(account, channelService)
+          if (verdict.status === 'fresh') {
+            identityStatus = 'verified'
+            verifiedBy = 'fast'
+          } else {
+            identityStatus = 'stale'
+          }
+        } catch {
+          identityStatus = hasIdentity ? 'stale' : 'missing'
+        }
+      } else {
+        identityStatus = hasIdentity ? 'stale' : 'missing'
+      }
       const identity = {
-        status: identityStatus as 'verified' | 'stale' | 'missing',
+        status: identityStatus,
+        verifiedBy,
         platform,
         // G5 — 未登录不能生成账号名：missing（从未获取身份）时 name/avatar/externalId 一律 null，
         //   绝不 fallback 到渠道展示名（channelName）冒充账号身份

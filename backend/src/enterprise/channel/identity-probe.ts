@@ -35,8 +35,24 @@ export interface ChannelIdentity {
   expiresAt?: string
   /** 探测时间（ISO） */
   checkedAt: string
-  /** 信号明细（调试/健康面板展示） */
-  signals?: { page: boolean; cookie: boolean; identity: boolean }
+  /** 信号明细（调试/健康面板展示）
+   * IDENTITY-V2-HARDENING-01 — 三层信号：
+   *   page     = Workspace Signal（工作台页面特征）
+   *   cookie   = Credential Signal（关键登录 cookie 存在）
+   *   identity = Identity Signal（userId/nickname 提取成功）
+   *   loginPage / securityCheck = 登录页/安全验证页排除信号（防误判）
+   *   credential = 派生：cookie && !loginPage && !securityCheck
+   * v2 综合判定：authenticated = credential && (identity || page)
+   * （禁止 cookie 数量>0 即成功；必须凭证 + 身份/工作台双信号）
+   */
+  signals?: {
+    page: boolean
+    cookie: boolean
+    identity: boolean
+    loginPage?: boolean
+    securityCheck?: boolean
+    credential?: boolean
+  }
 }
 
 /** 平台身份探针接口 — 小红书/视频号/B站/微博 全部实现此接口 */

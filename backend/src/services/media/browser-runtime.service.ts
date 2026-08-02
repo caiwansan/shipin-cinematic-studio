@@ -63,10 +63,23 @@ export interface BrowserInstance {
   profilePath?: string
   /** TASK03.2 — 最近一次成功导航的 URL（页面被风控杀死后恢复用） */
   lastUrl?: string
+  /** 调试端口（BROWSER_CDP_PORT 开启时按实例分配，避免多实例抢同一端口） */
+  debugPort?: number
 }
 
 class BrowserRuntimeService {
   private instances = new Map<string, BrowserInstance>()
+
+  /**
+   * 按 sessionId 稳定分配调试端口（18800 + hash%100），多渠道账号共存不抢端口。
+   * 仅当 BROWSER_CDP_PORT 设置（诊断模式）时启用 remote-debugging-port。
+   */
+  private debugPortFor(sessionId: string): number | null {
+    if (!process.env.BROWSER_CDP_PORT) return null
+    let h = 0
+    for (let i = 0; i < sessionId.length; i++) h = (h * 31 + sessionId.charCodeAt(i)) >>> 0
+    return 18800 + (h % 100)
+  }
 
   /**
    * SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 02 — Workspace 生命周期管理
@@ -158,6 +171,7 @@ class BrowserRuntimeService {
       headless: config.headless ?? true,
       slowMo: config.slowMo ?? 0,
       ignoreDefaultArgs: ['--enable-automation'],
+      // BROWSER_CDP_PORT 环境变量控制调试端口（仅诊断时开启）；按实例分配避免多账号抢端口
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -166,6 +180,7 @@ class BrowserRuntimeService {
         '--disable-infobars',
         '--no-first-run',
         '--no-default-browser-check',
+        ...(process.env.BROWSER_CDP_PORT ? [`--remote-debugging-port=${this.debugPortFor(sessionId)}`] : []),
       ],
     })
 
@@ -174,7 +189,7 @@ class BrowserRuntimeService {
       viewport: config.viewport || { width: 1280, height: 800 },
     })
 
-    this.instances.set(sessionId, { browser, context, page: undefined, headless: config.headless ?? true, persistent: false })
+    this.instances.set(sessionId, { browser, context, page: undefined, headless: config.headless ?? true, persistent: false, debugPort: this.debugPortFor(sessionId) ?? undefined })
   }
 
   /**
@@ -192,6 +207,45 @@ class BrowserRuntimeService {
       fs.mkdirSync(profilePath, { recursive: true })
     }
 
+    try {
+      await this.doLaunchPersistent(sessionId, profilePath, config)
+    } catch (e: any) {
+      // SPRINT-MEDIA-LOGIN-REALITY-FIX-01 — 孤儿实例自愈：
+      // profile 被残留 Chromium 占用（api-server 重启 Map 丢失 / 前端未关弹窗 / 崩溃残留）→
+      // 清理占用进程 + 锁文件后重试一次，禁止直接把 400 抛给用户
+      if (/existing browser session|already in use|profile/i.test(e.message || '')) {
+        console.warn(`[BrowserRuntime] profile 被占用（孤儿实例）→ 自愈清理: ${String(e.message).slice(0, 140)}`)
+        this.killOrphanChrome(profilePath)
+        await this.doLaunchPersistent(sessionId, profilePath, config)
+      } else {
+        throw e
+      }
+    }
+  }
+
+  /**
+   * LOGIN-REALITY-FIX-01 — 杀掉占用指定 profile 的残留 Chromium 进程 + 清理锁文件
+   * 只杀 cmdline 精确包含该 profilePath 的进程，绝不误伤其他账号浏览器
+   */
+  private killOrphanChrome(profilePath: string): void {
+    try {
+      const { execSync } = require('node:child_process') as typeof import('node:child_process')
+      const out = execSync(`ps -eo pid,args | grep -F "${profilePath}" | grep -v grep`, { encoding: 'utf8' })
+      const pids = out.split('\n').map(l => l.trim().split(/\s+/)[0]).filter(Boolean)
+      for (const pid of pids) {
+        try { execSync(`kill -9 ${pid}`) } catch {}
+      }
+      for (const f of ['SingletonLock', 'SingletonSocket', 'SingletonCookie', 'Singleton']) {
+        try { fs.rmSync(path.join(profilePath, f), { force: true }) } catch {}
+      }
+      console.warn(`[BrowserRuntime] 已清理孤儿实例 ${pids.length} 个（${profilePath}）+ 锁文件`)
+    } catch (e: any) {
+      console.warn(`[BrowserRuntime] 孤儿实例清理失败: ${e.message}`)
+    }
+  }
+
+  /** 实际启动持久化浏览器（launchPersistent 的重试单元） */
+  private async doLaunchPersistent(sessionId: string, profilePath: string, config: BrowserConfig = {}): Promise<void> {
     const context = await chromium.launchPersistentContext(profilePath, {
       executablePath: CHROME_PATH,
       headless: config.headless ?? true,
@@ -204,6 +258,9 @@ class BrowserRuntimeService {
       locale: 'zh-CN',
       // TASK03.2 反风控：隐藏自动化特征（抖音身份验证层会检测 webdriver/自动化标志并杀页面）
       ignoreDefaultArgs: ['--enable-automation'],
+      // SPRINT-MEDIA-LOGIN-REALITY-FIX-01：BROWSER_CDP_PORT 环境变量控制调试端口
+      // （仅诊断时开启：外部 playwright connectOverCDP 可监听登录轮询 XHR / cookie 写入）
+      // 2026-08-03：改为按实例分配端口（debugPortFor），多个渠道账号浏览器共存不抢 18801
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -212,6 +269,7 @@ class BrowserRuntimeService {
         '--disable-infobars',
         '--no-first-run',
         '--no-default-browser-check',
+        ...(process.env.BROWSER_CDP_PORT ? [`--remote-debugging-port=${this.debugPortFor(sessionId)}`] : []),
       ],
     })
 
@@ -252,7 +310,7 @@ class BrowserRuntimeService {
       } catch {}
     })
 
-    this.instances.set(sessionId, { context, page: undefined, headless: config.headless ?? true, persistent: true, profilePath })
+    this.instances.set(sessionId, { context, page: undefined, headless: config.headless ?? true, persistent: true, profilePath, debugPort: this.debugPortFor(sessionId) ?? undefined })
   }
 
   /**
@@ -277,16 +335,20 @@ class BrowserRuntimeService {
   /**
    * TASK03.1.5 — 获取或创建持久化实例（主路径）
    * 复用规则：同 sessionId 已存在且同为 persistent 同 profile → 直接复用（保留登录态与页面）
+   * LOGIN-REALITY-FIX-01 — 复用前存活探测：浏览器被外部 kill（孤儿清理/手动杀进程）后
+   *   Map 引用已死，必须 close 重建，否则 navigate 炸 Target closed
    */
   async getOrCreatePersistent(sessionId: string, profilePath: string, config: BrowserConfig = {}): Promise<BrowserInstance> {
     let instance = this.instances.get(sessionId)
     if (instance) {
+      const alive = await this.isAlive(instance)
       const sameProfile = instance.persistent && instance.profilePath === profilePath
       const headlessOk = config.headless === undefined || config.headless === instance.headless
-      if (sameProfile && headlessOk) {
+      if (alive && sameProfile && headlessOk) {
         return instance
       }
-      // 模式/profile 变化 → 重启
+      // 浏览器已死 / 模式或 profile 变化 → 重启
+      if (!alive) console.warn(`[BrowserRuntime] 复用检测到实例已死（${sessionId}）→ 重建`)
       await this.close(sessionId)
       instance = undefined
     }
@@ -295,6 +357,21 @@ class BrowserRuntimeService {
       instance = this.instances.get(sessionId)!
     }
     return instance
+  }
+
+  /** LOGIN-REALITY-FIX-01 — 实例存活探测（不抛异常） */
+  private async isAlive(instance: BrowserInstance): Promise<boolean> {
+    try {
+      if (instance.persistent) {
+        // persistent 模式只持有 context：浏览器死后 pages() 抛 Target closed
+        const pages = instance.context.pages()
+        void pages
+        return true
+      }
+      return !!instance.browser?.isConnected()
+    } catch {
+      return false
+    }
   }
 
   /**
@@ -312,13 +389,25 @@ class BrowserRuntimeService {
         instance = await this.getOrCreate(sessionId, config)
       }
       
-      // 如果有已存在的页面，先关闭
-      if (instance.page) {
-        try { await instance.page.close() } catch {}
+      // XHS-LOGIN-FIX-2026-08-03 — 复用存活页面导航，禁止 close+newPage：
+      // 每次 navigate 重建页面会杀掉登录页上的二维码轮询 JS，扫码确认结果直接丢失
+      // （掌柜实测：扫码确认后 web_session 未更新、creator 401，登录永不生效）。
+      // 策略：存活且非 about:blank → 直接 goto 复用；SPA about:blank 中间态等 1.5s；真死页才重建。
+      let page = instance.page && !instance.page.isClosed() ? instance.page : null
+      if (page && page.url() === 'about:blank') {
+        try {
+          await page.waitForLoadState('domcontentloaded', { timeout: 1500 }).catch(() => {})
+          await page.waitForTimeout(1500)
+        } catch {}
+        if (page.url() === 'about:blank') page = null
       }
-      
-      const page = await instance.context.newPage()
-      instance.page = page
+      if (!page) {
+        if (instance.page) {
+          try { await instance.page.close() } catch {}
+        }
+        page = await instance.context.newPage()
+        instance.page = page
+      }
 
       await page.goto(url, {
         waitUntil: 'domcontentloaded',
@@ -420,6 +509,17 @@ class BrowserRuntimeService {
         await page.waitForLoadState('domcontentloaded', { timeout: 1500 }).catch(() => {})
         await page.waitForTimeout(1500)
       } catch {}
+      // LOGIN-REALITY-FIX-01 — about:blank 仍为空 → 换 context 其他存活页面：
+      // 视频号 SPA 跳转后主页面对象可能废弃（login.html → /platform/），探针若继续跑在
+      // about:blank 上会永远 miss（authenticated 判定失效 → confirm 400）。
+      if (page.url() === 'about:blank') {
+        const alive = context.pages().find((p: any) => !p.isClosed() && p.url() !== 'about:blank')
+        if (alive) {
+          console.log(`[BrowserRuntime] withPage about:blank 废弃，切换到存活页 ${alive.url().slice(0, 60)}`)
+          page = alive
+          if (inst) inst.page = alive
+        }
+      }
     }
     if (!page || page.isClosed()) {
       // 真死页 → 重建（优先从 context 现有存活页面里挑，其次新建）

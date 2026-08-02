@@ -270,6 +270,17 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const wsIds = wsList.map((w: any) => w.id)
       if (!wsIds.length) return reply.send({ code: 0, data: [] })
 
+      // AI-EMPLOYEE-OPERATION-REALITY-01 Task04 — 预取各账号最新指标快照（owner-view 运营状态）
+      const accIds = wsList.map((w: any) => w.channelAccountId)
+      const latestSnaps = await prisma.channelMetricSnapshot.findMany({
+        where: { channelAccountId: { in: accIds } },
+        orderBy: { collectedAt: 'desc' },
+      })
+      const latestMetricMap = new Map<string, any>()
+      for (const s of latestSnaps) {
+        if (!latestMetricMap.has(s.channelAccountId)) latestMetricMap.set(s.channelAccountId, s)
+      }
+
       const bindings = await prisma.agentChannelBinding.findMany({
         where: { status: 'active', browserWorkspaceId: { in: wsIds } },
         orderBy: { updatedAt: 'desc' },
@@ -332,6 +343,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
           if (account.connectionStatus === ChannelConnectionStatus.WAITING_LOGIN) return 'waiting_scan'
           if (account.connectionStatus === ChannelConnectionStatus.VERIFYING) return 'verifying'
           if (account.connectionStatus === ChannelConnectionStatus.AUTHENTICATED) return 'authenticated'
+          if (account.connectionStatus === ChannelConnectionStatus.IDENTITY_VERIFIED) return 'authenticated'
           if (account.connectionStatus === ChannelConnectionStatus.EXPIRED) return 'expired'
           if (account.connectionStatus === ChannelConnectionStatus.ERROR) return 'error'
           return 'pending'
@@ -357,6 +369,29 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
             reason: identityReason,
             verifiedBy: accMeta.identitySnapshot?.via || (accMeta.lastVerifiedAt ? 'manual_bind' : null),
           },
+          // AI-EMPLOYEE-OPERATION-REALITY-01 Task04 — 运营状态（最新真实指标快照）：
+          //   无快照/失效 → status=unavailable + reason（禁止 0 冒充）；
+          //   追溯链：ChannelAccount → BrowserWorkspace → Runtime → Platform（snapshot 含 workspaceId/agentId/source）
+          metrics: (() => {
+            const snap = latestMetricMap.get(account.id)
+            if (!snap) return { status: 'unavailable', unavailableReason: '暂无指标采集（登录后 Alice 可读取）', collectedAt: null, metrics: null }
+            return {
+              status: snap.status,
+              unavailableReason: snap.unavailableReason,
+              collectedAt: snap.collectedAt ? new Date(snap.collectedAt).toISOString() : null,
+              source: snap.source,
+              workspaceId: snap.workspaceId,
+              agentId: snap.agentId,
+              metrics: {
+                followerCount: snap.followerCount,
+                likeCount: snap.likeCount,
+                videoCount: snap.videoCount,
+                recentViews: snap.recentViews,
+                recentFollowerDelta: snap.recentFollowerDelta,
+                interactionRate: snap.interactionRate,
+              },
+            }
+          })(),
           agent: profile ? { id: profile.id, name: profile.name, role: profile.role, agentType: profile.agentType, businessType: profile.businessType } : null,
           lastOperation: trustedTraj[0] ? { action: trustedTraj[0].action, description: trustedTraj[0].description, createdAt: trustedTraj[0].createdAt } : null,
         })

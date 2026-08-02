@@ -21,6 +21,7 @@ import { agentChannelBindingService } from './agent-channel-binding.service.js'
 import { channelBrowserSessionService } from './channel-browser-session.service.js'
 import { browserRuntime } from '../media/browser-runtime.service.js'
 import { identityProbeRegistry } from '../../enterprise/channel/identity-probe.js'
+import { CHANNEL_META } from '../../enterprise/channel/adapters/browser-channel.meta.js'
 import {
   ChannelConnectionStatus,
   isChannelConnected,
@@ -318,7 +319,10 @@ export class ChannelService {
       return {
         ...result,
         status: 'awaiting_confirmation',
-        message: '已检测到抖音账号登录，请确认绑定后完成连接',
+        // KUAISHOU-FIX-01 — 文案平台泛化（原来写死「抖音」，快手/小红书会误导）
+        message: result.accountName
+          ? `已检测到「${result.accountName}」账号登录，请确认绑定后完成连接`
+          : '已检测到平台账号登录，请确认绑定后完成连接',
       }
     } else if (result.status === 'waiting_login') {
       // SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase E — 登录态失效：connected → expired（不得一直显示在线）
@@ -352,33 +356,103 @@ export class ChannelService {
     }
     const result = await adapter.waitForLogin(account.id, timeoutMs)
     if (result.status === 'connected') {
-      // 已确认账号 → 维持登录（G2 重启后仍 connected）
-      const alreadyBound = isChannelConnected(account.connectionStatus) && !!account.externalAccountId
-      if (alreadyBound) {
-        // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（externalAccountId + accountName + avatarUrl）
-        await this.updateChannelIdentity(account.id, {
-          externalAccountId: result.externalAccountId ?? account.externalAccountId,
-          accountName: result.accountName ?? account.accountName ?? account.channelName,
-          avatarUrl: result.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
-          via: 'wait_login_keepalive',
-          connectionStatus: ChannelConnectionStatus.CONNECTED,
-          connectedAt: account.connectedAt ?? new Date(),
-        })
-        try {
-          const session = await channelBrowserSessionService.findByAccount(account.id)
-          if (session) {
-            await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
-          }
-        } catch (e: any) {
-          console.warn(`[ChannelService] 浏览器会话健康检查记录失败: ${e.message}`)
-        }
-        return { ...result, status: 'connected' }
+      // ═══ LOGIN-REALITY-FIX-01 Task01 — 身份闭环：探针成功 ≠ 连接成功 ═══
+      // 掌柜冻结模型：probe.loginSuccess → extractIdentity → updateChannelIdentity
+      //              → externalAccountId 非空才允许 CONNECTED → return success
+      // 任何一步失败：返回明确状态（AUTHENTICATED / IDENTITY_VERIFIED），绝不假装连接。
+      const sid = adapter.sessionIdFor ? adapter.sessionIdFor(account.id) : `${account.channelType}:${account.id}`
+
+      // 1) 身份提取：优先用探针结果；缺失时主动复核一次
+      let identity: {
+        accountId: string | null | undefined
+        accountName: string | null | undefined
+        avatar: string | null | undefined
+        permissions?: string[]
+      } = {
+        accountId: result.externalAccountId,
+        accountName: result.accountName,
+        avatar: result.avatar,
+        permissions: result.permissions,
       }
-      // 首次登录 → 等待人工确认（不写 DB，身份暂存返回）
+      if (!identity.accountId) {
+        const probe = identityProbeRegistry.get(account.channelType)
+        if (probe) {
+          try {
+            const p = await probe.probe(sid)
+            if (p.authenticated) {
+              identity = {
+                accountId: p.accountId,
+                accountName: p.accountName,
+                avatar: p.avatar,
+                permissions: p.permissions,
+              }
+            }
+          } catch (e: any) {
+            console.warn(`[ChannelService] waitChannelLogin 探针复核异常: ${e.message}`)
+          }
+        }
+      }
+
+      // 2) 身份必须完整：externalAccountId 非空才允许推进（掌柜：身份才是连接证明）
+      if (!identity.accountId) {
+        return {
+          ...result,
+          status: 'AUTHENTICATED',
+          message: '登录成功，但账号身份确认失败（未提取到账号 ID），请重新扫码或手动确认绑定',
+        }
+      }
+
+      // 3) 身份锚定 → IDENTITY_VERIFIED（SSOT 写入：externalAccountId + accountName + avatarUrl）
+      await this.updateChannelIdentity(account.id, {
+        externalAccountId: identity.accountId,
+        accountName: identity.accountName ?? account.accountName ?? account.channelName,
+        avatarUrl: identity.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
+        via: 'wait_login_identity',
+        connectionStatus: ChannelConnectionStatus.IDENTITY_VERIFIED,
+        connectedAt: account.connectedAt ?? new Date(),
+      })
+
+      // 4) 凭证落库（adapter 内部探针复核 + cookie 加密保存）→ 成功才 CONNECTED
+      try {
+        const cred = await adapter.refreshCredential(account.id)
+        if (!cred.ok) {
+          // 身份已锚定但凭证保存失败：不假装连接，返回明确中间态
+          return {
+            ...result,
+            status: 'IDENTITY_VERIFIED',
+            accountName: identity.accountName ?? account.channelName,
+            externalAccountId: identity.accountId,
+            message: `账号身份已确认，但登录凭证保存失败：${cred.error || '未知错误'}，请确认绑定重试`,
+          }
+        }
+        await prisma.enterpriseChannelAccount.update({
+          where: { id: account.id },
+          data: { connectionStatus: ChannelConnectionStatus.CONNECTED, connectedAt: account.connectedAt ?? new Date() },
+        })
+      } catch (e: any) {
+        return {
+          ...result,
+          status: 'IDENTITY_VERIFIED',
+          accountName: identity.accountName ?? account.channelName,
+          externalAccountId: identity.accountId,
+          message: `账号身份已确认，但登录凭证保存异常：${e.message}，请确认绑定重试`,
+        }
+      }
+
+      // 5) 会话健康记录（仅全闭环成功）
+      try {
+        const session = await channelBrowserSessionService.findByAccount(account.id)
+        if (session) {
+          await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
+        }
+      } catch (e: any) {
+        console.warn(`[ChannelService] 浏览器会话健康检查记录失败: ${e.message}`)
+      }
       return {
         ...result,
-        status: 'awaiting_confirmation',
-        message: '已检测到抖音账号登录，请确认绑定后完成连接',
+        status: 'connected',
+        accountName: identity.accountName ?? account.channelName,
+        externalAccountId: identity.accountId,
       }
     }
     if (result.status === 'awaiting_confirmation') {
@@ -406,23 +480,74 @@ export class ChannelService {
     const adapter = this.resolveAdapter(account.channelType)
     const sid = adapter.sessionIdFor ? adapter.sessionIdFor(account.id) : `${account.channelType}:${account.id}`
 
+    // LOGIN-REALITY-FIX-01 — 确认绑定前确保实例存在（restart 后 Map 丢失时从 profile 重建）：
+    // ⚠️ 不 navigate 回 loginUrl：视频号无 cookie 自动恢复（依赖本机微信 fastLogin），
+    //    强制导航只会把已登录的工作台现场导航回登录页；登录态由探针判定，miss 则明确提示重新扫码。
+    try {
+      const profilePath = browserRuntime.getProfilePath(account.channelType, account.id)
+      await browserRuntime.getOrCreatePersistent(sid, profilePath, { headless: false })
+      // WECHAT-CHANNELS-FIX-01 — 重启后浏览器新起默认 about:blank，探针看不到工作台 → confirm 必 400：
+      // 实例就绪后若当前页面不在工作台（about:blank/登录页），导航到 workspaceUrl（非 loginUrl）——
+      // cookie 持久化有效则直接进工作台（实测 wxuin/sessionid 够用），无效才跳登录页（探针 miss 合理）
+      const meta = CHANNEL_META[account.channelType as keyof typeof CHANNEL_META] as any
+      const wsUrl = meta?.workspaceUrl
+      if (wsUrl) {
+        await browserRuntime.withPage(sid, async (page: any) => {
+          const url = page.url()
+          const onWorkspace = (meta.identityRules?.urlFragments || []).some((f: string) => url.includes(f))
+          if (!onWorkspace && (url === 'about:blank' || /\/login|login\.html|passport/i.test(url))) {
+            await page.goto(wsUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {})
+            await page.waitForTimeout(2000 + Math.random() * 1500)
+          }
+        })
+      }
+    } catch (e: any) {
+      console.warn(`[ChannelService] confirmBinding 实例恢复异常（继续探针）: ${e.message}`)
+    }
+
     // 1. 探针复核：登录态是否仍在 + 身份完整
     const probe = identityProbeRegistry.get(account.channelType)
     if (!probe) throw new Error(`渠道 ${account.channelType} 无身份探针`)
-    const identity = await probe.probe(sid)
+    let identity = await probe.probe(sid)
+    // LOGIN-REALITY-FIX-01 — 登录跳转竞态容错：
+    // 视频号扫码成功后需手机确认 → 页面才从 login.html 跳转工作台（1~5s）
+    // 掌柜点「确认绑定」时页面可能还在跳转中 → 探针误判未登录 → 400
+    // 修复：首次 miss 后退避重试（2s/4s/6s），页面跳转完成后即可命中，不再把竞态抛给用户
+    if (!identity.authenticated) {
+      for (let i = 1; i <= 3; i++) {
+        await new Promise(r => setTimeout(r, 2000 * i))
+        console.warn(`[ChannelService] confirmBinding 探针复核重试 ${i}/3（${account.channelType} 页面跳转中）`)
+        identity = await probe.probe(sid)
+        if (identity.authenticated) break
+      }
+    }
     if (!identity.authenticated) {
       throw new Error('未检测到有效登录态，请重新扫码登录')
     }
 
     // 2. 回写账号身份（G1：externalAccountId + accountName + avatarUrl）
     // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（身份锚点落 SSOT 列，metadata 只存新鲜度/权限）
-    // REALITY-HARDENING-01 Task02 — 探针复核通过 = 平台确认真人 → AUTHENTICATED（凭证落库后才 CONNECTED）
+    // LOGIN-REALITY-FIX-01 Task03 — 掌柜冻结模型：AUTHENTICATED（浏览器登录）→ IDENTITY_VERIFIED（身份锚定）→ CONNECTED（凭证落库）
+    //   身份是连接证明：externalAccountId 非空才允许推进（绝不写 NULL 身份冒充连接）
+    const finalExternalId = identity.accountId ?? account.externalAccountId
+    if (!finalExternalId) {
+      const err: any = new Error('登录成功，但账号身份确认失败（未提取到账号 ID），请重新扫码')
+      err.code = 'identity_missing'
+      throw err
+    }
+    // LOGIN-REALITY-FIX-01 — 假 ID 防护：ensure-account 占位符（platform-时间戳）不是真实身份，
+    // 探针未提取到真实 ID 时禁止 fallback 保留假 ID（掌柜：身份是连接证明，假 ID 等于未绑定）
+    if (!identity.accountId && /^[a-z_]+-\d{10,}$/.test(finalExternalId)) {
+      const err: any = new Error('登录成功，但未提取到真实账号 ID（当前为占位身份），请重新扫码或稍后重试')
+      err.code = 'identity_missing'
+      throw err
+    }
     await this.updateChannelIdentity(account.id, {
-      externalAccountId: identity.accountId ?? account.externalAccountId,
+      externalAccountId: finalExternalId,
       accountName: identity.accountName ?? account.accountName ?? account.channelName,
       avatarUrl: identity.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
       via: 'confirm_binding',
-      connectionStatus: ChannelConnectionStatus.AUTHENTICATED,
+      connectionStatus: ChannelConnectionStatus.IDENTITY_VERIFIED,
       connectedAt: new Date(),
     })
     // 权限/绑定元数据单独维护（非身份数据）
@@ -477,20 +602,24 @@ export class ChannelService {
     }
 
     // 3. 保存 cookie 凭证（登录成功即续期落库）
-    // REALITY-HARDENING-01 Task01 — Reality Gate：adapter.refreshCredential 内部探针复核，
-    // 未登录/无身份一律拒绝；凭证落库成功 = 身份+凭证就绪 → CONNECTED
+    // LOGIN-REALITY-FIX-01 Task03 — 凭证不是连接证明，身份才是：
+    //   身份已锚定（IDENTITY_VERIFIED），凭证落库成功才 CONNECTED；失败必须显式返回失败，绝不假装连接
     try {
       const result = await adapter.refreshCredential(account.id)
       if (!result.ok) {
-        console.warn(`[ChannelService] 确认绑定凭证保存失败: ${result.error}`)
-      } else {
-        await prisma.enterpriseChannelAccount.update({
-          where: { id: account.id },
-          data: { connectionStatus: ChannelConnectionStatus.CONNECTED },
-        })
+        const err: any = new Error(`账号身份已确认，但登录凭证保存失败：${result.error || '未知错误'}，请重试`)
+        err.code = 'credential_failed'
+        throw err
       }
+      await prisma.enterpriseChannelAccount.update({
+        where: { id: account.id },
+        data: { connectionStatus: ChannelConnectionStatus.CONNECTED },
+      })
     } catch (e: any) {
-      console.warn(`[ChannelService] 确认绑定凭证保存异常: ${e.message}`)
+      if (e.code === 'credential_failed') throw e
+      const err: any = new Error(`账号身份已确认，但登录凭证保存异常：${e.message}`)
+      err.code = 'credential_failed'
+      throw err
     }
 
     // 4. 浏览器会话健康记录
@@ -623,7 +752,7 @@ export class ChannelService {
 
     // account 态：DB 绑定状态（G3 验收核心）
     // REALITY-HARDENING-01 — 仅 CONNECTED + externalAccountId 才是可信在线；
-    // WAITING_LOGIN/VERIFYING/AUTHENTICATED → connecting（流程中，绝不显示已连接）
+    // WAITING_LOGIN/VERIFYING/AUTHENTICATED/IDENTITY_VERIFIED → connecting（流程中，绝不显示已连接）
     const accountState = (() => {
       if (isChannelConnected(account.connectionStatus) && account.externalAccountId) return 'connected'
       if (account.connectionStatus === ChannelConnectionStatus.EXPIRED) return 'expired'
@@ -631,6 +760,7 @@ export class ChannelService {
         ChannelConnectionStatus.WAITING_LOGIN,
         ChannelConnectionStatus.VERIFYING,
         ChannelConnectionStatus.AUTHENTICATED,
+        ChannelConnectionStatus.IDENTITY_VERIFIED,
       ].includes(account.connectionStatus as any)) return 'connecting'
       return 'none'
     })()

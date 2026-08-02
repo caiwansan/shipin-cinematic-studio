@@ -9710,3 +9710,41 @@ model AgentWorkflowTemplate {
   @@index([businessType, status])
   @@map("agent_workflow_template")
 }
+
+// ============================================================
+// SPRINT-MEDIA-AI-EMPLOYEE-OPERATION-REALITY-01 Task02 — ChannelMetricSnapshot
+// 渠道指标快照（真实数据持久化，AI 员工读取指标的落点）
+// 纪律（掌柜冻结）：
+// - 无数据 = null，禁止用 0 冒充（无数据返回 unavailable + reason）
+// - 数据来源唯一：BrowserWorkspace Runtime → PlatformMetricsExtractor → 本表
+// - 追溯链：ChannelAccount → BrowserWorkspace → Runtime → Platform（source/rawData 记录）
+// - status: available（抓到真实指标）/ unavailable（登录失效/页面异常，带 reason）
+model ChannelMetricSnapshot {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId            String   @map("tenant_id") @db.Text
+  organizationId      String?  @map("organization_id") @db.Text
+  channelAccountId    String   @map("channel_account_id") @db.Text // EnterpriseChannelAccount.id
+  workspaceId         String?  @map("workspace_id") @db.Text       // BrowserWorkspace.id（数字电脑）
+  agentId             String?  @map("agent_id") @db.Text           // EnterpriseAgentInstance.id（AI 员工）
+  platform            String   @map("platform") @db.Text           // douyin / xiaohongshu ...
+  // 核心指标（可空！无数据不得返回 0）
+  followerCount       Int?     @map("follower_count")
+  likeCount           Int?     @map("like_count")
+  videoCount          Int?     @map("video_count")
+  totalViews          Int?     @map("total_views")
+  recentViews         Int?     @map("recent_views")             // 近7天播放
+  recentFollowerDelta Int?     @map("recent_follower_delta")    // 近7天涨粉
+  interactionRate     Float?   @map("interaction_rate")         // 互动率（百分比数值，如 3.2 = 3.2%）
+  // 状态与来源
+  status              String   @default("available") @map("status") // available / unavailable
+  unavailableReason   String?  @map("unavailable_reason")           // 登录失效/页面异常/未绑定
+  source              String?  @map("source")                        // creator-center / public-profile
+  collectedAt         DateTime @map("collected_at")
+  rawData             Json?    @default("{}") @map("raw_data")       // 追溯：pageUrl/页面片段/提取器版本
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([channelAccountId, collectedAt])
+  @@index([tenantId])
+  @@index([status])
+  @@map("channel_metric_snapshot")
+}

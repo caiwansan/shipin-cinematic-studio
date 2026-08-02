@@ -18,31 +18,51 @@ import { browserRuntime } from '../../../services/media/browser-runtime.service.
 const WORKBENCH_MARKERS = ['内容管理', '发布作品', '创作灵感', '作品管理', '数据概览', '创作者服务', '我的主页']
 /** 明确登录页营销文案（排除误判） */
 const LOGIN_PAGE_MARKERS = ['扫码登录', '扫一扫', '验证码登录', '密码登录', '我是创作者', '我是MCN机构']
+/** IDENTITY-V2 — 抖音安全验证页标记（身份验证/风控，区别于普通登录页） */
+const SECURITY_CHECK_MARKERS = ['身份验证', '为保障账号安全', '安全验证', '请完成验证', '人脸验证']
+const SECURITY_CHECK_URL_PATTERNS = [/\/verify|\/security|safe_verify|security_check/i]
 /** 抖音登录态核心 Cookie（信号 B） */
 const KEY_COOKIES = ['sessionid', 'sid_guard', 'uid_tt']
+
+/** IDENTITY-V2 — 抖音侧综合判定（与通用探针同一规则，独立实现避免循环依赖） */
+function judgeDouyinV2(signals: {
+  page: boolean
+  cookie: boolean
+  identity: boolean
+  loginPage?: boolean
+}): { authenticated: boolean; credential: boolean } {
+  const credential = signals.cookie && !signals.loginPage
+  return { authenticated: credential && (signals.identity || signals.page), credential }
+}
 
 export class DouyinIdentityProbe implements ChannelIdentityProbe {
   readonly platform = 'douyin'
 
   async probe(sessionId: string): Promise<ChannelIdentity> {
-    const signals = { page: false, cookie: false, identity: false }
+    const signals = { page: false, cookie: false, identity: false, loginPage: false, securityCheck: false, credential: false }
     let accountName: string | undefined
     let accountId: string | undefined
     let avatar: string | undefined
 
-    // A 页面特征（创作者工作台菜单 ≥2）
+    // A 页面特征 + 登录页/安全验证页排除（单次 withPage）
     try {
-      signals.page = await browserRuntime.withPage(sessionId, async (page) => {
+      const pageRes = await browserRuntime.withPage(sessionId, async (page) => {
         // TASK03.2.2-FIX — 页面跳转/恢复期间等待稳定（扫码成功跳转 2-4s）
         await page.waitForTimeout(2000 + Math.random() * 1000)
-        if (page.isClosed()) return false
+        if (page.isClosed()) return null
         const url = page.url()
-        if (/passport|login|qr|sso/i.test(url)) return false
         const bodyText = await page.locator('body').innerText().catch(() => '')
-        if (LOGIN_PAGE_MARKERS.some(m => bodyText.includes(m))) return false
+        const loginPage = /passport|login|qr|sso/i.test(url) || LOGIN_PAGE_MARKERS.some(m => bodyText.includes(m))
+        const securityCheck = SECURITY_CHECK_URL_PATTERNS.some(re => re.test(url)) || SECURITY_CHECK_MARKERS.some(m => bodyText.includes(m))
+        if (loginPage) return { loginPage, securityCheck, page: false }
         const hit = WORKBENCH_MARKERS.filter(m => bodyText.includes(m)).length
-        return hit >= 2
+        return { loginPage, securityCheck, page: hit >= 2 }
       })
+      if (pageRes) {
+        signals.page = pageRes.page
+        signals.loginPage = pageRes.loginPage
+        signals.securityCheck = pageRes.securityCheck
+      }
     } catch (e: any) {
       console.warn(`[DouyinIdentityProbe] 页面特征探测异常: ${e.message}`)
     }
@@ -131,11 +151,9 @@ export class DouyinIdentityProbe implements ChannelIdentityProbe {
       }
     }
 
-    // 综合判定：页面特征或身份提取任一命中即认证（真实登录态）
-    // ⚠️ 2026-08-02 修正：仅 cookie 信号（sessionid/sid_guard 残留）不算登录成功——
-    //    抖音 session 失效时 cookie 仍在但页面已回登录页，误判 authenticated 会导致
-    //    前端卡「请确认绑定」而实际已掉线（掌柜反馈：离开页面又没了）
-    const authenticated = signals.page || signals.identity
+    // IDENTITY-V2 — 三层信号综合判定（凭证 + 身份/工作台双信号）
+    const { authenticated, credential } = judgeDouyinV2(signals)
+    signals.credential = credential
 
     return {
       authenticated,

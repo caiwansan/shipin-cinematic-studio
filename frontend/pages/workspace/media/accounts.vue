@@ -58,6 +58,22 @@
             <div v-else class="ac-owner-row"><span class="k">状态</span><span class="v">{{ workerStatusDetail(ov) }}</span></div>
             <div v-if="ov.identity?.lastVerifiedAt" class="ac-owner-row"><span class="k">最近验证</span><span class="v">{{ timeAgo(ov.identity.lastVerifiedAt) }}<span class="ac-owner-verify-by">{{ verifiedByLabel(ov) }}</span></span></div>
             <div class="ac-owner-row"><span class="k">最近动作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '等待任务' }}</span></div>
+            <!-- AI-EMPLOYEE-OPERATION-REALITY-01 Task04 — 今日运营状态（真实指标快照，无数据不显示0） -->
+            <div v-if="ov.metrics" class="ac-owner-row ac-owner-metrics">
+              <span class="k">今日状态</span>
+              <span class="v">
+                <template v-if="ov.metrics.status === 'available' && ov.metrics.metrics">
+                  <span class="ac-metric-line">粉丝 <b>{{ fmtCount(ov.metrics.metrics.followerCount) }}</b></span>
+                  <span v-if="ov.metrics.metrics.videoCount != null" class="ac-metric-line">作品 <b>{{ fmtCount(ov.metrics.metrics.videoCount) }}</b></span>
+                  <span v-if="ov.metrics.metrics.recentViews != null" class="ac-metric-line">近7天播放 <b>{{ fmtCount(ov.metrics.metrics.recentViews) }}</b></span>
+                  <span v-if="ov.metrics.metrics.interactionRate != null" class="ac-metric-line">互动率 <b>{{ ov.metrics.metrics.interactionRate }}%</b></span>
+                  <span class="ac-metric-time">采集于 {{ timeAgo(ov.metrics.collectedAt) }}</span>
+                </template>
+                <template v-else>
+                  <span class="ac-metric-unavailable">暂无数据{{ ov.metrics.unavailableReason ? ' · ' + ov.metrics.unavailableReason : '' }}</span>
+                </template>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -613,55 +629,129 @@ async function onQrImageError() {
   }
 }
 
+// LOGIN-REALITY-FIX-01 Task02 — Reality API 复核：登录成功 = 浏览器真实登录 + DB 身份闭环，两者缺一不可
+// 禁止 accountName 存在 = 登录成功（那只是探针实时状态，刷新后即丢）
+async function fetchReality() {
+  try {
+    const r = await api(`/api/enterprise/channels/${accountId.value}/reality`)
+    return r.data || null
+  } catch (e: any) {
+    console.warn('[finishConnect] reality 复核失败:', e?.message)
+    return null
+  }
+}
+
+// 连接成功展示（绿色）：reality.identity.verified + account.connected 双确认
+function showConnected(name: string, avatar: string, employeeName?: string) {
+  loginStage.value = 'connected'
+  statusMsg.value = employeeName
+    ? `账号已连接：${name} ✓ AI 员工「${employeeName}」可使用`
+    : `账号已连接：${name} ✓`
+  if (connectPlatform.value) {
+    connectPlatform.value.connected = true
+    connectPlatform.value.name = name
+    connectPlatform.value.boundName = name
+    connectPlatform.value.boundAvatar = avatar
+  }
+  $toast?.success?.(`${name}连接成功！`)
+  setTimeout(() => { connectModal.value = false }, 1800)
+}
+
+// 中间态展示（黄色）：账号已登录但身份闭环未完成，绝不宣称已连接
+function showConfirming(msg: string, name?: string, avatar?: string, externalId?: string) {
+  loginStage.value = 'awaiting_confirmation'
+  awaitingConfirm.value = true
+  if (name) detectedName.value = name
+  if (avatar) detectedAvatar.value = avatar
+  if (externalId) detectedAccountId.value = externalId
+  statusMsg.value = msg
+}
+
 async function finishConnect() {
   try {
-    // TASK03.2.1 — 登录成功闭环：wait-for-login 自动回写账号（connected + 身份 + 凭证）
+    // TASK03.2.1 — 登录成功闭环：wait-for-login 探针确认 + 身份提取 + 凭证落库
     const res = await api(`/api/enterprise/channels/runtime/${accountId.value}/wait-for-login`, { method: 'POST', body: {} })
     const d = res.data || {}
-    statusMsg.value = d.accountName
-      ? `账号已连接：${d.accountName} ✓`
-      : '连接成功！账号已点亮 ✓'
-    if (connectPlatform.value) {
-      connectPlatform.value.connected = true
-      if (d.accountName) connectPlatform.value.name = d.accountName
+    const st = String(d.status || '').toUpperCase()
+
+    if (st === 'CONNECTED') {
+      // 后端全闭环成功（身份+凭证+连接落库）→ Reality API 复核（掌柜：只认真实状态）
+      const reality = await fetchReality()
+      if (reality?.identity?.verified && reality?.account?.connected) {
+        const name = d.accountName || reality.identity.name || connectPlatform.value?.name || '平台账号'
+        showConnected(name, reality.identity.avatar || d.avatar || '', reality.employee?.binding?.name || undefined)
+      } else {
+        // 后端说成功但 Reality 复核未过（异常降级）→ 黄色，不假成功
+        showConfirming('账号已登录，正在确认身份...', d.accountName || '', d.avatar || '', d.externalAccountId || '')
+        $toast?.info?.('登录态已确认，正在完成账号身份绑定...')
+      }
+      return
     }
-    $toast?.success?.(`${connectPlatform.value?.name || '渠道'}连接成功！`)
-    setTimeout(() => { connectModal.value = false }, 1800)
+    if (st === 'IDENTITY_VERIFIED') {
+      // 身份已锚定但凭证未落库 → 展示确认卡片，用户确认后补完闭环（confirm-binding）
+      showConfirming(d.message || '账号身份已确认，请确认绑定完成连接', d.accountName || '', d.avatar || '', d.externalAccountId || '')
+      return
+    }
+    if (st === 'AUTHENTICATED') {
+      // 探针确认登录但身份提取失败 → 黄色明确提示，绝不假成功
+      loginStage.value = 'awaiting_confirmation'
+      statusMsg.value = d.message || '登录成功，但账号身份确认失败，请重新扫码或确认绑定'
+      $toast?.warn?.(statusMsg.value)
+      return
+    }
+    // awaiting_confirmation（探针检测到登录，等人工确认绑定）
+    showConfirming(d.message || '已检测到账号，请确认绑定', d.accountName || '', d.avatar || '', d.externalAccountId || '')
   } catch (e: any) {
-    // wait-for-login 超时（未扫）→ 回退：仅保存当前登录态
+    // wait-for-login 超时（未扫）→ 回退：仅保存当前登录态（仍走 Reality 复核，不假成功）
     try {
       await api(`/api/enterprise/channels/runtime/${accountId.value}/refresh-credential`, { method: 'POST', body: {} })
-      statusMsg.value = '连接成功！账号已点亮 ✓'
-      $toast?.success?.(`${connectPlatform.value?.name || '渠道'}连接成功！`)
-      setTimeout(() => { connectModal.value = false }, 1500)
+      const reality = await fetchReality()
+      if (reality?.identity?.verified && reality?.account?.connected) {
+        const name = reality.identity.name || connectPlatform.value?.name || '平台账号'
+        showConnected(name, reality.identity.avatar || '')
+      } else {
+        showConfirming('账号已登录，正在确认身份...')
+      }
     } catch (e2: any) {
       statusMsg.value = '登录态保存失败: ' + e2.message
+      $toast?.error?.(`登录态保存失败: ${e2.message}`)
     }
   }
 }
 
-// TASK03.2.2 — 人工授权确认：用户点「确认绑定」→ 探针复核 → 回写 DB + 保存凭证
+// TASK03.2.2 — 人工授权确认：用户点「确认绑定」→ 探针复核 → 身份锚定（IDENTITY_VERIFIED）→ 凭证落库 → CONNECTED
+// LOGIN-REALITY-FIX-01 Task03 — 后端失败显式报错不假成功；前端成功同样过 Reality 复核
 async function confirmBinding() {
   connecting.value = true
   statusMsg.value = '正在确认账号身份...'
   try {
     const res = await api(`/api/enterprise/channels/runtime/${accountId.value}/confirm-binding`, { method: 'POST', body: {} })
     const d = res.data || {}
+    const reality = await fetchReality()
+    if (!reality?.identity?.verified || !reality?.account?.connected) {
+      // 后端返回成功但 Reality 复核未过（异常）→ 黄色，不假成功
+      showConfirming('账号身份已确认，但连接状态未落库，请稍后刷新确认', d.accountName || '', d.avatar || '', d.externalAccountId || '')
+      $toast?.warn?.('身份已确认，但连接闭环未完成，请稍后重试')
+      return
+    }
+    const name = d.accountName || reality.identity.name || connectPlatform.value?.name || '平台账号'
+    const avatar = reality.identity.avatar || d.avatar || ''
     awaitingConfirm.value = false
     loggedIn.value = true
     loginStage.value = 'connected'
-    statusMsg.value = d.accountName
-      ? `已连接：${d.accountName}（L1 观察权限）✓`
-      : '连接成功！账号已点亮（L1 观察权限）✓'
+    statusMsg.value = reality.employee?.usable
+      ? `已连接：${name}（L1 观察权限）✓ AI 员工「${reality.employee.binding?.name}」可使用`
+      : `已连接：${name}（L1 观察权限）✓`
     if (connectPlatform.value) {
       connectPlatform.value.connected = true
-      connectPlatform.value.name = d.accountName || connectPlatform.value.name
-      connectPlatform.value.boundName = d.accountName || connectPlatform.value.name
-      connectPlatform.value.boundAvatar = d.avatar || ''
+      connectPlatform.value.name = name
+      connectPlatform.value.boundName = name
+      connectPlatform.value.boundAvatar = avatar
     }
-    $toast?.success?.(`${connectPlatform.value?.name || '渠道'}账号绑定成功！`)
+    $toast?.success?.(`${name}账号绑定成功！`)
     setTimeout(() => { connectModal.value = false }, 2000)
   } catch (e: any) {
+    // LOGIN-REALITY-FIX-01 — 后端明确错误（identity_missing / credential_failed）直接展示，禁止假成功
     statusMsg.value = '确认绑定失败: ' + e.message
     $toast?.error?.(`确认绑定失败: ${e.message}`)
   } finally {
@@ -846,6 +936,13 @@ function timeAgo(iso: string): string {
   const h = Math.floor(m / 60)
   if (h < 24) return h + ' 小时前'
   return Math.floor(h / 24) + ' 天前'
+}
+
+function fmtCount(n: number | null | undefined): string {
+  if (n == null) return '—'
+  if (n >= 100000000) return (n / 100000000).toFixed(1) + ' 亿'
+  if (n >= 10000) return (n / 10000).toFixed(1) + ' 万'
+  return n.toLocaleString()
 }
 
 onMounted(async () => {
@@ -1047,6 +1144,13 @@ function onClick(p: any) {
 .ac-owner-warn .v { color: #b45309; display: flex; flex-direction: column; gap: 2px; }
 .ac-owner-warn-reason { font-size: 11px; color: #d97706; opacity: .85; }
 .ac-owner-verify-by { font-size: 10px; color: #94a3b8; margin-left: 4px; }
+
+/* AI-EMPLOYEE-OPERATION-REALITY-01 Task04 — 今日运营状态（真实指标，无数据不显示0） */
+.ac-owner-metrics .v { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ac-metric-line { font-size: 12px; color: #374151; white-space: nowrap; }
+.ac-metric-line b { color: #111827; font-weight: 600; }
+.ac-metric-time { font-size: 10px; color: #94a3b8; }
+.ac-metric-unavailable { font-size: 12px; color: #94a3b8; }
 
 /* ═══ 分类 Tabs ═══ */
 .ac-tabs {

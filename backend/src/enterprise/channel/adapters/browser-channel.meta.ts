@@ -66,8 +66,24 @@ export interface ChannelPlatformDefinition {
     markers: string[]
     /** 登录页标记（命中 → 明确未登录；优先于 markers 判断） */
     loginPageMarkers: string[]
+    /** IDENTITY-V2-HARDENING-01 — 安全验证页标记（命中 → 非普通登录页，是平台安全验证：
+     *  身份验证/风控/刷脸/短信确认。区别于登录页：用户可能已登录，只是被要求二次验证。
+     *  供 SECURITY_CHECK / NEEDS_REAUTH 状态判定，不直接算未登录） */
+    securityCheckMarkers?: string[]
+    /** 安全验证页 URL 正则（如抖音 /verify、安全验证路径） */
+    securityCheckUrlPatterns?: RegExp[]
     /** 身份提取规则（userId/nickname/avatar/accountType） */
     extractionRules: ExtractionRule[]
+    /** network 捕获（SPRINT-MEDIA-KUAISHOU-FIX-01）：页面 body 无 UID 明文时，
+     *  刷新页面监听内部 API 响应提取官方身份（快手 cp.kuaishou.com 需 __NS_sig3 签名，
+     *  探针无法直接 fetch；监听页面自身发起的请求最可靠）。
+     *  userApis: URL 片段白名单；xxxKeys: 响应内字段名（递归查找） */
+    networkApis?: {
+      userApis: string[]
+      userIdKeys: string[]
+      nicknameKeys: string[]
+      avatarKeys?: string[]
+    }
   }
   /** 登录入口确认（SPRINT-MEDIA-LOGIN-REALITY-FIX-01 Task03/04）：
    *  打开 loginUrl 后可能落到游客首页/普通用户端（如 www.xiaohongshu.com、www.kuaishou.com），
@@ -112,6 +128,8 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
       urlFragments: ['creator.douyin.com/creator-micro'],
       markers: ['创作者中心', '作品管理', '内容管理', '数据概览', '创作灵感'],
       loginPageMarkers: ['扫码登录', '验证码登录', '密码登录'],
+      securityCheckMarkers: ['身份验证', '为保障账号安全', '安全验证', '请完成验证', '人脸验证'],
+      securityCheckUrlPatterns: [/\/verify|\/security|safe_verify|security_check/i],
       extractionRules: [
         { field: 'nickname', method: 'regex', pattern: /抖音号[：:]\s*([0-9A-Za-z_]{4,})/ },
         { field: 'userId', method: 'regex', pattern: /抖音号[：:]\s*([0-9A-Za-z_]{4,})/ },
@@ -150,15 +168,26 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
       excludeUrlPatterns: [/v\.kuaishou\.com\/profile/, /www\.kuaishou\.com\/profile/, /v\.kuaishou\.com\/u\//],
       markers: ['作品管理', '数据中心', '快手小店', '创作服务', '视频管理', '数据分析'],
       loginPageMarkers: ['扫码登录', '手机号登录', '扫一扫'],
+      securityCheckMarkers: ['安全验证', '身份验证', '账号存在风险', '短信验证'],
       extractionRules: [
         { field: 'nickname', method: 'regex', pattern: /快手号[：:]\s*([0-9A-Za-z_]{4,})/ },
         { field: 'userId', method: 'regex', pattern: /快手号[：:]\s*([0-9A-Za-z_]{4,})/ },
         { field: 'nickname', method: 'regex', pattern: /(?:昵称|账号)[：:]\s*([^\s|，,]{2,20})/ },
+        // KUAISHOU-FIX-01：创作者中心导航栏昵称（「4 | 骏霄数字科技 | 发布作品」）
+        { field: 'nickname', method: 'regex', pattern: /\d+\s*\|\s*([^|]+?)\s*\|\s*发布作品/ },
         { field: 'nickname', method: 'hydration', hydrationKeys: ['user.user_name', 'userInfo.user_name', 'user.nickname'] },
         { field: 'userId', method: 'hydration', hydrationKeys: ['user.id', 'userInfo.id', 'user.principalId'] },
         { field: 'avatar', method: 'hydration', hydrationKeys: ['user.headurl', 'userInfo.headurl', 'user.avatar'] },
         { field: 'accountType', method: 'hydration', hydrationKeys: ['user.userType', 'userInfo.userType'] },
       ],
+      // KUAISHOU-FIX-01：创作者中心 body 无 UID 明文 + API 需 __NS_sig3 签名 →
+      // 刷新页面监听内部 API 响应捕获官方 userId/userName（页面自身请求自带签名）
+      networkApis: {
+        userApis: ['/rest/cp/creator/pc/home/', '/rest/v2/creator/pc/authority/account/current'],
+        userIdKeys: ['userId', 'user_id', 'id', 'principalId'],
+        nicknameKeys: ['userName', 'user_name', 'name', 'nickname'],
+        avatarKeys: ['headUrl', 'headurl', 'avatar', 'headImg'],
+      },
     },
     metricsExtraction: {
       dataUrl: 'https://cp.kuaishou.com/data',
@@ -202,6 +231,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
       urlFragments: ['creator.xiaohongshu.com/publish', 'creator.xiaohongshu.com/new', 'creator.xiaohongshu.com/data', 'creator.xiaohongshu.com/creator'],
       markers: ['创作中心', '笔记管理', '数据中心', '粉丝', '蒲公英'],
       loginPageMarkers: ['扫码登录', '手机号登录', '登录小红书', '短信登录'],
+      securityCheckMarkers: ['安全验证', '身份验证', '账号存在风险'],
       extractionRules: [
         { field: 'nickname', method: 'regex', pattern: /小红书号[：:]\s*([0-9A-Za-z_]{4,})/ },
         { field: 'userId', method: 'regex', pattern: /小红书号[：:]\s*([0-9A-Za-z_]{4,})/ },
@@ -241,9 +271,14 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
       urlFragments: ['channels.weixin.qq.com/platform'],
       markers: ['视频号助手', '发布动态', '数据中心', '发表视频', '视频号'],
       loginPageMarkers: ['微信扫一扫', '扫码登录'],
+      securityCheckMarkers: ['安全验证', '身份验证', '账号存在风险'],
       extractionRules: [
-        { field: 'nickname', method: 'regex', pattern: /视频号[：:]\s*([^\s|，,]{2,20})/ },
+        // LOGIN-REALITY-FIX-01 — 实测视频号 ID 格式为 sphpfkmVO5uy6NF（非公众号 gh_ 格式）：
+        // 工作台 DOM 展示「视频号ID: <id>」，直接按该标签提取，同时兼容 gh_ 历史格式
+        { field: 'userId', method: 'regex', pattern: /(?:视频号ID|视频号 ID)[：:]\s*([A-Za-z0-9_-]{6,32})/ },
         { field: 'userId', method: 'regex', pattern: /gh_[0-9a-f]{10,}/ },
+        { field: 'nickname', method: 'regex', pattern: /([\u4e00-\u9fa5A-Za-z0-9·]{2,30})\s*视频号ID[：:]/ },
+        { field: 'nickname', method: 'regex', pattern: /视频号[：:]\s*([^\s|，,]{2,20})/ },
         { field: 'nickname', method: 'hydration', hydrationKeys: ['user.nickname', 'finderInfo.nickname', 'finder_info.nickname'] },
         { field: 'userId', method: 'hydration', hydrationKeys: ['finderInfo.finder_uin', 'finderInfo.uin', 'user.uin'] },
         { field: 'avatar', method: 'hydration', hydrationKeys: ['finderInfo.head_url', 'finderInfo.headUrl', 'user.head_url'] },

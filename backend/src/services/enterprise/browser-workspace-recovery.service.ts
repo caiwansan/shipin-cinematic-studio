@@ -15,15 +15,23 @@
  *
  * ── 掌柜原则 ──
  * - 电脑开机 ≠ 用户登录：workspace RUNNING 只是浏览器活着，是否「在线」必须由探针判定
- * - 未登录账号不能显示在线：探针未通过 → CONNECTED 一律降级 EXPIRED
+ * - 未登录账号不能显示在线：探针未通过 → CONNECTED 一律降级（EXPIRED/NEEDS_REAUTH/BLOCKED）
  * - 不猜登录状态：identity 必须来自 IdentityProbe（authenticated + externalAccountId）
  * - 幂等 + 串行 + 错误隔离：单账号失败不影响其他账号恢复
+ *
+ * ── IDENTITY-V2-HARDENING-01 Task03（掌柜战略：几十个账号不启动几十个 Chrome）──
+ * 恢复 CONNECTED 账号新增 FastIdentityValidator 快照验证阶段：
+ *   fresh（凭证+快照可信）  → 不启动浏览器，保持 CONNECTED + metadata.fastVerifiedAt（懒加载）
+ *   stale（凭证在快照旧）   → 启动浏览器完整探针复核（原有路径）
+ *   invalid（凭证缺失）     → 降级（EXPIRED/NEEDS_REAUTH）
+ * 降级目标按原因映射：验证类文案 → NEEDS_REAUTH；封禁类 → BLOCKED；其余 EXPIRED
  *
  * ── 状态处理矩阵 ──
  * | account.connectionStatus | 恢复动作                                        |
  * |--------------------------|-------------------------------------------------|
- * | CONNECTED                | 拉起 profile → 探针 → 通过：保持 CONNECTED+健康标记 |
- * |                          |                → 未通过：close + EXPIRED          |
+ * | CONNECTED                | 快照验证 → fresh：不启浏览器保持 CONNECTED          |
+ * |                          | stale/invalid → 拉起 profile → 探针复核           |
+ * |                          |  通过：保持 CONNECTED；未通过：降级（按原因）       |
  * | AUTHENTICATED            | 凭证未落库（重启中断）→ EXPIRED（需重新授权）      |
  * | WAITING_LOGIN/VERIFYING  | 扫码流程已被重启打断 → EXPIRED（需重新连接）       |
  * | PENDING/EXPIRED/ERROR    | 跳过（无需恢复）；workspace 归位 READY             |
@@ -31,9 +39,10 @@
 import { prisma } from '../../utils/index.js'
 import { browserRuntime } from '../media/browser-runtime.service.js'
 import { identityProbeRegistry } from '../../enterprise/channel/identity-probe.js'
-import { ChannelConnectionStatus, isChannelConnected } from '../../constants/channel-connection-status.js'
+import { ChannelConnectionStatus, isChannelConnected, demoteStatusFromSignals } from '../../constants/channel-connection-status.js'
 import { browserWorkspaceService } from './browser-workspace.service.js'
 import { channelService } from './channel.service.js'
+import { fastIdentityValidator } from '../../enterprise/channel/fast-identity-validator.js'
 
 export class BrowserWorkspaceRecoveryService {
   private recovering = false
@@ -169,6 +178,40 @@ export class BrowserWorkspaceRecoveryService {
       return false
     }
 
+    // ── IDENTITY-V2 Task03 — FastIdentityValidator 快照验证阶段（不起浏览器）──
+    // fresh：凭证 + 身份快照可信 → 不启动浏览器（懒加载），保持 CONNECTED + fastVerifiedAt
+    // stale/invalid：继续完整浏览器探针复核（原有路径）
+    let verdict: Awaited<ReturnType<typeof fastIdentityValidator.verify>> | null = null
+    try {
+      verdict = await fastIdentityValidator.verify(account, channelService)
+    } catch (e: any) {
+      console.warn(`[BrowserWorkspaceRecovery] ${account.id} 快照验证异常（继续探针复核）: ${e.message}`)
+    }
+    if (verdict?.status === 'fresh') {
+      const nowIso = new Date().toISOString()
+      const meta = (account.metadata as any) || {}
+      await prisma.enterpriseChannelAccount.update({
+        where: { id: account.id },
+        data: {
+          metadata: {
+            ...meta,
+            fastVerifiedAt: nowIso,
+            lastFastVerifyReason: verdict.reason,
+          },
+        },
+      })
+      // workspace 归位 READY（浏览器未运行；reality 访问时按需懒启动）
+      if (ws.status !== 'READY') {
+        await this.settleWorkspaceIdle(ws.id, 'fast_verified_lazy')
+      }
+      details.push({ accountId: account.id, platform, action: 'keep', message: `快照验证通过（未启动浏览器，懒加载）: ${verdict.reason}` })
+      console.log(`[BrowserWorkspaceRecovery] ⚡ ${account.id} 快照验证 fresh（不启动浏览器）→ 保持 CONNECTED`)
+      return true
+    }
+    if (verdict && verdict.status !== 'stale') {
+      console.warn(`[BrowserWorkspaceRecovery] ⚠️ ${account.id} 快照验证 ${verdict.status}: ${verdict.reason}`)
+    }
+
     // 1. 拉起同一持久化 profile（登录时写入登录态的目录）
     await browserRuntime.getOrCreatePersistent(sid, profilePath, { headless: false })
     // 2. 导航平台首页（探针页面特征信号需要工作台 URL；导航失败不阻断探针）
@@ -235,16 +278,18 @@ export class BrowserWorkspaceRecoveryService {
       return true
     }
 
-    // 4b. 未通过：登录态已失效 → 关闭实例 + EXPIRED（未登录绝不显示在线）
+    // 4b. 未通过：登录态已失效 → 关闭实例 + 按原因降级（IDENTITY-V2：验证类 → NEEDS_REAUTH；封禁类 → BLOCKED；其余 EXPIRED）
+    //     未登录绝不显示在线；但安全验证/风控不是普通过期，给掌柜准确的下一步动作提示
     await browserRuntime.close(sid).catch(() => {})
     await this.settleWorkspaceIdle(ws.id, 'login_expired')
     const reason = identity && !identity.authenticated ? '探针未检测到有效登录态' : '探针未返回账号身份（externalAccountId 缺失）'
+    const demoteTo = demoteStatusFromSignals(identity?.signals as any, `${reason} ${identity?.signals?.securityCheck ? '检测到平台安全验证' : ''}`)
     await prisma.enterpriseChannelAccount.update({
       where: { id: account.id },
-      data: { connectionStatus: ChannelConnectionStatus.EXPIRED, lastError: `${reason}，请重新扫码授权` },
+      data: { connectionStatus: demoteTo, lastError: `${reason}，请重新扫码授权` },
     })
-    details.push({ accountId: account.id, platform, action: 'demote', message: `探针未通过 → CONNECTED → EXPIRED（${reason}）` })
-    console.warn(`[BrowserWorkspaceRecovery] ⚠️ ${platform}:${account.id} 登录态失效 → EXPIRED`)
+    details.push({ accountId: account.id, platform, action: 'demote', message: `探针未通过 → CONNECTED → ${demoteTo}（${reason}）` })
+    console.warn(`[BrowserWorkspaceRecovery] ⚠️ ${platform}:${account.id} 登录态失效 → ${demoteTo}`)
     return false
   }
 

@@ -87,6 +87,27 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
       }
     }
 
+    // 检测登录态（多信号探针）
+    let identity: ChannelIdentity | null = null
+    try {
+      identity = await identityProbeRegistry.get(this.platform)!.probe(sid)
+    } catch (e: any) {
+      console.warn(`[${this.name}Adapter] connect 阶段登录态检测异常: ${e.message}`)
+    }
+    if (identity?.authenticated) {
+      return {
+        sessionId: sid,
+        status: 'connected',
+        accountName: identity.accountName || meta.displayName,
+        externalAccountId: identity.accountId,
+        avatar: identity.avatar,
+        permissions: identity.permissions,
+      }
+    }
+
+    // LOGIN-REALITY-FIX-01 — 探针先行失败才导航登录页：
+    // 已有实例且探针命中时，绝不允许 navigate 把已登录的工作台页面导航回登录页（现场自毁）。
+    // 视频号无 cookie 自动恢复（依赖本机微信 fastLogin），现场更须保护。
     const nav = await browserRuntime.navigate(sid, meta.loginUrl, { headless: false })
     if (!nav.success) {
       console.warn(`[${this.name}Adapter] 浏览器启动/导航失败: ${nav.error}`)
@@ -103,12 +124,11 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     // 必须确认当前 URL 命中登录入口，否则回退导航（禁止停留在非登录面）
     await this.ensureLoginSurface(sid)
 
-    // 检测登录态（多信号探针）
-    let identity: ChannelIdentity | null = null
+    // 导航后二次探针（登录页→扫码成功跳转场景）
     try {
       identity = await identityProbeRegistry.get(this.platform)!.probe(sid)
     } catch (e: any) {
-      console.warn(`[${this.name}Adapter] connect 阶段登录态检测异常: ${e.message}`)
+      console.warn(`[${this.name}Adapter] connect 阶段二次登录态检测异常: ${e.message}`)
     }
     if (identity?.authenticated) {
       return {
