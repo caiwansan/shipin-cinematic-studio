@@ -74,17 +74,20 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   app.get('/api/enterprise/channels/runtime/douyin/account-status', async (request, reply) => {
     try {
       const { prisma } = await import('../utils/index.js')
+      const { isChannelConnected, ChannelConnectionStatus } = await import('../constants/channel-connection-status.js')
       const account = await prisma.enterpriseChannelAccount.findFirst({
         where: { channelType: 'douyin' },
         orderBy: { createdAt: 'asc' },
         select: { id: true, connectionStatus: true, channelName: true, externalAccountId: true, metadata: true },
       })
-      if (!account) return reply.send({ code: 0, data: { connected: false } })
+      if (!account) return reply.send({ code: 0, data: { connected: false, connectionStatus: ChannelConnectionStatus.PENDING } })
       const meta = (account.metadata as any) || {}
       return reply.send({
         code: 0,
         data: {
-          connected: account.connectionStatus === 'connected' && !!account.externalAccountId,
+          // REALITY-HARDENING-01 Task01 — 仅 CONNECTED + externalAccountId 为真连接
+          connected: isChannelConnected(account.connectionStatus) && !!account.externalAccountId,
+          connectionStatus: account.connectionStatus,
           accountName: account.channelName,
           avatar: meta.avatar || '',
           permissionLevel: meta.permissionLevel ?? 1,

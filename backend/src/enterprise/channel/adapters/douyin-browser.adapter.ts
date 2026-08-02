@@ -175,9 +175,25 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
   /**
    * [v1.0] 刷新凭证（浏览器取新 cookie → persistCredential 加密落库）
    * 必须由上层在登录完成后调用；adapter 不保存任何凭证
+   * REALITY-HARDENING-01 Task01 — Reality Gate：游客 cookie 不得视为登录成功。
+   * 取 cookie 前先用 IdentityProbe 复核真实登录态，未认证/无身份 → 拒绝刷新（防假 connected）
    */
   async refreshCredential(accountId: string): Promise<{ ok: boolean; error?: string }> {
     const sid = this.sessionIdFor(accountId)
+
+    // Reality Gate：探针复核——游客 cookie（ttwid 等）不算登录成功
+    try {
+      const probe = identityProbeRegistry.get(this.platform)
+      if (probe) {
+        const identity = await probe.probe(sid)
+        if (!identity.authenticated || !identity.accountId) {
+          return { ok: false, error: '未检测到有效登录态（无真实账号身份），拒绝刷新凭证' }
+        }
+      }
+    } catch (e: any) {
+      return { ok: false, error: `登录态探针失败，拒绝刷新凭证: ${e.message}` }
+    }
+
     let cookies: CookieData[]
     try {
       cookies = await browserRuntime.getCookies(sid)

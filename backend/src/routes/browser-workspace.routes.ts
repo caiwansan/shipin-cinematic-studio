@@ -224,12 +224,24 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
   //   只返回 media 域 AI 员工 + media 域 workspace（双过滤），禁止 Career/Recruitment Agent 混入
   //   （原实现无域过滤 → 新媒体工作台展示了「用户的AI职业助理」绑抖音的跨域污染）
   // GET /api/enterprise/workspaces/owner-view?businessType=media
+  // REALITY-HARDENING-01 Task03 — 真实性视图：
+  //   online 必须是 workspace RUNNING/READY + account CONNECTED + externalAccountId 三重条件
+  //   workerStatus 推导：等待扫码/验证中/工作中/离线/异常（未登录绝不显示「工作中」）
+  //   lastOperation 只接受真实只读动作（publish/reply 等 Task 阶段禁用动作一律过滤）
   app.get('/api/enterprise/workspaces/owner-view', async (request, reply) => {
     try {
       const { prisma } = await import('../utils/index.js')
+      const { isChannelConnected, ChannelConnectionStatus } = await import('../constants/channel-connection-status.js')
       const query: any = (request.query as any) || {}
       const businessType = query.businessType || 'media'
       const { organizationId } = ctx(request)
+
+      // REALITY-HARDENING-01 — 动作白名单：仅展示真实可发生的只读/生命周期动作
+      // （publish/reply/comment/schedule 在 Task 阶段 adapter 恒 failed，日志出现即伪造）
+      const TRUSTED_ACTIONS = new Set([
+        'navigate', 'open_creator_center', 'login', 'scan', 'verify',
+        'bind', 'confirm', 'fetch_metrics', 'read', 'health_check', 'refresh',
+      ])
 
       // 域过滤第一层：workspace 必须属于 media 域
       // org 过滤：admin 超管（无 organizationId）看全部 media workspace；普通用户严格按 org 隔离
@@ -252,7 +264,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         if (!ws) continue
         const account = await prisma.enterpriseChannelAccount.findUnique({
           where: { id: ws.channelAccountId },
-          select: { id: true, channelType: true, channelName: true, connectionStatus: true },
+          select: { id: true, channelType: true, channelName: true, connectionStatus: true, externalAccountId: true },
         })
         if (!account) continue
         const agent = await prisma.enterpriseAgentInstance.findUnique({ where: { id: b.agentInstanceId } })
@@ -266,17 +278,33 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
           continue
         }
         const traj = await browserTrajectoryService.listByWorkspace(ws.id, 1)
+        // 最近真实操作：过滤伪造/禁用动作（publish/reply/comment/schedule 不可能是 success）
+        const trustedTraj = traj.filter((t: any) => TRUSTED_ACTIONS.has(t.action))
+        const workspaceRunning = ['RUNNING', 'READY'].includes(ws.status)
+        const accountConnected = isChannelConnected(account.connectionStatus) && !!account.externalAccountId
+        // 真实性状态推导：老板看到的状态 = 电脑 + 账号 + 最近动作 的组合，不是单一 workspace RUNNING
+        const workerStatus = (() => {
+          if (!workspaceRunning) return 'offline'
+          if (accountConnected) return 'working'
+          if (account.connectionStatus === ChannelConnectionStatus.WAITING_LOGIN) return 'waiting_scan'
+          if (account.connectionStatus === ChannelConnectionStatus.VERIFYING) return 'verifying'
+          if (account.connectionStatus === ChannelConnectionStatus.AUTHENTICATED) return 'authenticated'
+          if (account.connectionStatus === ChannelConnectionStatus.EXPIRED) return 'expired'
+          if (account.connectionStatus === ChannelConnectionStatus.ERROR) return 'error'
+          return 'pending'
+        })()
         rows.push({
           workspaceId: ws.id,
           workspaceStatus: ws.status,
-          online: ['RUNNING', 'READY'].includes(ws.status),
+          online: workspaceRunning && accountConnected,
+          workerStatus,
           lastHealthCheckAt: ws.lastHealthCheckAt,
           businessType: ws.businessType,
           platform: account.channelType || null,
           platformName: account.channelName || null,
           accountConnection: account.connectionStatus || null,
           agent: profile ? { id: profile.id, name: profile.name, role: profile.role, agentType: profile.agentType, businessType: profile.businessType } : null,
-          lastOperation: traj[0] ? { action: traj[0].action, description: traj[0].description, createdAt: traj[0].createdAt } : null,
+          lastOperation: trustedTraj[0] ? { action: trustedTraj[0].action, description: trustedTraj[0].description, createdAt: trustedTraj[0].createdAt } : null,
         })
       }
       return reply.send({ code: 0, data: rows })

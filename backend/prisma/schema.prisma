@@ -7547,6 +7547,16 @@ model EnterpriseChannelAccount {
   channelName           String    @map("channel_name") @db.Text
   externalAccountId     String?   @map("external_account_id") @unique @db.Text
   credentialEncrypted   Json      @default("{}") @map("credential_encrypted")
+  // SPRINT-MEDIA-REALITY-HARDENING-01 Task02 — 连接状态机（禁止 PENDING 直跳 connected）
+  // PENDING → WAITING_LOGIN → VERIFYING → AUTHENTICATED → CONNECTED
+  //                                               ↘ FAILED/EXPIRED/ERROR
+  // PENDING:      初始（账号创建，未发起连接）
+  // WAITING_LOGIN:浏览器已打开，等待用户扫码
+  // VERIFYING:    扫码完成，等待平台/探针确认身份
+  // AUTHENTICATED:平台确认真人身份（探针复核通过），凭证待落库
+  // CONNECTED:    账号身份+凭证+runtime 全部正常（唯一可信在线态）
+  // EXPIRED:      登录态过期/失效，需要重新授权
+  // ERROR:        连接流程失败
   connectionStatus      String    @default("PENDING") @map("connection_status") @db.Text
   connectedAt           DateTime? @map("connected_at")
   lastSyncAt            DateTime? @map("last_sync_at")

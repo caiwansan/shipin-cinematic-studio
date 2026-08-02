@@ -178,7 +178,8 @@ onMounted(async () => {
     const data = await res.json()
     if (data?.code === 0 && data?.data) {
       const agents = data.data.agents || []
-      badgeText.value = agents.length ? `${agents.length} 名 AI 在线` : 'AI 团队待启动'
+      // REALITY-HARDENING-01 Task03 — 「active」只是实例启用，不等于在线；不谎报「在线」
+      badgeText.value = agents.length ? `${agents.length} 名 AI 员工` : 'AI 团队待启动'
     }
   } catch {
     // 静默

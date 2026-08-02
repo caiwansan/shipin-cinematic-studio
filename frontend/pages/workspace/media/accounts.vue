@@ -33,12 +33,12 @@
             </div>
             <span class="ac-owner-state" :class="ov.online ? 'on' : 'off'">
               <span class="ac-owner-dot" :class="ov.online ? 'on' : 'off'"></span>
-              {{ ov.online ? '🟢 工作中' : '⚫ 离线' }}
+              {{ workerStatusLabel(ov) }}
             </span>
           </div>
           <div class="ac-owner-info">
             <div class="ac-owner-row"><span class="k">工作电脑</span><span class="v">🖥 {{ (ov.platformName || ov.platform || '运营空间') + '运营空间' }}</span></div>
-            <div class="ac-owner-row"><span class="k">状态</span><span class="v">{{ ov.workspaceStatus }}</span></div>
+            <div class="ac-owner-row"><span class="k">状态</span><span class="v">{{ workerStatusDetail(ov) }}</span></div>
             <div class="ac-owner-row"><span class="k">最近动作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '等待任务' }}</span></div>
           </div>
         </div>
@@ -673,6 +673,34 @@ const visiblePlatforms = computed(() => {
 // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task08.1 — 加载 AI 员工工作电脑 Owner View
 const ownerViews = ref<any[]>([])
 
+// REALITY-HARDENING-01 Task03 — 状态标签：未登录绝不显示「工作中」
+const WORKER_STATUS_LABEL: Record<string, string> = {
+  working: '🟢 工作中',
+  waiting_scan: '🟡 等待扫码',
+  verifying: '🟡 验证中',
+  authenticated: '🟡 已确认身份',
+  expired: '🔴 登录已过期',
+  error: '🔴 异常',
+  pending: '⚪ 待连接',
+  offline: '⚫ 离线',
+}
+const WORKER_STATUS_DETAIL: Record<string, string> = {
+  working: '电脑在线 · 账号已连接',
+  waiting_scan: '电脑在线 · 等待扫码授权',
+  verifying: '电脑在线 · 扫码完成，验证中',
+  authenticated: '电脑在线 · 身份已确认，凭证保存中',
+  expired: '电脑在线 · 登录态过期，请重新授权',
+  error: '电脑异常 · 请检查浏览器环境',
+  pending: '电脑就绪 · 尚未发起连接',
+  offline: '电脑离线',
+}
+function workerStatusLabel(ov: any): string {
+  return WORKER_STATUS_LABEL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || '⚫ 离线'
+}
+function workerStatusDetail(ov: any): string {
+  return WORKER_STATUS_DETAIL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || ov.workspaceStatus || '—'
+}
+
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const m = Math.floor(diff / 60000)
@@ -701,9 +729,10 @@ onMounted(async () => {
     // 账号状态加载失败静默（未连接态保持默认）
   }
   // Task08.1 — Owner View（失败静默，不影响渠道列表）
+  // REALITY-HARDENING-01 Task03 — 不得按 online 过滤：等待扫码/验证中也是真实状态，必须展示
   try {
     const ov = await api('/api/enterprise/workspaces/owner-view')
-    ownerViews.value = (ov.data || []).filter((r: any) => r.online || r.lastOperation)
+    ownerViews.value = (ov.data || []).filter((r: any) => r.agent)
   } catch (e: any) {
     // 静默
   }

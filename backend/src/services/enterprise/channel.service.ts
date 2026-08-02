@@ -21,6 +21,10 @@ import { agentChannelBindingService } from './agent-channel-binding.service.js'
 import { channelBrowserSessionService } from './channel-browser-session.service.js'
 import { browserRuntime } from '../media/browser-runtime.service.js'
 import { identityProbeRegistry } from '../../enterprise/channel/identity-probe.js'
+import {
+  ChannelConnectionStatus,
+  isChannelConnected,
+} from '../../constants/channel-connection-status.js'
 
 export class ChannelService {
   private adapters: Map<string, EnterpriseChannelAdapter> = new Map()
@@ -156,7 +160,7 @@ export class ChannelService {
         channelName: input.accountName,
         externalAccountId: input.externalAccountId ?? null,
         credentialEncrypted: { cipher: 'aes-256-gcm', payload: encryptedCred } as any,
-        connectionStatus: 'pending',
+        connectionStatus: ChannelConnectionStatus.PENDING,
         connectedAt: null,
         ownerId: '',
         ownerType: 'org',
@@ -228,7 +232,7 @@ export class ChannelService {
     const result = await adapter.connect(account.id)
     if (result.status === 'connected') {
       // 已确认账号（曾绑定）→ 维持登录态直接 connected；首次 → 需人工确认绑定
-      const alreadyBound = account.connectionStatus === 'connected' && !!account.externalAccountId
+      const alreadyBound = isChannelConnected(account.connectionStatus) && !!account.externalAccountId
       if (alreadyBound) {
         // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 03 — 状态机：AUTH_SUCCESS（已授权环境恢复登录态）
         try {
@@ -248,7 +252,7 @@ export class ChannelService {
         await prisma.enterpriseChannelAccount.update({
           where: { id: account.id },
           data: {
-            connectionStatus: 'connected',
+            connectionStatus: ChannelConnectionStatus.CONNECTED,
             connectedAt: account.connectedAt ?? new Date(),
             externalAccountId: result.externalAccountId ?? account.externalAccountId,
             channelName: result.accountName ?? account.channelName,
@@ -263,12 +267,20 @@ export class ChannelService {
         status: 'awaiting_confirmation',
         message: '已检测到抖音账号登录，请确认绑定后完成连接',
       }
-    } else if (result.status === 'waiting_login' && account.connectionStatus === 'connected') {
+    } else if (result.status === 'waiting_login') {
       // SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase E — 登录态失效：connected → expired（不得一直显示在线）
-      await prisma.enterpriseChannelAccount.update({
-        where: { id: account.id },
-        data: { connectionStatus: 'expired' },
-      })
+      if (isChannelConnected(account.connectionStatus)) {
+        await prisma.enterpriseChannelAccount.update({
+          where: { id: account.id },
+          data: { connectionStatus: ChannelConnectionStatus.EXPIRED },
+        })
+      } else if (account.connectionStatus === ChannelConnectionStatus.PENDING) {
+        // REALITY-HARDENING-01 Task02 — 浏览器已打开等扫码：PENDING → WAITING_LOGIN
+        await prisma.enterpriseChannelAccount.update({
+          where: { id: account.id },
+          data: { connectionStatus: ChannelConnectionStatus.WAITING_LOGIN },
+        })
+      }
     }
     return result
   }
@@ -288,12 +300,12 @@ export class ChannelService {
     const result = await adapter.waitForLogin(account.id, timeoutMs)
     if (result.status === 'connected') {
       // 已确认账号 → 维持登录（G2 重启后仍 connected）
-      const alreadyBound = account.connectionStatus === 'connected' && !!account.externalAccountId
+      const alreadyBound = isChannelConnected(account.connectionStatus) && !!account.externalAccountId
       if (alreadyBound) {
         await prisma.enterpriseChannelAccount.update({
           where: { id: account.id },
           data: {
-            connectionStatus: 'connected',
+            connectionStatus: ChannelConnectionStatus.CONNECTED,
             connectedAt: account.connectedAt ?? new Date(),
             externalAccountId: result.externalAccountId ?? account.externalAccountId,
             channelName: result.accountName ?? account.channelName,
@@ -315,6 +327,13 @@ export class ChannelService {
         status: 'awaiting_confirmation',
         message: '已检测到抖音账号登录，请确认绑定后完成连接',
       }
+    }
+    if (result.status === 'awaiting_confirmation') {
+      // REALITY-HARDENING-01 Task02 — 扫码完成待确认：WAITING_LOGIN → VERIFYING
+      await prisma.enterpriseChannelAccount.update({
+        where: { id: account.id },
+        data: { connectionStatus: ChannelConnectionStatus.VERIFYING },
+      }).catch((e: any) => console.warn(`[ChannelService] VERIFYING 状态更新失败: ${e.message}`))
     }
     return result
   }
@@ -342,11 +361,12 @@ export class ChannelService {
       throw new Error('未检测到有效登录态，请重新扫码登录')
     }
 
-    // 2. 回写账号身份（G1：externalAccountId + channelName + avatar + connected）
+    // 2. 回写账号身份（G1：externalAccountId + channelName + avatar）
+    // REALITY-HARDENING-01 Task02 — 探针复核通过 = 平台确认真人 → AUTHENTICATED（凭证落库后才 CONNECTED）
     await prisma.enterpriseChannelAccount.update({
       where: { id: account.id },
       data: {
-        connectionStatus: 'connected',
+        connectionStatus: ChannelConnectionStatus.AUTHENTICATED,
         connectedAt: new Date(),
         externalAccountId: identity.accountId ?? account.externalAccountId,
         channelName: identity.accountName ?? account.channelName,
@@ -400,10 +420,17 @@ export class ChannelService {
     }
 
     // 3. 保存 cookie 凭证（登录成功即续期落库）
+    // REALITY-HARDENING-01 Task01 — Reality Gate：adapter.refreshCredential 内部探针复核，
+    // 未登录/无身份一律拒绝；凭证落库成功 = 身份+凭证就绪 → CONNECTED
     try {
       const result = await adapter.refreshCredential(account.id)
       if (!result.ok) {
         console.warn(`[ChannelService] 确认绑定凭证保存失败: ${result.error}`)
+      } else {
+        await prisma.enterpriseChannelAccount.update({
+          where: { id: account.id },
+          data: { connectionStatus: ChannelConnectionStatus.CONNECTED },
+        })
       }
     } catch (e: any) {
       console.warn(`[ChannelService] 确认绑定凭证保存异常: ${e.message}`)
@@ -451,19 +478,47 @@ export class ChannelService {
 
   /**
    * SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 编排：凭证续期
-   * adapter.refreshCredential → updateCredential（AES 回写）
+   * REALITY-HARDENING-01 Task01 — Reality Gate：未登录/无身份账号不得进入 connected
+   * 流程：探针复核（authenticated + accountId）→ adapter.refreshCredential（内部同样探针校验）→ CONNECTED
    */
   async refreshChannelCredential(accountId: string) {
     const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
     if (!account) throw new Error('Channel account not found')
     const adapter = this.resolveAdapter(account.channelType)
-    const result = await adapter.refreshCredential(account.id)
-    if (result.ok) {
-      await prisma.enterpriseChannelAccount.update({
-        where: { id: account.id },
-        data: { connectionStatus: 'connected', connectedAt: new Date() },
-      })
+
+    // REALITY-HARDENING-01 Task01 — Reality Gate 第一层：探针复核，未登录直接拒绝
+    const probe = identityProbeRegistry.get(account.channelType)
+    if (!probe) throw new Error(`渠道 ${account.channelType} 无身份探针`)
+    const sid = adapter.sessionIdFor ? adapter.sessionIdFor(account.id) : `${account.channelType}:${account.id}`
+    let identity: Awaited<ReturnType<typeof probe.probe>> | null = null
+    try {
+      identity = await probe.probe(sid)
+    } catch (e: any) {
+      const err: any = new Error(`登录态探针失败，拒绝刷新凭证: ${e.message}`)
+      err.code = 'auth_required'
+      throw err
     }
+    if (!identity.authenticated || !identity.accountId) {
+      const err: any = new Error('未检测到有效登录态（无真实账号身份），拒绝刷新凭证')
+      err.code = 'auth_required'
+      throw err
+    }
+
+    // Reality Gate 第二层：adapter 内部同样校验（防绕过）
+    const result = await adapter.refreshCredential(account.id)
+    if (!result.ok) {
+      return result
+    }
+    // 探针确认真人 + 凭证落库成功 → CONNECTED（身份 + 凭证 + runtime 全部正常）
+    await prisma.enterpriseChannelAccount.update({
+      where: { id: account.id },
+      data: {
+        connectionStatus: ChannelConnectionStatus.CONNECTED,
+        connectedAt: new Date(),
+        externalAccountId: identity.accountId ?? account.externalAccountId,
+        channelName: identity.accountName ?? account.channelName,
+      },
+    })
     return result
   }
 
@@ -494,9 +549,16 @@ export class ChannelService {
     if (!account) throw new Error('Channel account not found')
 
     // account 态：DB 绑定状态（G3 验收核心）
+    // REALITY-HARDENING-01 — 仅 CONNECTED + externalAccountId 才是可信在线；
+    // WAITING_LOGIN/VERIFYING/AUTHENTICATED → connecting（流程中，绝不显示已连接）
     const accountState = (() => {
-      if (account.connectionStatus === 'connected' && account.externalAccountId) return 'connected'
-      if (account.connectionStatus === 'expired') return 'expired'
+      if (isChannelConnected(account.connectionStatus) && account.externalAccountId) return 'connected'
+      if (account.connectionStatus === ChannelConnectionStatus.EXPIRED) return 'expired'
+      if ([
+        ChannelConnectionStatus.WAITING_LOGIN,
+        ChannelConnectionStatus.VERIFYING,
+        ChannelConnectionStatus.AUTHENTICATED,
+      ].includes(account.connectionStatus as any)) return 'connecting'
       return 'none'
     })()
 
