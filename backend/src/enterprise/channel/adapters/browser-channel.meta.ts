@@ -218,7 +218,11 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
       // KUAISHOU-QR-FIX-01：快手实际登录 cookie 是 bUserId + kwssectoken（passport 会话），
       // 旧配置 kuaishou.api_st/server_st 永不命中 → cookie 信号永远 false → 扫码成功也无法认证
       cookies: ['bUserId', 'kwssectoken', 'did'],
-      urlFragments: ['cp.kuaishou.com/article', 'cp.kuaishou.com/workbench', 'cp.kuaishou.com/data', 'cp.kuaishou.com/live', 'cp.kuaishou.com/workspace'],
+      // G6-V3-REALITY-0725：快手已登录工作台默认停在 /profile（SPA 把 /article 等路由拉回 /profile，
+      // 菜单切换不改变 URL）→ urlFragments 必须含 cp.kuaishou.com/profile。
+      // 安全：authenticated = credential && (identity||page)，未登录游客页无 bUserId/kwssectoken →
+      // cookie=false → credential=false，即使 workspaceReady=true 也判未登录，不会误判。
+      urlFragments: ['cp.kuaishou.com/article', 'cp.kuaishou.com/workbench', 'cp.kuaishou.com/data', 'cp.kuaishou.com/live', 'cp.kuaishou.com/workspace', 'cp.kuaishou.com/profile'],
       // Task04：登录成功但停留在普通用户主页（v.kuaishou.com/profile 等）≠ 创作者工作台，必须排除
       excludeUrlPatterns: [/v\.kuaishou\.com\/profile/, /www\.kuaishou\.com\/profile/, /v\.kuaishou\.com\/u\//],
       markers: ['作品管理', '数据中心', '快手小店', '创作服务', '视频管理', '数据分析'],
@@ -230,6 +234,8 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
         { field: 'nickname', method: 'regex', pattern: /(?:昵称|账号)[：:]\s*([^\s|，,]{2,20})/ },
         // KUAISHOU-FIX-01：创作者中心导航栏昵称（「4 | 骏霄数字科技 | 发布作品」）
         { field: 'nickname', method: 'regex', pattern: /\d+\s*\|\s*([^|]+?)\s*\|\s*发布作品/ },
+        // G6-V3-REALITY-0725：实测页面文本为换行分隔（「4\n骏霄数字科技\n发布作品」）→ 兼容多行
+        { field: 'nickname', method: 'regex', pattern: /\d+\s*\n\s*([^\n|]+?)\s*\n\s*发布作品/ },
         { field: 'nickname', method: 'hydration', hydrationKeys: ['user.user_name', 'userInfo.user_name', 'user.nickname'] },
         { field: 'userId', method: 'hydration', hydrationKeys: ['user.id', 'userInfo.id', 'user.principalId'] },
         { field: 'avatar', method: 'hydration', hydrationKeys: ['user.headurl', 'userInfo.headurl', 'user.avatar'] },

@@ -353,11 +353,16 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
         }
       }
       // session 已成立但身份/工作台未确认 → 诚实日志（前端轮询 getLoginStatus 展示 LOGIN_PARTIAL）
-      if (identity?.reality?.session?.authenticated && !identity.reality?.workspace?.ready) {
+      // G6-V3-REALITY-0725：触发条件从「仅 workspace✗」放宽为「workspace✗ 或 身份不完整(无 accountId)」。
+      // 快手实锤：已登录 + /profile 命中 workspace✓，但页面无快手号明文 + 无 hydration → userId 只能靠
+      // network 捕获（home API 带 __NS_sig3 签名）；页面已加载完无自然请求 → 永不捕获 → accountId 空
+      // → 硬条件不满足 → 永远「轮询未认证」。会话已成立（非扫码窗口期）时导航刷新页面一次是安全的，
+      // 页面自然请求触发捕获即可补齐官方 userId。
+      if (identity?.reality?.session?.authenticated && (!identity.reality?.workspace?.ready || !identity.reality?.identity?.resolved || !identity.accountId)) {
         // MEDIA-LOGIN-CAPABILITY-V3 Task03 — 登录后自动导航工作台：
-        // session 成立但未进工作台 + 平台配置 navigation.afterSessionAuthenticated
+        // session 成立但身份/工作台未就绪 + 平台配置 navigation.afterSessionAuthenticated
         // （快手 passport 停留 /profile、小红书停留主站）→ 导航 workspaceUrl 后重新探针。
-        // 触发严格：仅 session✓ + workspace✗；扫码确认窗口期 session 未成立，绝不打断确认。
+        // 触发严格：仅 session✓ + (workspace✗ 或 identity✗)；扫码确认窗口期 session 未成立，绝不打断确认。
         // 节流：同 session 20s 内至多导航一次，防死循环（导航后仍非工作台 → 下轮再试）
         if (meta.navigation?.afterSessionAuthenticated) {
           const last = this._lastAutoNavigateAt.get(sid) || 0
