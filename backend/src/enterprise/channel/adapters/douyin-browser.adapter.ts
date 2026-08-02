@@ -208,6 +208,9 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
     accountName?: string
     externalAccountId?: string
     avatar?: string
+    verificationRequired?: boolean
+    verificationType?: 'sms' | 'app' | 'face' | 'none'
+    verificationTriggered?: boolean
     error?: string
     debug?: any
   }> {
@@ -318,7 +321,70 @@ canvas.save('${out}')
       debug = { ...(debug || {}), probeSignals, probeAuthenticated, probeAccount }
       // TASK03.2.1 — 扫码确认阶段判定（未登录但页面出现确认过渡层）
       if (!loggedIn && debug?.scanConfirming) loginStage = 'scan_confirming'
-      return { url: status.currentUrl, title: status.title, screenshotBase64, qrCodeBase64, loggedIn, loginStage, accountName, externalAccountId, avatar, debug }
+      // Channel Identity Trust Completion — 平台安全验证页检测（新设备首次绑定风控）
+      // 抖音：扫码后要求「身份验证」（短信验证码/手机刷脸/本人操作）→ 透出 verificationRequired，前端展示安全验证流程
+      // ⚠️ 流程设计修正（2026-08-02）：检测到验证页必须**主动触发**验证按钮，手机端才会收到验证请求。
+      //    之前只检测不触发 → 手机永远收不到提示 → 超时自动退回登录页。
+      let verificationRequired = false
+      let verificationType: 'sms' | 'app' | 'face' | 'none' = 'none'
+      let verificationTriggered = false
+      if (!loggedIn) {
+        try {
+          const verifyInfo = await browserRuntime.withPage(sessionId, async (page) => {
+            if (page.isClosed()) return { required: false }
+            const bt = await page.locator('body').innerText().catch(() => '')
+            const isVerifyPage =
+              bt.includes('身份验证') &&
+              (bt.includes('接收短信验证码') || bt.includes('手机刷脸验证') || bt.includes('为保障账号安全') || bt.includes('本人操作'))
+            if (!isVerifyPage) return { required: false }
+            let type: 'sms' | 'app' | 'face' | 'none' = 'app'
+            if (bt.includes('手机刷脸验证')) type = 'face'
+            else if (bt.includes('接收短信验证码')) type = 'sms'
+            // 触发：点击「手机刷脸验证」按钮 → 手机抖音 App 收到刷脸请求
+            // （优先刷脸：无需手机号，掌柜手机上直接确认；短信模式还需填手机号）
+            // 全事件触发（pointerdown/mousedown/.../click + touch）兼容 React 合成事件（对齐 clickSendCode 已验证模式）
+            let triggered = false
+            let triggerInfo = ''
+            if (type === 'face') {
+              const clicked = await page.evaluate(() => {
+                const all = Array.from(document.querySelectorAll('div, span, button, a, label, p, li')) as HTMLElement[]
+                // 优先最小可点击元素（span/button/a/label），fallback 任意
+                const el = all.find(e => /^(span|button|a|label)$/i.test(e.tagName) && ((e.textContent || '').trim() === '手机刷脸验证' || ((e.textContent || '').trim().includes('手机刷脸') && (e.textContent || '').trim().length < 25)))
+                  || all.find(e => (e.textContent || '').trim() === '手机刷脸验证' || ((e.textContent || '').trim().includes('手机刷脸') && (e.textContent || '').trim().length < 25))
+                if (!el) return { clicked: false as boolean, tag: '', t: '' }
+                const targets: HTMLElement[] = [el]
+                const parent = el.closest('div')
+                if (parent && parent !== el) targets.push(parent as HTMLElement)
+                let fired = 0
+                for (const t of targets) {
+                  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'touchstart', 'touchend']) {
+                    try {
+                      t.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }))
+                      fired++
+                    } catch {}
+                  }
+                }
+                return { clicked: fired > 0, tag: el.tagName, t: (el.textContent || '').trim() }
+              }).catch(() => ({ clicked: false as boolean, tag: '', t: '' }))
+              triggered = !!clicked?.clicked
+              triggerInfo = (clicked as any)?.t || ''
+            }
+            return { required: true, type, triggered, triggerInfo }
+          })
+          if (verifyInfo?.required) {
+            verificationRequired = true
+            verificationType = verifyInfo.type
+            verificationTriggered = !!verifyInfo.triggered
+            // 触发后给手机端推送留出时间
+            if (verifyInfo.triggered) {
+              await new Promise(r => setTimeout(r, 800))
+            }
+          }
+        } catch {}
+        // loginStage 收窄后不含 connected/awaiting_confirmation（该分支前已设），直接切 verifying
+        if (verificationRequired) loginStage = 'verifying'
+      }
+      return { url: status.currentUrl, title: status.title, screenshotBase64, qrCodeBase64, loggedIn, loginStage, accountName, externalAccountId, avatar, verificationRequired, verificationType, verificationTriggered, debug }
     } catch (e: any) {
       return { url: '', title: '', loggedIn: false, loginStage: 'waiting_scan', error: e.message }
     }

@@ -52,6 +52,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { tenantId, organizationId } = ctx(request)
       const body: any = (request.body as any) || {}
       const channelAccountId = body.channelAccountId
+      const businessType = body.businessType || 'media' // 默认 media 域（兼容存量抖音）
       if (!channelAccountId) {
         // 未指定账号时：自动确保抖音账号存在（与 runtime ensure-account 一致）
         let account = await (await import('../utils/index.js')).prisma.enterpriseChannelAccount.findFirst({
@@ -69,10 +70,10 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
           })
           account = { id: created.id }
         }
-        const ws = await browserWorkspaceService.getOrCreate(tenantId, organizationId, account.id)
+        const ws = await browserWorkspaceService.getOrCreate(tenantId, organizationId, account.id, businessType)
         return reply.send({ code: 0, data: ws })
       }
-      const ws = await browserWorkspaceService.getOrCreate(tenantId, organizationId, channelAccountId)
+      const ws = await browserWorkspaceService.getOrCreate(tenantId, organizationId, channelAccountId, businessType)
       return reply.send({ code: 0, data: ws })
     } catch (e: any) {
       return reply.status(400).send({ code: 1, message: e.message })
@@ -219,39 +220,62 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
 
   // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task08.1 — Browser Workspace Owner View（老板视角）
   // AI员工 → 工作电脑（🟢在线/⚫离线）→ 平台 → 最近操作 → 状态
-  // GET /api/enterprise/workspaces/owner-view
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01.1 Domain Boundary Fix：
+  //   只返回 media 域 AI 员工 + media 域 workspace（双过滤），禁止 Career/Recruitment Agent 混入
+  //   （原实现无域过滤 → 新媒体工作台展示了「用户的AI职业助理」绑抖音的跨域污染）
+  // GET /api/enterprise/workspaces/owner-view?businessType=media
   app.get('/api/enterprise/workspaces/owner-view', async (request, reply) => {
     try {
       const { prisma } = await import('../utils/index.js')
+      const query: any = (request.query as any) || {}
+      const businessType = query.businessType || 'media'
+      const { organizationId } = ctx(request)
+
+      // 域过滤第一层：workspace 必须属于 media 域
+      // org 过滤：admin 超管（无 organizationId）看全部 media workspace；普通用户严格按 org 隔离
+      const wsWhere: any = { businessType }
+      if (organizationId && organizationId !== 'default') {
+        wsWhere.organizationId = organizationId
+      }
+      const wsList = await prisma.browserWorkspace.findMany({ where: wsWhere })
+      const wsIds = wsList.map((w: any) => w.id)
+      if (!wsIds.length) return reply.send({ code: 0, data: [] })
+
       const bindings = await prisma.agentChannelBinding.findMany({
-        where: { status: 'active', browserWorkspaceId: { not: null } },
+        where: { status: 'active', browserWorkspaceId: { in: wsIds } },
         orderBy: { updatedAt: 'desc' },
       })
       const rows: any[] = []
       for (const b of bindings) {
         if (!b.browserWorkspaceId) continue
-        const ws = await prisma.browserWorkspace.findUnique({
-          where: { id: b.browserWorkspaceId },
-          include: {
-            channelAccount: { select: { id: true, channelType: true, channelName: true, connectionStatus: true } },
-          },
-        })
+        const ws = wsList.find((w: any) => w.id === b.browserWorkspaceId)
         if (!ws) continue
+        const account = await prisma.enterpriseChannelAccount.findUnique({
+          where: { id: ws.channelAccountId },
+          select: { id: true, channelType: true, channelName: true, connectionStatus: true },
+        })
+        if (!account) continue
         const agent = await prisma.enterpriseAgentInstance.findUnique({ where: { id: b.agentInstanceId } })
+        // 域过滤第二层：AI 员工必须属于 media 域（防 Career/Recruitment Agent 混入）
         const profile = agent ? await prisma.enterpriseAgentProfile.findUnique({
           where: { id: agent.employeeId },
-          select: { id: true, name: true, role: true },
+          select: { id: true, name: true, role: true, agentType: true, businessType: true },
         }) : null
+        if (!profile || profile.businessType !== businessType) {
+          console.warn(`[OwnerView] 域过滤: agent ${agent?.id} domain=${profile?.businessType} ≠ ${businessType}，已跳过（防跨域污染）`)
+          continue
+        }
         const traj = await browserTrajectoryService.listByWorkspace(ws.id, 1)
         rows.push({
           workspaceId: ws.id,
           workspaceStatus: ws.status,
           online: ['RUNNING', 'READY'].includes(ws.status),
           lastHealthCheckAt: ws.lastHealthCheckAt,
-          platform: ws.channelAccount?.channelType || null,
-          platformName: ws.channelAccount?.channelName || null,
-          accountConnection: ws.channelAccount?.connectionStatus || null,
-          agent: agent && profile ? { id: agent.id, name: profile.name, role: profile.role } : null,
+          businessType: ws.businessType,
+          platform: account.channelType || null,
+          platformName: account.channelName || null,
+          accountConnection: account.connectionStatus || null,
+          agent: profile ? { id: profile.id, name: profile.name, role: profile.role, agentType: profile.agentType, businessType: profile.businessType } : null,
           lastOperation: traj[0] ? { action: traj[0].action, description: traj[0].description, createdAt: traj[0].createdAt } : null,
         })
       }

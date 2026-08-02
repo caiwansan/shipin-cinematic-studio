@@ -6913,6 +6913,10 @@ model EnterpriseAgentProfile {
   description     String?
   role            String   @db.VarChar(100)
   agentType       String   @map("agent_type") @db.VarChar(50)
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01.1 Domain Boundary Fix — 业务域隔离
+  // career（求职招聘）/ media（新媒体运营）/ ecommerce（电商）/ legal（法律）…
+  // AI 员工必须属于业务部门；禁止跨域绑定渠道（招聘 AI 不得登录抖音）
+  businessType    String   @default("career") @map("business_type") @db.VarChar(30)
   goal            String?
   knowledgeScope  String   @default("[]") @map("knowledge_scope")
   tools           String   @default("[]")
@@ -7705,6 +7709,10 @@ model BrowserWorkspace {
   tenantId          String    @map("tenant_id") @db.Text
   organizationId    String    @map("organization_id") @db.Text
   channelAccountId  String    @unique @map("channel_account_id") @db.Text // EnterpriseChannelAccount.id
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01.1 Domain Boundary Fix — 工作电脑业务域隔离
+  // career（求职招聘）/ media（新媒体运营）/ ecommerce（电商）/ legal（法律）
+  // 查询必须 organizationId + businessType；法律 AI 不得打开淘宝，招聘 AI 不得登录抖音
+  businessType      String    @default("media") @map("business_type") @db.VarChar(30)
   workspaceType     String    @default("chrome") @map("workspace_type") @db.Text // chrome / firefox
   profilePath       String    @map("profile_path") @db.Text
   status            String    @default("CREATED") @db.Text // CREATED / READY / RUNNING / ERROR / DESTROYED
@@ -7720,6 +7728,7 @@ model BrowserWorkspace {
 
   @@index([tenantId])
   @@index([organizationId])
+  @@index([organizationId, businessType])
   @@index([status])
   @@map("browser_workspace")
 }

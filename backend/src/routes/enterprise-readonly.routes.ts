@@ -176,20 +176,33 @@ export async function registerMediaOverviewRoutes(app: FastifyInstance) {
       const endOf7d = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000)
 
       // 1. AI 员工实例（真实状态）+ 档案
-      const instances = await prisma.enterpriseAgentInstance.findMany({
-        where: { organizationId: organizationId as any },
-        orderBy: { createdAt: 'asc' },
-        select: {
-          id: true,
-          employeeId: true,
-          runtimeStatus: true,
-          lifecycleState: true,
-          lastActiveAt: true,
-          totalTasks: true,
-          totalErrors: true,
-          createdAt: true,
-        },
+      // SPRINT-MEDIA-BROWSER-WORKSPACE-01.1 Domain Boundary Fix：
+      //   media 域工作台只返回 businessType='media' 的 AI 员工，禁止 Career/Recruitment Agent 混入
+      //   （两步查询：先取 media 域 profile id 白名单，再查实例）
+      const mediaProfiles = await prisma.enterpriseAgentProfile.findMany({
+        where: { businessType: 'media' },
+        select: { id: true },
       })
+      const mediaProfileIds = mediaProfiles.map((p: any) => p.id)
+      const instances = mediaProfileIds.length
+        ? await prisma.enterpriseAgentInstance.findMany({
+            where: {
+              organizationId: organizationId as any,
+              employeeId: { in: mediaProfileIds },
+            },
+            orderBy: { createdAt: 'asc' },
+            select: {
+              id: true,
+              employeeId: true,
+              runtimeStatus: true,
+              lifecycleState: true,
+              lastActiveAt: true,
+              totalTasks: true,
+              totalErrors: true,
+              createdAt: true,
+            },
+          })
+        : []
       const profiles = instances.length
         ? await prisma.enterpriseAgentProfile.findMany({
             where: { id: { in: instances.map((i: any) => i.employeeId) } },

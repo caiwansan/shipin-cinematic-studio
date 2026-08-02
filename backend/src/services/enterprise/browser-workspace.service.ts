@@ -27,6 +27,8 @@ export interface BrowserWorkspaceRecord {
   tenantId: string
   organizationId: string
   channelAccountId: string
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01.1 — 业务域（career/media/ecommerce/legal）
+  businessType: string
   workspaceType: string
   profilePath: string
   status: WorkspaceStatus
@@ -58,8 +60,9 @@ export class BrowserWorkspaceService {
    * 获取或创建 workspace（by channelAccountId）
    * - 已存在：返回现有记录（幂等）
    * - 不存在：创建（CREATED 状态，profilePath 按企业/账号分层）
+   * - businessType：工作电脑所属业务域（默认 media，兼容存量抖音工作空间）
    */
-  async getOrCreate(tenantId: string, organizationId: string, channelAccountId: string): Promise<BrowserWorkspaceRecord> {
+  async getOrCreate(tenantId: string, organizationId: string, channelAccountId: string, businessType = 'media'): Promise<BrowserWorkspaceRecord> {
     const existing = await prisma.browserWorkspace.findUnique({
       where: { channelAccountId },
     })
@@ -71,13 +74,14 @@ export class BrowserWorkspaceService {
         tenantId,
         organizationId,
         channelAccountId,
+        businessType,
         workspaceType: 'chrome',
         profilePath,
         status: 'CREATED',
         metadata: {},
       },
     })
-    console.log(`[BrowserWorkspace] created org=${organizationId} account=${channelAccountId} profile=${profilePath}`)
+    console.log(`[BrowserWorkspace] created org=${organizationId} account=${channelAccountId} domain=${businessType} profile=${profilePath}`)
     return this.map(created)
   }
 
@@ -100,6 +104,28 @@ export class BrowserWorkspaceService {
       orderBy: { createdAt: 'desc' },
     })
     return rows.map(r => this.map(r))
+  }
+
+  /**
+   * 按组织 + 业务域查询（Domain Boundary Fix）
+   * 隔离：organizationId + businessType 双条件，防止跨域串线
+   */
+  async listByOrganizationAndDomain(organizationId: string, businessType: string): Promise<BrowserWorkspaceRecord[]> {
+    const rows = await prisma.browserWorkspace.findMany({
+      where: { organizationId, businessType },
+      orderBy: { createdAt: 'desc' },
+    })
+    return rows.map(r => this.map(r))
+  }
+
+  /** 业务域校验：workspace 归属域与期望域一致，否则拒绝（防跨域访问） */
+  async assertDomain(id: string, expectedDomain: string): Promise<BrowserWorkspaceRecord> {
+    const ws = await this.findById(id)
+    if (!ws) throw new Error(`BrowserWorkspace not found: ${id}`)
+    if (ws.businessType !== expectedDomain) {
+      throw new Error(`BrowserWorkspace 业务域不匹配: ${ws.businessType} ≠ ${expectedDomain}（跨域访问被拒绝）`)
+    }
+    return ws
   }
 
   /** 状态机流转（带校验） */
@@ -155,6 +181,7 @@ export class BrowserWorkspaceService {
       tenantId: row.tenantId,
       organizationId: row.organizationId,
       channelAccountId: row.channelAccountId,
+      businessType: row.businessType || 'media',
       workspaceType: row.workspaceType,
       profilePath: row.profilePath,
       status: row.status,

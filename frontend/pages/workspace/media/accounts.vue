@@ -15,11 +15,12 @@
     />
 
     <!-- SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task08.1 — Browser Workspace Owner View（老板视角）
-         AI员工 → 工作电脑（🟢在线）→ 平台 → 最近操作 → 状态 -->
+         AI员工 → 工作电脑（🟢在线）→ 平台 → 最近操作 → 状态
+         SPRINT-MEDIA-BROWSER-WORKSPACE-01.1：展示 media 域专属员工（禁止 Career/Recruitment Agent 混入）-->
     <div v-if="ownerViews.length" class="ac-owner">
       <div class="ac-owner-head">
-        <span class="ac-owner-title">AI 员工工作电脑</span>
-        <span class="ac-owner-sub">每一台都是真实浏览器环境 · 登录态长期保留</span>
+        <span class="ac-owner-title">新媒体运营部门 · 我的 AI 员工</span>
+        <span class="ac-owner-sub">每个 AI 员工拥有自己的工作电脑 · 登录态长期保留</span>
       </div>
       <div class="ac-owner-grid">
         <div v-for="ov in ownerViews" :key="ov.workspaceId" class="ac-owner-card">
@@ -28,16 +29,17 @@
             <div class="ac-owner-meta">
               <div class="ac-owner-name">{{ ov.agent?.name || 'AI 员工' }}</div>
               <div class="ac-owner-role">{{ ov.agent?.role || '运营' }}</div>
+              <div class="ac-owner-dept"><span class="ac-owner-dept-dot"></span>{{ ov.businessType === 'media' ? '新媒体运营部门' : ov.businessType }}</div>
             </div>
             <span class="ac-owner-state" :class="ov.online ? 'on' : 'off'">
               <span class="ac-owner-dot" :class="ov.online ? 'on' : 'off'"></span>
-              {{ ov.online ? '🟢 在线' : '⚫ 离线' }}
+              {{ ov.online ? '🟢 工作中' : '⚫ 离线' }}
             </span>
           </div>
           <div class="ac-owner-info">
-            <div class="ac-owner-row"><span class="k">平台</span><span class="v">{{ ov.platformName || ov.platform || '—' }}</span></div>
+            <div class="ac-owner-row"><span class="k">工作电脑</span><span class="v">🖥 {{ (ov.platformName || ov.platform || '运营空间') + '运营空间' }}</span></div>
             <div class="ac-owner-row"><span class="k">状态</span><span class="v">{{ ov.workspaceStatus }}</span></div>
-            <div class="ac-owner-row"><span class="k">最近操作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '等待任务' }}</span></div>
+            <div class="ac-owner-row"><span class="k">最近动作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '等待任务' }}</span></div>
           </div>
         </div>
       </div>
@@ -264,9 +266,15 @@
                     <div class="ac-verify-step-name">
                       {{ verificationType === 'sms' ? '接收短信验证码' : verificationType === 'face' ? '手机刷脸验证' : '抖音 App 确认' }}
                     </div>
-                    <div class="ac-verify-step-desc">在抖音 App 中按提示完成{{ verificationType === 'sms' ? '短信验证' : verificationType === 'face' ? '刷脸' : '确认登录' }}</div>
+                    <div class="ac-verify-step-desc">
+                      <template v-if="verificationTriggered">✅ 验证请求已发送到你的抖音 App，请在手机上完成{{ verificationType === 'sms' ? '短信验证' : verificationType === 'face' ? '刷脸' : '确认' }}（若未收到，点击下方按钮重新发送）</template>
+                      <template v-else>在抖音 App 中按提示完成{{ verificationType === 'sms' ? '短信验证' : verificationType === 'face' ? '刷脸' : '确认登录' }}</template>
+                    </div>
                   </div>
                 </div>
+                <button v-if="verificationType === 'face' || verificationType === 'sms'" class="ac-btn ac-btn-ghost ac-verify-resend" :disabled="connecting" @click="resendVerification">
+                  ↻ 重新发送验证请求
+                </button>
                 <div class="ac-verify-step">
                   <span class="ac-verify-step-dot">②</span>
                   <div>
@@ -324,6 +332,7 @@ const detectedAccountId = ref('')
 const verificationRequired = ref(false)
 const verificationType = ref<'sms' | 'app' | 'face' | 'none'>('none')
 const verificationAcknowledged = ref(false)
+const verificationTriggered = ref(false)
 
 async function api(url: string, opts: any = {}) {
   const token = getAuthToken() || ''
@@ -361,6 +370,7 @@ async function openDouyinConnect(p: any) {
   verificationRequired.value = false
   verificationType.value = 'none'
   verificationAcknowledged.value = false
+  verificationTriggered.value = false
   loginStage.value = 'waiting_scan'
   try {
     // 1) 确保渠道账号存在
@@ -391,6 +401,25 @@ async function openDouyinConnect(p: any) {
     $toast?.error?.(`连接启动失败: ${e.message}`)
   } finally {
     connecting.value = false
+  }
+}
+
+// 重新发送验证请求：手动触发一次 status 轮询（getLoginStatus 会自动点击刷脸/短信按钮向手机推送）
+async function resendVerification() {
+  if (!sessionId.value || connecting.value) return
+  statusMsg.value = '正在重新发送验证请求...'
+  try {
+    const d = await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/status`)
+    if (d?.data?.verificationTriggered) {
+      verificationTriggered.value = true
+      statusMsg.value = '✅ 验证请求已重新发送，请在抖音 App 上完成验证'
+    } else if (d?.data?.verificationRequired) {
+      statusMsg.value = '验证页已就绪，若手机仍未收到请求请稍后再试'
+    } else {
+      statusMsg.value = '验证状态已刷新'
+    }
+  } catch (e: any) {
+    statusMsg.value = '重新发送失败: ' + e.message
   }
 }
 
@@ -436,8 +465,11 @@ function startPolling() {
       if (d.verificationRequired && !verificationAcknowledged.value) {
         verificationRequired.value = true
         verificationType.value = d.verificationType || 'app'
+        verificationTriggered.value = !!d.verificationTriggered
         loginStage.value = 'verifying'
-        statusMsg.value = '抖音要求完成一次安全验证（新设备首次绑定），验证完成后本环境长期可信'
+        statusMsg.value = verificationTriggered.value
+          ? '已向你的抖音 App 发送验证请求，请在手机上完成验证'
+          : '抖音要求完成一次安全验证（新设备首次绑定），验证完成后本环境长期可信'
       }
       if (d.verificationRequired && verificationAcknowledged.value) {
         // 已确认：不打断，继续轮询等探针检测登录态
@@ -771,6 +803,20 @@ function onClick(p: any) {
 .ac-owner-role {
   font-size: 12px;
   color: #64748b;
+}
+.ac-owner-dept {
+  font-size: 11px;
+  color: #8b5cf6;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+}
+.ac-owner-dept-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8b5cf6;
 }
 .ac-owner-state {
   font-size: 12px;
@@ -1267,6 +1313,19 @@ function onClick(p: any) {
   font-size: 11px;
   color: #94a3b8;
   margin-top: 1px;
+}
+.ac-verify-resend {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, .35);
+  background: rgba(139, 92, 246, .08);
+  cursor: pointer;
+  margin-top: 2px;
+}
+.ac-verify-resend:hover {
+  background: rgba(139, 92, 246, .16);
 }
 .ac-verify-btn {
   margin-top: 14px;
