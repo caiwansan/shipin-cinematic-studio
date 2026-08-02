@@ -33,6 +33,7 @@ import { browserRuntime } from '../media/browser-runtime.service.js'
 import { identityProbeRegistry } from '../../enterprise/channel/identity-probe.js'
 import { ChannelConnectionStatus, isChannelConnected } from '../../constants/channel-connection-status.js'
 import { browserWorkspaceService } from './browser-workspace.service.js'
+import { channelService } from './channel.service.js'
 
 export class BrowserWorkspaceRecoveryService {
   private recovering = false
@@ -77,6 +78,8 @@ export class BrowserWorkspaceRecoveryService {
               id: true,
               channelType: true,
               channelName: true,
+              accountName: true,
+              avatarUrl: true,
               connectionStatus: true,
               externalAccountId: true,
               metadata: true,
@@ -148,7 +151,7 @@ export class BrowserWorkspaceRecoveryService {
    */
   private async recoverConnectedAccount(
     ws: any,
-    account: { id: string; channelType: string; channelName: string; connectionStatus: string; externalAccountId: string | null; metadata: any; connectedAt: Date | null },
+    account: { id: string; channelType: string; channelName: string; accountName: string | null; avatarUrl: string | null; connectionStatus: string; externalAccountId: string | null; metadata: any; connectedAt: Date | null },
     sid: string,
     profilePath: string,
     details: { accountId: string; platform: string; action: string; message: string }[],
@@ -199,26 +202,23 @@ export class BrowserWorkspaceRecoveryService {
     const authenticated = !!identity?.authenticated && !!identity.accountId
     if (authenticated && identity) {
       // 4a. 保持 CONNECTED + 更新身份快照（G1：identity 完整；owner-view 新鲜度判定依据）
+      // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（externalAccountId + accountName + avatarUrl）
+      await channelService.updateChannelIdentity(account.id, {
+        externalAccountId: identity.accountId ?? account.externalAccountId,
+        accountName: identity.accountName ?? account.accountName ?? account.channelName,
+        avatarUrl: identity.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
+        via: 'startup_recovery',
+        connectionStatus: ChannelConnectionStatus.CONNECTED,
+        connectedAt: account.connectedAt ?? new Date(),
+      })
       const nowIso = new Date().toISOString()
       const meta = (account.metadata as any) || {}
+      // 恢复计数单独维护（非身份数据）
       await prisma.enterpriseChannelAccount.update({
         where: { id: account.id },
         data: {
-          connectionStatus: ChannelConnectionStatus.CONNECTED,
-          connectedAt: account.connectedAt ?? new Date(),
-          externalAccountId: identity.accountId ?? account.externalAccountId,
-          channelName: identity.accountName ?? account.channelName,
           metadata: {
             ...meta,
-            avatar: identity.avatar ?? meta.avatar,
-            lastVerifiedAt: nowIso,
-            identitySnapshot: {
-              externalAccountId: identity.accountId,
-              accountName: identity.accountName ?? account.channelName,
-              avatar: identity.avatar ?? meta.avatar ?? null,
-              checkedAt: nowIso,
-              via: 'startup_recovery',
-            },
             recoveryCount: (meta.recoveryCount ?? 0) + 1,
             lastRecoveredAt: nowIso,
           },

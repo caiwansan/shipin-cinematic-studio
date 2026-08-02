@@ -99,6 +99,59 @@ export class ChannelService {
     return (account.metadata as any)?.permissionLevel ?? 1
   }
 
+  /**
+   * SPRINT-MEDIA-ACCOUNT-IDENTITY-VIEW-01 Task01/02 — 渠道身份唯一写入入口（SSOT）
+   * 来源唯一链路：IdentityProbe → updateChannelIdentity() → EnterpriseChannelAccount
+   *
+   * 写 SSOT 列：externalAccountId / accountName / avatarUrl
+   * 同步维护：channelName（历史兼容展示名）+ metadata.lastVerifiedAt + metadata.identitySnapshot（身份新鲜度）
+   *
+   * 禁止：前端保存账号名 / workspace 保存账号名 / AI 员工保存账号名（AI 员工只是使用电脑，不拥有账号）
+   *
+   * @param input.via 身份来源标注（connect_keepalive / wait_login_keepalive / refresh_credential / recovery / confirm_binding）
+   */
+  async updateChannelIdentity(
+    accountId: string,
+    input: {
+      externalAccountId?: string | null
+      accountName?: string | null
+      avatarUrl?: string | null
+      via: string
+      connectionStatus?: string
+      connectedAt?: Date | null
+    },
+  ) {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    const nowIso = new Date().toISOString()
+    const accMeta = (account.metadata as any) || {}
+    const finalExternalId = input.externalAccountId ?? account.externalAccountId
+    const finalName = input.accountName ?? account.accountName ?? account.channelName
+    const finalAvatar = input.avatarUrl ?? account.avatarUrl ?? accMeta.avatar ?? null
+    return prisma.enterpriseChannelAccount.update({
+      where: { id: accountId },
+      data: {
+        ...(input.externalAccountId != null ? { externalAccountId: input.externalAccountId } : {}),
+        ...(input.accountName != null ? { accountName: input.accountName, channelName: input.accountName } : {}),
+        ...(input.avatarUrl != null ? { avatarUrl: input.avatarUrl } : {}),
+        ...(input.connectionStatus ? { connectionStatus: input.connectionStatus } : {}),
+        ...(input.connectedAt ? { connectedAt: input.connectedAt } : {}),
+        metadata: {
+          ...accMeta,
+          ...(finalAvatar ? { avatar: finalAvatar } : {}),
+          lastVerifiedAt: nowIso,
+          identitySnapshot: {
+            externalAccountId: finalExternalId,
+            accountName: finalName,
+            avatar: finalAvatar,
+            checkedAt: nowIso,
+            via: input.via,
+          },
+        },
+      },
+    })
+  }
+
   /** 设置账号权限等级（1/2/3），仅允许升级到掌柜批准的范围（当前冻结 L1，L2/L3 预留） */
   async setPermissionLevel(accountId: string, level: number) {
     if (![1, 2, 3].includes(level)) throw new Error('权限等级必须为 1/2/3')
@@ -249,30 +302,14 @@ export class ChannelService {
           console.warn(`[ChannelService] 授权状态机恢复标记失败: ${e.message}`)
         }
         // TASK03.2.1 — 回写最新身份（登录态维持，身份可能更新）
-        // IDENTITY-PERSISTENCE-FIX-01 Task03 — 写完整身份（externalAccountId+nickname+avatar+lastVerifiedAt），
-        // 禁止只写 cookie 标记；owner-view 身份新鲜度依赖此快照
-        const nowIso = new Date().toISOString()
-        const accMeta = (account.metadata as any) || {}
-        await prisma.enterpriseChannelAccount.update({
-          where: { id: account.id },
-          data: {
-            connectionStatus: ChannelConnectionStatus.CONNECTED,
-            connectedAt: account.connectedAt ?? new Date(),
-            externalAccountId: result.externalAccountId ?? account.externalAccountId,
-            channelName: result.accountName ?? account.channelName,
-            metadata: {
-              ...accMeta,
-              avatar: result.avatar ?? accMeta.avatar,
-              lastVerifiedAt: nowIso,
-              identitySnapshot: {
-                externalAccountId: result.externalAccountId ?? account.externalAccountId,
-                accountName: result.accountName ?? account.channelName,
-                avatar: result.avatar ?? accMeta.avatar ?? null,
-                checkedAt: nowIso,
-                via: 'connect_keepalive',
-              },
-            },
-          },
+        // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（externalAccountId + accountName + avatarUrl）
+        await this.updateChannelIdentity(account.id, {
+          externalAccountId: result.externalAccountId ?? account.externalAccountId,
+          accountName: result.accountName ?? account.accountName ?? account.channelName,
+          avatarUrl: result.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
+          via: 'connect_keepalive',
+          connectionStatus: ChannelConnectionStatus.CONNECTED,
+          connectedAt: account.connectedAt ?? new Date(),
         })
         await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
         return { ...result, status: 'connected' }
@@ -318,28 +355,14 @@ export class ChannelService {
       // 已确认账号 → 维持登录（G2 重启后仍 connected）
       const alreadyBound = isChannelConnected(account.connectionStatus) && !!account.externalAccountId
       if (alreadyBound) {
-        const nowIso = new Date().toISOString()
-        const accMeta = (account.metadata as any) || {}
-        await prisma.enterpriseChannelAccount.update({
-          where: { id: account.id },
-          data: {
-            connectionStatus: ChannelConnectionStatus.CONNECTED,
-            connectedAt: account.connectedAt ?? new Date(),
-            externalAccountId: result.externalAccountId ?? account.externalAccountId,
-            channelName: result.accountName ?? account.channelName,
-            metadata: {
-              ...accMeta,
-              avatar: result.avatar ?? accMeta.avatar,
-              lastVerifiedAt: nowIso,
-              identitySnapshot: {
-                externalAccountId: result.externalAccountId ?? account.externalAccountId,
-                accountName: result.accountName ?? account.channelName,
-                avatar: result.avatar ?? accMeta.avatar ?? null,
-                checkedAt: nowIso,
-                via: 'wait_login_keepalive',
-              },
-            },
-          },
+        // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（externalAccountId + accountName + avatarUrl）
+        await this.updateChannelIdentity(account.id, {
+          externalAccountId: result.externalAccountId ?? account.externalAccountId,
+          accountName: result.accountName ?? account.accountName ?? account.channelName,
+          avatarUrl: result.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
+          via: 'wait_login_keepalive',
+          connectionStatus: ChannelConnectionStatus.CONNECTED,
+          connectedAt: account.connectedAt ?? new Date(),
         })
         try {
           const session = await channelBrowserSessionService.findByAccount(account.id)
@@ -391,25 +414,29 @@ export class ChannelService {
       throw new Error('未检测到有效登录态，请重新扫码登录')
     }
 
-    // 2. 回写账号身份（G1：externalAccountId + channelName + avatar）
+    // 2. 回写账号身份（G1：externalAccountId + accountName + avatarUrl）
+    // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（身份锚点落 SSOT 列，metadata 只存新鲜度/权限）
     // REALITY-HARDENING-01 Task02 — 探针复核通过 = 平台确认真人 → AUTHENTICATED（凭证落库后才 CONNECTED）
+    await this.updateChannelIdentity(account.id, {
+      externalAccountId: identity.accountId ?? account.externalAccountId,
+      accountName: identity.accountName ?? account.accountName ?? account.channelName,
+      avatarUrl: identity.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
+      via: 'confirm_binding',
+      connectionStatus: ChannelConnectionStatus.AUTHENTICATED,
+      connectedAt: new Date(),
+    })
+    // 权限/绑定元数据单独维护（非身份数据）
     await prisma.enterpriseChannelAccount.update({
       where: { id: account.id },
       data: {
-        connectionStatus: ChannelConnectionStatus.AUTHENTICATED,
-        connectedAt: new Date(),
-        externalAccountId: identity.accountId ?? account.externalAccountId,
-        channelName: identity.accountName ?? account.channelName,
         metadata: {
-          ...(account.metadata as any || {}),
-          avatar: identity.avatar ?? (account.metadata as any)?.avatar,
+          ...((account.metadata as any) || {}),
           permissionLevel: (account.metadata as any)?.permissionLevel ?? 1, // L1 观察员工（默认）
           permissions: identity.permissions,
           boundAt: new Date().toISOString(),
           // Channel Identity Trust Completion — 设备可信标记：本次绑定完成即建立长期可信环境，
           // 后续同一 profile 恢复登录态时不再触发新设备风控（由平台侧 profile 连续性保证）
           deviceTrusted: true,
-          lastVerifiedAt: new Date().toISOString(),
         },
       },
     })
@@ -556,28 +583,14 @@ export class ChannelService {
       return result
     }
     // 探针确认真人 + 凭证落库成功 → CONNECTED（身份 + 凭证 + runtime 全部正常）
-    const nowIso = new Date().toISOString()
-    const accMeta = (account.metadata as any) || {}
-    await prisma.enterpriseChannelAccount.update({
-      where: { id: account.id },
-      data: {
-        connectionStatus: ChannelConnectionStatus.CONNECTED,
-        connectedAt: new Date(),
-        externalAccountId: identity.accountId ?? account.externalAccountId,
-        channelName: identity.accountName ?? account.channelName,
-        metadata: {
-          ...accMeta,
-          avatar: identity.avatar ?? accMeta.avatar,
-          lastVerifiedAt: nowIso,
-          identitySnapshot: {
-            externalAccountId: identity.accountId ?? account.externalAccountId,
-            accountName: identity.accountName ?? account.channelName,
-            avatar: identity.avatar ?? accMeta.avatar ?? null,
-            checkedAt: nowIso,
-            via: 'refresh_credential',
-          },
-        },
-      },
+    // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（externalAccountId + accountName + avatarUrl）
+    await this.updateChannelIdentity(account.id, {
+      externalAccountId: identity.accountId ?? account.externalAccountId,
+      accountName: identity.accountName ?? account.accountName ?? account.channelName,
+      avatarUrl: identity.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
+      via: 'refresh_credential',
+      connectionStatus: ChannelConnectionStatus.CONNECTED,
+      connectedAt: new Date(),
     })
     return result
   }

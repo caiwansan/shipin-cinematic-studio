@@ -38,8 +38,25 @@
           </div>
           <div class="ac-owner-info">
             <div class="ac-owner-row"><span class="k">工作电脑</span><span class="v">🖥 {{ (ov.platformName || ov.platform || '运营空间') + '运营空间' }}</span></div>
-            <div class="ac-owner-row"><span class="k">账号身份</span><span class="v">{{ identityLabel(ov) }}</span></div>
-            <div class="ac-owner-row"><span class="k">状态</span><span class="v">{{ workerStatusDetail(ov) }}</span></div>
+            <!-- IDENTITY-VIEW-01 Task04 — 账号身份块：真实头像 + 账号名 + 平台ID（SSOT，前端不保存账号名） -->
+            <div class="ac-owner-row ac-owner-identity">
+              <span class="k">账号身份</span>
+              <span class="v ac-identity-cell">
+                <img v-if="ov.identity?.avatar" :src="ov.identity.avatar" class="ac-identity-avatar" alt="账号头像" referrerpolicy="no-referrer" />
+                <span v-else class="ac-identity-avatar-fb">{{ (ov.identity?.accountName || '?')[0] }}</span>
+                <span class="ac-identity-main">
+                  <span class="ac-identity-name">{{ ov.identity?.accountName || '未获取' }}</span>
+                  <span v-if="ov.identity?.externalAccountId" class="ac-identity-ext">ID {{ ov.identity.externalAccountId }}</span>
+                </span>
+              </span>
+            </div>
+            <!-- IDENTITY-VIEW-01 Task05 — 身份失效展示：登录过就保留身份，显示需重新验证 + 原因 + 最后验证 -->
+            <div v-if="ov.identity?.status === 'stale'" class="ac-owner-row ac-owner-warn">
+              <span class="k">状态</span>
+              <span class="v">🟡 登录状态需要重新验证<span class="ac-owner-warn-reason">{{ ov.identity.reason || '身份快照超期' }}</span></span>
+            </div>
+            <div v-else class="ac-owner-row"><span class="k">状态</span><span class="v">{{ workerStatusDetail(ov) }}</span></div>
+            <div v-if="ov.identity?.lastVerifiedAt" class="ac-owner-row"><span class="k">最近验证</span><span class="v">{{ timeAgo(ov.identity.lastVerifiedAt) }}<span class="ac-owner-verify-by">{{ verifiedByLabel(ov) }}</span></span></div>
             <div class="ac-owner-row"><span class="k">最近动作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '等待任务' }}</span></div>
           </div>
         </div>
@@ -804,14 +821,21 @@ function workerStatusLabel(ov: any): string {
 function workerStatusDetail(ov: any): string {
   return WORKER_STATUS_DETAIL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || ov.workspaceStatus || '—'
 }
-// SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 04 — 账号身份新鲜度展示
-// 后端 owner-view 返回 identity 块：verified（24h 内探针/恢复确认）/ stale（超期需核验）/ missing（从未获取）
-function identityLabel(ov: any): string {
-  const idn = ov.identity || {}
-  if (idn.status === 'verified') return `🟢 已验证 · ${idn.accountName || '已登录'}`
-  if (idn.status === 'stale') return `🟡 待核验 · ${idn.accountName || '已登录'}`
-  if (idn.status === 'missing') return '⚪ 未获取（登录后自动记录）'
-  return '—'
+// IDENTITY-VIEW-01 Task04 — 账号身份新鲜度：由卡片身份块（头像/账号名/ID/最近验证/失效原因）承载，
+// 展示逻辑内联在模板（identity.status 分支），此处不再保留单行文本函数
+// IDENTITY-VIEW-01 Task05 — 身份验证来源标注（verifiedBy → 人话）
+function verifiedByLabel(ov: any): string {
+  const via = ov.identity?.verifiedBy
+  if (!via) return ''
+  const map: Record<string, string> = {
+    confirm_binding: '· 扫码确认绑定',
+    connect_keepalive: '· 登录态维持',
+    wait_login_keepalive: '· 登录轮询确认',
+    refresh_credential: '· 凭证刷新确认',
+    startup_recovery: '· 开机恢复确认',
+    manual_bind: '· 手动绑定',
+  }
+  return map[via] || ''
 }
 
 function timeAgo(iso: string): string {
@@ -1011,6 +1035,18 @@ function onClick(p: any) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* IDENTITY-VIEW-01 Task04/05 — 身份单元格：头像 + 账号名 + 平台ID；失效警示 */
+.ac-owner-identity .v { display: flex; align-items: center; }
+.ac-identity-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ac-identity-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #f1f5f9; }
+.ac-identity-avatar-fb { width: 28px; height: 28px; border-radius: 50%; background: #eef2ff; color: #6366f1; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ac-identity-main { display: flex; flex-direction: column; min-width: 0; }
+.ac-identity-name { font-weight: 500; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-identity-ext { font-size: 10px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.ac-owner-warn .v { color: #b45309; display: flex; flex-direction: column; gap: 2px; }
+.ac-owner-warn-reason { font-size: 11px; color: #d97706; opacity: .85; }
+.ac-owner-verify-by { font-size: 10px; color: #94a3b8; margin-left: 4px; }
 
 /* ═══ 分类 Tabs ═══ */
 .ac-tabs {

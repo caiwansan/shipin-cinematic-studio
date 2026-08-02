@@ -281,7 +281,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         if (!ws) continue
         const account = await prisma.enterpriseChannelAccount.findUnique({
           where: { id: ws.channelAccountId },
-          select: { id: true, channelType: true, channelName: true, connectionStatus: true, externalAccountId: true, metadata: true },
+          select: { id: true, channelType: true, channelName: true, accountName: true, avatarUrl: true, connectionStatus: true, externalAccountId: true, connectedAt: true, metadata: true },
         })
         if (!account) continue
         const agent = await prisma.enterpriseAgentInstance.findUnique({ where: { id: b.agentInstanceId } })
@@ -305,11 +305,26 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         //   missing  = 从未获取到账号身份（即使 workspace RUNNING 也不算真在线）
         const accMeta = (account.metadata as any) || {}
         const lastVerifiedAt = accMeta.lastVerifiedAt || null
+        // IDENTITY-VIEW-01 Task05 — verified 必须同时满足「身份新鲜 + 登录有效」：
+        //   身份快照新鲜 ≠ 当前登录有效（EXPIRED/ERROR 即使昨天刚验证过也要显示「需重新验证」）
+        const loginInvalid = account.connectionStatus === ChannelConnectionStatus.EXPIRED || account.connectionStatus === ChannelConnectionStatus.ERROR
         const identityStatus = !account.externalAccountId
           ? 'missing'
-          : lastVerifiedAt && (Date.now() - new Date(lastVerifiedAt).getTime()) < 24 * 3600 * 1000
-            ? 'verified'
-            : 'stale'
+          : loginInvalid
+            ? 'stale'
+            : lastVerifiedAt && (Date.now() - new Date(lastVerifiedAt).getTime()) < 24 * 3600 * 1000
+              ? 'verified'
+              : 'stale'
+        // IDENTITY-VIEW-01 Task05 — 身份失效原因（真实 SaaS：账号身份 ≠ 当前在线；登录过就保留身份，不删除）
+        //   浏览器环境失效 / 登录态过期 / 探针未确认 / 从未登录
+        const identityReason = (() => {
+          if (identityStatus === 'verified') return null
+          if (identityStatus === 'missing') return '从未获取到账号身份（扫码登录后自动记录）'
+          if (!workspaceRunning) return '浏览器环境失效（数字电脑未运行）'
+          if (account.connectionStatus === ChannelConnectionStatus.EXPIRED) return '登录状态已过期，需重新扫码验证'
+          if (account.connectionStatus === ChannelConnectionStatus.ERROR) return '连接异常，需重新验证'
+          return '身份快照超期，需重新验证'
+        })()
         // 真实性状态推导：老板看到的状态 = 电脑 + 账号 + 最近动作 的组合，不是单一 workspace RUNNING
         const workerStatus = (() => {
           if (!workspaceRunning) return 'offline'
@@ -331,14 +346,15 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
           platform: account.channelType || null,
           platformName: account.channelName || null,
           accountConnection: account.connectionStatus || null,
-          // SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 04 — 身份块（owner-view 真实性核心）：
-          //   前端不得再根据 workspace.status 猜在线，必须结合 identity 维度
+          // IDENTITY-VIEW-01 Task04/05 — 身份块（SSOT 列：accountName/avatarUrl）+ 失效原因：
+          //   前端展示真实头像/账号名/平台 ID/最近验证；失效时身份保留 + 🟡 需重新验证 + 原因
           identity: {
             status: identityStatus,
             externalAccountId: account.externalAccountId || null,
-            accountName: account.channelName || null,
-            avatar: accMeta.avatar || null,
+            accountName: account.accountName || account.channelName || null,
+            avatar: account.avatarUrl || accMeta.avatar || null,
             lastVerifiedAt,
+            reason: identityReason,
             verifiedBy: accMeta.identitySnapshot?.via || (accMeta.lastVerifiedAt ? 'manual_bind' : null),
           },
           agent: profile ? { id: profile.id, name: profile.name, role: profile.role, agentType: profile.agentType, businessType: profile.businessType } : null,

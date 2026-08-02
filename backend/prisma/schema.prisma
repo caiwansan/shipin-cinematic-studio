@@ -7545,6 +7545,12 @@ model EnterpriseChannelAccount {
   governanceTenantId    String?   @map("governance_tenant_id") @db.Text
   channelType           String    @default("wechat_work") @map("channel_type") @db.Text
   channelName           String    @map("channel_name") @db.Text
+  // SPRINT-MEDIA-ACCOUNT-IDENTITY-VIEW-01 Task01 — 渠道身份 SSOT（唯一身份锚点）
+  // accountName = 平台真实账号名（如「宏荼记」）；avatarUrl = 平台真实头像
+  // 来源唯一链路：IdentityProbe → updateChannelIdentity() → 本表
+  // 禁止：前端保存账号名 / workspace 保存账号名 / AI 员工保存账号名（AI 员工只是使用电脑，不拥有账号）
+  accountName           String?   @map("account_name") @db.Text
+  avatarUrl             String?   @map("avatar_url") @db.Text
   externalAccountId     String?   @map("external_account_id") @unique @db.Text
   credentialEncrypted   Json      @default("{}") @map("credential_encrypted")
   // SPRINT-MEDIA-REALITY-HARDENING-01 Task02 — 连接状态机（禁止 PENDING 直跳 connected）

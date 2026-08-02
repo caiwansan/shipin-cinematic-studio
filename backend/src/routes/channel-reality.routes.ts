@@ -6,13 +6,19 @@
  * 四层真实状态（AI 员工执行前必查；老板验证「电脑/登录/授权/员工」是否真正可用）：
  * {
  *   browser:  { alive, profileExists }                    — 电脑是否开机 + profile 是否存在
- *   identity: { loggedIn, nickname, externalAccountId, avatar, checkedAt } — 实时探针（三信号）
+ *   identity: { status, platform, name, avatar, externalId, lastVerifiedAt,
+ *               loggedIn, checkedAt }                      — 身份（verified 必须来自最近真实探针）
  *   account:  { connected, connectionStatus, connectedAt }— SaaS 授权状态
  *   employee: { usable, binding }                         — AI 员工是否可用的最终结论
  * }
  *
+ * IDENTITY-VIEW-01 Task03 — identity 标准化：
+ *   status = verified（最近探针通过）/ stale（有身份但需重新验证）/ missing（从未获取到身份）
+ *   name/avatar/externalId 优先实时探针值；探针不可用时回退最近一次身份快照（SSOT 列），绝不编造
+ *   lastVerifiedAt = 最近一次真实探针/恢复确认时间
+ *
  * 设计原则：
- * - identity 是实时 IdentityProbe 结果（不猜、不用 DB 快照冒充）
+ * - identity.verified 必须来自最近一次真实探针（不猜、不用 DB 快照冒充在线）
  * - usable = account.connected && identity.loggedIn && binding.active（全部真实才可用）
  * - 租户/组织归属校验：非属主账号一律 404（第三方审计 H-02 教训，新代码从第一天就带校验）
  */
@@ -39,6 +45,8 @@ export async function channelRealityRoutes(app: FastifyInstance) {
           id: true,
           channelType: true,
           channelName: true,
+          accountName: true,
+          avatarUrl: true,
           connectionStatus: true,
           externalAccountId: true,
           connectedAt: true,
@@ -63,39 +71,53 @@ export async function channelRealityRoutes(app: FastifyInstance) {
       }
 
       // ── 2. identity 层：实时探针（页面特征 + Cookie + 身份提取）──
-      let identity: { loggedIn: boolean; nickname: string | null; externalAccountId: string | null; avatar: string | null; checkedAt: string; signals?: unknown } = {
-        loggedIn: false,
-        nickname: null,
-        externalAccountId: null,
-        avatar: null,
-        checkedAt: new Date().toISOString(),
-      }
+      // IDENTITY-VIEW-01 Task03 — 标准化 {status, platform, name, avatar, externalId, lastVerifiedAt}
+      //   status 判定：
+      //     verified = 最近一次真实探针通过（identity 必须来自探针，不猜）
+      //     stale    = 有身份（SSOT 列/快照）但当前未验证（浏览器不在线/探针未过/超时）→ 需重新验证，不删身份
+      //     missing  = 从未获取到身份
+      //   值优先级：实时探针 > SSOT 列（accountName/avatarUrl）> metadata 快照
+      const probeIdentity: { authenticated?: boolean; accountId?: string | null; accountName?: string | null; avatar?: string | null; checkedAt?: string } = {}
       if (alive) {
         const probe = identityProbeRegistry.get(platform)
         if (probe) {
           try {
             const r = await probe.probe(sid)
-            identity = {
-              loggedIn: !!r.authenticated && !!r.accountId,
-              nickname: r.accountName ?? null,
-              externalAccountId: r.accountId ?? null,
+            Object.assign(probeIdentity, {
+              authenticated: !!r.authenticated && !!r.accountId,
+              accountId: r.accountId ?? null,
+              accountName: r.accountName ?? null,
               avatar: r.avatar ?? null,
               checkedAt: r.checkedAt,
-              signals: r.signals,
-            }
+            })
           } catch (e: any) {
-            identity.loggedIn = false
-            identity.nickname = null
-            identity.externalAccountId = null
-            identity.avatar = null
             console.warn(`[ChannelReality] ${id} 探针异常: ${e.message}`)
           }
         }
       }
+      const accMeta = (account.metadata as any) || {}
+      const lastVerifiedAt = accMeta.lastVerifiedAt || null
+      const hasIdentity = !!account.externalAccountId || !!account.accountName || !!accMeta.identitySnapshot
+      const identityStatus = probeIdentity.authenticated
+        ? 'verified'
+        : hasIdentity
+          ? 'stale'
+          : 'missing'
+      const identity = {
+        status: identityStatus as 'verified' | 'stale' | 'missing',
+        platform,
+        // G5 — 未登录不能生成账号名：missing（从未获取身份）时 name/avatar/externalId 一律 null，
+        //   绝不 fallback 到渠道展示名（channelName）冒充账号身份
+        name: identityStatus === 'missing' ? null : (probeIdentity.accountName ?? account.accountName ?? account.channelName ?? null),
+        avatar: identityStatus === 'missing' ? null : (probeIdentity.avatar ?? account.avatarUrl ?? accMeta.avatar ?? null),
+        externalId: identityStatus === 'missing' ? null : (probeIdentity.accountId ?? account.externalAccountId ?? null),
+        lastVerifiedAt: identityStatus === 'missing' ? null : lastVerifiedAt,
+        loggedIn: !!probeIdentity.authenticated,
+        checkedAt: probeIdentity.checkedAt ?? new Date().toISOString(),
+      }
 
       // ── 3. account 层：SaaS 授权状态 ──
       const accountConnected = isChannelConnected(account.connectionStatus) && !!account.externalAccountId
-
       // ── 4. employee 层：AI 员工绑定 ──
       const binding = await prisma.agentChannelBinding.findFirst({
         where: { channelAccountId: account.id, status: 'active' },
@@ -130,7 +152,7 @@ export async function channelRealityRoutes(app: FastifyInstance) {
             connected: accountConnected,
             connectionStatus: account.connectionStatus,
             connectedAt: account.connectedAt ? account.connectedAt.toISOString() : null,
-            accountName: account.channelName,
+            accountName: account.accountName ?? account.channelName,
           },
           employee: {
             usable,
