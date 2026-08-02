@@ -21,12 +21,14 @@
 export interface ChannelIdentity {
   /** 是否已认证（多信号综合判定） */
   authenticated: boolean
-  /** 平台账号 ID（如抖音 sec_uid） */
+  /** 平台账号 ID（如抖音 sec_uid / 小红书 userId） */
   accountId?: string
   /** 平台账号昵称 */
   accountName?: string
   /** 头像 URL（base64 或 https） */
   avatar?: string
+  /** 账号类型（个人号/企业号/蓝V 等，平台定义） */
+  accountType?: string
   /** 已授权能力（read:metrics / read:comments / analyze ...） */
   permissions: string[]
   /** 登录态有效期（ISO；未实现为 undefined） */

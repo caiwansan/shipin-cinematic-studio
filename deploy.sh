@@ -24,7 +24,8 @@ if [ -d "/root/shipin-cinematic-studio/frontend/.output/server" ]; then
   cp -a /root/shipin-cinematic-studio/frontend/.output/server "$DEPLOY_DIR/.output/server"
 fi
 
-# 4. 重启（若存在 frontend 进程）
-echo ">>> 重启前端..."
-pm2 restart frontend > /dev/null 2>&1 || pm2 restart frontend-4000 frontend-4001 > /dev/null 2>&1 || true
+# 4. 重启前端（⚠️ pm2 进程名是 nuxt-frontend，不是 frontend——重启错进程会导致
+#    Nitro 返回旧 index.html 引用已删 hash → _nuxt 全 500）
+echo ">>> 重启前端 (nuxt-frontend)..."
+pm2 restart nuxt-frontend > /dev/null 2>&1 || pm2 restart frontend > /dev/null 2>&1 || true
 echo "✅ 部署完成"

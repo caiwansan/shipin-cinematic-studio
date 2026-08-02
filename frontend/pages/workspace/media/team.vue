@@ -13,6 +13,32 @@
       desc="一支为你运营线上生意的 AI 团队——每名员工职责清晰，解锁后自动部署并开始工作。"
     />
 
+    <!-- ═══ Task06 渠道状态矩阵：老板一眼看到哪些数字电脑已登录 ═══ -->
+    <div class="to-matrix">
+      <div class="to-matrix-head">
+        <span class="to-matrix-title">🗂️ 渠道状态矩阵</span>
+        <span class="to-matrix-legend"><span>🟢 已连接</span><span>🟡 等待授权</span><span>⚪ 未配置</span></span>
+        <NuxtLink to="/workspace/media/accounts" class="to-matrix-link">管理渠道 →</NuxtLink>
+      </div>
+      <table class="to-matrix-table">
+        <thead>
+          <tr>
+            <th class="to-matrix-th">AI 员工</th>
+            <th v-for="c in MATRIX_COLUMNS" :key="c" class="to-matrix-th">{{ CHANNELS[c]?.icon }} {{ CHANNELS[c]?.name }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="m in roster" :key="m.name" class="to-matrix-row">
+            <td class="to-matrix-employee">{{ m.avatar }} {{ m.name }}</td>
+            <td v-for="c in MATRIX_COLUMNS" :key="c" class="to-matrix-cell">
+              <span v-if="employeeChannels(m.name).includes(c)" class="to-matrix-dot" :class="channelDot(c).cls" :title="channelDot(c).label">{{ channelDot(c).mark }}</span>
+              <span v-else class="to-matrix-dash">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <div class="to-layout">
       <!-- ═══ 团队卡列 ═══ -->
       <div class="to-list">
@@ -73,6 +99,20 @@
             </div>
             <span v-if="selected.lifecycleState" class="to-detail-state" :class="stateClass(selected.lifecycleState)">{{ stateText(selected.lifecycleState) }}</span>
             <span v-else class="to-detail-state locked">🔒 未解锁</span>
+          </div>
+
+          <!-- 数字电脑（Task06 渠道状态矩阵：员工关联渠道实时状态） -->
+          <div class="to-detail-block">
+            <div class="to-block-title">🖥️ 数字电脑 <NuxtLink to="/workspace/media/accounts" class="to-block-link">渠道中心 →</NuxtLink></div>
+            <div class="to-computers">
+              <div v-for="p in employeeChannels(selected.name)" :key="p" class="to-computer" :class="channelDot(p).cls">
+                <span class="to-computer-dot">{{ channelDot(p).mark }}</span>
+                <div class="to-computer-meta">
+                  <div class="to-computer-name">{{ CHANNELS[p]?.icon }} {{ CHANNELS[p]?.name }}</div>
+                  <div class="to-computer-state">{{ channelDot(p).label }}</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 帮你做什么 -->
@@ -196,6 +236,50 @@ const outcomes = ref<any[]>([])
 const showSubscribe = ref(false)
 const { $toast } = useNuxtApp() as any
 
+// ═══ Task06 渠道状态矩阵：AI员工 × 渠道（🟢已连接 / 🟡等待授权 / ⚪未配置）═══
+// 数字电脑：每个 AI 员工负责的运营渠道（登录状态从 account-status 实时拉取）
+const CHANNELS: Record<string, { platform: string; name: string; icon: string }> = {
+  douyin: { platform: 'douyin', name: '抖音', icon: '🎵' },
+  xiaohongshu: { platform: 'xiaohongshu', name: '小红书', icon: '📕' },
+  channels_wechat: { platform: 'channels_wechat', name: '视频号', icon: '🎬' },
+  kuaishou: { platform: 'kuaishou', name: '快手', icon: '🎥' },
+}
+const MATRIX_COLUMNS = ['douyin', 'xiaohongshu', 'channels_wechat', 'kuaishou']
+// 员工 → 数字电脑（负责渠道）
+const EMPLOYEE_CHANNELS: Record<string, string[]> = {
+  'Alice': ['douyin', 'xiaohongshu', 'channels_wechat'],
+  'Bob': ['douyin', 'xiaohongshu'],
+  'Carol': ['xiaohongshu', 'channels_wechat', 'kuaishou'],
+  'David': ['channels_wechat'],
+  'Eve': ['douyin', 'xiaohongshu', 'kuaishou'],
+}
+// 渠道连接状态（platform → { connected, accountName }）
+const channelStatus = ref<Record<string, { connected: boolean; accountName?: string }>>({})
+async function loadChannelStatus() {
+  const token = getAuthToken()
+  for (const p of MATRIX_COLUMNS) {
+    try {
+      const res = await fetch(`/api/enterprise/channels/runtime/${p}/account-status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const j = await res.json()
+      const d = j?.data || {}
+      channelStatus.value[p] = { connected: !!d.connected, accountName: d.accountName || '' }
+    } catch {
+      channelStatus.value[p] = { connected: false }
+    }
+  }
+}
+function channelDot(platform: string): { mark: string; label: string; cls: string } {
+  const st = channelStatus.value[platform]
+  if (!st) return { mark: '⚪', label: '未配置', cls: 'dot-idle' }
+  if (st.connected) return { mark: '🟢', label: st.accountName || '已连接', cls: 'dot-on' }
+  return { mark: '🟡', label: '等待授权', cls: 'dot-wait' }
+}
+function employeeChannels(name: string): string[] {
+  return EMPLOYEE_CHANNELS[name] || MATRIX_COLUMNS.slice(0, 2)
+}
+
 // 标准编制：帮你做什么（产品语言）+ 解锁后自动工作
 const roster = [
   {
@@ -277,6 +361,7 @@ const selectedOutcomes = computed(() => {
 })
 
 onMounted(async () => {
+  loadChannelStatus()
   try {
     const token = getAuthToken()
     const res = await fetch('/api/enterprise/media/overview', {
@@ -326,6 +411,106 @@ function stateClass(s: string) {
   gap: var(--media-gap-card);
   align-items: start;
 }
+
+/* ── Task06 渠道状态矩阵 ── */
+.to-matrix {
+  background: var(--media-card-bg);
+  border: 1px solid var(--media-card-border);
+  border-radius: var(--media-radius-card);
+  padding: 14px 16px;
+  margin-bottom: var(--media-gap-card);
+}
+.to-matrix-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.to-matrix-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--media-text-strong);
+}
+.to-matrix-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--media-text-soft);
+}
+.to-matrix-link {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--media-accent);
+  text-decoration: none;
+}
+.to-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.to-matrix-th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--media-text-soft);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--media-card-border);
+}
+.to-matrix-row td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--media-card-border);
+  font-size: 12px;
+}
+.to-matrix-employee {
+  color: var(--media-text-strong);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.to-matrix-dot {
+  font-size: 15px;
+  cursor: default;
+}
+.to-matrix-dash {
+  color: var(--media-text-faint);
+}
+
+/* ── 数字电脑（员工详情） ── */
+.to-block-link {
+  font-size: 11px;
+  color: var(--media-accent);
+  text-decoration: none;
+  margin-left: 8px;
+}
+.to-computers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.to-computer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--media-card-border);
+  border-radius: 10px;
+  background: var(--media-bg-subtle);
+}
+.to-computer-dot {
+  font-size: 16px;
+}
+.to-computer-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--media-text-strong);
+}
+.to-computer-state {
+  font-size: 11px;
+  color: var(--media-text-soft);
+  margin-top: 2px;
+}
+.to-computer.dot-on { border-color: rgba(16,185,129,.4); }
+.to-computer.dot-wait { border-color: rgba(217,119,6,.4); }
+.to-computer.dot-idle { border-color: var(--media-card-border); }
+
 
 /* ── 团队卡列 ── */
 .to-list {

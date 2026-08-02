@@ -221,6 +221,7 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
     qrCodeBase64?: string
     loggedIn: boolean
     loginStage?: 'waiting_scan' | 'scan_confirming' | 'verifying' | 'awaiting_confirmation' | 'connected'
+    state?: string
     accountName?: string
     externalAccountId?: string
     avatar?: string
@@ -410,9 +411,11 @@ canvas.save('${out}')
         // loginStage 收窄后不含 connected/awaiting_confirmation（该分支前已设），直接切 verifying
         if (verificationRequired) loginStage = 'verifying'
       }
-      return { url: status.currentUrl, title: status.title, screenshotBase64, qrCodeBase64, loggedIn, loginStage, accountName, externalAccountId, avatar, verificationRequired, verificationType, verificationTriggered, debug }
+      // Task05 统一状态机：抖音也输出标准 state（兼容层映射，前端统一消费）
+      const state = (await import('../login-state-machine.js')).LEGACY_TO_STATE[loginStage] || 'WAIT_LOGIN'
+      return { url: status.currentUrl, title: status.title, screenshotBase64, qrCodeBase64, loggedIn, loginStage, state, accountName, externalAccountId, avatar, verificationRequired, verificationType, verificationTriggered, debug }
     } catch (e: any) {
-      return { url: '', title: '', loggedIn: false, loginStage: 'waiting_scan', error: e.message }
+      return { url: '', title: '', loggedIn: false, loginStage: 'waiting_scan', state: 'WAIT_LOGIN', error: e.message }
     }
   }
 

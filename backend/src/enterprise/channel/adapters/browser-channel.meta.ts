@@ -1,131 +1,324 @@
 /**
- * BrowserChannelMeta — 浏览器自动化渠道平台元数据（多平台配置中心）
- * 2026-08-02 — 抖音打通后按同范式铺开其他新媒体渠道
+ * ChannelPlatformDefinition — 浏览器渠道平台定义中心（配置驱动，零平台分支）
+ * SPRINT-MEDIA-CHANNEL-ADAPTER-EXPANSION-01 Task01 平台接入标准化
  *
- * 每个平台 = 登录 URL + 工作台特征（URL 片段 + 页面 markers）+ 账号名/ID 提取正则
- * 探针用这些配置做「登录态检测 + 身份提取」，Adapter 用登录 URL 做扫码入口。
+ * ── 掌柜蓝图 ──
+ * 一个平台 = 一个 Browser Workspace 模板。禁止复制抖音代码、禁止 if(platform==="douyin")。
+ * 新渠道接入 = 在此加一条配置 + 工厂注册 + 前端点亮卡片，适配器/探针零改动。
  *
- * ⚠️ 只做配置，不含业务逻辑。新渠道接入 = 在此加一条 + 注册 Adapter + 前端点亮卡片。
+ * ── 结构说明 ──
+ * - loginMethods: 平台支持的登录方式（qr 扫码 / sms 短信），不再用 boolean
+ * - selectors:    CSS 选择器级定位（登录页输入框/工作台容器/账号信息节点）
+ * - identityRules:
+ *     cookies         平台关键 cookie 名（登录态核心；仅 cookie 残留不算登录）
+ *     pageSignals     工作台 URL 片段 + 页面 markers（页面特征信号）
+ *     loginPageMarkers 登录页标记（命中 → 明确未登录，防止误判）
+ *     extractionRules 身份提取规则（userId/nickname/avatar/accountType 全字段，
+ *                     method: hydration=前端状态树 / regex=页面文本 / url=URL 正则）
+ *
+ * ⚠️ 只做配置，不含业务逻辑。禁止在配置里写平台分支。
  */
-export interface BrowserChannelMeta {
+export type LoginMethod = 'qr' | 'sms'
+export type IdentityField = 'userId' | 'nickname' | 'avatar' | 'accountType'
+
+export interface ExtractionRule {
+  /** 提取目标身份字段 */
+  field: IdentityField
+  /** 提取方式：hydration=前端状态树 / regex=页面 body 文本 / url=当前 URL */
+  method: 'hydration' | 'regex' | 'url'
+  /** method=regex|url 时的正则（取 group 捕获组，默认 1） */
+  pattern?: RegExp
+  /** method=hydration 时的字段名候选（按序取第一个命中；支持嵌套路径 a.b.c） */
+  hydrationKeys?: string[]
+  /** 捕获组下标（默认 1） */
+  group?: number
+}
+
+export interface ChannelPlatformDefinition {
   platform: string
   displayName: string
   /** 登录/首页 URL（连接时打开） */
   loginUrl: string
-  /** 工作台 URL 片段（命中任一 → 页面已进工作台） */
-  workspaceUrlFragments: string[]
-  /** 页面 markers（登录后页面出现的文本特征，≥2 命中视为已登录；探针兜底） */
-  pageMarkers: string[]
-  /** 账号名提取正则（页面 body 文本扫描，取第一个命中组） */
-  accountNamePatterns: RegExp[]
-  /** 账号 ID 提取正则（抖音号/快手号等） */
-  accountIdPatterns: RegExp[]
-  /** 登录页 markers（命中 → 明确未登录） */
-  loginPageMarkers: string[]
-  /** 是否支持短信验证码登录（默认仅扫码） */
-  smsLogin?: boolean
-  /** 平台 App 名（扫码提示文案用） */
-  appName: string
+  /** 工作台主 URL（导航/数据页基址） */
+  workspaceUrl: string
+  /** 支持的登录方式（qr 扫码 / sms 短信） */
+  loginMethods: LoginMethod[]
+  /** 短信 tab 标签文案（平台差异：小红书「短信登录」vs 抖音「验证码登录」） */
+  smsTabLabel?: string
+  /** CSS 选择器级定位（各平台 DOM 差异；探针/适配器兜底用） */
+  selectors: {
+    /** 登录页特征选择器（命中 → 明确未登录） */
+    loginPage?: string
+    /** 工作台容器选择器（命中 → 已在工作台） */
+    workspace?: string
+    /** 账号信息节点选择器（身份提取锚点） */
+    accountInfo?: string
+  }
+  /** 身份识别规则（探针唯一数据源） */
+  identityRules: {
+    /** 平台关键 cookie 名（登录态核心；≥2 命中算 cookie 信号） */
+    cookies: string[]
+    /** 工作台 URL 片段（命中任一 → 页面已进工作台） */
+    urlFragments: string[]
+    /** 排除 URL 正则（命中 → 明确非工作台；如快手普通用户主页 v.kuaishou.com/profile） */
+    excludeUrlPatterns?: RegExp[]
+    /** 页面 markers（登录后页面出现的文本特征，≥2 命中视为已登录） */
+    markers: string[]
+    /** 登录页标记（命中 → 明确未登录；优先于 markers 判断） */
+    loginPageMarkers: string[]
+    /** 身份提取规则（userId/nickname/avatar/accountType） */
+    extractionRules: ExtractionRule[]
+  }
+  /** 数据读取配置（fetchMetrics 通用实现；未配置 → 诚实报未实现） */
+  metricsExtraction?: {
+    /** 数据中心页 URL（连接后打开抓取） */
+    dataUrl: string
+    /** 指标规则：页面文本 label → ChannelMetrics 字段（数字 + 万/w 单位自动解析） */
+    rules: { label: string; field: 'followerCount' | 'videoCount' | 'totalLikes' | 'totalViews' | 'totalComments' | 'totalShares' }[]
+    /** 最近内容列表选择器（最近笔记/作品标题，rawData.recentContent） */
+    recentContentSelector?: string
+  }
 }
 
-export const CHANNEL_META: Record<string, BrowserChannelMeta> = {
+export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
   douyin: {
     platform: 'douyin',
     displayName: '抖音',
     loginUrl: 'https://creator.douyin.com/',
-    workspaceUrlFragments: ['creator.douyin.com/creator-micro'],
-    pageMarkers: ['创作者中心', '作品管理', '内容管理', '数据概览', '创作灵感'],
-    accountNamePatterns: [/抖音号[：:]\s*([0-9A-Za-z_]{4,})/],
-    accountIdPatterns: [/抖音号[：:]\s*([0-9A-Za-z_]{4,})/],
-    loginPageMarkers: ['扫码登录', '验证码登录', '密码登录'],
-    smsLogin: true,
-    appName: '抖音',
+    workspaceUrl: 'https://creator.douyin.com/creator-micro',
+    loginMethods: ['qr', 'sms'],
+    smsTabLabel: '验证码登录',
+    selectors: {
+      loginPage: 'input[type="tel"], [class*="login"]',
+      workspace: '[class*="creator-micro"]',
+    },
+    identityRules: {
+      cookies: ['sessionid', 'sid_guard', 'uid_tt', 'passport_csrf_token'],
+      urlFragments: ['creator.douyin.com/creator-micro'],
+      markers: ['创作者中心', '作品管理', '内容管理', '数据概览', '创作灵感'],
+      loginPageMarkers: ['扫码登录', '验证码登录', '密码登录'],
+      extractionRules: [
+        { field: 'nickname', method: 'regex', pattern: /抖音号[：:]\s*([0-9A-Za-z_]{4,})/ },
+        { field: 'userId', method: 'regex', pattern: /抖音号[：:]\s*([0-9A-Za-z_]{4,})/ },
+        { field: 'nickname', method: 'hydration', hydrationKeys: ['user.nickname', 'userInfo.nickname', 'user_info.nickname'] },
+        { field: 'userId', method: 'hydration', hydrationKeys: ['user.sec_uid', 'userInfo.sec_uid', 'user.uid'] },
+        { field: 'avatar', method: 'hydration', hydrationKeys: ['user.avatar_larger.url_list.0', 'userInfo.avatar_larger.url_list.0', 'user.avatar_thumb.url_list.0'] },
+        { field: 'accountType', method: 'hydration', hydrationKeys: ['user.user_type', 'userInfo.user_type'] },
+      ],
+    },
   },
+
   kuaishou: {
     platform: 'kuaishou',
     displayName: '快手',
     loginUrl: 'https://cp.kuaishou.com/',
-    // ⚠️ 登录页 URL 也是 cp.kuaishou.com（/profile 未登录也跳转），须用工作台专属路径片段
-    workspaceUrlFragments: ['cp.kuaishou.com/article', 'cp.kuaishou.com/workbench', 'cp.kuaishou.com/data', 'cp.kuaishou.com/live', 'cp.kuaishou.com/workspace'],
-    pageMarkers: ['作品管理', '数据中心', '快手小店', '创作服务', '视频管理', '数据分析'],
-    accountNamePatterns: [/快手号[：:]\s*([0-9A-Za-z_]{4,})/, /(?:昵称|账号)[：:]\s*([^\s|，,]{2,20})/],
-    accountIdPatterns: [/快手号[：:]\s*([0-9A-Za-z_]{4,})/],
-    loginPageMarkers: ['扫码登录', '手机号登录', '扫一扫'],
-    smsLogin: true,
-    appName: '快手',
+    workspaceUrl: 'https://cp.kuaishou.com/article',
+    loginMethods: ['qr', 'sms'],
+    smsTabLabel: '手机号登录',
+    selectors: {
+      loginPage: 'input[type="tel"], [class*="login"]',
+      workspace: '[class*="workbench"], [class*="article"]',
+    },
+    identityRules: {
+      // ⚠️ 登录页 URL 也是 cp.kuaishou.com（未登录跳 /profile），须用工作台专属路径片段
+      cookies: ['kuaishou.api_st', 'kuaishou.server_st', 'userId'],
+      urlFragments: ['cp.kuaishou.com/article', 'cp.kuaishou.com/workbench', 'cp.kuaishou.com/data', 'cp.kuaishou.com/live', 'cp.kuaishou.com/workspace'],
+      // Task04：登录成功但停留在普通用户主页（v.kuaishou.com/profile 等）≠ 创作者工作台，必须排除
+      excludeUrlPatterns: [/v\.kuaishou\.com\/profile/, /www\.kuaishou\.com\/profile/, /v\.kuaishou\.com\/u\//],
+      markers: ['作品管理', '数据中心', '快手小店', '创作服务', '视频管理', '数据分析'],
+      loginPageMarkers: ['扫码登录', '手机号登录', '扫一扫'],
+      extractionRules: [
+        { field: 'nickname', method: 'regex', pattern: /快手号[：:]\s*([0-9A-Za-z_]{4,})/ },
+        { field: 'userId', method: 'regex', pattern: /快手号[：:]\s*([0-9A-Za-z_]{4,})/ },
+        { field: 'nickname', method: 'regex', pattern: /(?:昵称|账号)[：:]\s*([^\s|，,]{2,20})/ },
+        { field: 'nickname', method: 'hydration', hydrationKeys: ['user.user_name', 'userInfo.user_name', 'user.nickname'] },
+        { field: 'userId', method: 'hydration', hydrationKeys: ['user.id', 'userInfo.id', 'user.principalId'] },
+        { field: 'avatar', method: 'hydration', hydrationKeys: ['user.headurl', 'userInfo.headurl', 'user.avatar'] },
+        { field: 'accountType', method: 'hydration', hydrationKeys: ['user.userType', 'userInfo.userType'] },
+      ],
+    },
+    metricsExtraction: {
+      dataUrl: 'https://cp.kuaishou.com/data',
+      rules: [
+        { label: '粉丝', field: 'followerCount' },
+        { label: '作品', field: 'videoCount' },
+        { label: '获赞', field: 'totalLikes' },
+        { label: '播放', field: 'totalViews' },
+      ],
+    },
   },
+
   xiaohongshu: {
     platform: 'xiaohongshu',
     displayName: '小红书',
-    loginUrl: 'https://creator.xiaohongshu.com/',
-    // ⚠️ /login 也在 creator.xiaohongshu.com 域下，须排除登录路径
-    workspaceUrlFragments: ['creator.xiaohongshu.com/publish', 'creator.xiaohongshu.com/new', 'creator.xiaohongshu.com/home', 'creator.xiaohongshu.com/data', 'creator.xiaohongshu.com/creator'],
-    pageMarkers: ['创作中心', '笔记管理', '数据中心', '粉丝', '蒲公英'],
-    accountNamePatterns: [/小红书号[：:]\s*([0-9A-Za-z_]{4,})/, /@([0-9a-zA-Z]{5,})/],
-    accountIdPatterns: [/小红书号[：:]\s*([0-9A-Za-z_]{4,})/],
-    loginPageMarkers: ['扫码登录', '手机号登录', '登录小红书'],
-    smsLogin: true,
-    appName: '小红书',
+    loginUrl: 'https://creator.xiaohongshu.com/login',
+    workspaceUrl: 'https://creator.xiaohongshu.com/new/home',
+    loginMethods: ['qr', 'sms'],
+    smsTabLabel: '短信登录',
+    selectors: {
+      loginPage: 'input[type="tel"], [class*="login"]',
+      workspace: '[class*="creator"]',
+      accountInfo: '[class*="user-info"], [class*="avatar"]',
+    },
+    identityRules: {
+      // ⚠️ /login 也在 creator.xiaohongshu.com 域下，工作台 URL 命中前必须先排除登录路径
+      cookies: ['web_session', 'customerClientId', 'gid'],
+      urlFragments: ['creator.xiaohongshu.com/publish', 'creator.xiaohongshu.com/new', 'creator.xiaohongshu.com/data', 'creator.xiaohongshu.com/creator'],
+      markers: ['创作中心', '笔记管理', '数据中心', '粉丝', '蒲公英'],
+      loginPageMarkers: ['扫码登录', '手机号登录', '登录小红书', '短信登录'],
+      extractionRules: [
+        { field: 'nickname', method: 'regex', pattern: /小红书号[：:]\s*([0-9A-Za-z_]{4,})/ },
+        { field: 'userId', method: 'regex', pattern: /小红书号[：:]\s*([0-9A-Za-z_]{4,})/ },
+        { field: 'nickname', method: 'hydration', hydrationKeys: ['user.nickname', 'userInfo.nickname', 'user.nickName', 'user.userName'] },
+        { field: 'userId', method: 'hydration', hydrationKeys: ['user.userId', 'user.user_id', 'userInfo.userId', 'user.id'] },
+        { field: 'avatar', method: 'hydration', hydrationKeys: ['user.avatar', 'userInfo.avatar', 'user.imageb', 'user.avatar_url'] },
+        { field: 'accountType', method: 'hydration', hydrationKeys: ['user.userType', 'userInfo.userType', 'user.user_type'] },
+        { field: 'userId', method: 'url', pattern: /creator\.xiaohongshu\.com\/user\/profile\/([0-9a-zA-Z]+)/ },
+      ],
+    },
+    metricsExtraction: {
+      // 小红书创作者中心数据概览：粉丝/笔记/获赞与收藏（Task02 数据读取：粉丝、笔记数量、点赞收藏、最近内容）
+      dataUrl: 'https://creator.xiaohongshu.com/new/home',
+      rules: [
+        { label: '粉丝', field: 'followerCount' },
+        { label: '笔记', field: 'videoCount' },
+        { label: '获赞', field: 'totalLikes' },
+        { label: '收藏', field: 'totalShares' },
+      ],
+      recentContentSelector: '[class*="note"] [class*="title"], [class*="note-item"]',
+    },
   },
+
   channels_wechat: {
     platform: 'channels_wechat',
     displayName: '视频号',
-    loginUrl: 'https://channels.weixin.qq.com/',
-    workspaceUrlFragments: ['channels.weixin.qq.com/platform'],
-    pageMarkers: ['视频号助手', '发布动态', '数据中心', '视频号', '发表视频'],
-    accountNamePatterns: [/视频号[：:]\s*([^\s|，,]{2,20})/],
-    accountIdPatterns: [/gh_[0-9a-f]{10,}/],
-    loginPageMarkers: ['微信扫一扫', '扫码登录'],
-    smsLogin: false,
-    appName: '微信',
+    loginUrl: 'https://channels.weixin.qq.com/login.html',
+    workspaceUrl: 'https://channels.weixin.qq.com/platform',
+    loginMethods: ['qr'],
+    selectors: {
+      loginPage: '[class*="login"], iframe[src*="qrconnect"]',
+      workspace: '[class*="platform"]',
+    },
+    identityRules: {
+      // ⚠️ 二维码成功 ≠ 登录成功：微信扫码后需手机确认，确认后才跳工作台（Task03）
+      cookies: ['wxuin', 'wxsid', 'rand_info', 'mm_lang'],
+      urlFragments: ['channels.weixin.qq.com/platform'],
+      markers: ['视频号助手', '发布动态', '数据中心', '发表视频', '视频号'],
+      loginPageMarkers: ['微信扫一扫', '扫码登录'],
+      extractionRules: [
+        { field: 'nickname', method: 'regex', pattern: /视频号[：:]\s*([^\s|，,]{2,20})/ },
+        { field: 'userId', method: 'regex', pattern: /gh_[0-9a-f]{10,}/ },
+        { field: 'nickname', method: 'hydration', hydrationKeys: ['user.nickname', 'finderInfo.nickname', 'finder_info.nickname'] },
+        { field: 'userId', method: 'hydration', hydrationKeys: ['finderInfo.finder_uin', 'finderInfo.uin', 'user.uin'] },
+        { field: 'avatar', method: 'hydration', hydrationKeys: ['finderInfo.head_url', 'finderInfo.headUrl', 'user.head_url'] },
+        { field: 'accountType', method: 'hydration', hydrationKeys: ['finderInfo.type', 'user.type'] },
+      ],
+    },
+    metricsExtraction: {
+      dataUrl: 'https://channels.weixin.qq.com/platform',
+      rules: [
+        { label: '粉丝', field: 'followerCount' },
+        { label: '作品', field: 'videoCount' },
+        { label: '获赞', field: 'totalLikes' },
+        { label: '播放', field: 'totalViews' },
+      ],
+    },
   },
+
   wechat_mp: {
     platform: 'wechat_mp',
     displayName: '微信公众号',
     loginUrl: 'https://mp.weixin.qq.com/',
-    workspaceUrlFragments: ['mp.weixin.qq.com'],
-    pageMarkers: ['公众号', '图文消息', '素材管理', '内容与互动', '数据'],
-    accountNamePatterns: [/公众号[：:]\s*([^\s|，,]{2,20})/, /微信号[：:]\s*([0-9A-Za-z_-]{6,})/],
-    accountIdPatterns: [/gh_[0-9a-f]{10,}/],
-    loginPageMarkers: ['微信扫一扫', '扫码登录', '请使用微信扫一扫'],
-    smsLogin: false,
-    appName: '微信',
+    workspaceUrl: 'https://mp.weixin.qq.com/',
+    loginMethods: ['qr'],
+    selectors: {
+      loginPage: '[class*="login"], iframe[src*="open.weixin"]',
+      workspace: '#js_mp_content',
+    },
+    identityRules: {
+      cookies: ['slave_sid', 'slave_user', 'data_ticket'],
+      urlFragments: ['mp.weixin.qq.com'],
+      markers: ['公众号', '图文消息', '素材管理', '内容与互动', '数据'],
+      loginPageMarkers: ['微信扫一扫', '扫码登录', '请使用微信扫一扫'],
+      extractionRules: [
+        { field: 'nickname', method: 'regex', pattern: /公众号[：:]\s*([^\s|，,]{2,20})/ },
+        { field: 'userId', method: 'regex', pattern: /gh_[0-9a-f]{10,}/ },
+        { field: 'nickname', method: 'hydration', hydrationKeys: ['user.nickname', 'accountInfo.nickname'] },
+        { field: 'userId', method: 'hydration', hydrationKeys: ['user.user_name', 'accountInfo.user_name'] },
+        { field: 'avatar', method: 'hydration', hydrationKeys: ['user.head_url', 'accountInfo.head_url'] },
+      ],
+    },
   },
+
   weibo: {
     platform: 'weibo',
     displayName: '微博',
     loginUrl: 'https://weibo.com/login.php',
-    workspaceUrlFragments: ['weibo.com/u/', 'weibo.com/'],
-    pageMarkers: ['微博', '首页', '热门', '超话'],
-    accountNamePatterns: [/(?:昵称|微博名)[：:]\s*([^\s|，,]{2,20})/],
-    accountIdPatterns: [/weibo\.com\/u\/(\d{8,})/],
-    loginPageMarkers: ['扫码登录', '账号登录', '手机号登录'],
-    smsLogin: true,
-    appName: '微博',
+    workspaceUrl: 'https://weibo.com/',
+    loginMethods: ['qr', 'sms'],
+    smsTabLabel: '手机号登录',
+    selectors: {
+      loginPage: 'input[type="tel"], [class*="login"]',
+    },
+    identityRules: {
+      cookies: ['SUB', 'SUBP', 'WBPSESS'],
+      urlFragments: ['weibo.com/u/'],
+      markers: ['微博', '首页', '热门', '超话'],
+      loginPageMarkers: ['扫码登录', '账号登录', '手机号登录'],
+      extractionRules: [
+        { field: 'nickname', method: 'regex', pattern: /(?:昵称|微博名)[：:]\s*([^\s|，,]{2,20})/ },
+        { field: 'userId', method: 'url', pattern: /weibo\.com\/u\/(\d{8,})/ },
+        { field: 'userId', method: 'hydration', hydrationKeys: ['user.id', 'userInfo.id'] },
+        { field: 'nickname', method: 'hydration', hydrationKeys: ['user.screen_name', 'userInfo.screen_name'] },
+        { field: 'avatar', method: 'hydration', hydrationKeys: ['user.avatar_hd', 'userInfo.avatar_hd'] },
+      ],
+    },
   },
+
   toutiao: {
     platform: 'toutiao',
     displayName: '今日头条',
     loginUrl: 'https://mp.toutiao.com/',
-    workspaceUrlFragments: ['mp.toutiao.com'],
-    pageMarkers: ['内容管理', '创作中心', '数据中心', '发布作品', '头条号'],
-    accountNamePatterns: [/头条号[：:]\s*([^\s|，,]{2,20})/],
-    accountIdPatterns: [/头条号[：:]\s*([^\s|，,]{2,20})/],
-    loginPageMarkers: ['扫码登录', '验证码登录', '密码登录'],
-    smsLogin: true,
-    appName: '抖音',
+    workspaceUrl: 'https://mp.toutiao.com/',
+    loginMethods: ['qr', 'sms'],
+    smsTabLabel: '验证码登录',
+    selectors: {
+      loginPage: 'input[type="tel"], [class*="login"]',
+    },
+    identityRules: {
+      cookies: ['sessionid', 'sid_guard', 'uid_tt'],
+      urlFragments: ['mp.toutiao.com'],
+      markers: ['内容管理', '创作中心', '数据中心', '发布作品', '头条号'],
+      loginPageMarkers: ['扫码登录', '验证码登录', '密码登录'],
+      extractionRules: [
+        { field: 'nickname', method: 'regex', pattern: /头条号[：:]\s*([^\s|，,]{2,20})/ },
+        { field: 'userId', method: 'hydration', hydrationKeys: ['user.id', 'userInfo.id'] },
+        { field: 'nickname', method: 'hydration', hydrationKeys: ['user.name', 'userInfo.name', 'user.screen_name'] },
+      ],
+    },
   },
+
   baijiahao: {
     platform: 'baijiahao',
     displayName: '百家号',
     loginUrl: 'https://baijiahao.baidu.com/',
-    workspaceUrlFragments: ['baijiahao.baidu.com'],
-    pageMarkers: ['百家号', '内容管理', '发布', '数据'],
-    accountNamePatterns: [/(?:百家号|昵称)[：:]\s*([^\s|，,]{2,20})/],
-    accountIdPatterns: [/[0-9]{10,}/],
-    loginPageMarkers: ['扫码登录', '百度账号登录', '登录'],
-    smsLogin: true,
-    appName: '百度',
+    workspaceUrl: 'https://baijiahao.baidu.com/',
+    loginMethods: ['qr', 'sms'],
+    smsTabLabel: '验证码登录',
+    selectors: {
+      loginPage: 'input[type="tel"], [class*="login"]',
+    },
+    identityRules: {
+      cookies: ['BDUSS', 'BDUSS_BFESS', 'STOKEN'],
+      urlFragments: ['baijiahao.baidu.com'],
+      markers: ['百家号', '内容管理', '发布', '数据'],
+      loginPageMarkers: ['扫码登录', '百度账号登录', '登录'],
+      extractionRules: [
+        { field: 'nickname', method: 'regex', pattern: /(?:百家号|昵称)[：:]\s*([^\s|，,]{2,20})/ },
+        { field: 'userId', method: 'hydration', hydrationKeys: ['user.uid', 'userInfo.uid'] },
+        { field: 'nickname', method: 'hydration', hydrationKeys: ['user.name', 'userInfo.name'] },
+      ],
+    },
   },
 }
 

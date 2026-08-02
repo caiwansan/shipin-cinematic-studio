@@ -17,7 +17,8 @@ import { browserRuntime } from '../../../services/media/browser-runtime.service.
 import type { CookieData } from '../../../services/media/browser-runtime.service.js'
 import { identityProbeRegistry } from '../identity-probe.js'
 import type { ChannelIdentity } from '../identity-probe.js'
-import { CHANNEL_META, type BrowserChannelMeta } from './browser-channel.meta.js'
+import { CHANNEL_META, type ChannelPlatformDefinition } from './browser-channel.meta.js'
+import { LoginStateMachine } from '../login-state-machine.js'
 import type {
   EnterpriseChannelAdapter,
   ConnectResult,
@@ -38,8 +39,20 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
   abstract readonly platform: string
   abstract readonly name: string
 
-  protected get meta(): BrowserChannelMeta {
+  protected get meta(): ChannelPlatformDefinition {
     return CHANNEL_META[this.platform]
+  }
+
+  /** 会话级登录状态机（统一状态，禁止平台自定义） */
+  private readonly stateMachines = new Map<string, LoginStateMachine>()
+
+  protected getStateMachine(sessionId: string): LoginStateMachine {
+    let sm = this.stateMachines.get(sessionId)
+    if (!sm) {
+      sm = new LoginStateMachine()
+      this.stateMachines.set(sessionId, sm)
+    }
+    return sm
   }
 
   protected constructor(protected readonly deps: BrowserChannelDeps) {}
@@ -189,6 +202,7 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
 
   /**
    * 登录页状态（截图 + 二维码 + 登录检测）——前端轮询
+   * Task05：统一登录状态机驱动（INIT→OPEN_BROWSER→WAIT_LOGIN→USER_ACTION_REQUIRED→VERIFYING→AUTHENTICATED→CONNECTED→READY）
    * 与抖音一致：串行锁由路由层保证；二维码放大逻辑复用
    */
   async getLoginStatus(sessionId: string): Promise<{
@@ -197,10 +211,14 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     screenshotBase64?: string
     qrCodeBase64?: string
     loggedIn: boolean
-    loginStage?: 'waiting_scan' | 'scan_confirming' | 'verifying' | 'awaiting_confirmation' | 'connected'
+    /** 统一登录状态（Task05 标准枚举；前端优先消费，禁止平台自定义） */
+    state?: string
+    /** 兼容旧 loginStage（迁移期保留） */
+    loginStage?: 'waiting_scan' | 'scan_confirming' | 'verifying' | 'awaiting_confirmation' | 'connected' | 'ready'
     accountName?: string
     externalAccountId?: string
     avatar?: string
+    accountType?: string
     verificationRequired?: boolean
     verificationType?: 'sms' | 'app' | 'face' | 'none'
     verificationTriggered?: boolean
@@ -313,10 +331,10 @@ canvas.save('${out}')
       } catch { /* 二维码提取失败不影响主流程 */ }
 
       let loggedIn = false
-      let loginStage: 'waiting_scan' | 'scan_confirming' | 'verifying' | 'awaiting_confirmation' | 'connected' = 'waiting_scan'
       let accountName: string | undefined
       let externalAccountId: string | undefined
       let avatar: string | undefined
+      let accountType: string | undefined
       let debug: any = {}
       try {
         const identity = await identityProbeRegistry.get(this.platform)!.probe(sessionId)
@@ -324,11 +342,28 @@ canvas.save('${out}')
         accountName = identity.accountName
         externalAccountId = identity.accountId
         avatar = identity.avatar
+        accountType = identity.accountType
         debug = { ...debug, probeSignals: identity.signals, probeAuthenticated: identity.authenticated, probeAccount: identity.accountName || '' }
-        if (identity.authenticated) {
-          loginStage = 'awaiting_confirmation'
-        }
       } catch { /* 浏览器异常时按未登录处理 */ }
+
+      // Task05 统一登录状态机：探针结果驱动状态迁移
+      const sm = this.getStateMachine(sessionId)
+      // 未认证时按验证页/操作态提示细分（视频号扫码后手机确认=VERIFYING；短信验证码页=USER_ACTION_REQUIRED）
+      let userActionRequired = false
+      let verifying = false
+      if (!loggedIn) {
+        try {
+          const pageUrl = await browserRuntime.withPage(sessionId, async (page) => page.url()).catch(() => '')
+          verifying = /scan_confirm|confirm|wait|qrcode_confirm/i.test(pageUrl)
+          userActionRequired = !!(status.currentUrl && /sms|code|verify|phone/i.test(status.currentUrl))
+        } catch {}
+      }
+      sm.derive({ authenticated: loggedIn, hasIdentity: !!externalAccountId, verifying, userActionRequired })
+      const state = sm.current
+      const loginStage = (sm.toLegacy() as any)
+      if (loggedIn) {
+        // 认证后：若尚未 connected 则推进 AUTHENTICATED（CONNECTED 由 wait-for-login 回写时置位）
+      }
 
       return {
         url: status.currentUrl,
@@ -336,14 +371,16 @@ canvas.save('${out}')
         screenshotBase64,
         qrCodeBase64,
         loggedIn,
+        state,
         loginStage,
         accountName,
         externalAccountId,
         avatar,
+        accountType,
         debug,
       }
     } catch (e: any) {
-      return { url: '', title: '', loggedIn: false, loginStage: 'waiting_scan', error: e.message }
+      return { url: '', title: '', loggedIn: false, state: 'WAIT_LOGIN', loginStage: 'waiting_scan', error: e.message }
     }
   }
 
@@ -442,9 +479,14 @@ canvas.save('${out}')
     return { ok: true, message: msg }
   }
 
-  /** 切换登录方式 tab：sms / qr / password */
+  /** 切换登录方式 tab：sms / qr / password（tab 标签按平台 meta.smsTabLabel，如小红书「短信登录」） */
   async switchLoginTab(sessionId: string, tab: 'sms' | 'qr' | 'password'): Promise<{ ok: boolean; message?: string }> {
-    const label = tab === 'sms' ? '验证码登录' : tab === 'qr' ? '扫码登录' : '密码登录'
+    const label =
+      tab === 'sms'
+        ? (this.meta.smsTabLabel ?? '验证码登录')
+        : tab === 'qr'
+          ? '扫码登录'
+          : '密码登录'
     const msg = await browserRuntime.withPage(sessionId, async (page) => {
       return page.evaluate((lb) => {
         const all = Array.from(document.querySelectorAll('span,div,button')) as HTMLElement[]
@@ -540,9 +582,87 @@ canvas.save('${out}')
     return { accountId: this.platform, accountName: this.meta.displayName }
   }
 
-  /** 各平台数据页结构差异大，默认诚实报未实现（子类按需覆写） */
+  /** 各平台数据页结构差异大，默认诚实报未实现（子类按需覆写）
+   * Task02 通用实现：读 meta.metricsExtraction 配置（label → 字段 + 数字/万单位解析），
+   * 零平台分支；未配置的平台诚实报未实现（绝不 mock） */
   async fetchMetrics(accountId: string): Promise<ChannelMetrics> {
-    throw new Error(`[${this.name}Adapter] fetchMetrics 未实现（${this.platform} 数据页解析待接入）`)
+    const meta = this.meta
+    const extraction = meta.metricsExtraction
+    if (!extraction || !extraction.rules.length) {
+      throw new Error(`[${this.name}Adapter] fetchMetrics 未配置（${this.platform} 数据页解析待接入，请在 browser-channel.meta.ts 配 metricsExtraction）`)
+    }
+
+    const sid = this.sessionIdFor(accountId)
+    const profilePath = browserRuntime.getProfilePath(this.platform, accountId)
+    await browserRuntime.getOrCreatePersistent(sid, profilePath, { headless: false })
+
+    // fallback：持久化 profile 无登录态时注入凭证 cookie
+    try {
+      const cred = await this.deps.getCredential(accountId)
+      const cookieData = cred.cookieData
+      if (cookieData) {
+        await browserRuntime.restoreCookies(sid, JSON.parse(cookieData))
+      }
+    } catch (e: any) {
+      console.warn(`[${this.name}Adapter] fetchMetrics 凭证恢复失败（依赖持久化登录态）: ${e.message}`)
+    }
+
+    const nav = await browserRuntime.navigate(sid, extraction.dataUrl, { headless: false })
+    if (!nav.success) {
+      throw new Error(`打开${meta.displayName}数据中心失败: ${nav.error}`)
+    }
+
+    // 等待数据面板渲染
+    await new Promise(r => setTimeout(r, 4000 + Math.random() * 2000))
+
+    const metrics = await browserRuntime.withPage(sid, async (page) => {
+      const bodyText = await page.locator('body').innerText().catch(() => '')
+      const parse = (label: string): number | undefined => {
+        // 匹配「粉丝 123.4万」「获赞 5678」等文本模式
+        const re = new RegExp(`${label}[\\s\\S]{0,10}?([\\d,.]+)\\s*(万|w|W)?`, 'i')
+        const m = bodyText.match(re)
+        if (!m) return undefined
+        const num = parseFloat(m[1].replace(/,/g, ''))
+        const unit = m[2]
+        return unit ? Math.round(num * 10000) : Math.round(num)
+      }
+
+      const result: any = {}
+      for (const rule of extraction.rules) {
+        result[rule.field] = parse(rule.label)
+      }
+
+      // 最近内容（小红书笔记标题等；rawData 供 AI 分析员工消费）
+      let recentContent: string[] = []
+      if (extraction.recentContentSelector) {
+        try {
+          const items = page.locator(extraction.recentContentSelector)
+          const n = await items.count().catch(() => 0)
+          for (let i = 0; i < Math.min(n, 10); i++) {
+            const t = (await items.nth(i).innerText().catch(() => '')).trim()
+            if (t && t.length > 1 && t.length < 100) recentContent.push(t)
+          }
+        } catch {}
+      }
+
+      const hasAny = Object.values(result).some(v => v !== undefined)
+      if (!hasAny && !recentContent.length) {
+        throw new Error(`[${this.name}Adapter] ${meta.displayName}数据中心未解析到指标（可能未登录或页面结构变更），拒绝返回空数据`)
+      }
+
+      return {
+        followerCount: result.followerCount ?? 0,
+        videoCount: result.videoCount ?? 0,
+        totalViews: result.totalViews ?? 0,
+        totalLikes: result.totalLikes ?? 0,
+        totalComments: result.totalComments ?? 0,
+        totalShares: result.totalShares ?? 0,
+        collectedAt: new Date(),
+        rawData: { recentContent, url: page.url() },
+      }
+    })
+    await browserRuntime.close(sid)
+    return metrics
   }
 
   async fetchComments(accountId: string, postId?: string): Promise<ChannelComment[]> {

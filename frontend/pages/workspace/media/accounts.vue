@@ -207,7 +207,7 @@
             <!-- 登录方式切换（短信 tab 仅平台支持时显示：视频号/公众号仅扫码） -->
             <div class="ac-mode-tabs">
               <button class="ac-mode-tab" :class="{ active: loginMode === 'qr' }" @click="switchLoginTab('qr')">📱 扫码登录</button>
-              <button v-if="connectPlatform?.smsLogin" class="ac-mode-tab" :class="{ active: loginMode === 'sms' }" @click="switchLoginTab('sms')">💬 短信验证码</button>
+              <button v-if="connectPlatform?.loginMethods?.includes('sms')" class="ac-mode-tab" :class="{ active: loginMode === 'sms' }" @click="switchLoginTab('sms')">💬 短信验证码</button>
             </div>
 
             <!-- 短信登录表单 -->
@@ -707,10 +707,10 @@ const tabs = computed(() => [
 // ① 内容平台（品牌曝光）
 // 2026-08-02 — 多平台浏览器渠道：抖音/快手/小红书/视频号已真实可连（connectable+platform）
 const contentPlatforms = [
-  { icon: '📱', name: '抖音', plan: '短视频 · 直播', category: 'content', platform: 'douyin', appName: '抖音', smsLogin: true, connectable: true, connected: false },
-  { icon: '🎥', name: '快手', plan: '短视频 · 直播', category: 'content', platform: 'kuaishou', appName: '快手', smsLogin: true, connectable: true, connected: false },
-  { icon: '📕', name: '小红书', plan: '种草图文 · 视频', category: 'content', platform: 'xiaohongshu', appName: '小红书', smsLogin: true, connectable: true, connected: false },
-  { icon: '🎬', name: '视频号', plan: '微信生态分发', category: 'content', platform: 'channels_wechat', appName: '微信', smsLogin: false, connectable: true, connected: false },
+  { icon: '📱', name: '抖音', plan: '短视频 · 直播', category: 'content', platform: 'douyin', appName: '抖音', loginMethods: ['qr', 'sms'], connectable: true, connected: false },
+  { icon: '🎥', name: '快手', plan: '短视频 · 直播', category: 'content', platform: 'kuaishou', appName: '快手', loginMethods: ['qr', 'sms'], connectable: true, connected: false },
+  { icon: '📕', name: '小红书', plan: '种草图文 · 视频', category: 'content', platform: 'xiaohongshu', appName: '小红书', loginMethods: ['qr', 'sms'], connectable: true, connected: false },
+  { icon: '🎬', name: '视频号', plan: '微信生态分发', category: 'content', platform: 'channels_wechat', appName: '微信', loginMethods: ['qr'], connectable: true, connected: false },
   { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务', category: 'content', connectable: false, connected: false },
   { icon: '🌐', name: '微博', plan: '话题 · 图文', category: 'content', connectable: false, connected: false },
   { icon: '📰', name: '百家号', plan: '图文 · 视频', category: 'content', connectable: false, connected: false },
