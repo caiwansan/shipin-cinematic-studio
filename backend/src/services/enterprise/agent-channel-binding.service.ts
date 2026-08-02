@@ -166,6 +166,28 @@ export class AgentChannelBindingService {
   /**
    * 获取企业中可绑定的渠道列表
    */
+  /**
+   * SPRINT-MEDIA-CHANNEL-01 Task03.2 Phase D — 权限检查（AI 员工 → 渠道操作隔离）
+   * 规则：binding 不存在 → binding_not_found；binding 非 active → binding_paused；
+   * permissions[permission] !== true → permission_denied
+   */
+  async authorize(
+    agentInstanceId: string,
+    channelAccountId: string,
+    permission: string,
+  ): Promise<{ allowed: boolean; reason?: string }> {
+    const binding = await prisma.agentChannelBinding.findUnique({
+      where: {
+        agentInstanceId_channelAccountId: { agentInstanceId, channelAccountId },
+      },
+    })
+    if (!binding) return { allowed: false, reason: 'binding_not_found' }
+    if (binding.status !== 'active') return { allowed: false, reason: 'binding_paused' }
+    const perms = (binding.permissions as Record<string, boolean>) || {}
+    if (perms[permission] !== true) return { allowed: false, reason: 'permission_denied' }
+    return { allowed: true }
+  }
+
   async getAvailableChannels(tenantId: string): Promise<any[]> {
     return prisma.enterpriseChannelAccount.findMany({
       where: { tenantId },

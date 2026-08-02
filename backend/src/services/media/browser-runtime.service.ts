@@ -61,6 +61,8 @@ export interface BrowserInstance {
   headless: boolean
   persistent: boolean
   profilePath?: string
+  /** TASK03.2 — 最近一次成功导航的 URL（页面被风控杀死后恢复用） */
+  lastUrl?: string
 }
 
 class BrowserRuntimeService {
@@ -94,7 +96,16 @@ class BrowserRuntimeService {
       executablePath: CHROME_PATH,
       headless: config.headless ?? true,
       slowMo: config.slowMo ?? 0,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'],
+      ignoreDefaultArgs: ['--enable-automation'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-infobars',
+        '--no-first-run',
+        '--no-default-browser-check',
+      ],
     })
 
     const context = await browser.newContext({
@@ -126,7 +137,34 @@ class BrowserRuntimeService {
       slowMo: config.slowMo ?? 0,
       viewport: config.viewport || { width: 1280, height: 800 },
       userAgent: config.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'],
+      // TASK03.2 反风控：隐藏自动化特征（抖音身份验证层会检测 webdriver/自动化标志并杀页面）
+      ignoreDefaultArgs: ['--enable-automation'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-infobars',
+        '--no-first-run',
+        '--no-default-browser-check',
+      ],
+    })
+
+    // 反自动化：抹掉 navigator.webdriver 等指纹
+    await context.addInitScript(() => {
+      try {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
+      } catch {}
+      try {
+        Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh'] })
+      } catch {}
+      try {
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
+      } catch {}
+      try {
+        // @ts-ignore
+        window.chrome = { runtime: {} }
+      } catch {}
     })
 
     this.instances.set(sessionId, { context, page: undefined, headless: config.headless ?? true, persistent: true, profilePath })
@@ -199,6 +237,12 @@ class BrowserRuntimeService {
 
       const title = await page.title()
       const finalUrl = page.url()
+      // TASK03.2 — 记录最后成功导航的 URL（风控杀页后恢复用）
+      if (!/^about:blank/.test(finalUrl)) {
+        instance.lastUrl = finalUrl
+      }
+      console.log(`[BrowserRuntime] navigate ${sessionId} -> ${finalUrl.slice(0, 80)} success`)
+      console.log(`[BrowserRuntime] navigate pages count: ${instance.context.pages().length}`)
 
       // 截图
       const screenshotPath = path.join(SESSION_DIR, `${sessionId}-${Date.now()}.png`)
@@ -257,15 +301,36 @@ class BrowserRuntimeService {
 
   /**
    * 在当前 Session 执行页面操作（高级）
+   * TASK03.2 — 页面被风控杀死后自动恢复：不再新建 about:blank，而是重新导航回最后已知 URL
    */
-  async withPage(sessionId: string, action: (page: Page) => Promise<any>): Promise<any> {
+  async withPage(sessionId: string, action: (page: Page) => Promise<any>, fallbackUrl?: string): Promise<any> {
     const { context } = await this.getOrCreate(sessionId)
     // 优先复用 navigate 打开的主页面（登录页必须保留，不能新建 about:blank / 不能关闭）
     const inst = this.instances.get(sessionId)
     let page = inst?.page
-    if (!page || page.isClosed()) {
-      page = await context.newPage()
-      if (inst) inst.page = page
+    if (!page || page.isClosed() || page.url() === 'about:blank') {
+      // 页面被风控杀死 → 重新打开最后已知 URL（避免操作落在 about:blank 上）
+      try {
+        page = await context.newPage()
+        if (inst) inst.page = page
+        const restoreUrl = fallbackUrl || inst?.lastUrl
+        console.log(`[BrowserRuntime] withPage 页面死亡(prev=${inst?.page?.url?.()?.slice(0,60) || 'none'}, closed=${page?.isClosed?.()})，恢复导航到 ${restoreUrl?.slice(0,60)}`)
+        if (restoreUrl) {
+          try {
+            await page.goto(restoreUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+            await page.waitForTimeout(800 + Math.random() * 1200)
+            if (inst) inst.lastUrl = page.url()
+            console.log(`[BrowserRuntime] withPage 恢复成功 -> ${page.url().slice(0, 80)}`)
+          } catch (e: any) {
+            console.log(`[BrowserRuntime] withPage 恢复 goto 失败: ${e.message.slice(0, 120)}`)
+          }
+        }
+      } catch (e: any) {
+        console.warn(`[BrowserRuntime] withPage 恢复页面失败: ${e.message}`)
+      }
+    }
+    if (!page) {
+      throw new Error('BROWSER_PAGE_UNAVAILABLE')
     }
     try {
       return await action(page)

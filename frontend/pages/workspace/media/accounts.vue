@@ -101,6 +101,72 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══ 抖音浏览器连接弹窗 ═══ -->
+    <Teleport to="body">
+      <div v-if="connectModal" class="ac-modal-mask" @click.self="closeConnectModal">
+        <div class="ac-modal">
+          <div class="ac-modal-head">
+            <div>
+              <div class="ac-modal-title">{{ connectPlatform?.icon }} 连接{{ connectPlatform?.name }}</div>
+              <div class="ac-modal-sub">登录态保存在服务器浏览器中，AI 员工将用此账号运营</div>
+            </div>
+            <button class="ac-modal-close" @click="closeConnectModal">✕</button>
+          </div>
+
+          <div v-if="loggedIn" class="ac-modal-success">
+            <div class="ac-success-ico">✓</div>
+            <div>连接成功！账号已点亮</div>
+            <div class="ac-success-sub">{{ statusMsg }}</div>
+          </div>
+
+          <template v-else>
+            <!-- 扫码模式：优先显示放大的实时二维码（可直接扫）；无二维码时回退整页截图 -->
+            <div v-if="loginMode === 'qr' && qrCode" class="ac-qr-wrap">
+              <img :src="qrCode" class="ac-qr-big" alt="抖音登录二维码" />
+              <div class="ac-qr-refresh-tip">二维码每 15 秒自动刷新，直接用<strong>抖音 App</strong> 扫一扫</div>
+            </div>
+            <!-- 整页截图（短信模式 / 二维码提取失败时兜底） -->
+            <div v-else class="ac-shot-wrap">
+              <img v-if="screenshot" :src="screenshot" class="ac-shot" alt="登录画面" />
+              <div v-else class="ac-shot-empty">
+                <div class="ac-shot-spinner"></div>
+                <div>正在启动登录浏览器...</div>
+              </div>
+            </div>
+
+            <!-- 登录方式切换 -->
+            <div class="ac-mode-tabs">
+              <button class="ac-mode-tab" :class="{ active: loginMode === 'qr' }" @click="switchLoginTab('qr')">📱 扫码登录</button>
+              <button class="ac-mode-tab" :class="{ active: loginMode === 'sms' }" @click="switchLoginTab('sms')">💬 短信验证码</button>
+            </div>
+
+            <!-- 短信登录表单 -->
+            <div v-if="loginMode === 'sms'" class="ac-sms-form">
+              <div class="ac-sms-row">
+                <input v-model="phone" class="ac-input" placeholder="输入抖音绑定的手机号" maxlength="11" />
+                <button class="ac-btn ac-btn-ghost" :disabled="countdown > 0 || connecting" @click="sendSmsCode">
+                  {{ countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}
+                </button>
+              </div>
+              <div class="ac-sms-row">
+                <input v-model="smsCode" class="ac-input" placeholder="输入短信验证码" maxlength="8" />
+                <button class="ac-btn ac-btn-primary" :disabled="!codeSent || connecting" @click="submitLogin">登录</button>
+              </div>
+            </div>
+
+            <div v-if="loginMode === 'qr' && !qrCode" class="ac-qr-tip">
+              用<strong>抖音 App</strong> 扫一扫上方二维码，确认登录后自动完成连接
+            </div>
+
+            <!-- 状态提示 -->
+            <div v-if="statusMsg" class="ac-status" :class="{ err: statusMsg.includes('失败') || statusMsg.includes('启动失败') }">
+              {{ statusMsg }}
+            </div>
+          </template>
+        </div>
+      </div>
+    </Teleport>
   </MediaWorkspaceShell>
 </template>
 
@@ -111,8 +177,174 @@ import MediaWorkspaceShell from '~/components/media/MediaWorkspaceShell.vue'
 import MediaPageHeader from '~/components/media/MediaPageHeader.vue'
 
 const { $toast } = useNuxtApp() as any
+import { getAuthToken } from '~/utils/auth/token'
 
 const activeTab = ref('all')
+
+/* ═══ 抖音浏览器连接弹窗状态 ═══ */
+const connectModal = ref(false)
+const connectPlatform = ref<any>(null)
+const sessionId = ref('')
+const accountId = ref('')
+const screenshot = ref('')
+const qrCode = ref('')
+const loginMode = ref<'qr' | 'sms'>('qr')
+const phone = ref('')
+const smsCode = ref('')
+const countdown = ref(0)
+const statusMsg = ref('')
+const connecting = ref(false)
+const loggedIn = ref(false)
+const pollTimer = ref<any>(null)
+const codeSent = ref(false)
+
+async function api(url: string, opts: any = {}) {
+  const token = getAuthToken() || ''
+  const res = await fetch(url, {
+    method: opts.method || 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  })
+  if (!res.ok) throw new Error(`API ${res.status}`)
+  return res.json()
+}
+
+async function openDouyinConnect(p: any) {
+  connectPlatform.value = p
+  connectModal.value = true
+  statusMsg.value = '正在启动登录浏览器...'
+  connecting.value = true
+  loggedIn.value = false
+  screenshot.value = ''
+  loginMode.value = 'qr'
+  countdown.value = 0
+  codeSent.value = false
+  phone.value = ''
+  smsCode.value = ''
+  qrCode.value = ''
+  try {
+    // 1) 确保渠道账号存在
+    const ensure = await api('/api/enterprise/channels/runtime/douyin/ensure-account', { method: 'POST', body: {} })
+    accountId.value = ensure.data.id
+    // 2) 打开登录浏览器
+    const conn = await api(`/api/enterprise/channels/runtime/${accountId.value}/connect`, { method: 'POST', body: {} })
+    sessionId.value = conn.data.sessionId
+    statusMsg.value = conn.data.status === 'connected' ? '登录态已恢复 ✓' : '请扫码或使用短信验证码登录'
+    loggedIn.value = conn.data.status === 'connected'
+    startPolling()
+  } catch (e: any) {
+    statusMsg.value = '启动失败: ' + e.message
+    $toast?.error?.(`连接启动失败: ${e.message}`)
+  } finally {
+    connecting.value = false
+  }
+}
+
+function startPolling() {
+  stopPolling()
+  pollTimer.value = setInterval(async () => {
+    if (!sessionId.value) return
+    try {
+      const res = await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/status`)
+      const d = res.data || {}
+      // 优先放大二维码（工作台可直接扫码），回退整页截图
+      if (d.qrCodeBase64) qrCode.value = 'data:image/png;base64,' + d.qrCodeBase64
+      else if (d.screenshotBase64) {
+        qrCode.value = ''
+        screenshot.value = 'data:image/png;base64,' + d.screenshotBase64
+      }
+      if (d.loggedIn && !loggedIn.value) {
+        loggedIn.value = true
+        statusMsg.value = '登录成功！正在保存登录态...'
+        stopPolling()
+        await finishConnect()
+      }
+    } catch (e: any) {
+      // 轮询失败静默，等下次
+    }
+  }, 2500)
+}
+
+function stopPolling() {
+  if (pollTimer.value) { clearInterval(pollTimer.value); pollTimer.value = null }
+}
+
+async function finishConnect() {
+  try {
+    await api(`/api/enterprise/channels/runtime/${accountId.value}/refresh-credential`, { method: 'POST', body: {} })
+    statusMsg.value = '连接成功！账号已点亮 ✓'
+    if (connectPlatform.value) connectPlatform.value.connected = true
+    $toast?.success?.('抖音渠道连接成功！')
+    setTimeout(() => { connectModal.value = false }, 1500)
+  } catch (e: any) {
+    statusMsg.value = '登录态保存失败: ' + e.message
+  }
+}
+
+function closeConnectModal() {
+  stopPolling()
+  connectModal.value = false
+  qrCode.value = ''
+  screenshot.value = ''
+}
+
+async function switchLoginTab(mode: 'qr' | 'sms') {
+  loginMode.value = mode
+  statusMsg.value = mode === 'qr' ? '请用抖音 App 扫码' : '请填写手机号接收短信验证码'
+  if (!sessionId.value) return
+  try {
+    await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/tab`, { method: 'POST', body: { tab: mode === 'qr' ? 'qr' : 'sms' } })
+  } catch (e: any) {
+    statusMsg.value = '切换登录方式失败: ' + e.message
+  }
+}
+
+async function sendSmsCode() {
+  if (!/^1\d{10}$/.test(phone.value)) { $toast?.warn?.('请先填写正确的手机号'); return }
+  if (!sessionId.value) return
+  statusMsg.value = '正在发送验证码...'
+  try {
+    await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/phone`, { method: 'POST', body: { phone: phone.value } })
+    const res = await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/send-code`, { method: 'POST', body: {} })
+    codeSent.value = true
+    if (res.data?.countdown) {
+      statusMsg.value = '验证码已发送，请查收手机短信'
+      startCountdown(59)
+    } else {
+      statusMsg.value = '验证码已发送，请查收手机短信'
+      startCountdown(59)
+    }
+  } catch (e: any) {
+    statusMsg.value = '发送失败: ' + e.message
+  }
+}
+
+function startCountdown(sec: number) {
+  countdown.value = sec
+  const timer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0) { clearInterval(timer); countdown.value = 0 }
+  }, 1000)
+}
+
+async function submitLogin() {
+  if (!/^\d{4,8}$/.test(smsCode.value)) { $toast?.warn?.('请填写收到的验证码'); return }
+  if (!sessionId.value) return
+  statusMsg.value = '正在登录...'
+  try {
+    await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/code`, { method: 'POST', body: { code: smsCode.value } })
+    statusMsg.value = '登录中，请稍候...'
+    // 等待登录检测（轮询会自动处理 loggedIn → finishConnect）
+    startPolling()
+  } catch (e: any) {
+    statusMsg.value = '登录失败: ' + e.message
+  }
+}
+
+onBeforeUnmount(() => stopPolling())
 
 const tabs = computed(() => [
   { key: 'all', icon: '◉', label: '全部', count: allPlatforms.length },
@@ -123,7 +355,7 @@ const tabs = computed(() => [
 
 // ① 内容平台（品牌曝光）
 const contentPlatforms = [
-  { icon: '📱', name: '抖音', plan: '短视频 · 直播', category: 'content', connectable: false, connected: false },
+  { icon: '📱', name: '抖音', plan: '短视频 · 直播', category: 'content', platform: 'douyin', connectable: true, connected: false },
   { icon: '📱', name: '快手', plan: '短视频 · 直播', category: 'content', connectable: false, connected: false },
   { icon: '📕', name: '小红书', plan: '种草图文 · 视频', category: 'content', connectable: false, connected: false },
   { icon: '🎬', name: '视频号', plan: '微信生态分发', category: 'content', connectable: false, connected: false },
@@ -173,14 +405,14 @@ const steps = [
 function onClick(p: any) {
   if (p.connected) return
   if (p.connectable) {
-    connect()
+    if (p.platform === 'douyin') {
+      openDouyinConnect(p)
+    } else {
+      $toast?.info?.('微信资产接入等待掌柜提供授权信息（Sprint-MEDIA-01 遗留）')
+    }
   } else {
-    $toast?.info?.(`「${p.name}」接入即将开放，先连接微信公众号体验完整流程`)
+    $toast?.info?.(`「${p.name}」接入即将开放，先连接抖音体验完整流程`)
   }
-}
-
-function connect() {
-  $toast?.info?.('微信资产接入等待掌柜提供授权信息（Sprint-MEDIA-01 遗留）')
 }
 </script>
 
@@ -375,4 +607,196 @@ function connect() {
   .ac-grid, .ac-perms-grid { grid-template-columns: repeat(2, 1fr); }
   .ac-steps { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ═══ 抖音浏览器连接弹窗 ═══ */
+.ac-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 16, 32, 0.72);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.ac-modal {
+  width: 560px;
+  max-width: 96vw;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: #12192e;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+.ac-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.ac-modal-title { font-size: 16px; font-weight: 800; color: #f1f5f9; }
+.ac-modal-sub { font-size: 11.5px; color: #64748b; margin-top: 4px; }
+.ac-modal-close {
+  background: rgba(148, 163, 184, 0.12);
+  border: none;
+  color: #94a3b8;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ac-modal-close:hover { background: rgba(148, 163, 184, 0.25); color: #f1f5f9; }
+.ac-shot-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #0b1020;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 放大二维码展示（工作台直接扫码） */
+.ac-qr-wrap {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: #ffffff;
+  padding: 22px 22px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.ac-qr-big {
+  width: 340px;
+  height: 340px;
+  object-fit: contain;
+  image-rendering: auto;
+  display: block;
+}
+.ac-qr-refresh-tip {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+}
+.ac-qr-refresh-tip strong { color: #111827; }
+.ac-shot {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  display: block;
+}
+.ac-shot-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+}
+.ac-shot-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(59, 130, 246, 0.2);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  animation: ac-spin 0.9s linear infinite;
+}
+@keyframes ac-spin { to { transform: rotate(360deg); } }
+.ac-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 12px;
+}
+.ac-mode-tab {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  cursor: pointer;
+  transition: all 0.16s;
+}
+.ac-mode-tab.active {
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: transparent;
+}
+.ac-sms-form { display: flex; flex-direction: column; gap: 10px; }
+.ac-sms-row { display: flex; gap: 8px; }
+.ac-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(11, 16, 32, 0.6);
+  color: #f1f5f9;
+  font-size: 13px;
+  outline: none;
+}
+.ac-input:focus { border-color: #3b82f6; }
+.ac-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s;
+}
+.ac-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ac-btn-ghost { background: rgba(148, 163, 184, 0.15); color: #e2e8f0; }
+.ac-btn-ghost:hover:not(:disabled) { background: rgba(148, 163, 184, 0.28); }
+.ac-btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+.ac-btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+.ac-qr-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.6;
+}
+.ac-qr-tip strong { color: #f1f5f9; }
+.ac-status {
+  margin-top: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.ac-status.err {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+.ac-modal-success {
+  text-align: center;
+  padding: 48px 20px;
+  color: #f1f5f9;
+  font-size: 15px;
+  font-weight: 700;
+}
+.ac-success-ico {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  border: 2px solid #10b981;
+  color: #10b981;
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ac-success-sub { font-size: 12px; color: #64748b; font-weight: 400; margin-top: 6px; }
 </style>

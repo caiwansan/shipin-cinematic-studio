@@ -182,6 +182,7 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
     url: string
     title: string
     screenshotBase64?: string
+    qrCodeBase64?: string
     loggedIn: boolean
     error?: string
     debug?: any
@@ -193,6 +194,59 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
         const buf = await import('fs').then(fs => fs.promises.readFile(status.screenshot!))
         screenshotBase64 = buf.toString('base64')
       }
+      // 提取放大二维码（登录卡片内 data:image/png 且 ~178px、位于右侧卡片区域 x>600）
+      let qrCodeBase64: string | undefined
+      try {
+        qrCodeBase64 = await browserRuntime.withPage(sessionId, async (page) => {
+          const qrInfo = await page.evaluate(() => {
+            const imgs = Array.from(document.querySelectorAll('img'))
+            const hit = imgs.find((el: HTMLImageElement) => {
+              const r = el.getBoundingClientRect()
+              return (el.src || '').startsWith('data:image/png') && r.width >= 140 && r.width <= 240 && r.x > 600
+            })
+            if (!hit) return null
+            const r = hit.getBoundingClientRect()
+            return {
+              src: (hit as HTMLImageElement).src,
+              x: Math.round(r.x),
+              y: Math.round(r.y),
+              w: Math.round(r.width),
+              h: Math.round(r.height),
+            }
+          })
+          if (!qrInfo) return undefined
+          // 方式1：二维码原图 base64（最清晰，无页面 CSS 干扰）→ 服务端放大 + 白边
+          const b64 = qrInfo.src.replace(/^data:image\/png;base64,/, '')
+          const raw = Buffer.from(b64, 'base64')
+          if (raw.length > 800) {
+            try {
+              const { execSync } = await import('child_process')
+              const fs = await import('fs')
+              const os = await import('os')
+              const path = await import('path')
+              const tmp = path.join(os.tmpdir(), `douyin-qr-${Date.now()}.png`)
+              fs.writeFileSync(tmp, raw)
+              const out = path.join(os.tmpdir(), `douyin-qr-out-${Date.now()}.png`)
+              execSync(`python3 -c "
+from PIL import Image
+img = Image.open('${tmp}').convert('RGB')
+big = img.resize((1024,1024), Image.LANCZOS)
+canvas = Image.new('RGB', (1154,1154), 'white')
+canvas.paste(big, (65,65))
+canvas.save('${out}')
+"`)
+              const outBuf = fs.readFileSync(out)
+              try { fs.unlinkSync(tmp) } catch {}
+              try { fs.unlinkSync(out) } catch {}
+              return outBuf.toString('base64')
+            } catch {
+              // 放大失败则退回原图 base64（512 内足够手机扫）
+              return b64
+            }
+          }
+          return undefined
+        })
+      } catch { /* 二维码提取失败不影响主流程 */ }
       let loggedIn = false
       try {
         loggedIn = await this.detectLoggedIn(sessionId)
@@ -214,7 +268,7 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
           })
         })
       } catch {}
-      return { url: status.currentUrl, title: status.title, screenshotBase64, loggedIn, debug }
+      return { url: status.currentUrl, title: status.title, screenshotBase64, qrCodeBase64, loggedIn, debug }
     } catch (e: any) {
       return { url: '', title: '', loggedIn: false, error: e.message }
     }

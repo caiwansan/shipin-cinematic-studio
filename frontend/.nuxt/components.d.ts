@@ -199,6 +199,7 @@ interface _GlobalComponents {
     'KunlunScenesWenquxingScene': typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']
     'KunlunScenesWorkbenchUniverseScene': typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']
     'MediaAgentRoster': typeof import("../components/media/MediaAgentRoster.vue")['default']
+    'MediaCapabilitySplit': typeof import("../components/media/MediaCapabilitySplit.vue")['default']
     'MediaEmptyState': typeof import("../components/media/MediaEmptyState.vue")['default']
     'MediaHealthRing': typeof import("../components/media/MediaHealthRing.vue")['default']
     'MediaKpiCard': typeof import("../components/media/MediaKpiCard.vue")['default']
@@ -232,6 +233,7 @@ interface _GlobalComponents {
     'UIToastContainer': typeof import("../components/ui/UIToastContainer.vue")['default']
     'WizardFirstRunWizard': typeof import("../components/wizard/FirstRunWizard.vue")['default']
     'WorkspaceSharedWorkspaceUserCard': typeof import("../components/workspace/shared/WorkspaceUserCard.vue")['default']
+    'WorkspaceSharedWorkspaceVipCard': typeof import("../components/workspace/shared/WorkspaceVipCard.vue")['default']
     'NuxtWelcome': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/welcome.vue")['default']
     'NuxtLayout': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-layout")['default']
     'NuxtErrorBoundary': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-error-boundary")['default']
@@ -442,6 +444,7 @@ interface _GlobalComponents {
     'LazyKunlunScenesWenquxingScene': LazyComponent<typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']>
     'LazyKunlunScenesWorkbenchUniverseScene': LazyComponent<typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']>
     'LazyMediaAgentRoster': LazyComponent<typeof import("../components/media/MediaAgentRoster.vue")['default']>
+    'LazyMediaCapabilitySplit': LazyComponent<typeof import("../components/media/MediaCapabilitySplit.vue")['default']>
     'LazyMediaEmptyState': LazyComponent<typeof import("../components/media/MediaEmptyState.vue")['default']>
     'LazyMediaHealthRing': LazyComponent<typeof import("../components/media/MediaHealthRing.vue")['default']>
     'LazyMediaKpiCard': LazyComponent<typeof import("../components/media/MediaKpiCard.vue")['default']>
@@ -475,6 +478,7 @@ interface _GlobalComponents {
     'LazyUIToastContainer': LazyComponent<typeof import("../components/ui/UIToastContainer.vue")['default']>
     'LazyWizardFirstRunWizard': LazyComponent<typeof import("../components/wizard/FirstRunWizard.vue")['default']>
     'LazyWorkspaceSharedWorkspaceUserCard': LazyComponent<typeof import("../components/workspace/shared/WorkspaceUserCard.vue")['default']>
+    'LazyWorkspaceSharedWorkspaceVipCard': LazyComponent<typeof import("../components/workspace/shared/WorkspaceVipCard.vue")['default']>
     'LazyNuxtWelcome': LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/welcome.vue")['default']>
     'LazyNuxtLayout': LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-layout")['default']>
     'LazyNuxtErrorBoundary': LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-error-boundary")['default']>
@@ -691,6 +695,7 @@ export const KunlunScenesHeroScene: typeof import("../components/kunlun/scenes/H
 export const KunlunScenesWenquxingScene: typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']
 export const KunlunScenesWorkbenchUniverseScene: typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']
 export const MediaAgentRoster: typeof import("../components/media/MediaAgentRoster.vue")['default']
+export const MediaCapabilitySplit: typeof import("../components/media/MediaCapabilitySplit.vue")['default']
 export const MediaEmptyState: typeof import("../components/media/MediaEmptyState.vue")['default']
 export const MediaHealthRing: typeof import("../components/media/MediaHealthRing.vue")['default']
 export const MediaKpiCard: typeof import("../components/media/MediaKpiCard.vue")['default']
@@ -724,6 +729,7 @@ export const UISkeleton: typeof import("../components/ui/UISkeleton.vue")['defau
 export const UIToastContainer: typeof import("../components/ui/UIToastContainer.vue")['default']
 export const WizardFirstRunWizard: typeof import("../components/wizard/FirstRunWizard.vue")['default']
 export const WorkspaceSharedWorkspaceUserCard: typeof import("../components/workspace/shared/WorkspaceUserCard.vue")['default']
+export const WorkspaceSharedWorkspaceVipCard: typeof import("../components/workspace/shared/WorkspaceVipCard.vue")['default']
 export const NuxtWelcome: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/welcome.vue")['default']
 export const NuxtLayout: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-layout")['default']
 export const NuxtErrorBoundary: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-error-boundary")['default']
@@ -934,6 +940,7 @@ export const LazyKunlunScenesHeroScene: LazyComponent<typeof import("../componen
 export const LazyKunlunScenesWenquxingScene: LazyComponent<typeof import("../components/kunlun/scenes/WenquxingScene.vue")['default']>
 export const LazyKunlunScenesWorkbenchUniverseScene: LazyComponent<typeof import("../components/kunlun/scenes/WorkbenchUniverseScene.vue")['default']>
 export const LazyMediaAgentRoster: LazyComponent<typeof import("../components/media/MediaAgentRoster.vue")['default']>
+export const LazyMediaCapabilitySplit: LazyComponent<typeof import("../components/media/MediaCapabilitySplit.vue")['default']>
 export const LazyMediaEmptyState: LazyComponent<typeof import("../components/media/MediaEmptyState.vue")['default']>
 export const LazyMediaHealthRing: LazyComponent<typeof import("../components/media/MediaHealthRing.vue")['default']>
 export const LazyMediaKpiCard: LazyComponent<typeof import("../components/media/MediaKpiCard.vue")['default']>
@@ -967,6 +974,7 @@ export const LazyUISkeleton: LazyComponent<typeof import("../components/ui/UISke
 export const LazyUIToastContainer: LazyComponent<typeof import("../components/ui/UIToastContainer.vue")['default']>
 export const LazyWizardFirstRunWizard: LazyComponent<typeof import("../components/wizard/FirstRunWizard.vue")['default']>
 export const LazyWorkspaceSharedWorkspaceUserCard: LazyComponent<typeof import("../components/workspace/shared/WorkspaceUserCard.vue")['default']>
+export const LazyWorkspaceSharedWorkspaceVipCard: LazyComponent<typeof import("../components/workspace/shared/WorkspaceVipCard.vue")['default']>
 export const LazyNuxtWelcome: LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/welcome.vue")['default']>
 export const LazyNuxtLayout: LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-layout")['default']>
 export const LazyNuxtErrorBoundary: LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-error-boundary")['default']>
