@@ -118,14 +118,13 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
         select: { id: true },
       })
       if (!account) {
-        const { CHANNEL_META } = await import('../enterprise/channel/adapters/browser-channel.meta.js')
-        const meta = CHANNEL_META[platform] || { displayName: platform }
+        // REALITY-GATE-FINAL-01 — 真实或不存在：只建 WAITING_LOGIN 空壳（无假 ID/无空凭证/不冒充账号名），
+        // 真实身份由登录成功后写入（updateChannelIdentity）。禁止 externalAccountId=platform-时间戳 占位。
         const created = await channelService.connectAccount({
           tenantId,
           platform,
-          accountName: meta.displayName,
-          externalAccountId: platform + '-' + Date.now(),
-          credential: { cookieData: '[]' },
+          accountName: '未连接',
+          credential: {},
         })
         account = { id: created.id }
       }
