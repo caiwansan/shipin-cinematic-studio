@@ -89,6 +89,9 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
           avatar: meta.avatar || '',
           permissionLevel: meta.permissionLevel ?? 1,
           boundAt: meta.boundAt || null,
+          // Channel Identity Trust Completion — 设备可信标记（安全验证完成后长期可信）
+          deviceTrusted: !!meta.deviceTrusted,
+          lastVerifiedAt: meta.lastVerifiedAt || null,
         },
       })
     } catch (e: any) {
@@ -133,6 +136,30 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
       try {
         const adapter = channelService.resolveAdapter('douyin') as any
         const status = await adapter.getLoginStatus(sessionId)
+        // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 03 — 轮询时同步授权状态机（幂等、失败静默）
+        if (status && status.loginStage) {
+          try {
+            const { browserAuthSessionService } = await import('../services/enterprise/browser-auth-session.service.js')
+            const { prisma } = await import('../utils/index.js')
+            const accountId = String(sessionId).replace(/^douyin:/, '')
+            const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+            if (account) {
+              const authSession = await browserAuthSessionService.begin(account.id, { type: 'app' })
+              const stage = status.loginStage
+              if (stage === 'verifying' && status.verificationRequired) {
+                await browserAuthSessionService.transition(authSession.id, 'PLATFORM_VERIFY', {
+                  metadata: { verificationType: status.verificationType || 'app' },
+                }).catch(() => {})
+              } else if (stage === 'waiting_scan' || stage === 'scan_confirming') {
+                await browserAuthSessionService.transition(authSession.id, 'WAIT_USER_LOGIN').catch(() => {})
+              } else if (stage === 'awaiting_confirmation') {
+                await browserAuthSessionService.transition(authSession.id, 'PLATFORM_VERIFY').catch(() => {})
+              }
+            }
+          } catch (e: any) {
+            // 状态机同步失败不影响主流程
+          }
+        }
         return { code: 0, data: status }
       } catch (e: any) {
         return reply.status(400).send({ code: 1, message: e.message })

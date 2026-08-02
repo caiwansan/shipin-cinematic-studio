@@ -67,6 +67,7 @@
           <div class="ac-bound-tags">
             <span class="ac-bound-tag">L1 观察权限</span>
             <span class="ac-bound-tag">读取数据 · 分析</span>
+            <span v-if="p.deviceTrusted" class="ac-bound-tag ac-bound-tag--trusted">🛡 安全验证已完成</span>
           </div>
         </div>
 
@@ -216,6 +217,40 @@
             <div v-if="statusMsg" class="ac-status" :class="{ err: statusMsg.includes('失败') || statusMsg.includes('启动失败') }">
               {{ statusMsg }}
             </div>
+
+            <!-- Channel Identity Trust Completion — 平台安全验证产品流程（新设备首次绑定）
+                 不是错误：抖音识别为新设备，要求完成一次安全验证；完成后本环境长期可信，无需重复 -->
+            <div v-if="verificationRequired && loginStage === 'verifying' && !verificationAcknowledged" class="ac-verify">
+              <div class="ac-verify-head">
+                <span class="ac-verify-icon">🛡</span>
+                <div>
+                  <div class="ac-verify-title">需要完成一次安全验证</div>
+                  <div class="ac-verify-sub">首次绑定新设备，抖音要求确认本人操作（正常安全流程）</div>
+                </div>
+              </div>
+              <div class="ac-verify-steps">
+                <div class="ac-verify-step">
+                  <span class="ac-verify-step-dot">①</span>
+                  <div>
+                    <div class="ac-verify-step-name">
+                      {{ verificationType === 'sms' ? '接收短信验证码' : verificationType === 'face' ? '手机刷脸验证' : '抖音 App 确认' }}
+                    </div>
+                    <div class="ac-verify-step-desc">在抖音 App 中按提示完成{{ verificationType === 'sms' ? '短信验证' : verificationType === 'face' ? '刷脸' : '确认登录' }}</div>
+                  </div>
+                </div>
+                <div class="ac-verify-step">
+                  <span class="ac-verify-step-dot">②</span>
+                  <div>
+                    <div class="ac-verify-step-name">返回创作者中心</div>
+                    <div class="ac-verify-step-desc">验证完成后页面自动进入抖音创作者中心</div>
+                  </div>
+                </div>
+              </div>
+              <button class="ac-btn ac-btn-primary ac-verify-btn" :disabled="connecting" @click="verificationAcknowledged = true">
+                我已完成验证，继续连接
+              </button>
+              <div class="ac-verify-note">💡 完成本次验证后，昆仑镜将把此浏览器环境固化为可信设备，后续直接恢复登录态，无需重复验证</div>
+            </div>
           </template>
         </div>
       </div>
@@ -256,6 +291,10 @@ const awaitingConfirm = ref(false)
 const detectedName = ref('')
 const detectedAvatar = ref('')
 const detectedAccountId = ref('')
+// Channel Identity Trust Completion — 平台安全验证（新设备首次绑定风控：短信/App确认/刷脸）
+const verificationRequired = ref(false)
+const verificationType = ref<'sms' | 'app' | 'face' | 'none'>('none')
+const verificationAcknowledged = ref(false)
 
 async function api(url: string, opts: any = {}) {
   const token = getAuthToken() || ''
@@ -289,6 +328,10 @@ async function openDouyinConnect(p: any) {
   detectedName.value = ''
   detectedAvatar.value = ''
   detectedAccountId.value = ''
+  // Channel Identity Trust Completion — 重置安全验证状态
+  verificationRequired.value = false
+  verificationType.value = 'none'
+  verificationAcknowledged.value = false
   loginStage.value = 'waiting_scan'
   try {
     // 1) 确保渠道账号存在
@@ -358,6 +401,18 @@ function startPolling() {
         statusMsg.value = '扫码确认成功，正在验证登录...'
       } else if (loginStage.value !== 'verifying' && loginStage.value !== 'awaiting_confirmation') {
         loginStage.value = 'waiting_scan'
+      }
+      // Channel Identity Trust Completion — 平台安全验证页（新设备首次绑定风控）
+      // 产品化：不是错误，是正常的安全验证流程（短信/App确认/刷脸），完成后无需重复
+      if (d.verificationRequired && !verificationAcknowledged.value) {
+        verificationRequired.value = true
+        verificationType.value = d.verificationType || 'app'
+        loginStage.value = 'verifying'
+        statusMsg.value = '抖音要求完成一次安全验证（新设备首次绑定），验证完成后本环境长期可信'
+      }
+      if (d.verificationRequired && verificationAcknowledged.value) {
+        // 已确认：不打断，继续轮询等探针检测登录态
+        verificationRequired.value = true
       }
       // 优先放大二维码（工作台可直接扫码），回退整页截图
       if (d.qrCodeBase64) qrCode.value = 'data:image/png;base64,' + d.qrCodeBase64
@@ -565,6 +620,7 @@ onMounted(async () => {
         douyin.boundName = d.accountName || douyin.name
         douyin.boundAvatar = d.avatar || ''
         douyin.permissionLevel = d.permissionLevel || 1
+        douyin.deviceTrusted = !!d.deviceTrusted
       }
     }
   } catch (e: any) {
@@ -991,6 +1047,74 @@ function onClick(p: any) {
   color: #475569;
   font-size: 11px;
 }
+/* Channel Identity Trust Completion — 平台安全验证产品流程（新设备首次绑定） */
+.ac-verify {
+  margin-top: 14px;
+  padding: 14px 14px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.10), rgba(59, 130, 246, 0.08));
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+.ac-verify-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ac-verify-icon {
+  font-size: 22px;
+  line-height: 1.2;
+}
+.ac-verify-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.ac-verify-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.ac-verify-steps {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ac-verify-step {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.ac-verify-step-dot {
+  font-size: 11px;
+  color: #8b5cf6;
+  font-weight: 700;
+  margin-top: 1px;
+}
+.ac-verify-step-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+.ac-verify-step-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+.ac-verify-btn {
+  margin-top: 14px;
+  width: 100%;
+}
+.ac-verify-note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #8b5cf6;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px dashed rgba(139, 92, 246, 0.3);
+}
 .ac-modal-success {
   text-align: center;
   padding: 48px 20px;
@@ -1073,6 +1197,11 @@ function onClick(p: any) {
   background: rgba(16, 185, 129, 0.12);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.ac-bound-tag--trusted {
+  background: rgba(139, 92, 246, 0.12);
+  color: #a78bfa;
+  border-color: rgba(139, 92, 246, 0.3);
 }
 .ac-cta--bound {
   border-color: rgba(16, 185, 129, 0.4);

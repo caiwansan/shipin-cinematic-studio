@@ -10,6 +10,9 @@ export interface CreateBindingDTO {
   tenantId: string
   agentInstanceId: string
   channelAccountId: string
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 05 — AI 员工绑定升级：
+  // AI员工 → BrowserWorkspace（工作电脑）→ ChannelAccount（身份）
+  browserWorkspaceId?: string
   permissions?: {
     read?: boolean
     reply?: boolean
@@ -35,6 +38,7 @@ export interface ChannelBindingView {
   tenantId: string
   agentInstanceId: string
   channelAccountId: string
+  browserWorkspaceId?: string
   channelName: string
   channelType: string
   permissions: Record<string, boolean>
@@ -72,6 +76,7 @@ export class AgentChannelBindingService {
         tenantId: b.tenantId,
         agentInstanceId: b.agentInstanceId,
         channelAccountId: b.channelAccountId,
+        browserWorkspaceId: b.browserWorkspaceId || undefined,
         channelName: channel?.channelName || '未知渠道',
         channelType: channel?.channelType || 'unknown',
         permissions: (b.permissions as Record<string, boolean>) || {},
@@ -114,11 +119,26 @@ export class AgentChannelBindingService {
       throw new Error('渠道账号不存在')
     }
 
+    // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 05 — 自动关联 BrowserWorkspace（未指定时创建）
+    // Alice 拥有「宏图抖音工作空间」：binding.browserWorkspaceId → workspace → profile
+    let browserWorkspaceId = dto.browserWorkspaceId
+    if (!browserWorkspaceId) {
+      try {
+        const { browserWorkspaceService } = await import('./browser-workspace.service.js')
+        const orgId = channel.organizationId || dto.tenantId
+        const ws = await browserWorkspaceService.getOrCreate(dto.tenantId, orgId, channel.id)
+        browserWorkspaceId = ws.id
+      } catch (e: any) {
+        console.warn(`[AgentChannelBinding] workspace 自动创建失败（不影响绑定）: ${e.message}`)
+      }
+    }
+
     return prisma.agentChannelBinding.create({
       data: {
         tenantId: dto.tenantId,
         agentInstanceId: dto.agentInstanceId,
         channelAccountId: dto.channelAccountId,
+        browserWorkspaceId,
         permissions: dto.permissions || { read: true, reply: true },
         status: 'active',
       },

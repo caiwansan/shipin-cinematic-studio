@@ -213,11 +213,37 @@ export class ChannelService {
     })
     await channelBrowserSessionService.markStarted(session.id)
 
+    // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 03 — BrowserAuthSession 状态机：INIT → OPEN_BROWSER
+    try {
+      const { browserAuthSessionService } = await import('./browser-auth-session.service.js')
+      const authSession = await browserAuthSessionService.begin(account.id, { type: 'app' })
+      await browserAuthSessionService.transition(authSession.id, 'OPEN_BROWSER').catch(async (e: any) => {
+        console.warn(`[ChannelService] 授权状态机 OPEN_BROWSER 降级: ${e.message}`)
+        await browserAuthSessionService.mark(authSession.id, 'OPEN_BROWSER')
+      })
+    } catch (e: any) {
+      console.warn(`[ChannelService] 授权流程开启失败: ${e.message}`)
+    }
+
     const result = await adapter.connect(account.id)
     if (result.status === 'connected') {
       // 已确认账号（曾绑定）→ 维持登录态直接 connected；首次 → 需人工确认绑定
       const alreadyBound = account.connectionStatus === 'connected' && !!account.externalAccountId
       if (alreadyBound) {
+        // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 03 — 状态机：AUTH_SUCCESS（已授权环境恢复登录态）
+        try {
+          const { browserAuthSessionService } = await import('./browser-auth-session.service.js')
+          const authSession = await browserAuthSessionService.begin(account.id, { type: 'app' })
+          await browserAuthSessionService.mark(authSession.id, 'AUTH_SUCCESS', {
+            verifiedIdentity: {
+              accountName: result.accountName ?? account.channelName,
+              externalAccountId: result.externalAccountId ?? account.externalAccountId,
+            },
+            metadata: { restored: true },
+          })
+        } catch (e: any) {
+          console.warn(`[ChannelService] 授权状态机恢复标记失败: ${e.message}`)
+        }
         // TASK03.2.1 — 回写最新身份（登录态维持，身份可能更新）
         await prisma.enterpriseChannelAccount.update({
           where: { id: account.id },
@@ -330,9 +356,48 @@ export class ChannelService {
           permissionLevel: (account.metadata as any)?.permissionLevel ?? 1, // L1 观察员工（默认）
           permissions: identity.permissions,
           boundAt: new Date().toISOString(),
+          // Channel Identity Trust Completion — 设备可信标记：本次绑定完成即建立长期可信环境，
+          // 后续同一 profile 恢复登录态时不再触发新设备风控（由平台侧 profile 连续性保证）
+          deviceTrusted: true,
+          lastVerifiedAt: new Date().toISOString(),
         },
       },
     })
+
+    // 2.5 ChannelVerificationSession — 授权设备验证完成记录（用户主动完成平台安全验证后固化）
+    // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 03 — BrowserAuthSession 状态机：AUTH_SUCCESS
+    try {
+      const { browserAuthSessionService } = await import('./browser-auth-session.service.js')
+      // 开启（或复用进行中）授权流程
+      const authSession = await browserAuthSessionService.begin(account.id, { type: 'app' })
+      // PLATFORM_VERIFY → AUTH_SUCCESS（扫码 + 平台验证 + 探针确认后由用户确认绑定 = 授权成功）
+      await browserAuthSessionService
+        .transition(authSession.id, 'AUTH_SUCCESS', {
+          verifiedIdentity: {
+            accountName: identity.accountName ?? account.channelName,
+            externalAccountId: identity.accountId ?? account.externalAccountId,
+            avatar: identity.avatar ?? null,
+          },
+          metadata: {
+            boundVia: 'scan_confirm',
+            permissionLevel: 1,
+            authStage: 'AUTH_SUCCESS',
+          },
+        })
+        .catch(async (e: any) => {
+          // 非法迁移（如已是 AUTH_SUCCESS）→ 直接快进标记，不报错
+          console.warn(`[ChannelService] 授权状态机迁移降级（${e.message}），直接标记 AUTH_SUCCESS`)
+          await browserAuthSessionService.mark(authSession.id, 'AUTH_SUCCESS', {
+            verifiedIdentity: {
+              accountName: identity.accountName ?? account.channelName,
+              externalAccountId: identity.accountId ?? account.externalAccountId,
+              avatar: identity.avatar ?? null,
+            },
+          })
+        })
+    } catch (e: any) {
+      console.warn(`[ChannelService] 验证会话记录失败: ${e.message}`)
+    }
 
     // 3. 保存 cookie 凭证（登录成功即续期落库）
     try {
@@ -473,6 +538,25 @@ export class ChannelService {
     const permissionLevel = (account.metadata as any)?.permissionLevel ?? 1
     const permissionLabel = permissionLevel === 1 ? 'read/analyze' : permissionLevel === 2 ? 'read/write (需批准)' : 'read/write/publish (明确授权)'
 
+    // Channel Identity Trust Completion — 安全验证状态（首次绑定新设备风控已完成 → 长期可信）
+    let verification: { status: string; type: string; completedAt: string | null; accountName: string | null } | null = null
+    try {
+      const latest = await prisma.channelVerificationSession.findFirst({
+        where: { channelAccountId: account.id, status: 'VERIFIED' },
+        orderBy: { completedAt: 'desc' },
+      })
+      if (latest) {
+        verification = {
+          status: latest.status,
+          type: latest.verificationType,
+          completedAt: latest.completedAt ? latest.completedAt.toISOString() : null,
+          accountName: (latest.verifiedIdentity as any)?.accountName ?? null,
+        }
+      }
+    } catch (e: any) {
+      console.warn(`[RuntimeHealth] 验证状态查询异常: ${e.message}`)
+    }
+
     return {
       browser: browserState,
       session: sessionState,
@@ -482,6 +566,11 @@ export class ChannelService {
       accountName: account.channelName,
       lastCheck: lastHealthAt ? this.relativeTime(lastHealthAt) : '从未检查',
       lastCheckAt: lastHealthAt ? lastHealthAt.toISOString() : null,
+      // Channel Identity Trust Completion — 安全验证完成状态（无需重复验证，直接恢复）
+      verification: verification
+        ? { ...verification, label: `安全验证已完成（${verification.type === 'sms' ? '短信验证' : verification.type === 'face' ? '刷脸验证' : 'App确认'}）` }
+        : { status: 'none', type: 'none', completedAt: null, accountName: null, label: '尚未完成首次安全验证' },
+      deviceTrusted: !!(account.metadata as any)?.deviceTrusted,
       checkedAt: new Date().toISOString(),
     }
   }

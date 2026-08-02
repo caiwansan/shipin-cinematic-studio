@@ -7077,6 +7077,10 @@ model AgentChannelBinding {
   tenantId          String   @map("tenant_id") @db.Text
   agentInstanceId   String   @map("agent_instance_id") @db.Text // EnterpriseAgentInstance.id
   channelAccountId  String   @map("channel_account_id") @db.Text // EnterpriseChannelAccount.id
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 05 — AI 员工绑定升级：
+  // AI员工 → BrowserWorkspace（工作电脑）→ ChannelAccount（身份）
+  // Alice 拥有「宏图抖音工作空间」，而非直接持有渠道账号
+  browserWorkspaceId String? @map("browser_workspace_id") @db.Text // BrowserWorkspace.id
   permissions       Json     @default("{\"read\":true,\"reply\":true}") // {read, reply, createTask, execute, delete, publish, analyze, schedule}
   status            String   @default("active") @map("status") // active | paused
   publishCount      Int      @default(0) @map("publish_count")  // 今日发布数
@@ -7088,6 +7092,7 @@ model AgentChannelBinding {
   @@index([tenantId])
   @@index([agentInstanceId])
   @@index([channelAccountId])
+  @@index([browserWorkspaceId])
   @@map("agent_channel_binding")
 }
 
@@ -7555,6 +7560,8 @@ model EnterpriseChannelAccount {
   interactions          EnterpriseInteraction[]
   syncLogs              EnterpriseChannelSyncLog[]
   browserSessions       ChannelBrowserSession[]
+  verificationSessions  ChannelVerificationSession[]
+  browserWorkspace      BrowserWorkspace?
 
   @@unique([tenantId, channelType])
   @@index([tenantId])
@@ -7660,6 +7667,125 @@ model ChannelBrowserSession {
   @@index([channelAccountId])
   @@index([status])
   @@map("channel_browser_session")
+}
+
+// Channel Identity Trust Completion — 授权设备验证会话（用户主动完成平台二次验证后固化可信环境）
+// 首次绑定：扫码 → 平台安全验证（短信/App确认/刷脸）→ 验证完成 → 建立长期可信浏览器环境
+model ChannelVerificationSession {
+  id                String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  channelAccountId  String    @map("channel_account_id") @db.Text
+  verificationType  String    @map("verification_type") @db.Text // sms / app / face / none
+  status            String    @default("PENDING") @map("status") @db.Text // PENDING / VERIFIED / FAILED / EXPIRED
+  startedAt         DateTime  @default(now()) @map("started_at")
+  completedAt       DateTime? @map("completed_at")
+  verifiedIdentity  Json?     @map("verified_identity") // 验证完成时的账号身份快照（accountName/externalAccountId/avatar）
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  channelAccount    EnterpriseChannelAccount @relation(fields: [channelAccountId], references: [id], onDelete: Cascade)
+
+  @@index([channelAccountId])
+  @@index([status])
+  @@index([channelAccountId, status])
+  @@map("channel_verification_session")
+}
+
+// SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 01 — Browser Workspace SSOT（AI 员工数字办公环境）
+// ── 核心认知：账号身份 ≠ 运行环境 ──
+//   EnterpriseChannelAccount = 身份（是谁）：凭证/状态/归属
+//   BrowserWorkspace        = 工作环境（在哪里工作）：浏览器 profile/生命周期/健康
+// 设计原则：
+// - 每企业每渠道账号一个 workspace（channelAccountId 唯一）
+// - profilePath 指向持久化 Chrome user-data-dir（登录一次长期有效）
+// - 状态机：CREATED → READY → RUNNING → ERROR / DESTROYED
+// - 不存储凭证/cookie（唯一凭证源仍是 EnterpriseChannelAccount.credentialEncrypted）
+model BrowserWorkspace {
+  id                String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId          String    @map("tenant_id") @db.Text
+  organizationId    String    @map("organization_id") @db.Text
+  channelAccountId  String    @unique @map("channel_account_id") @db.Text // EnterpriseChannelAccount.id
+  workspaceType     String    @default("chrome") @map("workspace_type") @db.Text // chrome / firefox
+  profilePath       String    @map("profile_path") @db.Text
+  status            String    @default("CREATED") @db.Text // CREATED / READY / RUNNING / ERROR / DESTROYED
+  browserVersion    String?   @map("browser_version") @db.Text
+  lastStartedAt     DateTime? @map("last_started_at")
+  lastHealthCheckAt DateTime? @map("last_health_check_at")
+  lastError         String?   @map("last_error") @db.Text
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  channelAccount    EnterpriseChannelAccount @relation(fields: [channelAccountId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([status])
+  @@map("browser_workspace")
+}
+
+// SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 07 — ChannelOperationLog（AI 员工渠道操作日志）
+// 用途：防止重复发布/重复评论/重复操作；操作可审计
+// 唯一约束：workspaceId + action + target（同一工作空间对同一目标同一动作只允许一次）
+// 规则：
+// - 每次渠道操作（读取/发布/回复/评论）写一条日志
+// - 重复操作（同 workspace+action+target）插入时被唯一约束拦截 → 上层转为「已执行过」提示
+// - screenshot：操作完成时的截图路径/base64（可选）
+model ChannelOperationLog {
+  id           String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId     String    @map("tenant_id") @db.Text
+  organizationId String? @map("organization_id") @db.Text
+  workspaceId  String    @map("workspace_id") @db.Text // BrowserWorkspace.id
+  channelAccountId String @map("channel_account_id") @db.Text
+  agentId      String?   @map("agent_id") @db.Text // EnterpriseAgentInstance.id（AI 员工）
+  action       String    @map("action") @db.Text // publish / reply / comment / read_metrics / read_comments ...
+  target       String    @map("target") @db.Text // 操作目标（如作品ID/评论ID/URL）
+  result       String    @default("pending") @db.Text // pending / success / failed / duplicate
+  detail       Json?     @default("{}")
+  screenshot   String?   @map("screenshot") @db.Text
+  startedAt    DateTime  @default(now()) @map("started_at")
+  finishedAt   DateTime? @map("finished_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@unique([workspaceId, action, target])
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([channelAccountId])
+  @@index([agentId])
+  @@index([action])
+  @@map("channel_operation_log")
+}
+
+// SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 08 — BrowserTrajectory（AI 操作轨迹实时）
+// 记录 AI 正在做什么：打开页面 → 点击菜单 → 读取数据 → 生成报告
+// 支持老板实时查看：「Alice 现在正在运营我的抖音账号」
+// 设计：
+// - 一条轨迹 = 一个动作步骤（轻量、高频写入）
+// - step 顺序递增；workspaceId + agentId + sessionKey 关联一次任务会话
+// - status: running / done / failed
+// - 旧轨迹自动清理（保留最近 N 条/天），避免无限膨胀
+model BrowserTrajectory {
+  id           String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  tenantId     String    @map("tenant_id") @db.Text
+  organizationId String? @map("organization_id") @db.Text
+  workspaceId  String    @map("workspace_id") @db.Text // BrowserWorkspace.id
+  agentId      String?   @map("agent_id") @db.Text // EnterpriseAgentInstance.id
+  sessionKey   String    @map("session_key") @db.Text // 任务会话标识（如 taskId）
+  step         Int       @default(0) @map("step")
+  action       String    @map("action") @db.Text // open_page / click_menu / read_data / generate_report ...
+  description  String    @map("description") @db.Text // 「正在打开数据中心」
+  target       String?   @map("target") @db.Text // 目标 URL/元素
+  status       String    @default("running") @db.Text // running / done / failed
+  detail       Json?     @default("{}")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([workspaceId, createdAt])
+  @@index([agentId, createdAt])
+  @@index([sessionKey])
+  @@map("browser_trajectory")
 }
 
 model ChannelOutcomeMapping {

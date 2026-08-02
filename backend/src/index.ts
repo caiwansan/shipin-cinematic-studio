@@ -487,6 +487,8 @@ await app.register(projectV2Routes)
   }))
   // SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 链路（真实执行，非模拟授权）
   await app.register((await import('./routes/enterprise-channel-runtime.js')).enterpriseChannelRuntimeRoutes)
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 01/02 — Browser Workspace 生命周期（AI 员工数字办公环境）
+  await app.register((await import('./routes/browser-workspace.routes.js')).browserWorkspaceRoutes)
   // P1.7 — V3 Schema 三层审计系统（只读观测路由）
   await app.register(await import('./routes/v3-metrics.js').then(m => m.default))
   // P1.8 — 生产切换决策模型（只读评估，不修改任何系统状态）

@@ -69,6 +69,67 @@ class BrowserRuntimeService {
   private instances = new Map<string, BrowserInstance>()
 
   /**
+   * SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 02 — Workspace 生命周期管理
+   * 语义化方法：createWorkspace/startWorkspace/stopWorkspace/restartWorkspace/healthCheckWorkspace/destroyWorkspace
+   * 底层复用现有 launchPersistentContext（launchPersistentContext 是唯一主路径，禁止 launch()+addCookies 作主流程）
+   */
+
+  /** 创建 workspace（确保 profile 目录就绪，READY 状态由上层 SSOT 记录） */
+  async createWorkspace(sessionId: string, profilePath: string, config: BrowserConfig = {}): Promise<void> {
+    if (!fs.existsSync(profilePath)) {
+      fs.mkdirSync(profilePath, { recursive: true })
+    }
+    // 预启动验证 Chromium 可执行（不常驻，避免占用 profile 锁）
+    const h = await this.healthCheck()
+    if (h.status !== 'healthy') throw new Error(`Chromium 不可用: ${h.version}`)
+    console.log(`[BrowserWorkspace] createWorkspace ${sessionId} profile=${profilePath}`)
+  }
+
+  /** 启动 workspace（拉起持久化浏览器实例，保留登录态） */
+  async startWorkspace(sessionId: string, profilePath: string, config: BrowserConfig = {}): Promise<void> {
+    await this.getOrCreatePersistent(sessionId, profilePath, config)
+    console.log(`[BrowserWorkspace] startWorkspace ${sessionId}`)
+  }
+
+  /** 停止 workspace（关闭浏览器，profile 保留） */
+  async stopWorkspace(sessionId: string): Promise<void> {
+    await this.close(sessionId)
+    console.log(`[BrowserWorkspace] stopWorkspace ${sessionId}`)
+  }
+
+  /** 重启 workspace */
+  async restartWorkspace(sessionId: string, profilePath: string, config: BrowserConfig = {}): Promise<void> {
+    await this.close(sessionId)
+    await this.getOrCreatePersistent(sessionId, profilePath, config)
+    console.log(`[BrowserWorkspace] restartWorkspace ${sessionId}`)
+  }
+
+  /** workspace 健康检查（实例存活 + 页面可用） */
+  async healthCheckWorkspace(sessionId: string): Promise<{ ok: boolean; running: boolean; profilePath?: string; detail?: string }> {
+    const inst = this.instances.get(sessionId)
+    if (!inst) return { ok: false, running: false, detail: 'BROWSER_NOT_RUNNING' }
+    try {
+      const pageOk = !!(inst.page && !inst.page.isClosed())
+      return { ok: pageOk, running: true, profilePath: inst.profilePath, detail: pageOk ? 'page_ok' : 'page_closed' }
+    } catch (e: any) {
+      return { ok: false, running: true, detail: e.message }
+    }
+  }
+
+  /** 销毁 workspace（关闭浏览器；profile 目录由上层决定是否删除） */
+  async destroyWorkspace(sessionId: string, profilePath?: string, deleteProfile = false): Promise<void> {
+    await this.close(sessionId)
+    if (deleteProfile && profilePath) {
+      try {
+        fs.rmSync(profilePath, { recursive: true, force: true })
+        console.log(`[BrowserWorkspace] destroyWorkspace ${sessionId} profile 已删除`)
+      } catch (e: any) {
+        console.warn(`[BrowserWorkspace] destroyWorkspace 删除 profile 失败: ${e.message}`)
+      }
+    }
+  }
+
+  /**
    * TASK03.1.5 — 计算渠道账号的持久化 profile 路径
    * 目录结构：<PROFILE_ROOT>/<platform>/<accountId>（账号身份与运行环境分离）
    * 例：/data/browser-profiles/douyin/08a0f643-...
@@ -137,6 +198,10 @@ class BrowserRuntimeService {
       slowMo: config.slowMo ?? 0,
       viewport: config.viewport || { width: 1280, height: 800 },
       userAgent: config.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      // Channel Browser Identity Layer — Browser Context 固定（不随机）：
+      // timezone/locale/language 固化，与 UA（zh-CN）一致，避免平台识别为异常环境信号
+      timezoneId: 'Asia/Shanghai',
+      locale: 'zh-CN',
       // TASK03.2 反风控：隐藏自动化特征（抖音身份验证层会检测 webdriver/自动化标志并杀页面）
       ignoreDefaultArgs: ['--enable-automation'],
       args: [
@@ -159,11 +224,31 @@ class BrowserRuntimeService {
         Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh'] })
       } catch {}
       try {
+        Object.defineProperty(navigator, 'language', { get: () => 'zh-CN' })
+      } catch {}
+      try {
         Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
       } catch {}
       try {
         // @ts-ignore
         window.chrome = { runtime: {} }
+      } catch {}
+      // Channel Browser Identity Layer — 固定环境指纹：时区/语言与 UA 一致（Asia/Shanghai + zh-CN）
+      try {
+        Object.defineProperty(Intl.DateTimeFormat.prototype, 'resolvedOptions', {
+          value: function (this: any) {
+            const orig = Intl.DateTimeFormat.prototype.resolvedOptions
+            const res = orig.call(this)
+            res.timeZone = 'Asia/Shanghai'
+            return res
+          },
+        })
+      } catch {}
+      try {
+        Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 })
+      } catch {}
+      try {
+        Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 })
       } catch {}
     })
 
@@ -217,7 +302,15 @@ class BrowserRuntimeService {
    */
   async navigate(sessionId: string, url: string, config: BrowserConfig = {}): Promise<NavigationResult> {
     try {
-      const instance = await this.getOrCreate(sessionId, config)
+      // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 02 — navigate 感知持久化实例：
+      // 已存在 persistent 实例时直接复用（不得用 getOrCreate 把持久化浏览器重启成临时模式）
+      const existing = this.instances.get(sessionId)
+      let instance: BrowserInstance
+      if (existing?.persistent) {
+        instance = existing
+      } else {
+        instance = await this.getOrCreate(sessionId, config)
+      }
       
       // 如果有已存在的页面，先关闭
       if (instance.page) {
@@ -300,13 +393,24 @@ class BrowserRuntimeService {
   }
 
   /**
+   * SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 02 — 获取会话 context（优先复用持久化实例）
+   * 持久化实例存在 → 直接返回其 context（绝不重启为临时模式）；否则 getOrCreate
+   */
+  private async ensureContext(sessionId: string, config: BrowserConfig = {}): Promise<BrowserContext> {
+    const existing = this.instances.get(sessionId)
+    if (existing?.persistent) return existing.context
+    const instance = await this.getOrCreate(sessionId, config)
+    return instance.context
+  }
+
+  /**
    * 在当前 Session 执行页面操作（高级）
    * TASK03.2 — 页面被风控杀死后自动恢复：不再新建 about:blank，而是重新导航回最后已知 URL
    * TASK03.2.2-FIX — 扫码成功 SPA 跳转会短暂经过 about:blank，绝不能因此重建页面（会把已登录页替换成登录页）
    *   重建条件收紧为 page.isClosed()（真死页）；about:blank 时等待跳转完成，超时再处理
    */
   async withPage(sessionId: string, action: (page: Page) => Promise<any>, fallbackUrl?: string): Promise<any> {
-    const { context } = await this.getOrCreate(sessionId)
+    const { context } = { context: await this.ensureContext(sessionId) }
     // 优先复用 navigate 打开的主页面（登录页必须保留，不能新建 about:blank / 不能关闭）
     const inst = this.instances.get(sessionId)
     let page = inst?.page
@@ -400,7 +504,7 @@ class BrowserRuntimeService {
    */
   async restoreCookies(sessionId: string, cookies: CookieData[]): Promise<boolean> {
     if (!cookies || cookies.length === 0) return false
-    const { context } = await this.getOrCreate(sessionId)
+    const context = await this.ensureContext(sessionId)
     await context.addCookies(cookies as any)
     return true
   }
