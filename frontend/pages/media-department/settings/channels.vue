@@ -206,7 +206,7 @@ function agentIcon(type: string): string {
 
 async function fetchChannels() {
   try {
-    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken() || 'demo-token'}` }
+    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken()}` }
     const res = await fetch(`https://aigc.fushtn.com/api/enterprise/channel-accounts`, { headers })
     if (res.ok) {
       const data = await res.json()
@@ -227,7 +227,7 @@ async function fetchChannels() {
 
 async function fetchAgents() {
   try {
-    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken() || 'demo-token'}` }
+    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken()}` }
     const res = await fetch(`https://aigc.fushtn.com/api/enterprise/channel-accounts/agents`, { headers })
     if (res.ok) {
       const data = await res.json()
@@ -240,7 +240,7 @@ async function addChannel() {
   if (!newChannel.value.accountName) return
   try {
     const headers: Record<string, string> = {
-      'Authorization': `Bearer ${getToken() || 'demo-token'}`,
+      'Authorization': `Bearer ${getToken()}`,
       'Content-Type': 'application/json',
     }
     await fetch('https://aigc.fushtn.com/api/enterprise/channel-accounts', {
@@ -255,7 +255,7 @@ async function addChannel() {
 
 async function connect(channelId: string) {
   try {
-    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken() || 'demo-token'}` }
+    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken()}` }
     await fetch(`https://aigc.fushtn.com/api/enterprise/channel-accounts/${channelId}/connect`, { method: 'POST', headers })
     await fetchChannels()
   } catch (e) { console.warn('Connect failed:', e) }
@@ -263,7 +263,7 @@ async function connect(channelId: string) {
 
 async function disconnect(channelId: string) {
   try {
-    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken() || 'demo-token'}` }
+    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken()}` }
     await fetch(`https://aigc.fushtn.com/api/enterprise/channel-accounts/${channelId}`, { method: 'DELETE', headers })
     await fetchChannels()
   } catch (e) { console.warn('Disconnect failed:', e) }
@@ -290,7 +290,7 @@ async function bindAgents() {
   if (!selectedChannel.value) return
   try {
     const headers: Record<string, string> = {
-      'Authorization': `Bearer ${getToken() || 'demo-token'}`,
+      'Authorization': `Bearer ${getToken()}`,
       'Content-Type': 'application/json',
     }
     for (const agentId of selectedAgentIds.value) {
@@ -310,7 +310,7 @@ async function bindAgents() {
 
 async function unbind(bindingId: string) {
   try {
-    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken() || 'demo-token'}` }
+    const headers: Record<string, string> = { 'Authorization': `Bearer ${getToken()}` }
     await fetch(`https://aigc.fushtn.com/api/enterprise/channel-accounts/bindings/${bindingId}`, { method: 'DELETE', headers })
     await fetchChannels()
   } catch (e) { console.warn('Unbind failed:', e) }

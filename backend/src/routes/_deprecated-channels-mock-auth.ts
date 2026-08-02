@@ -229,51 +229,12 @@ export default async function channelRoutes(fastify: FastifyInstance) {
   })
 
   // ──────────────────────────────────────────────
-  // POST /api/enterprise/channel-accounts/:id/connect — 发起渠道授权（模拟）
-  // 未来替换为真实 OAuth / QR 扫码流程
+  // POST /api/enterprise/channel-accounts/:id/connect — REALITY-GATE-FINAL-01 Task03 已下线
+  // 原实现为模拟授权（fakeToken + simulated:true），违反「真实或不存在」原则。
+  // 真实连接请使用新链路：/api/enterprise/channels/runtime/:id/connect（BrowserWorkspace 真机扫码）
   // ──────────────────────────────────────────────
-  fastify.post('/api/enterprise/channel-accounts/:id/connect', async (request, reply) => {
-    const { id } = request.params as any
-    const orgId = ((request as any).tenantContext as any).orgId
-
-    const channel = await prisma.channelAccount.findFirst({
-      where: { id, organizationId: orgId },
-    })
-    if (!channel) {
-      return reply.status(404).send({ code: 1, message: '渠道账号不存在' })
-    }
-
-    // 模拟授权：生成 token 并标记为 active
-    const fakeToken = `tok_${Buffer.from(`${id}:${Date.now()}`).toString('base64url').slice(0, 32)}`
-    await prisma.channelAccount.update({
-      where: { id },
-      data: {
-        status: 'active',
-        credentials: JSON.stringify({ token: fakeToken, expiresAt: Date.now() + 86400000 * 30 }),
-        connectedAt: new Date(),
-        lastVerifiedAt: new Date(),
-      },
-    })
-
-    await prisma.channelAuthorizationLog.create({
-      data: {
-        organizationId: orgId,
-        channelAccountId: id,
-        action: 'connect',
-        actor: 'admin',
-        details: JSON.stringify({ platform: channel.platform, simulated: true }),
-      },
-    })
-
-    return {
-      code: 0,
-      data: {
-        status: 'active',
-        connectedAt: new Date(),
-        platform: channel.platform,
-        message: `已连接 ${channel.accountName}（模拟授权）`,
-      },
-    }
+  fastify.post('/api/enterprise/channel-accounts/:id/connect', async (_request, reply) => {
+    return reply.status(410).send({ code: 410, message: '模拟授权已下线：请使用真实扫码链路 /api/enterprise/channels/runtime/:id/connect' })
   })
 
   // ──────────────────────────────────────────────

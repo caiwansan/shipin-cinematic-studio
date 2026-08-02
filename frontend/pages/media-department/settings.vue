@@ -160,7 +160,7 @@ function getToken(): string {
 /** BETA-06.9.6: 统一 Auth Header — 不再手动传递 organizationId */
 function getAuthHeaders(): Record<string, string> {
   const token = getToken()
-  return token ? { Authorization: `Bearer ${token}` } : { Authorization: 'Bearer demo-token' }
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 function goLogin() { window.location.href = '/?login=1' }

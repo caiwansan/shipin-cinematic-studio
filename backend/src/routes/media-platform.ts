@@ -50,17 +50,7 @@ export async function registerMediaPlatformRoutes(app: FastifyInstance) {
       }
       return
     } catch (err) {
-      const auth = request.headers.authorization
-      if (auth === 'Bearer demo-token' || auth === 'Bearer test') {
-        (request as any).tenantContext = {
-          userId: 'demo-user',
-          email: 'demo@kunlun.com',
-          orgId: 'demo-org-001',
-          orgName: '昆仑镜 Demo Company',
-          role: 'OWNER',
-        }
-        return
-      }
+      // REALITY-GATE-FINAL-01 Task03: 移除 demo-token/test 后门（假身份注入），原则：真实或不存在
       reply.status(401).send({ code: 401, message: 'Unauthorized' })
       return
     }

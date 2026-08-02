@@ -31,8 +31,8 @@
               <div class="ac-owner-role">{{ ov.agent?.role || '运营' }}</div>
               <div class="ac-owner-dept"><span class="ac-owner-dept-dot"></span>{{ ov.businessType === 'media' ? '新媒体运营部门' : ov.businessType }}</div>
             </div>
-            <span class="ac-owner-state" :class="ov.online ? 'on' : 'off'">
-              <span class="ac-owner-dot" :class="ov.online ? 'on' : 'off'"></span>
+            <span class="ac-owner-state" :class="ownerStateClass(ov)">
+              <span class="ac-owner-dot" :class="ownerStateClass(ov)"></span>
               {{ workerStatusLabel(ov) }}
             </span>
           </div>
@@ -57,7 +57,7 @@
             </div>
             <div v-else class="ac-owner-row"><span class="k">状态</span><span class="v">{{ workerStatusDetail(ov) }}</span></div>
             <div v-if="ov.identity?.lastVerifiedAt" class="ac-owner-row"><span class="k">最近验证</span><span class="v">{{ timeAgo(ov.identity.lastVerifiedAt) }}<span class="ac-owner-verify-by">{{ verifiedByLabel(ov) }}</span></span></div>
-            <div class="ac-owner-row"><span class="k">最近动作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '等待任务' }}</span></div>
+            <div class="ac-owner-row"><span class="k">最近动作</span><span class="v">{{ ov.lastOperation ? timeAgo(ov.lastOperation.createdAt) + ' · ' + ov.lastOperation.description : '暂无真实动作记录' }}</span></div>
             <!-- AI-EMPLOYEE-OPERATION-REALITY-01 Task04 — 今日运营状态（真实指标快照，无数据不显示0） -->
             <div v-if="ov.metrics" class="ac-owner-row ac-owner-metrics">
               <span class="k">今日状态</span>
@@ -71,6 +71,7 @@
                 </template>
                 <template v-else>
                   <span class="ac-metric-unavailable">暂无数据{{ ov.metrics.unavailableReason ? ' · ' + ov.metrics.unavailableReason : '' }}</span>
+                  <span v-if="ov.metrics.collectedAt" class="ac-metric-time">最近尝试 {{ timeAgo(ov.metrics.collectedAt) }}</span>
                 </template>
               </span>
             </div>
@@ -910,30 +911,39 @@ const visiblePlatforms = computed(() => {
 const ownerViews = ref<any[]>([])
 
 // REALITY-HARDENING-01 Task03 — 状态标签：未登录绝不显示「工作中」
+// REALITY-GATE-FINAL-01 Task04 — 老板语言三态：🟢 在线 / ⚪ 等待授权 / 🟡 需要重新登录 / 🔴 账号保护中 / ⚫ 电脑离线
 const WORKER_STATUS_LABEL: Record<string, string> = {
-  working: '🟢 工作中',
-  waiting_scan: '🟡 等待扫码',
-  verifying: '🟡 验证中',
-  authenticated: '🟡 已确认身份',
-  expired: '🔴 登录已过期',
-  error: '🔴 异常',
-  pending: '⚪ 待连接',
-  offline: '⚫ 离线',
+  working: '🟢 在线',
+  waiting_scan: '⚪ 等待授权',
+  verifying: '⚪ 等待授权',
+  authenticated: '⚪ 等待授权',
+  expired: '🟡 需要重新登录',
+  error: '🔴 电脑异常',
+  pending: '⚪ 等待授权',
+  offline: '⚫ 电脑离线',
   attention: '🔴 账号保护中',
 }
 const WORKER_STATUS_DETAIL: Record<string, string> = {
-  working: '电脑在线 · 账号已连接',
-  waiting_scan: '电脑在线 · 等待扫码授权',
-  verifying: '电脑在线 · 扫码完成，验证中',
-  authenticated: '电脑在线 · 身份已确认，凭证保存中',
-  expired: '电脑在线 · 登录态过期，请重新授权',
+  working: '电脑在线 · 账号已连接 · 可读取数据',
+  waiting_scan: '电脑就绪 · 等待扫码授权',
+  verifying: '电脑就绪 · 扫码完成，验证中',
+  authenticated: '电脑就绪 · 身份已确认，凭证保存中',
+  expired: '电脑在线 · 登录态已失效，请重新扫码登录',
   error: '电脑异常 · 请检查浏览器环境',
   pending: '电脑就绪 · 尚未发起连接',
   offline: '电脑离线',
   attention: '账号保护中 · 连续失败已暂停任务，等待老板确认恢复',
 }
 function workerStatusLabel(ov: any): string {
-  return WORKER_STATUS_LABEL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || '⚫ 离线'
+  return WORKER_STATUS_LABEL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || '⚫ 电脑离线'
+}
+// REALITY-GATE-FINAL-01 Task04 — 状态点颜色：🟢在线=绿 / 🟡需重新登录=黄 / 🔴保护=红 / 其余=灰
+function ownerStateClass(ov: any): string {
+  const st = ov.workerStatus || (ov.online ? 'working' : 'offline')
+  if (st === 'working') return 'on'
+  if (st === 'expired') return 'warn'
+  if (st === 'attention' || st === 'error') return 'danger'
+  return 'off'
 }
 function workerStatusDetail(ov: any): string {
   return WORKER_STATUS_DETAIL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || ov.workspaceStatus || '—'
@@ -1171,6 +1181,14 @@ function onClick(p: any) {
 .ac-owner-dot.on {
   background: #10b981;
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+.ac-owner-dot.warn {
+  background: #d97706;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
+}
+.ac-owner-dot.danger {
+  background: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
 }
 .ac-owner-dot.off {
   background: #94a3b8;
