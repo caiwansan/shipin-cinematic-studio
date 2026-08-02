@@ -108,6 +108,27 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     }
   })
 
+  // TASK03.2.1 — 等待登录完成并自动回写账号（登录成功闭环）
+  // 浏览器轮询多信号探针 → 登录成功 → 自动更新 EnterpriseChannelAccount
+  // （connected + connectedAt + externalAccountId + channelName）+ 保存 cookie 凭证
+  app.post('/api/enterprise/channels/runtime/:id/wait-for-login', async (request, reply) => {
+    const { id } = request.params as any
+    try {
+      const result = await channelService.waitChannelLogin(id, 180000)
+      // 登录成功 → 自动续期凭证（cookie 加密落库），无需用户手动操作
+      if (result.status === 'connected') {
+        try {
+          await channelService.refreshChannelCredential(id)
+        } catch (e: any) {
+          console.warn(`[Runtime] wait-for-login 凭证保存失败: ${e.message}`)
+        }
+      }
+      return reply.send({ code: 0, data: result })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
   // 填手机号
   app.post('/api/enterprise/channels/runtime/browser/:sessionId/phone', async (request, reply) => {
     const { sessionId } = request.params as any

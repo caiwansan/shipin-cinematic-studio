@@ -145,9 +145,15 @@ export class ChannelService {
 
     const result = await adapter.connect(account.id)
     if (result.status === 'connected') {
+      // TASK03.2.1 — 登录成功回写真实账号身份（externalAccountId + channelName + connectedAt）
       await prisma.enterpriseChannelAccount.update({
         where: { id: account.id },
-        data: { connectionStatus: 'connected', connectedAt: new Date() },
+        data: {
+          connectionStatus: 'connected',
+          connectedAt: new Date(),
+          externalAccountId: result.externalAccountId ?? account.externalAccountId,
+          channelName: result.accountName ?? account.channelName,
+        },
       })
       await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
     } else if (result.status === 'waiting_login' && account.connectionStatus === 'connected') {
@@ -173,9 +179,15 @@ export class ChannelService {
     }
     const result = await adapter.waitForLogin(account.id, timeoutMs)
     if (result.status === 'connected') {
+      // TASK03.2.1 — 登录成功回写真实账号身份（externalAccountId + channelName + connectedAt）
       await prisma.enterpriseChannelAccount.update({
         where: { id: account.id },
-        data: { connectionStatus: 'connected', connectedAt: new Date() },
+        data: {
+          connectionStatus: 'connected',
+          connectedAt: new Date(),
+          externalAccountId: result.externalAccountId ?? account.externalAccountId,
+          channelName: result.accountName ?? account.channelName,
+        },
       })
       // TASK03.1.5 — 登录成功：记录运行环境健康检查
       try {

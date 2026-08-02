@@ -159,6 +159,21 @@
               用<strong>抖音 App</strong> 扫一扫上方二维码，确认登录后自动完成连接
             </div>
 
+            <!-- TASK03.2.1 — 登录阶段状态机（等待扫码 → 扫码确认 → 验证登录 → 已连接） -->
+            <div v-if="loginStage === 'scan_confirming' || loginStage === 'verifying' || loginStage === 'connected'" class="ac-stage">
+              <div class="ac-stage-item" :class="{ on: loginStage === 'scan_confirming' || loginStage === 'verifying' || loginStage === 'connected' }">
+                <span class="ac-stage-dot">①</span>扫码确认
+              </div>
+              <div class="ac-stage-arrow">→</div>
+              <div class="ac-stage-item" :class="{ on: loginStage === 'verifying' || loginStage === 'connected' }">
+                <span class="ac-stage-dot">②</span>验证登录
+              </div>
+              <div class="ac-stage-arrow">→</div>
+              <div class="ac-stage-item" :class="{ on: loginStage === 'connected' }">
+                <span class="ac-stage-dot">③</span>账号已连接
+              </div>
+            </div>
+
             <!-- 状态提示 -->
             <div v-if="statusMsg" class="ac-status" :class="{ err: statusMsg.includes('失败') || statusMsg.includes('启动失败') }">
               {{ statusMsg }}
@@ -195,6 +210,7 @@ const countdown = ref(0)
 const statusMsg = ref('')
 const connecting = ref(false)
 const loggedIn = ref(false)
+const loginStage = ref<'waiting_scan' | 'scan_confirming' | 'verifying' | 'connected'>('waiting_scan')
 const pollTimer = ref<any>(null)
 const codeSent = ref(false)
 
@@ -250,17 +266,24 @@ function startPolling() {
     try {
       const res = await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/status`)
       const d = res.data || {}
+      // TASK03.2.1 — 登录阶段状态机：等待扫码 → 扫码确认 → 验证中 → 已连接
+      if (d.loginStage === 'connected' || d.loggedIn) {
+        loginStage.value = 'connected'
+        statusMsg.value = '登录成功！正在保存登录态...'
+        stopPolling()
+        await finishConnect()
+        return
+      } else if (d.loginStage === 'scan_confirming') {
+        loginStage.value = 'scan_confirming'
+        statusMsg.value = '扫码确认成功，正在验证登录...'
+      } else if (loginStage.value !== 'verifying') {
+        loginStage.value = 'waiting_scan'
+      }
       // 优先放大二维码（工作台可直接扫码），回退整页截图
       if (d.qrCodeBase64) qrCode.value = 'data:image/png;base64,' + d.qrCodeBase64
       else if (d.screenshotBase64) {
         qrCode.value = ''
         screenshot.value = 'data:image/png;base64,' + d.screenshotBase64
-      }
-      if (d.loggedIn && !loggedIn.value) {
-        loggedIn.value = true
-        statusMsg.value = '登录成功！正在保存登录态...'
-        stopPolling()
-        await finishConnect()
       }
     } catch (e: any) {
       // 轮询失败静默，等下次
@@ -274,13 +297,28 @@ function stopPolling() {
 
 async function finishConnect() {
   try {
-    await api(`/api/enterprise/channels/runtime/${accountId.value}/refresh-credential`, { method: 'POST', body: {} })
-    statusMsg.value = '连接成功！账号已点亮 ✓'
-    if (connectPlatform.value) connectPlatform.value.connected = true
+    // TASK03.2.1 — 登录成功闭环：wait-for-login 自动回写账号（connected + 身份 + 凭证）
+    const res = await api(`/api/enterprise/channels/runtime/${accountId.value}/wait-for-login`, { method: 'POST', body: {} })
+    const d = res.data || {}
+    statusMsg.value = d.accountName
+      ? `账号已连接：${d.accountName} ✓`
+      : '连接成功！账号已点亮 ✓'
+    if (connectPlatform.value) {
+      connectPlatform.value.connected = true
+      if (d.accountName) connectPlatform.value.name = d.accountName
+    }
     $toast?.success?.('抖音渠道连接成功！')
-    setTimeout(() => { connectModal.value = false }, 1500)
+    setTimeout(() => { connectModal.value = false }, 1800)
   } catch (e: any) {
-    statusMsg.value = '登录态保存失败: ' + e.message
+    // wait-for-login 超时（未扫）→ 回退：仅保存当前登录态
+    try {
+      await api(`/api/enterprise/channels/runtime/${accountId.value}/refresh-credential`, { method: 'POST', body: {} })
+      statusMsg.value = '连接成功！账号已点亮 ✓'
+      $toast?.success?.('抖音渠道连接成功！')
+      setTimeout(() => { connectModal.value = false }, 1500)
+    } catch (e2: any) {
+      statusMsg.value = '登录态保存失败: ' + e2.message
+    }
   }
 }
 
@@ -777,6 +815,36 @@ function onClick(p: any) {
   color: #fca5a5;
   background: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.3);
+}
+/* TASK03.2.1 — 登录阶段状态机指示条 */
+.ac-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.ac-stage-item {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ac-stage-item.on {
+  color: #34d399;
+  font-weight: 700;
+}
+.ac-stage-dot {
+  font-size: 11px;
+}
+.ac-stage-arrow {
+  color: #475569;
+  font-size: 11px;
 }
 .ac-modal-success {
   text-align: center;
