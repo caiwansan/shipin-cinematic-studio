@@ -180,8 +180,8 @@
               <img v-if="detectedAvatar" :src="detectedAvatar" class="ac-confirm-avatar-img" alt="账号头像" />
               <div v-else class="ac-confirm-avatar-fallback">{{ (detectedName || '抖')[0] }}</div>
             </div>
-            <div class="ac-confirm-title">已检测到抖音账号登录</div>
-            <div class="ac-confirm-account">{{ detectedName || '抖音账号' }}</div>
+            <div class="ac-confirm-title">已检测到{{ connectPlatform?.name }}账号登录</div>
+            <div class="ac-confirm-account">{{ detectedName || connectPlatform?.name || '平台账号' }}</div>
             <div class="ac-confirm-desc">确认这是你要绑定的账号吗？绑定后 AI 员工（Alice 运营总监）将以 <strong>观察权限（L1）</strong> 读取该账号数据，不会自动发布任何内容。</div>
             <div class="ac-confirm-actions">
               <button class="ac-btn ac-btn-ghost" :disabled="connecting" @click="rejectBinding">不是这个账号</button>
@@ -192,8 +192,8 @@
           <template v-else>
             <!-- 扫码模式：优先显示放大的实时二维码（可直接扫）；无二维码时回退整页截图 -->
             <div v-if="loginMode === 'qr' && qrCode" class="ac-qr-wrap">
-              <img :src="qrCode" class="ac-qr-big" alt="抖音登录二维码" />
-              <div class="ac-qr-refresh-tip">二维码每 15 秒自动刷新，直接用<strong>抖音 App</strong> 扫一扫</div>
+              <img :src="qrCode" class="ac-qr-big" alt="登录二维码" @error="onQrImageError" />
+              <div class="ac-qr-refresh-tip">二维码每 15 秒自动刷新，直接用<strong>{{ connectPlatform?.appName || connectPlatform?.name }} App</strong> 扫一扫</div>
             </div>
             <!-- 整页截图（短信模式 / 二维码提取失败时兜底） -->
             <div v-else class="ac-shot-wrap">
@@ -204,16 +204,16 @@
               </div>
             </div>
 
-            <!-- 登录方式切换 -->
+            <!-- 登录方式切换（短信 tab 仅平台支持时显示：视频号/公众号仅扫码） -->
             <div class="ac-mode-tabs">
               <button class="ac-mode-tab" :class="{ active: loginMode === 'qr' }" @click="switchLoginTab('qr')">📱 扫码登录</button>
-              <button class="ac-mode-tab" :class="{ active: loginMode === 'sms' }" @click="switchLoginTab('sms')">💬 短信验证码</button>
+              <button v-if="connectPlatform?.smsLogin" class="ac-mode-tab" :class="{ active: loginMode === 'sms' }" @click="switchLoginTab('sms')">💬 短信验证码</button>
             </div>
 
             <!-- 短信登录表单 -->
             <div v-if="loginMode === 'sms'" class="ac-sms-form">
               <div class="ac-sms-row">
-                <input v-model="phone" class="ac-input" placeholder="输入抖音绑定的手机号" maxlength="11" />
+                <input v-model="phone" class="ac-input" :placeholder="`输入${connectPlatform?.name || '平台'}绑定的手机号`" maxlength="11" />
                 <button class="ac-btn ac-btn-ghost" :disabled="countdown > 0 || connecting" @click="sendSmsCode">
                   {{ countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}
                 </button>
@@ -225,7 +225,7 @@
             </div>
 
             <div v-if="loginMode === 'qr' && !qrCode" class="ac-qr-tip">
-              用<strong>抖音 App</strong> 扫一扫上方二维码，确认登录后自动完成连接
+              用<strong>{{ connectPlatform?.appName || connectPlatform?.name }} App</strong> 扫一扫上方二维码，确认登录后自动完成连接
             </div>
 
             <!-- TASK03.2.1 — 登录阶段状态机（等待扫码 → 扫码确认 → 验证登录 → 已连接）
@@ -250,13 +250,13 @@
             </div>
 
             <!-- Channel Identity Trust Completion — 平台安全验证产品流程（新设备首次绑定）
-                 不是错误：抖音识别为新设备，要求完成一次安全验证；完成后本环境长期可信，无需重复 -->
+                 不是错误：平台识别为新设备，要求完成一次安全验证；完成后本环境长期可信，无需重复 -->
             <div v-if="verificationRequired && loginStage === 'verifying' && !verificationAcknowledged" class="ac-verify">
               <div class="ac-verify-head">
                 <span class="ac-verify-icon">🛡</span>
                 <div>
                   <div class="ac-verify-title">需要完成一次安全验证</div>
-                  <div class="ac-verify-sub">首次绑定新设备，抖音要求确认本人操作（正常安全流程）</div>
+                  <div class="ac-verify-sub">首次绑定新设备，{{ connectPlatform?.name }}要求确认本人操作（正常安全流程）</div>
                 </div>
               </div>
               <div class="ac-verify-steps">
@@ -264,11 +264,11 @@
                   <span class="ac-verify-step-dot">①</span>
                   <div>
                     <div class="ac-verify-step-name">
-                      {{ verificationType === 'sms' ? '接收短信验证码' : verificationType === 'face' ? '手机刷脸验证' : '抖音 App 确认' }}
+                      {{ verificationType === 'sms' ? '接收短信验证码' : verificationType === 'face' ? '手机刷脸验证' : (connectPlatform?.appName || connectPlatform?.name) + ' App 确认' }}
                     </div>
                     <div class="ac-verify-step-desc">
-                      <template v-if="verificationTriggered">✅ 验证请求已发送到你的抖音 App，请在手机上完成{{ verificationType === 'sms' ? '短信验证' : verificationType === 'face' ? '刷脸' : '确认' }}（若未收到，点击下方按钮重新发送）</template>
-                      <template v-else>在抖音 App 中按提示完成{{ verificationType === 'sms' ? '短信验证' : verificationType === 'face' ? '刷脸' : '确认登录' }}</template>
+                      <template v-if="verificationTriggered">✅ 验证请求已发送到你的{{ connectPlatform?.appName || connectPlatform?.name }} App，请在手机上完成{{ verificationType === 'sms' ? '短信验证' : verificationType === 'face' ? '刷脸' : '确认' }}（若未收到，点击下方按钮重新发送）</template>
+                      <template v-else>在{{ connectPlatform?.appName || connectPlatform?.name }} App 中按提示完成{{ verificationType === 'sms' ? '短信验证' : verificationType === 'face' ? '刷脸' : '确认登录' }}</template>
                     </div>
                   </div>
                 </div>
@@ -278,8 +278,8 @@
                 <div class="ac-verify-step">
                   <span class="ac-verify-step-dot">②</span>
                   <div>
-                    <div class="ac-verify-step-name">返回创作者中心</div>
-                    <div class="ac-verify-step-desc">验证完成后页面自动进入抖音创作者中心</div>
+                    <div class="ac-verify-step-name">返回{{ connectPlatform?.name }}工作台</div>
+                    <div class="ac-verify-step-desc">验证完成后页面自动进入{{ connectPlatform?.name }}工作台</div>
                   </div>
                 </div>
               </div>
@@ -313,6 +313,9 @@ const sessionId = ref('')
 const accountId = ref('')
 const screenshot = ref('')
 const qrCode = ref('')
+// TASK03.2.2-QRFIX — 裂图自修复：后端 JPEG 二维码提取 bug 时，前端用 jsQR 从整页截图定位+裁剪放大二维码
+const lastScreenshotBase64 = ref('')
+const qrFallbackTried = ref(false)
 const loginMode = ref<'qr' | 'sms'>('qr')
 const phone = ref('')
 const smsCode = ref('')
@@ -373,8 +376,8 @@ async function openDouyinConnect(p: any) {
   verificationTriggered.value = false
   loginStage.value = 'waiting_scan'
   try {
-    // 1) 确保渠道账号存在
-    const ensure = await api('/api/enterprise/channels/runtime/douyin/ensure-account', { method: 'POST', body: {} })
+    // 1) 确保渠道账号存在（多平台：URL 带 platform）
+    const ensure = await api(`/api/enterprise/channels/runtime/${connectPlatform.value.platform}/ensure-account`, { method: 'POST', body: {} })
     accountId.value = ensure.data.id
     // 2) 打开登录浏览器
     const conn = await api(`/api/enterprise/channels/runtime/${accountId.value}/connect`, { method: 'POST', body: {} })
@@ -393,7 +396,7 @@ async function openDouyinConnect(p: any) {
       loginStage.value = 'awaiting_confirmation'
       startPolling()
     } else {
-      statusMsg.value = '请扫码或使用短信验证码登录'
+      statusMsg.value = `请扫码或使用短信验证码登录${connectPlatform.value.name}`
       startPolling()
     }
   } catch (e: any) {
@@ -412,7 +415,7 @@ async function resendVerification() {
     const d = await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/status`)
     if (d?.data?.verificationTriggered) {
       verificationTriggered.value = true
-      statusMsg.value = '✅ 验证请求已重新发送，请在抖音 App 上完成验证'
+      statusMsg.value = `✅ 验证请求已重新发送，请在${connectPlatform.value?.appName || connectPlatform.value?.name || '平台'} App 上完成验证`
     } else if (d?.data?.verificationRequired) {
       statusMsg.value = '验证页已就绪，若手机仍未收到请求请稍后再试'
     } else {
@@ -468,16 +471,20 @@ function startPolling() {
         verificationTriggered.value = !!d.verificationTriggered
         loginStage.value = 'verifying'
         statusMsg.value = verificationTriggered.value
-          ? '已向你的抖音 App 发送验证请求，请在手机上完成验证'
-          : '抖音要求完成一次安全验证（新设备首次绑定），验证完成后本环境长期可信'
+          ? `已向你的${connectPlatform.value?.appName || connectPlatform.value?.name || '平台'} App 发送验证请求，请在手机上完成验证`
+          : `${connectPlatform.value?.name || '平台'}要求完成一次安全验证（新设备首次绑定），验证完成后本环境长期可信`
       }
       if (d.verificationRequired && verificationAcknowledged.value) {
         // 已确认：不打断，继续轮询等探针检测登录态
         verificationRequired.value = true
       }
       // 优先放大二维码（工作台可直接扫码），回退整页截图
-      if (d.qrCodeBase64) qrCode.value = 'data:image/png;base64,' + d.qrCodeBase64
-      else if (d.screenshotBase64) {
+      // TASK03.2.2-QRFIX — 保留最新整页截图 base64（裂图时用于 jsQR 自修复）
+      if (d.screenshotBase64) lastScreenshotBase64.value = d.screenshotBase64
+      if (d.qrCodeBase64) {
+        qrCode.value = 'data:image/png;base64,' + d.qrCodeBase64
+        qrFallbackTried.value = false  // 新二维码到来，重置裂图修复标记
+      } else if (d.screenshotBase64) {
         qrCode.value = ''
         screenshot.value = 'data:image/png;base64,' + d.screenshotBase64
       }
@@ -493,6 +500,70 @@ function stopPolling() {
   if (pollTimer.value) { clearInterval(pollTimer.value); pollTimer.value = null }
 }
 
+// TASK03.2.2-QRFIX — 裂图自修复：img 加载失败（后端 JPEG 提取坏图）时，用 jsQR 从整页截图定位二维码并裁剪放大
+let jsQRModule: any = null
+async function loadJsQR(): Promise<any> {
+  if (jsQRModule) return jsQRModule
+  const mod = await import('~/static/vendor/jsqr.min.js')
+  jsQRModule = mod.default || mod
+  return jsQRModule
+}
+
+async function onQrImageError() {
+  if (qrFallbackTried.value) return
+  qrFallbackTried.value = true
+  const shotB64 = lastScreenshotBase64.value
+  if (!shotB64) return
+  try {
+    const jsQR = await loadJsQR()
+    // 整页截图 → canvas → jsQR 定位
+    const img = new Image()
+    img.src = 'data:image/png;base64,' + shotB64
+    await img.decode()
+    const c = document.createElement('canvas')
+    c.width = img.width
+    c.height = img.height
+    const ctx = c.getContext('2d')!
+    ctx.drawImage(img, 0, 0)
+    const id = ctx.getImageData(0, 0, c.width, c.height)
+    const code = jsQR(id.data, id.width, id.height)
+    if (!code) { screenshot.value = 'data:image/png;base64,' + shotB64; return }
+    // 用 jsQR 返回的定位角计算二维码包围盒（含余量）
+    const loc = code.location
+    const pts = [loc.topLeftCorner, loc.topRightCorner, loc.bottomRightCorner, loc.bottomLeftCorner]
+    const xs = pts.map(p => p.x), ys = pts.map(p => p.y)
+    const pad = 16
+    const sx = Math.max(0, Math.min(...xs) - pad)
+    const sy = Math.max(0, Math.min(...ys) - pad)
+    const sw = Math.min(c.width - sx, Math.max(...xs) - Math.min(...xs) + pad * 2)
+    const sh = Math.min(c.height - sy, Math.max(...ys) - Math.min(...ys) + pad * 2)
+    // 裁剪 + 4x 放大 + 白边（与后端 1024 放大等效）
+    const scale = 4
+    const out = document.createElement('canvas')
+    out.width = sw * scale
+    out.height = sh * scale
+    const octx = out.getContext('2d')!
+    octx.imageSmoothingEnabled = true
+    octx.imageSmoothingQuality = 'high'
+    octx.drawImage(c, sx, sy, sw, sh, 0, 0, out.width, out.height)
+    // 白边画布
+    const border = 48
+    const final = document.createElement('canvas')
+    final.width = out.width + border * 2
+    final.height = out.height + border * 2
+    const fctx = final.getContext('2d')!
+    fctx.fillStyle = '#ffffff'
+    fctx.fillRect(0, 0, final.width, final.height)
+    fctx.drawImage(out, border, border)
+    qrCode.value = final.toDataURL('image/png')
+    screenshot.value = ''
+    statusMsg.value = `二维码已自动修复，请用${connectPlatform.value?.appName || connectPlatform.value?.name || '平台'} App 扫描`
+  } catch (e: any) {
+    // 修复失败 → 回退整页截图
+    screenshot.value = 'data:image/png;base64,' + shotB64
+  }
+}
+
 async function finishConnect() {
   try {
     // TASK03.2.1 — 登录成功闭环：wait-for-login 自动回写账号（connected + 身份 + 凭证）
@@ -505,14 +576,14 @@ async function finishConnect() {
       connectPlatform.value.connected = true
       if (d.accountName) connectPlatform.value.name = d.accountName
     }
-    $toast?.success?.('抖音渠道连接成功！')
+    $toast?.success?.(`${connectPlatform.value?.name || '渠道'}连接成功！`)
     setTimeout(() => { connectModal.value = false }, 1800)
   } catch (e: any) {
     // wait-for-login 超时（未扫）→ 回退：仅保存当前登录态
     try {
       await api(`/api/enterprise/channels/runtime/${accountId.value}/refresh-credential`, { method: 'POST', body: {} })
       statusMsg.value = '连接成功！账号已点亮 ✓'
-      $toast?.success?.('抖音渠道连接成功！')
+      $toast?.success?.(`${connectPlatform.value?.name || '渠道'}连接成功！`)
       setTimeout(() => { connectModal.value = false }, 1500)
     } catch (e2: any) {
       statusMsg.value = '登录态保存失败: ' + e2.message
@@ -539,7 +610,7 @@ async function confirmBinding() {
       connectPlatform.value.boundName = d.accountName || connectPlatform.value.name
       connectPlatform.value.boundAvatar = d.avatar || ''
     }
-    $toast?.success?.('抖音账号绑定成功！')
+    $toast?.success?.(`${connectPlatform.value?.name || '渠道'}账号绑定成功！`)
     setTimeout(() => { connectModal.value = false }, 2000)
   } catch (e: any) {
     statusMsg.value = '确认绑定失败: ' + e.message
@@ -573,7 +644,7 @@ function closeConnectModal() {
 
 async function switchLoginTab(mode: 'qr' | 'sms') {
   loginMode.value = mode
-  statusMsg.value = mode === 'qr' ? '请用抖音 App 扫码' : '请填写手机号接收短信验证码'
+  statusMsg.value = mode === 'qr' ? `请用${connectPlatform.value?.appName || connectPlatform.value?.name || '平台'} App 扫码` : '请填写手机号接收短信验证码'
   if (!sessionId.value) return
   try {
     await api(`/api/enterprise/channels/runtime/browser/${encodeURIComponent(sessionId.value)}/tab`, { method: 'POST', body: { tab: mode === 'qr' ? 'qr' : 'sms' } })
@@ -634,12 +705,13 @@ const tabs = computed(() => [
 ])
 
 // ① 内容平台（品牌曝光）
+// 2026-08-02 — 多平台浏览器渠道：抖音/快手/小红书/视频号已真实可连（connectable+platform）
 const contentPlatforms = [
-  { icon: '📱', name: '抖音', plan: '短视频 · 直播', category: 'content', platform: 'douyin', connectable: true, connected: false },
-  { icon: '📱', name: '快手', plan: '短视频 · 直播', category: 'content', connectable: false, connected: false },
-  { icon: '📕', name: '小红书', plan: '种草图文 · 视频', category: 'content', connectable: false, connected: false },
-  { icon: '🎬', name: '视频号', plan: '微信生态分发', category: 'content', connectable: false, connected: false },
-  { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务', category: 'content', connectable: true, connected: false },
+  { icon: '📱', name: '抖音', plan: '短视频 · 直播', category: 'content', platform: 'douyin', appName: '抖音', smsLogin: true, connectable: true, connected: false },
+  { icon: '🎥', name: '快手', plan: '短视频 · 直播', category: 'content', platform: 'kuaishou', appName: '快手', smsLogin: true, connectable: true, connected: false },
+  { icon: '📕', name: '小红书', plan: '种草图文 · 视频', category: 'content', platform: 'xiaohongshu', appName: '小红书', smsLogin: true, connectable: true, connected: false },
+  { icon: '🎬', name: '视频号', plan: '微信生态分发', category: 'content', platform: 'channels_wechat', appName: '微信', smsLogin: false, connectable: true, connected: false },
+  { icon: '💬', name: '微信公众号', plan: '图文 · 菜单服务', category: 'content', connectable: false, connected: false },
   { icon: '🌐', name: '微博', plan: '话题 · 图文', category: 'content', connectable: false, connected: false },
   { icon: '📰', name: '百家号', plan: '图文 · 视频', category: 'content', connectable: false, connected: false },
   { icon: '📰', name: '今日头条', plan: '图文 · 视频', category: 'content', connectable: false, connected: false },
@@ -712,22 +784,23 @@ function timeAgo(iso: string): string {
 }
 
 onMounted(async () => {
-  try {
-    const res = await api('/api/enterprise/channels/runtime/douyin/account-status')
-    const d = res.data || {}
-    if (d.connected) {
-      const douyin = allPlatforms.find((p: any) => p.platform === 'douyin')
-      if (douyin) {
-        douyin.connected = true
-        douyin.boundName = d.accountName || douyin.name
-        douyin.boundAvatar = d.avatar || ''
-        douyin.permissionLevel = d.permissionLevel || 1
-        douyin.deviceTrusted = !!d.deviceTrusted
+  // 2026-08-02 — 多平台：循环加载全部可连接渠道的连接状态
+  const connectables = allPlatforms.filter((p: any) => p.connectable && p.platform)
+  await Promise.all(connectables.map(async (p: any) => {
+    try {
+      const res = await api(`/api/enterprise/channels/runtime/${p.platform}/account-status`)
+      const d = res.data || {}
+      if (d.connected) {
+        p.connected = true
+        p.boundName = d.accountName || p.name
+        p.boundAvatar = d.avatar || ''
+        p.permissionLevel = d.permissionLevel || 1
+        p.deviceTrusted = !!d.deviceTrusted
       }
+    } catch (e: any) {
+      // 账号状态加载失败静默（未连接态保持默认）
     }
-  } catch (e: any) {
-    // 账号状态加载失败静默（未连接态保持默认）
-  }
+  }))
   // Task08.1 — Owner View（失败静默，不影响渠道列表）
   // REALITY-HARDENING-01 Task03 — 不得按 online 过滤：等待扫码/验证中也是真实状态，必须展示
   try {
@@ -754,7 +827,7 @@ const steps = [
 function onClick(p: any) {
   if (p.connected) return
   if (p.connectable) {
-    if (p.platform === 'douyin') {
+    if (p.platform) {
       openDouyinConnect(p)
     } else {
       $toast?.info?.('微信资产接入等待掌柜提供授权信息（Sprint-MEDIA-01 遗留）')

@@ -473,6 +473,8 @@ await app.register(projectV2Routes)
   const { DouyinBrowserAdapter } = await import('./enterprise/channel/adapters/douyin-browser.adapter.js')
   // TASK03.2.2 — 注册抖音身份探针（ChannelIdentityProbe，模块加载即注册 registry）
   await import('./enterprise/channel/adapters/douyin-identity.probe.js')
+  // 2026-08-02 — 多平台浏览器渠道（快手/小红书/视频号）：同抖音范式，配置驱动
+  const { registerBrowserChannels } = await import('./enterprise/channel/adapters/browser-channels.js')
   // P4.2.5.2: WeCom 不再使用 Mock（CTO: No Mock in Production）
   // 其他渠道继续使用 Mock（开发测试用）
   channelService.registerAdapter(new VideoAccountAdapter())
@@ -485,6 +487,12 @@ await app.register(projectV2Routes)
     getCredential: (accountId) => channelService.getCredential(accountId),
     persistCredential: (accountId, credential) => channelService.updateCredential(accountId, credential),
   }))
+  // 2026-08-02 — 多平台浏览器渠道注册（快手/小红书/视频号 + 探针）
+  const browserAdapters = registerBrowserChannels({
+    getCredential: (accountId) => channelService.getCredential(accountId),
+    persistCredential: (accountId, credential) => channelService.updateCredential(accountId, credential),
+  })
+  for (const a of browserAdapters) channelService.registerAdapter(a)
   // SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 链路（真实执行，非模拟授权）
   await app.register((await import('./routes/enterprise-channel-runtime.js')).enterpriseChannelRuntimeRoutes)
   // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 01/02 — Browser Workspace 生命周期（AI 员工数字办公环境）

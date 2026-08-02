@@ -97,8 +97,45 @@ export class DouyinIdentityProbe implements ChannelIdentityProbe {
       console.warn(`[DouyinIdentityProbe] 身份提取异常: ${e.message}`)
     }
 
-    // 综合判定：任一强信号命中即认证
-    const authenticated = signals.page || signals.cookie || signals.identity
+    // C2 DOM 文本兜底：hydration 数据缺失时，从工作台 DOM 提取「账号名 + 抖音号」
+    // （创作者中心登录后页头/个人卡渲染 user_name + 抖音号：XXXX；抖音号即账号标识）
+    if (!accountId || !accountName) {
+      try {
+        const domIdentity = await browserRuntime.withPage(sessionId, async (page) => {
+          if (page.isClosed()) return null
+          const text = await page.locator('body').innerText().catch(() => '')
+          const nameMatch = text.match(/抖音号[：:]\s*(\d{6,})/)
+          // 账号名：取「抖音号：」前最近的一段中文昵称（页头个人卡常见结构）
+          const lines = text.split(/\n+/).map(s => s.trim()).filter(Boolean)
+          const idx = lines.findIndex(l => /抖音号[：:]/.test(l))
+          let nickname: string | undefined
+          if (idx > 0) {
+            const prev = lines[idx - 1]
+            // 昵称一般 ≤12 字且不含标点/链接词
+            if (prev && prev.length <= 12 && !/首页|内容管理|数据中心|收入变现|创作服务|作品发布/.test(prev)) {
+              nickname = prev
+            }
+          }
+          if (!nameMatch) return null
+          return { name: nickname, id: nameMatch[1] }
+        }).catch(() => null)
+        if (domIdentity) {
+          if (!accountName && domIdentity.name) accountName = domIdentity.name
+          if (!accountId && domIdentity.id) {
+            accountId = domIdentity.id
+            signals.identity = true // DOM 文本确认登录身份，等同强信号
+          }
+        }
+      } catch (e: any) {
+        console.warn(`[DouyinIdentityProbe] DOM 身份提取异常: ${e.message}`)
+      }
+    }
+
+    // 综合判定：页面特征或身份提取任一命中即认证（真实登录态）
+    // ⚠️ 2026-08-02 修正：仅 cookie 信号（sessionid/sid_guard 残留）不算登录成功——
+    //    抖音 session 失效时 cookie 仍在但页面已回登录页，误判 authenticated 会导致
+    //    前端卡「请确认绑定」而实际已掉线（掌柜反馈：离开页面又没了）
+    const authenticated = signals.page || signals.identity
 
     return {
       authenticated,

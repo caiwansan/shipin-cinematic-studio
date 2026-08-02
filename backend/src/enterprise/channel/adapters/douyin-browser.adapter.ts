@@ -237,16 +237,23 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
         const buf = await import('fs').then(fs => fs.promises.readFile(status.screenshot!))
         screenshotBase64 = buf.toString('base64')
       }
-      // 提取放大二维码（登录卡片内 data:image/png 且 ~178px、位于右侧卡片区域 x>600）
+      // 提取放大二维码（登录卡片内 data:image/png 且 ~140-240px；位置不限——不同登录阶段二维码位置会变：扫码登录在右侧 x>600，安全验证页在左侧）
       let qrCodeBase64: string | undefined
       try {
         qrCodeBase64 = await browserRuntime.withPage(sessionId, async (page) => {
           const qrInfo = await page.evaluate(() => {
             const imgs = Array.from(document.querySelectorAll('img'))
-            const hit = imgs.find((el: HTMLImageElement) => {
-              const r = el.getBoundingClientRect()
-              return (el.src || '').startsWith('data:image/png') && r.width >= 140 && r.width <= 240 && r.x > 600
-            })
+            // 优先：data:image/png 且尺寸 120-260px（任意位置）
+            const hit =
+              imgs.find((el: HTMLImageElement) => {
+                const r = el.getBoundingClientRect()
+                return (el.src || '').startsWith('data:image/png') && r.width >= 120 && r.width <= 260
+              }) ||
+              // 兜底：data:image 任意尺寸 + 可见且近似正方形（防模糊渲染导致尺寸漂移）
+              imgs.find((el: HTMLImageElement) => {
+                const r = el.getBoundingClientRect()
+                return (el.src || '').startsWith('data:image') && r.width >= 80 && r.width <= 400 && Math.abs(r.width - r.height) < 30
+              })
             if (!hit) return null
             const r = hit.getBoundingClientRect()
             return {
@@ -259,7 +266,10 @@ export class DouyinBrowserAdapter implements EnterpriseChannelAdapter {
           })
           if (!qrInfo) return undefined
           // 方式1：二维码原图 base64（最清晰，无页面 CSS 干扰）→ 服务端放大 + 白边
-          const b64 = qrInfo.src.replace(/^data:image\/png;base64,/, '')
+          // TASK03.2.2-QRFIX — 兼容 png/jpeg/jpg/webp：抖音安全验证（人脸识别）阶段返回 JPEG，
+          // 旧代码只剥 png 前缀 → 前缀残留混入 base64 解码 → 坏图（工作台裂图根因）
+          const mimeMatch = qrInfo.src.match(/^data:image\/(png|jpeg|jpg|webp);base64,/) 
+          const b64 = mimeMatch ? qrInfo.src.slice(mimeMatch[0].length) : qrInfo.src
           const raw = Buffer.from(b64, 'base64')
           if (raw.length > 800) {
             try {

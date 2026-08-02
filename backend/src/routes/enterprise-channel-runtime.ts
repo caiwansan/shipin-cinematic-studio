@@ -70,13 +70,15 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   // 前端弹窗 → 轮询截图 → 掌柜扫码 / 填手机号+验证码 → 登录成功 → refresh-credential
   // ═══════════════════════════════════════════════════════
 
-  // TASK03.2.2 G4 — 抖音账号连接状态（前端卡片已连接态渲染）
-  app.get('/api/enterprise/channels/runtime/douyin/account-status', async (request, reply) => {
+  // TASK03.2.2 G4 — 渠道账号连接状态（前端卡片已连接态渲染）
+  // 2026-08-02 — 多平台泛化：/api/enterprise/channels/runtime/:platform/account-status
+  app.get('/api/enterprise/channels/runtime/:platform/account-status', async (request, reply) => {
+    const { platform } = request.params as any
     try {
       const { prisma } = await import('../utils/index.js')
       const { isChannelConnected, ChannelConnectionStatus } = await import('../constants/channel-connection-status.js')
       const account = await prisma.enterpriseChannelAccount.findFirst({
-        where: { channelType: 'douyin' },
+        where: { channelType: platform },
         orderBy: { createdAt: 'asc' },
         select: { id: true, connectionStatus: true, channelName: true, externalAccountId: true, metadata: true },
       })
@@ -102,23 +104,27 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     }
   })
 
-  // 确保抖音渠道账号存在（查不到则自动创建），返回 accountId
-  app.post('/api/enterprise/channels/runtime/douyin/ensure-account', async (request, reply) => {
+  // 确保渠道账号存在（查不到则自动创建），返回 accountId
+  // 2026-08-02 — 多平台泛化：/api/enterprise/channels/runtime/:platform/ensure-account
+  app.post('/api/enterprise/channels/runtime/:platform/ensure-account', async (request, reply) => {
+    const { platform } = request.params as any
     const user = (request as any).user as any
     const tenantId = user?.tenantId || user?.id || 'default'
     try {
       const { prisma } = await import('../utils/index.js')
       let account = await prisma.enterpriseChannelAccount.findFirst({
-        where: { channelType: 'douyin' },
+        where: { channelType: platform },
         orderBy: { createdAt: 'asc' },
         select: { id: true },
       })
       if (!account) {
+        const { CHANNEL_META } = await import('../enterprise/channel/adapters/browser-channel.meta.js')
+        const meta = CHANNEL_META[platform] || { displayName: platform }
         const created = await channelService.connectAccount({
           tenantId,
-          platform: 'douyin',
-          accountName: '抖音创作者中心',
-          externalAccountId: 'douyin-' + Date.now(),
+          platform,
+          accountName: meta.displayName,
+          externalAccountId: platform + '-' + Date.now(),
           credential: { cookieData: '[]' },
         })
         account = { id: created.id }
@@ -131,20 +137,22 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
 
   // 登录页状态（截图 base64 + 登录检测）——前端轮询
   // TASK03.2.2-FIX — 串行化：探针执行 2-3s 而前端轮询 2.5s，并发会互相替换/关闭页面 → 登录检测失败
+  // 2026-08-02 — 多平台：sessionId 形如 `platform:accountId`，按前缀解析 adapter
   const statusLocks = new Map<string, Promise<any>>()
   app.get('/api/enterprise/channels/runtime/browser/:sessionId/status', async (request, reply) => {
     const { sessionId } = request.params as any
     const prev = statusLocks.get(sessionId) || Promise.resolve()
     const run = prev.then(async () => {
       try {
-        const adapter = channelService.resolveAdapter('douyin') as any
+        const platform = String(sessionId).split(':')[0]
+        const adapter = channelService.resolveAdapter(platform) as any
         const status = await adapter.getLoginStatus(sessionId)
         // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 03 — 轮询时同步授权状态机（幂等、失败静默）
         if (status && status.loginStage) {
           try {
             const { browserAuthSessionService } = await import('../services/enterprise/browser-auth-session.service.js')
             const { prisma } = await import('../utils/index.js')
-            const accountId = String(sessionId).replace(/^douyin:/, '')
+            const accountId = String(sessionId).replace(/^[^:]+:/, '')
             const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
             if (account) {
               const authSession = await browserAuthSessionService.begin(account.id, { type: 'app' })
@@ -202,7 +210,8 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     const { phone } = request.body as any
     if (!phone) return reply.status(400).send({ code: 400, message: 'phone is required' })
     try {
-      const adapter = channelService.resolveAdapter('douyin') as any
+      const platform = String(sessionId).split(':')[0]
+      const adapter = channelService.resolveAdapter(platform) as any
       const result = await adapter.fillPhone(sessionId, phone)
       return reply.send({ code: 0, data: result })
     } catch (e: any) {
@@ -214,7 +223,8 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   app.post('/api/enterprise/channels/runtime/browser/:sessionId/send-code', async (request, reply) => {
     const { sessionId } = request.params as any
     try {
-      const adapter = channelService.resolveAdapter('douyin') as any
+      const platform = String(sessionId).split(':')[0]
+      const adapter = channelService.resolveAdapter(platform) as any
       const result = await adapter.clickSendCode(sessionId)
       return reply.send({ code: 0, data: result })
     } catch (e: any) {
@@ -228,7 +238,8 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     const { code } = request.body as any
     if (!code) return reply.status(400).send({ code: 400, message: 'code is required' })
     try {
-      const adapter = channelService.resolveAdapter('douyin') as any
+      const platform = String(sessionId).split(':')[0]
+      const adapter = channelService.resolveAdapter(platform) as any
       const result = await adapter.fillCodeAndLogin(sessionId, code)
       return reply.send({ code: 0, data: result })
     } catch (e: any) {
@@ -242,7 +253,8 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     const { tab } = request.body as any
     if (!['sms', 'qr', 'password'].includes(tab)) return reply.status(400).send({ code: 400, message: 'tab must be sms|qr|password' })
     try {
-      const adapter = channelService.resolveAdapter('douyin') as any
+      const platform = String(sessionId).split(':')[0]
+      const adapter = channelService.resolveAdapter(platform) as any
       const result = await adapter.switchLoginTab(sessionId, tab)
       return reply.send({ code: 0, data: result })
     } catch (e: any) {
