@@ -41,6 +41,8 @@ export interface ChannelPlatformDefinition {
   loginUrl: string
   /** 工作台主 URL（导航/数据页基址） */
   workspaceUrl: string
+  /** KUAISHOU-QR-FIX-02 — 连接时清理残留缓存的平台域（cookie/localStorage 按域清，防旧会话干扰新扫码） */
+  cookieDomains: string[]
   /** 支持的登录方式（qr 扫码 / sms 短信） */
   loginMethods: LoginMethod[]
   /** 短信 tab 标签文案（平台差异：小红书「短信登录」vs 抖音「验证码登录」） */
@@ -117,6 +119,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     displayName: '抖音',
     loginUrl: 'https://creator.douyin.com/',
     workspaceUrl: 'https://creator.douyin.com/creator-micro',
+    cookieDomains: ['douyin.com', 'iesdouyin.com'],
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '验证码登录',
     selectors: {
@@ -146,6 +149,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     displayName: '快手',
     loginUrl: 'https://cp.kuaishou.com/',
     workspaceUrl: 'https://cp.kuaishou.com/article',
+    cookieDomains: ['kuaishou.com', 'gifshow.com'],
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '手机号登录',
     // Task04：cp.kuaishou.com 未登录可能落到普通用户端/其他域 → 必须确认创作者登录入口
@@ -213,6 +217,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     // （jsQR 验证：https://www.xiaohongshu.com/mobile/login?qrId=...&ruleId=4&xhs_code=...&timestamp=...）
     loginUrl: 'https://www.xiaohongshu.com/explore',
     workspaceUrl: 'https://creator.xiaohongshu.com/new/home',
+    cookieDomains: ['xiaohongshu.com', 'xhscdn.com'],
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '短信登录',
     // 登录入口：主站 → 点「登录」按钮 → 弹窗（qrcode-img 二维码与短信表单共存于 DOM）
@@ -264,6 +269,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     displayName: '视频号',
     loginUrl: 'https://channels.weixin.qq.com/login.html',
     workspaceUrl: 'https://channels.weixin.qq.com/platform',
+    cookieDomains: ['weixin.qq.com', 'qq.com'],
     loginMethods: ['qr'],
     selectors: {
       loginPage: '[class*="login"], iframe[src*="qrconnect"]',
@@ -305,6 +311,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     displayName: '微信公众号',
     loginUrl: 'https://mp.weixin.qq.com/',
     workspaceUrl: 'https://mp.weixin.qq.com/',
+    cookieDomains: ['weixin.qq.com', 'qq.com'],
     loginMethods: ['qr'],
     selectors: {
       loginPage: '[class*="login"], iframe[src*="open.weixin"]',
@@ -330,6 +337,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     displayName: '微博',
     loginUrl: 'https://weibo.com/login.php',
     workspaceUrl: 'https://weibo.com/',
+    cookieDomains: ['weibo.com', 'sina.com.cn'],
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '手机号登录',
     selectors: {
@@ -355,6 +363,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     displayName: '今日头条',
     loginUrl: 'https://mp.toutiao.com/',
     workspaceUrl: 'https://mp.toutiao.com/',
+    cookieDomains: ['toutiao.com'],
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '验证码登录',
     selectors: {
@@ -378,6 +387,7 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
     displayName: '百家号',
     loginUrl: 'https://baijiahao.baidu.com/',
     workspaceUrl: 'https://baijiahao.baidu.com/',
+    cookieDomains: ['baidu.com'],
     loginMethods: ['qr', 'sms'],
     smsTabLabel: '验证码登录',
     selectors: {

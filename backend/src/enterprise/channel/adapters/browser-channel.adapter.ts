@@ -71,6 +71,30 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
   }
 
   /**
+   * KUAISHOU-QR-FIX-02 — 连接时清理残留缓存（掌柜指令：先清缓存再出二维码）。
+   * 1) localStorage/sessionStorage（需先确保页面在平台域才能访问）
+   * 2) 平台域 cookies（meta.cookieDomains）
+   * 只清平台域，绝不误伤 profile 内其他数据。
+   */
+  protected async clearLoginCache(sid: string): Promise<void> {
+    const domains = this.meta.cookieDomains?.length ? this.meta.cookieDomains : [new URL(this.meta.loginUrl).hostname]
+    // 1) localStorage/sessionStorage：页面导航到平台根域后清（浏览器安全限制：仅当前域可访问）
+    await browserRuntime.withPage(sid, async (page) => {
+      const root = `https://${domains[0]}`
+      if (!page.url().includes(domains[0])) {
+        await page.goto(root, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+      }
+      await page.evaluate(() => {
+        try { localStorage.clear() } catch {}
+        try { sessionStorage.clear() } catch {}
+      }).catch(() => {})
+    })
+    // 2) 平台域 cookies
+    await browserRuntime.clearCookies(sid, domains)
+    console.log(`[${this.name}Adapter] 残留缓存已清理: ${domains.join(',')}`)
+  }
+
+  /**
    * [v1.0] 连接渠道账号（持久化 profile 主路径，与抖音一致）
    */
   async connect(accountId?: string): Promise<ConnectResult> {
@@ -81,19 +105,9 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     // 主路径：持久化浏览器（同一 profile 已存在实例则复用，保留登录态）
     await browserRuntime.getOrCreatePersistent(sid, profilePath, { headless: false })
 
-    // fallback：持久化 profile 无登录态时，尝试用已有凭证注入 cookie
-    if (accountId) {
-      try {
-        const cred = await this.deps.getCredential(accountId)
-        const cookieData = cred.cookieData
-        if (cookieData) {
-          const cookies: CookieData[] = JSON.parse(cookieData)
-          await browserRuntime.restoreCookies(sid, cookies)
-        }
-      } catch (e: any) {
-        console.warn(`[${this.name}Adapter] 凭证恢复失败（继续打开登录页）: ${e.message}`)
-      }
-    }
+    // KUAISHOU-QR-FIX-02 — 移除 restoreCookies：persistent 模式下 cookie 本就在 profile 里，
+    // 注入旧凭证会让 passport 带着失效会话（数据中心 IP 风控）干扰新扫码 → 扫了不登录。
+    // 凭证注入路线整体废弃（与掌柜「不学 cookie 注入机器人」战略一致）。
 
     // 检测登录态（多信号探针）
     let identity: ChannelIdentity | null = null
@@ -111,6 +125,15 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
         avatar: identity.avatar,
         permissions: identity.permissions,
       }
+    }
+
+    // KUAISHOU-QR-FIX-02 — 掌柜指令：连接时先清残留缓存再出码。
+    // 探针未命中（未登录/登录态失效）→ 清平台域 cookie + localStorage/sessionStorage → 全新扫码。
+    // 探针命中已在上方返回（已登录账号绝不清理，防止把有效登录态清退出）。
+    try {
+      await this.clearLoginCache(sid)
+    } catch (e: any) {
+      console.warn(`[${this.name}Adapter] 残留缓存清理失败（继续出码）: ${(e as Error).message}`)
     }
 
     // LOGIN-REALITY-FIX-01 — 探针先行失败才导航登录页：

@@ -647,6 +647,24 @@ class BrowserRuntimeService {
   }
 
   /**
+   * KUAISHOU-QR-FIX-02 — 按域清理 cookie（连接时清残留缓存用）。
+   * domainFilter 为空时清全部；传入平台域数组时仅清匹配域（保 profile 内其他数据）。
+   */
+  async clearCookies(sessionId: string, domainFilter?: string[]): Promise<void> {
+    return this.withSessionLock(sessionId, async () => {
+      const instance = this.instances.get(sessionId)
+      if (!instance) throw new Error('BROWSER_NOT_RUNNING')
+      if (domainFilter?.length) {
+        for (const d of domainFilter) {
+          await instance.context.clearCookies({ domain: d }).catch(() => {})
+        }
+      } else {
+        await instance.context.clearCookies().catch(() => {})
+      }
+    })
+  }
+
+  /**
    * 健康检查
    */
   async healthCheck(): Promise<{ status: string; version: string }> {
