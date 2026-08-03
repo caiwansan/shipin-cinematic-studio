@@ -14,7 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
 
@@ -104,7 +104,7 @@ fn open_workspace(
     let webview = WebviewWindowBuilder::new(
         &app,
         "workspace",
-        WebviewUrl::External(url.parse().map_err(|e| e.to_string())?),
+        WebviewUrl::External(url.parse::<tauri::Url>().map_err(|e| e.to_string())?),
     )
     .title("昆仑镜工作台")
     .inner_size(1440.0, 900.0)
@@ -117,8 +117,7 @@ fn open_workspace(
             "window.__KUNLUN_DESKTOP__={{}}; localStorage.setItem('auth_token','{}');",
             token
         );
-        let wv = webview.webview();
-        wv.eval(&js).map_err(|e| e.to_string())?;
+        webview.eval(&js).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
