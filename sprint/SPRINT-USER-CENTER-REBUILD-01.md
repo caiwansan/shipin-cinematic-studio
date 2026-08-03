@@ -14,6 +14,10 @@
 | 层级 | 商品化生死线 | 生态基础设施入口建设 |
 | 关系 | 不能被打断 | 等 Task01 结果再启动 |
 
+**产品判断（掌柜 2026-08-04）：** 用户中心 = 未来生态商业入口，但启动必须在 Task01 后。原因：
+> 如果现在开发，会出现「收益展示入口 ↑ 但真实收入链还没有用户验证」——**容易提前建设商业壳**。
+> 现在 License / Settlement / PartnerReward 数据基础已成立，等第一个 AI 员工商品真实跑通后，再把能力通过用户中心暴露给用户，产品闭环更自然。
+
 **调度优先级（掌柜确认）：**
 ```
 P0  Phase A Task01 真机 Reality（进行中，代码冻结）
@@ -27,7 +31,8 @@ P2  AI内容运营经理 Business Reality（Task02）
 
 ```
 过去：用户中心 = 账号设置页面
-未来：用户中心 = 个人身份中心 + 资产中心 + 生态收益中心 + 伙伴成长中心
+未来：用户中心 = Identity Center + Asset Center + Ecology Revenue Center + Partner Growth Center
+（个人身份中心 + 资产中心 + 生态收益中心 + 伙伴成长中心）
 ```
 
 对应链路：
@@ -35,6 +40,28 @@ P2  AI内容运营经理 Business Reality（Task02）
 ```
 用户 → 身份 → 订阅 → 应用 → 插件 → 钱包 → 生态伙伴
 ```
+
+---
+
+## 1.5 USER-01 启动前冻结原则（掌柜 2026-08-04 补充）
+
+### 不改 Identity Authority
+
+复用：`User → Organization → Subscription → Ecology`
+
+### 钱包 = 收益资产中心（三层冻结）
+
+❌ 支付钱包 ❌ 充值钱包 ❌ 银行钱包
+
+数据来源链路：
+```
+ecology_settlements → PartnerReward → Developer Share
+```
+**禁止：** 注册数量 / 下载数量 / 邀请数量 产生收益。
+
+### 市场团队 = SaaS Affiliate + Revenue Share（非传统推广系统）
+
+核心链路：`真实插件订阅收入 → Settlement → Partner Reward`
 
 ---
 
