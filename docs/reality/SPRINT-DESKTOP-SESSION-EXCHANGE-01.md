@@ -70,7 +70,19 @@ Desktop（Identity + License + Launcher）          Cloud（Workspace + AI Agent
   3. organization 匹配（JWT organizationId ↔ device 归属）
   4. license 允许（appSlug 对应 License 有效）
 - 输出：`{ ticket }`（crypto.randomUUID，服务端登记，60s 过期，一次性）
-- 存储：`DesktopSessionTicket` 表（ticket PK / userId / deviceId / organizationId / appSlug / expiresAt / usedAt NULL）
+- **Ticket 表字段（总监冻结 2026-08-04，不可删减）**：
+  ```
+  ticket_id       PK（crypto.randomUUID）
+  user_id         签发用户
+  organization_id 签发组织
+  device_id       签发设备（防跨设备复用）
+  app_slug        目标应用（Media/Novel/PPT 统一入口预留）
+  issued_at       签发时间
+  expires_at      issued_at + 60s
+  used_at         NULL=未用；非 NULL=已消费
+  ```
+- **一次性消费（冻结）**：`used_at != null => reject`（防重放）
+- **防「复制 URL + ticket 到另一台机器」**（G9 依据）：exchange 时校验来源 device（WebView UA/指纹 与 issue 时 device_id 绑定不一致 → 拒绝）；即使 60s 内被复制，跨设备必然失败
 - 审计：auditLog 直写（prisma.auditLog，tenantId=orgId）
 
 ### 2.2 新增 `POST /api/desktop/session/exchange`（workspace 窗口调）
@@ -118,6 +130,16 @@ launchApp(slug, entry):
 - 删除：`access_token` 作为参数传给 open_workspace（Rust 不再接触 token）
 - `doLogin` 登录流程不动（accessToken 仍存 credentials.json，用于 issue）
 
+### 3.3 Shell 能力禁令（总监冻结 2026-08-04，架构红线，永久生效）
+
+**Kunlun Media.exe 永远禁止：**
+
+- ❌ 写 Web localStorage（任何 origin）
+- ❌ 注入 JWT / access token 到任何 WebView 页面
+- ❌ eval 任何身份凭据相关 JS
+
+**原因**：否则未来插件生态、桌面多应用（Kunlun Media/Novel/PPT.exe）、多平台（Win/macOS/Linux）会继续踩同一坑。Shell 与 Web 身份的边界 = Desktop 持 JWT/Device/License，Workspace 只持一次性 ticket，二者永不交叉。
+
 ### 3.3 安全细节
 
 - ticket 不走日志（diag.log 只记 ticket 长度或 hash）
@@ -141,7 +163,17 @@ launchApp(slug, entry):
 - auth-init.client.ts 增强：无 token 时先试 `/api/desktop/session/bootstrap`（带 cookie）→ 有会话则恢复，无则走原逻辑
 - **不破坏**：浏览器用户（无 cookie 无 ticket）路径零变化
 
-### 4.3 兼容矩阵
+### 4.3 双模式（总监冻结：两个入口共存，禁止为 Desktop 改坏 Web）
+
+```
+Nuxt Middleware
+  |
+  |── Browser User：JWT（Authorization Bearer，现有体系不动）
+  |
+  └── Desktop User：HttpOnly Session（kunlun_session cookie，本 sprint 新增）
+```
+
+### 4.4 兼容矩阵
 
 | 场景 | 身份来源 | 行为 |
 |---|---|---|
@@ -170,6 +202,18 @@ launchApp(slug, entry):
 → 打开日志：无 localStorage 注入记录
 ```
 
+### 5.2.1 G9 身份隔离测试（总监新增，冻结）
+
+验证：
+
+```
+用户A Desktop → ticket A
+用户B Desktop → ticket B
+A 的 ticket 不能打开 B 的 workspace（跨用户/跨组织/跨设备均拒绝）
+```
+
+原因：Desktop Session Exchange 是未来 Kunlun Media / Novel / PPT 多产品统一入口，身份隔离必须一次设计正确。
+
 ### 5.3 完成定义
 
 - Desktop → Workspace 首次启动**零白屏**（Layer 2 目标）
@@ -194,6 +238,13 @@ Task 4 Reality Gate（自动化 + 真机链）
 
 ## 7. 冻结清单（持续，掌柜最终调度）
 
-❌ 白屏补丁（围绕症状修） ❌ 改 CSP ❌ 改 index.html 业务 ❌ 生态新功能
-⏸ AI 内容运营经理商品化：先把 **Kunlun Media.exe → AI 员工工作台** 商业入口打磨成真正产品
+❌ 白屏补丁（围绕症状修） ❌ 改 CSP ❌ 改 index.html 业务 ❌ 生态新功能 ❌ ECO-12 ❌ AI 内容运营经理开发
 ✅ 本 sprint 是入口打磨的第一步：安装 → 登录 → 启动 → 进工作台 → 刷新保持 → 设备授权持久
+
+**正确路线（掌柜 2026-08-04 冻结）：**
+
+```
+白屏定位 → Session Exchange → Desktop Reality Gate → AI内容运营经理 Business Reality → 用户中心商业入口
+```
+
+这条顺序符合昆仑镜从「技术平台」进入「商业产品」的节奏。
