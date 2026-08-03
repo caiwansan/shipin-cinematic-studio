@@ -7736,6 +7736,9 @@ model BrowserWorkspace {
   browserVersion    String?   @map("browser_version") @db.Text
   lastStartedAt     DateTime? @map("last_started_at")
   lastHealthCheckAt DateTime? @map("last_health_check_at")
+  // SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task01 — 虚拟电脑登录状态（电脑实例在线 ≠ 平台账号在线）
+  loginRealityState String    @default("UNKNOWN") @map("login_reality_state") @db.Text
+  lastLoginStateAt  DateTime? @map("last_login_state_at")
   lastError         String?   @map("last_error") @db.Text
   metadata          Json      @default("{}")
   createdAt         DateTime  @default(now()) @map("created_at")

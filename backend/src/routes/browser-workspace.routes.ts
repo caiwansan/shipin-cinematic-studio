@@ -405,7 +405,10 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         const lastVerifiedAt = accMeta.lastVerifiedAt || null
         // IDENTITY-VIEW-01 Task05 — verified 必须同时满足「身份新鲜 + 登录有效」：
         //   身份快照新鲜 ≠ 当前登录有效（EXPIRED/ERROR 即使昨天刚验证过也要显示「需重新验证」）
-        const loginInvalid = account.connectionStatus === ChannelConnectionStatus.EXPIRED || account.connectionStatus === ChannelConnectionStatus.ERROR
+        // SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task02 — LOGGED_OUT 也是登录无效（用户主动退出）
+        const loginInvalid = account.connectionStatus === ChannelConnectionStatus.EXPIRED
+          || account.connectionStatus === ChannelConnectionStatus.ERROR
+          || account.connectionStatus === ChannelConnectionStatus.LOGGED_OUT
         const identityStatus = !account.externalAccountId
           ? 'missing'
           : loginInvalid
@@ -426,6 +429,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
         // 真实性状态推导：老板看到的状态 = 电脑 + 账号 + 最近动作 的组合，不是单一 workspace RUNNING
         const workerStatus = (() => {
           if (bindingPaused && healthRow?.state === 'NEEDS_ATTENTION') return 'attention' // 账号保护中（老板需确认恢复）
+          // SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task02 — 用户主动退出：优先展示已退出（不是 pending）
+          if (account.connectionStatus === ChannelConnectionStatus.LOGGED_OUT) return 'logged_out'
           if (!workspaceRunning) return 'offline'
           if (accountConnected) return 'working'
           if (account.connectionStatus === ChannelConnectionStatus.WAITING_LOGIN) return 'waiting_scan'

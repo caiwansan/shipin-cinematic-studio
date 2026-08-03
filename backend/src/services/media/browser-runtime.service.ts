@@ -670,6 +670,66 @@ class BrowserRuntimeService {
   }
 
   /**
+   * SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task02 — 销毁平台认证环境（退出登录核心）
+   * 必须清：Cookies / LocalStorage / SessionStorage / IndexedDB / CacheStorage / ServiceWorker / 浏览器缓存。
+   * 用 CDP Storage.clearDataForOrigin(storageTypes='all') + Network.clearBrowserCookies/Cache 双保险；
+   * 再对全部 open pages 执行 localStorage/sessionStorage.clear() 兜底。
+   * 返回清理明细供审计。
+   */
+  async clearPlatformAuth(
+    sessionId: string,
+    origins: string[],
+  ): Promise<{ clearedOrigins: number; cookiesCleared: boolean; cacheCleared: boolean; storageCleared: boolean }> {
+    return this.withSessionLock(sessionId, async () => {
+      const instance = this.instances.get(sessionId)
+      if (!instance) throw new Error('BROWSER_NOT_RUNNING')
+      let clearedOrigins = 0
+      let storageCleared = false
+      try {
+        const page = instance.page || instance.context.pages()[0]
+        if (page) {
+          const cdp = await instance.context.newCDPSession(page)
+          for (const origin of origins) {
+            try {
+              await cdp.send('Storage.clearDataForOrigin', { origin, storageTypes: 'all' })
+              clearedOrigins++
+            } catch (e: any) {
+              console.warn(`[BrowserRuntime] clearDataForOrigin 失败 ${origin}: ${e.message}`)
+            }
+          }
+          storageCleared = clearedOrigins > 0
+        }
+      } catch (e: any) {
+        console.warn(`[BrowserRuntime] CDP storage 清理失败: ${e.message}`)
+      }
+      let cookiesCleared = false
+      let cacheCleared = false
+      try {
+        const page = instance.page || instance.context.pages()[0]
+        if (page) {
+          const cdp = await instance.context.newCDPSession(page)
+          try { await cdp.send('Network.clearBrowserCookies'); cookiesCleared = true } catch (e: any) { console.warn(`[BrowserRuntime] clearBrowserCookies 失败: ${e.message}`) }
+          try { await cdp.send('Network.clearBrowserCache'); cacheCleared = true } catch (e: any) { console.warn(`[BrowserRuntime] clearBrowserCache 失败: ${e.message}`) }
+        }
+      } catch (e: any) {
+        console.warn(`[BrowserRuntime] CDP 浏览器级清理失败: ${e.message}`)
+      }
+      // 兜底：所有 open pages 执行 web storage 清理（含未知 origin）
+      for (const page of instance.context.pages()) {
+        try {
+          await page.evaluate(() => {
+            try { localStorage.clear() } catch {}
+            try { sessionStorage.clear() } catch {}
+            try { (indexedDB as any)?.databases?.().then?.((dbs: any[]) => dbs.forEach((db) => { try { indexedDB.deleteDatabase(db.name) } catch {} })) } catch {}
+          }).catch(() => {})
+        } catch {}
+      }
+      console.log(`[BrowserRuntime] clearPlatformAuth ${sessionId}: origins=${clearedOrigins}, cookies=${cookiesCleared}, cache=${cacheCleared}`)
+      return { clearedOrigins, cookiesCleared, cacheCleared, storageCleared }
+    })
+  }
+
+  /**
    * 健康检查
    */
   async healthCheck(): Promise<{ status: string; version: string }> {

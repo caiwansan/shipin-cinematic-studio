@@ -25,6 +25,8 @@ import { CHANNEL_META } from '../../enterprise/channel/adapters/browser-channel.
 import {
   ChannelConnectionStatus,
   isChannelConnected,
+  mapToLoginRealityState,
+  BrowserProfileLoginState,
 } from '../../constants/channel-connection-status.js'
 
 export class ChannelService {
@@ -125,6 +127,22 @@ export class ChannelService {
     const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
     if (!account) throw new Error('Channel account not found')
 
+    // SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task01 — 虚拟电脑登录状态同步（电脑实例在线 ≠ 平台账号在线）
+    const syncLoginState = async (targetAccountId: string, status?: string) => {
+      try {
+        const ws = await prisma.browserWorkspace.findUnique({ where: { channelAccountId: targetAccountId } })
+        if (ws) {
+          const nextState = mapToLoginRealityState(status ?? input.connectionStatus ?? account.connectionStatus)
+          await prisma.browserWorkspace.update({
+            where: { id: ws.id },
+            data: { loginRealityState: nextState, lastLoginStateAt: new Date() },
+          })
+        }
+      } catch (e: any) {
+        console.warn(`[updateChannelIdentity] 虚拟电脑登录状态同步失败: ${e.message}`)
+      }
+    }
+
     // DUPLICATE-IDENTITY-FIX — externalAccountId 唯一冲突：同平台同一身份只允许一条记录
     // 同 org → 合并登录态到既有账号（资产属人迁移 + 身份刷新，零删除）；跨 org → 明确报错不合并
     if (input.externalAccountId) {
@@ -202,6 +220,9 @@ export class ChannelService {
           },
         })
         // ③ 当前账号不再重复标记（②中已 BLOCKED + mergedInto）——旧逻辑的重复标记块已移除，此处直接返回合并结果
+        //    合并后：源账号 workspace 标记 UNKNOWN（会话已被目标接管），目标账号登录状态同步
+        await syncLoginState(accountId, ChannelConnectionStatus.BLOCKED)
+        await syncLoginState(existing.id, input.connectionStatus)
         return { merged: true, mergedIntoId: existing.id, account: existing }
       }
     }
@@ -211,7 +232,7 @@ export class ChannelService {
     const finalExternalId = input.externalAccountId ?? account.externalAccountId
     const finalName = input.accountName ?? account.accountName ?? account.channelName
     const finalAvatar = input.avatarUrl ?? account.avatarUrl ?? accMeta.avatar ?? null
-    return prisma.enterpriseChannelAccount.update({
+    const updated = await prisma.enterpriseChannelAccount.update({
       where: { id: accountId },
       data: {
         ...(input.externalAccountId != null ? { externalAccountId: input.externalAccountId } : {}),
@@ -233,6 +254,9 @@ export class ChannelService {
         },
       },
     })
+    // 虚拟电脑登录状态随 ChannelAccount 状态推进同步（Task01）
+    await syncLoginState(accountId, input.connectionStatus)
+    return updated
   }
 
   /** 设置账号权限等级（1/2/3），仅允许升级到掌柜批准的范围（当前冻结 L1，L2/L3 预留） */
@@ -836,6 +860,145 @@ export class ChannelService {
     if (!account) throw new Error('Channel account not found')
     const adapter = this.resolveAdapter(account.channelType)
     return adapter.healthCheck()
+  }
+
+  /**
+   * SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task02 — 退出登录（Logout Reality Flow）
+   * 一台数字电脑 = 一个真实可验证的新媒体账号环境；退出 = 彻底销毁平台认证环境。
+   * 链路：① 暂停 AI 员工绑定（防止任务中途读取）→ ② CDP 清理浏览器认证（cookies/LS/SS/IndexedDB/Cache/SW/缓存）
+   *       → ③ 关闭浏览器 + 删除 profile 目录（含 Downloads 临时文件，重新登录重建新环境）
+   *       → ④ DB：credential 销毁 + LOGGED_OUT + workspace DESTROYED/detached（identitySnapshot 保留）
+   *       → ⑤ 审计（governance audit log）
+   */
+  async logoutChannel(accountId: string, opts: { by?: string; reason?: string; tenantId?: string; organizationId?: string } = {}) {
+    const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
+    if (!account) throw new Error('Channel account not found')
+    let sid: string
+    try {
+      sid = this.adapterSessionId(account)
+    } catch {
+      sid = `${account.channelType}:${accountId}`
+    }
+    const cleanup: Record<string, any> = {}
+
+    // ① 暂停 AI 员工绑定（HealthGuard pauseForLogout，非失败路径）
+    const { channelHealthGuardService } = await import('./channel/channel-health-guard.service.js')
+    let pausedBindingIds: string[] = []
+    try {
+      const r = await channelHealthGuardService.pauseForLogout(accountId, { by: opts.by || 'system', reason: opts.reason || 'user_logout' })
+      pausedBindingIds = r.pausedBindingIds
+    } catch (e: any) {
+      console.warn(`[ChannelService] logout 暂停 AI 员工绑定失败: ${e.message}`)
+    }
+    cleanup.pausedBindingIds = pausedBindingIds
+
+    // ② 浏览器认证清理（实例存活时 CDP 清理）
+    const meta = CHANNEL_META[account.channelType]
+    const origins: string[] = []
+    const originOf = (u?: string) => { try { return u ? new URL(u).origin : null } catch { return null } }
+    const o1 = originOf(meta?.loginUrl); if (o1) origins.push(o1)
+    const o2 = originOf(meta?.workspaceUrl); if (o2) origins.push(o2)
+    ;(meta?.cookieDomains || []).forEach((d: string) => origins.push(`https://${d.startsWith('.') ? d.slice(1) : d}`))
+    let browserCleanup: any = { clearedOrigins: 0 }
+    try {
+      const running = browserRuntime.listInstances().some(i => i.sessionId === sid)
+      if (running) {
+        browserCleanup = await browserRuntime.clearPlatformAuth(sid, [...new Set(origins)])
+      }
+    } catch (e: any) {
+      console.warn(`[ChannelService] logout 浏览器认证清理失败: ${e.message}`)
+    }
+    cleanup.browserCleanup = browserCleanup
+
+    // ③ 关闭浏览器 + 删除 profile 目录（含 Downloads 临时文件；重新登录时 createWorkspace 重建新环境）
+    let profileDeleted = false
+    const ws = await prisma.browserWorkspace.findUnique({ where: { channelAccountId: accountId } })
+    if (ws) {
+      try { await browserRuntime.stopWorkspace(sid) } catch (e: any) { console.warn(`[ChannelService] logout 关闭浏览器失败: ${e.message}`) }
+      try {
+        const fs = await import('fs')
+        if (fs.existsSync(ws.profilePath)) {
+          fs.rmSync(ws.profilePath, { recursive: true, force: true })
+          profileDeleted = true
+        }
+      } catch (e: any) {
+        console.warn(`[ChannelService] logout 删除 profile 目录失败: ${e.message}`)
+      }
+      await prisma.browserWorkspace.update({
+        where: { id: ws.id },
+        data: {
+          status: 'DESTROYED',
+          loginRealityState: BrowserProfileLoginState.LOGGED_OUT,
+          lastLoginStateAt: new Date(),
+        },
+      })
+    }
+    cleanup.profileDeleted = profileDeleted
+
+    // ④ DB：credential 销毁 + LOGGED_OUT（identitySnapshot 保留，账号实体是历史资产不删除）
+    const accMeta = (account.metadata as any) || {}
+    await prisma.enterpriseChannelAccount.update({
+      where: { id: accountId },
+      data: {
+        connectionStatus: ChannelConnectionStatus.LOGGED_OUT,
+        credentialEncrypted: '',
+        connectedAt: null,
+        metadata: {
+          ...accMeta,
+          loggedOutAt: new Date().toISOString(),
+          loggedOutBy: opts.by || 'system',
+          loggedOutReason: opts.reason || 'user_logout',
+          credentialDestroyed: true,
+          // identitySnapshot 保留（账号历史身份）
+        },
+      },
+    })
+
+    // ⑤ 审计（governance_audit_log：tenantId = account.tenantId 是合法 Tenant FK，直接写）
+    try {
+      await prisma.auditLog.create({
+        data: {
+          tenantId: account.tenantId,
+          userId: opts.by || 'system',
+          action: 'channel_logout',
+          resource: 'channel_account',
+          resourceId: accountId,
+          details: JSON.stringify({
+            platform: account.channelType,
+            accountName: account.accountName || account.channelName,
+            externalAccountId: account.externalAccountId,
+            reason: opts.reason || 'user_logout',
+            credentialRemoved: true,
+            browserCacheCleared: true,
+            profileDeleted,
+            clearedOrigins: browserCleanup.clearedOrigins ?? 0,
+            pausedBindingIds,
+          }),
+        },
+      })
+      // 同时写 channel_ownership_migration（reason=user_logout，无 FK 依赖的可靠审计通道）
+      await prisma.channelOwnershipMigration.create({
+        data: {
+          channelAccountId: accountId,
+          oldOwnerId: account.ownerId || '',
+          newOwnerId: account.ownerId || '',
+          oldOrganizationId: account.organizationId || '',
+          newOrganizationId: account.organizationId || '',
+          operatorUserId: opts.by || 'system',
+          reason: 'user_logout',
+        },
+      }).catch((e: any) => console.warn(`[ChannelService] logout 迁移审计写入失败: ${e.message}`))
+    } catch (e: any) {
+      console.warn(`[ChannelService] logout 审计写入失败: ${e.message}`)
+    }
+
+    console.log(`[ChannelService] logoutChannel ${accountId} (${account.channelType}): bindings=${pausedBindingIds.length}, origins=${browserCleanup.clearedOrigins}, profileDeleted=${profileDeleted}`)
+    return {
+      status: ChannelConnectionStatus.LOGGED_OUT,
+      accountId,
+      accountName: account.accountName || account.channelName,
+      cleanup,
+    }
   }
 
   /**

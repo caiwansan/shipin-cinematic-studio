@@ -267,6 +267,47 @@ export class ChannelHealthGuardService {
   }
 
   /**
+   * SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task02 — 用户主动退出登录：暂停该账号所有 AI 员工绑定
+   * （非失败路径：不走 recordFailure，避免污染失败计数；bindings 全部 paused 防止任务中途读取）
+   */
+  async pauseForLogout(channelAccountId: string, opts: { by?: string; reason?: string } = {}): Promise<{ pausedBindingIds: string[] }> {
+    const bindings = await prisma.agentChannelBinding.findMany({
+      where: { channelAccountId, status: 'active' },
+      select: { id: true },
+    })
+    if (bindings.length > 0) {
+      await prisma.agentChannelBinding.updateMany({
+        where: { id: { in: bindings.map(b => b.id) } },
+        data: { status: 'paused' },
+      })
+    }
+    const now = new Date()
+    await prisma.channelHealthState.upsert({
+      where: { channelAccountId },
+      create: {
+        tenantId: '',
+        organizationId: null,
+        channelAccountId,
+        state: 'HEALTHY',
+        failureCount: 0,
+        windowStartedAt: now,
+        pausedAt: now,
+        pausedBy: opts.by || 'system',
+        pauseReason: opts.reason || 'user_logout',
+        lastError: '用户主动退出登录，AI 员工绑定已暂停（待重新登录后恢复）',
+      },
+      update: {
+        pausedAt: now,
+        pausedBy: opts.by || 'system',
+        pauseReason: opts.reason || 'user_logout',
+        lastError: '用户主动退出登录，AI 员工绑定已暂停（待重新登录后恢复）',
+      },
+    })
+    console.log(`[ChannelHealthGuard] pauseForLogout ${channelAccountId}: pausedBindings=${bindings.length}`)
+    return { pausedBindingIds: bindings.map(b => b.id) }
+  }
+
+  /**
    * 成功上报：清窗口计数，DEGRADED → HEALTHY（NEEDS_ATTENTION 不自动恢复，必须人工）
    */
   async recordSuccess(channelAccountId: string): Promise<HealthGuardStateView> {

@@ -45,8 +45,14 @@
                 <img v-if="ov.identity?.avatar" :src="ov.identity.avatar" class="ac-identity-avatar" alt="账号头像" referrerpolicy="no-referrer" />
                 <span v-else class="ac-identity-avatar-fb">{{ (ov.identity?.accountName || '?')[0] }}</span>
                 <span class="ac-identity-main">
-                  <span class="ac-identity-name">{{ ov.identity?.accountName || '未获取' }}</span>
-                  <span v-if="ov.identity?.externalAccountId" class="ac-identity-ext">ID {{ ov.identity.externalAccountId }}</span>
+                  <template v-if="ov.identity?.status === 'missing'">
+                    <span class="ac-identity-name ac-identity-missing">⚪ 未绑定账号</span>
+                    <span class="ac-identity-ext">没有登录成功，就不存在这个账号</span>
+                  </template>
+                  <template v-else>
+                    <span class="ac-identity-name">{{ ov.identity?.accountName || '未获取' }}</span>
+                    <span v-if="ov.identity?.externalAccountId" class="ac-identity-ext">ID {{ ov.identity.externalAccountId }}</span>
+                  </template>
                 </span>
               </span>
             </div>
@@ -85,7 +91,7 @@
                 <span class="ac-ai-summary">{{ ov.aiInsight.summary || '暂无可用数据，无法生成 AI 判断' }}</span>
               </span>
             </div>
-            <!-- AI-EMPLOYEE-REALITY-01 Task01 — 账号健康（Channel Health Guard）：NEEDS_ATTENTION 展示保护 + 人工恢复 -->
+            <!-- 账号健康（Channel Health Guard）→ 保持原有逻辑 -->
             <div v-if="ov.health && ov.health.state !== 'HEALTHY'" class="ac-owner-row ac-owner-health" :class="ov.health.state === 'NEEDS_ATTENTION' ? 'danger' : 'warn'">
               <span class="k">账号健康</span>
               <span class="v ac-health-cell">
@@ -99,6 +105,11 @@
                   <span class="ac-health-reason">近期出现 {{ ov.health.failureCount }} 次失败，继续失败将自动保护</span>
                 </template>
               </span>
+            </div>
+            <!-- SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task02/04 — 退出登录 / 重新登录 -->
+            <div class="ac-owner-actions">
+              <button v-if="['logged_out','expired','offline'].includes(workerStatusKey(ov)) && ov.channelAccountId" class="ac-owner-btn primary" @click.stop="reLogin(ov)">↻ 重新登录</button>
+              <button v-if="!['logged_out','offline','pending','waiting_scan'].includes(workerStatusKey(ov)) && ov.channelAccountId" class="ac-owner-btn danger" @click.stop="logoutChannel(ov)">退出登录</button>
             </div>
           </div>
         </div>
@@ -924,6 +935,7 @@ const WORKER_STATUS_LABEL: Record<string, string> = {
   pending: '⚪ 等待授权',
   offline: '⚫ 电脑离线',
   attention: '🔴 账号保护中',
+  logged_out: '⚫ 已退出登录',
 }
 const WORKER_STATUS_DETAIL: Record<string, string> = {
   working: '电脑在线 · 账号已连接 · 可读取数据',
@@ -935,20 +947,24 @@ const WORKER_STATUS_DETAIL: Record<string, string> = {
   pending: '电脑就绪 · 尚未发起连接',
   offline: '电脑离线',
   attention: '账号保护中 · 连续失败已暂停任务，等待老板确认恢复',
+  logged_out: '已退出登录 · 认证环境已清空，可重新扫码登录',
+}
+function workerStatusKey(ov: any): string {
+  return ov.workerStatus || (ov.online ? 'working' : 'offline')
 }
 function workerStatusLabel(ov: any): string {
-  return WORKER_STATUS_LABEL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || '⚫ 电脑离线'
+  return WORKER_STATUS_LABEL[workerStatusKey(ov)] || '⚫ 电脑离线'
 }
 // REALITY-GATE-FINAL-01 Task04 — 状态点颜色：🟢在线=绿 / 🟡需重新登录=黄 / 🔴保护=红 / 其余=灰
 function ownerStateClass(ov: any): string {
-  const st = ov.workerStatus || (ov.online ? 'working' : 'offline')
+  const st = workerStatusKey(ov)
   if (st === 'working') return 'on'
   if (st === 'expired') return 'warn'
   if (st === 'attention' || st === 'error') return 'danger'
   return 'off'
 }
 function workerStatusDetail(ov: any): string {
-  return WORKER_STATUS_DETAIL[ov.workerStatus || (ov.online ? 'working' : 'offline')] || ov.workspaceStatus || '—'
+  return WORKER_STATUS_DETAIL[workerStatusKey(ov)] || ov.workspaceStatus || '—'
 }
 // IDENTITY-VIEW-01 Task04 — 账号身份新鲜度：由卡片身份块（头像/账号名/ID/最近验证/失效原因）承载，
 // 展示逻辑内联在模板（identity.status 分支），此处不再保留单行文本函数
@@ -1010,6 +1026,34 @@ async function recoverChannel(ov: any) {
   } catch (e: any) {
     $toast?.error?.('恢复失败: ' + e.message)
   }
+}
+
+// SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task02 — 退出登录（Logout Reality Flow）
+async function logoutChannel(ov: any) {
+  if (!ov?.channelAccountId) return
+  const name = ov.identity?.accountName || ov.platformName || '该平台'
+  if (!window.confirm(`退出「${name}」账号登录？\n将清除浏览器登录态与本地数据，AI 员工任务会暂停。账号历史记录保留，可随时重新扫码登录。`)) return
+  try {
+    const res = await api(`/api/enterprise/channels/runtime/${ov.channelAccountId}/logout`, { method: 'POST', body: { reason: 'user_logout' } })
+    if (res.code === 0) {
+      $toast?.success?.('已退出登录，认证环境已清空')
+      await reloadOwnerViews()
+    } else {
+      $toast?.error?.(res.message || '退出失败')
+    }
+  } catch (e: any) {
+    $toast?.error?.('退出失败: ' + e.message)
+  }
+}
+
+// SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task04 — 重新登录（退出/过期后重新扫码）
+function reLogin(ov: any) {
+  const platform = allPlatforms.find((p: any) => p.platform === ov.platform)
+  if (!platform) {
+    $toast?.error?.('无法发起重新登录：平台信息缺失')
+    return
+  }
+  openDouyinConnect(platform)
 }
 
 async function reloadOwnerViews() {
@@ -1280,6 +1324,41 @@ function onClick(p: any) {
 .ac-health-tag.danger { color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; }
 .ac-health-tag.warn { color: #d97706; background: #fffbeb; border: 1px solid #fde68a; }
 .ac-health-reason { font-size: 11px; color: #6b7280; line-height: 1.5; white-space: normal; }
+.ac-owner-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ac-owner-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ac-owner-btn.primary {
+  color: #4f46e5;
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+.ac-owner-btn.primary:hover {
+  background: #e0e7ff;
+}
+.ac-owner-btn.danger {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+.ac-owner-btn.danger:hover {
+  background: #fee2e2;
+}
+.ac-identity-missing {
+  color: #94a3b8;
+  font-weight: 500;
+}
 .ac-owner-health.danger .ac-health-reason { color: #b91c1c; }
 .ac-health-recover {
   align-self: flex-start;

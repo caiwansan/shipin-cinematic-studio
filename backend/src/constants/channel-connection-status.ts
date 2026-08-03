@@ -45,6 +45,8 @@ export const ChannelConnectionStatus = {
   SECURITY_CHECK: 'SECURITY_CHECK',
   BLOCKED: 'BLOCKED',
   ERROR: 'ERROR',
+  // SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 — 用户主动退出登录（账号实体保留历史，认证环境已销毁）
+  LOGGED_OUT: 'LOGGED_OUT',
 } as const
 
 export type ChannelConnectionStatusValue =
@@ -63,11 +65,69 @@ export const ChannelConnectionStatusLabel: Record<string, string> = {
   SECURITY_CHECK: '安全验证中',
   BLOCKED: '账号已冻结',
   ERROR: '连接异常',
+  LOGGED_OUT: '已退出登录',
 }
 
 /** 是否处于「可信在线」语义（owner-view online 判定等） */
 export function isChannelConnected(status: string | null | undefined): boolean {
   return status === ChannelConnectionStatus.CONNECTED
+}
+
+/**
+ * SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task01 — BrowserProfileLoginState
+ * 虚拟电脑登录状态模型：电脑实例在线 ≠ 平台账号在线，两者必须拆开。
+ * 状态由 ChannelAccount.connectionStatus + 探针实时信号映射（登录推进/退出时同步）。
+ *
+ * | 状态                  | 含义                                              |
+ * |-----------------------|---------------------------------------------------|
+ * | UNKNOWN               | 未初始化/异常态（无 workspace 或状态不可判）       |
+ * | EMPTY                 | 浏览器可用但无任何平台登录态（含 EXPIRED 会话失效）|
+ * | WAITING_LOGIN         | 浏览器已打开，等待用户扫码                        |
+ * | SESSION_AUTHENTICATED | 浏览器已确认平台登录（探针通过，身份未锚定）      |
+ * | IDENTITY_READY        | 身份已锚定（账号ID/名称已确认，凭证待落库）       |
+ * | WORKSPACE_READY       | 身份+凭证+runtime 全部正常（AI员工可用）          |
+ * | LOGGED_OUT            | 用户主动退出，认证环境已销毁                      |
+ */
+export const BrowserProfileLoginState = {
+  UNKNOWN: 'UNKNOWN',
+  EMPTY: 'EMPTY',
+  WAITING_LOGIN: 'WAITING_LOGIN',
+  SESSION_AUTHENTICATED: 'SESSION_AUTHENTICATED',
+  IDENTITY_READY: 'IDENTITY_READY',
+  WORKSPACE_READY: 'WORKSPACE_READY',
+  LOGGED_OUT: 'LOGGED_OUT',
+} as const
+
+export type BrowserProfileLoginStateValue =
+  (typeof BrowserProfileLoginState)[keyof typeof BrowserProfileLoginState]
+
+/**
+ * 纯函数：ChannelAccount.connectionStatus → BrowserProfileLoginState
+ * 唯一事实源，禁止手写字符串。
+ */
+export function mapToLoginRealityState(status: string | null | undefined): BrowserProfileLoginStateValue {
+  switch (status) {
+    case ChannelConnectionStatus.WAITING_LOGIN:
+    case ChannelConnectionStatus.VERIFYING:
+      return BrowserProfileLoginState.WAITING_LOGIN
+    case ChannelConnectionStatus.AUTHENTICATED:
+      return BrowserProfileLoginState.SESSION_AUTHENTICATED
+    case ChannelConnectionStatus.IDENTITY_VERIFIED:
+      return BrowserProfileLoginState.IDENTITY_READY
+    case ChannelConnectionStatus.CONNECTED:
+      return BrowserProfileLoginState.WORKSPACE_READY
+    case ChannelConnectionStatus.LOGGED_OUT:
+      return BrowserProfileLoginState.LOGGED_OUT
+    case ChannelConnectionStatus.EXPIRED:
+    case ChannelConnectionStatus.NEEDS_REAUTH:
+      // 会话失效：浏览器里没有有效登录态（身份快照保留在 ChannelAccount，不算浏览器登录态）
+      return BrowserProfileLoginState.EMPTY
+    case ChannelConnectionStatus.PENDING:
+      return BrowserProfileLoginState.EMPTY
+    default:
+      // BLOCKED / SECURITY_CHECK / ERROR / 未知 → 异常态
+      return BrowserProfileLoginState.UNKNOWN
+  }
 }
 
 /**

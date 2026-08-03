@@ -253,8 +253,8 @@ const EMPLOYEE_CHANNELS: Record<string, string[]> = {
   'David': ['channels_wechat'],
   'Eve': ['douyin', 'xiaohongshu', 'kuaishou'],
 }
-// 渠道连接状态（platform → { connected, accountName }）
-const channelStatus = ref<Record<string, { connected: boolean; accountName?: string }>>({})
+// 渠道连接状态（platform → { connected, accountName, connectionStatus }）
+const channelStatus = ref<Record<string, { connected: boolean; accountName?: string; connectionStatus?: string }>>({})
 async function loadChannelStatus() {
   const token = getAuthToken()
   for (const p of MATRIX_COLUMNS) {
@@ -264,16 +264,20 @@ async function loadChannelStatus() {
       })
       const j = await res.json()
       const d = j?.data || {}
-      channelStatus.value[p] = { connected: !!d.connected, accountName: d.accountName || '' }
+      channelStatus.value[p] = { connected: !!d.connected, accountName: d.accountName || '', connectionStatus: d.connectionStatus || '' }
     } catch {
       channelStatus.value[p] = { connected: false }
     }
   }
 }
+// SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task03 — 电脑状态真实化：
+// 浏览器在线 ≠ 平台账号在线；按 connectionStatus 真实映射（已退出/需重登/等待授权/未配置）
 function channelDot(platform: string): { mark: string; label: string; cls: string } {
   const st = channelStatus.value[platform]
   if (!st) return { mark: '⚪', label: '未配置', cls: 'dot-idle' }
   if (st.connected) return { mark: '🟢', label: st.accountName || '已连接', cls: 'dot-on' }
+  if (st.connectionStatus === 'LOGGED_OUT') return { mark: '⚫', label: '已退出登录', cls: 'dot-off' }
+  if (st.connectionStatus === 'EXPIRED') return { mark: '🟡', label: '需要重新登录', cls: 'dot-wait' }
   return { mark: '🟡', label: '等待授权', cls: 'dot-wait' }
 }
 function employeeChannels(name: string): string[] {
@@ -510,6 +514,7 @@ function stateClass(s: string) {
 .to-computer.dot-on { border-color: rgba(16,185,129,.4); }
 .to-computer.dot-wait { border-color: rgba(217,119,6,.4); }
 .to-computer.dot-idle { border-color: var(--media-card-border); }
+.to-computer.dot-off { border-color: rgba(100,116,139,.4); opacity: .75; }
 
 
 /* ── 团队卡列 ── */

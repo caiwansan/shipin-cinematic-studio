@@ -377,6 +377,29 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     }
   })
 
+  // SPRINT-MEDIA-VIRTUAL-COMPUTER-REALITY-01 Task02 — 退出登录（Logout Reality Flow）
+  // 破坏性操作：仅账号所有者或 MANAGE 授权可执行；销毁平台认证环境 + credential + profile，保留历史
+  app.post('/api/enterprise/channels/runtime/:id/logout', async (request, reply) => {
+    const { id } = request.params as any
+    const user = (request as any).user as any
+    const orgId = (request as any).orgId
+    try {
+      const { prisma } = await import('../utils/index.js')
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      await new ChannelAccessService(prisma).assertAccess(user.id, id, 'MANAGE')
+      const result = await channelService.logoutChannel(id, {
+        by: user.id,
+        reason: (request.body as any)?.reason || 'user_logout',
+        tenantId: orgId,
+        organizationId: orgId,
+      })
+      return reply.send({ code: 0, data: result })
+    } catch (e: any) {
+      const status = e.code === 'CHANNEL_ACCESS_DENIED' ? 403 : 400
+      return reply.status(status).send({ code: e.code || 1, message: e.message })
+    }
+  })
+
   // Runtime Health Agent（三态：browser / session / account）
   // G3 Health：老板看到「我的 AI 员工办公室正常」
   app.get('/api/enterprise/channels/runtime/:id/runtime-health', async (request, reply) => {
