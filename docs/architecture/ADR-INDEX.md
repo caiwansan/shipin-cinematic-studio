@@ -3,7 +3,7 @@
 > **Document**: KMKI-ARCH-002 / ADR-INDEX.md  
 > **Status**: ✅ Ratified  
 > **Date**: 2026-07-02 (KMKI-DOC-001)  
-> **Purpose**: Unified catalog of all Architecture Decision Records (ADR-001 through ADR-018). Every number is explicitly accounted for.
+> **Purpose**: Unified catalog of all Architecture Decision Records (ADR-001 through ADR-021). Every number is explicitly accounted for.
 
 ---
 
@@ -40,6 +40,7 @@
 | 016 | Workflow Runtime | `adr/ADR-016-workflow-runtime.md` | ✅ Accepted | PLAT-011 |
 | **017** | **(Reserved — Platform Governance)** | — | 🔲 Reserved | PLAT-012 |
 | **018** | **Website Intelligence as Platform Capability** | `adr/ADR-018-website-intelligence.md` | ✅ **Accepted** | Phase B Foundation (Platform Knowledge Acquisition)
+| **021** | **Desktop Shell Identity Boundary** | `adr/ADR-021-desktop-shell-identity-boundary.md` | ✅ **Accepted** | Desktop Session Exchange（SESSION-EXCHANGE-01） |
 
 ---
 
