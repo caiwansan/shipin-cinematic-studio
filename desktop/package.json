@@ -1,62 +1,15 @@
 {
-  "name": "kunlun-mirror-desktop",
-  "version": "1.0.0",
-  "description": "昆仑镜桌面版 - AI 短剧制作平台",
-  "main": "main.js",
+  "name": "kunlun-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "昆仑镜 Kunlun Desktop — AI 应用操作系统桌面壳（Tauri v2 + WebView2，Windows 优先）",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "build:win": "electron-builder --win --x64",
-    "build:mac": "electron-builder --mac --x64",
-    "build:linux": "electron-builder --linux --x64",
-    "build:all": "electron-builder --win --mac --linux --x64",
-    "dist": "electron-builder --win --mac --linux --x64"
-  },
-  "build": {
-    "appId": "com.kunlun.desktop",
-    "productName": "昆仑镜",
-    "copyright": "Copyright © 2025",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "main.js",
-      "preload.js",
-      "package.json",
-      "web/**/*"
-    ],
-    "win": {
-      "target": ["nsis"],
-      "icon": "build/icon.ico",
-      "artifactName": "昆仑镜-${version}-win-${arch}.${ext}"
-    },
-    "mac": {
-      "target": ["dmg"],
-      "icon": "build/icon.icns",
-      "artifactName": "昆仑镜-${version}-mac-${arch}.${ext}"
-    },
-    "linux": {
-      "target": ["AppImage", "deb"],
-      "icon": "build/icon.png",
-      "artifactName": "kunlun-mirror-${version}-linux-${arch}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "language": "2052"
-    },
-    "publish": [{
-      "provider": "generic",
-      "url": "https://aigc.fushtn.com/desktop",
-      "channel": "latest"
-    }]
-  },
-  "dependencies": {
-    "electron-updater": "^6.3.0"
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icon": "tauri icon src-tauri/icons/icon.png"
   },
   "devDependencies": {
-    "electron": "^34.0.0",
-    "electron-builder": "^25.0.0"
+    "@tauri-apps/cli": "^2"
   }
 }

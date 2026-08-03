@@ -551,6 +551,15 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/ecology-partner.routes.js')).registerEcologyPartnerRoutes, { prefix: '/api/ecosystem' })
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-11.2 — Kunlun Desktop Shell（本地应用生态 · 设备层）
+  // 掌柜冻结：B 设备级授权 MVP；设备指纹 = 随机 device_id + 签名 token + 用户确认
+  // Gate：G3 设备注册 / G4 重启恢复 / G5 License 预演（设备隔离）/ G6 工作台回归
+  // 纪律：只新增 ecology_* 表；不碰 PaymentOrder/Subscription/User/Organization/Agent/Hermes
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-device.routes.js')).registerEcologyDeviceRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-11.2] Kunlun Desktop Shell 设备层路由已注册（devices/register, heartbeat, revoke, local-apps, authorized-plugins, launch-check）')
+
   // 注册渠道适配器
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')

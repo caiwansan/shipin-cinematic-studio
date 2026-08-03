@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>昆仑镜 Kunlun Desktop</title>
+<style>
+  :root {
+    --bg: #0e0f1a; --panel: #16182b; --panel2: #1d2038;
+    --text: #e8e6f0; --dim: #8a8aa0; --accent: #c8562a; --accent2: #e6c878;
+    --ok: #4ade80; --err: #f87171; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; height: 100vh; overflow: hidden; }
+  #app { display: flex; height: 100vh; }
+  .sidebar { width: 230px; background: var(--panel); padding: 20px 16px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid #242748; }
+  .logo { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+  .logo span { color: var(--accent2); }
+  .nav-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--dim); font-size: 14px; }
+  .nav-item.active, .nav-item:hover { background: var(--panel2); color: var(--text); }
+  .main { flex: 1; padding: 28px 36px; overflow-y: auto; }
+  h1 { font-size: 22px; margin-bottom: 6px; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 24px; }
+  .card { background: var(--panel); border: 1px solid #242748; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
+  .card h3 { font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--panel2); color: var(--dim); }
+  .badge.ok { background: rgba(74,222,128,.12); color: var(--ok); }
+  .badge.err { background: rgba(248,113,113,.12); color: var(--err); }
+  .badge.warn { background: rgba(251,191,36,.12); color: var(--warn); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  button { background: var(--accent); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  button.secondary { background: var(--panel2); color: var(--text); border: 1px solid #2d3158; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  input { background: var(--panel2); border: 1px solid #2d3158; color: var(--text); padding: 10px 12px; border-radius: 8px; width: 100%; font-size: 14px; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .app-card { background: var(--panel); border: 1px solid #242748; border-radius: 12px; padding: 16px; }
+  .app-card .name { font-weight: 600; font-size: 15px; }
+  .app-card .desc { color: var(--dim); font-size: 12px; margin: 8px 0 12px; min-height: 34px; }
+  .plugin-item { padding: 10px 0; border-bottom: 1px solid #242748; }
+  .plugin-item:last-child { border-bottom: none; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .hidden { display: none !important; }
+  .login-wrap { display: flex; align-items: center; justify-content: center; height: 100%; }
+  .login-box { width: 360px; background: var(--panel); border: 1px solid #242748; border-radius: 16px; padding: 32px; }
+  .login-box h2 { margin-bottom: 20px; font-size: 18px; }
+  .err-msg { color: var(--err); font-size: 13px; margin-top: 8px; }
+  .muted { color: var(--dim); font-size: 12px; }
+  a { color: var(--accent2); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 登录视图 -->
+  <div id="view-login" class="login-wrap hidden">
+    <div class="login-box">
+      <div class="logo">昆仑镜 <span>KUNLUN</span></div>
+      <h2>登录昆仑镜账号</h2>
+      <input id="login-account" placeholder="邮箱 / 手机号 / 账号" autocomplete="username" />
+      <input id="login-password" type="password" placeholder="密码" autocomplete="current-password" />
+      <button id="btn-login" style="width:100%">登 录</button>
+      <div id="login-err" class="err-msg"></div>
+      <div class="muted" style="margin-top:16px">登录即完成设备激活（Steam/Adobe 激活模式，随机设备标识，不采集硬件序列号）</div>
+    </div>
+  </div>
+
+  <!-- 主视图 -->
+  <div id="view-main" class="hidden">
+    <div class="sidebar">
+      <div class="logo">昆仑镜 <span>KUNLUN</span></div>
+      <div class="nav-item active" data-view="apps">我的应用</div>
+      <div class="nav-item" data-view="plugins">插件授权</div>
+      <div class="nav-item" data-view="device">设备信息</div>
+      <div style="flex:1"></div>
+      <div class="nav-item" id="btn-logout">退出登录</div>
+    </div>
+    <div class="main">
+      <div id="page-apps">
+        <h1>我的应用</h1>
+        <div class="sub" id="sub-apps">加载中…</div>
+        <div class="grid" id="apps-grid"></div>
+      </div>
+      <div id="page-plugins" class="hidden">
+        <h1>插件授权</h1>
+        <div class="sub" id="sub-plugins">加载中…</div>
+        <div class="card" id="plugins-list"></div>
+      </div>
+      <div id="page-device" class="hidden">
+        <h1>设备信息</h1>
+        <div class="sub">设备身份与本地应用安装记录</div>
+        <div class="card" id="device-info"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// ECO-11.2 Kunlun Desktop Shell UI
+// 掌柜冻结：只读 Shell；启动线上工作台 = 新 WebView 窗口
+// API 走线上 https://aigc.fushtn.com（生产）或 http://127.0.0.1:4002（本地调试）
+// ─────────────────────────────────────────────
+const API_BASE = (window.__KUNLUN_API__) || 'https://aigc.fushtn.com';
+const WORKSPACE_BASE = 'https://aigc.fushtn.com';
+const isTauri = !!(window.__TAURI_INTERNALS__);
+
+let creds = { device_id: null, device_token: null, device_fingerprint: null, access_token: null, user_name: null, organization_id: null };
+let apps = [];
+let plugins = [];
+
+const $ = (id) => document.getElementById(id);
+
+// ── Tauri 桥 ────────────────────────────────
+async function invoke(cmd, args = {}) {
+  if (!isTauri) {
+    // 浏览器调试模式：本地模拟（不落盘）
+    if (cmd === 'get_credentials') return { device_id: localStorage.getItem('dbg_device_id'), access_token: localStorage.getItem('dbg_token') };
+    if (cmd === 'save_credentials') {
+      if (args.device_id) localStorage.setItem('dbg_device_id', args.device_id);
+      if (args.access_token) localStorage.setItem('dbg_token', args.access_token);
+      return {};
+    }
+    if (cmd === 'clear_credentials') { localStorage.removeItem('dbg_device_id'); localStorage.removeItem('dbg_token'); return {}; }
+    if (cmd === 'generate_device_fingerprint') return crypto.randomUUID();
+    if (cmd === 'open_workspace') { window.open(args.url, '_blank'); return {}; }
+    return {};
+  }
+  return window.__TAURI__.core.invoke(cmd, args);
+}
+
+// ── 视图切换 ────────────────────────────────
+function showMain() { $('view-login').classList.add('hidden'); $('view-main').classList.remove('hidden'); }
+function showLogin() { $('view-main').classList.add('hidden'); $('view-login').classList.remove('hidden'); }
+function switchPage(name) {
+  ['apps','plugins','device'].forEach(p => $(`page-${p}`).classList.toggle('hidden', p !== name));
+  document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.toggle('active', n.dataset.view === name));
+}
+
+// ── API ─────────────────────────────────────
+async function api(path, { method = 'GET', body } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (creds.access_token) headers['Authorization'] = `Bearer ${creds.access_token}`;
+  const res = await fetch(`${API_BASE}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 401) { await logout(); throw new Error('登录已过期，请重新登录'); }
+  if (json.code !== 0 && json.code !== undefined && json.code !== 200) throw new Error(json.message || `请求失败(${res.status})`);
+  return json.data ?? json;
+}
+
+// ── 登录 ────────────────────────────────────
+async function doLogin() {
+  const account = $('login-account').value.trim();
+  const password = $('login-password').value;
+  $('login-err').textContent = '';
+  if (!account || !password) { $('login-err').textContent = '请输入账号和密码'; return; }
+  try {
+    const data = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account, password }),
+    }).then(r => r.json());
+    const token = data.accessToken;
+    if (!token) throw new Error(data.message || '登录失败');
+    creds.access_token = token;
+    creds.user_name = data.user?.email || data.user?.name || account;
+    creds.organization_id = data.user?.organizationId || null;
+    await invoke('save_credentials', { access_token: token, user_name: creds.user_name, organization_id: creds.organization_id });
+    await ensureDevice();
+    showMain();
+    await refreshApps(); await refreshPlugins(); await refreshDevice();
+  } catch (e) { $('login-err').textContent = e.message; }
+}
+
+// ── 设备注册（首次：随机指纹 + 签名 token + 用户确认=已登录）──
+async function ensureDevice() {
+  if (creds.device_id) return;
+  const fingerprint = await invoke('generate_device_fingerprint');
+  const data = await api('/api/ecosystem/devices/register', {
+    method: 'POST',
+    body: { deviceName: `Kunlun Desktop (${navigator.platform || 'Windows'})`, os: 'windows', deviceFingerprint: fingerprint },
+  });
+  creds.device_id = data.device.deviceId;
+  creds.device_token = data.token;
+  await invoke('save_credentials', { device_id: creds.device_id, device_token: creds.device_token, device_fingerprint: fingerprint });
+}
+
+// ── 应用列表 ────────────────────────────────
+async function refreshApps() {
+  try {
+    const data = await api('/api/ecosystem/applications');
+    apps = data.applications || [];
+    $('sub-apps').textContent = `共 ${apps.length} 个内置应用 · 启动即打开线上工作台`;
+    $('apps-grid').innerHTML = apps.map(a => `
+      <div class="app-card">
+        <div class="name">${a.name}</div>
+        <div class="desc">${a.description || ''}</div>
+        <div class="row">
+          <span class="badge">${a.category || ''}</span>
+          <button data-app-slug="${a.slug}" data-app-entry="${a.workspaceEntry || ''}">启动</button>
+        </div>
+      </div>`).join('');
+    document.querySelectorAll('[data-app-slug]').forEach(b => b.addEventListener('click', () => launchApp(b.dataset.appSlug, b.dataset.appEntry)));
+  } catch (e) { $('sub-apps').textContent = `❌ ${e.message}`; }
+}
+
+function launchApp(slug, entry) {
+  const url = `${WORKSPACE_BASE}${entry || '/workspace/media'}`;
+  invoke('open_workspace', { url, access_token: creds.access_token });
+}
+
+// ── 插件授权状态 ────────────────────────────
+async function refreshPlugins() {
+  try {
+    if (!creds.device_id) { $('sub-plugins').textContent = '未注册设备'; return; }
+    const data = await api(`/api/ecosystem/devices/${creds.device_id}/authorized-plugins`);
+    plugins = data.plugins || [];
+    $('sub-plugins').textContent = `设备状态: ${data.deviceStatus || 'ACTIVE'} · ${plugins.length} 个有效授权`;
+    $('plugins-list').innerHTML = plugins.length === 0
+      ? '<div class="muted">暂无已授权插件（订阅插件后此处自动出现）</div>'
+      : plugins.map(p => `
+        <div class="plugin-item row">
+          <div>
+            <span class="status-dot" style="background:${p.allowed ? 'var(--ok)' : 'var(--err)'}"></span>
+            <strong>${p.name}</strong> <span class="badge">${p.type}</span>
+            <div class="muted">${p.pluginId} · ${p.licenseType} · 到期 ${new Date(p.expireAt).toLocaleDateString()}</div>
+          </div>
+          <span class="badge ${p.allowed ? 'ok' : 'err'}">${p.allowed ? '可运行' : '受限'}</span>
+        </div>`).join('');
+  } catch (e) { $('sub-plugins').textContent = `❌ ${e.message}`; }
+}
+
+// ── 设备信息 ────────────────────────────────
+async function refreshDevice() {
+  if (!creds.device_id) { $('device-info').innerHTML = '<div class="muted">未注册设备</div>'; return; }
+  try {
+    const data = await api(`/api/ecosystem/devices/me?deviceId=${creds.device_id}`);
+    const d = data.device;
+    $('device-info').innerHTML = `
+      <div class="row"><span class="muted">设备 ID</span><code>${d.deviceId}</code></div>
+      <div class="row"><span class="muted">设备名</span><span>${d.deviceName || '—'}</span></div>
+      <div class="row"><span class="muted">系统</span><span>${d.os || '—'}</span></div>
+      <div class="row"><span class="muted">状态</span><span class="badge ${d.status === 'ACTIVE' ? 'ok' : 'warn'}">${d.status}</span></div>
+      <div class="row"><span class="muted">最后心跳</span><span>${d.lastHeartbeat ? new Date(d.lastHeartbeat).toLocaleString() : '—'}</span></div>
+      <div class="row"><span class="muted">本地应用</span><span>${(d.localApps || []).map(a => a.name + ' v' + a.version).join('、') || '—'}</span></div>`;
+  } catch (e) { $('device-info').innerHTML = `<div class="err-msg">${e.message}</div>`; }
+}
+
+// ── 退出 ────────────────────────────────────
+async function logout() {
+  await invoke('clear_credentials');
+  creds = { device_id: null, device_token: null, device_fingerprint: null, access_token: null, user_name: null, organization_id: null };
+  showLogin();
+}
+
+// ── 心跳（吊销信号轮询）─────────────────────
+async function heartbeatLoop() {
+  if (!creds.device_id || !creds.device_token) return;
+  try {
+    const data = await api(`/api/ecosystem/devices/${creds.device_id}/heartbeat`, {
+      method: 'POST', body: { token: creds.device_token },
+    });
+    if (data.allowed === false) { alert('设备已被管理员吊销/禁用，请重新登录'); await logout(); }
+  } catch (e) { /* 网络抖动忽略 */ }
+}
+setInterval(heartbeatLoop, 60000);
+
+// ── 启动 ────────────────────────────────────
+async function boot() {
+  document.querySelectorAll('.nav-item[data-view]').forEach(n => n.addEventListener('click', () => switchPage(n.dataset.view)));
+  $('btn-login').addEventListener('click', doLogin);
+  $('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  $('btn-logout').addEventListener('click', logout);
+
+  creds = await invoke('get_credentials');
+  if (creds.access_token) {
+    try {
+      await ensureDevice();
+      showMain();
+      await refreshApps(); await refreshPlugins(); await refreshDevice();
+    } catch (e) {
+      await logout(); // token 失效 → 回登录
+    }
+  } else {
+    showLogin();
+  }
+}
+boot();
+</script>
+</body>
+</html>

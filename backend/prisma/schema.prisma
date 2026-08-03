@@ -10404,3 +10404,54 @@ model EcologyPartnerReward {
   @@index([performanceId])
   @@map("ecology_partner_rewards")
 }
+
+// ═══════════════════════════════════════════════════════════
+// SPRINT-ECO-11.2 — Kunlun Desktop Shell（本地应用生态 · 设备层）
+// 掌柜冻结（2026-08-04）：
+//   - 设备授权策略 = B 设备级授权 MVP（Organization → Device → Local App → Plugin Runtime）
+//   - 设备指纹 = 随机 device_id + 签名 token + 用户确认（Steam/Adobe 激活模式）
+//   - ❌ 禁止硬件绑定（CPU 序列号 / 硬盘序列号 / MAC 唯一绑定——换机客服成本）
+//   - 纪律：只新增 ecology_* 表；不碰 PaymentOrder/Subscription/User/Organization/Agent/Hermes
+//   - ECO-11.2 只建设 Desktop Shell 基础能力：设备注册 / 应用列表 / 授权状态 / 启动线上工作台
+//     Plugin Runtime（ecology_local_plugin_runtime）留 ECO-11.3，本 Sprint 不建
+// ═══════════════════════════════════════════════════════════
+
+model EcologyDevice {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  deviceId          String   @unique @map("device_id") @db.VarChar(80) // 随机业务标识（uuid v4，非硬件序列号）
+  organizationId    String   @map("organization_id") @db.Text // Organization.id（设备归属组织，隔离基础）
+  userId            String   @map("user_id") @db.Text // User.id（注册设备的用户 = 激活确认人）
+  deviceName        String?  @map("device_name") @db.VarChar(120) // 用户可读名（如 "掌柜的 Windows 工作机"）
+  deviceFingerprint String   @map("device_fingerprint") @db.VarChar(200) // 随机指纹（客户端生成，服务端只存不逆向）
+  os                String?  @db.VarChar(60) // windows | macOS | linux + 版本（如 windows-11）
+  status            String   @default("ACTIVE") @db.VarChar(20) // ACTIVE | DISABLED | REVOKED（REVOKED=吊销，heartbeat 403）
+  deviceTokenHash   String   @map("device_token_hash") @db.VarChar(128) // 签名 token 的 SHA-256（服务端不存明文 token）
+  lastHeartbeat     DateTime? @map("last_heartbeat") // 最近心跳（吊销/失效判定依据）
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  localApps EcologyLocalApp[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("ecology_devices")
+}
+
+model EcologyLocalApp {
+  id            String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  organizationId String  @map("organization_id") @db.Text // Organization.id（与设备同组织，隔离一致）
+  deviceId      String   @map("device_id") @db.Text // EcologyDevice.id
+  applicationId String   @map("application_id") @db.Text // ecology_applications.id（如 kunlun-media）
+  version       String   @db.VarChar(30) // 本地安装的应用版本（semver，更新审计）
+  installPath   String?  @map("install_path") @db.Text // 本地安装路径（Windows: %LOCALAPPDATA%\Kunlun Desktop\apps\...）
+  status        String   @default("INSTALLED") @db.VarChar(20) // INSTALLED | UNINSTALLED | UPDATING
+  installedAt   DateTime @default(now()) @map("installed_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  device EcologyDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, applicationId]) // 一设备一应用一条记录（卸载不删行，保留历史）
+  @@index([organizationId])
+  @@index([applicationId])
+  @@map("ecology_local_apps")
+}
