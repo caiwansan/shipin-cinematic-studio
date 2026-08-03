@@ -125,11 +125,18 @@ jobs:
       - name: List artifacts
         run: ls -la artifacts/ && sha256sum artifacts/*.exe
 
-      - name: Publish diagnostic release
+      # 幂等发布：同 tag 重跑时先删旧 Release（与 desktop-release.yml 同款模式）
+      - name: Clean existing release (idempotent republish)
         run: |
           gh release delete ${{ github.ref_name }} --yes --cleanup-tag || true
-          gh release create ${{ github.ref_name }} artifacts/*.exe \
-            --title "Diagnostic Matrix ${{ github.ref_name }}" \
-            --notes "RCA-01 构建矩阵（A=纯HTML / B=Vue静态 / C=完整壳）。仅诊断测试，勿用于用户下载。"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 发布用 softprops/action-gh-release（与正式版同款；gh CLI create 曾在 publish 步骤失败）
+      - name: Publish diagnostic release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Diagnostic Matrix ${{ github.ref_name }}
+          draft: false
+          prerelease: true
+          generate_release_notes: false
+          files: artifacts/*.exe
