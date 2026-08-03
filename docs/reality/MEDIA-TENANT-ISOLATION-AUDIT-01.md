@@ -1,99 +1,89 @@
-# SPRINT-MEDIA-TENANT-ISOLATION-AUDIT-01 — 租户隔离 P0 审计（只审计，零代码改动）
+# SPRINT-MEDIA-TENANT-ISOLATION-AUDIT-01 — 多租户隔离 P0 审计（只审计，零改动）— COMPLETE ✅
 
-**Date:** 2026-08-03 08:10
-**Gate:** 掌柜 P0 指令（账号 B 疑似可见账号 A 的南波万渠道资产 → 先查后修，P0 优先于 QR Latency）
-**结论:** 掌柜判断成立 —— **租户隔离存在 3 条 P0 级代码漏洞**；当前数据下「未串」是 500 bug 与残缺数据碰巧挡路，**非隔离有效**。
+**Date:** 2026-08-03 08:30
+**Gate:** 掌柜 P0 指令（「账号 B 登录仍看到账号 A 的渠道账号 = 数据越权展示，安全级问题」→ 停止修登录，只审计不改代码，先找出哪层漏了用户身份绑定）
 
 ---
 
-## 一句话判定
+## 审计结论（先答掌柜的假设）
 
-> 无企业用户（JWT 无 org）登录后：
-> - **跨租户接口** `/api/enterprise/:tenantId/channels/accounts`：URL 传南波万 tenantId 即可读其账号（当前被权限服务 500 挡路，**修好即 IDOR 直通**）
-> - **owner-view**：`organizationId === 'default'` 跳过过滤 → 返回全部 media workspace（当前因绑定 agent 数据残缺显示为空，属假阴性）
-> - **tenant-guard**（TENANT_ID_FROM_JWT_ONLY 规则）：**定义了但零注册**，从未生效
+**掌柜判断 ✅ 成立，且问题比报的更严重，分两级：**
+
+| 级别 | 问题 | 实测 |
+|---|---|---|
+| **P0-A 跨企业 IDOR**（掌柜没报，审计新发现） | `GET /channels/:id/reality` 无任何 org/owner 过滤（历史「全局资源」注释包袱） | 无组织用户 iso 读南波万抖音 → **200 + 泄露 externalAccountId=881306 + 账号名「南坡万」** |
+| **P0-B 同企业用户级隔离缺失**（掌柜报的） | owner-view / accounts / account-status / ensure-account 只按 organizationId 过滤，**未绑定当前用户** | 账号B(tenant_org_test) → 看到南波万(ownerId=0ba5bf98) 的抖音+快手+2台数字电脑 |
+
+**根因一句话：查询链只绑了「企业」（organizationId），没绑「用户」（ownerId）——Single Identity Authority 缺最后一段；channel-reality 连企业都没绑。**
 
 ---
 
 ## Task01 数据模型审计
 
-| 模型 | 租户字段 | 现状 |
-|---|---|---|
-| EnterpriseChannelAccount | tenantId / governanceTenantId / organizationId / ownerId / ownerType / manageRole | ✅ 字段齐全，**但值严重混乱**（见下） |
-| BrowserWorkspace | tenantId / organizationId / channelAccountId / businessType | ✅ 字段齐全，与账号 org 基本对齐 |
-| AgentChannelBinding | agentInstanceId / channelAccountId / browserWorkspaceId | ✅ 字段齐全（2 条存量绑定） |
-
-**账号租户值混乱（数据治理问题）：**
-
-| 账号 | tenantId | organizationId | ownerId | 判定 |
+| 模型 | tenantId | organizationId | ownerId | 结论 |
 |---|---|---|---|---|
-| 抖音 南坡万（08a0f643） | 9af5f6bd（=昆仑镜验收测试企业 govOrg tenant ✅） | 11111111-2222（昆仑镜验收测试企业 ✅） | 0ba5bf98（用户南波万 ✅） | **账号层 OK** |
-| 快手（10e0ea29） | affc9201（幽灵，无对应 org/user ❌） | affc9201（幽灵 ❌） | 0ba5bf98 | tenant 幽灵 |
-| 微信 骏霄（c4a1b25f） | d57d9df8（幽灵 ❌） | **空** | **空** | **孤儿 CONNECTED** |
-| 小红书（45663e51） | 0ba5bf98（=用户 id 当 tenant ❌） | 空 | 空 | 孤儿 |
+| EnterpriseChannelAccount | ✅ | ✅ | ✅ ownerId(govUser) | **归属字段齐全——但查询没用 ownerId** |
+| BrowserWorkspace | ✅ | ✅ | ❌ 无 | 缺用户级归属字段 |
+| AgentChannelBinding | ✅(governance tenant) | ❌ 无 | 需经 agent 反查 | 企业级归属靠反查链 |
+| EnterpriseAgentInstance | ✅ | ✅ | employeeId | 归属齐（反查链可用） |
 
-**结构性矛盾（G4 实锤）:** 南波万用户 govUser 链 → tenant f28823ce → org `c7064fde`（郑州骏霄），但抖音账号 org=`11111111-2222`（昆仑镜验收测试企业）→ **南波万本人登录，owner-view 按自身 org 过滤 → 看不到自己的抖音账号**。用户→org 映射链与账号写入 org 是两条线，从未对齐。
+## Task02 API 审计（13 个查询点全查）
 
-## Task02 API 审计
+**🔴 P0-A 跨企业 IDOR（1 处）**
+- `channel-reality.routes.ts:51` — `findFirst({id})` 零过滤。任何登录用户（含无组织）可读任意账号 identity/externalAccountId。代码注释声称「渠道账号是组织级全局资源，仅要求已认证」——历史包袱，与 FIX-01 的隔离原则直接冲突
 
-### 🔴 P0-1 跨租户账户接口零校验（IDOR 通道）
-```ts
-// src/routes/enterprise-channel.ts:171
-app.get('/api/enterprise/:tenantId/channels/accounts', async (request, reply) => {
-  const { tenantId } = request.params as any          // ← URL 客户端可控
-  const accounts = await channelAccountService.listAccounts(tenantId)  // ← 直接查库
-})
+**🔴 P0-B 同企业用户级隔离缺失（4 处，掌柜报的）**
+- `owner-view`（browser-workspace.routes.ts:281）— `wsWhere={businessType, organizationId}` → 账号B 看到账号A 的数字电脑
+- `GET /channels/accounts`（enterprise-channel.ts:200）— `listAccountsByOrg(orgId)` → 账号B 看到账号A 的账号
+- `account-status`（enterprise-channel-runtime.ts:137）— `{channelType, organizationId}` → 账号B 看账号A 登录状态
+- `ensure-account`（enterprise-channel-runtime.ts:174）— `{channelType, organizationId}` + `findFirst` → **写路径串号：账号B 发起连接会复用账号A 的抖音账号**（最危险：不只是读泄露，是操作串号）
+- （连带）browser-workspace.routes.ts:94 创建 workspace 未指定账号时同样跨用户取号
+
+**🟡 B 级 tenantId 语义风险（5 处，调用方来源待定，未逐条实锤）**
+- enterprise-channel.ts:575 `{tenantId, channelType:'wechat_work'}`（URL tenantId，guard 已校验，低危）
+- channel.service.ts:882 `{tenantId}`（调用方来源待查）
+- agent-channel-binding.service.ts:212 `getAvailableChannels({tenantId})`（tenantId 参数来源待查）
+- agent-channel-binding.service.ts:115 bind 校验 `{id, tenantId: dto.tenantId}`（tenantId 客户端传入，可伪造）
+- roi-dashboard.service.ts:134 `{tenantId, status:'active'}`（**status 字段不存在于表**——Prisma 应报错，接口疑似恒 500）
+
+**✅ 已隔离（FIX-01 确认，保持）**
+- 跨企业 org 过滤：iso/骏霄 全部 403；无 org 用户 owner-view/accounts/workspaces 403
+
+## Task03 实测复现（铁证）
+
 ```
-- 无任何 JWT org 比对；任意登录用户传任意 tenantId 即可读该租户全部账号
-- 同类：`POST /api/enterprise/:tenantId/channels/accounts`（任意用户给任意租户建账号）、`GET .../accounts/:id`（详情无校验）
-- **当前 500 掩盖**：`channel-permission.service.ts:70` 调 `prisma.govUser.findFirst({ where: { userId: input.govUserId, ... } })` —— **GovUser 模型无 userId 字段** → 该权限检查**从未成功过**（Prisma Unknown field 抛错）→ 修复此 bug 后 IDOR 直接暴露
+账号B(tenant_org_test@audit.local) 登录：
+  owner-view → 200, 2 台数字电脑（南波万抖音 b27a2e1e + 快手 e310162e）
+  accounts   → 200, 3 条（南波万抖音 ownerId=0ba5bf98、快手 ownerId=0ba5bf98）
 
-### 🔴 P0-2 owner-view 无企业用户不过滤
-```ts
-// src/routes/browser-workspace.routes.ts:31-37
-const ctx = (request) => ({
-  organizationId: user?.organizationId || user?.orgId || user?.tenantId || user?.id || 'default',
-})
-// :254 owner-view
-const wsWhere = { businessType }
-if (organizationId && organizationId !== 'default') { wsWhere.organizationId = organizationId }  // ← 'default' 不过滤！
+无组织用户(tenant_iso_test@audit.local)：
+  reality(南波万抖音) → 200, externalAccountId=881306 泄露
 ```
-- 无 org 用户（getOrganizationIdForUser 返回 null → JWT 无 org）→ fallback `'default'` → **跳过 org 过滤 → 返回全部 media workspace**
-- 实测 careeruitest（无 govUser）owner-view 返回 0 —— **假阴性**：存量绑定 agent `7e0b486f` 在 DB 不存在，全部被 `agent/profile 域过滤` 跳过。一旦存在 media 域 agent 绑定，无企业用户即可见全部
 
-### 🔴 P0-3 tenant-guard 零注册
-- `src/middleware/tenant-guard.ts` 定义了严格规则（禁客户端传 tenantId / 仅 JWT 取 org），**但 `registerTenantGuard` 全仓无任何调用** → 保护从未生效
-- G3 实测：带 `?tenantId=hack-attempt` 请求未被 403
+## Task04 Reality Gate：1/4 PASS，3 FAIL（缺口实锤）
 
-### 🟡 其他
-- `getAccounts(tenantId)` 带 tenantId 过滤 ✅（但上层入口把 tenantId 暴露在 URL，可信性为零）
-- `resolveTenantId` 本身正确（JWT-only），只是没人用它
+```
+✅ A1 无组织用户 owner-view 403（跨企业隔离保持）
+❌ A2 账号B 看到账号A 渠道账号 2 条（用户级隔离缺失）
+❌ A3 账号B 看到账号A 数字电脑 2 台（用户级隔离缺失）
+❌ A4 无组织用户读他人 reality 200 + externalAccountId 泄露（跨企业 IDOR）
+```
+脚本：scripts/reality-check-tenant-isolation-audit-01.mjs（可重复执行）
 
-## Task03 前端非重点（后端响应即真相）
-- 前端看到的 = 后端已返回；本审计全部聚焦后端查询链与响应
-- 实测响应：跨租户 500 / owner-view [] / registry 平台能力清单（无账号数据）
+---
 
-## Task04 Reality Gate（scripts/reality-check-tenant-isolation-01.mjs）
+## 修复方案（待掌柜批准——本 sprint 只审计零改动）
 
-**2/5 PASS，3 FAIL**
+**决策点 1（产品语义，掌柜定）：渠道账号是企业共享资产还是用户私有资产？**
+- 选项 A「用户私有」：ownerId=登录者，他人不可见（推荐——与掌柜「谁登录的账号归谁」一致；AI 员工绑定是唯一授权通道）
+- 选项 B「企业共享」：保持现状 organizationId 可见（但 ensure-account 仍须禁止 findFirst 偷取他人账号）
+- 注意影响：若选 A，掌柜（非南波万）将看不到南波万账号——掌柜验收场景需「南波万→掌柜」显式共享授权或确认掌柜=南波万本人
 
-| 用例 | 预期 | 现状 | 结果 |
-|---|---|---|---|
-| G1 无企业用户跨租户读账号 | 被拒/空 | HTTP 500（权限服务 bug 挡路，非隔离） | ❌ FAIL |
-| G2 无企业用户 owner-view | 空 | 空（假阴性，代码路径无 org 过滤） | ✅ PASS* |
-| G3 tenant-guard 挂载 | 已挂载 | 未挂载（零注册） | ❌ FAIL |
-| G4 南波万用户 org 一致性 | 用户 org = 账号 org | 用户 c7064fde(骏霄) ≠ 账号 11111111(昆仑镜验收测试企业) | ❌ FAIL |
-| G5 registry 无敏感数据 | 无账号身份 | 仅平台能力清单 | ✅ PASS |
+**修复清单（批准后执行）：**
+1. 🔴 `channel-reality` 补 org 校验（任何模型都必须做——跨企业 IDOR 无争议）
+2. 🔴 `ensure-account` 禁止复用他人账号：账号 B 连接时只允许「新建自己账号」或「显式选中自己 ownerId 的账号」，绝不允许 findFirst 偷取
+3. 🔴 owner-view / accounts / account-status 绑定 ownerId（若选 A）
+4. 🟡 agent-channel-binding tenantId 语义统一（governance tenantId 或 organizationId 二选一）
+5. 🟡 roi-dashboard 的 status 字段修复（疑似恒 500）
 
-## 修复建议（待掌柜批准，不在本 sprint 动手）
-
-1. **tenant-guard 挂载**到全部 `/api/enterprise/*` 路由组；无 org 用户 → 403（而非 fallback default）
-2. **accounts 路由去 URL tenantId**：从 JWT 解析；删除/废弃 `:tenantId` 路径参数
-3. **修 channel-permission.service**：`userId` 字段不存在 → 改按 email 关联 govUser 或改查真实字段（此 bug 当前同时是「保护」与「500 祸根」）
-4. **owner-view ctx 收紧**：删除 `'default'` 宽松路径；businessType+org 双重过滤改为强制
-5. **数据治理**：快手 tenant（affc9201 幽灵）、骏霄孤儿（org/owner 空）、小红书 tenant=用户 id 三类脏数据统一迁移到真实 govOrg tenant；南波万用户 org 与账号 org 对齐（决策：账号归昆仑镜验收测试企业 还是 骏霄？）
-
-## 关联
-- 冻结清单中「⏸ 安全项（明文 Key / IDOR）单独进 Security Sprint」→ 掌柜本次升级为 **P0 提前审计**；本 sprint 只审计，修复方案待批
-- QR Latency 审计（qr-latency-audit-01.mjs）已就绪暂停，P0 处置后恢复
-- 审计动作说明：为实测临时重置 careeruitest 密码（已恢复原 hash）、未创建任何数据、未改任何代码
+**数据迁移影响（若选 A）：** ChannelAccount 已有 ownerId 字段（南波万 0ba5bf98），无需改表；BrowserWorkspace 需补 ownerId 列（或经 channelAccountId 反查 ownerId）；AgentChannelBinding 经 agent 反查 org。
