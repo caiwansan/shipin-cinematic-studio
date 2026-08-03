@@ -45,6 +45,12 @@ P2  AI内容运营经理 Business Reality（Task02）
 
 ## 1.5 USER-01 启动前冻结原则（掌柜 2026-08-04 补充）
 
+### USER-01 启动三条件（门禁，全部满足才启动）
+
+1. **第一个 AI 商品验证成立**：用户 → 安装 Kunlun Media.exe → 订阅 AI内容运营经理 → 真实使用 → 产生价值
+2. **收益链真实存在**：License → Revenue Snapshot → Settlement → PartnerReward 基础设施已成立，但需真实商品验证——否则「收益页面↑没有真实业务」= 商业展示壳
+3. **保持生态商业纪律**：❌ 注册奖励 ❌ 下载奖励 ❌ 邀请奖励 ❌ 拉人返佣；只允许 真实插件订阅收入 → Settlement → 开发者收益 → 生态伙伴收益
+
 ### 不改 Identity Authority
 
 复用：`User → Organization → Subscription → Ecology`
