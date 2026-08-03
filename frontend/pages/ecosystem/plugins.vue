@@ -4,6 +4,9 @@
 <template>
   <div class="eco-plugins-page">
     <div class="page-header">
+      <div class="page-header-top">
+        <EcosystemEcoBackHome />
+      </div>
       <h1>🧩 昆仑镜 AI 插件中心</h1>
       <p class="page-subtitle">发现、安装和管理 AI 员工与智能工作流插件</p>
     </div>
@@ -355,6 +358,7 @@ onMounted(load)
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 .page-header h1 { font-size: 24px; margin: 0 0 4px; }
+.page-header-top { margin-bottom: 12px; }
 .page-subtitle { color: #666; margin: 0 0 16px; font-size: 14px; }
 .state-box { text-align: center; padding: 60px 0; color: #666; }
 .state-box.error { color: #c0392b; }

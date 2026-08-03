@@ -4,6 +4,9 @@
 <template>
   <div class="eco-apps-page">
     <div class="page-header">
+      <div class="page-header-top">
+        <EcosystemEcoBackHome />
+      </div>
       <h1>🧩 应用中心</h1>
       <p class="page-subtitle">昆仑镜 AI 应用生态 — 9 大应用，点击进入对应工作台（ECO-09 Application Center Navigation）</p>
     </div>
@@ -143,6 +146,7 @@ onMounted(load)
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 .page-header h1 { font-size: 24px; margin: 0 0 4px; }
+.page-header-top { margin-bottom: 12px; }
 .page-subtitle { color: #666; margin: 0 0 16px; font-size: 14px; }
 .state-box { text-align: center; padding: 60px 0; color: #666; }
 .state-box.error { color: #c0392b; }
