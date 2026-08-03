@@ -52,6 +52,7 @@ Task01 不是失败，是**验收入口不存在**。缺的是 SaaS 产品 vs �
 | G5 | Device 注册成功 |
 | G6 | 工作台可打开 |
 | G7 | AI内容运营经理插件入口存在 |
+| G8 | **产品发行真实性**：无开发环境（无 Node/Rust/VS/源码/命令行）的普通 Windows 用户，只收到一个下载地址，可完成安装并启动 |
 
 通过后 → Phase A Task01 真机五轮 → Task02 AI内容运营经理 Business Reality → USER-CENTER（用户中心依然不能提前做）
 
