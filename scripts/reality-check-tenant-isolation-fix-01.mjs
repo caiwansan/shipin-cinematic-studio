@@ -45,14 +45,16 @@ async function main() {
     else FAIL('G1b 无 org 用户 JWT', '意外携带 org=' + p2.organizationId)
   }
 
-  // ── G2 ChannelAccount 隔离 ──
+  // ── G2 ChannelAccount 隔离（FIX-02 用户私有语义更新：无授权用户只见自己账号）──
   {
     const r = await fetch(API + '/api/enterprise/channels/accounts', { headers: HOrg })
     const j = await r.json()
     const types = (j.data || []).map(a => a.channelType).sort()
-    if (r.status === 200 && types.join(',') === 'douyin,kuaishou')
-      PASS('G2 ChannelAccount隔离', '本 org 只见 douyin+kuaishou（南坡万/快手）')
-    else FAIL('G2 ChannelAccount隔离', `status=${r.status} types=${types}`)
+    // FIX-02：tenant_org_test 无南波万账号授权 → 只可见自己 ensure-account 创建的 douyin（未连接）
+    const leaked = (j.data || []).some(a => a.channelName === '南坡万' || a.channelName === '快手')
+    if (r.status === 200 && !leaked)
+      PASS('G2 ChannelAccount隔离', `只见自己账号 types=${types.join(',')}（南坡万/快手不可见）`)
+    else FAIL('G2 ChannelAccount隔离', `status=${r.status} types=${types} 泄露=${leaked}`)
   }
   {
     const r = await fetch(API + '/api/enterprise/' + JUNXIAO_TENANT + '/channels/accounts', { headers: HOrg })
@@ -63,8 +65,9 @@ async function main() {
     const r = await fetch(API + '/api/enterprise/channels/runtime/douyin/account-status', { headers: HOrg })
     const j = await r.json()
     const name = j.data?.accountName || ''
-    if (name === '南坡万' || name === '') PASS('G2c account-status 按 org 过滤', '返回本 org 抖音状态')
-    else FAIL('G2c account-status 按 org 过滤', '返回=' + name)
+    // FIX-02：无授权用户查不到南波万登录状态（返回自己账号状态或不显示）
+    if (name !== '南坡万') PASS('G2c account-status 用户级隔离', '不泄露南波万登录状态（返回=' + (name || '未连接') + '）')
+    else FAIL('G2c account-status 用户级隔离', '泄露南波万=' + name)
   }
   {
     // 跨 org 拿南坡万账号 id 调 metrics → 403
@@ -74,17 +77,16 @@ async function main() {
     else FAIL('G2d 本 org 账号 metrics', 'status=' + r.status)
   }
 
-  // ── G3 OwnerView 隔离 ──
+  // ── G3 OwnerView 隔离（FIX-02 用户私有语义更新）──
   {
     const r = await fetch(API + '/api/enterprise/workspaces/owner-view?businessType=media', { headers: HOrg })
     const j = await r.json()
     const rows = j.data || []
-    // owner-view 已按 org 过滤；断言：返回的 workspace 对应的账号必须属于本 org（南坡万 douyin + kuaishou）
-    const orgAccountIds = ['08a0f643-fb0d-48d5-af18-ad87bd9a34fb', '10e0ea29'] // douyin/kuaishou 前缀
-    const allInOrg = rows.every(w => orgAccountIds.some(pre => String(w.channelAccountId).startsWith(pre)))
-    if (r.status === 200 && rows.length >= 1 && allInOrg)
-      PASS('G3 OwnerView隔离', `返回 ${rows.length} 条，全部属于本 org（无骏霄/小红书/他人资产）`)
-    else FAIL('G3 OwnerView隔离', `status=${r.status} rows=${rows.length} allInOrg=${allInOrg}`)
+    // FIX-02：无授权用户 owner-view 空（不回落看南波万数字电脑）
+    const leaked = rows.some(w => String(w.channelAccountId).startsWith('08a0f643') || String(w.channelAccountId).startsWith('10e0ea29'))
+    if (r.status === 200 && !leaked)
+      PASS('G3 OwnerView隔离', `返回 ${rows.length} 条，无南波万 workspace 泄露（无骏霄/小红书/他人资产）`)
+    else FAIL('G3 OwnerView隔离', `status=${r.status} rows=${rows.length} 泄露=${leaked}`)
   }
 
   // ── G4 Agent Binding 隔离 ──

@@ -416,6 +416,14 @@ export async function registerAgentIdentityRoutes(app: FastifyInstance) {
         return reply.status(400).send({ code: 400, message: 'channelAccountId 为必填' });
       }
 
+      // SPRINT-MEDIA-TENANT-ISOLATION-FIX-02 — 绑定=授权使用，仅账号 owner 或 MANAGE 授权人可操作（防授权绕过）
+      const { prisma } = await import('../utils/index.js')
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      const access = new ChannelAccessService(prisma)
+      if (!(await access.canAccess(user?.id, channelAccountId, 'MANAGE'))) {
+        return reply.status(403).send({ code: 403, error: 'CHANNEL_ACCESS_DENIED', message: '无权绑定该渠道账号（需账号所有者授权）' })
+      }
+
       const binding = await agentChannelBindingService.createBinding({
         tenantId,
         agentInstanceId,

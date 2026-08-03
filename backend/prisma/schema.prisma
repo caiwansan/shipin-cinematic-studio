@@ -7583,7 +7583,8 @@ model EnterpriseChannelAccount {
   verificationSessions  ChannelVerificationSession[]
   browserWorkspace      BrowserWorkspace?
 
-  @@unique([tenantId, channelType])
+  // FIX-02 — 用户私有资产模型：一个用户一个平台一个账号（不再按 tenant 唯一，同组织多用户可各持账号）
+  @@unique([ownerId, channelType])
   @@index([tenantId])
   @@index([governanceTenantId])
   @@index([connectionStatus])
@@ -9799,4 +9800,42 @@ model ChannelAccountOwnerSnapshot {
   operator         String   @map("operator") @db.Text
   createdAt        DateTime @default(now()) @map("created_at")
   @@map("ChannelAccountOwnerSnapshot")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPRINT-MEDIA-TENANT-ISOLATION-FIX-02 — 用户私有资产模型 + 授权层
+// 掌柜批准方案 A（2026-08-03）：ChannelAccount 第一归属 = ownerId(登录创建者)
+// Organization = 工作环境（第二归属）；AI Employee = 授权使用（AgentChannelBinding）
+// 共享访问必须走 ChannelAccountShare 授权层，禁止改 ownerId 绕过授权
+// ═══════════════════════════════════════════════════════════════
+model ChannelAccountShare {
+  id               String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  channelAccountId String    @map("channel_account_id") @db.Text // EnterpriseChannelAccount.id
+  granteeUserId    String    @map("grantee_user_id") @db.Text // 被授权人 user.id
+  permission       String    @default("READ") @db.Text // READ | ANALYZE | MANAGE（MANAGE ⊃ ANALYZE ⊃ READ）
+  createdBy        String?   @map("created_by") @db.Text
+  expiresAt        DateTime? @map("expires_at") // null = 永久
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@unique([channelAccountId, granteeUserId])
+  @@index([granteeUserId])
+  @@index([channelAccountId])
+  @@map("channel_account_share")
+}
+
+// 数据治理审计表：记录账号所有权/归属变更（禁止删除脏数据，只记录）
+model ChannelOwnershipMigration {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  channelAccountId   String    @map("channel_account_id") @db.Text
+  oldOwnerId         String?   @map("old_owner_id") @db.Text
+  newOwnerId         String?   @map("new_owner_id") @db.Text
+  oldOrganizationId  String?   @map("old_organization_id") @db.Text
+  newOrganizationId  String?   @map("new_organization_id") @db.Text
+  operatorUserId     String?   @map("operator_user_id") @db.Text
+  reason             String?   @db.Text
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@index([channelAccountId])
+  @@map("channel_ownership_migration")
 }

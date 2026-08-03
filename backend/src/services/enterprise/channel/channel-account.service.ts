@@ -138,6 +138,18 @@ export class ChannelAccountService {
     })
   }
 
+  // SPRINT-MEDIA-TENANT-ISOLATION-FIX-02 — 用户私有资产模型：列表 = 当前组织 ∩ 用户可访问（owner ∪ share）
+  async listAccountsByOrgForUser(organizationId: string, userId: string) {
+    const { ChannelAccessService } = await import('./channel-access.service.js')
+    const access = new ChannelAccessService(prisma)
+    const accessibleIds = await access.getAccessibleAccountIds(userId)
+    if (!accessibleIds.length) return []
+    return prisma.enterpriseChannelAccount.findMany({
+      where: { organizationId, id: { in: accessibleIds } },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
   /**
    * 获取账户详情
    */

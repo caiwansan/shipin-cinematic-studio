@@ -205,8 +205,85 @@ export async function channelRoutes(app: FastifyInstance) {
     if (!orgId) {
       return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
     }
-    const accounts = await channelAccountService.listAccountsByOrg(orgId)
+    // FIX-02 — 用户私有资产模型：列表 = 当前组织 ∩ 用户可访问（owner ∪ share）
+    const accounts = await channelAccountService.listAccountsByOrgForUser(orgId, (request as any).user?.id)
     return reply.send({ code: 0, data: accounts })
+  })
+
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-MEDIA-TENANT-ISOLATION-FIX-02 — 共享授权层 ChannelAccountShare
+  // 掌柜批准方案 A：禁止改 ownerId 绕过授权；共享访问走本授权层
+  // 权限：READ < ANALYZE < MANAGE（MANAGE 可管理 share）
+  // ═══════════════════════════════════════════════════════════
+  // 创建/更新共享授权（owner 或 MANAGE grantee 可操作）
+  app.post('/api/enterprise/channels/:id/shares', async (request, reply) => {
+    try {
+      const { id } = request.params as any
+      const user = (request as any).user as any
+      const body: any = (request.body as any) || {}
+      const { prisma } = await import('../utils/index.js')
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      const access = new ChannelAccessService(prisma)
+      if (!(await access.canAccess(user?.id, id, 'MANAGE'))) {
+        return reply.status(403).send({ code: 403, error: 'CHANNEL_ACCESS_DENIED', message: '仅账号所有者或 MANAGE 授权人可管理共享' })
+      }
+      if (!body.granteeUserId || !['READ', 'ANALYZE', 'MANAGE'].includes(body.permission || 'READ')) {
+        return reply.status(400).send({ code: 400, message: 'granteeUserId 必填，permission ∈ READ|ANALYZE|MANAGE' })
+      }
+      const share = await prisma.channelAccountShare.upsert({
+        where: { channelAccountId_granteeUserId: { channelAccountId: id, granteeUserId: body.granteeUserId } },
+        create: {
+          channelAccountId: id,
+          granteeUserId: body.granteeUserId,
+          permission: body.permission || 'READ',
+          createdBy: user?.id,
+          expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+        },
+        update: {
+          permission: body.permission || 'READ',
+          expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+        },
+      })
+      return reply.send({ code: 0, data: share })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
+  // 共享授权列表（owner 或 MANAGE 可见）
+  app.get('/api/enterprise/channels/:id/shares', async (request, reply) => {
+    try {
+      const { id } = request.params as any
+      const user = (request as any).user as any
+      const { prisma } = await import('../utils/index.js')
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      const access = new ChannelAccessService(prisma)
+      if (!(await access.canAccess(user?.id, id, 'MANAGE'))) {
+        return reply.status(403).send({ code: 403, error: 'CHANNEL_ACCESS_DENIED', message: '仅账号所有者或 MANAGE 授权人可见共享列表' })
+      }
+      const shares = await prisma.channelAccountShare.findMany({ where: { channelAccountId: id } })
+      return reply.send({ code: 0, data: shares })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
+  })
+
+  // 撤销共享授权
+  app.delete('/api/enterprise/channels/:id/shares/:granteeUserId', async (request, reply) => {
+    try {
+      const { id, granteeUserId } = request.params as any
+      const user = (request as any).user as any
+      const { prisma } = await import('../utils/index.js')
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      const access = new ChannelAccessService(prisma)
+      if (!(await access.canAccess(user?.id, id, 'MANAGE'))) {
+        return reply.status(403).send({ code: 403, error: 'CHANNEL_ACCESS_DENIED', message: '仅账号所有者或 MANAGE 授权人可撤销共享' })
+      }
+      await prisma.channelAccountShare.deleteMany({ where: { channelAccountId: id, granteeUserId } })
+      return reply.send({ code: 0, data: { revoked: true } })
+    } catch (e: any) {
+      return reply.status(400).send({ code: 1, message: e.message })
+    }
   })
 
   // GET /api/enterprise/:tenantId/channels/accounts — 列表

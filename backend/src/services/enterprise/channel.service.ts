@@ -203,6 +203,8 @@ export class ChannelService {
     accountName: string
     externalAccountId?: string
     credential: Record<string, string>
+    // SPRINT-MEDIA-TENANT-ISOLATION-FIX-02 — 用户私有资产模型：创建者即 owner（禁止空 ownerId）
+    ownerId?: string
   }) {
     const encryptedCred = encryptKey(JSON.stringify(input.credential))
     return prisma.enterpriseChannelAccount.create({
@@ -216,8 +218,8 @@ export class ChannelService {
         credentialEncrypted: { cipher: 'aes-256-gcm', payload: encryptedCred } as any,
         connectionStatus: ChannelConnectionStatus.PENDING,
         connectedAt: null,
-        ownerId: '',
-        ownerType: 'org',
+        ownerId: input.ownerId ?? '',
+        ownerType: 'gov_user',
       },
     })
   }

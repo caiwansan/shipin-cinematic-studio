@@ -91,6 +91,13 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     const { id } = request.params as any
     const { agentInstanceId } = request.query as any
     try {
+      // FIX-02 — 用户私有资产：metrics 读取前校验账号可访问（owner 或授权人）
+      const { prisma } = await import('../utils/index.js')
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      const access = new ChannelAccessService(prisma)
+      if (!(await access.canAccess((request as any).user?.id, id, 'READ'))) {
+        return reply.status(403).send({ code: 403, error: 'CHANNEL_ACCESS_DENIED', message: '无权读取该账号指标（需账号所有者授权）' })
+      }
       const metrics = await channelService.fetchMetrics(id, { agentInstanceId })
       return reply.send({ code: 0, data: metrics })
     } catch (e: any) {
@@ -134,8 +141,12 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     try {
       const { prisma } = await import('../utils/index.js')
       const { isChannelConnected, ChannelConnectionStatus } = await import('../constants/channel-connection-status.js')
+      // FIX-02 — 用户私有资产：只查当前用户可访问的账号（owner ∪ share）
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      const access = new ChannelAccessService(prisma)
+      const accessibleIds = await access.getAccessibleAccountIds((request as any).user?.id)
       const account = await prisma.enterpriseChannelAccount.findFirst({
-        where: { channelType: platform, organizationId: orgId },
+        where: { channelType: platform, organizationId: orgId, id: { in: accessibleIds } },
         orderBy: { createdAt: 'asc' },
         select: { id: true, connectionStatus: true, channelName: true, externalAccountId: true, metadata: true },
       })
@@ -171,8 +182,10 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
     const tenantId = govTenantId || orgId || 'default'
     try {
       const { prisma } = await import('../utils/index.js')
+      // FIX-02 — 写路径防串号（P0）：只允许「自己的账号」或「新建自己账号」，
+      // 禁止 findFirst 偷取同组织他人账号（B 扫码覆盖 A 登录态 = 事故）
       let account = await prisma.enterpriseChannelAccount.findFirst({
-        where: { channelType: platform, organizationId: orgId },
+        where: { channelType: platform, organizationId: orgId, ownerId: user.id },
         orderBy: { createdAt: 'asc' },
         select: { id: true },
       })
@@ -185,6 +198,7 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
           platform,
           accountName: '未连接',
           credential: {},
+          ownerId: user.id, // FIX-02 — 创建者即 owner（用户私有资产）
         })
         account = { id: created.id }
       }

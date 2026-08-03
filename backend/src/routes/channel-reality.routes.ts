@@ -38,16 +38,16 @@ export async function channelRealityRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const user = (request as any).user as any
 
-      // ═══ 归属校验（AUDIT-2026-08-03 修正）═══
-      // 原实现 `tenantId = user?.tenantId || user?.id` 有双重错误：
-      // 1) JWT payload 里根本没有 tenantId 字段（实际是 organizationId）→ 全落 user.id
-      // 2) ensure-account 按 platform 复用「全局唯一账号」（findFirst 只查 channelType），
-      //    账号 tenant_id 是创建者 user.id（快手 affc9201 / 视频号 d57d9df8 / 小红书 0ba5bf98
-      //    均非任何组织租户）→ 后续用户登录后 reality 永远 404「无权访问」→ 扫码成功后
-      //    前端 Reality 复核必挂（owner 被自己挡在门外）。
-      // 修正：渠道账号是组织级全局资源（一个平台一个数字电脑，AI 员工共享），
-      //      与 connect/status/wait-for-login 等接口一致——仅要求已认证，不按 tenant 隔离；
-      //      账号存在性校验保留（防跨账号 IDOR 读取不存在 ID 的伪 404 语义）。
+      // ═══ 归属校验（TENANT-ISOLATION-FIX-02 修正 — P0-A IDOR 关闭）═══
+      // AUDIT-01 实锤：旧实现「渠道账号是组织级全局资源，仅要求已认证」= 跨企业 IDOR，
+      // 无组织用户可读任意账号 identity/externalAccountId（实测 200 + 泄露 881306）。
+      // 修正：用户私有资产模型——owner 本人（全权限）或 ChannelAccountShare 被授权人可读；
+      //      知道 id 不再等于可访问。无组织用户若是 owner 本人仍可读（账号属人，不属组织）。
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      const access = new ChannelAccessService(prisma)
+      if (!(await access.canAccess(user?.id, id))) {
+        return reply.status(403).send({ code: 403, error: 'CHANNEL_ACCESS_DENIED', message: '无权访问该渠道账号（需账号所有者授权）' })
+      }
       const account = await prisma.enterpriseChannelAccount.findFirst({
         where: { id },
         select: {

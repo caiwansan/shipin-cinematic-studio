@@ -32,6 +32,17 @@ async function resolveOrgId(userId: string) {
   return getOrganizationIdForUser(userId)
 }
 
+
+/** FIX-02 — 用户私有资产模型：workspace 操作需账号可访问（owner 或 MANAGE grantee） */
+async function assertWsUserAccess(request: any, reply: any, ws: any) {
+  const { prisma } = await import('../utils/index.js')
+  const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+  const ok = await new ChannelAccessService(prisma).canAccess(request.user?.id, ws.channelAccountId, 'MANAGE')
+  if (!ok) return reply.status(403).send({ code: 403, error: 'CHANNEL_ACCESS_DENIED', message: '无权访问该工作空间（需账号所有者授权）' })
+  return null
+}
+
+
 export async function browserWorkspaceRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
 
@@ -100,6 +111,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
           const created = await channelService.connectAccount({
             tenantId,
             platform: 'douyin',
+            ownerId: (request as any).user?.id, // FIX-02 — 创建者即 owner
             accountName: '抖音创作者中心',
             externalAccountId: 'douyin-' + Date.now(),
             credential: { cookieData: '[]' },
@@ -123,6 +135,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const orgId = (request as any).orgId
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      const denied = await assertWsUserAccess(request, reply, ws)
+      if (denied) return denied
       // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03: workspace 归属校验（IDOR 关闭）
       if (orgId && ws.organizationId !== orgId) {
         return reply.status(403).send({ code: 403, error: 'WORKSPACE_NOT_IN_ORG', message: '无权访问该工作空间' })
@@ -142,6 +156,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const orgId = (request as any).orgId
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      const denied = await assertWsUserAccess(request, reply, ws)
+      if (denied) return denied
       // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03: workspace 归属校验
       if (orgId && ws.organizationId !== orgId) {
         return reply.status(403).send({ code: 403, error: 'WORKSPACE_NOT_IN_ORG', message: '无权操作该工作空间' })
@@ -181,6 +197,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      const denied = await assertWsUserAccess(request, reply, ws)
+      if (denied) return denied
       const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       await browserRuntime.stopWorkspace(sessionId)
       const updated = await browserWorkspaceService.transition(id, ['RUNNING', 'ERROR', 'READY'], 'READY')
@@ -196,6 +214,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      const denied = await assertWsUserAccess(request, reply, ws)
+      if (denied) return denied
       const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       await browserRuntime.restartWorkspace(sessionId, ws.profilePath, { headless: false })
       await browserWorkspaceService.transition(id, ['CREATED', 'READY', 'RUNNING', 'ERROR'], 'RUNNING')
@@ -213,6 +233,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      const denied = await assertWsUserAccess(request, reply, ws)
+      if (denied) return denied
       const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       const health = await browserRuntime.healthCheckWorkspace(sessionId)
       if (health.ok) {
@@ -231,6 +253,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const query: any = (request.query as any) || {}
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      const denied = await assertWsUserAccess(request, reply, ws)
+      if (denied) return denied
       const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       await browserRuntime.destroyWorkspace(sessionId, ws.profilePath, query.deleteProfile === 'true')
       await browserWorkspaceService.transition(id, ['CREATED', 'READY', 'RUNNING', 'ERROR'], 'DESTROYED')
@@ -247,6 +271,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      const denied = await assertWsUserAccess(request, reply, ws)
+      if (denied) return denied
       const logs = await channelOperationLogService.listByWorkspace(id, 50)
       return reply.send({ code: 0, data: logs })
     } catch (e: any) {
@@ -261,6 +287,8 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const { id } = request.params as any
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      const denied = await assertWsUserAccess(request, reply, ws)
+      if (denied) return denied
       const traj = await browserTrajectoryService.listByWorkspace(id, 30)
       return reply.send({ code: 0, data: traj })
     } catch (e: any) {
@@ -298,7 +326,13 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       if (!organizationId) {
         return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织，无法访问工作台' })
       }
+      // FIX-02 — 用户私有资产模型：owner-view 只显示当前用户可访问账号的电脑（owner ∪ share）
+      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
+      const access = new ChannelAccessService(prisma)
+      const accessibleIds = await access.getAccessibleAccountIds((request as any).user?.id)
       const wsWhere: any = { businessType, organizationId }
+      if (accessibleIds.length) wsWhere.channelAccountId = { in: accessibleIds }
+      else wsWhere.id = '__none__' // 无可访问账号 → 空列表（不回落看全部）
       const wsList = await prisma.browserWorkspace.findMany({ where: wsWhere })
       const wsIds = wsList.map((w: any) => w.id)
       if (!wsIds.length) return reply.send({ code: 0, data: [] })
