@@ -9785,3 +9785,18 @@ model ChannelHealthState {
   @@index([state])
   @@map("channel_health_state")
 }
+
+// SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task05 — ChannelAccount 重归属迁移快照
+// 记录渠道账号租户/组织归属迁移历史（只记录，不删除账号）
+model ChannelAccountOwnerSnapshot {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  channelAccountId String   @map("channel_account_id") @db.Text
+  oldTenantId      String?  @map("old_tenant_id") @db.Text
+  newTenantId      String?  @map("new_tenant_id") @db.Text
+  oldOrganizationId String? @map("old_organization_id") @db.Text
+  newOrganizationId String? @map("new_organization_id") @db.Text
+  migrationReason  String   @map("migration_reason") @db.Text
+  operator         String   @map("operator") @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  @@map("ChannelAccountOwnerSnapshot")
+}

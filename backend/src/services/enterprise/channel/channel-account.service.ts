@@ -128,6 +128,17 @@ export class ChannelAccountService {
   }
 
   /**
+   * SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task02 — 按组织隔离查询（JWT-only）
+   * 账号归属以 organizationId 为准（数据治理后所有账号 organizationId 非空）
+   */
+  async listAccountsByOrg(organizationId: string) {
+    return prisma.enterpriseChannelAccount.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
+  /**
    * 获取账户详情
    */
   async getAccount(id: string) {

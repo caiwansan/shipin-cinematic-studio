@@ -67,11 +67,14 @@ export class ChannelPermissionService {
    */
   async check(input: PermissionCheckInput): Promise<{ allowed: boolean; reason?: string }> {
     // 1. 获取用户在 Tenant 中的角色
+    // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task04: GovUser 无 userId 字段（历史 bug，曾导致本服务永远 500）
+    // User 与 GovUser 通过 email 关联；改为 email 查询
+    const user = await prisma.user.findUnique({
+      where: { id: input.govUserId },
+      select: { email: true },
+    })
     const govUser = await prisma.govUser.findFirst({
-      where: {
-        userId: input.govUserId,
-        tenantId: input.tenantId,
-      },
+      where: { email: user?.email ?? '__no_such_email__', tenantId: input.tenantId },
     })
 
     if (!govUser) {
@@ -91,10 +94,11 @@ export class ChannelPermissionService {
 
     // 4. 如果是渠道级别检查，确认组织范围
     if (input.channelAccountId) {
-      const inOrg = await this.checkOrgScope(
-        input.channelAccountId,
-        govUser.organizationId
-      )
+      // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task04: GovUser 无 organizationId 字段（曾永远 undefined → 范围检查恒通过）
+      // 改为 tenantId → govOrganization.id 映射
+      const govOrg = await prisma.govOrganization.findFirst({ where: { tenantId: input.tenantId } })
+      const orgId = govOrg?.id ?? null
+      const inOrg = await this.checkOrgScope(input.channelAccountId, orgId)
       if (!inOrg) {
         return { allowed: false, reason: 'Channel not in user organization scope' }
       }

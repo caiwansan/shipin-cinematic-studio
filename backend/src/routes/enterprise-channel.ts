@@ -20,6 +20,29 @@ export async function channelRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
 
   /**
+   * SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task02 — 租户上下文强制校验
+   * URL 中的 :tenantId 不得由客户端自由决定：必须映射到登录用户 JWT organizationId 对应的 govOrg。
+   * 不一致 → 403 TENANT_CONTEXT_INVALID（IDOR 关闭）。
+   */
+  app.addHook('preHandler', async (request, reply) => {
+    const user = request.user as any
+    const { tenantId } = request.params as any
+    if (!tenantId || !user?.id) return
+    const orgId = user?.organizationId || user?.orgId || null
+    if (!orgId) {
+      return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
+    }
+    const govOrg = await prisma.govOrganization.findFirst({ where: { tenantId } }).catch(() => null)
+    if (!govOrg || govOrg.id !== orgId) {
+      return reply.status(403).send({
+        code: 403,
+        error: 'TENANT_CONTEXT_INVALID',
+        message: '租户上下文与登录组织不匹配',
+      })
+    }
+  })
+
+  /**
    * Sprint 4.2.5.1: Capability Check 中间件
    * CTO: 所有 Channel API 需要 channel.* capability
    */
@@ -165,6 +188,18 @@ export async function channelRoutes(app: FastifyInstance) {
       console.error('Create channel account failed:', e)
       throw e
     }
+  })
+
+  // GET /api/enterprise/channels/accounts — JWT-only 账户列表（无 URL tenantId）
+  // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task02: tenantId 不由客户端决定，后端从 JWT organizationId 解析
+  app.get('/api/enterprise/channels/accounts', async (request, reply) => {
+    const user = request.user as any
+    const orgId = user?.organizationId || user?.orgId || null
+    if (!orgId) {
+      return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
+    }
+    const accounts = await channelAccountService.listAccountsByOrg(orgId)
+    return reply.send({ code: 0, data: accounts })
   })
 
   // GET /api/enterprise/:tenantId/channels/accounts — 列表

@@ -28,11 +28,25 @@ import { browserWorkspaceRecoveryService } from '../services/enterprise/browser-
 export async function browserWorkspaceRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
 
+  /**
+   * SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03 — 无组织访问一律 403
+   * 禁止「未知身份 → 看全部」的宽松路径（原 'default' fallback 已删除）
+   */
+  app.addHook('preHandler', async (request, reply) => {
+    const user = request.user as any
+    const orgId = user?.organizationId || user?.orgId || null
+    if (!orgId) {
+      return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
+    }
+  })
+
   const ctx = (request: any) => {
     const user = request.user as any
     return {
-      tenantId: user?.tenantId || user?.id || 'default',
-      organizationId: user?.organizationId || user?.orgId || user?.tenantId || user?.id || 'default',
+      // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task01: 禁止 fallback 到 'default'/user.id
+      // 无 org = 未知身份 → 调用方必须 403（NO_ORGANIZATION），不得降级为「看全部」
+      tenantId: user?.tenantId || user?.id || null,
+      organizationId: user?.organizationId || user?.orgId || null,
     }
   }
 
@@ -67,9 +81,9 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       const channelAccountId = body.channelAccountId
       const businessType = body.businessType || 'media' // 默认 media 域（兼容存量抖音）
       if (!channelAccountId) {
-        // 未指定账号时：自动确保抖音账号存在（与 runtime ensure-account 一致）
+        // 未指定账号时：自动确保当前组织自己的抖音账号存在（org 过滤，禁止跨 org 取号）
         let account = await (await import('../utils/index.js')).prisma.enterpriseChannelAccount.findFirst({
-          where: { channelType: 'douyin' },
+          where: { channelType: 'douyin', organizationId },
           orderBy: { createdAt: 'asc' },
           select: { id: true },
         })
@@ -97,8 +111,14 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
   app.get('/api/enterprise/workspaces/:id', async (request, reply) => {
     try {
       const { id } = request.params as any
+      const user = request.user as any
+      const orgId = user?.organizationId || user?.orgId || null
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03: workspace 归属校验（IDOR 关闭）
+      if (orgId && ws.organizationId !== orgId) {
+        return reply.status(403).send({ code: 403, error: 'WORKSPACE_NOT_IN_ORG', message: '无权访问该工作空间' })
+      }
       const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       const health = await browserRuntime.healthCheckWorkspace(sessionId)
       return reply.send({ code: 0, data: { ...ws, runtime: health } })
@@ -111,8 +131,14 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
   app.post('/api/enterprise/workspaces/:id/start', async (request, reply) => {
     try {
       const { id } = request.params as any
+      const user = request.user as any
+      const orgId = user?.organizationId || user?.orgId || null
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
+      // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03: workspace 归属校验
+      if (orgId && ws.organizationId !== orgId) {
+        return reply.status(403).send({ code: 403, error: 'WORKSPACE_NOT_IN_ORG', message: '无权操作该工作空间' })
+      }
       const sessionId = await browserWorkspaceService.resolveSessionId(ws.channelAccountId)
       await browserWorkspaceService.transition(id, ['CREATED', 'READY', 'ERROR', 'RUNNING'], 'RUNNING')
       await browserRuntime.startWorkspace(sessionId, ws.profilePath, { headless: false })
@@ -261,11 +287,11 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       ])
 
       // 域过滤第一层：workspace 必须属于 media 域
-      // org 过滤：admin 超管（无 organizationId）看全部 media workspace；普通用户严格按 org 隔离
-      const wsWhere: any = { businessType }
-      if (organizationId && organizationId !== 'default') {
-        wsWhere.organizationId = organizationId
+      // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03: 无 org = 未知身份 → 403，禁止 fallback 看全部
+      if (!organizationId) {
+        return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织，无法访问工作台' })
       }
+      const wsWhere: any = { businessType, organizationId }
       const wsList = await prisma.browserWorkspace.findMany({ where: wsWhere })
       const wsIds = wsList.map((w: any) => w.id)
       if (!wsIds.length) return reply.send({ code: 0, data: [] })

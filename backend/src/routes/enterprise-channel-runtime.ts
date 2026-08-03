@@ -13,11 +13,39 @@
  */
 import type { FastifyInstance } from 'fastify'
 import { channelService } from '../services/enterprise/channel.service.js'
+import { enterpriseContextService } from '../services/enterprise/enterprise-context.service.js'
 import { identityProbeRegistry } from '../enterprise/channel/identity-probe.js'
 import { channelPlatformRegistry } from '../enterprise/channel/platform-registry.js'
 
 export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
+
+  /**
+   * SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task02 — runtime 路由租户强制校验
+   * 1) 无 org 用户一律 403（未知身份不得访问任何渠道资产）
+   * 2) :id 路由（账号级操作）校验账号 org === 用户 org（IDOR 关闭）
+   * 3) request.orgId 注入 handler（account-status/ensure-account 等按 org 过滤）
+   */
+  app.addHook('preHandler', async (request, reply) => {
+    const user = request.user as any
+    const orgId = user?.organizationId || user?.orgId || null
+    if (!orgId) {
+      return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
+    }
+    ;(request as any).orgId = orgId
+    const { id } = request.params as any
+    if (id) {
+      const { prisma } = await import('../utils/index.js')
+      const account = await prisma.enterpriseChannelAccount.findUnique({
+        where: { id },
+        select: { organizationId: true },
+      })
+      if (!account) return reply.status(404).send({ code: 404, message: 'Channel account not found' })
+      if (account.organizationId !== orgId) {
+        return reply.status(403).send({ code: 403, error: 'CHANNEL_NOT_IN_ORG', message: '无权访问该渠道账号' })
+      }
+    }
+  })
 
   // ═══ REGISTRY-SSOT-01 — 平台注册中心（前端渠道中心唯一数据源）═══
   // 前端禁止硬编码 connectable/platform；平台能力（登录方式/探针策略/扫码后行为/就绪状态）
@@ -93,11 +121,12 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   // 2026-08-02 — 多平台泛化：/api/enterprise/channels/runtime/:platform/account-status
   app.get('/api/enterprise/channels/runtime/:platform/account-status', async (request, reply) => {
     const { platform } = request.params as any
+    const orgId = (request as any).orgId
     try {
       const { prisma } = await import('../utils/index.js')
       const { isChannelConnected, ChannelConnectionStatus } = await import('../constants/channel-connection-status.js')
       const account = await prisma.enterpriseChannelAccount.findFirst({
-        where: { channelType: platform },
+        where: { channelType: platform, organizationId: orgId },
         orderBy: { createdAt: 'asc' },
         select: { id: true, connectionStatus: true, channelName: true, externalAccountId: true, metadata: true },
       })
@@ -128,11 +157,13 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
   app.post('/api/enterprise/channels/runtime/:platform/ensure-account', async (request, reply) => {
     const { platform } = request.params as any
     const user = (request as any).user as any
-    const tenantId = user?.tenantId || user?.id || 'default'
+    const orgId = (request as any).orgId
+    const govTenantId = await enterpriseContextService.getGovernanceTenantId(user?.id || '')
+    const tenantId = govTenantId || orgId || 'default'
     try {
       const { prisma } = await import('../utils/index.js')
       let account = await prisma.enterpriseChannelAccount.findFirst({
-        where: { channelType: platform },
+        where: { channelType: platform, organizationId: orgId },
         orderBy: { createdAt: 'asc' },
         select: { id: true },
       })
@@ -141,6 +172,7 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
         // 真实身份由登录成功后写入（updateChannelIdentity）。禁止 externalAccountId=platform-时间戳 占位。
         const created = await channelService.connectAccount({
           tenantId,
+          organizationId: orgId,
           platform,
           accountName: '未连接',
           credential: {},

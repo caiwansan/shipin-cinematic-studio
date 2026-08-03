@@ -95,7 +95,13 @@ export class BrowserWorkspaceService {
     const existing = await prisma.browserWorkspace.findUnique({
       where: { channelAccountId },
     })
-    if (existing) return this.map(existing)
+    if (existing) {
+      // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03: 禁止跨 org 引用已有 workspace
+      if (existing.organizationId !== organizationId) {
+        throw new Error('WORKSPACE_NOT_IN_ORG: 该账号的工作空间不属于当前组织')
+      }
+      return this.map(existing)
+    }
 
     const channelType = await this.getChannelType(channelAccountId)
     const profilePath = this.getProfilePath(channelType, channelAccountId)
