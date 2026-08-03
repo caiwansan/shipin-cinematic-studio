@@ -54,3 +54,27 @@ WebView2 页面加载完成但前端脚本未执行。需要 `%LOCALAPPDATA%\com
 - ⛔ 不改 token 注入 / 不改 CSP / 不改 index.html / 不发新版本
 - ✅ 进入 Layer 1 排查：WebView2 Runtime / asset 加载 / CSP 执行层 / Windows 环境
 - 下一证据：掌柜打包 logs 四文件 + （可选）启动后等 5 秒再截一张
+
+---
+
+## 5. 离线核查（logs 到达前先行缩小，Tauri 2.11.5 源码级）
+
+### P0-1 CSP 执行层 — 源码配置理论正确（嫌疑降级）
+- `tauri-2.11.5/src/manager/mod.rs`：`dangerous_disable_asset_csp_modification.can_modify("script-src")` → 仅当允许修改才做 nonce/hash 替换
+- `tauri-utils-2.9.3/src/config.rs:2507`：`Flag(f) => !f` —— 配置 `true` → `can_modify=false` → **不注入 nonce/hash** → CSP 原样（`script-src 'self' 'unsafe-inline'`）→ 内联 JS 应被允许
+- 前提：**发行包 tauri.conf.json = 源码**（未被旧缓存/旧配置覆盖）→ 归入 P0-3 验证
+
+### P0-2 WebView2 脚本协议层 — 理论正常（嫌疑降级）
+- `src/protocol/asset.rs`：MIME 由魔数+扩展名检测（`MimeType::parse`），HTML → text/html，无异常路径
+- 单文件内联 shell（无外部 JS/CSS）→ 无构建时 hash 注入干扰
+
+### P0-3 构建产物不一致 — **升级头号嫌疑** ⭐⭐⭐⭐⭐
+- 「1.1.2」**无任何版本定义**：git tags 仅到 v1.0.4；Cargo.toml=1.1.0 / tauri.conf.json=1.1.0 / package.json=1.0.4 三处不一致
+- 本地 releases 目录 = 1.0.0 占位符（2026-06-04，Electron 时代）；publish.sh 为旧 Electron 脚本；Tauri 构建走 build.sh，但 1.1.2 构建过程/产物不在仓库可溯
+- **发行包溯源断链**：无法从源码验证 1.1.2 内嵌的 tauri.conf.json / ui/index.html 内容
+
+### logs 30 秒定案清单（掌柜动作）
+1. `startup.log` 首行 `version=` → 对照 1.1.2（不一致 = P0-3 实锤）
+2. `webview.log` 有无 `page load FINISHED`（无 = 加载中断；有 = 进入 JS 执行层）
+3. `startup.log` 有无前端 `[BOOT]` 行（有 = JS 已执行，截图时机问题）
+4. `error.log` 有无 `JS ERROR` / `PANIC`（有 = 直接定根因）
