@@ -467,6 +467,16 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/governance.js')).governanceRoutes, { prefix: '/api/enterprise/governance' })
   ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
 
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-01 — Application Adapter Layer（应用身份抽象层）
+  // 生态身份证：9 内置应用幂等注册 + 应用目录只读 API
+  // 纪律：只挂载身份，不碰工作台业务，不做商城
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-application.routes.js')).registerEcologyApplicationRoutes, { prefix: '/api/ecosystem' })
+  const { ensureEcologySeed } = await import('./routes/ecology-application.routes.js')
+  const ecologySeed = await ensureEcologySeed()
+  app.log.info(`[ECO-01] 内置应用注册完成: ${ecologySeed.registered} 新增 / ${ecologySeed.skipped} 已存在`)
+
   // 注册渠道适配器
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')

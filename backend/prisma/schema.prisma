@@ -9842,3 +9842,94 @@ model ChannelOwnershipMigration {
   @@index([channelAccountId])
   @@map("channel_ownership_migration")
 }
+
+// ═══════════════════════════════════════════════════════════════
+// SPRINT-ECO-01 — Application Adapter Layer（应用身份抽象层）
+// 生态身份证系统：让现有工作台拥有 Application Identity / Lifecycle /
+// Metadata / Capability Boundary，统一进入生态。只挂载身份，不碰业务。
+// 状态语义：BUILT_IN=平台内置应用（9 工作台）；PUBLISHED 留给未来开发者应用
+// 生命周期：DRAFT → INSTALLED → ACTIVE → SUSPENDED → DEPRECATED
+// ═══════════════════════════════════════════════════════════════
+model EcologyApplication {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  slug             String   @unique @db.VarChar(80) // kunlun-media / kunlun-drama / ...
+  name             String   @db.VarChar(100) // 显示名：Kunlun Media
+  icon             String?  @db.Text
+  description      String?  @db.Text
+  category         String   @db.VarChar(30) // media | drama | novel | recruit | legal | mall | music | ad | geo
+  authorOrgId      String?  @map("author_org_id") @db.Text // 开发者组织（平台内置=null）
+  isPlatformBuiltIn Boolean @default(true) @map("is_platform_built_in")
+  status           String   @default("BUILT_IN") @db.VarChar(30) // BUILT_IN | DRAFT | PUBLISHED | DEPRECATED
+  lifecycleState   String   @default("ACTIVE") @map("lifecycle_state") @db.VarChar(30) // DRAFT | INSTALLED | ACTIVE | SUSPENDED | DEPRECATED
+  workspaceEntry   String?  @map("workspace_entry") @db.Text // 前端入口 /workspaces/media
+  backendModule    String?  @map("backend_module") @db.Text // 后端模块标识
+  metadata         Json     @default("{}") // 扩展元数据（版本、作者等）
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  versions         EcologyApplicationVersion[]
+  installs         EcologyApplicationInstall[]
+
+  @@index([category])
+  @@index([status])
+  @@map("ecology_applications")
+}
+
+model EcologyApplicationVersion {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  applicationId    String   @map("application_id") @db.Text
+  version          String   @db.VarChar(30) // semver: 1.0.0
+  changelog        String?  @db.Text
+  frontendEntry    String?  @map("frontend_entry") @db.Text
+  backendModule    String?  @map("backend_module") @db.Text
+  schemaVersion    String?  @map("schema_version") @db.Text
+  minPlatformVersion String? @map("min_platform_version") @db.Text
+  manifest         Json     @default("{}") // 能力声明快照
+  status           String   @default("released") @db.VarChar(30) // draft | testing | approved | released
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  application      EcologyApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  installs         EcologyApplicationInstall[]
+
+  @@unique([applicationId, version])
+  @@index([applicationId])
+  @@map("ecology_application_versions")
+}
+
+model EcologyApplicationInstall {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  organizationId   String   @map("organization_id") @db.Text // Organization.id
+  applicationId    String   @map("application_id") @db.Text
+  versionId        String?  @map("version_id") @db.Text
+  status           String   @default("ACTIVE") @db.VarChar(30) // installing | active | disabled | uninstalling
+  lifecycleState   String   @default("INSTALLED") @map("lifecycle_state") @db.VarChar(30) // DRAFT | INSTALLED | ACTIVE | SUSPENDED | DEPRECATED
+  config           Json?    @default("{}")
+  installedAt      DateTime @default(now()) @map("installed_at")
+  lastUsedAt       DateTime? @map("last_used_at")
+
+  application      EcologyApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  version          EcologyApplicationVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  permissions      EcologyApplicationPermission[]
+
+  @@unique([organizationId, applicationId])
+  @@index([organizationId])
+  @@index([applicationId])
+  @@map("ecology_application_installations")
+}
+
+model EcologyApplicationPermission {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  installId        String   @map("install_id") @db.Text
+  permission       String   @db.VarChar(50) // browser | content | analytics | ...
+  grantedBy        String?  @map("granted_by") @db.Text
+  grantedAt        DateTime @default(now()) @map("granted_at")
+  expiresAt        DateTime? @map("expires_at")
+  status           String   @default("active") @db.VarChar(20) // active | revoked | expired
+
+  install          EcologyApplicationInstall @relation(fields: [installId], references: [id], onDelete: Cascade)
+
+  @@index([installId])
+  @@index([permission])
+  @@map("ecology_application_permissions")
+}
