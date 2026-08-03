@@ -79,8 +79,8 @@ User ── owns ──> ChannelAccount（第一归属 ownerId=登录创建者�
 
 ## 待掌柜
 
-1. **掌柜登录账号的 user id** 提供给我 → 给南波万账号 seed MANAGE share（掌柜管理南波万场景；owner 是幽灵无法自助授权）
-2. 南波万账号 ownerId=0ba5bf98 真实归属确认（南波万本人账号？掌柜？）→ 后续走 ChannelOwnershipMigration 记录，不直接改
+1. **掌柜登录账号的 user id** 提供给我 → 给南波万账号 seed MANAGE share（注：FIX-03 发现 0ba5bf98 其实是掌柜 QQ 登录账号 qq_6F736FAC37ED3A3AF774AE0924374F4D@aigc.fushtn.com 的 id——南波万 owner=掌柜本人，本报告「幽灵」判定错误，已更正）
+2. 南波万账号 ownerId=0ba5bf98 真实归属确认（FIX-03 已确认 = 掌柜 QQ 账号，无需再迁移）
 3. 遗留：POST /workspaces/recover（服务恢复）仍是全局恢复（运维动作，无数据泄露但可跨 org 拉起浏览器）→ 待办列入后续
 
 ## 优先级确认（掌柜指令）
