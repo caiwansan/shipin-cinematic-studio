@@ -526,6 +526,10 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/ecology-developer.routes.js')).registerEcologyDeveloperRoutes, { prefix: '/api/ecosystem' })
   app.log.info('[ECO-05] Developer Center Foundation 路由已注册')
 
+  // SPRINT-ECO-06 — Marketplace Foundation（生态商品与交易基础设施）
+  await app.register((await import('./routes/ecology-marketplace.routes.js')).registerEcologyMarketplaceRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-06] Marketplace Foundation 路由已注册')
+
   // 注册渠道适配器
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')

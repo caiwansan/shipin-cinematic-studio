@@ -9960,6 +9960,8 @@ model EcologyPlugin {
   runtimeBindings  EcologyPluginRuntimeBinding[]
   licenses         EcologyLicense[]
   publishRequests  EcologyPluginPublishRequest[]
+  marketplaceItem  EcologyMarketplaceItem?
+  revenueSnapshots EcologyRevenueSnapshot[]
 
   @@index([type])
   @@index([applicationId])
@@ -9991,11 +9993,13 @@ model EcologyPluginInstall {
   organizationId   String   @map("organization_id") @db.Text // Organization.id
   pluginId         String   @map("plugin_id") @db.Text // 关联 ecology_plugins.id
   versionId        String?  @map("version_id") @db.Text
-  status           String   @default("INSTALLED") @db.VarChar(30) // INSTALLED | DISABLED | UNINSTALLED（只登记不执行）
+  status           String   @default("INSTALLED") @db.VarChar(30) // INSTALL_REQUEST | INSTALLED | FAILED | DISABLED | REMOVED（卸载不删行，ECO-06 G3）
   lifecycleState   String   @default("ACTIVE") @map("lifecycle_state") @db.VarChar(30)
+  licenseId        String?  @map("license_id") @db.Text // 关联 ecology_licenses.id（G2 安装→授权联动；卸载保留历史）
   config           Json?    @default("{}")
   installedAt      DateTime @default(now()) @map("installed_at")
   lastUsedAt       DateTime? @map("last_used_at")
+  removedAt        DateTime? @map("removed_at")
 
   plugin           EcologyPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
   version          EcologyPluginVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
@@ -10004,6 +10008,53 @@ model EcologyPluginInstall {
   @@index([organizationId])
   @@index([pluginId])
   @@map("ecology_plugin_installations")
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPRINT-ECO-06 — Marketplace Foundation（生态商品与交易基础设施）
+// 上架登记 + 插件发现 + 安装流程 + License 联动 + 结算数据快照
+// 纪律：不做商城 UI / 不做支付 / 不做推广 / 不提现 / 不分佣计算（后置 ECO-07/08）
+// 链路：Plugin → APPROVED → Listing → Install → License ACTIVE → KAOR Load（未来）→ Plugin Available
+// ═══════════════════════════════════════════════════════════
+
+model EcologyMarketplaceItem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  pluginId      String   @map("plugin_id") @db.Text // 关联 ecology_plugins.id（唯一：一插件一商品）
+  developerId   String   @map("developer_id") @db.Text // 关联 ecology_developers.id（G1 上架者 = 插件 author）
+  displayName   String   @map("display_name") @db.VarChar(100)
+  description   String?  @db.Text
+  category      String?  @db.VarChar(50) // agent | tool | workflow 或业务类目
+  pricingModel  String   @default("FREE") @map("pricing_model") @db.VarChar(20) // FREE | TRIAL | SUBSCRIPTION（仅登记不接支付）
+  status        String   @default("UNLISTED") @db.VarChar(20) // LISTED | UNLISTED（掌柜冻结）
+  listedAt      DateTime? @map("listed_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  plugin      EcologyPlugin       @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  developer   EcologyDeveloper    @relation(fields: [developerId], references: [id], onDelete: Restrict)
+
+  @@unique([pluginId])
+  @@index([developerId])
+  @@index([status])
+  @@map("ecology_marketplace_items")
+}
+
+model EcologyRevenueSnapshot {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  pluginId          String   @map("plugin_id") @db.Text // 关联 ecology_plugins.id
+  period            String   @db.VarChar(7) // 'YYYY-MM'（月度快照）
+  subscriptionCount Int      @default(0) @map("subscription_count") // 该周期 ACTIVE 许可数（真实聚合）
+  grossAmount       Decimal  @default(0) @map("gross_amount") @db.Decimal(12, 2) // 登记值（未接支付恒 0，诚实不编造）
+  currency          String   @default("CNY") @db.VarChar(10)
+  status            String   @default("DRAFT") @db.VarChar(20) // DRAFT | FINALIZED（ECO-07 Settlement 使用）
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  plugin EcologyPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, period])
+  @@index([period])
+  @@map("ecology_revenue_snapshots")
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -10152,6 +10203,7 @@ model EcologyDeveloper {
 
   publishRequests EcologyPluginPublishRequest[]
   agreements      EcologyDeveloperAgreement[]
+  marketplaceItems EcologyMarketplaceItem[]
 
   @@unique([userId])
   @@index([organizationId])
