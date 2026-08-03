@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Diag-A: Hello World</title>
+<style>
+  body { background: #0e0f1a; color: #e8e6f0; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+  .box { text-align: center; padding: 48px; border: 1px solid #242748; border-radius: 16px; background: #16182b; min-width: 420px; }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  .sub { color: #8a8aa0; font-size: 14px; margin-bottom: 24px; }
+  .status { font-size: 18px; padding: 12px; border-radius: 8px; margin: 8px 0; }
+  .ok { color: #4ade80; } .fail { color: #f87171; } .pending { color: #fbbf24; }
+  .env { color: #8a8aa0; font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Hello World</h1>
+  <div class="sub">Diagnostic Matrix — A: 纯 HTML（测 Tauri 壳 / WebView2 / 资源嵌入 / CSP）</div>
+  <div class="status ok">HTML 渲染 OK</div>
+  <div class="status pending" id="js-status">JS 执行检测中…</div>
+  <div class="env" id="env"></div>
+</div>
+<script src="./diag-a.js"></script>
+</body>
+</html>

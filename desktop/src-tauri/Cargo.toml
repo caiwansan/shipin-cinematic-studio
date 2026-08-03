@@ -1,6 +1,6 @@
 [package]
 name = "kunlun-desktop"
-version = "1.0.4"
+version = "1.1.0"
 description = "昆仑镜 Kunlun Desktop — AI 应用操作系统桌面壳"
 authors = ["Kunlun"]
 edition = "2021"

@@ -1,0 +1,133 @@
+name: Diagnostic Matrix Build (A/B/C)
+
+# SPRINT-RELEASE-WINDOWS-WHITE-SCREEN-ROOT-CAUSE-01 — Task 04 构建矩阵
+# 触发：push tag diag-*（零 API token；SSH 推 tag 即可）
+#   矩阵三版本（同一 Tauri 壳，不同前端）：
+#     A = 纯 HTML hello world   → 失败 ⇒ Tauri/WebView2/资源/CSP 问题
+#     B = Vue 3 静态页(按钮+路由) → 失败 ⇒ 前端框架层问题
+#     C = 完整 Kunlun Media（含诊断模式）→ 失败 ⇒ 业务初始化层问题
+# 产物发布到 GitHub Release diag-<tag>（中间仓），服务器脚本拉取到昆仑镜仓库
+#   releases/desktop/diagnostic/（不进用户下载页，仅诊断测试用）
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags: ['diag-*']
+
+jobs:
+  build-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [a, b, c]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            desktop/src-tauri/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-diag-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-diag-
+
+      - name: Install Desktop Dependencies
+        working-directory: desktop
+        run: npm install
+
+      # ── 变体准备：A/B 覆盖前端；C 保留完整壳 ──
+      - name: Prepare Variant A (pure HTML)
+        if: matrix.variant == 'a'
+        shell: pwsh
+        run: |
+          Copy-Item desktop/diag/a/index.html desktop/ui/index.html -Force
+          Copy-Item desktop/diag/a/diag-a.js desktop/ui/diag-a.js -Force
+          $conf = Get-Content desktop/src-tauri/tauri.conf.json -Raw
+          $conf = $conf -replace '"productName": "Kunlun Media"', '"productName": "KunlunMediaDiagA"'
+          Set-Content desktop/src-tauri/tauri.conf.json $conf -NoNewline
+          Write-Host 'Variant A prepared'
+
+      - name: Prepare Variant B (Vue static)
+        if: matrix.variant == 'b'
+        shell: pwsh
+        run: |
+          Copy-Item desktop/diag/b/index.html desktop/ui/index.html -Force
+          Copy-Item desktop/diag/b/vendor/vue.global.prod.js desktop/ui/vue.global.prod.js -Force
+          $conf = Get-Content desktop/src-tauri/tauri.conf.json -Raw
+          $conf = $conf -replace '"productName": "Kunlun Media"', '"productName": "KunlunMediaDiagB"'
+          Set-Content desktop/src-tauri/tauri.conf.json $conf -NoNewline
+          Write-Host 'Variant B prepared'
+
+      - name: Prepare Variant C (full shell)
+        if: matrix.variant == 'c'
+        shell: pwsh
+        run: |
+          Write-Host 'Variant C = full Kunlun Media shell (unchanged)'
+
+      - name: Show Effective Config
+        shell: pwsh
+        run: |
+          Get-Content desktop/src-tauri/tauri.conf.json | Select-String 'productName|version'
+          Get-ChildItem desktop/ui | Select-Object Name, Length
+
+      - name: Clean Stale Bundle (cache residue)
+        working-directory: desktop/src-tauri/target/release/bundle
+        run: |
+          Get-ChildItem -Recurse -File | Remove-Item -Force
+          Write-Host 'bundle cleaned'
+
+      - name: Build (NSIS)
+        working-directory: desktop
+        run: npm run tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ''
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List Bundle Artifacts
+        working-directory: desktop/src-tauri/target/release/bundle
+        run: Get-ChildItem -Recurse | Select-Object FullName, Length
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kunlun-diag-${{ matrix.variant }}
+          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+  publish:
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all variants
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la artifacts/ && sha256sum artifacts/*.exe
+
+      - name: Publish diagnostic release
+        run: |
+          gh release delete ${{ github.ref_name }} --yes --cleanup-tag || true
+          gh release create ${{ github.ref_name }} artifacts/*.exe \
+            --title "Diagnostic Matrix ${{ github.ref_name }}" \
+            --notes "RCA-01 构建矩阵（A=纯HTML / B=Vue静态 / C=完整壳）。仅诊断测试，勿用于用户下载。"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
