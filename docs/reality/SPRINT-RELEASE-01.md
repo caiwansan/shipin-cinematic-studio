@@ -53,6 +53,13 @@ Task01 不是失败，是**验收入口不存在**。缺的是 SaaS 产品 vs �
 | G6 | 工作台可打开 |
 | G7 | AI内容运营经理插件入口存在 |
 | G8 | **产品发行真实性**：无开发环境（无 Node/Rust/VS/源码/命令行）的普通 Windows 用户，只收到一个下载地址，可完成安装并启动 |
+| G9 | **Source Release Reality**（可复制发行能力）：GitHub main → clone 新环境 → npm install → tauri build → 成功生成 exe。证明发行不依赖某台开发服务器的未追踪文件 |
+
+## 凭证排查结论（2026-08-04 01:10 实锤，正式记录）
+- 旧 PAT `ghp_Rm…AdDv`：API /user → Bad credentials；git push → Invalid username or token。**结论：凭证失效，不可恢复使用，非权限问题**
+- 仓库 `caiwansan/shipin-cinematic-studio`：public ✅ / default main ✅ / **commit=0（空仓库）**——服务器代码从未进入 GitHub 发布源链路
+- 因此 Release-01 实际是在建立**首次发行链**：本地开发 → GitHub Source of Truth → Windows Runner → Installer Artifact → 用户下载
+- **凭证方案（掌柜定）**：SSH Deploy Key（不暴露个人 PAT、权限范围小、可随时删除、适合服务器自动发布），remote 切 `git@github.com:caiwansan/shipin-cinematic-studio.git`
 
 通过后 → Phase A Task01 真机五轮 → Task02 AI内容运营经理 Business Reality → USER-CENTER（用户中心依然不能提前做）
 
