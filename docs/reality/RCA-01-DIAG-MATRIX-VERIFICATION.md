@@ -99,3 +99,60 @@ C 版：kunlun-desktop.exe --debug --diag
 3. WebView 日志 webview.log
 4. error.log
 5. api.log
+
+---
+
+## 附录 B：时间线判定标准（技术总监 2026-08-04 05:16 定稿）
+
+diag-1.1.2 最有价值的数据是**时间线**（每条日志 UTC ISO8601 毫秒级），不是单个日志。
+
+### 情况 1：Token 注入过早（高概率嫌疑）
+
+```
+T0 create workspace window
+T1 token inject begin
+T2 token inject end
+T3 page STARTED
+T4 page FINISHED
+T5 NAVIGATE /login
+```
+
+**结论**：Workspace 加载成功，但身份桥接失败。修复方向（非业务改动）：调整生命周期为 `page ready → inject token → reload/auth bootstrap`。
+
+### 情况 2：Token 正常但页面渲染失败
+
+```
+STARTED / FINISHED
+无 /login 导航
+title = 工作台
+页面空白
+```
+
+**结论**：身份链可能正常。查：前端异常 / API 首屏数据 / workspace runtime error。
+
+### 情况 3：Workspace URL 根本没成功加载
+
+```
+open_workspace
+URL created
+WebView created
+（无 FINISHED）
+```
+
+**结论**：进入 WebView2 网络 / HTTPS / DNS / CSP / 代理环境排查。
+
+### 真机回传仅需五项（不贴大量截图）
+
+每版本：1. 是否显示 ｜ 2. startup.log ｜ 3. webview.log ｜ 4. error.log ｜ 5. api.log
+尤其 C 版关键节点：`open_workspace` → `token inject` → `page FINISHED` → `navigate`
+
+### 当前状态裁定（总监）
+
+```
+ECO-11.3 Local Runtime ✅
+Release Artifact ✅
+Desktop Shell Architecture ✅
+RCA Diagnostic Framework ✅
+白屏根因 ⏳ 等证据
+业务修复 ❌ 暂停 / 功能扩展 ❌ 暂停 / 生态扩展 ❌ 暂停
+```
