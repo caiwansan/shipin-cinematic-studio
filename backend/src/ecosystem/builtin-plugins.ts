@@ -24,6 +24,8 @@ export interface BuiltinPluginSpec {
   /** 订阅登记价（元/月，仅登记展示，未接支付） */
   price: number;
   icon: string;
+  /** 允许桌面本地入口（ECO-11.3 白名单；true 时强制 kaor=true，默认 false） */
+  runtimeLocal?: boolean;
 }
 
 /** 官方开发者（平台运营方 = 太昊子） */
@@ -49,6 +51,7 @@ export const BUILTIN_PLUGINS: BuiltinPluginSpec[] = [
     version: '1.0.0',
     price: 599,
     icon: '📋',
+    runtimeLocal: true, // ECO-11.3 Task04：首个本地插件闭环样本
   },
   {
     pluginId: 'ai-viral-analyst',
@@ -111,7 +114,7 @@ function buildManifest(spec: BuiltinPluginSpec) {
     application: spec.application,
     description: spec.description,
     permissions: spec.permissions,
-    runtime: { kaor: true },
+    runtime: { kaor: true, local: spec.runtimeLocal === true },
     billing: { subscription: true, price: spec.price, currency: 'CNY' },
   });
 }

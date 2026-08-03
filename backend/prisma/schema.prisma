@@ -9959,6 +9959,7 @@ model EcologyPlugin {
   installs         EcologyPluginInstall[]
   runtimeBindings  EcologyPluginRuntimeBinding[]
   licenses         EcologyLicense[]
+  localRuntimes    EcologyLocalPluginRuntime[]
   publishRequests  EcologyPluginPublishRequest[]
   marketplaceItem  EcologyMarketplaceItem?
   revenueSnapshots EcologyRevenueSnapshot[]
@@ -10431,6 +10432,7 @@ model EcologyDevice {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   localApps EcologyLocalApp[]
+  pluginRuntimes EcologyLocalPluginRuntime[]
 
   @@index([organizationId])
   @@index([userId])
@@ -10454,4 +10456,36 @@ model EcologyLocalApp {
   @@index([organizationId])
   @@index([applicationId])
   @@map("ecology_local_apps")
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPRINT-ECO-11.3 — Local Plugin Runtime（设备 ↔ 插件运行时实例）
+// 掌柜冻结（2026-08-04）：
+//   - 定位 = 本地应用生命周期管理器（安装/版本/运行状态/心跳/设备关联）
+//   - ❌ 不是插件执行环境（本地零代码执行，插件 = 云端 Agent）
+//   - ❌ 不存授权结论（licenseStatus/allowed/permissionResult 属于 License 系统，
+//     授权永远实时 join ecology_licenses，避免双真源）
+// 状态机：INSTALLED → RUNNING ⇄ DISABLED → UNINSTALLED（卸载不删行）
+model EcologyLocalPluginRuntime {
+  id             String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  organizationId String   @map("organization_id") @db.Text // 组织隔离（与设备/许可同源）
+  deviceId       String   @map("device_id") @db.Text // EcologyDevice.id
+  pluginId       String   @map("plugin_id") @db.Text // EcologyPlugin.id
+  version        String   @db.VarChar(30) // 本地插件实例版本（semver，更新审计）
+  status         String   @default("INSTALLED") @db.VarChar(20) // INSTALLED | RUNNING | DISABLED | UNINSTALLED
+  installedAt    DateTime @default(now()) @map("installed_at")
+  startedAt      DateTime? @map("started_at") // 最近一次进入 RUNNING
+  lastHeartbeat  DateTime? @map("last_heartbeat") // 插件运行时心跳（吊销/失效判定依据）
+  stoppedAt      DateTime? @map("stopped_at") // 最近一次退出 RUNNING
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  device EcologyDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  plugin EcologyPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, pluginId]) // 每设备每插件单实例（重装/升级 = upsert）
+  @@index([organizationId])
+  @@index([pluginId])
+  @@index([lastHeartbeat])
+  @@map("ecology_local_plugin_runtime")
 }

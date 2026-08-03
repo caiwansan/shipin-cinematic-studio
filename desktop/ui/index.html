@@ -206,24 +206,70 @@ function launchApp(slug, entry) {
   invoke('open_workspace', { url, access_token: creds.access_token });
 }
 
-// ── 插件授权状态 ────────────────────────────
+// ── 插件授权状态 + 本地运行时（ECO-11.3）────────────────────
+// 本地 = 入口 + 状态管理；云端 = AI 执行真相（本地零代码执行）
+async function startPlugin(pluginId) {
+  try {
+    const r = await api(`/api/ecosystem/devices/${creds.device_id}/plugins/${pluginId}/start`, { method: 'POST', body: { version: '1.0.0' } });
+    if (r.allowed === false) { alert(`插件无法启动: ${r.reason}`); }
+    await refreshPlugins();
+  } catch (e) { alert(`启动失败: ${e.message}`); }
+}
+// 进入工作台（云端 Agent 能力呈现处；本地只负责入口）
+function openPluginWorkspace(pluginId) {
+  openWorkspace(`/workspace/media?plugin=${pluginId}`);
+}
+async function stopPlugin(pluginId) {
+  try {
+    await api(`/api/ecosystem/devices/${creds.device_id}/plugins/${pluginId}/stop`, { method: 'POST' });
+    await refreshPlugins();
+  } catch (e) { alert(`停止失败: ${e.message}`); }
+}
+async function uninstallPlugin(pluginId) {
+  if (!confirm('卸载该插件？（仅本地记录移除，不影响云端授权）')) return;
+  try {
+    await api(`/api/ecosystem/devices/${creds.device_id}/plugins/${pluginId}/uninstall`, { method: 'POST' });
+    await refreshPlugins();
+  } catch (e) { alert(`卸载失败: ${e.message}`); }
+}
+
 async function refreshPlugins() {
   try {
     if (!creds.device_id) { $('sub-plugins').textContent = '未注册设备'; return; }
     const data = await api(`/api/ecosystem/devices/${creds.device_id}/authorized-plugins`);
     plugins = data.plugins || [];
-    $('sub-plugins').textContent = `设备状态: ${data.deviceStatus || 'ACTIVE'} · ${plugins.length} 个有效授权`;
+    const localCount = plugins.filter(p => p.runtimeLocal).length;
+    $('sub-plugins').textContent = `设备状态: ${data.deviceStatus || 'ACTIVE'} · ${plugins.length} 个有效授权 · ${localCount} 个支持本地`;
     $('plugins-list').innerHTML = plugins.length === 0
       ? '<div class="muted">暂无已授权插件（订阅插件后此处自动出现）</div>'
-      : plugins.map(p => `
-        <div class="plugin-item row">
-          <div>
-            <span class="status-dot" style="background:${p.allowed ? 'var(--ok)' : 'var(--err)'}"></span>
-            <strong>${p.name}</strong> <span class="badge">${p.type}</span>
-            <div class="muted">${p.pluginId} · ${p.licenseType} · 到期 ${new Date(p.expireAt).toLocaleDateString()}</div>
+      : plugins.map(p => {
+          const runtimeBadge = p.runtimeStatus
+            ? `<span class="badge ${p.runtimeStatus === 'RUNNING' ? 'ok' : 'warn'}">本地:${p.runtimeStatus}</span>`
+            : '<span class="badge">未启动</span>';
+          const actions = p.runtimeLocal
+            ? `<div style="margin-top:8px;display:flex;gap:8px">
+                 ${p.runtimeStatus === 'RUNNING'
+                   ? `<button onclick="stopPlugin('${p.pluginId}')">停止</button><button onclick="openPluginWorkspace('${p.pluginId}')">打开工作台</button>`
+                   : `<button onclick="startPlugin('${p.pluginId}')">启动</button>`}
+                 <button onclick="uninstallPlugin('${p.pluginId}')" style="opacity:.6">卸载</button>
+               </div>`
+            : '';
+          return `
+        <div class="plugin-item">
+          <div class="row">
+            <div>
+              <span class="status-dot" style="background:${p.allowed ? 'var(--ok)' : 'var(--err)'}"></span>
+              <strong>${p.name}</strong> <span class="badge">${p.type}</span> ${runtimeBadge}
+              <div class="muted">${p.pluginId} · ${p.licenseType} · 到期 ${new Date(p.expireAt).toLocaleDateString()}
+                ${p.runtimeLocal ? '' : ' · 仅云端'}
+              </div>
+              <div class="muted">${p.kaorBound ? 'KAOR 云端执行 ✅' : '未绑定 KAOR ⚠️'}${p.runtimeVersion ? ` · 本地 v${p.runtimeVersion}` : ''}</div>
+            </div>
+            <span class="badge ${p.allowed ? 'ok' : 'err'}">${p.allowed ? '可运行' : '受限'}</span>
           </div>
-          <span class="badge ${p.allowed ? 'ok' : 'err'}">${p.allowed ? '可运行' : '受限'}</span>
-        </div>`).join('');
+          ${actions}
+        </div>`;
+        }).join('');
   } catch (e) { $('sub-plugins').textContent = `❌ ${e.message}`; }
 }
 
@@ -257,7 +303,15 @@ async function heartbeatLoop() {
     const data = await api(`/api/ecosystem/devices/${creds.device_id}/heartbeat`, {
       method: 'POST', body: { token: creds.device_token },
     });
-    if (data.allowed === false) { alert('设备已被管理员吊销/禁用，请重新登录'); await logout(); }
+    if (data.allowed === false) { alert('设备已被管理员吊销/禁用，请重新登录'); await logout(); return; }
+    // ECO-11.3：本地运行中的插件心跳续命（云端 Agent 执行不受影响，仅运行时声明）
+    for (const p of plugins) {
+      if (p.runtimeLocal && p.runtimeStatus === 'RUNNING') {
+        await api(`/api/ecosystem/devices/${creds.device_id}/plugins/${p.pluginId}/heartbeat`, {
+          method: 'POST', body: { token: creds.device_token },
+        }).catch(() => {});
+      }
+    }
   } catch (e) { /* 网络抖动忽略 */ }
 }
 setInterval(heartbeatLoop, 60000);

@@ -179,13 +179,14 @@ export async function registerEcologyDeviceRoutes(app: FastifyInstance) {
   /**
    * POST /api/ecosystem/devices/:deviceId/launch-check — G5 设备级启动校验（License 预演）
    * body: { pluginId }
+   * 授权判定唯一实现 = DeviceService.checkPluginLaunch（D4：Web/Desktop 同一授权入口）
    * → allowed:true（设备 ACTIVE + License ACTIVE + 组织匹配）
    * → allowed:false + reason（NO_LICENSE / EXPIRED / SUSPENDED / DEVICE_REVOKED / DEVICE_ORG_MISMATCH）
    */
   app.post('/devices/:deviceId/launch-check', async (request: any, reply: any) => {
     try {
       const organizationId = await resolveOrg(request);
-      const { prisma } = await getService();
+      const { devices, prisma } = await getService();
       const device = await prisma.ecologyDevice.findUnique({ where: { deviceId: request.params?.deviceId } });
       if (!device) {
         return reply.send({ code: 0, data: { allowed: false, reason: 'DEVICE_NOT_FOUND', deviceStatus: null } });
@@ -193,38 +194,114 @@ export async function registerEcologyDeviceRoutes(app: FastifyInstance) {
       if (device.organizationId !== organizationId) {
         return reply.send({ code: 0, data: { allowed: false, reason: 'DEVICE_ORG_MISMATCH', deviceStatus: device.status } });
       }
-      if (device.status !== 'ACTIVE') {
-        return reply.send({ code: 0, data: { allowed: false, reason: `DEVICE_${device.status}`, deviceStatus: device.status } });
+      const gate = await devices.checkPluginLaunch(request.params?.deviceId, request.body?.pluginId);
+      // 审计（allowed/denied 均记录；source=local_app 语义）
+      if (gate.allowed) {
+        await prisma.ecologyLicenseCheckLog.create({
+          data: {
+            organizationId: device.organizationId,
+            pluginId: request.body?.pluginId,
+            licenseId: gate.licenseId ?? null,
+            result: 'allowed',
+            reason: 'OK',
+            source: 'local_app',
+            machineId: device.deviceId,
+          },
+        });
+      } else if (!['DEVICE_NOT_FOUND', 'DEVICE_ORG_MISMATCH'].includes(gate.reason)) {
+        await prisma.ecologyLicenseCheckLog.create({
+          data: {
+            organizationId: device.organizationId,
+            pluginId: request.body?.pluginId,
+            licenseId: gate.licenseId ?? null,
+            result: 'denied',
+            reason: gate.reason,
+            source: 'local_app',
+            machineId: device.deviceId,
+          },
+        });
       }
-      const plugin = await prisma.ecologyPlugin.findUnique({ where: { pluginId: request.body?.pluginId } });
-      if (!plugin) {
-        return reply.send({ code: 0, data: { allowed: false, reason: 'PLUGIN_NOT_FOUND', deviceStatus: device.status } });
-      }
-      const license = await prisma.ecologyLicense.findUnique({
-        where: { organizationId_pluginId: { organizationId: device.organizationId, pluginId: plugin.id } },
-      });
-      if (!license) {
-        return reply.send({ code: 0, data: { allowed: false, reason: 'NO_LICENSE', deviceStatus: device.status } });
-      }
-      if (license.status === 'EXPIRED' || license.expireAt <= new Date()) {
-        return reply.send({ code: 0, data: { allowed: false, reason: 'EXPIRED', deviceStatus: device.status } });
-      }
-      if (license.status === 'SUSPENDED') {
-        return reply.send({ code: 0, data: { allowed: false, reason: 'SUSPENDED', deviceStatus: device.status } });
-      }
-      // 设备级启动校验通过 → 记录审计（ecology_license_check_logs，source=local_app 语义）
-      await prisma.ecologyLicenseCheckLog.create({
+      return reply.send({
+        code: 0,
         data: {
-          organizationId: device.organizationId,
-          pluginId: plugin.pluginId,
-          licenseId: license.id,
-          result: 'allowed',
-          reason: 'OK',
-          source: 'local_app',
-          machineId: device.deviceId,
+          allowed: gate.allowed,
+          reason: gate.reason,
+          deviceStatus: gate.deviceStatus,
+          licenseId: gate.licenseId,
+          expireAt: gate.expireAt ?? null,
         },
       });
-      return reply.send({ code: 0, data: { allowed: true, reason: 'OK', deviceStatus: device.status, licenseId: license.id, expireAt: license.expireAt } });
+    } catch (e: any) { return replyErr(reply, e); }
+  });
+
+  /**
+   * POST /api/ecosystem/devices/:deviceId/plugins/:pluginId/start — ECO-11.3 桌面插件启动
+   * body: { version? }
+   * 门禁 = checkPluginLaunch（唯一授权判定）+ local 白名单（manifest.local）+ KAOR 绑定
+   * → allowed:true → runtime 行 RUNNING（本地只记录生命周期，不执行任何插件代码）
+   */
+  app.post('/devices/:deviceId/plugins/:pluginId/start', async (request: any, reply: any) => {
+    try {
+      const organizationId = await resolveOrg(request);
+      const { devices } = await getService();
+      const result = await devices.startPluginRuntime({
+        organizationId,
+        deviceId: request.params?.deviceId,
+        pluginId: request.params?.pluginId,
+        version: request.body?.version,
+      });
+      return reply.send({ code: 0, data: result });
+    } catch (e: any) { return replyErr(reply, e); }
+  });
+
+  /**
+   * POST /api/ecosystem/devices/:deviceId/plugins/:pluginId/heartbeat — ECO-11.3 插件运行时心跳
+   * body: { token }（设备凭据鉴权，桌面无 JWT 轮换场景）
+   * → 刷新 lastHeartbeat；设备吊销/禁用 → allowed:false（本地降级信号）
+   */
+  app.post('/devices/:deviceId/plugins/:pluginId/heartbeat', async (request: any, reply: any) => {
+    try {
+      const { devices } = await getService();
+      const result = await devices.heartbeatPluginRuntime({
+        deviceId: request.params?.deviceId,
+        pluginId: request.params?.pluginId,
+        token: request.body?.token,
+      });
+      return reply.send({ code: 0, data: result });
+    } catch (e: any) { return replyErr(reply, e); }
+  });
+
+  /**
+   * POST /api/ecosystem/devices/:deviceId/plugins/:pluginId/stop — ECO-11.3 停止插件运行
+   * → DISABLED + stoppedAt（不删行）
+   */
+  app.post('/devices/:deviceId/plugins/:pluginId/stop', async (request: any, reply: any) => {
+    try {
+      const organizationId = await resolveOrg(request);
+      const { devices } = await getService();
+      const result = await devices.stopPluginRuntime({
+        organizationId,
+        deviceId: request.params?.deviceId,
+        pluginId: request.params?.pluginId,
+      });
+      return reply.send({ code: 0, data: result });
+    } catch (e: any) { return replyErr(reply, e); }
+  });
+
+  /**
+   * POST /api/ecosystem/devices/:deviceId/plugins/:pluginId/uninstall — ECO-11.3 卸载插件
+   * → UNINSTALLED + stoppedAt（不删行，保留审计轨迹）
+   */
+  app.post('/devices/:deviceId/plugins/:pluginId/uninstall', async (request: any, reply: any) => {
+    try {
+      const organizationId = await resolveOrg(request);
+      const { devices } = await getService();
+      const result = await devices.uninstallPluginRuntime({
+        organizationId,
+        deviceId: request.params?.deviceId,
+        pluginId: request.params?.pluginId,
+      });
+      return reply.send({ code: 0, data: result });
     } catch (e: any) { return replyErr(reply, e); }
   });
 }

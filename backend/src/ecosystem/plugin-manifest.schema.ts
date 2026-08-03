@@ -7,7 +7,8 @@
  * 白名单（未来扩展只改这里，不改校验逻辑）：
  *  - type: agent | tool | workflow
  *  - permissions: browser | content | analytics | storage | network | automation
- *  - runtime: { kaor: boolean }（禁止任意运行时声明）
+ *  - runtime: { kaor: boolean, local?: boolean }（禁止任意运行时声明）
+ *    local=true 强制 kaor=true（本地插件必须是云端 Agent 型，纯本地插件不存在）
  */
 import { ZodError, z } from 'zod';
 
@@ -24,8 +25,8 @@ export const KNOWN_PERMISSIONS = [
 /** 已知插件类型 */
 export const KNOWN_PLUGIN_TYPES = ['agent', 'tool', 'workflow'] as const;
 
-/** 已知运行时能力（仅 kaor，禁止任意声明） */
-export const KNOWN_RUNTIME_KEYS = ['kaor'] as const;
+/** 已知运行时能力（kaor=云端 Agent 执行；local=允许桌面本地入口，白名单） */
+export const KNOWN_RUNTIME_KEYS = ['kaor', 'local'] as const;
 
 /** plugin.json schema（zod 严格模式：未知字段拒绝，防线之一） */
 const manifestSchema = z
@@ -45,9 +46,20 @@ const manifestSchema = z
     runtime: z
       .object({
         kaor: z.boolean(),
+        local: z.boolean().optional(), // true = 允许出现在桌面本地加载器（白名单，缺省 false）
       })
       .strict()
-      .optional(), // 严格：未知运行时字段拒绝
+      .optional() // 严格：未知运行时字段拒绝
+      .superRefine((runtime, ctx) => {
+        // 掌柜冻结：local=true 必须 kaor=true（非法组合直接拒绝）
+        if (runtime?.local === true && runtime.kaor !== true) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['runtime'],
+            message: 'runtime.local=true 必须同时 runtime.kaor=true（本地插件必须是云端 Agent 型）',
+          });
+        }
+      }),
     billing: z
       .object({
         subscription: z.boolean(),
