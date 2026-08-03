@@ -124,6 +124,88 @@ export class ChannelService {
   ) {
     const account = await prisma.enterpriseChannelAccount.findUnique({ where: { id: accountId } })
     if (!account) throw new Error('Channel account not found')
+
+    // DUPLICATE-IDENTITY-FIX — externalAccountId 唯一冲突：同平台同一身份只允许一条记录
+    // 同 org → 合并登录态到既有账号（资产属人迁移 + 身份刷新，零删除）；跨 org → 明确报错不合并
+    if (input.externalAccountId) {
+      const existing = await prisma.enterpriseChannelAccount.findFirst({
+        where: { channelType: account.channelType, externalAccountId: input.externalAccountId, id: { not: accountId } },
+      })
+      if (existing) {
+        if (existing.organizationId !== account.organizationId) {
+          const err: any = new Error(`该平台账号（${existing.channelName || existing.externalAccountId}）已被其他企业认领，禁止跨企业合并`)
+          err.code = 'DUPLICATE_ACCOUNT_CROSS_ORG'
+          throw err
+        }
+        // 同 org 重复身份（如历史分裂记录 + 本次真实扫码）→ 登录态合并至既有账号
+        const nowIso = new Date().toISOString()
+        // ① 先处理当前账号：BLOCKED + owner 键释放（ownerId → unclaimed-merged 幽灵，避免与既有账号改主后撞 (owner_id, channel_type) 唯一索引）
+        const mergedGhost = `unclaimed-merged-${accountId.slice(0, 13)}`
+        await prisma.channelOwnershipMigration.create({
+          data: {
+            channelAccountId: accountId,
+            oldOwnerId: account.ownerId || '',
+            newOwnerId: mergedGhost,
+            oldOrganizationId: account.organizationId || '',
+            newOrganizationId: account.organizationId || '',
+            operatorUserId: 'system',
+            reason: 'duplicate_login_merge_source_retire',
+          },
+        }).catch((e: any) => console.warn(`[updateChannelIdentity] 迁移审计写入失败: ${e.message}`))
+        await prisma.enterpriseChannelAccount.update({
+          where: { id: accountId },
+          data: {
+            ownerId: mergedGhost,
+            connectionStatus: ChannelConnectionStatus.BLOCKED,
+            metadata: {
+              ...((account.metadata as any) || {}),
+              mergedInto: existing.id,
+              mergedAt: nowIso,
+              mergedVia: input.via,
+            },
+          },
+        }).catch((e: any) => console.warn(`[updateChannelIdentity] merged 标记失败: ${e.message}`))
+        // ② 既有账号接管：归属迁移到当前用户 + 登录态/身份刷新
+        await prisma.channelOwnershipMigration.create({
+          data: {
+            channelAccountId: existing.id,
+            oldOwnerId: existing.ownerId || '',
+            newOwnerId: account.ownerId || '',
+            oldOrganizationId: existing.organizationId || '',
+            newOrganizationId: account.organizationId || '',
+            operatorUserId: 'system',
+            reason: 'duplicate_login_merge',
+          },
+        }).catch((e: any) => console.warn(`[updateChannelIdentity] 迁移审计写入失败: ${e.message}`))
+        const existingMeta = (existing.metadata as any) || {}
+        await prisma.enterpriseChannelAccount.update({
+          where: { id: existing.id },
+          data: {
+            ownerId: account.ownerId || existing.ownerId,
+            ...(input.externalAccountId != null ? { externalAccountId: input.externalAccountId } : {}),
+            ...(input.accountName != null ? { accountName: input.accountName, channelName: input.accountName } : {}),
+            ...(input.avatarUrl != null ? { avatarUrl: input.avatarUrl } : {}),
+            ...(input.connectionStatus ? { connectionStatus: input.connectionStatus } : {}),
+            ...(input.connectedAt ? { connectedAt: input.connectedAt } : {}),
+            metadata: {
+              ...existingMeta,
+              ...(input.avatarUrl ? { avatar: input.avatarUrl } : {}),
+              lastVerifiedAt: nowIso,
+              identitySnapshot: {
+                externalAccountId: input.externalAccountId,
+                accountName: input.accountName ?? existing.channelName,
+                avatar: input.avatarUrl ?? null,
+                checkedAt: nowIso,
+                via: input.via,
+              },
+            },
+          },
+        })
+        // ③ 当前账号不再重复标记（②中已 BLOCKED + mergedInto）——旧逻辑的重复标记块已移除，此处直接返回合并结果
+        return { merged: true, mergedIntoId: existing.id, account: existing }
+      }
+    }
+
     const nowIso = new Date().toISOString()
     const accMeta = (account.metadata as any) || {}
     const finalExternalId = input.externalAccountId ?? account.externalAccountId
@@ -306,7 +388,7 @@ export class ChannelService {
         }
         // TASK03.2.1 — 回写最新身份（登录态维持，身份可能更新）
         // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（externalAccountId + accountName + avatarUrl）
-        await this.updateChannelIdentity(account.id, {
+        const upd = await this.updateChannelIdentity(account.id, {
           externalAccountId: result.externalAccountId ?? account.externalAccountId,
           accountName: result.accountName ?? account.accountName ?? account.channelName,
           avatarUrl: result.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
@@ -314,6 +396,9 @@ export class ChannelService {
           connectionStatus: ChannelConnectionStatus.CONNECTED,
           connectedAt: account.connectedAt ?? new Date(),
         })
+        if ((upd as any)?.merged) {
+          return { ...result, status: 'merged', accountId: (upd as any).mergedIntoId, mergedIntoId: (upd as any).mergedIntoId, message: '检测到该平台账号已有记录，登录态已合并至既有账号' }
+        }
         await channelBrowserSessionService.markHealthCheck(session.id, { loginState: 'connected' })
         return { ...result, status: 'connected' }
       }
@@ -405,7 +490,7 @@ export class ChannelService {
       }
 
       // 3) 身份锚定 → IDENTITY_VERIFIED（SSOT 写入：externalAccountId + accountName + avatarUrl）
-      await this.updateChannelIdentity(account.id, {
+      const upd = await this.updateChannelIdentity(account.id, {
         externalAccountId: identity.accountId,
         accountName: identity.accountName ?? account.accountName ?? account.channelName,
         avatarUrl: identity.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
@@ -413,6 +498,16 @@ export class ChannelService {
         connectionStatus: ChannelConnectionStatus.IDENTITY_VERIFIED,
         connectedAt: account.connectedAt ?? new Date(),
       })
+      // DUPLICATE-IDENTITY-FIX — 同平台同身份已存在（历史分裂）→ 登录态已合并，诚实告知不假装连接
+      if ((upd as any)?.merged) {
+        return {
+          ...result,
+          status: 'merged',
+          accountId: (upd as any).mergedIntoId,
+          mergedIntoId: (upd as any).mergedIntoId,
+          message: '检测到该平台账号已有记录，登录态已合并至既有账号',
+        }
+      }
 
       // 4) 凭证落库（adapter 内部探针复核 + cookie 加密保存）→ 成功才 CONNECTED
       try {
@@ -544,7 +639,7 @@ export class ChannelService {
       err.code = 'identity_missing'
       throw err
     }
-    await this.updateChannelIdentity(account.id, {
+    const upd = await this.updateChannelIdentity(account.id, {
       externalAccountId: finalExternalId,
       accountName: identity.accountName ?? account.accountName ?? account.channelName,
       avatarUrl: identity.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
@@ -552,6 +647,10 @@ export class ChannelService {
       connectionStatus: ChannelConnectionStatus.IDENTITY_VERIFIED,
       connectedAt: new Date(),
     })
+    // DUPLICATE-IDENTITY-FIX — 同平台同身份已存在 → 已合并，返回合并结果（不再对本账号继续绑定）
+    if ((upd as any)?.merged) {
+      return { merged: true, mergedIntoId: (upd as any).mergedIntoId, accountId: (upd as any).mergedIntoId, status: 'merged' }
+    }
     // 权限/绑定元数据单独维护（非身份数据）
     await prisma.enterpriseChannelAccount.update({
       where: { id: account.id },
@@ -715,7 +814,7 @@ export class ChannelService {
     }
     // 探针确认真人 + 凭证落库成功 → CONNECTED（身份 + 凭证 + runtime 全部正常）
     // IDENTITY-VIEW-01 — 统一走 SSOT 写入入口（externalAccountId + accountName + avatarUrl）
-    await this.updateChannelIdentity(account.id, {
+    const upd = await this.updateChannelIdentity(account.id, {
       externalAccountId: identity.accountId ?? account.externalAccountId,
       accountName: identity.accountName ?? account.accountName ?? account.channelName,
       avatarUrl: identity.avatar ?? account.avatarUrl ?? (account.metadata as any)?.avatar ?? null,
@@ -723,6 +822,9 @@ export class ChannelService {
       connectionStatus: ChannelConnectionStatus.CONNECTED,
       connectedAt: new Date(),
     })
+    if ((upd as any)?.merged) {
+      return { ...result, merged: true, mergedIntoId: (upd as any).mergedIntoId }
+    }
     return result
   }
 

@@ -190,17 +190,41 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
         select: { id: true },
       })
       if (!account) {
-        // REALITY-GATE-FINAL-01 — 真实或不存在：只建 WAITING_LOGIN 空壳（无假 ID/无空凭证/不冒充账号名），
-        // 真实身份由登录成功后写入（updateChannelIdentity）。禁止 externalAccountId=platform-时间戳 占位。
-        const created = await channelService.connectAccount({
-          tenantId,
-          organizationId: orgId,
-          platform,
-          accountName: '未连接',
-          credential: {},
-          ownerId: user.id, // FIX-02 — 创建者即 owner（用户私有资产）
+        // DUPLICATE-IDENTITY-FIX — 先认领同 org 同平台无主幽灵账号（unclaimed-*），避免重复分裂
+        // （历史登录产生的账号 owner 无主 → 用户私有模型下由登录用户认领，走迁移审计）
+        const ghost = await prisma.enterpriseChannelAccount.findFirst({
+          where: { channelType: platform, organizationId: orgId, ownerId: { startsWith: 'unclaimed-' } },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true },
         })
-        account = { id: created.id }
+        if (ghost) {
+          await prisma.channelOwnershipMigration.create({
+            data: {
+              channelAccountId: ghost.id,
+              oldOwnerId: 'unclaimed',
+              newOwnerId: user.id,
+              oldOrganizationId: orgId || '',
+              newOrganizationId: orgId || '',
+              operatorUserId: user.id,
+              reason: 'ensure_claim_unclaimed',
+            },
+          }).catch((e: any) => console.warn(`[ensure-account] 认领审计写入失败: ${e.message}`))
+          await prisma.enterpriseChannelAccount.update({ where: { id: ghost.id }, data: { ownerId: user.id } })
+          account = { id: ghost.id }
+          console.log(`[ensure-account] ${platform} 认领无主幽灵账号 ${String(ghost.id).slice(0, 8)} → 归属 ${user.id.slice(0, 8)}`)
+        } else {
+          // REALITY-GATE-FINAL-01 — 真实或不存在：只建 WAITING_LOGIN 空壳（无假 ID/无空凭证/不冒充账号名），
+          // 真实身份由登录成功后写入（updateChannelIdentity）。禁止 externalAccountId=platform-时间戳 占位。
+          const created = await channelService.connectAccount({
+            tenantId,
+            organizationId: orgId,
+            platform,
+            accountName: '未连接',
+            credential: {},
+            ownerId: user.id, // FIX-02 — 创建者即 owner（用户私有资产）
+          })
+          account = { id: created.id }
+        }
       }
       return reply.send({ code: 0, data: { id: account.id } })
     } catch (e: any) {
