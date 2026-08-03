@@ -58,4 +58,6 @@ export const primaryNav: NavItem[] = [
   { label: '插件中心', icon: '🔌', to: '/ecosystem/plugins' },
   // AI Center：昆仑镜 AI 生态入口层（掌柜指令 2026-08-01）
   { label: 'AI中心', icon: '🧠', to: '/ai-center' },
+  // 桌面版下载入口（掌柜指令 2026-08-04 RELEASE-01.1：用户只能从昆仑镜官网下载，GitHub 非入口）
+  { label: '下载桌面版', icon: '⬇️', to: '/download/desktop' },
 ]
