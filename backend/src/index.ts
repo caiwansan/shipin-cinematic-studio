@@ -517,6 +517,15 @@ await app.register(projectV2Routes)
     app.log.warn(`[ECO-04] 启动到期扫描失败（不影响启动）: ${e.message}`)
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-05 — Developer Center Foundation（开发者身份 + 插件发布基础）
+  // 链路：Developer → Plugin Author → Plugin Version → Review Status → Marketplace Ready
+  // 纪律：不做开发者商城 / 不做收益提现 / 不做推广系统 / 不做审核后台 UI
+  // 边界：G1 Author Ownership / G2 Permission Intersection / G3 Version Ownership
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-developer.routes.js')).registerEcologyDeveloperRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-05] Developer Center Foundation 路由已注册')
+
   // 注册渠道适配器
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')

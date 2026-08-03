@@ -9959,6 +9959,7 @@ model EcologyPlugin {
   installs         EcologyPluginInstall[]
   runtimeBindings  EcologyPluginRuntimeBinding[]
   licenses         EcologyLicense[]
+  publishRequests  EcologyPluginPublishRequest[]
 
   @@index([type])
   @@index([applicationId])
@@ -9978,6 +9979,7 @@ model EcologyPluginVersion {
 
   plugin           EcologyPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
   installs         EcologyPluginInstall[]
+  publishRequests  EcologyPluginPublishRequest[]
 
   @@unique([pluginId, version])
   @@index([pluginId])
@@ -10128,4 +10130,69 @@ model EcologyLicenseCheckLog {
   @@index([licenseId])
   @@index([checkedAt])
   @@map("ecology_license_check_logs")
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPRINT-ECO-05 — Developer Center Foundation（开发者身份 + 插件发布基础）
+// 链路：Developer → Plugin Author → Plugin Version → Review Status → Marketplace Ready
+// 纯新增 3 表：ecology_developers / ecology_plugin_publish_requests / ecology_developer_agreements
+// 纪律：不做开发者商城 / 不做收益提现 / 不做推广系统 / 不做审核后台 UI
+// 设计：author 关联为 service 层语义（ecology_plugins.author = developerId），避免破坏存量数据
+// ═══════════════════════════════════════════════════════════
+
+model EcologyDeveloper {
+  id             String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  developerId    String   @unique @map("developer_id") @db.VarChar(64) // 公开开发者 ID（插件 author 引用）
+  userId         String   @map("user_id") @db.Text // 平台 User.id（一用户一开发者）
+  organizationId String   @map("organization_id") @db.Text // 归属组织
+  developerName  String   @map("developer_name") @db.VarChar(100)
+  status         String   @default("CREATED") @db.VarChar(20) // CREATED | VERIFIED | SUSPENDED（掌柜冻结）
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  publishRequests EcologyPluginPublishRequest[]
+  agreements      EcologyDeveloperAgreement[]
+
+  @@unique([userId])
+  @@index([organizationId])
+  @@index([status])
+  @@map("ecology_developers")
+}
+
+model EcologyPluginPublishRequest {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  pluginId    String   @map("plugin_id") @db.Text // EcologyPlugin.id
+  versionId   String   @map("version_id") @db.Text // EcologyPluginVersion.id
+  developerId String   @map("developer_id") @db.Text // EcologyDeveloper.id
+  status      String   @default("DRAFT") @db.VarChar(20) // DRAFT | SUBMITTED | APPROVED | REJECTED（掌柜冻结）
+  reviewNote  String?  @map("review_note") @db.Text // 审核意见（登记）
+  reviewedBy  String?  @map("reviewed_by") @db.Text // 审核人（登记）
+  reviewedAt  DateTime? @map("reviewed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  plugin    EcologyPlugin        @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  version   EcologyPluginVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  developer EcologyDeveloper     @relation(fields: [developerId], references: [id], onDelete: Restrict)
+
+  @@unique([pluginId, versionId]) // 一个版本一个发布申请（G3 防恶意覆盖）
+  @@index([developerId])
+  @@index([status])
+  @@map("ecology_plugin_publish_requests")
+}
+
+model EcologyDeveloperAgreement {
+  id            String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  developerId   String   @map("developer_id") @db.Text // EcologyDeveloper.id
+  agreementType String   @map("agreement_type") @db.VarChar(30) // developer_terms | revenue_share | ip_ownership | plugin_liability
+  version       String   @db.VarChar(30) // 协议版本
+  content       String?  @db.Text // 协议摘要/条款（留痕：分成/IP/插件责任）
+  signedAt      DateTime @default(now()) @map("signed_at")
+  status        String   @default("SIGNED") @db.VarChar(20) // SIGNED | REVOKED
+
+  developer EcologyDeveloper @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@unique([developerId, agreementType, version])
+  @@index([developerId])
+  @@map("ecology_developer_agreements")
 }
