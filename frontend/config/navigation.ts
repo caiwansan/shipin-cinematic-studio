@@ -54,6 +54,8 @@ export const primaryNav: NavItem[] = [
   { label: '社区', icon: '🌐', to: '/community' },
   // 应用中心：应用生态入口层（掌柜指令 2026-08-04 ECO-09）
   { label: '应用中心', icon: '🧩', to: '/ecosystem/applications' },
+  // 插件中心：AI 能力生态入口层（掌柜指令 2026-08-04 ECO-10.1，与应用中心并列：应用=使用工具，插件=增强能力）
+  { label: '插件中心', icon: '🔌', to: '/ecosystem/plugins' },
   // AI Center：昆仑镜 AI 生态入口层（掌柜指令 2026-08-01）
   { label: 'AI中心', icon: '🧠', to: '/ai-center' },
 ]

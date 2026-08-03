@@ -1,11 +1,11 @@
-<!-- SPRINT-ECO-10 — 插件发现中心（Plugin Marketplace Discovery MVP） -->
+<!-- SPRINT-ECO-10.1 — 插件中心导航接入（ECO-10.1：标题/定位升级，非商城） -->
 <!-- 范围：插件目录 + 搜索 + 分类 + 详情 + 安装 + License + 运行检查 -->
 <!-- 禁止：支付页面 / 提现 / 推广入口 / 排行榜 / 推荐算法 / 评分造假 -->
 <template>
   <div class="eco-plugins-page">
     <div class="page-header">
-      <h1>🧩 插件中心</h1>
-      <p class="page-subtitle">插件发现中心 — 官方 AI 员工插件，安装后由 License 授权运行（ECO-10 Discovery MVP）</p>
+      <h1>🧩 昆仑镜 AI 插件中心</h1>
+      <p class="page-subtitle">发现、安装和管理 AI 员工与智能工作流插件</p>
     </div>
 
     <!-- Loading -->
@@ -175,6 +175,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+
+useHead({ title: '昆仑镜 AI 插件中心' })
 
 const items = ref<any[]>([])
 const detail = ref<any>(null)
