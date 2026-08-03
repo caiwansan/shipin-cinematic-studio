@@ -297,9 +297,9 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
       //    reload 会打断 passport 扫码确认窗口期 → 确认结果丢失（扫码成功不登录根因）
       const netCfg = this.meta.identityRules.networkApis
       if (!out.userId && netCfg?.userApis?.length && !opts?.skipNetwork) {
-        const cache = this._networkIdentityCache
-        const cached = cache && cache.sessionId === sessionId && Date.now() - cache.at < 5 * 60 * 1000 ? cache.data : null
-        const cap = cached ?? (await this.captureIdentityFromNetwork(page, netCfg, sessionId, { allowReload: !!opts?.allowReload }))
+        // VC-REALITY-HOTFIX-01 — 常驻缓存优先（导航/SPA 自然请求/主动 reload 已累积捕获）
+        const persData = this.getPersistentCapture(sessionId)
+        const cap = persData ?? (await this.captureIdentityFromNetwork(page, netCfg, sessionId, { allowReload: !!opts?.allowReload }))
         if (cap) {
           if (cap.userId && !out.userId) out.userId = cap.userId
           if (cap.nickname && !out.nickname) out.nickname = cap.nickname
@@ -315,8 +315,79 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
     return out
   }
 
-  /** network 捕获缓存（sessionId → 数据，5 分钟有效） */
-  private _networkIdentityCache: { sessionId: string; at: number; data: { userId?: string; nickname?: string; avatar?: string } } | null = null
+  /**
+   * VC-REALITY-HOTFIX-01 — per-session 常驻网络监听：
+   * listener 挂在 page 上不清理（页面生命周期内持续捕获），导航/SPA 自然请求/主动 reload
+   * 触发的官方身份 API 响应都会被累积捕获。根治「快手已登录但 accountId 空」：
+   * 旧实现 listener 只在 captureIdentityFromNetwork 内挂 12s 就移除，导航发生在 probe 之间
+   * → 页面加载请求永远错过 → 快手 home API（__NS_sig3 签名）永不捕获 → waitForLogin 硬条件
+   * identity.accountId 永不满足 → 永远「轮询未认证」→ 前端永远等待扫码（掌柜 2026-08-03 真机实锤）。
+   */
+  private _persistentCapture = new Map<string, { page: any; data: { userId?: string; nickname?: string; avatar?: string } | null; handler?: any }>()
+
+  /**
+   * 确保该 session 的常驻监听已挂载（导航/reload 前调用，避免错过整页加载的 API 请求）。
+   * page 引用变化（页面重建）时自动重挂。返回当前已捕获数据（无则 null）。
+   */
+  ensurePersistentCapture(page: any, sessionId: string): { userId?: string; nickname?: string; avatar?: string } | null {
+    const cfg = this.meta.identityRules.networkApis
+    if (!cfg?.userApis?.length) return null
+    const cur = this._persistentCapture.get(sessionId)
+    if (cur && cur.page === page && cur.handler) {
+      return cur.data && (cur.data.userId || cur.data.nickname) ? cur.data : null
+    }
+    // 页面引用变化 → 旧 listener 已随旧 page 失效（off 安全幂等）
+    try {
+      if (cur?.handler && cur.page && cur.page !== page) cur.page.off('response', cur.handler)
+    } catch {}
+    let data: { userId?: string; nickname?: string; avatar?: string } | null = null
+    const handler = async (resp: any) => {
+      try {
+        const u = resp.url()
+        if (!cfg.userApis.some(p => u.includes(p))) return
+        const ct = resp.headers()['content-type'] || ''
+        if (!ct.includes('json')) return
+        const j = await resp.json().catch(() => null)
+        if (!j) return
+        const userId = this.pickKeys(j, cfg.userIdKeys)
+        const nickname = this.pickKeys(j, cfg.nicknameKeys)
+        if (userId || nickname) {
+          data = { userId, nickname, avatar: cfg.avatarKeys ? this.pickKeys(j, cfg.avatarKeys) : undefined }
+          this._persistentCapture.set(sessionId, { page, data, handler })
+          console.log(`[BrowserChannelProbe:${this.platform}] 常驻监听捕获官方身份 ${userId || '-'}/${nickname || '-'}（${u.slice(0, 80)}）`)
+        }
+      } catch {}
+    }
+    page.on('response', handler)
+    this._persistentCapture.set(sessionId, { page, data, handler })
+    return null
+  }
+
+  /** 只读：该 session 常驻捕获的数据（无则 null） */
+  getPersistentCapture(sessionId: string): { userId?: string; nickname?: string; avatar?: string } | null {
+    const cur = this._persistentCapture.get(sessionId)
+    if (!cur || !cur.data) return null
+    return cur.data.userId || cur.data.nickname ? cur.data : null
+  }
+
+  /** 深度取值（复用 capture 与常驻监听的 pick 逻辑） */
+  private pickKeys(obj: any, keys: string[]): string | undefined {
+    const deepPick = (o: any, key: string, depth = 0): any => {
+      if (!o || typeof o !== 'object' || depth > 4) return undefined
+      if (o[key] !== undefined && o[key] !== null) return o[key]
+      for (const v of Object.values(o)) {
+        const r = deepPick(v, key, depth + 1)
+        if (r !== undefined) return r
+      }
+      return undefined
+    }
+    for (const k of keys) {
+      const v = deepPick(obj, k)
+      if (typeof v === 'string' && v) return v
+      if (typeof v === 'number' && v) return String(v)
+    }
+    return undefined
+  }
 
   /**
    * KUAISHOU-FIX-01 — 监听内部 API 响应，捕获官方身份（页面自身请求自带 __NS_sig3 签名）
@@ -335,6 +406,13 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
     // AUDIT-2026-08-03 — 双保险：reload 前再次确认当前页面不是登录页/安全验证页。
     // 登录页 reload = 扫码确认窗口期自杀（passport 已扫码待确认状态被刷掉 → 永不登录）
     const allowReload = !!opts?.allowReload
+    // VC-REALITY-HOTFIX-01 — 常驻监听已捕获（导航/SPA 自然请求/主动 reload 累积）→ 直接命中，
+    // 不再重复 12s 等待（旧实现每次 probe 都白等——页面已稳定无自然请求，永远捕获不到）
+    const persistent = this.getPersistentCapture(sessionId)
+    if (persistent) {
+      console.log(`[BrowserChannelProbe:${this.platform}] network 常驻缓存命中 ${persistent.userId || '-'}/${persistent.nickname || '-'}`)
+      return persistent
+    }
     try {
       const url = page.url() || ''
       if (/\/login|\/signin|\/passport|\/auth|\/sso|login\.html|login\.php/i.test(url)) {
@@ -386,13 +464,17 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
                 clearTimeout(timer)
                 cleanup()
                 const data = { userId, nickname, avatar: cfg.avatarKeys ? pick(cfg.avatarKeys) : undefined }
-                this._networkIdentityCache = { sessionId, at: Date.now(), data }
+                // VC-REALITY-HOTFIX-01 — 临时窗口捕获结果写入常驻缓存（后续 probe 秒读）
+                this._persistentCapture.set(sessionId, { page, data, handler: this._persistentCapture.get(sessionId)?.handler })
                 resolve(data)
               }
             }
           } catch {}
         }
         page.on('response', handler)
+        // VC-REALITY-HOTFIX-01 — 等待窗口内同时挂常驻监听（窗口内到来的官方 API 也累积，
+        // 后续 probe 秒读缓存；页面导航后请求也能捕获，根治「页面已稳定无自然请求」）
+        this.ensurePersistentCapture(page, sessionId)
         // 仅 allowReload=true 时主动 reload 触发请求；passive 模式绝不 reload（保护扫码确认窗口期）
         if (allowReload) {
           console.log(`[BrowserChannelProbe:${this.platform}] network 捕获 reload 触发（allowReload=true）`)

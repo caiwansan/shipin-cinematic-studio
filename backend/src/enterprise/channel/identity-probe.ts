@@ -87,6 +87,14 @@ export interface ChannelIdentityProbe {
   readonly platform: string
   /** 探测指定浏览器会话的账号身份 */
   probe(sessionId: string): Promise<ChannelIdentity>
+  /**
+   * VC-REALITY-HOTFIX-01 — 常驻网络监听（仅 networkCapture 平台实现，如 BrowserChannelProbe）：
+   * 确保页面级 listener 已挂，导航/reload 的官方身份 API 请求会被累积捕获。
+   * 可选：非 networkCapture 平台（抖音等）无需实现。
+   */
+  ensurePersistentCapture?(page: any, sessionId: string): { userId?: string; nickname?: string; avatar?: string } | null
+  /** 只读：该 session 常驻捕获的数据（无则 null；未实现返回 undefined） */
+  getPersistentCapture?(sessionId: string): { userId?: string; nickname?: string; avatar?: string } | null
 }
 
 /** 探针注册表（上层通过 registry.get(platform) 获取，零分支） */

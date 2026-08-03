@@ -370,11 +370,31 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
             this._lastAutoNavigateAt.set(sid, Date.now())
             console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin 自动导航工作台 ${meta.workspaceUrl}（session✓ workspace✗ url=${(identity.reality.workspace.url || '').slice(0, 60)}）`)
             try {
+              // VC-REALITY-HOTFIX-01 — 导航前确保常驻监听已挂：goto 整页加载过程的官方身份 API
+              // 请求（快手 home API 带 __NS_sig3 签名，只能靠页面自身请求捕获）也会被累积捕获
+              const probeSvc = identityProbeRegistry.get(this.platform)!
+              try {
+                await browserRuntime.withPage(sid, async (page) => { await probeSvc.ensurePersistentCapture?.(page, sid) }).catch(() => {})
+              } catch {}
               const nav = await browserRuntime.navigate(sid, meta.workspaceUrl, { headless: false })
               if (nav.success) {
                 await new Promise(r => setTimeout(r, 3500))
+                // G6-V3 预言修复：快手 SPA 把 /article 等路由拉回 /profile，导航后页面已稳定
+                // → 无自然请求 → 常驻监听也捕获不到。会话已成立（非扫码窗口期）→ reload 一次
+                // 强制触发页面加载请求是安全的（注释原文：导航刷新页面一次是安全的）
+                const cap = probeSvc.getPersistentCapture?.(sid) ?? null
+                if (!cap?.userId) {
+                  console.log(`[LOGIN-TIMELINE][${this.platform}] 导航后常驻捕获无 userId，会话已成立 reload 触发官方身份 API`)
+                  await browserRuntime.withPage(sid, async (page) => {
+                    await probeSvc.ensurePersistentCapture?.(page, sid)
+                    if (!page.isClosed()) {
+                      try { await page.reload({ waitUntil: 'domcontentloaded', timeout: 25000 }) } catch {}
+                    }
+                  }).catch(() => {})
+                  await new Promise(r => setTimeout(r, 4500))
+                }
                 // 重新探针（工作台 DOM 提供 page+identity 信号）
-                identity = await identityProbeRegistry.get(this.platform)!.probe(sid).catch(() => null)
+                identity = await probeSvc.probe(sid).catch(() => null)
                 if (identity?.authenticated && identity.accountId && identity.reality?.identity?.resolved && identity.reality?.workspace?.ready) {
                   console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin ✅ 导航后认证成功 account=${identity.accountName || '-'}/${identity.accountId || '-'}`)
                   return {
