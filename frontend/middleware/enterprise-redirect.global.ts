@@ -65,4 +65,12 @@ export default defineNuxtRouteMiddleware((to) => {
       { redirectCode: 301 },
     )
   }
+
+  // ─── Case 4: /user/download → /download/desktop ───
+  // RELEASE-01.2 Task 02（技术总监+产品经理裁定）：下载页属于公共发行层，不属于用户中心。
+  // 旧下载页曾要求登录（middleware: auth），用户访问被登录墙拦截。
+  // 统一 301 到公开下载页 /download/desktop（唯一真机下载入口，无需登录）。
+  if (to.path === '/user/download' || to.path.startsWith('/user/download/')) {
+    return navigateTo('/download/desktop', { redirectCode: 301 })
+  }
 })
