@@ -22,6 +22,22 @@
 
 ---
 
+## 0. 验收纪律（掌柜 2026-08-04 确认）
+
+**结果出来前保持：**
+- ✅ 不改代码 ✅ 不扩插件 ✅ 不做商城支付 ✅ 不做自动发布 ✅ 不增加平台适配 ✅ 不调整生态模型
+
+**只接受 P0 边界问题（修复）：** 安装失败 / 登录失败 / Device 注册异常 / License 判断错误 / 插件入口异常 / 工作台打开失败
+
+**五轮验收顺序（按普通用户路径，不一次全测）：**
+1. 安装 Reality（普通 Win + 无 Node/Rust + 无开发环境）
+2. 账号 Reality（登录 → Organization → Device → LocalApp，OpenClaw 同步查 DB）
+3. 插件 Reality（授权模型 License ACTIVE + Device ACTIVE + Org Match = Allowed）
+4. 核心商业原则验证（ACTIVE→运行→EXPIRED→插件停→应用继续→Renew→插件恢复）
+5. 完整用户闭环（打开 exe → 新媒体工作台 → 调用 AI 内容运营经理 → 获得任务入口）
+
+---
+
 ## 1. 真机环境（掌柜 2026-08-04 细化：模拟真实用户）
 
 > **开发机成功没有意义。** 目标 = 模拟普通用户：
@@ -125,18 +141,20 @@ ACTIVE License
 | 点击启动 | 状态 → RUNNING（allowed:true） | ____ |
 | 服务端核对 | ecology_local_plugin_runtime 有 RUNNING 行 + startedAt | ____ |
 
-### 4.1 过期测试（生态核心原则：应用不受插件影响）
+### 4.1 核心商业原则验证（掌柜 2026-08-04 第五轮定稿）
 
-> 模拟 License EXPIRED：OpenClaw 侧将 license `expire_at` 置为过去时间 → 掌柜观察 → 恢复。
+> **应用是平台资产，插件是订阅商品** —— 未来整个生态商业模型的核心实证。
+> 完整循环：ACTIVE → 运行 → EXPIRED → 插件停 → 应用继续 → Renew → 插件恢复
 
 | 步骤 | 预期 | 结果 |
 |---|---|---|
-| OpenClaw 置 expire_at 过去 | 插件授权页状态变化 | ____ |
-| 启动插件 | **DENIED**（license 不满足） | ____ |
-| 打开应用列表 | **应用继续打开**（应用 ≠ 插件，互相独立） | ____ |
-| OpenClaw 恢复 expire_at | 插件恢复可启动 | ____ |
+| ① License ACTIVE + 插件运行 | RUNNING | ____ |
+| ② OpenClaw 置 expire_at 过去（模拟 EXPIRED） | 插件状态变化 | ____ |
+| ③ 启动插件 | **DENIED**（License 不满足） | ____ |
+| ④ 打开应用列表 | **应用继续运行**（应用 ≠ 插件） | ____ |
+| ⑤ OpenClaw 恢复 expire_at（模拟 Renew） | 插件恢复可启动 → RUNNING | ____ |
 
-**这条是生态核心原则的实证：应用是基座，插件是商品——商品过期不影响基座使用。**
+**实证结论**：应用 = 平台资产（基座），插件 = 订阅商品（独立生命周期）。商品过期不影响基座使用。
 
 ---
 
