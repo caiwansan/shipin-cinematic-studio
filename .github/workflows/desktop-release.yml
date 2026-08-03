@@ -51,10 +51,13 @@ jobs:
         run: npm install
 
       # Cargo 缓存命中时 target 目录残留旧版本产物 → 构建前清空 bundle 目录保证只发布当前版本
+      # 注：目录可能不存在（新 cache key 无缓存），需容错
       - name: Clean Stale Bundle (cache residue)
-        working-directory: desktop/src-tauri/target/release/bundle
+        working-directory: desktop
         run: |
-          Get-ChildItem -Recurse -File | Remove-Item -Force
+          if (Test-Path 'src-tauri/target/release/bundle') {
+            Get-ChildItem 'src-tauri/target/release/bundle' -Recurse -File | Remove-Item -Force
+          }
           Write-Host 'bundle cleaned'
 
       - name: Build Kunlun Media (NSIS)

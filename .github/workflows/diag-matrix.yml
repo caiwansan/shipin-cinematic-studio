@@ -87,9 +87,11 @@ jobs:
           Get-ChildItem desktop/ui | Select-Object Name, Length
 
       - name: Clean Stale Bundle (cache residue)
-        working-directory: desktop/src-tauri/target/release/bundle
+        working-directory: desktop
         run: |
-          Get-ChildItem -Recurse -File | Remove-Item -Force
+          if (Test-Path 'src-tauri/target/release/bundle') {
+            Get-ChildItem 'src-tauri/target/release/bundle' -Recurse -File | Remove-Item -Force
+          }
           Write-Host 'bundle cleaned'
 
       - name: Build (NSIS)
