@@ -9958,6 +9958,7 @@ model EcologyPlugin {
   versions         EcologyPluginVersion[]
   installs         EcologyPluginInstall[]
   runtimeBindings  EcologyPluginRuntimeBinding[]
+  licenses         EcologyLicense[]
 
   @@index([type])
   @@index([applicationId])
@@ -10058,4 +10059,73 @@ model EcologyPluginRuntimeBinding {
   @@index([pluginId])
   @@index([runtimeId])
   @@map("ecology_plugin_runtime_bindings")
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPRINT-ECO-04 — License & Entitlement Boundary（生态商业授权）
+// 纯新增 3 表：ecology_licenses / ecology_license_events / ecology_license_check_logs
+// 纪律：不碰 PaymentOrder/Subscription/User/Organization/Agent/Hermes
+// 状态机（掌柜冻结）：subscribe→ACTIVE；ACTIVE→renew→ACTIVE；ACTIVE→expire→EXPIRED；
+//                     ACTIVE→suspend→SUSPENDED；SUSPENDED→restore→ACTIVE；EXPIRED→renew→ACTIVE
+// 设计目标：支持未来本地 App（Kunlun Media.exe → KAOR → License Check → Plugin Load），非纯网页授权
+// ═══════════════════════════════════════════════════════════
+
+model EcologyLicense {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  organizationId       String   @map("organization_id") @db.Text // 组织隔离（G8）：A 组织许可 B 组织不可用
+  pluginId             String   @map("plugin_id") @db.Text // EcologyPlugin.id
+  pluginVersion        String   @map("plugin_version") @db.VarChar(30) // 许可对应的插件版本
+  status               String   @default("ACTIVE") @db.VarChar(20) // ACTIVE | EXPIRED | SUSPENDED（掌柜冻结）
+  licenseType          String   @default("subscription") @map("license_type") @db.VarChar(20) // trial | subscription | lifetime
+  startAt              DateTime @map("start_at")
+  expireAt             DateTime @map("expire_at")
+  sourceSubscriptionId String?  @map("source_subscription_id") @db.Text // 预留：未来订阅体系来源
+  machineId            String?  @map("machine_id") @db.VarChar(120) // 预留：本地 App 机器标识（非纯网页授权）
+  entitlements         Json     @default("{}") // 能力授权清单（预留：哪些插件能力被授权）
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  plugin EcologyPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  events EcologyLicenseEvent[]
+  checks EcologyLicenseCheckLog[]
+
+  @@unique([organizationId, pluginId]) // 组织对插件唯一许可（G8 基础）
+  @@index([organizationId])
+  @@index([pluginId])
+  @@index([status])
+  @@map("ecology_licenses")
+}
+
+model EcologyLicenseEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  licenseId String   @map("license_id") @db.Text // EcologyLicense.id
+  eventType String   @map("event_type") @db.VarChar(20) // INSTALL | ACTIVATE | RENEW | EXPIRE | SUSPEND | RESTORE
+  detail    Json     @default("{}") // 原因 / 操作人 / 变更前后
+  createdAt DateTime @default(now()) @map("created_at")
+
+  license EcologyLicense @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  @@index([licenseId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("ecology_license_events")
+}
+
+model EcologyLicenseCheckLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  organizationId String   @map("organization_id") @db.Text
+  pluginId       String   @map("plugin_id") @db.Text
+  licenseId      String?  @map("license_id") @db.Text // 无许可时为 null
+  result         String   @db.VarChar(10) // allowed | denied
+  reason         String   @db.VarChar(60) // OK | NO_LICENSE | EXPIRED | SUSPENDED | PLUGIN_NOT_FOUND
+  source         String   @default("kaor") @db.VarChar(20) // kaor | local_app（本地 App 预留）
+  machineId      String?  @map("machine_id") @db.VarChar(120)
+  checkedAt      DateTime @default(now()) @map("checked_at")
+
+  license EcologyLicense? @relation(fields: [licenseId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, pluginId])
+  @@index([licenseId])
+  @@index([checkedAt])
+  @@map("ecology_license_check_logs")
 }

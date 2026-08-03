@@ -500,6 +500,23 @@ await app.register(projectV2Routes)
     app.log.warn(`[ECO-03] KAOR Runtime seed 失败（不影响启动）: ${e.message}`)
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-04 — License & Entitlement Boundary（生态商业授权）
+  // 只登记授权 / 只校验不执行 / 全事件审计；不碰现有商业系统 / Agent / Hermes
+  // 状态机（掌柜冻结）：subscribe→ACTIVE；renew→ACTIVE；expire→EXPIRED；
+  //                    suspend→SUSPENDED；restore→ACTIVE；支持本地 App 授权链路
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-license.routes.js')).registerEcologyLicenseRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-04] License & Entitlement Boundary 路由已注册')
+  try {
+    const { prisma } = await import('./utils/index.js')
+    const { LicenseService } = await import('./ecosystem/license.service.js')
+    const expired = await new LicenseService(prisma).expireDueLicenses()
+    if (expired > 0) app.log.info(`[ECO-04] 启动到期扫描: ${expired} 个许可已自动 EXPIRED`)
+  } catch (e: any) {
+    app.log.warn(`[ECO-04] 启动到期扫描失败（不影响启动）: ${e.message}`)
+  }
+
   // 注册渠道适配器
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')
