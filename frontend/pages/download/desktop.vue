@@ -60,6 +60,30 @@
         <div class="dl-note">
           ℹ️ 更新提示：应用内后续版本将支持自动升级（Tauri Updater），本页面始终提供最新版本。
         </div>
+
+        <!-- DIAG-RELEASE-01：高级诊断下载（内部测试）-->
+        <section class="dl-diag">
+          <div class="dl-diag-head">
+            <h2 class="dl-diag-title">🧪 高级诊断下载 <span class="dl-diag-tag">内部测试</span></h2>
+            <p class="dl-diag-sub">Desktop Reality 验证专用，非正式版本。用于定位桌面端 JavaScript 执行链路问题。</p>
+          </div>
+          <div class="dl-diag-grid">
+            <div v-for="p in diagPacks" :key="p.id" class="dl-diag-card">
+              <div class="dl-diag-name">{{ p.name }}</div>
+              <div class="dl-diag-desc">{{ p.desc }}</div>
+              <div class="dl-diag-rows">
+                <div class="dl-diag-row"><span>版本</span><b>{{ p.version }}</b></div>
+                <div class="dl-diag-row"><span>测试点</span><b>{{ p.test }}</b></div>
+                <div class="dl-diag-row dl-diag-row-sha"><span>SHA256</span><code>{{ p.sha256 }}</code></div>
+              </div>
+              <a :href="p.url" class="dl-diag-btn" :download="p.filename">⬇️ 下载 {{ p.name }}</a>
+            </div>
+          </div>
+          <div class="dl-diag-note">
+            测试流程：安装 DiagA → 运行截图 → 卸载 → 安装 DiagB → 运行截图。<br />
+            期望：DiagA 显示「Hello World + JS 执行 OK（外部脚本）」；DiagB 显示「Vue 静态页正常渲染 + 按钮可点」。任一项缺失请截图回传。
+          </div>
+        </section>
       </section>
     </main>
 
@@ -145,6 +169,31 @@ function formatTime(iso: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
+// DIAG-RELEASE-01：诊断包清单（下载链接 + SHA256 + 版本 + 用途）
+// 来源：aigc.fushtn.com/releases/desktop/diagnostics/（昆仑镜镜像仓，非 GitHub）
+const diagPacks = [
+  {
+    id: 'diaga',
+    name: 'DiagA — 纯 HTML + 外部 JS',
+    desc: '验证 WebView2 基础 JS 执行（外部脚本路径）',
+    test: 'HTML / external JS',
+    version: '1.1.0',
+    sha256: '64a587194ae5ee1c92a15a987d16a06e74e04cb2e8c004ddab04e4a6834e1104',
+    filename: 'KunlunMediaDiagA_1.1.0_x64-setup.exe',
+    url: '/releases/desktop/diagnostics/KunlunMediaDiagA_1.1.0_x64-setup.exe',
+  },
+  {
+    id: 'diagb',
+    name: 'DiagB — Vue + inline script',
+    desc: '验证 inline script 执行路径（Vue 3 静态页）',
+    test: 'Vue / inline script',
+    version: '1.1.0',
+    sha256: '55a74f2a9f3315a23e67319a4257964f9c238ecd04d90283846a4b84fbe6d68c',
+    filename: 'KunlunMediaDiagB_1.1.0_x64-setup.exe',
+    url: '/releases/desktop/diagnostics/KunlunMediaDiagB_1.1.0_x64-setup.exe',
+  },
+]
+
 function doLogin() { /* 登录走 /login 完整流程，此处仅占位 */ }
 function doRegister() { /* 注册走 /register 完整流程 */ }
 function doLogout() { isLoggedIn.value = false }
@@ -184,6 +233,30 @@ function doLogout() { isLoggedIn.value = false }
 .dl-step b { display: block; margin-bottom: 6px; }
 .dl-step p { color: #7c84a3; font-size: .85rem; line-height: 1.6; margin: 0; }
 .dl-note { margin-top: 32px; color: #6f7796; font-size: .82rem; }
+
+/* DIAG-RELEASE-01：高级诊断下载 */
+.dl-diag { margin-top: 56px; text-align: left; border-top: 1px dashed #232947; padding-top: 40px; }
+.dl-diag-head { margin-bottom: 24px; }
+.dl-diag-title { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.dl-diag-tag { font-size: .7rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.45); color: #fbbf24; letter-spacing: .5px; }
+.dl-diag-sub { color: #7c84a3; font-size: .85rem; margin-top: 8px; }
+.dl-diag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.dl-diag-card { background: #11152b; border: 1px solid #2a3150; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.dl-diag-name { font-weight: 700; font-size: 1rem; }
+.dl-diag-desc { color: #8a92b0; font-size: .82rem; line-height: 1.6; }
+.dl-diag-rows { display: flex; flex-direction: column; gap: 6px; font-size: .78rem; }
+.dl-diag-row { display: flex; gap: 8px; align-items: baseline; }
+.dl-diag-row span { color: #6f7796; width: 52px; flex-shrink: 0; }
+.dl-diag-row b { color: #cdd4ee; }
+.dl-diag-row-sha { flex-direction: column; gap: 2px; }
+.dl-diag-row-sha code { color: #8a92b0; word-break: break-all; font-size: .7rem; }
+.dl-diag-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #1e2440; border: 1px solid #2a3150; color: #e8ecf8; font-size: .9rem; font-weight: 600; padding: 10px 14px; border-radius: 10px; text-decoration: none; transition: background .15s, border-color .15s; margin-top: auto; }
+.dl-diag-btn:hover { background: #2a3150; border-color: #6366f1; }
+.dl-diag-note { margin-top: 16px; color: #6f7796; font-size: .78rem; line-height: 1.8; background: rgba(245,158,11,.05); border: 1px solid rgba(245,158,11,.2); border-radius: 10px; padding: 12px 16px; }
+
+@media (max-width: 768px) {
+  .dl-diag-grid { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 768px) {
   .dl-steps { grid-template-columns: 1fr; }
