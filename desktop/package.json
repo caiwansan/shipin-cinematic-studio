@@ -1,6 +1,6 @@
 {
   "name": "kunlun-desktop",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "昆仑镜 Kunlun Desktop — AI 应用操作系统桌面壳（Tauri v2 + WebView2，Windows 优先）",
   "scripts": {
