@@ -95,6 +95,20 @@ export interface ChannelPlatformDefinition {
   identityRules: {
     /** 平台关键 cookie 名（登录态核心；≥2 命中算 cookie 信号） */
     cookies: string[]
+    /** 身份要求信号（TASK02 快手 Reality — 取代 cookies≥2 判定；可选，未配置平台走旧逻辑）
+     * 业务语义：requiredCookies=登录主体凭证（缺失=会话不成立）；weakCookies=辅助/环境（仅诊断）；
+     * requiredIdentity=身份提取字段（提取命中→身份成立补充）；invalidWhen=否定信号（命中→明确未登录）。
+     * 数据源约束：配置只允许引用 MEDIA-PLATFORM-IDENTITY-MATRIX 实测信号，禁止凭经验填写。 */
+    identityRequirements?: {
+      /** 强信号：登录主体凭证 cookie，必须全部命中 cookie 信号才成立 */
+      requiredCookies: string[]
+      /** 弱信号：辅助/环境 cookie（passport 残留/设备 ID），仅诊断日志，不参与成立判定 */
+      weakCookies?: string[]
+      /** 强信号：身份提取字段（如 userId），提取命中即身份成立补充 */
+      requiredIdentity?: string[]
+      /** 否定信号：命中任一 → 明确未登录（judgeIdentityV2 已内置 loginPage 否定，此处显式声明） */
+      invalidWhen?: ('loginPage' | 'securityCheck')[]
+    }
     /** 工作台 URL 片段（命中任一 → 页面已进工作台） */
     urlFragments: string[]
     /** 排除 URL 正则（命中 → 明确非工作台；如快手普通用户主页 v.kuaishou.com/profile） */
@@ -218,6 +232,18 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
       // KUAISHOU-QR-FIX-01：快手实际登录 cookie 是 bUserId + kwssectoken（passport 会话），
       // 旧配置 kuaishou.api_st/server_st 永不命中 → cookie 信号永远 false → 扫码成功也无法认证
       cookies: ['bUserId', 'kwssectoken', 'did'],
+      // TASK02 快手 Reality — identityRequirements（取代 cookies≥2 判定）：
+      // 数据源：MEDIA-PLATFORM-IDENTITY-MATRIX §2（快手）+ VC-REALITY-HOTFIX-01 实证：
+      //   脏会话（kwssectoken+did 无 bUserId）曾触发 cookie≥2 假阳性 → authenticated 虚真 + accountId 空。
+      // bUserId=登录主体凭证（required）；kwssectoken=passport 会话可能残留 / did=设备 ID（weak，仅诊断）；
+      // requiredIdentity.userId=快手号提取（body 无明文，靠 networkCapture authority API）；
+      // invalidWhen.loginPage=登录页优先否定（judgeIdentityV2 内置，此处显式声明）。
+      identityRequirements: {
+        requiredCookies: ['bUserId'],
+        weakCookies: ['kwssectoken', 'did'],
+        requiredIdentity: ['userId'],
+        invalidWhen: ['loginPage'],
+      },
       // G6-V3-REALITY-0725：快手已登录工作台默认停在 /profile（SPA 把 /article 等路由拉回 /profile，
       // 菜单切换不改变 URL）→ urlFragments 必须含 cp.kuaishou.com/profile。
       // 安全：authenticated = credential && (identity||page)，未登录游客页无 bUserId/kwssectoken →
@@ -244,7 +270,10 @@ export const CHANNEL_META: Record<string, ChannelPlatformDefinition> = {
       // KUAISHOU-FIX-01：创作者中心 body 无 UID 明文 + API 需 __NS_sig3 签名 →
       // 刷新页面监听内部 API 响应捕获官方 userId/userName（页面自身请求自带签名）
       networkApis: {
-        userApis: ['/rest/cp/creator/pc/home/', '/rest/v2/creator/pc/authority/account/current'],
+        // KS-DEBUG-2026-08-03 — 收窄 userApis：宽前缀 /rest/cp/creator/pc/home/ 会误命中
+        // taskCardV2（成长任务卡片，无 userId 仅 nickname「我的成长任务」）→ 后到覆盖已捕获的
+        // 官方 userId → probe 永远读不到 userId（掌柜 08-03 实锤）。只保留官方身份接口精确路径。
+        userApis: ['/rest/v2/creator/pc/authority/account/current', '/rest/cp/creator/pc/home/userInfo', '/rest/cp/creator/pc/home/infoV2'],
         userIdKeys: ['userId', 'user_id', 'id', 'principalId'],
         nicknameKeys: ['userName', 'user_name', 'name', 'nickname'],
         avatarKeys: ['headUrl', 'headurl', 'avatar', 'headImg'],

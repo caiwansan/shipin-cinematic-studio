@@ -764,8 +764,12 @@ async function confirmBinding() {
   try {
     const res = await api(`/api/enterprise/channels/runtime/${accountId.value}/confirm-binding`, { method: 'POST', body: {} })
     const d = res.data || {}
+    // KS-DEBUG-2026-08-03 — reality 复核降级：confirm-binding 后端成功 = 连接权威落库（CONNECTED），
+    // reality 只是补充展示（owner/组织权限不足时 403 → fetchReality 返回 null）。
+    // 旧逻辑把 reality 不可读当作「连接未落库」→ 掌柜扫码成功点确认后永远黄色警告（快手实锤）。
+    // 仅当 reality 真实可读且状态异常（verified=false / connected=false）才警告。
     const reality = await fetchReality()
-    if (!reality?.identity?.verified || !reality?.account?.connected) {
+    if (reality && (!reality?.identity?.verified || !reality?.account?.connected)) {
       // 后端返回成功但 Reality 复核未过（异常）→ 黄色，不假成功
       showConfirming('账号身份已确认，但连接状态未落库，请稍后刷新确认', d.accountName || '', d.avatar || '', d.externalAccountId || '')
       $toast?.warn?.('身份已确认，但连接闭环未完成，请稍后重试')

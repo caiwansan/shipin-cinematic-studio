@@ -326,13 +326,11 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       if (!organizationId) {
         return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织，无法访问工作台' })
       }
-      // FIX-02 — 用户私有资产模型：owner-view 只显示当前用户可访问账号的电脑（owner ∪ share）
-      const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
-      const access = new ChannelAccessService(prisma)
-      const accessibleIds = await access.getAccessibleAccountIds((request as any).user?.id)
+      // KS-DEBUG-2026-08-03 — 组织级可见（与 runtime 操作链一致）：
+      // 旧实现 owner-view 按 accessibleIds（owner ∪ share）过滤 → 组织内非 owner 成员扫码连接
+      // 的账号电脑在 owner-view 消失（快手 10e0ea29 实锤：owner=南波万，掌柜同组织连接后看不到）。
+      // 数字电脑 = 组织资产，成员可见；操作权限（start/logout）仍由 owner/MANAGE 分级控制。
       const wsWhere: any = { businessType, organizationId }
-      if (accessibleIds.length) wsWhere.channelAccountId = { in: accessibleIds }
-      else wsWhere.id = '__none__' // 无可访问账号 → 空列表（不回落看全部）
       const wsList = await prisma.browserWorkspace.findMany({ where: wsWhere })
       const wsIds = wsList.map((w: any) => w.id)
       if (!wsIds.length) return reply.send({ code: 0, data: [] })

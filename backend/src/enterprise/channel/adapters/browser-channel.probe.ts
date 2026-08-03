@@ -55,6 +55,16 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
     return this.meta.identityRules.cookies
   }
 
+  /** TASK02 — identityRequirements 强信号 cookie（登录主体凭证，必须全命中）；未配置回退 keyCookies */
+  private get requiredCookieKeys(): string[] {
+    return this.meta.identityRules.identityRequirements?.requiredCookies ?? this.keyCookies
+  }
+
+  /** TASK02 — identityRequirements 弱信号 cookie（仅诊断日志） */
+  private get weakCookieKeys(): string[] {
+    return this.meta.identityRules.identityRequirements?.weakCookies ?? []
+  }
+
   async probe(sessionId: string): Promise<ChannelIdentity> {
     const signals = { page: false, cookie: false, identity: false, loginPage: false, securityCheck: false, credential: false, sessionAuthenticated: false, identityResolved: false, workspaceReady: false }
     const identity: { userId?: string; nickname?: string; avatar?: string; accountType?: string } = {}
@@ -116,12 +126,19 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
     }
     }
 
-    // B Cookie 信号（平台关键 cookie ≥2；仅信号，不单独判定登录）
+    // B Cookie 信号（TASK02：配置 identityRequirements 的平台 = requiredCookies 全命中；
+    // 未配置平台保持旧逻辑 cookies≥2。仅信号，不单独判定登录）
     if (strategy.cookieProbe) {
     try {
       const cookies = await browserRuntime.getCookies(sessionId)
       const names = new Set((cookies || []).map(c => c.name))
-      signals.cookie = this.keyCookies.filter(k => names.has(k)).length >= 2
+      const req = this.meta.identityRules.identityRequirements
+      if (req?.requiredCookies?.length) {
+        // 强信号全命中才成立：脏会话（kwssectoken+did 无 bUserId）→ false，杜绝假阳性
+        signals.cookie = req.requiredCookies.every(k => names.has(k))
+      } else {
+        signals.cookie = this.keyCookies.filter(k => names.has(k)).length >= 2
+      }
     } catch (e: any) {
       console.warn(`[BrowserChannelProbe:${this.platform}] Cookie 探测异常: ${e.message}`)
     }
@@ -174,10 +191,13 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
       reality.workspace.url = url || undefined
       const cookieNames = await browserRuntime.getCookies(sessionId).catch(() => [])
       const names = (cookieNames || []).map((c: any) => c.name)
+      const req = this.meta.identityRules.identityRequirements
+      const reqHit = req?.requiredCookies?.filter(k => names.includes(k)) ?? []
+      const weakHit = (req?.weakCookies ?? []).filter(k => names.includes(k))
       console.log(
         `[LOGIN-TIMELINE][${this.platform}] probe url=${url.slice(0, 80)} | ` +
         `page=${signals.page} workspace=${signals.workspaceReady} loginPage=${signals.loginPage} securityCheck=${signals.securityCheck} | ` +
-        `cookie=${signals.cookie} (${this.keyCookies.filter(k => names.includes(k)).join(',') || 'none'} / have:${names.slice(0, 10).join(',')}) | ` +
+        `cookie=${signals.cookie} (req=${reqHit.join(',') || 'none'}/${req?.requiredCookies?.join(',') || this.keyCookies.join(',')} weak=${weakHit.join(',') || 'none'} have:${names.slice(0, 10).join(',')}) | ` +
         `identity=${signals.identity} (${identity.userId || '-'}/${identity.nickname || '-'}) | ` +
         `V3(session=${signals.sessionAuthenticated} identity=${signals.identityResolved} workspace=${signals.workspaceReady}) | ` +
         `=> authenticated=${authenticated} credential=${credential}`
@@ -352,9 +372,19 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
         const userId = this.pickKeys(j, cfg.userIdKeys)
         const nickname = this.pickKeys(j, cfg.nicknameKeys)
         if (userId || nickname) {
-          data = { userId, nickname, avatar: cfg.avatarKeys ? this.pickKeys(j, cfg.avatarKeys) : undefined }
+          // KS-DEBUG-2026-08-03 — 合并策略（防宽前缀 API 污染覆盖）：
+          // 快手 taskCardV2 等接口命中 userApis 宽前缀但无 userId（仅 nickname 如「我的成长任务」），
+          // 若后到会覆盖已捕获的官方 userId → probe 永远读不到 userId（掌柜实锤：捕获 4541961964
+          // 后探针仍输出 '-'）。合并：新值缺失时保留已有值，新值存在时升级。
+          const prev = this._persistentCapture.get(sessionId)?.data
+          const merged = {
+            userId: userId || prev?.userId,
+            nickname: nickname || prev?.nickname,
+            avatar: (cfg.avatarKeys ? this.pickKeys(j, cfg.avatarKeys) : undefined) || prev?.avatar,
+          }
+          data = merged
           this._persistentCapture.set(sessionId, { page, data, handler })
-          console.log(`[BrowserChannelProbe:${this.platform}] 常驻监听捕获官方身份 ${userId || '-'}/${nickname || '-'}（${u.slice(0, 80)}）`)
+          console.log(`[BrowserChannelProbe:${this.platform}] 常驻监听捕获官方身份 ${merged.userId || '-'}/${merged.nickname || '-'}（${u.slice(0, 80)}）`)
         }
       } catch {}
     }
@@ -463,7 +493,13 @@ export class BrowserChannelProbe implements ChannelIdentityProbe {
                 settled = true
                 clearTimeout(timer)
                 cleanup()
-                const data = { userId, nickname, avatar: cfg.avatarKeys ? pick(cfg.avatarKeys) : undefined }
+                // KS-DEBUG-2026-08-03 — 与常驻监听一致的合并策略：新捕获缺 userId 时保留已有值
+                const prev = this._persistentCapture.get(sessionId)?.data
+                const data = {
+                  userId: userId || prev?.userId,
+                  nickname: nickname || prev?.nickname,
+                  avatar: (cfg.avatarKeys ? pick(cfg.avatarKeys) : undefined) || prev?.avatar,
+                }
                 // VC-REALITY-HOTFIX-01 — 临时窗口捕获结果写入常驻缓存（后续 probe 秒读）
                 this._persistentCapture.set(sessionId, { page, data, handler: this._persistentCapture.get(sessionId)?.handler })
                 resolve(data)

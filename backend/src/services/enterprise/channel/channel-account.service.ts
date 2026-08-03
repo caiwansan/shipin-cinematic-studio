@@ -140,12 +140,14 @@ export class ChannelAccountService {
 
   // SPRINT-MEDIA-TENANT-ISOLATION-FIX-02 — 用户私有资产模型：列表 = 当前组织 ∩ 用户可访问（owner ∪ share）
   async listAccountsByOrgForUser(organizationId: string, userId: string) {
-    const { ChannelAccessService } = await import('./channel-access.service.js')
-    const access = new ChannelAccessService(prisma)
-    const accessibleIds = await access.getAccessibleAccountIds(userId)
-    if (!accessibleIds.length) return []
+    // KS-DEBUG-2026-08-03 — 组织级可见（与 runtime 操作链一致）：
+    // ensure-account 按 org 复用/创建账号、connect/confirm-binding 均 org 校验（同组织成员可操作），
+    // 但列表旧实现按 ownerId（accessibleIds）过滤 → 组织内非 owner 成员扫码连接成功后在列表消失
+    // （快手 10e0ea29 实锤：owner=南波万，掌柜同组织扫码 confirm 成功，刷新后账号不见）。
+    // 账号 = 组织资产，成员可见；操作权限（connect/logout）仍由 owner/MANAGE 分级控制。
+    // 跨组织隔离保持：organizationId 硬过滤（TENANT-ISOLATION-FIX 不回归）。
     return prisma.enterpriseChannelAccount.findMany({
-      where: { organizationId, id: { in: accessibleIds } },
+      where: { organizationId },
       orderBy: { createdAt: 'desc' },
     })
   }

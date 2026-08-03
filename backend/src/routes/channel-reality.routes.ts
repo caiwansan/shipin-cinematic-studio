@@ -43,9 +43,21 @@ export async function channelRealityRoutes(app: FastifyInstance) {
       // 无组织用户可读任意账号 identity/externalAccountId（实测 200 + 泄露 881306）。
       // 修正：用户私有资产模型——owner 本人（全权限）或 ChannelAccountShare 被授权人可读；
       //      知道 id 不再等于可访问。无组织用户若是 owner 本人仍可读（账号属人，不属组织）。
+      // KS-DEBUG-2026-08-03 — 补组织通道：runtime 操作链（ensure-account/connect/confirm-binding）
+      // 全程 organizationId 校验（同组织成员可操作），reality 若只认 owner 会造成「掌柜扫码连接成功、
+      // 确认绑定后 reality 复核 403 → 前端永远显示确认卡片」的断链（快手 10e0ea29 实锤：
+      // owner=南波万、organizationId=掌柜同组织）。组织级账号详情对同组织成员可读。
+      const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+      const orgId = await getOrganizationIdForUser(user?.id).catch(() => null)
+      const orgAccount = await prisma.enterpriseChannelAccount.findUnique({
+        where: { id },
+        select: { organizationId: true },
+      })
       const { ChannelAccessService } = await import('../services/enterprise/channel/channel-access.service.js')
       const access = new ChannelAccessService(prisma)
-      if (!(await access.canAccess(user?.id, id))) {
+      const isOwnerOrGrantee = await access.canAccess(user?.id, id)
+      const inSameOrg = !!orgId && !!orgAccount?.organizationId && orgAccount.organizationId === orgId
+      if (!isOwnerOrGrantee && !inSameOrg) {
         return reply.status(403).send({ code: 403, error: 'CHANNEL_ACCESS_DENIED', message: '无权访问该渠道账号（需账号所有者授权）' })
       }
       const account = await prisma.enterpriseChannelAccount.findFirst({

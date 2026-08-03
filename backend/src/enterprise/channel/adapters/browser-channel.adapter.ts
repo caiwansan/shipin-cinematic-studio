@@ -54,6 +54,8 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
   private readonly probeCache = new Map<string, { identity: any; at: number }>()
   /** MEDIA-LOGIN-CAPABILITY-V3 Task03 — 登录后自动导航工作台节流（sessionId → 上次导航时间） */
   private readonly _lastAutoNavigateAt = new Map<string, number>()
+  // KS-DEBUG-2026-08-03 — 未登录兜底导航节流（防止未登录+非登录面死循环频繁导航）
+  private readonly _lastLoginNavAt = new Map<string, number>()
   private readonly QR_CACHE_TTL = 15000
   private readonly PROBE_CACHE_TTL = 5000
 
@@ -78,23 +80,69 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
    * 2) 平台域 cookies（meta.cookieDomains）
    * 只清平台域，绝不误伤 profile 内其他数据。
    */
-  protected async clearLoginCache(sid: string): Promise<void> {
+  /**
+   * VC-REALITY-HOTFIX-01 — DB 状态权威判定：账号非已连接 → 浏览器残留登录态必须强制清理。
+   * 场景：退出登录/登录态过期后，profile 目录残留平台 cookies（bUserId/passToken 等），
+   * 触发 clearLoginCache 保护假阳性 → connect 永远出不了新二维码。
+   * DB CONNECTED 的账号 → 保护逻辑照旧（恢复登录态场景，禁止误清）。
+   */
+  private async shouldForceClean(accountId?: string): Promise<boolean> {
+    if (!accountId || accountId === 'new') return true
+    try {
+      const { prisma } = await import('../../../utils/index.js')
+      const account = await prisma.enterpriseChannelAccount.findUnique({
+        where: { id: accountId },
+        select: { connectionStatus: true },
+      })
+      if (!account) return true
+      const { isChannelConnected } = await import('../../../constants/channel-connection-status.js')
+      return !isChannelConnected(account.connectionStatus)
+    } catch (e: any) {
+      console.warn(`[${this.name}Adapter] shouldForceClean 判定失败（默认强制清理）: ${e.message}`)
+      return true
+    }
+  }
+
+  protected async clearLoginCache(sid: string, forceClean = false): Promise<void> {
     const domains = this.meta.cookieDomains?.length ? this.meta.cookieDomains : [new URL(this.meta.loginUrl).hostname]
     // WECHAT-VIDEO-G6-DEBUG-01 Task04 — 清理守卫：页面已进工作台（urlFragments 命中）
     // → 登录态有效，禁止清理（防自杀式清理：探针误判未登录 → 清掉真实登录 cookie → 扫码成功不登录）
     // 双保险：keyCookies 命中 ≥2 也视为登录态存在（页面可能尚未跳转工作台，但会话有效）
+    // TASK02 快手 Reality — 配置 identityRequirements 的平台（快手）：保护条件收窄为 requiredCookies
+    //   全命中（登录主体凭证存在）。半失效会话（kwssectoken+did 无 bUserId）→ 不保护 → 必须允许清理，
+    //   否则脏 cookie 残留会再次触发假阳性（VC-REALITY-HOTFIX-01 根因）。urlFragments 单独命中不再
+    //   保护（快手游客页 /profile 也命中，urlFragments 单独保护=假阳性窗口）。未配置平台保持旧逻辑。
     try {
       const [pageUrl, cookies] = await Promise.all([
         browserRuntime.withPage(sid, async (page) => page.url()).catch(() => ''),
         browserRuntime.getCookies(sid).catch(() => []),
       ])
       const names = new Set((cookies || []).map((c: any) => c.name))
+      const req = this.meta.identityRules.identityRequirements
       const keyHit = this.meta.identityRules.cookies.filter(k => names.has(k)).length
-      if (this.meta.identityRules.urlFragments.some(f => pageUrl.includes(f)) || keyHit >= 2) {
-        console.log(`[${this.name}Adapter] 登录态存在（url=${pageUrl.slice(0, 50)} keyCookieHit=${keyHit}），跳过残留清理（保护有效会话）`)
+      let protect = false
+      let protectReason = ''
+      if (req?.requiredCookies?.length) {
+        // 快手路径：只认登录主体凭证全命中
+        const reqHit = req.requiredCookies.filter(k => names.has(k))
+        protect = reqHit.length === req.requiredCookies.length
+        protectReason = `requiredCookies=${reqHit.join(',') || 'none'}/${req.requiredCookies.join(',')}`
+      } else {
+        // 旧路径（抖音/小红书/视频号等未配置平台）：urlFragments 或 keyCookies≥2
+        protect = this.meta.identityRules.urlFragments.some(f => pageUrl.includes(f)) || keyHit >= 2
+        protectReason = `url=${pageUrl.slice(0, 50)} keyCookieHit=${keyHit}`
+      }
+      if (protect && !forceClean) {
+        console.log(`[${this.name}Adapter] 登录态存在（${protectReason}），跳过残留清理（保护有效会话）`)
         return
       }
+      if (req?.requiredCookies?.length) {
+        console.log(`[${this.name}Adapter] 半失效/未登录（${protectReason}），执行残留清理（TASK02 允许清理脏会话）`)
+      }
     } catch {}
+    if (forceClean) {
+      console.log(`[${this.name}Adapter] forceClean=true（DB 非已连接状态，残留登录态视为脏数据）→ 强制执行残留清理`)
+    }
     // 1) localStorage/sessionStorage：页面导航到平台根域后清（浏览器安全限制：仅当前域可访问）
     await browserRuntime.withPage(sid, async (page) => {
       const root = `https://${domains[0]}`
@@ -152,8 +200,13 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
     // KUAISHOU-QR-FIX-02 — 掌柜指令：连接时先清残留缓存再出码。
     // 探针未命中（未登录/登录态失效）→ 清平台域 cookie + localStorage/sessionStorage → 全新扫码。
     // 探针命中已在上方返回（已登录账号绝不清理，防止把有效登录态清退出）。
+    // VC-REALITY-HOTFIX-01 补充：DB 非 CONNECTED 的账号（LOGGED_OUT/WAITING_LOGIN/EXPIRED/PENDING）
+    //   → 强制清理（forceClean）。浏览器残留登录态（如退出后未清的 cookies）会触发 requiredCookies
+    //   保护假阳性 → 跳过清理 → connect 半命中已登录态 → 永远不出二维码（掌柜 08-03 实锤）。
+    //   DB 状态是权威：没有登录成功就不存在这个账号，残留一律视为脏数据。
+    const forceClean = await this.shouldForceClean(accountId)
     try {
-      await this.clearLoginCache(sid)
+      await this.clearLoginCache(sid, forceClean)
     } catch (e: any) {
       console.warn(`[${this.name}Adapter] 残留缓存清理失败（继续出码）: ${(e as Error).message}`)
     }
@@ -415,6 +468,29 @@ export abstract class BrowserChannelAdapterBase implements EnterpriseChannelAdap
           }
         } else {
           console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin session✓ 但 workspace✗（身份/工作台未确认，保持轮询）url=${(identity.reality.workspace.url || '').slice(0, 60)}`)
+        }
+      }
+      // KS-DEBUG-2026-08-03 — 未登录兜底：探针未认证 + 页面不在登录面（已登录视图但会话失效/游客页）
+      // → 导航登录页出二维码。防「等待扫码但页面无二维码」死循环（掌柜 08-03 实锤：快手重启后
+      // bUserId 被风控踢掉，页面停在 /profile 游客页，waitForLogin 永远轮询、二维码永远不出）。
+      // 保护：页面已是登录面（passport/扫码 tab）绝不导航（扫码确认窗口期保护）。
+      if (!identity?.authenticated && !identity?.reality?.identity?.resolved) {
+        const url = identity?.reality?.workspace?.url || ''
+        const isLoginSurface = /passport|\/login|\/qr|sso|signin/i.test(url)
+        if (!isLoginSurface && url) {
+          const last = this._lastLoginNavAt.get(sid) || 0
+          if (Date.now() - last > 20000) {
+            this._lastLoginNavAt.set(sid, Date.now())
+            console.log(`[LOGIN-TIMELINE][${this.platform}] 未登录且页面非登录面（url=${url.slice(0, 60)}）→ 导航登录页出二维码`)
+            try {
+              const nav = await browserRuntime.navigate(sid, meta.loginUrl, { headless: false })
+              if (nav.success) await this.ensureLoginSurface(sid).catch(() => {})
+            } catch (navErr: any) {
+              console.warn(`[${this.name}Adapter] 未登录导航登录页失败: ${navErr.message}`)
+            }
+          } else {
+            console.log(`[LOGIN-TIMELINE][${this.platform}] 未登录且页面非登录面（导航节流中，${Math.round(20 - (Date.now() - last) / 1000)}s 后重试）`)
+          }
         }
       }
       console.log(`[LOGIN-TIMELINE][${this.platform}] waitForLogin 轮询未认证 (${new Date().toISOString()})`)
