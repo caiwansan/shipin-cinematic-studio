@@ -485,6 +485,21 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/ecology-plugin.routes.js')).registerEcologyPluginRoutes, { prefix: '/api/ecosystem' })
   app.log.info('[ECO-02] Plugin Manifest Runtime 路由已注册')
 
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-03 — KAOR Runtime Boundary（生态 Runtime 契约）
+  // Plugin → KAOR Adapter → Existing Hermes 桥梁；不改 Hermes / 不迁移 Agent
+  // 纪律：只登记 Runtime 身份+能力+映射；不接插件执行；不开发本地执行
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-runtime.routes.js')).registerEcologyRuntimeRoutes, { prefix: '/api/ecosystem' })
+  try {
+    const { prisma } = await import('./utils/index.js')
+    const { ensureKaorRuntimeSeed } = await import('./ecosystem/runtime-registry.service.js')
+    const kaorRuntime = await ensureKaorRuntimeSeed(prisma)
+    app.log.info(`[ECO-03] KAOR Runtime seed 完成: ${kaorRuntime.runtimeId} v${kaorRuntime.version}（6 能力声明）`)
+  } catch (e: any) {
+    app.log.warn(`[ECO-03] KAOR Runtime seed 失败（不影响启动）: ${e.message}`)
+  }
+
   // 注册渠道适配器
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')

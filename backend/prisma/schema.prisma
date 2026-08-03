@@ -9957,6 +9957,7 @@ model EcologyPlugin {
   application      EcologyApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
   versions         EcologyPluginVersion[]
   installs         EcologyPluginInstall[]
+  runtimeBindings  EcologyPluginRuntimeBinding[]
 
   @@index([type])
   @@index([applicationId])
@@ -10000,4 +10001,61 @@ model EcologyPluginInstall {
   @@index([organizationId])
   @@index([pluginId])
   @@map("ecology_plugin_installations")
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPRINT-ECO-03 — KAOR Runtime Boundary（生态 Runtime 契约）
+// 只登记 Runtime 身份 + 能力声明 + 插件↔Runtime 映射；不执行任何代码
+// 纪律：不改 Hermes / 不迁移 Agent / 不接插件执行 / 不做本地执行
+// ═══════════════════════════════════════════════════════════
+
+model EcologyRuntime {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  runtimeId   String   @unique @map("runtime_id") @db.VarChar(50) // kaor | hermes | openclaw
+  name        String   @db.VarChar(100)
+  description String?
+  version     String   @db.VarChar(30)
+  adapter     String   @map("adapter") @db.VarChar(50) // 适配器标识（hermes-adapter）
+  status      String   @default("active") @db.VarChar(20) // active | disabled
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  capabilities EcologyRuntimeCapability[]
+  bindings     EcologyPluginRuntimeBinding[]
+
+  @@index([status])
+  @@map("ecology_runtimes")
+}
+
+model EcologyRuntimeCapability {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  runtimeId   String   @map("runtime_id") @db.Text // EcologyRuntime.id
+  capability  String   @db.VarChar(60) // agent.lifecycle | memory | workflow | tool | scheduler | permission
+  description String?
+  status      String   @default("active") @db.VarChar(20)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  runtime EcologyRuntime @relation(fields: [runtimeId], references: [id], onDelete: Cascade)
+
+  @@unique([runtimeId, capability])
+  @@index([capability])
+  @@map("ecology_runtime_capabilities")
+}
+
+model EcologyPluginRuntimeBinding {
+  id           String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  pluginId     String   @map("plugin_id") @db.Text // EcologyPlugin.id
+  runtimeId    String   @map("runtime_id") @db.Text // EcologyRuntime.id
+  capabilities String   @default("[]") // 插件声明的能力子集（JSON 数组）
+  status       String   @default("bound") @db.VarChar(20) // bound | unbound
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  plugin  EcologyPlugin  @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  runtime EcologyRuntime @relation(fields: [runtimeId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, runtimeId])
+  @@index([pluginId])
+  @@index([runtimeId])
+  @@map("ecology_plugin_runtime_bindings")
 }
