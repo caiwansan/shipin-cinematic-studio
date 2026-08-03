@@ -70,11 +70,11 @@ async function main() {
     else FAIL('G2c account-status 用户级隔离', '泄露南波万=' + name)
   }
   {
-    // 跨 org 拿南坡万账号 id 调 metrics → 403
-    const accId = '08a0f643-fb0d-48d5-af18-ad87bd9a34fb' // 抖音南坡万（本 org 的，用于验证正向）
+    // 无授权用户（tenant_org_test 非南波万 owner）读南波万 metrics → 403（FIX-02/03 校验生效）
+    const accId = '08a0f643-fb0d-48d5-af18-ad87bd9a34fb' // 抖音南坡万（本 org 但非本人账号）
     const r = await fetch(API + '/api/enterprise/channels/runtime/' + accId + '/metrics', { headers: HOrg })
-    if (r.status === 200 || r.status === 400) PASS('G2d 本 org 账号 metrics 可访问', 'status=' + r.status)
-    else FAIL('G2d 本 org 账号 metrics', 'status=' + r.status)
+    if (r.status === 403) PASS('G2d 他人账号 metrics 拒绝', '无授权读南坡万 metrics → 403')
+    else FAIL('G2d 他人账号 metrics 拒绝', 'status=' + r.status)
   }
 
   // ── G3 OwnerView 隔离（FIX-02 用户私有语义更新）──
