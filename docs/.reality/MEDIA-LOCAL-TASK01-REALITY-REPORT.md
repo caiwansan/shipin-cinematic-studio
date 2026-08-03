@@ -50,18 +50,22 @@
 | 登录 → 我的应用（9 应用） | |
 | 设备注册 ACTIVE | |
 | 应用点击进入/返回 | |
+| DB 链路核对（User→Org→Device→LocalApp） | ✅/❌ |
 
 ### 3.3 设备授权 & 插件授权
 | 项 | 记录 |
 |---|---|
 | 设备 ACTIVE / License ACTIVE | |
 | ai-content-ops-manager 启动 → RUNNING | |
+| **过期测试**：License EXPIRED → 插件 DENIED，应用继续打开 | |
 | 生命周期（启动/停止/卸载/重装，无脏数据） | |
 
-### 3.4 新媒体入口
+### 3.4 新媒体入口（完整闭环）
 | 项 | 记录 |
 |---|---|
-| 打开工作台 → /workspace/media?plugin= | |
+| 打开工作台 → /workspace/media?plugin=（带插件上下文） | |
+| 工作台内可见 AI 内容运营经理入口（非孤立网页） | |
+| 闭环：Application+Plugin+License+KAOR+Workspace | ✅/❌ |
 
 ---
 
