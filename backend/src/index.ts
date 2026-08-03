@@ -532,6 +532,13 @@ await app.register(projectV2Routes)
 
   // SPRINT-ECO-07 — Revenue Settlement Foundation（收入计算基础设施，非财务系统）
   await app.register((await import('./routes/ecology-settlement.routes.js')).registerEcologySettlementRoutes, { prefix: '/api/ecosystem' })
+
+  // ═══════════════════════════════════════════════════════════
+  // ECO-08 Partner Revenue Share：等级配置只读 / 伙伴概况 / 业绩重算（幂等）
+  // 纪律：收益来源唯一 = ecology_settlements；只新增 ecology_partner* 表；
+  //       不做推广页面/邀请系统/裂变/发放（仅 ACCRUED 应计）
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-partner.routes.js')).registerEcologyPartnerRoutes, { prefix: '/api/ecosystem' })
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
   // 注册渠道适配器

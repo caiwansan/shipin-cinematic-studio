@@ -10319,3 +10319,88 @@ model EcologyDeveloperAgreement {
   @@index([developerId])
   @@map("ecology_developer_agreements")
 }
+
+// ═══════════════════════════════════════════════════════════
+// SPRINT-ECO-08 — Partner Revenue Share Foundation（SaaS Affiliate + Partner Revenue Share）
+// 掌柜范围：✅ 数据模型 ✅ 收益计算规则 ✅ 等级模型 ✅ 结算关系
+//          ❌ 推广页面 ❌ 邀请系统 ❌ 用户裂变 ❌ 奖励发放（仅 ACCRUED 应计，无 PAID 流程）
+// 纪律：收益来源唯一 = ecology_settlements（插件订阅真实收入）
+//       禁止 install/download/register/invite 作为收益依据
+// ═══════════════════════════════════════════════════════════
+
+model EcologyPartnerLevelPolicy {
+  id             String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  level          Int       @unique @db.Integer // 1-6（冻结：1普通 2生态 3区域 4城市 5省级 6平台生态合伙人）
+  levelName      String    @map("level_name") @db.VarChar(50)
+  minPerformance Decimal   @map("min_performance") @db.Decimal(14, 2) // 等级门槛：小区新增真实收入（元）
+  rewardRate     Decimal   @map("reward_rate") @db.Decimal(5, 4) // 分红比例 0-1
+  effectiveDate  DateTime  @map("effective_date") @db.Timestamptz(6) // 生效时间
+  status         String    @default("ACTIVE") @db.VarChar(20) // ACTIVE | INACTIVE
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("ecology_partner_level_policies")
+}
+
+model EcologyPartner {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  partnerId        String   @unique @map("partner_id") @db.VarChar(64) // 公开伙伴 ID
+  userId           String   @map("user_id") @db.Text // 平台 User.id
+  organizationId   String   @map("organization_id") @db.Text // 归属组织（其组织下开发者 settlement 计入自身业绩）
+  partnerName      String   @map("partner_name") @db.VarChar(100)
+  sponsorPartnerId String?  @map("sponsor_partner_id") @db.Text // 上级伙伴（团队树边；NULL=无上级）
+  level            Int      @default(1) @db.Integer // 当前等级（展示用，计算以 policy 判定为准）
+  status           String   @default("ACTIVE") @db.VarChar(20) // ACTIVE | INACTIVE
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  performances EcologyPartnerPerformance[]
+  rewards      EcologyPartnerReward[]
+
+  @@index([organizationId])
+  @@index([sponsorPartnerId])
+  @@index([status])
+  @@map("ecology_partners")
+}
+
+model EcologyPartnerPerformance {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  partnerId             String   @map("partner_id") @db.Text // EcologyPartner.id
+  period                String   @map("period") @db.VarChar(7) // YYYY-MM（对应 settlements.period）
+  teamPerformance       Decimal  @map("team_performance") @db.Decimal(14, 2) // 团队总业绩
+  maxLinePerformance    Decimal  @map("max_line_performance") @db.Decimal(14, 2) // 最大业绩线
+  smallAreaPerformance  Decimal  @map("small_area_performance") @db.Decimal(14, 2) // 小区业绩 = team - maxLine
+  level                 Int      @db.Integer // 计算时命中的等级
+  rewardRate            Decimal  @map("reward_rate") @db.Decimal(5, 4) // 命中等级的分红比例
+  accruedReward         Decimal  @map("accrued_reward") @db.Decimal(14, 2) // 应计分红（非实收）
+  status                String   @default("COMPUTED") @db.VarChar(20) // COMPUTED
+  detail                Json?    @map("detail") // 计算明细：成员组织/直接下线线/贡献 settlement 数
+  computedAt            DateTime @default(now()) @map("computed_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  partner EcologyPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, period])
+  @@index([period])
+  @@map("ecology_partner_performances")
+}
+
+model EcologyPartnerReward {
+  id            String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  partnerId     String   @map("partner_id") @db.Text // EcologyPartner.id
+  period        String   @map("period") @db.VarChar(7) // YYYY-MM
+  performanceId String   @map("performance_id") @db.Text // EcologyPartnerPerformance.id
+  rewardAmount  Decimal  @map("reward_amount") @db.Decimal(14, 2) // 应计分红金额
+  status        String   @default("ACCRUED") @db.VarChar(20) // ACCRUED（应计）；PAID/SETTLED 流程冻结（未来 Sprint）
+  detail        Json?    @map("detail") // 来源 settlements 明细（追溯）
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  partner EcologyPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, period])
+  @@index([performanceId])
+  @@map("ecology_partner_rewards")
+}
