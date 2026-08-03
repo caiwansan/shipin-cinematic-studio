@@ -14,6 +14,12 @@
 import type { FastifyInstance } from 'fastify'
 import { channelService } from '../services/enterprise/channel.service.js'
 import { enterpriseContextService } from '../services/enterprise/enterprise-context.service.js'
+
+/** SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 — org 实时解析（JWT 快照可过期，统一以 govUser→govOrg 实时查询为准） */
+async function resolveOrgId(userId: string) {
+  const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+  return getOrganizationIdForUser(userId)
+}
 import { identityProbeRegistry } from '../enterprise/channel/identity-probe.js'
 import { channelPlatformRegistry } from '../enterprise/channel/platform-registry.js'
 
@@ -28,11 +34,14 @@ export async function enterpriseChannelRuntimeRoutes(app: FastifyInstance) {
    */
   app.addHook('preHandler', async (request, reply) => {
     const user = request.user as any
-    const orgId = user?.organizationId || user?.orgId || null
-    if (!orgId) {
+    // org 实时解析（JWT 快照可能过期，如组织迁移后旧 token）；带 60s TTL 缓存
+    const orgId = user?.id ? await resolveOrgId(user.id) : null
+    ;(request as any).orgId = orgId
+    // registry = 平台能力清单（登录即可，无业务数据）——无 org 用户也能看到平台列表，操作时才 403
+    const isRegistry = String(request.url).includes('/channels/registry')
+    if (!orgId && !isRegistry) {
       return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
     }
-    ;(request as any).orgId = orgId
     const { id } = request.params as any
     if (id) {
       const { prisma } = await import('../utils/index.js')

@@ -177,15 +177,26 @@ export async function createOrganization(input: {
 /**
  * 获取用户的 governance_organization ID
  * P0-3-05 Phase A: User → email → govUser → tenant → org
+ * SPRINT-MEDIA-TENANT-ISOLATION-FIX-01: 加 60s TTL 缓存——org 实时解析，JWT 旧 token 无需重登
+ * （JWT 里的 organizationId 只是登录时快照，组织迁移后必须能以 userId 实时解析）
  */
+const orgIdCache = new Map<string, { orgId: string | null; ts: number }>()
+const ORG_ID_CACHE_TTL = 60_000
+
 export async function getOrganizationIdForUser(userId: string): Promise<string | null> {
+  const cached = orgIdCache.get(userId)
+  if (cached && Date.now() - cached.ts < ORG_ID_CACHE_TTL) return cached.orgId
+
   // 1. 通过 User ID 获取用户邮箱
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true },
   })
   
-  if (!user?.email) return null
+  if (!user?.email) {
+    orgIdCache.set(userId, { orgId: null, ts: Date.now() })
+    return null
+  }
 
   // 2. 通过 email 找到 governance_user
   const govUser = await prisma.govUser.findFirst({
@@ -193,7 +204,10 @@ export async function getOrganizationIdForUser(userId: string): Promise<string |
     select: { tenantId: true },
   })
 
-  if (!govUser?.tenantId) return null
+  if (!govUser?.tenantId) {
+    orgIdCache.set(userId, { orgId: null, ts: Date.now() })
+    return null
+  }
 
   // 3. 通过 tenantId 找到 governance_organization
   const org = await prisma.govOrganization.findFirst({
@@ -201,7 +215,9 @@ export async function getOrganizationIdForUser(userId: string): Promise<string |
     select: { id: true },
   })
 
-  return org?.id || null
+  const orgId = org?.id || null
+  orgIdCache.set(userId, { orgId, ts: Date.now() })
+  return orgId
 }
 
 /**

@@ -25,6 +25,13 @@ import { channelOperationLogService } from '../services/enterprise/channel-opera
 import { browserTrajectoryService } from '../services/enterprise/browser-trajectory.service.js'
 import { browserWorkspaceRecoveryService } from '../services/enterprise/browser-workspace-recovery.service.js'
 
+
+/** SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 — org 实时解析（JWT 快照可过期，统一以 govUser→govOrg 实时查询为准） */
+async function resolveOrgId(userId: string) {
+  const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+  return getOrganizationIdForUser(userId)
+}
+
 export async function browserWorkspaceRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
 
@@ -34,7 +41,9 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
    */
   app.addHook('preHandler', async (request, reply) => {
     const user = request.user as any
-    const orgId = user?.organizationId || user?.orgId || null
+    // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01: org 实时解析（JWT 快照可能过期，如组织迁移后旧 token）
+    const orgId = user?.id ? await resolveOrgId(user.id) : null
+    ;(request as any).orgId = orgId
     if (!orgId) {
       return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
     }
@@ -46,7 +55,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
       // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task01: 禁止 fallback 到 'default'/user.id
       // 无 org = 未知身份 → 调用方必须 403（NO_ORGANIZATION），不得降级为「看全部」
       tenantId: user?.tenantId || user?.id || null,
-      organizationId: user?.organizationId || user?.orgId || null,
+      organizationId: (request as any).orgId ?? user?.organizationId ?? user?.orgId ?? null,
     }
   }
 
@@ -111,8 +120,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
   app.get('/api/enterprise/workspaces/:id', async (request, reply) => {
     try {
       const { id } = request.params as any
-      const user = request.user as any
-      const orgId = user?.organizationId || user?.orgId || null
+      const orgId = (request as any).orgId
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
       // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03: workspace 归属校验（IDOR 关闭）
@@ -131,8 +139,7 @@ export async function browserWorkspaceRoutes(app: FastifyInstance) {
   app.post('/api/enterprise/workspaces/:id/start', async (request, reply) => {
     try {
       const { id } = request.params as any
-      const user = request.user as any
-      const orgId = user?.organizationId || user?.orgId || null
+      const orgId = (request as any).orgId
       const ws = await browserWorkspaceService.findById(id)
       if (!ws) return reply.status(404).send({ code: 1, message: 'BrowserWorkspace not found' })
       // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task03: workspace 归属校验

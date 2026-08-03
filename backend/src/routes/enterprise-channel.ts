@@ -9,6 +9,12 @@ import { channelAccountService } from '../services/enterprise/channel/channel-ac
 import { interactionSyncService } from '../services/enterprise/channel/interaction-sync.service.js'
 import { wecomAdapterService } from '../services/enterprise/channel/wecom-adapter.service.js'
 import { enterpriseContextService } from '../services/enterprise/enterprise-context.service.js'
+
+/** SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 — org 实时解析（JWT 快照可过期，统一以 govUser→govOrg 实时查询为准） */
+async function resolveOrgId(userId: string) {
+  const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+  return getOrganizationIdForUser(userId)
+}
 import { channelPermissionService, ChannelCapability } from '../services/enterprise/channel/channel-permission.service.js'
 import { channelCustomerMappingService } from '../services/enterprise/channel/channel-customer-mapping.service.js'
 import { callbackEventService } from '../enterprise/channel/callback-event.service.js'
@@ -27,8 +33,10 @@ export async function channelRoutes(app: FastifyInstance) {
   app.addHook('preHandler', async (request, reply) => {
     const user = request.user as any
     const { tenantId } = request.params as any
+    // org 实时解析（JWT 快照可能过期）
+    const orgId = user?.id ? await resolveOrgId(user.id) : null
+    ;(request as any).orgId = orgId
     if (!tenantId || !user?.id) return
-    const orgId = user?.organizationId || user?.orgId || null
     if (!orgId) {
       return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
     }
@@ -193,8 +201,7 @@ export async function channelRoutes(app: FastifyInstance) {
   // GET /api/enterprise/channels/accounts — JWT-only 账户列表（无 URL tenantId）
   // SPRINT-MEDIA-TENANT-ISOLATION-FIX-01 Task02: tenantId 不由客户端决定，后端从 JWT organizationId 解析
   app.get('/api/enterprise/channels/accounts', async (request, reply) => {
-    const user = request.user as any
-    const orgId = user?.organizationId || user?.orgId || null
+    const orgId = (request as any).orgId
     if (!orgId) {
       return reply.status(403).send({ code: 403, error: 'NO_ORGANIZATION', message: '当前用户未归属任何组织' })
     }
