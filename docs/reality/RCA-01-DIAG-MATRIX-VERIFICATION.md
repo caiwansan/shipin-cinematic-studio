@@ -67,3 +67,35 @@ C 版：kunlun-desktop.exe --debug --diag
 2. 是否弹出 WebView2 错误页（黄色感叹号/证书错误/导航错误）
 3. 断网启动 vs 联网启动差异
 4. 日志文件时间戳（确认是本次运行产生）
+
+---
+
+## 附录 A：技术总监判定表（2026-08-04 05:15 定稿）
+
+> 纪律：**禁止修改业务代码**。所有修改必须建立在诊断证据之后。diag-1.1.2 继续构建不阻塞三件套真机。
+
+### 三层判定
+
+| 结果组合 | 判定 | 排查层 |
+|---|---|---|
+| A 失败 | 不是 Vue/业务 | Tauri 配置 / WebView2 / CSP / Windows 环境 |
+| A 成功 + B 失败 | HTML 可以，Vue runtime 有问题 | Vue hydration / JS bundle / CSP / asset path |
+| A+B 成功 + C 失败 | 范围收窄到业务 | 登录 → Device → License → open_workspace → 线上工作台 |
+
+### 嫌疑排序（技术总监补充）
+
+1. **第一嫌疑：Workspace Token 注入生命周期**（跨 WebView 身份桥接）——token 注入太早 → 线上应用不知道用户是谁 → 跳转异常 → 白屏
+   - 判定方法（diag-1.1.2 日志时间线，UTC ISO8601 毫秒级）：
+     - `token inject begin/end` vs `page STARTED/FINISHED` 顺序
+     - FINISHED 后出现 `NAVIGATE: */login*` → token 未生效（被清/太早）
+     - FINISHED 后无 NAVIGATE 且 title 正常 → 渲染层
+2. **第二嫌疑：Workspace 页面错误边界缺失**——线上页面报错（401/403/timeout/JS exception）但 Desktop 无「加载失败/请检查网络/重新登录」展示 → 白屏
+3. **第三嫌疑：WebView2 环境**——概率低（登录 Shell 已能打开，基础环境大概率正常）
+
+### 每件必录 5 项
+
+1. 是否显示页面（白屏/黑屏/正常/转圈）
+2. 启动日志 startup.log
+3. WebView 日志 webview.log
+4. error.log
+5. api.log
