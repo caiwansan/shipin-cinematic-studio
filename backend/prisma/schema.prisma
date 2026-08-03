@@ -9962,6 +9962,8 @@ model EcologyPlugin {
   publishRequests  EcologyPluginPublishRequest[]
   marketplaceItem  EcologyMarketplaceItem?
   revenueSnapshots EcologyRevenueSnapshot[]
+  revenueSharePolicies EcologyRevenueSharePolicy[]
+  settlements          EcologySettlement[]
 
   @@index([type])
   @@index([applicationId])
@@ -10025,6 +10027,7 @@ model EcologyMarketplaceItem {
   description   String?  @db.Text
   category      String?  @db.VarChar(50) // agent | tool | workflow 或业务类目
   pricingModel  String   @default("FREE") @map("pricing_model") @db.VarChar(20) // FREE | TRIAL | SUBSCRIPTION（仅登记不接支付）
+  price         Decimal? @map("price") @db.Decimal(12, 2) // 订阅单价登记（元/月，未接支付：应计收入计算依据，非实收）
   status        String   @default("UNLISTED") @db.VarChar(20) // LISTED | UNLISTED（掌柜冻结）
   listedAt      DateTime? @map("listed_at")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -10055,6 +10058,72 @@ model EcologyRevenueSnapshot {
   @@unique([pluginId, period])
   @@index([period])
   @@map("ecology_revenue_snapshots")
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPRINT-ECO-07 — Revenue Settlement Foundation（收入计算基础设施，非财务系统）
+// 核心链：License → License Events → Revenue Snapshot → Settlement Record → Developer Share
+// 纪律：不做提现 / 不做钱包 / 不做支付改造 / 不做推广奖励 / 不做银行接口
+// ═══════════════════════════════════════════════════════════
+
+model EcologyRevenueSharePolicy {
+  id            String  @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  developerId   String? @map("developer_id") @db.Text // EcologyDeveloper.id；null = 平台默认策略
+  pluginId      String? @unique @map("plugin_id") @db.Text // ecology_plugins.id；null = 开发者级默认；非 null 必须带 developerId
+  developerRate Decimal @map("developer_rate") @db.Decimal(5, 2) // 0.70 = 70%（配置化，不写死）
+  platformRate  Decimal @map("platform_rate") @db.Decimal(5, 2)
+  status        String  @default("ACTIVE") @db.VarChar(20) // ACTIVE | DISABLED
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  developer EcologyDeveloper? @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  plugin    EcologyPlugin?    @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@index([developerId])
+  @@index([status])
+  @@map("ecology_revenue_share_policies")
+}
+
+model EcologySettlement {
+  id              String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  period          String   @db.VarChar(7) // 'YYYY-MM'（月度结算）
+  pluginId        String   @map("plugin_id") @db.Text // ecology_plugins.id
+  developerId     String   @map("developer_id") @db.Text // EcologyDeveloper.id（收入归属）
+  grossAmount     Decimal  @default(0) @map("gross_amount") @db.Decimal(12, 2) // 应计收入（登记单价×许可数，未接支付非实收）
+  developerAmount Decimal  @default(0) @map("developer_amount") @db.Decimal(12, 2) // 开发者分成（策略计算）
+  platformAmount  Decimal  @default(0) @map("platform_amount") @db.Decimal(12, 2) // 平台收入
+  currency        String   @default("CNY") @db.VarChar(10)
+  status          String   @default("DRAFT") @db.VarChar(20) // DRAFT | CONFIRMED | FINALIZED（不可回退）
+  detail          Json     @default("{}") // 对账结果 / 策略来源 / 单价来源（留痕）
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  plugin    EcologyPlugin    @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  developer EcologyDeveloper @relation(fields: [developerId], references: [id], onDelete: Restrict)
+  items     EcologySettlementItem[]
+
+  @@unique([pluginId, period])
+  @@index([developerId])
+  @@index([period])
+  @@index([status])
+  @@map("ecology_settlements")
+}
+
+model EcologySettlementItem {
+  id           String  @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  settlementId String  @map("settlement_id") @db.Text // EcologySettlement.id
+  licenseId    String? @map("license_id") @db.Text // EcologyLicense.id（可追溯；无明细时汇总为 null）
+  pluginId     String  @map("plugin_id") @db.Text
+  period       String  @db.VarChar(7)
+  amount       Decimal @default(0) @map("amount") @db.Decimal(12, 2) // 该许可应计金额（单价登记）
+  source       String  @db.VarChar(30) // LICENSE_EVENT | SNAPSHOT（追溯来源）
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  settlement EcologySettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  @@index([settlementId])
+  @@index([licenseId])
+  @@map("ecology_settlement_items")
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -10204,6 +10273,8 @@ model EcologyDeveloper {
   publishRequests EcologyPluginPublishRequest[]
   agreements      EcologyDeveloperAgreement[]
   marketplaceItems EcologyMarketplaceItem[]
+  revenueSharePolicies EcologyRevenueSharePolicy[]
+  settlements          EcologySettlement[]
 
   @@unique([userId])
   @@index([organizationId])
