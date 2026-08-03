@@ -98,6 +98,7 @@ fn clear_credentials(app: tauri::AppHandle, state: tauri::State<AppState>) -> Re
 
 /// 启动线上工作台（新 WebView 窗口；加载完成后注入 token 到 localStorage）
 /// 安全：仅允许 aigc.fushtn.com 域；token 注入后 UI 自持，Rust 不参与业务
+/// RCA-02（2026-08-04 掌柜指令）：补全 open_workspace 全链路可观测性（诊断埋点，零业务行为变更）
 #[tauri::command]
 fn open_workspace(
     app: tauri::AppHandle,
@@ -112,6 +113,7 @@ fn open_workspace(
         return Err(format!("拒绝打开非白名单域: {}", url));
     }
     diag.log("webview", &format!("open_workspace -> {}", url));
+    let workspace_app = app.clone();
     let webview = WebviewWindowBuilder::new(
         &app,
         "workspace",
@@ -119,16 +121,53 @@ fn open_workspace(
     )
     .title("昆仑镜工作台")
     .inner_size(1440.0, 900.0)
+    // ── RCA-02 可观测性埋点（只记录，不拦截/不改变导航行为）──
+    .on_navigation(move |nav_url| {
+        // 每次导航/重定向的 URL 链：可判定 401 跳登录 / 404 / 外链
+        let _ = workspace_app
+            .state::<diag::Diag>()
+            .log("webview", &format!("workspace NAVIGATE: {}", nav_url));
+        true // 不取消导航
+    })
+    .on_page_load(|window, payload| {
+        let url = payload.url().to_string();
+        let diag = window.app_handle().state::<diag::Diag>();
+        match payload.event() {
+            PageLoadEvent::Started => {
+                let _ = diag.log("webview", &format!("workspace page STARTED: {}", url));
+            }
+            PageLoadEvent::Finished => {
+                let _ = diag.log("webview", &format!("workspace page FINISHED: {}", url));
+            }
+        }
+    })
+    .on_document_title_changed(|window, title| {
+        // 页面身份信号：Nuxt 工作台渲染后 title 变化；白屏时 title 保持默认
+        let _ = window
+            .app_handle()
+            .state::<diag::Diag>()
+            .log("webview", &format!("workspace DOCUMENT_TITLE: {}", title));
+    })
     .build()
     .map_err(|e| e.to_string())?;
 
-    // 页面加载完成后注入 token（线上工作台复用现有 auth 双写机制）
+    // 注入 token（保持原有业务时机不变：build 后立即 eval）
+    // RCA-02：记录注入时间点与载荷长度（安全：绝不落 token 明文）
     if let Some(token) = access_token {
+        let diag = app.state::<diag::Diag>();
+        diag.log(
+            "webview",
+            &format!("workspace token inject: begin len={}", token.len()),
+        );
         let js = format!(
             "window.__KUNLUN_DESKTOP__={{}}; localStorage.setItem('auth_token','{}');",
             token
         );
         webview.eval(&js).map_err(|e| e.to_string())?;
+        diag.log(
+            "webview",
+            &format!("workspace token inject: eval dispatched len={}", token.len()),
+        );
     }
     Ok(())
 }

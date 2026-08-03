@@ -41,6 +41,7 @@ pub struct DiagStatus {
     pub os: String,
     pub arch: String,
     pub webview_version: String,
+    pub windows_version: String,
 }
 
 /// 诊断器：进程级单例，由 tauri manage() 托管
@@ -75,6 +76,47 @@ fn timestamp() -> String {
         "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
         yy, mm, dd, h, m, s, millis
     )
+}
+
+/// 读取 Windows 版本（注册表 CurrentVersion；失败返回 unknown）
+/// RCA-02 GAP-2：环境采集（Task 03）——os 字段仅 "windows"，需具体版本号
+#[cfg(target_os = "windows")]
+fn windows_version() -> String {
+    use std::process::Command;
+    let keys = [
+        r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+        r"HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion",
+    ];
+    for key in keys {
+        if let Ok(out) = Command::new("reg")
+            .args(["query", key, "/v", "DisplayVersion"])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&out.stdout);
+            if let Some(tok) = text.split_whitespace().last() {
+                if tok.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+                    return tok.to_string();
+                }
+            }
+        }
+        if let Ok(out) = Command::new("reg")
+            .args(["query", key, "/v", "CurrentBuild"])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&out.stdout);
+            if let Some(tok) = text.split_whitespace().last() {
+                if tok.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+                    return tok.to_string();
+                }
+            }
+        }
+    }
+    "not-found".into()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn windows_version() -> String {
+    std::env::consts::OS.to_string()
 }
 
 /// 读取 Windows 注册表中的 WebView2 Runtime 版本（失败返回 unknown）
@@ -190,6 +232,7 @@ impl Diag {
             os: std::env::consts::OS.to_string(),
             arch: std::env::consts::ARCH.to_string(),
             webview_version: webview2_version(),
+            windows_version: windows_version(),
         }
     }
 }
