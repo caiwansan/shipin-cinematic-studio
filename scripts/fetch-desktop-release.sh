@@ -19,8 +19,9 @@ ASSETS=$(curl -s "https://api.github.com/repos/$REPO/releases/tags/$VERSION")
 EXE_URL=$(echo "$ASSETS" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
+ver='${VERSION#v}'
 for a in d.get('assets',[]):
-    if a['name'].endswith('.exe'):
+    if a['name'].endswith('.exe') and f'_{ver}_' in a['name']:
         print(a['browser_download_url']); break
 " 2>/dev/null || true)
 

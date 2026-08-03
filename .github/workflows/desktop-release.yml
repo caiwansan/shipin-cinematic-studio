@@ -57,6 +57,13 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ''
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Cargo 缓存命中时 target 目录残留旧版本产物 → 清空 bundle 目录保证只发布当前版本
+      - name: Clean Stale Bundle (cache residue)
+        working-directory: desktop/src-tauri/target/release/bundle
+        run: |
+          Get-ChildItem -Recurse -File | Remove-Item -Force
+          Write-Host 'bundle cleaned'
+
       - name: List Bundle Artifacts
         working-directory: desktop/src-tauri/target/release/bundle
         run: |
@@ -76,6 +83,11 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
+      # 幂等发布：同 tag 重跑时先删旧 Release（残留资产会误导拉取脚本）
+      - name: Clean existing release (idempotent republish)
+        run: |
+          gh release delete ${{ github.ref_name }} --yes --cleanup-tag || true
+
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
