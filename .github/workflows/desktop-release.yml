@@ -50,19 +50,19 @@ jobs:
         working-directory: desktop
         run: npm install
 
+      # Cargo 缓存命中时 target 目录残留旧版本产物 → 构建前清空 bundle 目录保证只发布当前版本
+      - name: Clean Stale Bundle (cache residue)
+        working-directory: desktop/src-tauri/target/release/bundle
+        run: |
+          Get-ChildItem -Recurse -File | Remove-Item -Force
+          Write-Host 'bundle cleaned'
+
       - name: Build Kunlun Media (NSIS)
         working-directory: desktop
         run: npm run tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ''
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Cargo 缓存命中时 target 目录残留旧版本产物 → 清空 bundle 目录保证只发布当前版本
-      - name: Clean Stale Bundle (cache residue)
-        working-directory: desktop/src-tauri/target/release/bundle
-        run: |
-          Get-ChildItem -Recurse -File | Remove-Item -Force
-          Write-Host 'bundle cleaned'
 
       - name: List Bundle Artifacts
         working-directory: desktop/src-tauri/target/release/bundle
