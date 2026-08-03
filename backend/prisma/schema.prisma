@@ -9869,6 +9869,7 @@ model EcologyApplication {
 
   versions         EcologyApplicationVersion[]
   installs         EcologyApplicationInstall[]
+  plugins          EcologyPlugin[]
 
   @@index([category])
   @@index([status])
@@ -9932,4 +9933,71 @@ model EcologyApplicationPermission {
   @@index([installId])
   @@index([permission])
   @@map("ecology_application_permissions")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ECO-02 Plugin Manifest Runtime — 插件身份系统（只登记不执行）
+// 状态语义：REGISTERED=已登记身份；PUBLISHED=已发布版本；DEPRECATED=废弃
+// 禁止：不执行插件 / 不运行第三方代码 / 不接入支付
+// ═══════════════════════════════════════════════════════════════
+model EcologyPlugin {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  pluginId         String   @unique @map("plugin_id") @db.VarChar(80) // manifest.id: ai-media-manager
+  name             String   @db.VarChar(100) // 显示名
+  type             String   @db.VarChar(20) // agent | tool | workflow
+  author           String   @db.VarChar(64) // 开发者 ID
+  description      String?  @db.Text
+  applicationId    String?  @map("application_id") @db.Text // 关联 ecology_applications.id（可选）
+  status           String   @default("REGISTERED") @db.VarChar(30) // REGISTERED | PUBLISHED | DEPRECATED
+  lifecycleState   String   @default("ACTIVE") @map("lifecycle_state") @db.VarChar(30)
+  manifest         Json     @default("{}") // 最新 manifest 快照（只存不执行）
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  application      EcologyApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  versions         EcologyPluginVersion[]
+  installs         EcologyPluginInstall[]
+
+  @@index([type])
+  @@index([applicationId])
+  @@map("ecology_plugins")
+}
+
+model EcologyPluginVersion {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  pluginId         String   @map("plugin_id") @db.Text // 关联 ecology_plugins.id
+  version          String   @db.VarChar(30) // semver: 1.0.0
+  changelog        String?  @db.Text
+  schemaVersion    String?  @map("schema_version") @db.Text // manifest schema 版本
+  manifest         Json     @default("{}") // 该版本 manifest 快照
+  status           String   @default("published") @db.VarChar(20) // published | deprecated
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  plugin           EcologyPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  installs         EcologyPluginInstall[]
+
+  @@unique([pluginId, version])
+  @@index([pluginId])
+  @@map("ecology_plugin_versions")
+}
+
+model EcologyPluginInstall {
+  id               String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  organizationId   String   @map("organization_id") @db.Text // Organization.id
+  pluginId         String   @map("plugin_id") @db.Text // 关联 ecology_plugins.id
+  versionId        String?  @map("version_id") @db.Text
+  status           String   @default("INSTALLED") @db.VarChar(30) // INSTALLED | DISABLED | UNINSTALLED（只登记不执行）
+  lifecycleState   String   @default("ACTIVE") @map("lifecycle_state") @db.VarChar(30)
+  config           Json?    @default("{}")
+  installedAt      DateTime @default(now()) @map("installed_at")
+  lastUsedAt       DateTime? @map("last_used_at")
+
+  plugin           EcologyPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  version          EcologyPluginVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, pluginId])
+  @@index([organizationId])
+  @@index([pluginId])
+  @@map("ecology_plugin_installations")
 }

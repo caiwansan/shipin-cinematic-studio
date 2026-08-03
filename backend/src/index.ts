@@ -477,6 +477,14 @@ await app.register(projectV2Routes)
   const ecologySeed = await ensureEcologySeed()
   app.log.info(`[ECO-01] 内置应用注册完成: ${ecologySeed.registered} 新增 / ${ecologySeed.skipped} 已存在`)
 
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-02 — Plugin Manifest Runtime（插件身份系统）
+  // 只登记身份 / 只读目录 / 登记安装，不执行插件代码
+  // 纪律：不执行插件 / 不运行第三方代码 / 不接入支付 / 不做商城 UI
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-plugin.routes.js')).registerEcologyPluginRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-02] Plugin Manifest Runtime 路由已注册')
+
   // 注册渠道适配器
   const { channelService } = await import('./services/enterprise/channel.service.js')
   const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')
