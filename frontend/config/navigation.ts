@@ -52,6 +52,8 @@ export const navCategories: NavCategory[] = [
 export const primaryNav: NavItem[] = [
   { label: '商城', icon: '🛍️', to: '/mall' },
   { label: '社区', icon: '🌐', to: '/community' },
+  // 应用中心：应用生态入口层（掌柜指令 2026-08-04 ECO-09）
+  { label: '应用中心', icon: '🧩', to: '/ecosystem/applications' },
   // AI Center：昆仑镜 AI 生态入口层（掌柜指令 2026-08-01）
   { label: 'AI中心', icon: '🧠', to: '/ai-center' },
 ]

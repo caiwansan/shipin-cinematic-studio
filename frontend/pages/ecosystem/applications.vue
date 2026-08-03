@@ -5,7 +5,7 @@
   <div class="eco-apps-page">
     <div class="page-header">
       <h1>🧩 应用中心</h1>
-      <p class="page-subtitle">昆仑镜 AI 应用生态 — 应用身份目录（ECO-01 Application Adapter Layer）</p>
+      <p class="page-subtitle">昆仑镜 AI 应用生态 — 9 大应用，点击进入对应工作台（ECO-09 Application Center Navigation）</p>
     </div>
 
     <!-- Loading -->
@@ -29,7 +29,7 @@
       </div>
 
       <div class="app-grid">
-        <div v-for="app in apps" :key="app.slug" class="app-card">
+        <div v-for="app in apps" :key="app.slug" class="app-card" @click="enter(app)">
           <div class="app-head">
             <div class="app-icon">{{ iconFor(app.category) }}</div>
             <div class="app-title">
@@ -68,8 +68,8 @@
           </div>
 
           <div class="app-foot">
-            <span class="entry">入口：{{ app.workspaceEntry }}</span>
-            <button v-if="!app.installed" class="btn-install" @click="install(app.slug)">安装到组织</button>
+            <button class="btn-enter" @click.stop="enter(app)">进入工作台 →</button>
+            <button v-if="!app.installed" class="btn-install" @click.stop="install(app.slug)">安装到组织</button>
           </div>
         </div>
       </div>
@@ -126,6 +126,12 @@ async function install(slug: string) {
   }
 }
 
+function enter(app: any) {
+  if (app.workspaceEntry) {
+    window.location.href = app.workspaceEntry
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -156,7 +162,9 @@ onMounted(load)
   border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px;
   background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   display: flex; flex-direction: column; gap: 10px;
+  cursor: pointer; transition: box-shadow .15s, transform .15s;
 }
+.app-card:hover { box-shadow: 0 4px 14px rgba(37,99,235,0.14); transform: translateY(-2px); }
 .app-head { display: flex; align-items: center; gap: 10px; }
 .app-icon { font-size: 28px; }
 .app-title { flex: 1; }
@@ -172,6 +180,11 @@ onMounted(load)
 .perm-chip { background: #f5f3ff; color: #6d28d9; font-size: 11px; padding: 2px 8px; border-radius: 6px; font-family: monospace; }
 .empty-tag { color: #9ca3af; font-size: 12px; }
 .app-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f3f4f6; padding-top: 10px; }
+.btn-enter {
+  background: #2563eb; color: #fff; border: none; border-radius: 6px;
+  padding: 6px 14px; font-size: 13px; cursor: pointer; transition: background .15s;
+}
+.btn-enter:hover { background: #1d4ed8; }
 .entry { font-size: 12px; color: #9ca3af; font-family: monospace; }
 .btn-install {
   padding: 5px 14px; background: #3b82f6; color: #fff; border: none;

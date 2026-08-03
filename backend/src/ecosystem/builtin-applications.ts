@@ -24,7 +24,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun Media',
     category: 'media',
     description: '新媒体运营工作台：账号管理、内容管理、基础发布、数据查看（免费底包）；AI 员工插件付费',
-    workspaceEntry: '/workspaces/media',
+    workspaceEntry: '/workspace/media',
     backendModule: 'enterprise/channel',
     capabilities: [
       { code: 'media.read_metrics', name: '数据查看', description: '读取平台账号粉丝/作品数据', mountPoint: 'media.analytics' },
@@ -43,7 +43,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun Drama',
     category: 'drama',
     description: '短剧创作工作台：剧本、分镜、AI 视频生产',
-    workspaceEntry: '/workspaces/drama',
+    workspaceEntry: '/studio/v2',
     backendModule: 'studio-v2',
     capabilities: [
       { code: 'drama.storyboard', name: '分镜设计', description: '分镜脚本与镜头设计', mountPoint: 'drama.storyboard' },
@@ -59,7 +59,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun Novel',
     category: 'novel',
     description: '小说创作工作台：混沌珠世界观、大纲、章节写作',
-    workspaceEntry: '/workspaces/novel',
+    workspaceEntry: '/hdz',
     backendModule: 'hdz',
     capabilities: [
       { code: 'novel.outline', name: '大纲创作', description: '世界观与大纲', mountPoint: 'novel.outline' },
@@ -74,7 +74,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun Recruit',
     category: 'recruit',
     description: '招聘工作台：AI 招聘官、简历中心、面试中心',
-    workspaceEntry: '/workspaces/recruit',
+    workspaceEntry: '/workspace/recruitment',
     backendModule: 'enterprise/recruitment',
     capabilities: [
       { code: 'recruit.candidates', name: '候选人管理', description: '简历与候选人', mountPoint: 'recruit.candidates' },
@@ -91,7 +91,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun Legal',
     category: 'legal',
     description: '法律工作台：合同与法律文书处理',
-    workspaceEntry: '/workspaces/legal',
+    workspaceEntry: '/workspace/legal',
     backendModule: 'enterprise/legal',
     capabilities: [
       { code: 'legal.contracts', name: '合同处理', description: '合同审核与生成', mountPoint: 'legal.contracts' },
@@ -105,7 +105,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun Mall',
     category: 'mall',
     description: '商城工作台：商品与订单管理',
-    workspaceEntry: '/workspaces/mall',
+    workspaceEntry: '/mall',
     backendModule: 'enterprise/mall',
     capabilities: [
       { code: 'mall.products', name: '商品管理', description: '商品上下架', mountPoint: 'mall.products' },
@@ -120,7 +120,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun Music',
     category: 'music',
     description: '音乐工作台：音乐创作与音频资产',
-    workspaceEntry: '/workspaces/music',
+    workspaceEntry: '/workspace/music',
     backendModule: 'enterprise/music',
     capabilities: [
       { code: 'music.tracks', name: '音轨管理', description: '音频资产管理', mountPoint: 'music.tracks' },
@@ -134,7 +134,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun Ads',
     category: 'ad',
     description: '广告工作台：投放管理与效果分析',
-    workspaceEntry: '/workspaces/ad',
+    workspaceEntry: '/workspace/ad-create',
     backendModule: 'enterprise/ad',
     capabilities: [
       { code: 'ad.campaigns', name: '投放管理', description: '广告投放管理', mountPoint: 'ad.campaigns' },
@@ -149,7 +149,7 @@ export const BUILTIN_APPLICATIONS: BuiltinApplicationSpec[] = [
     name: 'Kunlun GEO',
     category: 'geo',
     description: 'GEO 工作台：AI 生成式引擎优化',
-    workspaceEntry: '/workspaces/geo',
+    workspaceEntry: '/workspace/geo/dashboard',
     backendModule: 'enterprise/geo',
     capabilities: [
       { code: 'geo.audit', name: 'GEO 审计', description: '品牌可见性审计', mountPoint: 'geo.audit' },
