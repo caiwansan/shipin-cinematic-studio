@@ -21,15 +21,19 @@ Task01 不是失败，是**验收入口不存在**。缺的是 SaaS 产品 vs �
 
 ❌ 新功能 ❌ 插件扩展 ❌ 商城 ❌ 用户中心 ❌ AI内容运营经理业务 ❌ 新平台
 
-## Task 01：Windows Build Pipeline（✅ 已完成本地验证）
-- `desktop-release.yml` 重写：Tauri v2 `windows-latest` 单 job（npm install → `tauri build` NSIS → scp 服务器）
+## Task 01：Windows Build Pipeline（✅ 已完成，CI 全链路验证通过）
+- `desktop-release.yml` 重写：Tauri v2 `windows-latest` 单 job（npm install → `tauri build` NSIS → artifact）
 - 版本管理：productName **Kunlun Media** / version **1.0.0**（tauri.conf/Cargo.toml/package.json 三处同步，提交 `bbfa8ebb`）
 - 构建链路修复（提交 `7f451a7b`）：
   - lib.rs `url.parse::<tauri::Url>()`（E0282）+ `webview.eval()` 替代 `webview.webview()`（E0599，Tauri 2.11.5 API 变化）
   - 图标 RGB→RGBA + `icon.ico`（Windows 资源必需）+ `icon-1024.png`
   - 移除 unused import/variable，零 warning
 - 本地 Linux Reality 验证：Rust 1.97.1（清华镜像）编译全通，kunlun-desktop release 6.1MB
-- ⛔ **阻塞：GitHub 凭证失效**（HTTPS PAT Invalid + SSH publickey denied）→ 无法 push/触发 CI → exe 待凭证
+- **GitHub Actions 实测（2026-08-04 02:xx）**：首次 run 全链路 success（Setup Node → Rust → Cargo cache → npm install → tauri build NSIS）—— G9 可复制发行能力成立
+- CI 踩坑记录：
+  - setup-node 失败 = `desktop/package-lock.json` 未入库 → 已提交
+  - publish 失败 = GITHUB_TOKEN 默认 read-only → workflow 顶层 `permissions: contents: write`
+  - 发版方式 = **push tag v\* 自动构建+发布**（deploy key 不能调 workflow_dispatch API）
 
 ## Task 02：Release Storage（✅ 已完成）
 - 目录 `/www/wwwroot/aigc.fushtn.com/releases/desktop/`（nginx `try_files $uri @nuxt` 直服，零配置改动）
@@ -77,5 +81,8 @@ Task01 不是失败，是**验收入口不存在**。缺的是 SaaS 产品 vs �
 - 长期方案：GitHub Actions（Windows runner）为唯一发布管道——未来 exe 自动更新/插件更新/License 检查都依赖它；服务器 SSH/PAT 不作为长期方案
 
 ## 阻塞清单
-- [ ] GitHub PAT（repo 权限）或 SSH deploy key（掌柜提供）→ push → Actions 出 exe
-- [ ] exe 到位后：填 latest.json signature + 建 Task03 入口 + G1-G7 验收
+- [x] GitHub SSH Deploy Key（掌柜 01:39 已添加）→ 发布链打通
+- [x] 历史瘦身：filter-repo 清除 backend/public/uploads（5.38GB → 228MB，348 提交保留）
+- [x] 首次 CI 构建 success（G9 成立）
+- [ ] v1.0.0 Release 发布（构建中，publish contents:write 已修复）
+- [ ] exe 到位后：fetch-desktop-release.sh → latest.json 回填 → Task03 入口 → G1-G9 验收
