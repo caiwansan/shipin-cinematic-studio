@@ -346,7 +346,7 @@ onMounted(() => {
         </div>
 
         <!-- 桌面版 -->
-        <a class="model-config-card" href="/user/download" target="_blank" style="text-decoration: none; display: flex;">
+        <a class="model-config-card" href="/download/desktop" target="_blank" style="text-decoration: none; display: flex;">
           <div class="model-config-icon">💻</div>
           <div class="model-config-text">
             <span class="model-config-title">桌面版</span>

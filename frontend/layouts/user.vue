@@ -16,7 +16,7 @@ const navItems = [
   { path: '/user/library', label: '作品库', icon: '🎬' },
   { path: '/user/promo', label: '推广中心', icon: '📢' },
   { path: '/user/agent', label: '代理中心', icon: '🤝' },
-  { path: '/user/download', label: '客户端下载', icon: '📥' },
+  { path: '/download/desktop', label: '客户端下载', icon: '📥' }, // RELEASE-01.2: 公开下载页（无需登录）
 ]
 
 function isActive(path: string) {

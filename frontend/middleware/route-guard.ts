@@ -5,6 +5,7 @@ export default defineNuxtRouteMiddleware((to) => {
   // 已知所有有效路由列表（由 nuxt-pages 自动生成，这里做安全 fallback）
   const validPaths = [
     '/', '/login', '/mobile', '/projects',
+    '/download/desktop', // RELEASE-01.2: 公开下载页（无需登录）
     '/community', '/community/new',
     '/studio', '/studio/export',
     '/user/agent', '/user/center', '/user/credits', '/user/download',

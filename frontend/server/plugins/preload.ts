@@ -74,6 +74,7 @@ export default defineNitroPlugin((nitroApp) => {
 
     const knownPaths = [
       '/', '/login', '/register', '/mobile', '/projects',
+      '/download/desktop', // RELEASE-01.2: 公开下载页（无需登录）
       '/community', '/community/new',
       '/studio', '/studio/export',
       '/user/agent', '/user/center', '/user/credits', '/user/download',
