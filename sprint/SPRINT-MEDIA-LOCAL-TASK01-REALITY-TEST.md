@@ -24,6 +24,10 @@
 
 ## 0. 验收纪律（掌柜 2026-08-04 确认）
 
+**⚠️ 状态变更（2026-08-04 00:40）：Task01 → PRE-GATE**
+> Reality Gate 前置条件缺口实锤：无真实可下载安装包 → 不存在「普通用户真机验收」。
+> 先执行 SPRINT-MEDIA-LOCAL-RELEASE-01（Desktop Release Build Gate），生成 Kunlun Media_1.0.0_x64-setup.exe 后重启五轮。
+
 **结果出来前保持：**
 - ✅ 不改代码 ✅ 不扩插件 ✅ 不做商城支付 ✅ 不做自动发布 ✅ 不增加平台适配 ✅ 不调整生态模型
 
