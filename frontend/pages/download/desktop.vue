@@ -80,8 +80,9 @@
             </div>
           </div>
           <div class="dl-diag-note">
-            测试流程：安装 DiagA → 运行截图 → 卸载 → 安装 DiagB → 运行截图。<br />
-            期望：DiagA 显示「Hello World + JS 执行 OK（外部脚本）」；DiagB 显示「Vue 静态页正常渲染 + 按钮可点」。任一项缺失请截图回传。
+            测试步骤（只需 4 步）：<br />
+            ① 下载 DiagA → ② 安装 → ③ 打开 → ④ 截图。<br />
+            然后卸载，同法测试 DiagB，再截图。
           </div>
         </section>
       </section>
@@ -160,6 +161,7 @@ onMounted(async () => {
   } catch (e) {
     console.error('latest.json 获取失败', e)
   }
+  loadDiagPacks()
 })
 
 function formatTime(iso: string): string {
@@ -169,30 +171,40 @@ function formatTime(iso: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-// DIAG-RELEASE-01：诊断包清单（下载链接 + SHA256 + 版本 + 用途）
-// 来源：aigc.fushtn.com/releases/desktop/diagnostics/（昆仑镜镜像仓，非 GitHub）
-const diagPacks = [
-  {
-    id: 'diaga',
-    name: 'DiagA — 纯 HTML + 外部 JS',
-    desc: '验证 WebView2 基础 JS 执行（外部脚本路径）',
-    test: 'HTML / external JS',
-    version: '1.1.0',
-    sha256: '64a587194ae5ee1c92a15a987d16a06e74e04cb2e8c004ddab04e4a6834e1104',
-    filename: 'KunlunMediaDiagA_1.1.0_x64-setup.exe',
-    url: '/releases/desktop/diagnostics/KunlunMediaDiagA_1.1.0_x64-setup.exe',
-  },
-  {
-    id: 'diagb',
-    name: 'DiagB — Vue + inline script',
-    desc: '验证 inline script 执行路径（Vue 3 静态页）',
-    test: 'Vue / inline script',
-    version: '1.1.0',
-    sha256: '55a74f2a9f3315a23e67319a4257964f9c238ecd04d90283846a4b84fbe6d68c',
-    filename: 'KunlunMediaDiagB_1.1.0_x64-setup.exe',
-    url: '/releases/desktop/diagnostics/KunlunMediaDiagB_1.1.0_x64-setup.exe',
-  },
-]
+// DIAG-RELEASE-01 + RCA-03 RESET：诊断包清单从 diagnostic.json 拉取（发行链唯一真源，与服务器文件/nginx 一致）
+interface DiagPack {
+  id: string
+  name: string
+  desc: string
+  test: string
+  version: string
+  sha256: string
+  filename: string
+  url: string
+}
+
+const diagPacks = ref<DiagPack[]>([])
+
+// 诊断包清单从 diagnostic.json 拉取（发行链唯一真源，与服务器文件/nginx 一致）
+async function loadDiagPacks() {
+  try {
+    const res = await fetch('/releases/desktop/diagnostics/diagnostic.json', { cache: 'no-store' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    diagPacks.value = (data.packs ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      desc: p.desc,
+      test: p.test,
+      version: p.version,
+      sha256: p.sha256,
+      filename: p.filename,
+      url: p.url,
+    }))
+  } catch (e) {
+    console.error('diagnostic.json 获取失败', e)
+  }
+}
 
 function doLogin() { /* 登录走 /login 完整流程，此处仅占位 */ }
 function doRegister() { /* 注册走 /register 完整流程 */ }

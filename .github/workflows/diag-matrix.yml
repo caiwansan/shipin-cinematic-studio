@@ -59,9 +59,11 @@ jobs:
           Copy-Item desktop/diag/a/index.html desktop/ui/index.html -Force
           Copy-Item desktop/diag/a/diag-a.js desktop/ui/diag-a.js -Force
           $conf = Get-Content desktop/src-tauri/tauri.conf.json -Raw
-          $conf = $conf -replace '"productName": "Kunlun Media"', '"productName": "KunlunMediaDiagA"'
+          # RCA-03 TEST ARTIFACT REALITY RESET Task02：版本隔离（文件名/安装目录/窗口标题三隔离，禁止伪装正式版）
+          $conf = $conf -replace '"productName": "Kunlun Media"', '"productName": "KunlunMedia-DiagA"'
+          $conf = $conf -replace '"title": "昆仑镜 Kunlun Desktop"', '"title": "昆仑镜 DiagA 诊断"'
           Set-Content desktop/src-tauri/tauri.conf.json $conf -NoNewline
-          Write-Host 'Variant A prepared'
+          Write-Host 'Variant A prepared (isolated: KunlunMedia-DiagA / 昆仑镜 DiagA 诊断)'
 
       - name: Prepare Variant B (Vue static)
         if: matrix.variant == 'b'
@@ -70,9 +72,11 @@ jobs:
           Copy-Item desktop/diag/b/index.html desktop/ui/index.html -Force
           Copy-Item desktop/diag/b/vendor/vue.global.prod.js desktop/ui/vue.global.prod.js -Force
           $conf = Get-Content desktop/src-tauri/tauri.conf.json -Raw
-          $conf = $conf -replace '"productName": "Kunlun Media"', '"productName": "KunlunMediaDiagB"'
+          # RCA-03 TEST ARTIFACT REALITY RESET Task02：版本隔离（文件名/安装目录/窗口标题三隔离，禁止伪装正式版）
+          $conf = $conf -replace '"productName": "Kunlun Media"', '"productName": "KunlunMedia-DiagB"'
+          $conf = $conf -replace '"title": "昆仑镜 Kunlun Desktop"', '"title": "昆仑镜 DiagB 诊断"'
           Set-Content desktop/src-tauri/tauri.conf.json $conf -NoNewline
-          Write-Host 'Variant B prepared'
+          Write-Host 'Variant B prepared (isolated: KunlunMedia-DiagB / 昆仑镜 DiagB 诊断)'
 
       - name: Prepare Variant C (full shell)
         if: matrix.variant == 'c'
