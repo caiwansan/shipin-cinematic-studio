@@ -1,6 +1,13 @@
 name: Build & Release Kunlun Media (Tauri v2)
 
 on:
+  # push main → 自动构建（G9 Source Release Reality：每次发行链变更都验证可复制构建）
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop-release.yml'
+  # 手动正式发版（生成 GitHub Release + exe 资产）
   workflow_dispatch:
     inputs:
       version:
@@ -59,8 +66,11 @@ jobs:
           path: desktop/src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
 
-  deploy:
+  # 正式发版：仅 workflow_dispatch（带版本号）→ GitHub Release（公开资产，GITHUB_TOKEN 自动注入，零 secret 配置）
+  # 服务器/官网从公开 Release 下载 exe → releases/desktop/ → latest.json
+  publish:
     needs: build-windows
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Download artifact
@@ -69,12 +79,12 @@ jobs:
           name: kunlun-media-windows
           path: artifacts/
 
-      - name: Deploy to Server
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-        run: |
-          echo "$DEPLOY_KEY" > deploy_key
-          chmod 600 deploy_key
-          scp -i deploy_key -o StrictHostKeyChecking=no -r artifacts/* root@$DEPLOY_HOST:/root/shipin-cinematic-studio/backend/releases/desktop/
-          echo "✅ Kunlun Media installer deployed to server"
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Kunlun Media ${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+          files: artifacts/*.exe
