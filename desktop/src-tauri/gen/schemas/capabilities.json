@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Kunlun Desktop 默认权限：本地窗口 + 安全存储 + 打开线上工作台","local":true,"windows":["main"],"permissions":["core:default","store:default","shell:allow-open"]}}
