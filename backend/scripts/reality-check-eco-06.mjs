@@ -163,7 +163,7 @@ async function main() {
   // ── 回归: ECO-01~05 ──
   console.log('\n回归 ECO-01~05（现有生态不受影响）');
   const ecoTables = q(`SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'ecology_%'`);
-  check('ecology 表 16 → 18 张', Number(ecoTables) === 18, `tables=${ecoTables}`);
+  check("ecology 表基线 25 张（ECO-06/07/08 累积）", Number(ecoTables) === 25, `tables=${ecoTables}`);
   const instCount = q(`SELECT count(*) FROM enterprise_agent_instance`);
   check('EnterpriseAgentInstance 正常', Number(instCount) >= 23, `instances=${instCount}`);
   const chkLic = await api('/api/ecosystem/license/check', 'POST', HA, { pluginId: pidMain });
@@ -181,21 +181,38 @@ async function main() {
   check('ECO-06 改动仅限生态层新增', eco6Only, changed.join(', '));
 
   // ── 回滚验证 ──
-  console.log('\n回滚验证（DROP 2 新表 + 还原 installations 列 → 重建幂等 → 恢复现场）');
-  execSync(`psql "${PG}" -c "DROP TABLE IF EXISTS ecology_revenue_snapshots; DROP TABLE IF EXISTS ecology_marketplace_items;"`, { encoding: 'utf8' });
-  const afterDrop = q(`SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'ecology_%'`);
-  check('DROP 后回到 16 张（无依赖）', Number(afterDrop) === 16, `tables=${afterDrop}`);
-  execSync(`psql "${PG}" -c "ALTER TABLE ecology_plugin_installations DROP COLUMN IF EXISTS license_id; ALTER TABLE ecology_plugin_installations DROP COLUMN IF EXISTS removed_at;"`, { encoding: 'utf8' });
-  check('installations 扩展列还原', q(`SELECT count(*) FROM information_schema.columns WHERE table_name='ecology_plugin_installations' AND column_name IN ('license_id','removed_at')`) === '0');
-  execSync(`psql "${PG}" -f ${REPO}/backend/prisma/migrations/sprint-eco-06-marketplace-foundation/migration.sql`, { encoding: 'utf8' });
-  const afterRe = q(`SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'ecology_%'`);
-  check('重建幂等（18 张）', Number(afterRe) === 18, `tables=${afterRe}`);
-  const uni = q(`SELECT count(*) FROM pg_indexes WHERE indexname IN ('ecology_marketplace_items_plugin_id_key','ecology_revenue_snapshots_plugin_id_period_key')`);
-  check('唯一索引保留（plugin / plugin+period）', Number(uni) >= 2);
-  // 恢复现场：重新上架 + 重装（原商品/安装数据已被回滚清除）
+  // ECO-10 升级：破坏性演练 → 事务内演练（BEGIN → DROP → 重建 → 检查 → ROLLBACK）
+  // 原因：官方种子商品/price 列/安装数据是生态资产，不能被 gate 清空（ECO-10 实锤：曾 DROP 后丢 price 列 + 清空官方商品）
+  console.log('\n回滚验证（事务内演练：DROP → 重建 → ROLLBACK，现场零破坏）');
+  const txnOut = execSync(
+    `psql "${PG}" -c "BEGIN;" -c "DROP TABLE IF EXISTS ecology_revenue_snapshots; DROP TABLE IF EXISTS ecology_marketplace_items;" ` +
+    `-c "ALTER TABLE ecology_plugin_installations DROP COLUMN IF EXISTS license_id; ALTER TABLE ecology_plugin_installations DROP COLUMN IF EXISTS removed_at;" ` +
+    `-f ${REPO}/backend/prisma/migrations/sprint-eco-06-marketplace-foundation/migration.sql ` +
+    `-c "ALTER TABLE ecology_marketplace_items ADD COLUMN IF NOT EXISTS price DECIMAL(12,2);" ` +
+    `-c "SELECT 'txn_tables=' || count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'ecology_%';" ` +
+    `-c "SELECT 'txn_uniq=' || count(*) FROM pg_indexes WHERE indexname IN ('ecology_marketplace_items_plugin_id_key','ecology_revenue_snapshots_plugin_id_period_key');" ` +
+    `-c "ROLLBACK;"`,
+    { encoding: 'utf8' },
+  );
+  const txnTables = Number((txnOut.match(/txn_tables=(\d+)/) || [])[1] ?? -1);
+  const txnUniq = Number((txnOut.match(/txn_uniq=(\d+)/) || [])[1] ?? -1);
+  check('事务内重建幂等（25 张）', txnTables === 25, `tables=${txnTables}`);
+  check('唯一索引保留（plugin / plugin+period）', txnUniq >= 2, `uniq=${txnUniq}`);
+  // ROLLBACK 后现场必须完好（官方种子 + price 列 + install 数据零丢失）
+  const afterRb = q(`SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'ecology_%'`);
+  check('ROLLBACK 后表数还原（25 张）', Number(afterRb) === 25, `tables=${afterRb}`);
+  const priceStill = q(`SELECT count(*) FROM information_schema.columns WHERE table_name='ecology_marketplace_items' AND column_name='price'`);
+  check('ROLLBACK 后 price 列保留（ECO-07 资产）', priceStill === '1', `cols=${priceStill}`);
+  const licCol = q(`SELECT count(*) FROM information_schema.columns WHERE table_name='ecology_plugin_installations' AND column_name='license_id'`);
+  check('ROLLBACK 后 license_id 列保留', licCol === '1', `cols=${licCol}`);
+  const officialLeft = q(`SELECT count(*) FROM ecology_marketplace_items mi JOIN ecology_plugins p ON p.id=mi.plugin_id WHERE p.author='kunlun-official' AND mi.status='LISTED'`);
+  check('ROLLBACK 后官方商品完好（5 款）', Number(officialLeft) === 5, `count=${officialLeft}`);
+  // 恢复现场：重上架 + 重装验证（演练已回滚，测试商品 ecoMain 仍在，直接幂等确认）
   await api('/api/ecosystem/marketplace/items', 'POST', HA, { pluginId: ecoMain, displayName: 'ECO6 数据分析员', category: 'agent', pricingModel: 'TRIAL' });
   const reInst2 = await api('/api/ecosystem/marketplace/install', 'POST', HA, { pluginId: ecoMain });
   check('恢复现场（重新上架 + 重装组织 A）', reInst2.code === 0 && reInst2.data?.install?.status === 'INSTALLED', reInst2.data?.install?.status);
+  // ECO-10 治理：验证完成后下架测试商品，插件发现中心只保留官方商品（不污染用户可见入口）
+  await api(`/api/ecosystem/marketplace/items/${ecoMain}/unlist`, 'POST', HA, {});
 
   console.log(`\n══════════════════════════════════════════`);
   console.log(` 结果: ${PASS} PASS / ${FAIL} FAIL`);

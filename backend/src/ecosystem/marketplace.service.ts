@@ -101,9 +101,25 @@ export class MarketplaceService {
   // ── 发现接口（商品目录）────────────────────────────────────
 
   /** listMarketplace：LISTED 商品 + 当前组织已安装标记 */
-  async listMarketplace(organizationId: string) {
+  /**
+   * listMarketplace — 插件发现（LISTED + 已安装标记）
+   * ECO-10 新增：q 搜索 / category 分类 / type 插件类型 服务端过滤
+   */
+  async listMarketplace(organizationId: string, filters: { q?: string; category?: string; type?: string } = {}) {
+    const where: any = { status: 'LISTED' };
+    if (filters.category) where.category = filters.category;
+    if (filters.type) where.plugin = { type: filters.type };
+    if (filters.q?.trim()) {
+      const q = filters.q.trim();
+      where.OR = [
+        { displayName: { contains: q } },
+        { description: { contains: q } },
+        { plugin: { name: { contains: q } } },
+        { plugin: { pluginId: { contains: q } } },
+      ];
+    }
     const items = await this.prisma.ecologyMarketplaceItem.findMany({
-      where: { status: 'LISTED' },
+      where,
       include: {
         plugin: {
           select: {
@@ -129,6 +145,7 @@ export class MarketplaceService {
       description: item.description,
       category: item.category,
       pricingModel: item.pricingModel,
+      price: item.price?.toString() ?? null,
       status: item.status,
       listedAt: item.listedAt,
       type: item.plugin.type,
@@ -138,15 +155,33 @@ export class MarketplaceService {
     }));
   }
 
-  /** getMarketplaceItem：商品详情（LISTED 或当前组织已安装） */
-  async getMarketplaceItem(organizationId: string, pluginEcologyId: string) {
+  // ── ECO-10：插件标识解析（兼容 ecology UUID 与 manifest pluginId）────
+  /** 发现中心前端用 manifest.pluginId（ai-viral-analyst），ECO-06 gate 用 ecology UUID；统一解析 */
+  private async resolvePluginEcologyId(pluginIdOrManifestId: string): Promise<string> {
+    const byId = await this.prisma.ecologyPlugin.findUnique({
+      where: { id: pluginIdOrManifestId }, select: { id: true },
+    });
+    if (byId) return byId.id;
+    const byManifest = await this.prisma.ecologyPlugin.findUnique({
+      where: { pluginId: pluginIdOrManifestId }, select: { id: true },
+    });
+    if (byManifest) return byManifest.id;
+    return pluginIdOrManifestId; // 交给原逻辑报 ITEM_NOT_FOUND
+  }
+
+  /** getMarketplaceItem：商品详情（LISTED 或当前组织已安装）
+   *  ECO-10 增强：返回 manifest（能力/权限）+ 关联应用（需要应用）
+   */
+  async getMarketplaceItem(organizationId: string, pluginIdOrManifestId: string) {
+    const pluginEcologyId = await this.resolvePluginEcologyId(pluginIdOrManifestId);
     const item = await this.prisma.ecologyMarketplaceItem.findUnique({
       where: { pluginId: pluginEcologyId },
       include: {
         plugin: {
           select: {
             id: true, pluginId: true, name: true, type: true, description: true,
-            manifest: true, status: true,
+            manifest: true, status: true, applicationId: true,
+            application: { select: { slug: true, name: true, workspaceEntry: true } },
             versions: { where: { status: 'published' }, orderBy: { createdAt: 'desc' }, take: 1, select: { version: true, changelog: true } },
           },
         },
@@ -160,7 +195,12 @@ export class MarketplaceService {
     const install = await this.prisma.ecologyPluginInstall.findUnique({
       where: { organizationId_pluginId: { organizationId, pluginId: item.pluginId } },
     });
-    return { ...item, install: install ?? null };
+    return {
+      ...item,
+      install: install ?? null,
+      manifest: item.plugin.manifest,
+      application: item.plugin.application ?? null,
+    };
   }
 
   // ── G2: 安装授权联动 ───────────────────────────────────────
@@ -174,7 +214,8 @@ export class MarketplaceService {
    *   5. 任一步失败 → FAILED + 错误留痕（不删行）
    * 幂等：已 INSTALLED → 返回现有安装与许可
    */
-  async installPlugin(organizationId: string, pluginEcologyId: string) {
+  async installPlugin(organizationId: string, pluginIdOrManifestId: string) {
+    const pluginEcologyId = await this.resolvePluginEcologyId(pluginIdOrManifestId);
     const item = await this.prisma.ecologyMarketplaceItem.findUnique({ where: { pluginId: pluginEcologyId } });
     if (!item) throw new MarketplaceServiceError('商品不存在（未上架）', 'ITEM_NOT_FOUND');
     if (item.status !== 'LISTED') throw new MarketplaceServiceError('商品已下架，无法安装', 'ITEM_UNLISTED');
@@ -229,7 +270,8 @@ export class MarketplaceService {
    * uninstallPlugin：卸载 = installation.status → REMOVED（不删行）
    * license 保留历史（不删除、不挂起、不失效——仅解除「当前安装」关系）
    */
-  async uninstallPlugin(organizationId: string, pluginEcologyId: string) {
+  async uninstallPlugin(organizationId: string, pluginIdOrManifestId: string) {
+    const pluginEcologyId = await this.resolvePluginEcologyId(pluginIdOrManifestId);
     const install = await this.prisma.ecologyPluginInstall.findUnique({
       where: { organizationId_pluginId: { organizationId, pluginId: pluginEcologyId } },
     });
@@ -255,7 +297,8 @@ export class MarketplaceService {
    *   3. License 非 ACTIVE → 对应原因（EXPIRED/SUSPENDED）
    *   4. 全部通过 → allowed（KAOR 可加载）
    */
-  async launchCheck(organizationId: string, pluginEcologyId: string) {
+  async launchCheck(organizationId: string, pluginIdOrManifestId: string) {
+    const pluginEcologyId = await this.resolvePluginEcologyId(pluginIdOrManifestId);
     const plugin = await this.prisma.ecologyPlugin.findUnique({ where: { id: pluginEcologyId } });
     if (!plugin) throw new MarketplaceServiceError('插件不存在', 'PLUGIN_NOT_FOUND');
     const install = await this.prisma.ecologyPluginInstall.findUnique({

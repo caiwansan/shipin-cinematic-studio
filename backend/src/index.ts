@@ -477,6 +477,16 @@ await app.register(projectV2Routes)
   const ecologySeed = await ensureEcologySeed()
   app.log.info(`[ECO-01] 内置应用注册完成: ${ecologySeed.registered} 新增 / ${ecologySeed.skipped} 已存在`)
 
+  // SPRINT-ECO-10 — 官方内置插件种子（插件发现中心首批商品）
+  try {
+    const { seedBuiltinPlugins } = await import('./ecosystem/builtin-plugins.js')
+    const { prisma } = await import('./utils/index.js')
+    const pluginSeed = await seedBuiltinPlugins(prisma)
+    app.log.info(`[ECO-10] 官方内置插件注册完成: ${pluginSeed.plugins} 插件 / ${pluginSeed.items} 商品`)
+  } catch (e: any) {
+    app.log.warn(`[ECO-10] 内置插件种子跳过（不影响启动）: ${e.message}`)
+  }
+
   // ═══════════════════════════════════════════════════════════
   // SPRINT-ECO-02 — Plugin Manifest Runtime（插件身份系统）
   // 只登记身份 / 只读目录 / 登记安装，不执行插件代码

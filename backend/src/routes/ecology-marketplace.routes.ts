@@ -71,13 +71,19 @@ export async function registerEcologyMarketplaceRoutes(app: FastifyInstance) {
     } catch (e: any) { return replyErr(reply, e); }
   });
 
-  /** GET /api/ecosystem/marketplace/items — 插件发现（LISTED + 已安装标记） */
+  /** GET /api/ecosystem/marketplace/items — 插件发现（LISTED + 已安装标记）
+   *  query: q=搜索词&category=agent&type=agent（ECO-10 发现中心过滤）
+   */
   app.get('/marketplace/items', async (request: any, reply: any) => {
     try {
       const organizationId = await resolveOrg(request);
       const { marketplace } = await getServices();
-      const items = await marketplace.listMarketplace(organizationId);
-      return reply.send({ code: 0, data: { items } });
+      const items = await marketplace.listMarketplace(organizationId, {
+        q: request.query?.q,
+        category: request.query?.category,
+        type: request.query?.type,
+      });
+      return reply.send({ code: 0, data: { items, total: items.length } });
     } catch (e: any) { return replyErr(reply, e); }
   });
 
