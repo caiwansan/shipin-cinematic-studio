@@ -11,6 +11,10 @@
 import { FastifyInstance } from 'fastify'
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join, resolve } from 'path'
+import { createHash } from 'crypto'
+
+// 官网下载源根目录（release-watcher 同步目标；与 backend 进程 cwd 无关）
+const WEB_RELEASES_ROOT = process.env.KUNLUN_RELEASES_ROOT || '/www/wwwroot/aigc.fushtn.com/releases/desktop'
 
 export default async function desktopUpdateRoutes(fastify: FastifyInstance) {
 
@@ -92,6 +96,75 @@ export default async function desktopUpdateRoutes(fastify: FastifyInstance) {
 
     const yml = readFileSync(ymlPath, 'utf-8')
     return reply.send({ success: true, data: { yml, platform: platform as string } })
+  })
+
+  // GET /api/download/releases — 发布状态总览（桌面端自检 + 人工可观察）
+  // Sprint A（掌柜 2026-08-04）：发布状态可观察，不靠人肉确认。
+  // 返回各通道最新版本 + 状态 + 校验和；桌面端启动时也可调用此接口检查更新。
+  fastify.get('/api/download/releases', async (_request, reply) => {
+    const channels: Record<string, any> = {}
+
+    // ── stable：latest.json ──
+    const latestPath = join(WEB_RELEASES_ROOT, 'latest.json')
+    if (existsSync(latestPath)) {
+      try {
+        const m = JSON.parse(readFileSync(latestPath, 'utf-8'))
+        const filePath = join(WEB_RELEASES_ROOT, m.downloadUrl?.replace('/releases/desktop/', ''))
+        let status = 'published'
+        if (m.sha256 && existsSync(filePath)) {
+          const actual = createHash('sha256').update(readFileSync(filePath)).digest('hex')
+          if (actual !== m.sha256) status = 'checksum_mismatch'
+        } else if (!existsSync(filePath)) {
+          status = 'missing_artifact'
+        }
+        channels.stable = {
+          channel: 'stable',
+          version: m.version,
+          status,
+          checksum: m.sha256 || '',
+          size: m.size || null,
+          publishedAt: m.publishedAt || null,
+          downloadUrl: m.downloadUrl || '',
+          platform: m.platform || 'windows-x64',
+        }
+      } catch (e: any) {
+        channels.stable = { channel: 'stable', status: 'manifest_error', error: e.message }
+      }
+    } else {
+      channels.stable = { channel: 'stable', status: 'none' }
+    }
+
+    // ── diagnostic：diagnostics/diagnostic.json ──
+    const diagPath = join(WEB_RELEASES_ROOT, 'diagnostics', 'diagnostic.json')
+    if (existsSync(diagPath)) {
+      try {
+        const m = JSON.parse(readFileSync(diagPath, 'utf-8'))
+        const packs = (m.packs || []).map((p: any) => {
+          const filePath = join(WEB_RELEASES_ROOT, 'diagnostics', p.filename || '')
+          const ok = existsSync(filePath)
+          let status = ok ? 'published' : 'missing_artifact'
+          if (ok && p.sha256) {
+            const actual = createHash('sha256').update(readFileSync(filePath)).digest('hex')
+            if (actual !== p.sha256) status = 'checksum_mismatch'
+          }
+          return { id: p.id, version: p.version, status, checksum: p.sha256 || '', size: p.size || null, downloadUrl: p.url || '' }
+        })
+        channels.diagnostic = {
+          channel: 'diagnostic',
+          version: (m.buildTag || '').replace(/^diag-/, '') || null,
+          buildTag: m.buildTag || null,
+          status: packs.every((p: any) => p.status === 'published') ? 'published' : 'partial',
+          updatedAt: m.updatedAt || null,
+          packs,
+        }
+      } catch (e: any) {
+        channels.diagnostic = { channel: 'diagnostic', status: 'manifest_error', error: e.message }
+      }
+    } else {
+      channels.diagnostic = { channel: 'diagnostic', status: 'none' }
+    }
+
+    return reply.send({ success: true, data: { updatedAt: new Date().toISOString(), channels } })
   })
 
   // GET /desktop/latest.yml — electron-updater 直接下载版本元数据（静态文件兼容）
