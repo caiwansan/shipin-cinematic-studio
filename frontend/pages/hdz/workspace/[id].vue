@@ -1718,7 +1718,7 @@ async function requestReview() {
       projectId: projectId.value,
       chapterId: ch.id,
       chapterNo: ch.chapterNo,
-    })
+    }, { timeout: 300_000 })
     // $api 返回 ApiResponse，res.data 是服务器响应体
     // 服务器响应: { success: true, data: { taskId } }
     // 所以 res.data.data = { taskId }
@@ -1783,7 +1783,7 @@ async function rewriteByReview() {
       chapterNo: ch.chapterNo,
       mode: 'rewrite',
       reviewNotes: reviewNotesText,
-    })
+    }, { timeout: 300_000 })
     // 后端返回 { success: true, data: task }
     if (res?.success) {
       const taskId = res?.data?.data?.id
@@ -2161,7 +2161,7 @@ async function batchCreateFromChat() {
   try {
     const res: any = await $api.post(`/api/hdz/character/${projectId.value}/batch`, {
       characters: parsedData.characters,
-    })
+    }, { timeout: 120_000 })
     const result = res?.data?.data
     if (result) {
       batchCreateResult.value = { success: result.created, skipped: result.skipped }
@@ -2413,7 +2413,7 @@ async function doApprove() {
     const res: any = await $api.post('/api/hdz/agent/approve', {
       taskId: selectedTask.value.id,
       action: 'approved',
-    })
+    }, { timeout: 300_000 })
     if (res?.data?.success !== false) {
       // Remove from pending
       approvalTasks.value = approvalTasks.value.filter(t => t.id !== selectedTask.value.id)
@@ -2446,7 +2446,7 @@ async function submitReject() {
       taskId: selectedTask.value.id,
       action: 'rejected',
       note: rejectReason.value.trim(),
-    })
+    }, { timeout: 300_000 })
     if (res?.data?.success !== false) {
       showRejectDialog.value = false
       rejectReason.value = ''
@@ -2478,7 +2478,7 @@ async function submitModify() {
       action: 'modified',
       modifiedOutput: modifyContent.value.trim(),
       note: modifyNote.value.trim() || undefined,
-    })
+    }, { timeout: 300_000 })
     if (res?.data?.success !== false) {
       showModifyDialog.value = false
       modifyNote.value = ''
@@ -2701,7 +2701,7 @@ async function autoSaveCardsFromChat(content: string) {
         if (data?.batchCreate && Array.isArray(data?.characters) && data.characters.length > 0) {
           const res: any = await $api.post(`/api/hdz/character/${projectId.value}/batch`, {
             characters: data.characters,
-          })
+          }, { timeout: 120_000 })
           const result = res?.data?.data
           if (result) {
             batchCreateResult.value = { success: result.created, skipped: result.skipped }
@@ -2726,7 +2726,7 @@ async function autoSaveCardsFromChat(content: string) {
         if (data?.batchCreate && Array.isArray(data?.factions) && data.factions.length > 0) {
           const res: any = await $api.post(`/api/hdz/faction/${projectId.value}/batch`, {
             factions: data.factions,
-          })
+          }, { timeout: 120_000 })
           const result = res?.data?.data
           if (result) {
             batchFactionResult.value = { success: result.created, skipped: result.skipped, total: result.total }
@@ -2769,7 +2769,7 @@ async function batchCreateFactions() {
   try {
     const res: any = await $api.post(`/api/hdz/faction/${projectId.value}/batch`, {
       factions: parsedData.factions,
-    })
+    }, { timeout: 120_000 })
     const result = res?.data?.data
     if (result) {
       batchFactionResult.value = { success: result.created, skipped: result.skipped, total: result.total }
@@ -2986,7 +2986,7 @@ async function generateOutline() {
   chatInput.value = ''
   messages.value.push({ role: 'assistant', content: '🤖 正在生成全文大纲...' })
   try {
-    const res = await $api.post('/api/hdz/agent/generate', { projectId: projectId.value, mode: 'full' })
+    const res = await $api.post('/api/hdz/agent/generate', { projectId: projectId.value, mode: 'full' }, { timeout: 300_000 })
     const body = res?.data
     if (!body?.success) throw new Error(body?.error || '生成失败')
     messages.value.push({ role: 'assistant', content: `✅ 大纲生成任务已提交，请稍候查看章节列表...` })
@@ -3017,7 +3017,7 @@ async function generateOutlineFromChat() {
       projectId: projectId.value,
       mode: 'full',
       userInput: `请根据我们之前讨论的所有设定（角色、宗门、世界观、故事走向等）生成完整的故事大纲。以下是最近的对话记录供参考：\n\n${chatContext}`,
-    })
+    }, { timeout: 300_000 })
     const body = res?.data
     if (!body?.success) throw new Error(body?.error || '生成失败')
     messages.value[messages.value.length - 1] = { role: 'assistant', content: `✅ 大纲生成任务已提交！文曲星已基于对话内容开始规划故事大纲，请切换到「📋 大纲管理」标签查看章节列表，稍等片刻后刷新。` }
@@ -3034,7 +3034,7 @@ async function continueWriting() {
   const nextNo = lastChapter ? lastChapter.chapterNo + 1 : 1
   messages.value.push({ role: 'assistant', content: `📖 续写模式启动 — 从第 ${nextNo} 章开始，基于已有 ${chapters.value.length} 章剧情继续规划...` })
   try {
-    const res = await $api.post('/api/hdz/agent/generate', { projectId: projectId.value, mode: 'full', userInput: `续写第 ${nextNo} 章起的后续章节大纲，保持已有故事线和人物关系连贯。已有${chapters.value.length}章章节摘要已提供。` })
+    const res = await $api.post('/api/hdz/agent/generate', { projectId: projectId.value, mode: 'full', userInput: `续写第 ${nextNo} 章起的后续章节大纲，保持已有故事线和人物关系连贯。已有${chapters.value.length}章章节摘要已提供。` }, { timeout: 300_000 })
     const body = res?.data
     if (!body?.success) throw new Error(body?.error || '续写失败')
     messages.value.push({ role: 'assistant', content: `✅ 续写任务已提交（Planner Agent 启动），请稍候查看新章节...` })
@@ -3068,7 +3068,7 @@ async function startWriting() {
       projectId: projectId.value,
       chapterNo: ch.chapterNo,
       userInput: writingGuideline || undefined,
-    })
+    }, { timeout: 300_000 })
     const body = res?.data
     if (!body?.success) throw new Error(body?.error || '写作失败')
     messages.value.push({ role: 'assistant', content: `✍️ 第 ${ch.chapterNo} 章的写作任务已提交！AI 正在创作中，写完后会显示在阅读器里等待审阅。` })
@@ -3468,7 +3468,7 @@ async function generateMasterPlan(userInput?: string): Promise<boolean> {
       totalChapter: planWizard.value.totalChapter,
       volumeCount: planWizard.value.volumeCount,
       genre: planWizard.value.genre,
-    })
+    }, { timeout: 180_000 }) // 总纲生成走 LLM 长文（1-2 分钟），30s 默认超时会掐断
     const body = res?.data
     // $api 不抛异常（4xx/5xx 都返回对象）——必须检查 success，否则失败被静默吞掉
     if (!body?.success) {
