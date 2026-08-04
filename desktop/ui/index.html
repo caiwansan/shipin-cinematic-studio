@@ -6,162 +6,256 @@
 <title>昆仑镜 Kunlun Desktop</title>
 <style>
   :root {
-    --bg: #0e0f1a; --panel: #16182b; --panel2: #1d2038;
-    --text: #e8e6f0; --dim: #8a8aa0; --accent: #c8562a; --accent2: #e6c878;
+    --bg: #0f172a; --panel: #1e293b; --panel2: #1e293bcc;
+    --text: #f8fafc; --dim: #94a3b8;
+    --blue: #2563eb; --blue2: #1e40af; --gold: #f59e0b;
     --ok: #4ade80; --err: #f87171; --warn: #fbbf24;
+    --glass: rgba(255,255,255,.05); --glass-border: rgba(255,255,255,.08);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; height: 100vh; overflow: hidden; }
-  #app { display: flex; height: 100vh; }
-  .sidebar { width: 230px; background: var(--panel); padding: 20px 16px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid #242748; }
-  .logo { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
-  .logo span { color: var(--accent2); }
-  .nav-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--dim); font-size: 14px; }
-  .nav-item.active, .nav-item:hover { background: var(--panel2); color: var(--text); }
-  .main { flex: 1; padding: 28px 36px; overflow-y: auto; }
-  h1 { font-size: 22px; margin-bottom: 6px; }
-  .sub { color: var(--dim); font-size: 13px; margin-bottom: 24px; }
-  .card { background: var(--panel); border: 1px solid #242748; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
-  .card h3 { font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .hidden { display: none !important; }
+  button { cursor: pointer; font-family: inherit; }
+  .btn { border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; color: #fff; background: var(--blue); transition: .2s; }
+  .btn:hover { background: var(--blue2); }
+  .btn.ghost { background: var(--panel2); border: 1px solid #334155; color: var(--text); }
+  .btn.ghost:hover { border-color: var(--blue); }
+  .btn.gold { background: var(--gold); color: #0f172a; font-weight: 600; }
+  .btn.sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+  .card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 18px 20px; backdrop-filter: blur(12px); }
+  .muted { color: var(--dim); font-size: 12px; }
   .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--panel2); color: var(--dim); }
   .badge.ok { background: rgba(74,222,128,.12); color: var(--ok); }
-  .badge.err { background: rgba(248,113,113,.12); color: var(--err); }
-  .badge.warn { background: rgba(251,191,36,.12); color: var(--warn); }
-  .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  button { background: var(--accent); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-  button.secondary { background: var(--panel2); color: var(--text); border: 1px solid #2d3158; }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  input { background: var(--panel2); border: 1px solid #2d3158; color: var(--text); padding: 10px 12px; border-radius: 8px; width: 100%; font-size: 14px; margin-bottom: 12px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
-  .app-card { background: var(--panel); border: 1px solid #242748; border-radius: 12px; padding: 16px; }
-  .app-card .name { font-weight: 600; font-size: 15px; }
-  .app-card .desc { color: var(--dim); font-size: 12px; margin: 8px 0 12px; min-height: 34px; }
-  .plugin-item { padding: 10px 0; border-bottom: 1px solid #242748; }
-  .plugin-item:last-child { border-bottom: none; }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .hidden { display: none !important; }
-  .login-wrap { display: flex; align-items: center; justify-content: center; height: 100%; }
-  .login-box { width: 360px; background: var(--panel); border: 1px solid #242748; border-radius: 16px; padding: 32px; }
-  .login-box h2 { margin-bottom: 20px; font-size: 18px; }
-  .err-msg { color: var(--err); font-size: 13px; margin-top: 8px; }
-  .muted { color: var(--dim); font-size: 12px; }
-  a { color: var(--accent2); }
+  .badge.gold { background: rgba(245,158,11,.12); color: var(--gold); }
+  .badge.blue { background: rgba(37,99,235,.15); color: #93c5fd; }
+  .grid { display: grid; gap: 14px; }
 
-  /* ── RCA-01 Diagnostic Mode 样式 ── */
+  /* ── Login ── */
+  #view-login { display: flex; align-items: center; justify-content: center; height: 100vh; background: radial-gradient(ellipse at 50% -10%, rgba(37,99,235,.22), transparent 55%), var(--bg); }
+  .login-box { width: 380px; text-align: center; }
+  .login-logo { font-size: 56px; margin-bottom: 12px; }
+  .login-title { font-size: 28px; font-weight: 700; }
+  .login-sub { color: var(--dim); font-size: 14px; margin: 8px 0 28px; }
+  .login-btn { width: 100%; height: 44px; border-radius: 12px; font-size: 15px; margin-bottom: 10px; border: none; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .login-btn.wechat { background: #07c160; }
+  .login-btn.qq { background: #12b7f5; }
+  .login-divider { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 12px; margin: 14px 0; }
+  .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: #334155; }
+  .login-field { width: 100%; background: var(--panel); border: 1px solid #334155; color: var(--text); padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 10px; }
+  .login-value-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 24px; }
+  .login-value-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 12px; padding: 10px 6px; font-size: 12px; color: var(--dim); }
+  .login-value-card b { display: block; font-size: 18px; margin-bottom: 4px; }
+
+  /* ── Shell ── */
+  #view-shell { display: flex; height: 100vh; }
+  aside { width: 220px; background: var(--panel); border-right: 1px solid #1e293b; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .side-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; padding: 8px 10px 18px; }
+  .side-logo .logo-icon { font-size: 24px; }
+  .nav-item { padding: 10px 12px; border-radius: 10px; cursor: pointer; color: var(--dim); font-size: 14px; display: flex; align-items: center; gap: 10px; border: none; background: none; text-align: left; width: 100%; }
+  .nav-item:hover { background: rgba(255,255,255,.05); color: var(--text); }
+  .nav-item.active { background: rgba(37,99,235,.14); color: #93c5fd; }
+  .nav-item.active::before { content: ''; width: 3px; height: 16px; background: var(--blue); border-radius: 2px; margin-left: -12px; }
+  .side-user { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px 10px; border-top: 1px solid #1e293b; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--blue2)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  main { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .page-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .page-sub { color: var(--dim); font-size: 13px; margin-bottom: 20px; }
+
+  /* ── Home ── */
+  .home-hello { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .home-hello-sub { color: var(--dim); font-size: 13px; margin-bottom: 20px; }
+  .section-title { font-size: 15px; font-weight: 600; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
+  .project-card { display: flex; align-items: center; gap: 14px; }
+  .project-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, rgba(37,99,235,.3), rgba(30,64,175,.2)); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .project-meta { flex: 1; min-width: 0; }
+  .project-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .project-sub { font-size: 12px; color: var(--dim); }
+  .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .app-tile { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 14px; padding: 14px; text-align: center; cursor: pointer; transition: .2s; }
+  .app-tile:hover { border-color: rgba(37,99,235,.5); transform: translateY(-2px); }
+  .app-tile .icon { font-size: 30px; margin-bottom: 8px; }
+  .app-tile .name { font-size: 13px; font-weight: 600; }
+  .discover-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .discover-card { background: linear-gradient(135deg, rgba(37,99,235,.16), rgba(245,158,11,.08)); border: 1px solid var(--glass-border); border-radius: 14px; padding: 16px; cursor: pointer; }
+  .discover-card b { font-size: 14px; }
+  .discover-card p { color: var(--dim); font-size: 12px; margin-top: 4px; }
+  .status-bar { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--dim); padding: 10px 14px; border-radius: 12px; background: var(--glass); border: 1px solid var(--glass-border); margin-bottom: 20px; flex-wrap: wrap; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+  /* ── Apps / Store ── */
+  .cat-label { font-size: 13px; font-weight: 700; color: #93c5fd; margin: 20px 0 10px; }
+  .app-card { display: flex; gap: 14px; align-items: flex-start; }
+  .app-card .icon { font-size: 34px; width: 54px; height: 54px; border-radius: 14px; background: linear-gradient(135deg, rgba(37,99,235,.3), rgba(30,64,175,.15)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .app-card .meta { flex: 1; }
+  .app-card .name { font-size: 15px; font-weight: 700; }
+  .app-card .desc { font-size: 12px; color: var(--dim); margin: 3px 0 8px; }
+  .cap-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .app-card .actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .plugin-card { display: flex; gap: 12px; align-items: center; }
+  .plugin-card .icon { font-size: 26px; width: 44px; height: 44px; border-radius: 12px; background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .plugin-card .meta { flex: 1; }
+  .plugin-card .name { font-size: 14px; font-weight: 600; }
+  .plugin-card .desc { font-size: 12px; color: var(--dim); }
+
+  /* ── Detail ── */
+  .detail-hero { display: flex; gap: 18px; align-items: center; margin-bottom: 20px; }
+  .detail-hero .icon { font-size: 56px; width: 88px; height: 88px; border-radius: 22px; background: linear-gradient(135deg, rgba(37,99,235,.35), rgba(30,64,175,.15)); display: flex; align-items: center; justify-content: center; }
+  .detail-hero h1 { font-size: 22px; }
+  .detail-hero p { color: var(--dim); font-size: 13px; margin-top: 4px; }
+  .back-btn { background: none; border: none; color: var(--dim); font-size: 13px; padding: 6px 0 12px; }
+  .back-btn:hover { color: var(--text); }
+  .empty { text-align: center; color: var(--dim); padding: 40px 0; font-size: 13px; }
+  .empty b { display: block; font-size: 30px; margin-bottom: 8px; }
+
+  /* diag */
   .diag-wrap { height: 100vh; overflow-y: auto; padding: 28px 36px; }
-  .diag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }
-  .diag-state { font-size: 15px; font-weight: 600; margin-top: 6px; }
-  .diag-state.ok { color: var(--ok); } .diag-state.fail { color: var(--err); } .diag-state.warn { color: var(--warn); }
-  .diag-env { font: 12px/1.7 monospace; color: var(--dim); white-space: pre-wrap; word-break: break-all; }
-  .diag-log { font: 11px/1.6 monospace; color: #b9b9d0; background: #0a0b14; border: 1px solid #242748; border-radius: 8px; padding: 12px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-  .diag-tabs { display: flex; gap: 6px; margin: 10px 0; }
-  .diag-tab { font-size: 12px; padding: 6px 14px; border-radius: 8px; background: var(--panel2); color: var(--dim); cursor: pointer; border: none; }
-  .diag-tab.active { background: var(--accent); color: #fff; }
+  .diag-log { font: 11px/1.6 monospace; color: #b9b9d0; background: #0a0b14; border: 1px solid #242748; border-radius: 8px; padding: 12px; max-height: 320px; overflow: auto; white-space: pre-wrap; }
   .diag-float { position: fixed; right: 16px; bottom: 16px; z-index: 99999; }
   .diag-boot { position: fixed; right: 10px; top: 10px; z-index: 99998; font: 10px monospace; color: var(--dim); text-align: right; }
 </style>
 </head>
 <body>
-<div id="app">
-  <!-- 登录视图 -->
-  <div id="view-login" class="login-wrap hidden">
-    <div class="login-box">
-      <div class="logo">昆仑镜 <span>KUNLUN</span></div>
-      <h2>登录昆仑镜账号</h2>
-      <input id="login-account" placeholder="邮箱 / 手机号 / 账号" autocomplete="username" />
-      <input id="login-password" type="password" placeholder="密码" autocomplete="current-password" />
-      <button id="btn-login" style="width:100%">登 录</button>
-      <div id="login-err" class="err-msg"></div>
-      <div class="muted" style="margin-top:16px">登录即完成设备激活（Steam/Adobe 激活模式，随机设备标识，不采集硬件序列号）</div>
-    </div>
-  </div>
 
-  <!-- 主视图 -->
-  <div id="view-main" class="hidden">
-    <div class="sidebar">
-      <div class="logo">昆仑镜 <span>KUNLUN</span></div>
-      <div class="nav-item active" data-view="apps">我的应用</div>
-      <div class="nav-item" data-view="plugins">插件授权</div>
-      <div class="nav-item" data-view="device">设备信息</div>
-      <div style="flex:1"></div>
-      <div class="nav-item" id="btn-logout">退出登录</div>
-    </div>
-    <div class="main">
-      <div id="page-apps">
-        <h1>我的应用</h1>
-        <div class="sub" id="sub-apps">加载中…</div>
-        <div class="grid" id="apps-grid"></div>
-      </div>
-      <div id="page-plugins" class="hidden">
-        <h1>插件授权</h1>
-        <div class="sub" id="sub-plugins">加载中…</div>
-        <div class="card" id="plugins-list"></div>
-      </div>
-      <div id="page-device" class="hidden">
-        <h1>设备信息</h1>
-        <div class="sub">设备身份与本地应用安装记录</div>
-        <div class="card" id="device-info"></div>
-      </div>
-    </div>
-  </div>
+<!-- ══════════ LOGIN ══════════ -->
+<div id="view-login">
+  <div class="login-box">
+    <div class="login-logo">◇</div>
+    <div class="login-title">昆仑镜</div>
+    <div class="login-sub">AI 应用平台 · 你的 AI 创作与生产中心</div>
 
-  <!-- RCA-01 诊断视图（--diag 强制；不加载登录/API/License/Device/Plugin） -->
-  <div id="view-diag" class="hidden">
-    <div class="diag-wrap">
-      <h1>🩺 Kunlun Media 诊断模式</h1>
-      <div class="sub">Desktop Runtime Diagnostic Mode · 本页不加载登录 / API / License / Device / Plugin，仅验证三层运行时</div>
-      <div class="diag-grid">
-        <div class="card">
-          <h3>Tauri Runtime</h3>
-          <div id="diag-tauri" class="diag-state warn">检测中…</div>
-          <div class="muted">Rust 壳 / 资源协议 / invoke 桥</div>
-        </div>
-        <div class="card">
-          <h3>WebView2</h3>
-          <div id="diag-webview" class="diag-state warn">检测中…</div>
-          <div class="muted">页面加载 / 渲染引擎</div>
-        </div>
-        <div class="card">
-          <h3>Frontend</h3>
-          <div id="diag-frontend" class="diag-state warn">检测中…</div>
-          <div class="muted">HTML / CSS / JS 执行</div>
-        </div>
-      </div>
-      <div class="card">
-        <h3>环境信息</h3>
-        <div id="diag-env" class="diag-env">…</div>
-      </div>
-      <div class="card">
-        <h3>运行时日志（logs/）</h3>
-        <div class="diag-tabs" id="diag-tabs">
-          <button class="diag-tab active" data-sec="startup">startup.log</button>
-          <button class="diag-tab" data-sec="webview">webview.log</button>
-          <button class="diag-tab" data-sec="api">api.log</button>
-          <button class="diag-tab" data-sec="error">error.log</button>
-        </div>
-        <div id="diag-log" class="diag-log">加载中…</div>
-      </div>
-      <div class="row" style="max-width:420px">
-        <button id="diag-refresh">刷新日志</button>
-        <button id="diag-copy" class="secondary">📋 复制诊断报告</button>
-        <button id="diag-exit" class="secondary">退出诊断 → 正常界面</button>
-      </div>
-      <div class="muted" style="margin-top:12px">日志目录：<span id="diag-logdir">…</span>（打包该目录 + 采集脚本输出发回即可）</div>
+    <button class="login-btn wechat" id="btn-wechat">🟢 微信登录</button>
+    <button class="login-btn qq" id="btn-qq">🐧 QQ 登录</button>
+
+    <div class="login-divider">手机号 / 邮箱登录</div>
+    <input class="login-field" id="login-account" placeholder="手机号 / 邮箱 / 账号" autocomplete="username" />
+    <input class="login-field" id="login-password" type="password" placeholder="密码" autocomplete="current-password" />
+    <button class="btn" id="btn-login" style="width:100%">登 录</button>
+    <div id="login-err" class="muted" style="color:var(--err);margin-top:10px;min-height:16px"></div>
+
+    <div class="login-value-cards">
+      <div class="login-value-card"><b>🎬</b>AI 短剧</div>
+      <div class="login-value-card"><b>📖</b>AI 小说</div>
+      <div class="login-value-card"><b>🎵</b>AI 音乐</div>
     </div>
   </div>
 </div>
 
-<script>
+<!-- ══════════ SHELL ══════════ -->
+<div id="view-shell" class="hidden">
+  <aside>
+    <div class="side-logo"><span class="logo-icon">◇</span> 昆仑镜</div>
+    <button class="nav-item active" data-page="home">🏠 首页</button>
+    <button class="nav-item" data-page="apps">🧩 应用中心</button>
+    <button class="nav-item" data-page="myapps">📦 我的应用</button>
+    <button class="nav-item" data-page="store">✨ 增强商城</button>
+    <button class="nav-item" data-page="models">🧠 模型中心</button>
+    <button class="nav-item" data-page="account">⚙ 账户设置</button>
+    <div class="side-user">
+      <div class="avatar" id="user-avatar">?</div>
+      <div style="min-width:0">
+        <div id="user-name" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+        <div id="user-tier" class="muted" style="font-size:11px">体验版</div>
+      </div>
+    </div>
+  </aside>
 
-// ── RCA-01 诊断管线（SPRINT-RELEASE-WINDOWS-WHITE-SCREEN-ROOT-CAUSE-01）──
-// 四日志：startup（启动时间线/BOOT 步骤） webview（页面加载） api（网络请求） error（JS 异常）
-// 全部经 diag_write 落盘到 %LOCALAPPDATA%\com.kunlun.desktop\logs\
+  <main>
+    <!-- HOME -->
+    <section id="page-home">
+      <div class="home-hello" id="home-hello">你好，欢迎回来</div>
+      <div class="home-hello-sub">你的 AI 应用平台今天准备好了</div>
+      <div class="status-bar" id="status-bar">模型: — · 积分: — · VIP: —</div>
+
+      <div class="section-title">🎬 继续你的创作</div>
+      <div id="home-projects" class="grid"></div>
+
+      <div class="section-title">📦 我的应用</div>
+      <div id="home-apps" class="app-grid"></div>
+
+      <div class="section-title">✨ 发现更多 AI 能力</div>
+      <div class="discover-row">
+        <div class="discover-card" onclick="showPage('apps')"><b>🧩 应用中心</b><p>发现并安装新的 AI 应用</p></div>
+        <div class="discover-card" onclick="showPage('store')"><b>✨ 增强商城</b><p>为应用添加专业能力</p></div>
+      </div>
+    </section>
+
+    <!-- APPS -->
+    <section id="page-apps" class="hidden">
+      <div class="page-title">🧩 应用中心</div>
+      <div class="page-sub">发现、安装和管理你的 AI 应用</div>
+      <div id="apps-content"></div>
+    </section>
+
+    <!-- MY APPS -->
+    <section id="page-myapps" class="hidden">
+      <div class="page-title">📦 我的应用</div>
+      <div class="page-sub">已安装的 AI 应用</div>
+      <div id="myapps-content" class="grid"></div>
+    </section>
+
+    <!-- APP DETAIL -->
+    <section id="page-app-detail" class="hidden">
+      <button class="back-btn" onclick="showPage('apps')">← 返回应用中心</button>
+      <div id="app-detail-content"></div>
+    </section>
+
+    <!-- STORE -->
+    <section id="page-store" class="hidden">
+      <div class="page-title">✨ 昆仑增强商城</div>
+      <div class="page-sub">为你的应用添加专业能力</div>
+      <div id="store-content"></div>
+    </section>
+
+    <!-- MODELS -->
+    <section id="page-models" class="hidden">
+      <div class="page-title">🧠 模型中心</div>
+      <div class="page-sub">管理你的模型能力（BYOK / 本地 / 平台）</div>
+      <div id="models-content"></div>
+    </section>
+
+    <!-- ACCOUNT -->
+    <section id="page-account" class="hidden">
+      <div class="page-title">⚙ 账户设置</div>
+      <div class="page-sub">账户、设备与关于</div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="avatar" id="acct-avatar" style="width:52px;height:52px;font-size:20px">?</div>
+          <div>
+            <div id="acct-name" style="font-weight:700">—</div>
+            <div id="acct-email" class="muted">—</div>
+            <div><span class="badge" id="acct-tier">体验版</span> <span class="badge gold">💎 升级 VIP</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-title" style="margin-top:0">设备</div>
+        <div id="acct-device" class="muted">—</div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-title" style="margin-top:0">关于</div>
+        <div class="muted">昆仑镜 Desktop v1.1.3 · AI 应用平台客户端</div>
+      </div>
+      <button class="btn ghost" onclick="logout()">退出登录</button>
+    </section>
+  </main>
+</div>
+
+<!-- ══════════ DIAG ══════════ -->
+<div id="view-diag" class="hidden">
+  <div class="diag-wrap">
+    <h2>昆仑镜诊断</h2>
+    <div class="diag-grid" id="diag-grid" style="margin:14px 0"></div>
+    <div class="diag-tabs" style="display:flex;gap:6px;margin:10px 0"></div>
+    <div class="diag-log" id="diag-log"></div>
+  </div>
+</div>
+
+<script>
+// ══════════ RCA-01 诊断管线（保留，Reality Gate 依赖）══════════
 var __diag = { enabled: false, diagShell: false, logDir: '', boot: [] };
 function diagLog(section, line) {
   var entry = line;
-  if (section === 'startup' && entry.indexOf('[BOOT]') === 0) {
-    __diag.boot.push(entry);
-  }
+  if (section === 'startup' && entry.indexOf('[BOOT]') === 0) { __diag.boot.push(entry); }
   try {
     if (window.__TAURI__ && window.__TAURI__.core) {
       window.__TAURI__.core.invoke('diag_write', { section: section, line: entry }).catch(function () {});
@@ -171,12 +265,8 @@ function diagLog(section, line) {
 function bootMark(step, detail) {
   var line = '[BOOT] ' + step + (detail ? ' — ' + detail : '');
   diagLog('startup', line);
-  try {
-    var el = document.getElementById('diag-bootline');
-    if (el) el.textContent = line;
-  } catch (e) {}
+  try { var el = document.getElementById('diag-bootline'); if (el) el.textContent = line; } catch (e) {}
 }
-// 网络请求全量记录 → api.log（CSP/网络层证据）
 (function () {
   var origFetch = window.fetch;
   window.fetch = function (input, init) {
@@ -184,7 +274,7 @@ function bootMark(step, detail) {
     var url = (typeof input === 'string') ? input : (input && input.url) || String(input);
     var method = (init && init.method) || 'GET';
     return origFetch.apply(this, arguments).then(function (res) {
-      diagLog('api', method + ' ' + url + ' -> ' + res.status + ' ' + (res.statusText || '') + ' (' + Math.round(performance.now() - t0) + 'ms)');
+      diagLog('api', method + ' ' + url + ' -> ' + res.status + ' (' + Math.round(performance.now() - t0) + 'ms)');
       return res;
     }).catch(function (err) {
       diagLog('error', 'FETCH FAIL ' + method + ' ' + url + ' : ' + (err && err.message ? err.message : String(err)));
@@ -192,7 +282,6 @@ function bootMark(step, detail) {
     });
   };
 })();
-// 白屏自诊断：JS 错误写入标题+页面（Release-01.3 保留）+ 落盘 error.log（RCA-01）
 (function () {
   function probe(color) {
     try {
@@ -226,35 +315,65 @@ window.onerror = function (msg, src, line, col, err) {
   try {
     var stack = (err && err.stack) ? err.stack : '';
     diagLog('error', 'JS ERROR: ' + msg + ' @ ' + (src || '') + ':' + line + ':' + col + (stack ? '\n' + stack : ''));
-    showFatalError('JS-ERR: ' + msg + ' @' + line + ':' + col, 'JS ERROR: ' + msg + ' @ ' + (src || '') + ':' + line + ':' + col + '\n' + stack);
+    showFatalError('JS-ERR: ' + msg, 'JS ERROR: ' + msg + ' @ ' + line + ':' + col + '\n' + stack);
   } catch (e) {}
 };
-// ─────────────────────────────────────────────
-// ECO-11.2 Kunlun Desktop Shell UI
-// 掌柜冻结：只读 Shell；启动线上工作台 = 新 WebView 窗口
-// API 走线上 https://aigc.fushtn.com（生产）或 http://127.0.0.1:4002（本地调试）
-// ─────────────────────────────────────────────
+
+// ══════════ 应用平台客户端（宪法 v1.0）══════════
 const API_BASE = (window.__KUNLUN_API__) || 'https://aigc.fushtn.com';
 const WORKSPACE_BASE = 'https://aigc.fushtn.com';
-const isTauriEnv = !!(window.__TAURI_INTERNALS__);
+const isTauriEnv = !!(window.isTauri || window.__TAURI_INTERNALS__);
 
 let creds = { device_id: null, device_token: null, device_fingerprint: null, access_token: null, user_name: null, organization_id: null };
-let apps = [];
-let plugins = [];
+let appsMeta = [];
+let installedApps = [];
 
 const $ = (id) => document.getElementById(id);
 
-// ── Tauri 桥 ────────────────────────────────
+// 应用矩阵（宪法第四章冻结：创作 5 + 工具 1 + 企业 4）
+const APP_CATALOG = [
+  { slug: 'kunlun-drama',  name: '影界', icon: '🎬', cat: '创作', desc: 'AI短剧创作工作室', caps: ['剧本', '角色', '分镜', '视频'], entry: '/studio/v2' },
+  { slug: 'kunlun-novel',  name: '文界', icon: '📖', cat: '创作', desc: '千万字记忆小说引擎', caps: ['写作', '世界观', '章节'], entry: '/hdz' },
+  { slug: 'kunlun-music',  name: '乐界', icon: '🎵', cat: '创作', desc: '词曲一体创作台', caps: ['作词', '作曲', '风格'], entry: '/workspace/music' },
+  { slug: 'kunlun-ads',    name: '广告', icon: '📢', cat: '创作', desc: 'AI广告创意', caps: ['脚本', '视频', '投放'], entry: '/workspace/ad-create' },
+  { slug: 'kunlun-ppt',    name: 'PPT', icon: '📊', cat: '创作', desc: 'AI演示制作', caps: ['大纲', '排版', '导出'], entry: '/ppt/' },
+  { slug: 'kunlun-mall',   name: '商城', icon: '🛍️', cat: '工具', desc: '昆仑商城', caps: ['商品', '订单'], entry: '/mall' },
+  { slug: 'kunlun-recruit', name: '招聘', icon: '👔', cat: '企业', desc: '招聘全流程自动化', caps: ['JD', '人才', '面试'], entry: '/workspace/recruitment' },
+  { slug: 'kunlun-legal',  name: '法律', icon: '⚖', cat: '企业', desc: '合同与法律文书', caps: ['合同', '文书', '案件'], entry: '/workspace/legal' },
+  { slug: 'kunlun-geo',    name: 'GEO', icon: '🌐', cat: '企业', desc: '生成式引擎优化', caps: ['品牌', '关键词', '核验'], entry: '/workspace/geo/dashboard' },
+  { slug: 'kunlun-media',  name: '新媒体', icon: '📱', cat: '企业', desc: '内容与账号运营', caps: ['内容', '客户', '渠道'], entry: '/workspace/media' },
+];
+
+// 增强商城（宪法第八章：卖应用增强能力）
+const PLUGIN_CATALOG = [
+  { cat: '创作增强', items: [
+    { icon: '🎬', name: '导演助手', desc: '让 AI 自动优化镜头语言', app: '影界' },
+    { icon: '🎬', name: '连续剧助手', desc: '保持人物一致性', app: '影界' },
+    { icon: '📈', name: '爆款分析', desc: '分析热门剧情结构', app: '影界' },
+    { icon: '✍', name: '编剧助手', desc: '世界观与人物连续性', app: '文界' },
+  ]},
+  { cat: '企业增强', items: [
+    { icon: '👔', name: '面试助手', desc: '面试评分报告自动生成', app: '招聘' },
+    { icon: '👔', name: '人才分析', desc: '简历筛选与匹配', app: '招聘' },
+    { icon: '⚖', name: '合同助手', desc: '合同风险自动识别', app: '法律' },
+  ]},
+  { cat: 'AI能力增强', items: [
+    { icon: '🧠', name: '模型包', desc: '高级模型额度', app: '全局' },
+    { icon: '⚡', name: '工作流', desc: '自动化流水线', app: '全局' },
+    { icon: '✨', name: '模板库', desc: '专业模板', app: '全局' },
+  ]},
+];
+
+// ── Tauri 桥 ──
 async function invoke(cmd, args = {}) {
   if (!isTauriEnv) {
-    // 浏览器调试模式：本地模拟（不落盘）
-    if (cmd === 'get_credentials') return { device_id: localStorage.getItem('dbg_device_id'), access_token: localStorage.getItem('dbg_token') };
+    if (cmd === 'get_credentials') return { device_id: localStorage.getItem('dbg_device_id'), access_token: localStorage.getItem('auth_token') };
     if (cmd === 'save_credentials') {
+      if (args.access_token) localStorage.setItem('auth_token', args.access_token);
       if (args.device_id) localStorage.setItem('dbg_device_id', args.device_id);
-      if (args.access_token) localStorage.setItem('dbg_token', args.access_token);
       return {};
     }
-    if (cmd === 'clear_credentials') { localStorage.removeItem('dbg_device_id'); localStorage.removeItem('dbg_token'); return {}; }
+    if (cmd === 'clear_credentials') { localStorage.removeItem('auth_token'); localStorage.removeItem('dbg_device_id'); return {}; }
     if (cmd === 'generate_device_fingerprint') return crypto.randomUUID();
     if (cmd === 'open_workspace') { window.open(args.url, '_blank'); return {}; }
     return {};
@@ -262,26 +381,30 @@ async function invoke(cmd, args = {}) {
   return window.__TAURI__.core.invoke(cmd, args);
 }
 
-// ── 视图切换 ────────────────────────────────
-function showMain() { $('view-login').classList.add('hidden'); $('view-main').classList.remove('hidden'); }
-function showLogin() { $('view-main').classList.add('hidden'); $('view-login').classList.remove('hidden'); }
-function switchPage(name) {
-  ['apps','plugins','device'].forEach(p => $(`page-${p}`).classList.toggle('hidden', p !== name));
-  document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.toggle('active', n.dataset.view === name));
-}
-
-// ── API ─────────────────────────────────────
+// ── API ──
 async function api(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (creds.access_token) headers['Authorization'] = `Bearer ${creds.access_token}`;
   const res = await fetch(`${API_BASE}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  const json = await res.json().catch(() => ({}));
   if (res.status === 401) { await logout(); throw new Error('登录已过期，请重新登录'); }
-  if (json.code !== 0 && json.code !== undefined && json.code !== 200) throw new Error(json.message || `请求失败(${res.status})`);
+  const json = await res.json().catch(() => ({}));
   return json.data ?? json;
 }
 
-// ── 登录 ────────────────────────────────────
+// ── 导航 ──
+function showPage(name) {
+  document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+  $('page-' + name).classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === name));
+  if (name === 'home') renderHome();
+  if (name === 'apps') renderApps();
+  if (name === 'myapps') renderMyApps();
+  if (name === 'store') renderStore();
+  if (name === 'models') renderModels();
+  if (name === 'account') renderAccount();
+}
+
+// ── 登录 ──
 async function doLogin() {
   const account = $('login-account').value.trim();
   const password = $('login-password').value;
@@ -296,251 +419,291 @@ async function doLogin() {
     if (!token) throw new Error(data.message || '登录失败');
     creds.access_token = token;
     creds.user_name = data.user?.email || data.user?.name || account;
-    creds.organization_id = data.user?.organizationId || null;
-    await invoke('save_credentials', { access_token: token, user_name: creds.user_name, organization_id: creds.organization_id });
+    await invoke('save_credentials', { access_token: token, user_name: creds.user_name });
     await ensureDevice();
-    showMain();
-    await refreshApps(); await refreshPlugins(); await refreshDevice();
+    enterApp();
   } catch (e) { $('login-err').textContent = e.message; }
 }
+$('btn-login') && ($('btn-login').addEventListener('click', doLogin));
+$('login-password') && ($('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); }));
+$('btn-wechat') && ($('btn-wechat').addEventListener('click', function () { launchWebLogin('wechat'); }));
+$('btn-qq') && ($('btn-qq').addEventListener('click', function () { launchWebLogin('qq'); }));
+function launchWebLogin(provider) {
+  // 社交 OAuth 走线上授权页（新窗口），授权后回客户端登录
+  invoke('open_workspace', { url: `${WORKSPACE_BASE}/?showLogin=1&provider=${provider}` }).catch(() => {
+    window.open(`${WORKSPACE_BASE}/?showLogin=1&provider=${provider}`, '_blank');
+  });
+}
 
-// ── 设备注册（首次：随机指纹 + 签名 token + 用户确认=已登录）──
 async function ensureDevice() {
   if (creds.device_id) return;
-  const fingerprint = await invoke('generate_device_fingerprint');
-  const data = await api('/api/ecosystem/devices/register', {
-    method: 'POST',
-    body: { deviceName: `Kunlun Desktop (${navigator.platform || 'Windows'})`, os: 'windows', deviceFingerprint: fingerprint },
-  });
-  creds.device_id = data.device.deviceId;
-  creds.device_token = data.token;
-  await invoke('save_credentials', { device_id: creds.device_id, device_token: creds.device_token, device_fingerprint: fingerprint });
+  try {
+    const fingerprint = await invoke('generate_device_fingerprint');
+    const data = await api('/api/ecosystem/devices/register', {
+      method: 'POST',
+      body: { deviceName: `Kunlun Desktop (${navigator.platform || 'Windows'})`, os: 'windows', deviceFingerprint: fingerprint },
+    });
+    creds.device_id = data.device?.deviceId || '';
+    await invoke('save_credentials', { device_id: creds.device_id });
+  } catch (e) { /* 设备注册失败不阻断 */ }
 }
 
-// ── 应用列表 ────────────────────────────────
-async function refreshApps() {
-  try {
-    const data = await api('/api/ecosystem/applications');
-    apps = data.applications || [];
-    $('sub-apps').textContent = `共 ${apps.length} 个内置应用 · 启动即打开线上工作台`;
-    $('apps-grid').innerHTML = apps.map(a => `
-      <div class="app-card">
-        <div class="name">${a.name}</div>
-        <div class="desc">${a.description || ''}</div>
-        <div class="row">
-          <span class="badge">${a.category || ''}</span>
-          <button data-app-slug="${a.slug}" data-app-entry="${a.workspaceEntry || ''}">启动</button>
-        </div>
-      </div>`).join('');
-    document.querySelectorAll('[data-app-slug]').forEach(b => b.addEventListener('click', () => launchApp(b.dataset.appSlug, b.dataset.appEntry)));
-  } catch (e) { $('sub-apps').textContent = `❌ ${e.message}`; }
-}
-
-function launchApp(slug, entry) {
-  const url = `${WORKSPACE_BASE}${entry || '/workspace/media'}`;
-  invoke('open_workspace', { url, access_token: creds.access_token });
-}
-
-// ── 插件授权状态 + 本地运行时（ECO-11.3）────────────────────
-// 本地 = 入口 + 状态管理；云端 = AI 执行真相（本地零代码执行）
-async function startPlugin(pluginId) {
-  try {
-    const r = await api(`/api/ecosystem/devices/${creds.device_id}/plugins/${pluginId}/start`, { method: 'POST', body: { version: '1.0.0' } });
-    if (r.allowed === false) { alert(`插件无法启动: ${r.reason}`); }
-    await refreshPlugins();
-  } catch (e) { alert(`启动失败: ${e.message}`); }
-}
-// 进入工作台（云端 Agent 能力呈现处；本地只负责入口）
-function openPluginWorkspace(pluginId) {
-  openWorkspace(`/workspace/media?plugin=${pluginId}`);
-}
-async function stopPlugin(pluginId) {
-  try {
-    await api(`/api/ecosystem/devices/${creds.device_id}/plugins/${pluginId}/stop`, { method: 'POST' });
-    await refreshPlugins();
-  } catch (e) { alert(`停止失败: ${e.message}`); }
-}
-async function uninstallPlugin(pluginId) {
-  if (!confirm('卸载该插件？（仅本地记录移除，不影响云端授权）')) return;
-  try {
-    await api(`/api/ecosystem/devices/${creds.device_id}/plugins/${pluginId}/uninstall`, { method: 'POST' });
-    await refreshPlugins();
-  } catch (e) { alert(`卸载失败: ${e.message}`); }
-}
-
-async function refreshPlugins() {
-  try {
-    if (!creds.device_id) { $('sub-plugins').textContent = '未注册设备'; return; }
-    const data = await api(`/api/ecosystem/devices/${creds.device_id}/authorized-plugins`);
-    plugins = data.plugins || [];
-    const localCount = plugins.filter(p => p.runtimeLocal).length;
-    $('sub-plugins').textContent = `设备状态: ${data.deviceStatus || 'ACTIVE'} · ${plugins.length} 个有效授权 · ${localCount} 个支持本地`;
-    $('plugins-list').innerHTML = plugins.length === 0
-      ? '<div class="muted">暂无已授权插件（订阅插件后此处自动出现）</div>'
-      : plugins.map(p => {
-          const runtimeBadge = p.runtimeStatus
-            ? `<span class="badge ${p.runtimeStatus === 'RUNNING' ? 'ok' : 'warn'}">本地:${p.runtimeStatus}</span>`
-            : '<span class="badge">未启动</span>';
-          const actions = p.runtimeLocal
-            ? `<div style="margin-top:8px;display:flex;gap:8px">
-                 ${p.runtimeStatus === 'RUNNING'
-                   ? `<button onclick="stopPlugin('${p.pluginId}')">停止</button><button onclick="openPluginWorkspace('${p.pluginId}')">打开工作台</button>`
-                   : `<button onclick="startPlugin('${p.pluginId}')">启动</button>`}
-                 <button onclick="uninstallPlugin('${p.pluginId}')" style="opacity:.6">卸载</button>
-               </div>`
-            : '';
-          return `
-        <div class="plugin-item">
-          <div class="row">
-            <div>
-              <span class="status-dot" style="background:${p.allowed ? 'var(--ok)' : 'var(--err)'}"></span>
-              <strong>${p.name}</strong> <span class="badge">${p.type}</span> ${runtimeBadge}
-              <div class="muted">${p.pluginId} · ${p.licenseType} · 到期 ${new Date(p.expireAt).toLocaleDateString()}
-                ${p.runtimeLocal ? '' : ' · 仅云端'}
-              </div>
-              <div class="muted">${p.kaorBound ? 'KAOR 云端执行 ✅' : '未绑定 KAOR ⚠️'}${p.runtimeVersion ? ` · 本地 v${p.runtimeVersion}` : ''}</div>
-            </div>
-            <span class="badge ${p.allowed ? 'ok' : 'err'}">${p.allowed ? '可运行' : '受限'}</span>
-          </div>
-          ${actions}
-        </div>`;
-        }).join('');
-  } catch (e) { $('sub-plugins').textContent = `❌ ${e.message}`; }
-}
-
-// ── 设备信息 ────────────────────────────────
-async function refreshDevice() {
-  if (!creds.device_id) { $('device-info').innerHTML = '<div class="muted">未注册设备</div>'; return; }
-  try {
-    const data = await api(`/api/ecosystem/devices/me?deviceId=${creds.device_id}`);
-    const d = data.device;
-    $('device-info').innerHTML = `
-      <div class="row"><span class="muted">设备 ID</span><code>${d.deviceId}</code></div>
-      <div class="row"><span class="muted">设备名</span><span>${d.deviceName || '—'}</span></div>
-      <div class="row"><span class="muted">系统</span><span>${d.os || '—'}</span></div>
-      <div class="row"><span class="muted">状态</span><span class="badge ${d.status === 'ACTIVE' ? 'ok' : 'warn'}">${d.status}</span></div>
-      <div class="row"><span class="muted">最后心跳</span><span>${d.lastHeartbeat ? new Date(d.lastHeartbeat).toLocaleString() : '—'}</span></div>
-      <div class="row"><span class="muted">本地应用</span><span>${(d.localApps || []).map(a => a.name + ' v' + a.version).join('、') || '—'}</span></div>`;
-  } catch (e) { $('device-info').innerHTML = `<div class="err-msg">${e.message}</div>`; }
-}
-
-// ── 退出 ────────────────────────────────────
 async function logout() {
   await invoke('clear_credentials');
   creds = { device_id: null, device_token: null, device_fingerprint: null, access_token: null, user_name: null, organization_id: null };
-  showLogin();
+  $('view-shell').classList.add('hidden');
+  $('view-login').classList.remove('hidden');
 }
 
-// ── 心跳（吊销信号轮询）─────────────────────
-async function heartbeatLoop() {
-  if (!creds.device_id || !creds.device_token) return;
+// ── 进入应用（打开 Workspace）──
+function launchApp(slug, entry) {
+  const app = APP_CATALOG.find(a => a.slug === slug) || {};
+  const url = `${WORKSPACE_BASE}${entry || app.entry || '/workspace/media'}`;
+  bootMark('6. launch app', slug + ' -> ' + url);
+  invoke('open_workspace', { url, access_token: creds.access_token });
+}
+
+// ── 首页渲染 ──
+async function renderHome() {
+  bootMark('5. view rendered: home');
+  $('home-hello').textContent = `你好，${creds.user_name || '欢迎回来'}`;
+  // 状态条
+  let tier = '体验版', credits = 0, modelState = '未配置';
   try {
-    const data = await api(`/api/ecosystem/devices/${creds.device_id}/heartbeat`, {
-      method: 'POST', body: { token: creds.device_token },
-    });
-    if (data.allowed === false) { alert('设备已被管理员吊销/禁用，请重新登录'); await logout(); return; }
-    // ECO-11.3：本地运行中的插件心跳续命（云端 Agent 执行不受影响，仅运行时声明）
-    for (const p of plugins) {
-      if (p.runtimeLocal && p.runtimeStatus === 'RUNNING') {
-        await api(`/api/ecosystem/devices/${creds.device_id}/plugins/${p.pluginId}/heartbeat`, {
-          method: 'POST', body: { token: creds.device_token },
-        }).catch(() => {});
-      }
+    const me = await api('/api/auth/me');
+    tier = me.user?.memberTier === 'free' ? '体验版' : (me.user?.memberTier || '体验版');
+    creds.user_name = me.user?.username || me.user?.email || creds.user_name;
+  } catch (e) {}
+  try {
+    const mp = await api('/api/member/profile');
+    credits = mp.credits ?? mp.data?.credits ?? 0;
+    if (mp.memberTier && mp.memberTier !== 'free') tier = 'VIP';
+  } catch (e) {}
+  $('status-bar').innerHTML = `🧠 模型: ${modelState} · 🪙 积分: ${credits} · 💎 VIP: ${tier}`;
+
+  // 最近项目（跨应用聚合：短剧 + 小说）
+  const projects = [];
+  try {
+    const sp = await api('/api/v2/workbench/project');
+    const list = Array.isArray(sp) ? sp : (sp.projects || sp.data || []);
+    list.slice(0, 3).forEach(p => projects.push({ icon: '🎬', name: p.title || p.name || '未命名短剧', sub: '影界 · ' + (p.status || 'draft'), id: p.id, type: 'shortdrama' }));
+  } catch (e) {}
+  try {
+    const np = await api('/api/hdz/projects');
+    const list = Array.isArray(np) ? np : (np.data || []);
+    list.slice(0, 2).forEach(p => projects.push({ icon: '📖', name: p.title || '未命名小说', sub: '文界 · ' + (p.status || 'draft'), id: p.id, type: 'novel' }));
+  } catch (e) {}
+
+  const box = $('home-projects');
+  if (!projects.length) {
+    box.innerHTML = '<div class="empty"><b>🎬</b>还没有项目<br/>去应用中心安装一个 AI 应用，开始你的创作</div>';
+  } else {
+    box.innerHTML = projects.map(p => `
+      <div class="card project-card">
+        <div class="project-icon">${p.icon}</div>
+        <div class="project-meta">
+          <div class="project-name">${esc(p.name)}</div>
+          <div class="project-sub">${esc(p.sub)}</div>
+        </div>
+        <button class="btn sm ghost" onclick="launchApp('${p.type === 'novel' ? 'kunlun-novel' : 'kunlun-drama'}','')">继续</button>
+      </div>`).join('');
+  }
+
+  // 我的应用（已安装）
+  const homeApps = APP_CATALOG.filter(a => a.cat !== '工具');
+  $('home-apps').innerHTML = homeApps.map(a => `
+    <div class="app-tile" onclick="launchApp('${a.slug}','')">
+      <div class="icon">${a.icon}</div>
+      <div class="name">${a.name}</div>
+      <div class="muted" style="font-size:11px;margin-top:4px">${a.desc}</div>
+    </div>`).join('');
+}
+
+// ── 应用中心 ──
+function renderApps() {
+  const cats = [['创作', '创作应用'], ['工具', '工具'], ['企业', '企业应用']];
+  let html = '';
+  cats.forEach(([cat, label]) => {
+    const list = APP_CATALOG.filter(a => a.cat === cat);
+    if (!list.length) return;
+    html += `<div class="cat-label">${label}</div><div class="grid">` +
+      list.map(a => appCard(a)).join('') + `</div>`;
+  });
+  $('apps-content').innerHTML = html;
+}
+function appCard(a) {
+  const installed = installedApps.includes(a.slug) || a.slug === 'kunlun-drama';
+  return `
+  <div class="card app-card">
+    <div class="icon">${a.icon}</div>
+    <div class="meta">
+      <div class="name">${a.name} ${installed ? '<span class="badge ok">已安装</span>' : '<span class="badge">未安装</span>'}</div>
+      <div class="desc">${a.desc}</div>
+      <div class="cap-tags">${a.caps.map(c => `<span class="badge blue">${c}</span>`).join('')}</div>
+      <div class="actions">
+        <button class="btn sm" onclick="launchApp('${a.slug}','')">打开</button>
+        <button class="btn sm ghost" onclick="showAppDetail('${a.slug}')">详情</button>
+        <button class="btn sm ghost" onclick="showPage('store')">增强能力 ›</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderMyApps() {
+  const mine = APP_CATALOG.filter(a => installedApps.includes(a.slug) || a.cat !== '工具');
+  $('myapps-content').innerHTML = mine.length
+    ? mine.map(a => appCard(a)).join('')
+    : '<div class="empty"><b>📦</b>还没有安装应用<br/>去应用中心发现你的第一个 AI 应用</div>';
+}
+
+// ── 应用详情 ──
+function showAppDetail(slug) {
+  const a = APP_CATALOG.find(x => x.slug === slug);
+  if (!a) return;
+  $('page-app-detail').classList.remove('hidden');
+  document.querySelectorAll('main > section').forEach(s => { if (s.id !== 'page-app-detail') s.classList.add('hidden'); });
+  const plugins = PLUGIN_CATALOG.flatMap(c => c.items).filter(p => p.app === a.name);
+  $('app-detail-content').innerHTML = `
+    <div class="detail-hero">
+      <div class="icon">${a.icon}</div>
+      <div>
+        <h1>${a.name}</h1>
+        <p>${a.desc}</p>
+        <div style="margin-top:8px">${a.caps.map(c => `<span class="badge blue">${c}</span>`).join(' ')}</div>
+      </div>
+      <div style="margin-left:auto"><button class="btn" onclick="launchApp('${a.slug}','')">启动应用</button></div>
+    </div>
+    <div class="section-title">📦 我的项目</div>
+    <div class="card"><div class="muted" id="detail-projects">加载中…</div></div>
+    <div class="section-title">✨ 增强插件</div>
+    <div class="grid">${plugins.length ? plugins.map(p => `
+      <div class="card plugin-card">
+        <div class="icon">${p.icon}</div>
+        <div class="meta"><div class="name">${p.name}</div><div class="desc">${p.desc}</div></div>
+        <button class="btn sm gold">订阅</button>
+      </div>`).join('') : '<div class="card muted">暂无增强插件</div>'}
+    </div>`;
+  // 加载该项目数
+  loadDetailProjects(a);
+}
+async function loadDetailProjects(a) {
+  const el = $('detail-projects');
+  try {
+    if (a.slug === 'kunlun-novel' || a.slug === 'kunlun-drama') {
+      const r = a.slug === 'kunlun-novel' ? await api('/api/hdz/projects') : await api('/api/v2/workbench/project');
+      const list = Array.isArray(r) ? r : (r.projects || r.data || []);
+      el.textContent = `共 ${list.length} 个项目`;
+    } else {
+      el.textContent = '暂无项目数据';
     }
-  } catch (e) { /* 网络抖动忽略 */ }
+  } catch (e) { el.textContent = '加载失败'; }
 }
-setInterval(heartbeatLoop, 60000);
 
-// ── RCA-01 诊断视图（Task 02：脱离业务验证 Shell 融合）──
-var __diagEnv = {};
-function renderDiagView() {
-  $('view-login').classList.add('hidden');
-  $('view-main').classList.add('hidden');
-  $('view-diag').classList.remove('hidden');
-
-  var tauriOk = !!(window.__TAURI__ && window.__TAURI__.core);
-  var tauriEl = $('diag-tauri');
-  tauriEl.textContent = tauriOk ? '✅ OK（invoke 桥可用）' : '❌ 不可用（__TAURI__ 缺失）';
-  tauriEl.className = 'diag-state ' + (tauriOk ? 'ok' : 'fail');
-  // 能渲染到这里 = HTML 解析 + JS 执行 + 页面加载完成
-  $('diag-webview').textContent = '✅ OK（页面加载 FINISHED）';
-  $('diag-webview').className = 'diag-state ok';
-  $('diag-frontend').textContent = '✅ OK（HTML/CSS/JS 执行）';
-  $('diag-frontend').className = 'diag-state ok';
-
-  var ua = navigator.userAgent || '';
-  var m = ua.match(/Edg\/([\d.]+)/);
-  var webviewVer = m ? m[1] : (__diagEnv.webview_version || 'unknown');
-  $('diag-env').textContent = [
-    'appVersion   : ' + (__diagEnv.app_version || 'unknown'),
-    'os           : ' + (__diagEnv.os || 'unknown') + ' / ' + (__diagEnv.arch || 'unknown'),
-    'webview2     : ' + webviewVer + '  (UA Edg/' + (m ? m[1] : '?') + ')',
-    'debug 模式   : ' + (__diag.enabled ? 'ON (--debug)' : 'OFF'),
-    'diag 模式    : ' + (__diag.diagShell ? 'ON (--diag)' : 'OFF'),
-    'logDir       : ' + (__diag.logDir || 'unknown'),
-    'boot 步骤    : ' + (__diag.boot.length ? __diag.boot.join(' | ') : '—'),
-  ].join('\n');
-  $('diag-logdir').textContent = __diag.logDir || 'unknown';
-
-  // 日志 tab
-  var sec = 'startup';
-  document.querySelectorAll('.diag-tab').forEach(function (b) {
-    b.addEventListener('click', function () {
-      document.querySelectorAll('.diag-tab').forEach(function (x) { x.classList.remove('active'); });
-      b.classList.add('active');
-      sec = b.dataset.sec;
-      loadDiagLog(sec);
-    });
+// ── 增强商城 ──
+function renderStore() {
+  let html = '';
+  PLUGIN_CATALOG.forEach(cat => {
+    html += `<div class="cat-label">${cat.cat}</div><div class="grid">` +
+      cat.items.map(p => `
+      <div class="card plugin-card">
+        <div class="icon">${p.icon}</div>
+        <div class="meta">
+          <div class="name">${p.name} <span class="badge">${p.app}</span></div>
+          <div class="desc">${p.desc}</div>
+        </div>
+        <button class="btn sm gold">订阅</button>
+      </div>`).join('') + `</div>`;
   });
-  $('diag-refresh').addEventListener('click', function () { loadDiagLog(sec); });
-  $('diag-copy').addEventListener('click', copyDiagReport);
-  $('diag-exit').addEventListener('click', function () {
-    $('view-diag').classList.add('hidden');
-    showLogin();
-  });
-  loadDiagLog('startup');
+  $('store-content').innerHTML = html;
 }
-function loadDiagLog(section) {
-  var el = $('diag-log');
-  el.textContent = '加载中…';
-  if (!window.__TAURI__ || !window.__TAURI__.core) {
-    el.textContent = '(浏览器调试模式无日志文件)\n' + (__diag.boot.join('\n') || '');
+
+// ── 模型中心 ──
+async function renderModels() {
+  let html = `<div class="grid">`;
+  try {
+    const cfg = await api('/api/v2/user/model-config/unified');
+    const providers = cfg?.providers || cfg?.configs || {};
+    const names = Object.keys(providers);
+    html += names.length
+      ? names.map(n => `<div class="card plugin-card"><div class="icon">🧠</div><div class="meta"><div class="name">${esc(n)}</div><div class="desc">已配置 · 用于各应用 AI 能力</div></div><span class="badge ok">● 就绪</span></div>`).join('')
+      : `<div class="card plugin-card"><div class="icon">🧠</div><div class="meta"><div class="name">DeepSeek 等</div><div class="desc">通过"大模型设置"配置你的 API Key（BYOK）</div></div><button class="btn sm ghost" onclick="openModelConfig()">去配置</button></div>`;
+  } catch (e) {
+    html += `<div class="card plugin-card"><div class="icon">🧠</div><div class="meta"><div class="name">BYOK 模型</div><div class="desc">在工作台中配置你的 API Key，全局生效</div></div><button class="btn sm ghost" onclick="openModelConfig()">去配置</button></div>`;
+  }
+  html += `<div class="card plugin-card"><div class="icon">🖥️</div><div class="meta"><div class="name">本地引擎</div><div class="desc">Ollama / ComfyUI / 本地视频</div></div><span class="badge">检测中</span></div>`;
+  html += `</div>`;
+  $('models-content').innerHTML = html;
+}
+function openModelConfig() {
+  launchApp('kunlun-drama', '/studio/v2'); // 大模型设置在工作室入口（现有能力）
+}
+
+// ── 账户 ──
+async function renderAccount() {
+  $('acct-name').textContent = creds.user_name || '—';
+  $('acct-email').textContent = creds.user_name || '—';
+  $('user-name').textContent = creds.user_name || '—';
+  $('user-avatar').textContent = (creds.user_name || '?').slice(0, 1).toUpperCase();
+  $('acct-avatar').textContent = (creds.user_name || '?').slice(0, 1).toUpperCase();
+  $('acct-device').textContent = creds.device_id ? `设备 ID: ${creds.device_id.slice(0, 8)}…` : '未注册';
+}
+
+// ── 启动 ──
+async function boot() {
+  window.__probe('#ffff00'); // boot 开始
+  bootMark('0. html loaded');
+  bootMark('1. script executed');
+
+  try {
+    if (isTauriEnv) {
+      const ds = await invoke('diag_status');
+      __diag.enabled = !!ds.enabled;
+      __diag.diagShell = !!ds.diag_shell;
+      __diag.logDir = ds.log_dir || '';
+      bootMark('3. tauri bridge OK', 'wv=' + ds.webview_version);
+    } else {
+      bootMark('3. browser debug mode (no tauri bridge)');
+    }
+  } catch (e) { diagLog('error', 'diag_status FAILED: ' + e.message); }
+  bootMark('2. dom ready / api client ready');
+
+  if (__diag.diagShell) {
+    bootMark('4. diag shell');
+    renderDiagView();
     return;
   }
-  window.__TAURI__.core.invoke('diag_read', { section: section })
-    .then(function (txt) { el.textContent = txt || '(空)'; })
-    .catch(function (e) { el.textContent = '读取失败: ' + (e && e.message ? e.message : e); });
+
+  try {
+    creds = await invoke('get_credentials');
+    window.__probe('#00ffff');
+  } catch (e) {
+    window.__probe('#ff0000');
+    diagLog('error', 'invoke get_credentials FAILED: ' + e.message);
+    $('view-login').classList.remove('hidden');
+    bootMark('5. view rendered: login (credentials error)');
+    return;
+  }
+
+  if (creds.access_token) {
+    $('view-login').classList.add('hidden');
+    $('view-shell').classList.remove('hidden');
+    window.__probe('#ff00ff');
+    renderAccount();
+    await ensureDevice();
+    await renderHome();
+    bootMark('5. view rendered: home');
+    if (__diag.enabled) showDiagFloat();
+  } else {
+    $('view-login').classList.remove('hidden');
+    bootMark('5. view rendered: login');
+  }
 }
-function copyDiagReport() {
-  var sections = ['startup', 'webview', 'api', 'error'];
-  var report = {
-    generatedAt: new Date().toISOString(),
-    env: __diagEnv,
-    logDir: __diag.logDir,
-    boot: __diag.boot,
-    logs: {},
-  };
-  var pending = sections.map(function (s) {
-    return window.__TAURI__.core.invoke('diag_read', { section: s })
-      .then(function (txt) { report.logs[s] = txt; })
-      .catch(function () { report.logs[s] = '(read failed)'; });
-  });
-  Promise.all(pending).then(function () {
-    var text = JSON.stringify(report, null, 2);
-    try {
-      navigator.clipboard.writeText(text).then(function () { alert('诊断报告已复制到剪贴板 ✅'); })
-        .catch(function () { fallbackCopy(text); });
-    } catch (e) { fallbackCopy(text); }
-  });
-}
-function fallbackCopy(text) {
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.select();
-  try { document.execCommand('copy'); alert('诊断报告已复制到剪贴板 ✅'); }
-  catch (e) { alert('复制失败，请手动复制诊断报告'); }
-  document.body.removeChild(ta);
+
+// 诊断视图（保留）
+function renderDiagView() {
+  $('view-login').classList.add('hidden');
+  $('view-shell').classList.add('hidden');
+  $('view-diag').classList.remove('hidden');
+  $('diag-log').textContent = (__diag.boot || []).join('\n') || '(no boot steps)';
 }
 function showDiagFloat() {
   var btn = document.createElement('button');
@@ -555,76 +718,9 @@ function showDiagFloat() {
   document.body.appendChild(line);
 }
 
-// ── 启动 ────────────────────────────────────
-async function boot() {
-  window.__probe('#ffff00'); // boot 开始
-  bootMark('0. html loaded');
-  bootMark('1. script executed');
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-  // RCA-01：诊断状态先行（--debug / --diag）
-  try {
-    if (isTauriEnv) {
-      var ds = await invoke('diag_status');
-      __diag.enabled = !!ds.enabled;
-      __diag.diagShell = !!ds.diag_shell;
-      __diag.logDir = ds.log_dir || '';
-      __diagEnv = ds;
-      bootMark('3. tauri bridge OK', 'diag enabled=' + __diag.enabled + ' shell=' + __diag.diagShell + ' wv=' + ds.webview_version);
-      diagLog('webview', 'frontend loaded — UA: ' + navigator.userAgent);
-    } else {
-      bootMark('3. browser debug mode (no tauri bridge)');
-    }
-  } catch (e) {
-    diagLog('error', 'diag_status FAILED: ' + (e && e.message ? e.message : String(e)));
-  }
-  bootMark('2. dom ready / api client ready');
-
-  // --diag：诊断 Shell（不加载登录/API/License/Device/Plugin）
-  if (__diag.diagShell) {
-    bootMark('4. diag shell — business init skipped');
-    renderDiagView();
-    bootMark('5. view rendered: diag');
-    return;
-  }
-
-  document.querySelectorAll('.nav-item[data-view]').forEach(n => n.addEventListener('click', () => switchPage(n.dataset.view)));
-  $('btn-login').addEventListener('click', doLogin);
-  $('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-  $('btn-logout').addEventListener('click', logout);
-
-  try {
-    creds = await invoke('get_credentials');
-    window.__probe('#00ffff'); // invoke 完成
-  } catch (e) {
-    window.__probe('#ff0000'); // invoke 失败
-    diagLog('error', 'invoke get_credentials FAILED: ' + (e && e.message ? e.message : String(e)));
-    var d = document.createElement('div');
-    d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#7f1d1d;color:#fff;font:12px monospace;padding:8px;z-index:999999';
-    d.textContent = 'invoke get_credentials FAILED: ' + (e && e.message ? e.message : String(e));
-    document.body.appendChild(d);
-    return;
-  }
-  if (creds.access_token) {
-    try {
-      await ensureDevice();
-      showMain();
-      await refreshApps(); await refreshPlugins(); await refreshDevice();
-      bootMark('5. view rendered: main');
-    } catch (e) {
-      diagLog('error', 'boot main flow FAILED: ' + (e && e.message ? e.message : String(e)));
-      await logout(); // token 失效 → 回登录
-      bootMark('5. view rendered: login (token expired)');
-    }
-  } else {
-    showLogin();
-    window.__probe('#ff00ff'); // showLogin 完成
-    bootMark('5. view rendered: login');
-  }
-  // --debug：悬浮诊断入口
-  if (__diag.enabled) showDiagFloat();
-}
 boot();
-
 </script>
 </body>
 </html>
