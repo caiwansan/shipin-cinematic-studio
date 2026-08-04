@@ -6,6 +6,7 @@
 <style>
   body { background: #0e0f1a; color: #e8e6f0; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; margin: 0; padding: 24px; }
   .card { background: #16182b; border: 1px solid #242748; border-radius: 12px; padding: 20px; margin-bottom: 16px; max-width: 680px; }
+  .ver { font-size: 11px; color: #4ade80; margin-left: 8px; }
   .sub { color: #8a8aa0; font-size: 13px; margin-top: 6px; }
   .status { font-size: 14px; padding: 10px; border-radius: 8px; margin-top: 10px; }
   .ok { color: #4ade80; background: rgba(74,222,128,.08); }
@@ -21,7 +22,7 @@
 <body>
 <!-- 静态骨架：即使所有 JS 失败，此区域也会渲染（验证 HTML/资源/CSS） -->
 <div class="card">
-  <b>DiagB — Vue + inline script</b>
+  <b>DiagB — Vue + inline script</b> <span class="ver">diag-1.1.6</span>
   <div class="sub">Diagnostic Matrix — B: Vue 3（测前端框架 / DOM 交互 / 路由）</div>
   <div class="status ok">✅ 静态 HTML 渲染 OK（不依赖 JS）</div>
 </div>
@@ -29,6 +30,7 @@
 <div class="card">
   <b>执行环节检测（逐环节可见）</b>
   <div class="status pending" id="check-status">⏳ 外部脚本 diag-b-check.js：未执行</div>
+  <div class="status pending" id="eval-status">⏳ CSP unsafe-eval 探测：未检测</div>
   <div class="status pending" id="vue-status">⏳ Vue 库（vue.global.prod.js）：未检测</div>
   <div class="status pending" id="inline-status">⏳ inline script：未执行</div>
   <div class="env" id="env">UA: 尚未写入</div>
@@ -53,6 +55,16 @@
       ? '✅ 外部脚本 diag-b-check.js 执行 OK'
       : '❌ 外部脚本 diag-b-check.js 未执行';
     checkEl.className = window.__diagBCheck === true ? 'status ok' : 'status fail';
+  }
+  // CSP unsafe-eval 探测：Vue 全局版编译模板依赖 new Function，被 CSP 拒绝即白屏根因
+  var evalEl = document.getElementById('eval-status');
+  if (evalEl) {
+    var evalOk = false;
+    try { new Function('return 1'); evalOk = true; } catch (e) { evalOk = false; }
+    evalEl.textContent = evalOk
+      ? '✅ CSP unsafe-eval 可用（new Function 放行）'
+      : '❌ CSP 拒绝 unsafe-eval（new Function 被拦）→ Vue 模板编译必失败';
+    evalEl.className = evalOk ? 'status ok' : 'status fail';
   }
   var vueEl = document.getElementById('vue-status');
   if (vueEl) {
