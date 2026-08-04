@@ -91,6 +91,12 @@ export function decryptWxpayNotify(resource: {
   ciphertext: string
   algorithm: string
 }, apiV3Key: string): any {
+  // RCA: APIv3 密钥必须恰好 32 字节（AES-256-GCM），配置错误时立即提示长度，避免"Invalid key length"裸报错排查困难
+  if (!apiV3Key || Buffer.byteLength(apiV3Key, 'utf-8') !== 32) {
+    const err = new Error(`[wxpay] APIv3 密钥长度错误: 实际 ${apiV3Key ? Buffer.byteLength(apiV3Key, 'utf-8') : 0} 字节，微信要求恰好 32 字节（AES-256-GCM）`)
+    console.error(err.message)
+    throw err
+  }
   try {
     const decipher = crypto.createDecipheriv(
       'aes-256-gcm',

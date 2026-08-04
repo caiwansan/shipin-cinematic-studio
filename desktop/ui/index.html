@@ -406,7 +406,13 @@ async function launchApp(slug, projectId) {
   if (projectId) url += (url.includes('?') ? '&' : '?') + 'project=' + projectId;
   bootMark('6. launch app', slug + ' -> ' + url);
   DesktopState.markLaunched(slug, app.version);
-  await invoke('open_workspace', { url, access_token: creds.access_token });
+  // Identity Exchange: 签发一次性 ticket，云端页面自行 exchange（壳不注入凭据，ADR-021）
+  try {
+    const r = await api('/api/auth/desktop/ticket', { method: 'POST' });
+    const ticket = r && (r.ticket || (r.data && r.data.ticket));
+    if (ticket) url += (url.includes('?') ? '&' : '?') + 'ticket=' + ticket;
+  } catch (e) { /* ticket 失败则云端自行登录 */ }
+  await invoke('open_workspace', { url });
 }
 
 // ══════════ Tauri bridge ══════════

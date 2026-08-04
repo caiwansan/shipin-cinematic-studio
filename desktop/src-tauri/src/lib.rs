@@ -40,6 +40,8 @@ struct LocalCredentials {
 /// 全局状态：内存 accessToken（避免每次读盘）
 struct AppState {
     session: Mutex<LocalCredentials>,
+    /// Workspace Bridge: 待打开的线上工作台 URL（bridge.html 经 invoke 读取后跳转）
+    pending_workspace_url: Mutex<Option<String>>,
 }
 
 const CRED_STORE: &str = "credentials.json";
@@ -120,14 +122,20 @@ fn open_workspace(
     diag.log("webview", &format!("open_workspace -> {}", url));
     let workspace_app = app.clone();
     let url = url.parse::<tauri::Url>().map_err(|e| e.to_string())?;
-    let webview = WebviewWindowBuilder::new(
-        &app,
-        "workspace",
-        // Workspace Bridge v1.0: 加载本地中转页（asset 协议必然成功），页面 onload 后 redirect 到目标
-        WebviewUrl::App(format!("bridge.html?url={}", encode_query(url.as_str())).into()),
-    )
-    .title("昆仑镜工作台")
-    .inner_size(1440.0, 900.0)
+
+    // Workspace Bridge v1.0: 窗口创建路径与主窗口一致（from_config，已验证可靠）。
+    // 目标 URL 存 AppState，bridge.html 加载后经 invoke 读取并 redirect（不猜内核就绪时间）。
+    *app.state::<AppState>().pending_workspace_url.lock().unwrap() = Some(url.to_string());
+
+    // 复用预定义 workspace 窗口配置（tauri.conf.json, create:false）
+    let windows = app.config().app.windows.clone();
+    let ws_cfg = windows
+        .iter()
+        .find(|w| w.label == "workspace")
+        .cloned()
+        .ok_or_else(|| "workspace window config missing".to_string())?;
+    let webview = WebviewWindowBuilder::from_config(&app, &ws_cfg)
+        .map_err(|e| e.to_string())?
     // ── RCA-02 可观测性埋点（只记录，不拦截/不改变导航行为）──
     .on_navigation(move |nav_url| {
         // 每次导航/重定向的 URL 链：可判定 401 跳登录 / 404 / 外链
@@ -145,15 +153,8 @@ fn open_workspace(
             }
             PageLoadEvent::Finished => {
                 let _ = diag.log("webview", &format!("workspace page FINISHED: {}", url));
-                // GAP-13 fix: token 注入移到页面加载完成后（External 首载导航丢失时，
-                // build 后立即 eval 会注入到 about:blank 被清空；此处保证注入到真实页面）
-                if let Some(tok) = &access_token {
-                    let js = format!(
-                        "window.__KUNLUN_DESKTOP__={{}}; localStorage.setItem('auth_token','{}');",
-                        tok
-                    );
-                    let _ = window.eval(&js);
-                }
+                // ADR-021 (S1): 壳禁止写工作台 localStorage/注入 JWT/eval 凭据。
+                // 身份经 Workspace Connection Protocol: ticket → 云端页面自行 exchange。
             }
         }
     })
@@ -168,6 +169,12 @@ fn open_workspace(
     .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+/// Workspace Bridge: bridge.html 读取待跳转目标（读取即清空，一次性）
+#[tauri::command]
+fn get_pending_workspace_url(state: tauri::State<AppState>) -> Option<String> {
+    state.pending_workspace_url.lock().unwrap().take()
 }
 
 // ── Diagnostic Mode 命令（SPRINT-RELEASE-WINDOWS-WHITE-SCREEN-ROOT-CAUSE-01）──
@@ -210,6 +217,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(AppState {
             session: Mutex::new(LocalCredentials::default()),
+            pending_workspace_url: Mutex::new(None),
         })
         .setup(|app| {
             // ── 诊断器初始化（日志目录 + 启动时间线）──
@@ -263,6 +271,7 @@ pub fn run() {
             get_credentials,
             clear_credentials,
             open_workspace,
+            get_pending_workspace_url,
             diag_status,
             diag_write,
             diag_read,

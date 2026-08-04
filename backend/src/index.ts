@@ -20,6 +20,7 @@ import communityPostRoutes from './routes/community/posts.js'
 import communityCommentRoutes from './routes/community/comments.js'
 import communityLikeRoutes from './routes/community/likes.js'
 import authRoutes from './routes/auth.js'
+import desktopBridgeRoutes from './routes/desktop-bridge.js'
 import captchaRoutes from './routes/captcha.js'
 import smsRoutes from './routes/sms.js'
 import smsAuthRoutes from './routes/sms-auth.js'
@@ -275,6 +276,7 @@ async function main() {
 
   // Register routes
   await app.register(authRoutes)
+  await app.register(desktopBridgeRoutes)
   registerSSEStream(app)
   await app.register(systemVersionRoutes)
   await app.register(captchaRoutes)

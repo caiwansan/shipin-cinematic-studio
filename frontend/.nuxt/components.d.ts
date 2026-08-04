@@ -61,6 +61,7 @@ interface _GlobalComponents {
     'EcomAnalysisPanel': typeof import("../components/ecom/AnalysisPanel.vue")['default']
     'EcomGalleryPanel': typeof import("../components/ecom/GalleryPanel.vue")['default']
     'EcomPromptsPanel': typeof import("../components/ecom/PromptsPanel.vue")['default']
+    'EcosystemEcoBackHome': typeof import("../components/ecosystem/EcoBackHome.vue")['default']
     'EnterpriseUiEnterpriseShell': typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']
     'EnterpriseUiCardsActionCard': typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']
     'EnterpriseUiCardsDecisionCard': typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']
@@ -305,6 +306,7 @@ interface _GlobalComponents {
     'LazyEcomAnalysisPanel': LazyComponent<typeof import("../components/ecom/AnalysisPanel.vue")['default']>
     'LazyEcomGalleryPanel': LazyComponent<typeof import("../components/ecom/GalleryPanel.vue")['default']>
     'LazyEcomPromptsPanel': LazyComponent<typeof import("../components/ecom/PromptsPanel.vue")['default']>
+    'LazyEcosystemEcoBackHome': LazyComponent<typeof import("../components/ecosystem/EcoBackHome.vue")['default']>
     'LazyEnterpriseUiEnterpriseShell': LazyComponent<typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']>
     'LazyEnterpriseUiCardsActionCard': LazyComponent<typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']>
     'LazyEnterpriseUiCardsDecisionCard': LazyComponent<typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']>
@@ -555,6 +557,7 @@ export const DirectorOllamaSetupModal: typeof import("../components/director/Oll
 export const EcomAnalysisPanel: typeof import("../components/ecom/AnalysisPanel.vue")['default']
 export const EcomGalleryPanel: typeof import("../components/ecom/GalleryPanel.vue")['default']
 export const EcomPromptsPanel: typeof import("../components/ecom/PromptsPanel.vue")['default']
+export const EcosystemEcoBackHome: typeof import("../components/ecosystem/EcoBackHome.vue")['default']
 export const EnterpriseUiEnterpriseShell: typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']
 export const EnterpriseUiCardsActionCard: typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']
 export const EnterpriseUiCardsDecisionCard: typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']
@@ -799,6 +802,7 @@ export const LazyDirectorOllamaSetupModal: LazyComponent<typeof import("../compo
 export const LazyEcomAnalysisPanel: LazyComponent<typeof import("../components/ecom/AnalysisPanel.vue")['default']>
 export const LazyEcomGalleryPanel: LazyComponent<typeof import("../components/ecom/GalleryPanel.vue")['default']>
 export const LazyEcomPromptsPanel: LazyComponent<typeof import("../components/ecom/PromptsPanel.vue")['default']>
+export const LazyEcosystemEcoBackHome: LazyComponent<typeof import("../components/ecosystem/EcoBackHome.vue")['default']>
 export const LazyEnterpriseUiEnterpriseShell: LazyComponent<typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']>
 export const LazyEnterpriseUiCardsActionCard: LazyComponent<typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']>
 export const LazyEnterpriseUiCardsDecisionCard: LazyComponent<typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']>
