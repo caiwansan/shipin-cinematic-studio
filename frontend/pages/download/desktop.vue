@@ -122,6 +122,7 @@
 import { ref, onMounted } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 import KunlunFooter from '~/components/kunlun/business/KunlunFooter.vue'
+import { getAuthToken, clearAuthToken } from '~/utils/auth/token'
 
 useHead({ title: '下载桌面版 - 昆仑镜 Kunlun Media' })
 
@@ -143,6 +144,8 @@ interface ReleaseMeta {
 const meta = ref<ReleaseMeta | null>(null)
 
 onMounted(async () => {
+  // 与首页同步登录态（修复：下载页曾硬编码未登录，已登录用户仍看到「登录/免费注册」）
+  isLoggedIn.value = !!getAuthToken()
   try {
     const res = await fetch('/releases/desktop/latest.json', { cache: 'no-store' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -208,7 +211,15 @@ async function loadDiagPacks() {
 
 function doLogin() { /* 登录走 /login 完整流程，此处仅占位 */ }
 function doRegister() { /* 注册走 /register 完整流程 */ }
-function doLogout() { isLoggedIn.value = false }
+function doLogout() {
+  // 与首页一致：清除所有 token 缓存
+  clearAuthToken()
+  ;['auth_token', 'auth_user'].forEach(k => {
+    try { localStorage.removeItem(k) } catch {}
+    document.cookie = `${k}=; path=/; max-age=0; samesite=lax`
+  })
+  isLoggedIn.value = false
+}
 </script>
 
 <style scoped>
