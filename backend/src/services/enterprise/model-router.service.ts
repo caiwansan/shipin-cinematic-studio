@@ -39,7 +39,7 @@ export class ModelRouterService {
     // 3. Fallback 到企业默认模型池
     // 4. Fallback 到用户个人 BYOK
 
-    const { tenantId, taskType } = input
+    const { tenantId, agentType, taskType } = input
 
     // --- Step 0 (SPRINT-IDENTITY-REALITY-01 T04): Agent 显式绑定优先 ---
     // 关系链: AgentInstance → AgentModelBinding → EnterpriseLlmConfig（企业自配 Key，平台不托管）

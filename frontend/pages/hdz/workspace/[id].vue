@@ -1107,6 +1107,7 @@
                 {{ planGenerating ? '⏳ AI 生成中（约 1-2 分钟）...' : '🚀 生成小说总纲 V1（≥3000字）' }}
               </button>
             </div>
+            <p v-if="planWizardError" class="hdz-plan-wizard-error">⚠️ {{ planWizardError }}</p>
           </div>
 
           <div v-if="masterPlanLoading && !masterPlan" class="hdz-panel-empty">
@@ -3435,6 +3436,7 @@ const masterPlanLoading = ref(false)
 const showPlanWizard = ref(false)
 const planWizard = ref({ genre: '玄幻', targetWords: 1000000, totalChapter: 1000, volumeCount: 5, idea: '' })
 const planGenerating = ref(false)
+const planWizardError = ref('')
 
 function masterPlanStatus(): string {
   if (!masterPlan.value) return 'none'
@@ -3458,7 +3460,7 @@ async function loadMasterPlan() {
   }
 }
 
-async function generateMasterPlan(userInput?: string) {
+async function generateMasterPlan(userInput?: string): Promise<boolean> {
   masterPlanLoading.value = true
   try {
     const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/generate`, {
@@ -3467,9 +3469,22 @@ async function generateMasterPlan(userInput?: string) {
       volumeCount: planWizard.value.volumeCount,
       genre: planWizard.value.genre,
     })
-    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || null
-  } catch (e) {
-    console.error('[MasterPlan] 生成失败:', e)
+    const body = res?.data
+    // $api 不抛异常（4xx/5xx 都返回对象）——必须检查 success，否则失败被静默吞掉
+    if (!body?.success) {
+      const msg = body?.error || res?.error || `HTTP ${res?.status || '?'}`
+      console.error('[MasterPlan] 生成失败:', msg)
+      planWizardError.value = msg
+      messages.value.push({ role: 'assistant', content: `⚠️ 总纲生成失败：${msg}` })
+      return false
+    }
+    masterPlan.value = body?.data?.masterPlan || null
+    planWizardError.value = ''
+    return true
+  } catch (e: any) {
+    console.error('[MasterPlan] 生成异常:', e)
+    messages.value.push({ role: 'assistant', content: `⚠️ 总纲生成异常：${e?.message || '未知错误'}` })
+    return false
   } finally {
     masterPlanLoading.value = false
   }
@@ -3481,9 +3496,14 @@ async function runPlanWizard() {
     return
   }
   planGenerating.value = true
+  planWizardError.value = ''
   try {
     const idea = `小说类型：${planWizard.value.genre}；目标字数：${planWizard.value.targetWords}；总章节：${planWizard.value.totalChapter}；卷数：${planWizard.value.volumeCount}。创作意图：${planWizard.value.idea}`
-    await generateMasterPlan(idea)
+    const ok = await generateMasterPlan(idea)
+    if (!ok) {
+      // 失败：wizard 保持打开可重试，错误已推送（修复：原来失败也关向导+假成功提示）
+      return
+    }
     showPlanWizard.value = false
     messages.value.push({ role: 'assistant', content: `🎬 小说总纲已生成（${(masterPlan.value?.title || '未命名')}）！请查看总纲中心，确认后点击「✅ 确认总纲」锁定创作方向。` })
   } finally {
@@ -3494,7 +3514,12 @@ async function runPlanWizard() {
 async function confirmMasterPlan() {
   try {
     const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/confirm`)
-    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || masterPlan.value
+    const body = res?.data
+    if (!body?.success) {
+      messages.value.push({ role: 'assistant', content: `⚠️ 确认失败：${body?.error || res?.error || '未知错误'}` })
+      return
+    }
+    masterPlan.value = body?.data?.masterPlan || masterPlan.value
     messages.value.push({ role: 'assistant', content: '✅ 总纲已确认！writer 将严格遵循此总纲创作。' })
   } catch (e: any) {
     console.error('[MasterPlan] 确认失败:', e)
@@ -3505,7 +3530,12 @@ async function confirmMasterPlan() {
 async function lockMasterPlan() {
   try {
     const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/lock`)
-    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || masterPlan.value
+    const body = res?.data
+    if (!body?.success) {
+      messages.value.push({ role: 'assistant', content: `⚠️ 锁定失败：${body?.error || res?.error || '未知错误'}` })
+      return
+    }
+    masterPlan.value = body?.data?.masterPlan || masterPlan.value
     messages.value.push({ role: 'assistant', content: '🔒 总纲已锁定！后续创作将强制遵循，不可再修改（可解锁）。' })
   } catch (e: any) {
     console.error('[MasterPlan] 锁定失败:', e)
@@ -3516,7 +3546,12 @@ async function lockMasterPlan() {
 async function unlockMasterPlan() {
   try {
     const res: any = await $api.post(`/api/hdz/projects/${projectId.value}/master-plan/unlock`)
-    masterPlan.value = res?.data?.data?.masterPlan || res?.data?.masterPlan || masterPlan.value
+    const body = res?.data
+    if (!body?.success) {
+      messages.value.push({ role: 'assistant', content: `⚠️ 解锁失败：${body?.error || res?.error || '未知错误'}` })
+      return
+    }
+    masterPlan.value = body?.data?.masterPlan || masterPlan.value
     messages.value.push({ role: 'assistant', content: '🔓 总纲已解锁，可修改后重新确认。' })
   } catch (e: any) {
     console.error('[MasterPlan] 解锁失败:', e)
@@ -4875,6 +4910,16 @@ async function showLibraryReader() {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 12px;
+}
+.hdz-plan-wizard-error {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(244,67,54,0.08);
+  border: 1px solid rgba(244,67,54,0.3);
+  color: #c62828;
+  font-size: 13px;
+  line-height: 1.5;
 }
 .hdz-btn-success {
   background: rgba(76,175,80,0.12);

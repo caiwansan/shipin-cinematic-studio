@@ -38,14 +38,28 @@ export async function buildEnterpriseRuntimeContext(
   })
   if (!project) return null
 
-  // 查找用户的 enterprise organization
+  // ① 先按用户 email 关联 govUser（tenantId 永不客户端决定/永不跨租户 findFirst）
+  // 修复：旧实现 findFirst 任意 govOrganization（不按用户过滤）→ 非企业用户被路由到别人租户的 LLM Key
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  })
+  if (!user?.email) return null
+  const govUser = await prisma.govUser.findFirst({
+    where: { email: user.email, status: 'active' },
+    select: { tenantId: true },
+  })
+  if (!govUser) return null
+
+  // ② 用该 govUser 的租户找组织（同租户内，不越界）
   const membership = await prisma.govOrganization.findFirst({
     where: {
-      tenantId: { not: undefined },
+      tenantId: govUser.tenantId,
       status: 'active',
     },
     select: { id: true, tenantId: true },
   })
+  if (!membership) return null
 
   // 查找 Agent Profile
   const agent = await prisma.enterpriseAgentProfile.findFirst({
@@ -58,20 +72,24 @@ export async function buildEnterpriseRuntimeContext(
   })
 
   // 如果有企业身份，构建 RuntimeContext
-  if (membership) {
+  {
+    const permissionScope: string[] = []
+    const knowledgeScope: string[] = []
+    try {
+      permissionScope.push(...(agent?.permissions ? JSON.parse(agent.permissions) : ['read_own_data']))
+      knowledgeScope.push(...(agent?.knowledgeScope ? JSON.parse(agent.knowledgeScope) : []))
+    } catch { /* 非法 JSON 时保持默认空数组，不再让调用方 500 */ }
     return {
       tenantId: membership.tenantId,
       organizationId: membership.id,
       agentId: agent?.id,
       agentType,
       taskType,
-      permissionScope: agent?.permissions ? JSON.parse(agent.permissions) : ['read_own_data'],
-      knowledgeScope: agent?.knowledgeScope ? JSON.parse(agent.knowledgeScope) : [],
+      permissionScope,
+      knowledgeScope,
       traceId: `trace_${taskId}_${Date.now()}`,
       userId,
       credentialOwner: 'enterprise',
     }
   }
-
-  return null
 }
