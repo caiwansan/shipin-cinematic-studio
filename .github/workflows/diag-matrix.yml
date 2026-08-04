@@ -76,8 +76,11 @@ jobs:
           # RCA-03 TEST ARTIFACT REALITY RESET Task02：版本隔离（文件名/安装目录/窗口标题三隔离，禁止伪装正式版）
           $conf = $conf -replace '"productName": "Kunlun Media"', '"productName": "KunlunMedia-DiagB"'
           $conf = $conf -replace '"title": "昆仑镜 Kunlun Desktop"', '"title": "昆仑镜 DiagB 诊断"'
+          # RCA-04 CSP 根因修复：Vue 3 全局版需 new Function 编译模板 → CSP 缺 'unsafe-eval' 被拒 → 白屏
+          # 仅诊断变体 B 放宽；正式版(C)与 DiagA 保持严格 CSP（产品用 Vite 预编译，无需 eval）
+          $conf = $conf -replace '"script-src ''self'' ''unsafe-inline''', '"script-src ''self'' ''unsafe-inline'' ''unsafe-eval'''
           Set-Content desktop/src-tauri/tauri.conf.json $conf -NoNewline
-          Write-Host 'Variant B prepared (isolated: KunlunMedia-DiagB / 昆仑镜 DiagB 诊断)'
+          Write-Host 'Variant B prepared (isolated: KunlunMedia-DiagB / 昆仑镜 DiagB 诊断 + unsafe-eval)'
 
       - name: Prepare Variant C (full shell)
         if: matrix.variant == 'c'
