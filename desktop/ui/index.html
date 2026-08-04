@@ -22,6 +22,7 @@
   .btn.ghost:hover { border-color: var(--blue); }
   .btn.gold { background: var(--gold); color: #0f172a; font-weight: 600; }
   .btn.sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
   .card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 18px 20px; backdrop-filter: blur(12px); }
   .muted { color: var(--dim); font-size: 12px; }
   .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--panel2); color: var(--dim); }
@@ -79,8 +80,7 @@
   .discover-card { background: linear-gradient(135deg, rgba(37,99,235,.16), rgba(245,158,11,.08)); border: 1px solid var(--glass-border); border-radius: 14px; padding: 16px; cursor: pointer; }
   .discover-card b { font-size: 14px; }
   .discover-card p { color: var(--dim); font-size: 12px; margin-top: 4px; }
-  .status-bar { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--dim); padding: 10px 14px; border-radius: 12px; background: var(--glass); border: 1px solid var(--glass-border); margin-bottom: 20px; flex-wrap: wrap; }
-  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+  .status-bar { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--dim); padding: 8px 14px; border-radius: 12px; background: var(--glass); border: 1px solid var(--glass-border); margin-bottom: 16px; flex-wrap: wrap; }
 
   /* ── Apps / Store ── */
   .cat-label { font-size: 13px; font-weight: 700; color: #93c5fd; margin: 20px 0 10px; }
@@ -90,7 +90,7 @@
   .app-card .name { font-size: 15px; font-weight: 700; }
   .app-card .desc { font-size: 12px; color: var(--dim); margin: 3px 0 8px; }
   .cap-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .app-card .actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .app-card .actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
   .plugin-card { display: flex; gap: 12px; align-items: center; }
   .plugin-card .icon { font-size: 26px; width: 44px; height: 44px; border-radius: 12px; background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .plugin-card .meta { flex: 1; }
@@ -160,11 +160,10 @@
   </aside>
 
   <main>
-    <!-- HOME -->
     <section id="page-home">
       <div class="home-hello" id="home-hello">你好，欢迎回来</div>
       <div class="home-hello-sub">你的 AI 应用平台今天准备好了</div>
-      <div class="status-bar" id="status-bar">模型: — · 积分: — · VIP: —</div>
+      <div class="status-bar" id="status-bar">加载中…</div>
 
       <div class="section-title">🎬 继续你的创作</div>
       <div id="home-projects" class="grid"></div>
@@ -179,41 +178,35 @@
       </div>
     </section>
 
-    <!-- APPS -->
     <section id="page-apps" class="hidden">
       <div class="page-title">🧩 应用中心</div>
       <div class="page-sub">发现、安装和管理你的 AI 应用</div>
       <div id="apps-content"></div>
     </section>
 
-    <!-- MY APPS -->
     <section id="page-myapps" class="hidden">
       <div class="page-title">📦 我的应用</div>
       <div class="page-sub">已安装的 AI 应用</div>
       <div id="myapps-content" class="grid"></div>
     </section>
 
-    <!-- APP DETAIL -->
     <section id="page-app-detail" class="hidden">
       <button class="back-btn" onclick="showPage('apps')">← 返回应用中心</button>
       <div id="app-detail-content"></div>
     </section>
 
-    <!-- STORE -->
     <section id="page-store" class="hidden">
       <div class="page-title">✨ 昆仑增强商城</div>
       <div class="page-sub">为你的应用添加专业能力</div>
       <div id="store-content"></div>
     </section>
 
-    <!-- MODELS -->
     <section id="page-models" class="hidden">
       <div class="page-title">🧠 模型中心</div>
       <div class="page-sub">管理你的模型能力（BYOK / 本地 / 平台）</div>
       <div id="models-content"></div>
     </section>
 
-    <!-- ACCOUNT -->
     <section id="page-account" class="hidden">
       <div class="page-title">⚙ 账户设置</div>
       <div class="page-sub">账户、设备与关于</div>
@@ -244,14 +237,13 @@
 <div id="view-diag" class="hidden">
   <div class="diag-wrap">
     <h2>昆仑镜诊断</h2>
-    <div class="diag-grid" id="diag-grid" style="margin:14px 0"></div>
-    <div class="diag-tabs" style="display:flex;gap:6px;margin:10px 0"></div>
+    <div class="diag-tabs" style="display:flex;gap:6px;margin:14px 0"></div>
     <div class="diag-log" id="diag-log"></div>
   </div>
 </div>
 
 <script>
-// ══════════ RCA-01 诊断管线（保留，Reality Gate 依赖）══════════
+// ══════════ RCA-01 诊断管线（保留）══════════
 var __diag = { enabled: false, diagShell: false, logDir: '', boot: [] };
 function diagLog(section, line) {
   var entry = line;
@@ -292,7 +284,7 @@ function bootMark(step, detail) {
     } catch (e) {}
   }
   window.__probe = probe;
-  probe('#00ff00'); // 脚本已执行
+  probe('#00ff00');
 })();
 function showFatalError(title, body) {
   try {
@@ -319,52 +311,105 @@ window.onerror = function (msg, src, line, col, err) {
   } catch (e) {}
 };
 
-// ══════════ 应用平台客户端（宪法 v1.0）══════════
+// ══════════ Core Constants ══════════
 const API_BASE = (window.__KUNLUN_API__) || 'https://aigc.fushtn.com';
 const WORKSPACE_BASE = 'https://aigc.fushtn.com';
 const isTauriEnv = !!(window.isTauri || window.__TAURI_INTERNALS__);
 
 let creds = { device_id: null, device_token: null, device_fingerprint: null, access_token: null, user_name: null, organization_id: null };
-let appsMeta = [];
-let installedApps = [];
-
 const $ = (id) => document.getElementById(id);
 
-// 应用矩阵（宪法第四章冻结：创作 5 + 工具 1 + 企业 4）
-const APP_CATALOG = [
-  { slug: 'kunlun-drama',  name: '影界', icon: '🎬', cat: '创作', desc: 'AI短剧创作工作室', caps: ['剧本', '角色', '分镜', '视频'], entry: '/studio/v2' },
-  { slug: 'kunlun-novel',  name: '文界', icon: '📖', cat: '创作', desc: '千万字记忆小说引擎', caps: ['写作', '世界观', '章节'], entry: '/hdz' },
-  { slug: 'kunlun-music',  name: '乐界', icon: '🎵', cat: '创作', desc: '词曲一体创作台', caps: ['作词', '作曲', '风格'], entry: '/workspace/music' },
-  { slug: 'kunlun-ads',    name: '广告', icon: '📢', cat: '创作', desc: 'AI广告创意', caps: ['脚本', '视频', '投放'], entry: '/workspace/ad-create' },
-  { slug: 'kunlun-ppt',    name: 'PPT', icon: '📊', cat: '创作', desc: 'AI演示制作', caps: ['大纲', '排版', '导出'], entry: '/ppt/' },
-  { slug: 'kunlun-mall',   name: '商城', icon: '🛍️', cat: '工具', desc: '昆仑商城', caps: ['商品', '订单'], entry: '/mall' },
-  { slug: 'kunlun-recruit', name: '招聘', icon: '👔', cat: '企业', desc: '招聘全流程自动化', caps: ['JD', '人才', '面试'], entry: '/workspace/recruitment' },
-  { slug: 'kunlun-legal',  name: '法律', icon: '⚖', cat: '企业', desc: '合同与法律文书', caps: ['合同', '文书', '案件'], entry: '/workspace/legal' },
-  { slug: 'kunlun-geo',    name: 'GEO', icon: '🌐', cat: '企业', desc: '生成式引擎优化', caps: ['品牌', '关键词', '核验'], entry: '/workspace/geo/dashboard' },
-  { slug: 'kunlun-media',  name: '新媒体', icon: '📱', cat: '企业', desc: '内容与账号运营', caps: ['内容', '客户', '渠道'], entry: '/workspace/media' },
-];
+// ══════════ Icon Resolver（展示层，slug → 本地镜面图标；不改后端 Manifest）══════════
+const ICON_MAP = {
+  'kunlun-drama': '🎬', 'kunlun-novel': '📖', 'kunlun-music': '🎵',
+  'kunlun-ads': '📢', 'kunlun-ppt': '📊', 'kunlun-mall': '🛍️',
+  'kunlun-recruit': '👔', 'kunlun-legal': '⚖', 'kunlun-geo': '🌐', 'kunlun-media': '📱',
+};
+function appIcon(slug) { return ICON_MAP[slug] || '🧩'; }
+const CAT_LABEL = { creative: '创作应用', tool: '工具', enterprise: '企业应用' };
+function catOf(slug) {
+  if (['kunlun-drama','kunlun-novel','kunlun-music','kunlun-ads','kunlun-ppt'].includes(slug)) return 'creative';
+  if (['kunlun-mall'].includes(slug)) return 'tool';
+  return 'enterprise';
+}
+// 企业域中文名（slug → 展示名；Registry 数据为英文名，此处做本地展示映射）
+const NAME_MAP = {
+  'kunlun-drama': '影界', 'kunlun-novel': '文界', 'kunlun-music': '乐界',
+  'kunlun-ads': '广告', 'kunlun-ppt': 'PPT', 'kunlun-mall': '商城',
+  'kunlun-recruit': '招聘', 'kunlun-legal': '法律', 'kunlun-geo': 'GEO', 'kunlun-media': '新媒体',
+};
 
-// 增强商城（宪法第八章：卖应用增强能力）
-const PLUGIN_CATALOG = [
-  { cat: '创作增强', items: [
-    { icon: '🎬', name: '导演助手', desc: '让 AI 自动优化镜头语言', app: '影界' },
-    { icon: '🎬', name: '连续剧助手', desc: '保持人物一致性', app: '影界' },
-    { icon: '📈', name: '爆款分析', desc: '分析热门剧情结构', app: '影界' },
-    { icon: '✍', name: '编剧助手', desc: '世界观与人物连续性', app: '文界' },
-  ]},
-  { cat: '企业增强', items: [
-    { icon: '👔', name: '面试助手', desc: '面试评分报告自动生成', app: '招聘' },
-    { icon: '👔', name: '人才分析', desc: '简历筛选与匹配', app: '招聘' },
-    { icon: '⚖', name: '合同助手', desc: '合同风险自动识别', app: '法律' },
-  ]},
-  { cat: 'AI能力增强', items: [
-    { icon: '🧠', name: '模型包', desc: '高级模型额度', app: '全局' },
-    { icon: '⚡', name: '工作流', desc: '自动化流水线', app: '全局' },
-    { icon: '✨', name: '模板库', desc: '专业模板', app: '全局' },
-  ]},
-];
+// ══════════ Services: Application Registry（消费后端，不维护本地列表）══════════
+const AppRegistry = {
+  apps: [], loaded: false,
+  async load(force) {
+    if (this.loaded && !force) return this.apps;
+    const data = await api('/api/ecosystem/applications');
+    const list = (data && data.applications) || (Array.isArray(data) ? data : []);
+    this.apps = list.map(a => ({
+      id: a.id, slug: a.slug, name: NAME_MAP[a.slug] || a.name, nameEn: a.name,
+      icon: appIcon(a.slug), cat: catOf(a.slug), desc: a.description || '',
+      workspaceUrl: WORKSPACE_BASE + (a.workspaceEntry || '/workspace/media'),
+      entry: a.workspaceEntry || '/workspace/media',
+      version: a.latestVersion || '1.0.0',
+      installed: !!a.installed,
+      capabilities: (a.capabilities || []).map(c => c.name || c.code),
+      permissions: (a.permissions || []).map(p => p.name),
+    }));
+    this.loaded = true;
+    return this.apps;
+  },
+  get(slug) { return this.apps.find(a => a.slug === slug) || null; },
+  installed() { return this.apps.filter(a => a.installed); },
+  async install(slug) {
+    const r = await api(`/api/ecosystem/applications/${slug}/install`, { method: 'POST' });
+    await this.load(true);
+    return r;
+  },
+};
 
-// ── Tauri 桥 ──
+// ══════════ Services: Desktop Local State（本地体验层；Server 为权威）══════════
+const DesktopState = {
+  KEY: 'kunlun_desktop_state_v1',
+  data: { installedApps: {}, recentProjects: [], pluginState: {}, preferences: {} },
+  load() {
+    try {
+      const raw = isTauriEnv
+        ? localStorage.getItem(this.KEY)   // Tauri store 后续接入；现用 localStorage 降级
+        : localStorage.getItem(this.KEY);
+      if (raw) this.data = JSON.parse(raw);
+    } catch (e) {}
+    return this.data;
+  },
+  save() {
+    try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch (e) {}
+  },
+  markLaunched(slug, version) {
+    const rec = this.data.installedApps[slug] || {};
+    rec.version = version; rec.lastLaunchedAt = Date.now(); rec.launchCount = (rec.launchCount || 0) + 1;
+    this.data.installedApps[slug] = rec;
+    this.save();
+  },
+  pushRecentProject(appSlug, project) {
+    this.data.recentProjects = this.data.recentProjects.filter(p => !(p.appSlug === appSlug && p.id === project.id));
+    this.data.recentProjects.unshift({ appSlug, id: project.id, title: project.title, openedAt: Date.now() });
+    this.data.recentProjects = this.data.recentProjects.slice(0, 8);
+    this.save();
+  },
+};
+
+// ══════════ Services: Workspace Bridge ══════════
+async function launchApp(slug, projectId) {
+  const app = AppRegistry.get(slug);
+  if (!app) return;
+  let url = app.workspaceUrl;
+  if (projectId) url += (url.includes('?') ? '&' : '?') + 'project=' + projectId;
+  bootMark('6. launch app', slug + ' -> ' + url);
+  DesktopState.markLaunched(slug, app.version);
+  await invoke('open_workspace', { url, access_token: creds.access_token });
+}
+
+// ══════════ Tauri bridge ══════════
 async function invoke(cmd, args = {}) {
   if (!isTauriEnv) {
     if (cmd === 'get_credentials') return { device_id: localStorage.getItem('dbg_device_id'), access_token: localStorage.getItem('auth_token') };
@@ -381,7 +426,7 @@ async function invoke(cmd, args = {}) {
   return window.__TAURI__.core.invoke(cmd, args);
 }
 
-// ── API ──
+// ══════════ API ══════════
 async function api(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (creds.access_token) headers['Authorization'] = `Bearer ${creds.access_token}`;
@@ -391,7 +436,7 @@ async function api(path, { method = 'GET', body } = {}) {
   return json.data ?? json;
 }
 
-// ── 导航 ──
+// ══════════ 导航 ══════════
 function showPage(name) {
   document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
   $('page-' + name).classList.remove('hidden');
@@ -404,7 +449,7 @@ function showPage(name) {
   if (name === 'account') renderAccount();
 }
 
-// ── 登录 ──
+// ══════════ 登录 ══════════
 async function doLogin() {
   const account = $('login-account').value.trim();
   const password = $('login-password').value;
@@ -438,7 +483,6 @@ $('login-password') && ($('login-password').addEventListener('keydown', e => { i
 $('btn-wechat') && ($('btn-wechat').addEventListener('click', function () { launchWebLogin('wechat'); }));
 $('btn-qq') && ($('btn-qq').addEventListener('click', function () { launchWebLogin('qq'); }));
 function launchWebLogin(provider) {
-  // 社交 OAuth 走线上授权页（新窗口），授权后回客户端登录
   invoke('open_workspace', { url: `${WORKSPACE_BASE}/?showLogin=1&provider=${provider}` }).catch(() => {
     window.open(`${WORKSPACE_BASE}/?showLogin=1&provider=${provider}`, '_blank');
   });
@@ -454,7 +498,7 @@ async function ensureDevice() {
     });
     creds.device_id = data.device?.deviceId || '';
     await invoke('save_credentials', { device_id: creds.device_id });
-  } catch (e) { /* 设备注册失败不阻断 */ }
+  } catch (e) {}
 }
 
 async function logout() {
@@ -464,122 +508,160 @@ async function logout() {
   $('view-login').classList.remove('hidden');
 }
 
-// ── 进入应用（打开 Workspace）──
-function launchApp(slug, entry) {
-  const app = APP_CATALOG.find(a => a.slug === slug) || {};
-  const url = `${WORKSPACE_BASE}${entry || app.entry || '/workspace/media'}`;
-  bootMark('6. launch app', slug + ' -> ' + url);
-  invoke('open_workspace', { url, access_token: creds.access_token });
-}
-
-// ── 首页渲染 ──
+// ══════════ 首页（Registry + Local State 驱动）══════════
 async function renderHome() {
   bootMark('5. view rendered: home');
   $('home-hello').textContent = `你好，${creds.user_name || '欢迎回来'}`;
-  // 状态条
-  let tier = '体验版', credits = 0, modelState = '未配置';
   try {
-    const me = await api('/api/auth/me');
-    tier = me.user?.memberTier === 'free' ? '体验版' : (me.user?.memberTier || '体验版');
-    creds.user_name = me.user?.username || me.user?.email || creds.user_name;
+    const apps = await AppRegistry.load();
+    const installed = apps.filter(a => a.installed);
+    $('home-apps').innerHTML = installed.length
+      ? installed.slice(0, 6).map(a => `
+        <div class="app-tile" onclick="launchApp('${a.slug}')">
+          <div class="icon">${a.icon}</div>
+          <div class="name">${esc(a.name)}</div>
+          <div class="muted" style="font-size:11px;margin-top:4px">${esc(a.desc.slice(0, 14))}</div>
+        </div>`).join('')
+      : '<div class="empty" style="padding:20px 0"><b>📦</b>还没有安装应用<br/><span style="font-size:12px">去应用中心安装你的第一个 AI 应用</span></div>';
+    renderProjects();
+    loadStatusBar();
+  } catch (e) {
+    $('home-apps').innerHTML = '<div class="empty"><b>⚠️</b>应用加载失败<br/>请检查网络后重试</div>';
+  }
+}
+
+async function renderProjects() {
+  const box = $('home-projects');
+  const recent = DesktopState.load().recentProjects;
+  if (recent.length) {
+    box.innerHTML = recent.slice(0, 3).map(p => {
+      const app = AppRegistry.get(p.appSlug);
+      return `<div class="card project-card">
+        <div class="project-icon">${app ? app.icon : '📁'}</div>
+        <div class="project-meta">
+          <div class="project-name">${esc(p.title)}</div>
+          <div class="project-sub">${app ? esc(app.name) : ''} · 最近打开</div>
+        </div>
+        <button class="btn sm ghost" onclick="launchApp('${p.appSlug}', '${p.id}')">继续</button>
+      </div>`;
+    }).join('');
+    return;
+  }
+  // 无本地最近 → 尝试远端项目（hdz 小说）
+  let html = '';
+  try {
+    const np = await api('/api/hdz/projects');
+    const list = Array.isArray(np) ? np : (np.data || []);
+    if (list.length) {
+      html = list.slice(0, 2).map(p => `<div class="card project-card">
+        <div class="project-icon">📖</div>
+        <div class="project-meta"><div class="project-name">${esc(p.title || '未命名小说')}</div><div class="project-sub">文界 · ${p.status || 'draft'}</div></div>
+        <button class="btn sm ghost" onclick="launchApp('kunlun-novel', '${p.id}')">继续</button>
+      </div>`).join('');
+    }
   } catch (e) {}
+  box.innerHTML = html || '<div class="empty" style="padding:20px 0"><b>🎬</b>还没有项目<br/><span style="font-size:12px">打开一个应用，开始你的创作</span></div>';
+}
+
+async function loadStatusBar() {
+  let tier = '体验版', credits = 0, model = '未配置';
   try {
     const mp = await api('/api/member/profile');
     credits = mp.credits ?? mp.data?.credits ?? 0;
     if (mp.memberTier && mp.memberTier !== 'free') tier = 'VIP';
   } catch (e) {}
-  $('status-bar').innerHTML = `🧠 模型: ${modelState} · 🪙 积分: ${credits} · 💎 VIP: ${tier}`;
+  $('status-bar').innerHTML = `🧠 模型: ${model} · 🪙 积分: ${credits} · 💎 VIP: ${tier}`;
+}
 
-  // 最近项目（跨应用聚合：短剧 + 小说）
-  const projects = [];
+// ══════════ 应用中心（Registry 驱动）══════════
+async function renderApps() {
+  const box = $('apps-content');
+  box.innerHTML = '<div class="empty">加载中…</div>';
   try {
-    const sp = await api('/api/v2/workbench/project');
-    const list = Array.isArray(sp) ? sp : (sp.projects || sp.data || []);
-    list.slice(0, 3).forEach(p => projects.push({ icon: '🎬', name: p.title || p.name || '未命名短剧', sub: '影界 · ' + (p.status || 'draft'), id: p.id, type: 'shortdrama' }));
-  } catch (e) {}
-  try {
-    const np = await api('/api/hdz/projects');
-    const list = Array.isArray(np) ? np : (np.data || []);
-    list.slice(0, 2).forEach(p => projects.push({ icon: '📖', name: p.title || '未命名小说', sub: '文界 · ' + (p.status || 'draft'), id: p.id, type: 'novel' }));
-  } catch (e) {}
-
-  const box = $('home-projects');
-  if (!projects.length) {
-    box.innerHTML = '<div class="empty"><b>🎬</b>还没有项目<br/>去应用中心安装一个 AI 应用，开始你的创作</div>';
-  } else {
-    box.innerHTML = projects.map(p => `
-      <div class="card project-card">
-        <div class="project-icon">${p.icon}</div>
-        <div class="project-meta">
-          <div class="project-name">${esc(p.name)}</div>
-          <div class="project-sub">${esc(p.sub)}</div>
-        </div>
-        <button class="btn sm ghost" onclick="launchApp('${p.type === 'novel' ? 'kunlun-novel' : 'kunlun-drama'}','')">继续</button>
-      </div>`).join('');
+    const apps = await AppRegistry.load();
+    const cats = ['creative', 'tool', 'enterprise'];
+    let html = '';
+    cats.forEach(cat => {
+      const list = apps.filter(a => a.cat === cat);
+      if (!list.length) return;
+      html += `<div class="cat-label">${CAT_LABEL[cat]}</div><div class="grid">` +
+        list.map(a => appCard(a)).join('') + `</div>`;
+    });
+    box.innerHTML = html || '<div class="empty"><b>🧩</b>暂无应用</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="empty"><b>⚠️</b>应用加载失败</div>';
   }
-
-  // 我的应用（已安装）
-  const homeApps = APP_CATALOG.filter(a => a.cat !== '工具');
-  $('home-apps').innerHTML = homeApps.map(a => `
-    <div class="app-tile" onclick="launchApp('${a.slug}','')">
-      <div class="icon">${a.icon}</div>
-      <div class="name">${a.name}</div>
-      <div class="muted" style="font-size:11px;margin-top:4px">${a.desc}</div>
-    </div>`).join('');
 }
 
-// ── 应用中心 ──
-function renderApps() {
-  const cats = [['创作', '创作应用'], ['工具', '工具'], ['企业', '企业应用']];
-  let html = '';
-  cats.forEach(([cat, label]) => {
-    const list = APP_CATALOG.filter(a => a.cat === cat);
-    if (!list.length) return;
-    html += `<div class="cat-label">${label}</div><div class="grid">` +
-      list.map(a => appCard(a)).join('') + `</div>`;
-  });
-  $('apps-content').innerHTML = html;
-}
 function appCard(a) {
-  const installed = installedApps.includes(a.slug) || a.slug === 'kunlun-drama';
+  const upd = a.installed && DesktopState.load().installedApps[a.slug] && DesktopState.data.installedApps[a.slug].version !== a.version;
   return `
   <div class="card app-card">
     <div class="icon">${a.icon}</div>
     <div class="meta">
-      <div class="name">${a.name} ${installed ? '<span class="badge ok">已安装</span>' : '<span class="badge">未安装</span>'}</div>
-      <div class="desc">${a.desc}</div>
-      <div class="cap-tags">${a.caps.map(c => `<span class="badge blue">${c}</span>`).join('')}</div>
+      <div class="name">${esc(a.name)} ${a.installed ? '<span class="badge ok">已安装</span>' : ''}${upd ? '<span class="badge gold">可更新</span>' : ''}</div>
+      <div class="desc">${esc(a.desc)}</div>
+      <div class="cap-tags">${(a.capabilities || []).slice(0, 4).map(c => `<span class="badge blue">${esc(c)}</span>`).join('')}</div>
       <div class="actions">
-        <button class="btn sm" onclick="launchApp('${a.slug}','')">打开</button>
+        ${a.installed
+          ? `<button class="btn sm" onclick="launchApp('${a.slug}')">打开</button>`
+          : `<button class="btn sm" onclick="installApp('${a.slug}')">安装</button>`}
         <button class="btn sm ghost" onclick="showAppDetail('${a.slug}')">详情</button>
         <button class="btn sm ghost" onclick="showPage('store')">增强能力 ›</button>
       </div>
     </div>
   </div>`;
 }
-function renderMyApps() {
-  const mine = APP_CATALOG.filter(a => installedApps.includes(a.slug) || a.cat !== '工具');
-  $('myapps-content').innerHTML = mine.length
-    ? mine.map(a => appCard(a)).join('')
-    : '<div class="empty"><b>📦</b>还没有安装应用<br/>去应用中心发现你的第一个 AI 应用</div>';
+
+async function installApp(slug) {
+  const a = AppRegistry.get(slug);
+  if (!a) return;
+  try {
+    await AppRegistry.install(slug);
+    const st = DesktopState.load();
+    st.installedApps[slug] = { version: a.version, installedAt: Date.now() };
+    DesktopState.save();
+    renderApps();
+    if (!document.getElementById('page-home').classList.contains('hidden')) renderHome();
+  } catch (e) {
+    alert('安装失败: ' + e.message);
+  }
 }
 
-// ── 应用详情 ──
-function showAppDetail(slug) {
-  const a = APP_CATALOG.find(x => x.slug === slug);
+async function renderMyApps() {
+  const box = $('myapps-content');
+  box.innerHTML = '<div class="empty">加载中…</div>';
+  try {
+    const apps = await AppRegistry.load();
+    const mine = apps.filter(a => a.installed);
+    box.innerHTML = mine.length
+      ? mine.map(a => appCard(a)).join('')
+      : '<div class="empty"><b>📦</b>还没有安装应用<br/>去应用中心发现你的第一个 AI 应用</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="empty"><b>⚠️</b>加载失败</div>';
+  }
+}
+
+// ══════════ 应用详情 ══════════
+async function showAppDetail(slug) {
+  const a = AppRegistry.get(slug);
   if (!a) return;
   $('page-app-detail').classList.remove('hidden');
   document.querySelectorAll('main > section').forEach(s => { if (s.id !== 'page-app-detail') s.classList.add('hidden'); });
-  const plugins = PLUGIN_CATALOG.flatMap(c => c.items).filter(p => p.app === a.name);
+  const plugins = PLUGIN_CATALOG.flatMap(c => c.items).filter(p => p.app === a.name || p.app === a.nameEn);
   $('app-detail-content').innerHTML = `
     <div class="detail-hero">
       <div class="icon">${a.icon}</div>
       <div>
-        <h1>${a.name}</h1>
-        <p>${a.desc}</p>
-        <div style="margin-top:8px">${a.caps.map(c => `<span class="badge blue">${c}</span>`).join(' ')}</div>
+        <h1>${esc(a.name)}</h1>
+        <p>${esc(a.desc)}</p>
+        <div style="margin-top:8px">${(a.capabilities || []).map(c => `<span class="badge blue">${esc(c)}</span>`).join(' ')}</div>
       </div>
-      <div style="margin-left:auto"><button class="btn" onclick="launchApp('${a.slug}','')">启动应用</button></div>
+      <div style="margin-left:auto">
+        ${a.installed
+          ? `<button class="btn" onclick="launchApp('${a.slug}')">启动应用</button>`
+          : `<button class="btn" onclick="installApp('${a.slug}')">安装</button>`}
+      </div>
     </div>
     <div class="section-title">📦 我的项目</div>
     <div class="card"><div class="muted" id="detail-projects">加载中…</div></div>
@@ -587,27 +669,45 @@ function showAppDetail(slug) {
     <div class="grid">${plugins.length ? plugins.map(p => `
       <div class="card plugin-card">
         <div class="icon">${p.icon}</div>
-        <div class="meta"><div class="name">${p.name}</div><div class="desc">${p.desc}</div></div>
+        <div class="meta"><div class="name">${esc(p.name)}</div><div class="desc">${esc(p.desc)}</div></div>
         <button class="btn sm gold">订阅</button>
       </div>`).join('') : '<div class="card muted">暂无增强插件</div>'}
     </div>`;
-  // 加载该项目数
   loadDetailProjects(a);
 }
 async function loadDetailProjects(a) {
   const el = $('detail-projects');
   try {
-    if (a.slug === 'kunlun-novel' || a.slug === 'kunlun-drama') {
-      const r = a.slug === 'kunlun-novel' ? await api('/api/hdz/projects') : await api('/api/v2/workbench/project');
-      const list = Array.isArray(r) ? r : (r.projects || r.data || []);
+    if (a.slug === 'kunlun-novel') {
+      const r = await api('/api/hdz/projects');
+      const list = Array.isArray(r) ? r : (r.data || []);
       el.textContent = `共 ${list.length} 个项目`;
     } else {
-      el.textContent = '暂无项目数据';
+      el.textContent = '打开应用后在对应工作台查看项目';
     }
   } catch (e) { el.textContent = '加载失败'; }
 }
 
-// ── 增强商城 ──
+// ══════════ 增强商城（用户语言，能力增强）══════════
+const PLUGIN_CATALOG = [
+  { cat: '创作增强', items: [
+    { icon: '🎬', name: '导演助手', desc: '让 AI 自动优化镜头语言', app: '影界' },
+    { icon: '🎬', name: '连续剧助手', desc: '保持人物一致性', app: '影界' },
+    { icon: '📈', name: '爆款分析', desc: '分析热门剧情结构', app: '影界' },
+    { icon: '✍', name: '编剧助手', desc: '世界观与人物连续性', app: '文界' },
+  ]},
+  { cat: '企业增强', items: [
+    { icon: '👔', name: '面试助手', desc: '面试评分报告自动生成', app: '招聘' },
+    { icon: '👔', name: '人才分析', desc: '简历筛选与匹配', app: '招聘' },
+    { icon: '⚖', name: '合同助手', desc: '合同风险自动识别', app: '法律' },
+  ]},
+  { cat: 'AI能力增强', items: [
+    { icon: '🧠', name: '模型包', desc: '高级模型额度', app: '全局' },
+    { icon: '⚡', name: '工作流', desc: '自动化流水线', app: '全局' },
+    { icon: '✨', name: '模板库', desc: '专业模板', app: '全局' },
+  ]},
+];
+
 function renderStore() {
   let html = '';
   PLUGIN_CATALOG.forEach(cat => {
@@ -616,8 +716,8 @@ function renderStore() {
       <div class="card plugin-card">
         <div class="icon">${p.icon}</div>
         <div class="meta">
-          <div class="name">${p.name} <span class="badge">${p.app}</span></div>
-          <div class="desc">${p.desc}</div>
+          <div class="name">${esc(p.name)} <span class="badge">${esc(p.app)}</span></div>
+          <div class="desc">${esc(p.desc)}</div>
         </div>
         <button class="btn sm gold">订阅</button>
       </div>`).join('') + `</div>`;
@@ -625,7 +725,7 @@ function renderStore() {
   $('store-content').innerHTML = html;
 }
 
-// ── 模型中心 ──
+// ══════════ 模型中心 ══════════
 async function renderModels() {
   let html = `<div class="grid">`;
   try {
@@ -638,15 +738,14 @@ async function renderModels() {
   } catch (e) {
     html += `<div class="card plugin-card"><div class="icon">🧠</div><div class="meta"><div class="name">BYOK 模型</div><div class="desc">在工作台中配置你的 API Key，全局生效</div></div><button class="btn sm ghost" onclick="openModelConfig()">去配置</button></div>`;
   }
-  html += `<div class="card plugin-card"><div class="icon">🖥️</div><div class="meta"><div class="name">本地引擎</div><div class="desc">Ollama / ComfyUI / 本地视频</div></div><span class="badge">检测中</span></div>`;
-  html += `</div>`;
+  html += `<div class="card plugin-card"><div class="icon">🖥️</div><div class="meta"><div class="name">本地引擎</div><div class="desc">Ollama / ComfyUI / 本地视频</div></div><span class="badge">检测中</span></div></div>`;
   $('models-content').innerHTML = html;
 }
 function openModelConfig() {
-  launchApp('kunlun-drama', '/studio/v2'); // 大模型设置在工作室入口（现有能力）
+  launchApp('kunlun-drama');
 }
 
-// ── 账户 ──
+// ══════════ 账户 ══════════
 async function renderAccount() {
   $('acct-name').textContent = creds.user_name || '—';
   $('acct-email').textContent = creds.user_name || '—';
@@ -656,9 +755,9 @@ async function renderAccount() {
   $('acct-device').textContent = creds.device_id ? `设备 ID: ${creds.device_id.slice(0, 8)}…` : '未注册';
 }
 
-// ── 启动 ──
+// ══════════ 启动 ══════════
 async function boot() {
-  window.__probe('#ffff00'); // boot 开始
+  window.__probe('#ffff00');
   bootMark('0. html loaded');
   bootMark('1. script executed');
 
@@ -693,6 +792,7 @@ async function boot() {
   }
 
   if (creds.access_token) {
+    DesktopState.load();
     $('view-login').classList.add('hidden');
     $('view-shell').classList.remove('hidden');
     window.__probe('#ff00ff');
@@ -707,7 +807,6 @@ async function boot() {
   }
 }
 
-// 诊断视图（保留）
 function renderDiagView() {
   $('view-login').classList.add('hidden');
   $('view-shell').classList.add('hidden');

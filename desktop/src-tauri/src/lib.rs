@@ -161,10 +161,15 @@ fn open_workspace(
     .build()
     .map_err(|e| e.to_string())?;
 
-    // GAP-13 fix: External 首载导航在 Windows WebView2 上可能丢失（窗口停在 about:blank）。
-    // build 后显式调用 WebView2 原生导航（与 CDP Page.navigate 同路径，实测可加载线上工作台）。
+    // GAP-13 fix v2: External 首载导航在 Windows WebView2 上可能丢失（窗口停在 about:blank）。
+    // build 返回时 WebView2 内核可能未就绪，立即 navigate 被吞（竞态）→ 延迟至内核就绪后
+    // 显式调用原生导航（与 CDP Page.navigate 同路径，实测可加载线上工作台）。
     // token 注入已移至 on_page_load Finished，保证注入到真实页面。
-    let _ = webview.navigate(url);
+    let nav_url = url.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(800));
+        let _ = webview.navigate(nav_url);
+    });
     Ok(())
 }
 
