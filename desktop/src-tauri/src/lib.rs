@@ -114,10 +114,11 @@ fn open_workspace(
     }
     diag.log("webview", &format!("open_workspace -> {}", url));
     let workspace_app = app.clone();
+    let url = url.parse::<tauri::Url>().map_err(|e| e.to_string())?;
     let webview = WebviewWindowBuilder::new(
         &app,
         "workspace",
-        WebviewUrl::External(url.parse::<tauri::Url>().map_err(|e| e.to_string())?),
+        WebviewUrl::External(url.clone()),
     )
     .title("昆仑镜工作台")
     .inner_size(1440.0, 900.0)
@@ -129,7 +130,7 @@ fn open_workspace(
             .log("webview", &format!("workspace NAVIGATE: {}", nav_url));
         true // 不取消导航
     })
-    .on_page_load(|window, payload| {
+    .on_page_load(move |window, payload| {
         let url = payload.url().to_string();
         let diag = window.app_handle().state::<diag::Diag>();
         match payload.event() {
@@ -138,6 +139,15 @@ fn open_workspace(
             }
             PageLoadEvent::Finished => {
                 let _ = diag.log("webview", &format!("workspace page FINISHED: {}", url));
+                // GAP-13 fix: token 注入移到页面加载完成后（External 首载导航丢失时，
+                // build 后立即 eval 会注入到 about:blank 被清空；此处保证注入到真实页面）
+                if let Some(tok) = &access_token {
+                    let js = format!(
+                        "window.__KUNLUN_DESKTOP__={{}}; localStorage.setItem('auth_token','{}');",
+                        tok
+                    );
+                    let _ = window.eval(&js);
+                }
             }
         }
     })
@@ -151,24 +161,10 @@ fn open_workspace(
     .build()
     .map_err(|e| e.to_string())?;
 
-    // 注入 token（保持原有业务时机不变：build 后立即 eval）
-    // RCA-02：记录注入时间点与载荷长度（安全：绝不落 token 明文）
-    if let Some(token) = access_token {
-        let diag = app.state::<diag::Diag>();
-        diag.log(
-            "webview",
-            &format!("workspace token inject: begin len={}", token.len()),
-        );
-        let js = format!(
-            "window.__KUNLUN_DESKTOP__={{}}; localStorage.setItem('auth_token','{}');",
-            token
-        );
-        webview.eval(&js).map_err(|e| e.to_string())?;
-        diag.log(
-            "webview",
-            &format!("workspace token inject: eval dispatched len={}", token.len()),
-        );
-    }
+    // GAP-13 fix: External 首载导航在 Windows WebView2 上可能丢失（窗口停在 about:blank）。
+    // build 后显式调用 WebView2 原生导航（与 CDP Page.navigate 同路径，实测可加载线上工作台）。
+    // token 注入已移至 on_page_load Finished，保证注入到真实页面。
+    let _ = webview.navigate(url);
     Ok(())
 }
 
@@ -234,7 +230,7 @@ pub fn run() {
                 ),
             );
             let win = WebviewWindowBuilder::from_config(app.handle(), &main_cfg)?
-                .on_page_load(|window, payload| {
+                .on_page_load(move |window, payload| {
                     let url = payload.url().to_string();
                     match payload.event() {
                         PageLoadEvent::Started => {
