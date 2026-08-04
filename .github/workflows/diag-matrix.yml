@@ -70,6 +70,7 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item desktop/diag/b/index.html desktop/ui/index.html -Force
+          Copy-Item desktop/diag/b/diag-b-check.js desktop/ui/diag-b-check.js -Force
           Copy-Item desktop/diag/b/vendor/vue.global.prod.js desktop/ui/vue.global.prod.js -Force
           $conf = Get-Content desktop/src-tauri/tauri.conf.json -Raw
           # RCA-03 TEST ARTIFACT REALITY RESET Task02：版本隔离（文件名/安装目录/窗口标题三隔离，禁止伪装正式版）

@@ -4,62 +4,108 @@
 <meta charset="UTF-8" />
 <title>Diag-B: Vue Static</title>
 <style>
-  body { background: #0e0f1a; color: #e8e6f0; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; margin: 0; height: 100vh; }
-  #app { max-width: 640px; margin: 0 auto; padding: 48px 24px; }
-  h1 { font-size: 24px; }
-  .sub { color: #8a8aa0; font-size: 13px; margin-bottom: 20px; }
-  nav { display: flex; gap: 8px; margin-bottom: 20px; }
+  body { background: #0e0f1a; color: #e8e6f0; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; margin: 0; padding: 24px; }
+  .card { background: #16182b; border: 1px solid #242748; border-radius: 12px; padding: 20px; margin-bottom: 16px; max-width: 680px; }
+  .sub { color: #8a8aa0; font-size: 13px; margin-top: 6px; }
+  .status { font-size: 14px; padding: 10px; border-radius: 8px; margin-top: 10px; }
+  .ok { color: #4ade80; background: rgba(74,222,128,.08); }
+  .fail { color: #f87171; background: rgba(248,113,113,.08); }
+  .pending { color: #fbbf24; background: rgba(251,191,36,.08); }
+  .env { color: #8a8aa0; font-size: 12px; margin-top: 14px; word-break: break-all; }
+  nav { display: flex; gap: 8px; margin: 12px 0; }
   button { background: #c8562a; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; }
   button.secondary { background: #1d2038; color: #e8e6f0; border: 1px solid #2d3158; }
-  .card { background: #16182b; border: 1px solid #242748; border-radius: 12px; padding: 20px; }
-  .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #1d2038; color: #4ade80; }
   .counter { font-size: 32px; font-weight: 700; margin: 12px 0; }
-  .status { font-size: 14px; padding: 10px; border-radius: 8px; margin-top: 16px; background: rgba(74,222,128,.08); color: #4ade80; }
-  .env { color: #8a8aa0; font-size: 12px; margin-top: 24px; word-break: break-all; }
 </style>
 </head>
 <body>
+<!-- 静态骨架：即使所有 JS 失败，此区域也会渲染（验证 HTML/资源/CSS） -->
+<div class="card">
+  <b>DiagB — Vue + inline script</b>
+  <div class="sub">Diagnostic Matrix — B: Vue 3（测前端框架 / DOM 交互 / 路由）</div>
+  <div class="status ok">✅ 静态 HTML 渲染 OK（不依赖 JS）</div>
+</div>
+
+<div class="card">
+  <b>执行环节检测（逐环节可见）</b>
+  <div class="status pending" id="check-status">⏳ 外部脚本 diag-b-check.js：未执行</div>
+  <div class="status pending" id="vue-status">⏳ Vue 库（vue.global.prod.js）：未检测</div>
+  <div class="status pending" id="inline-status">⏳ inline script：未执行</div>
+  <div class="env" id="env">UA: 尚未写入</div>
+</div>
+
+<!-- Vue 挂载目标 -->
 <div id="app"></div>
+
+<script src="./diag-b-check.js"></script>
 <script src="./vue.global.prod.js"></script>
 <script>
-// Diag-B: Vue 3 静态页（按钮 + hash 路由切换）— 测前端框架层
-// 不加载登录/API/License/Device/Plugin，纯前端渲染
-var { createApp, ref, computed } = Vue;
-
-var App = {
-  setup() {
-    var count = ref(0);
-    var route = ref(window.location.hash || '#/');
-    window.addEventListener('hashchange', function () { route.value = window.location.hash || '#/'; });
-    var view = computed(function () { return route.value.indexOf('#/about') === 0 ? 'about' : 'home'; });
-    function go(path) { window.location.hash = path; }
-    return { count, view, go, ua: navigator.userAgent };
-  },
-  template: [
-    '<nav>',
-    '  <button :class="{secondary: view!==\'home\'}" @click="go(\'#/\')">首页</button>',
-    '  <button :class="{secondary: view!==\'about\'}" @click="go(\'#/about\')">关于</button>',
-    '</nav>',
-    '<div v-if="view === \'home\'" class="card">',
-    '  <span class="badge">Vue OK</span>',
-    '  <h1>Vue 静态页正常渲染</h1>',
-    '  <div class="sub">Diagnostic Matrix — B: Vue 3（测前端框架 / DOM 交互 / 路由）</div>',
-    '  <div class="counter">{{ count }}</div>',
-    '  <button @click="count++">+1（按钮交互）</button>',
-    '  <button class="secondary" @click="count=0">重置</button>',
-    '  <div class="status">按钮点击正常 → Vue 事件系统工作</div>',
-    '</div>',
-    '<div v-else class="card">',
-    '  <h1>关于（About 页）</h1>',
-    '  <div class="sub">hash 路由切换成功 → 视图挂载/卸载正常</div>',
-    '  <div class="env">当前路由: #/about</div>',
-    '</div>',
-    '<div class="env">UA: {{ ua }}</div>'
-  ].join('\n')
-};
-
-createApp(App).mount('#app');
-document.title = 'DiagB-Vue-OK';
+// inline script：验证 CSP 是否放行 inline（页面唯一 inline 代码块）
+(function () {
+  var inlineEl = document.getElementById('inline-status');
+  if (inlineEl) {
+    inlineEl.textContent = '✅ inline script 执行 OK';
+    inlineEl.className = 'status ok';
+  }
+  var checkEl = document.getElementById('check-status');
+  if (checkEl) {
+    checkEl.textContent = window.__diagBCheck === true
+      ? '✅ 外部脚本 diag-b-check.js 执行 OK'
+      : '❌ 外部脚本 diag-b-check.js 未执行';
+    checkEl.className = window.__diagBCheck === true ? 'status ok' : 'status fail';
+  }
+  var vueEl = document.getElementById('vue-status');
+  if (vueEl) {
+    var vueLoaded = (typeof Vue !== 'undefined' && Vue && Vue.createApp);
+    vueEl.textContent = vueLoaded
+      ? '✅ Vue 库加载 OK（createApp 可用）'
+      : '❌ Vue 库加载失败（Vue 未定义 → vue.global.prod.js 未执行）';
+    vueEl.className = vueLoaded ? 'status ok' : 'status fail';
+  }
+  // Vue 可用 → 挂载应用（按钮 + hash 路由）
+  if (typeof Vue !== 'undefined' && Vue.createApp) {
+    try {
+      var createApp = Vue.createApp, ref = Vue.ref, computed = Vue.computed;
+      var App = {
+        setup: function () {
+          var count = ref(0);
+          var route = ref(window.location.hash || '#/');
+          window.addEventListener('hashchange', function () { route.value = window.location.hash || '#/'; });
+          var view = computed(function () { return route.value.indexOf('#/about') === 0 ? 'about' : 'home'; });
+          function go(path) { window.location.hash = path; }
+          return { count: count, view: view, go: go, ua: navigator.userAgent };
+        },
+        template: [
+          '<div class="card">',
+          '  <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#1d2038;color:#4ade80;">Vue OK</span>',
+          '  <nav>',
+          '    <button :class="{secondary: view!==\'home\'}" @click="go(\'#/\')">首页</button>',
+          '    <button :class="{secondary: view!==\'about\'}" @click="go(\'#/about\')">关于</button>',
+          '  </nav>',
+          '  <div v-if="view === \'home\'">',
+          '    <h1 style="font-size:24px;margin:0 0 8px;">Vue 静态页正常渲染</h1>',
+          '    <div class="sub">按钮交互 + hash 路由已就绪</div>',
+          '    <div class="counter">{{ count }}</div>',
+          '    <button @click="count++">+1（按钮交互）</button>',
+          '    <button class="secondary" @click="count=0">重置</button>',
+          '    <div class="status ok">Vue 事件系统工作</div>',
+          '  </div>',
+          '  <div v-else>',
+          '    <h1 style="font-size:24px;margin:0 0 8px;">关于（About 页）</h1>',
+          '    <div class="sub">hash 路由切换成功 → 视图挂载/卸载正常</div>',
+          '    <div class="env">当前路由: #/about</div>',
+          '  </div>',
+          '  <div class="env">UA: {{ ua }}</div>',
+          '</div>'
+        ].join('\n')
+      };
+      createApp(App).mount('#app');
+    } catch (e) {
+      var vueEl2 = document.getElementById('vue-status');
+      if (vueEl2) { vueEl2.textContent = '❌ Vue 挂载异常: ' + e.message; vueEl2.className = 'status fail'; }
+    }
+  }
+})();
 </script>
 </body>
 </html>
