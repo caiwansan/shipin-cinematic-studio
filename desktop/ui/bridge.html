@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>昆仑镜 · 正在打开工作台</title>
+<style>
+  body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+         background: #0f172a; color: #f8fafc; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .box { text-align: center; }
+  .logo { font-size: 44px; margin-bottom: 14px; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  .title { font-size: 15px; font-weight: 600; }
+  .sub { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+  .err { color: #f87171; font-size: 13px; margin-top: 16px; display: none; }
+  a { color: #93c5fd; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">◇</div>
+  <div class="title">昆仑镜 · 正在打开工作台</div>
+  <div class="sub" id="sub">连接中…</div>
+  <div class="err" id="err"></div>
+</div>
+<script>
+// ═══════════ Workspace Bridge v1.0 ═══════════
+// 本地中转页：WebView2 就绪(onload)后主动 redirect 到目标 Workspace。
+// 不依赖 sleep/猜测；白名单校验；失败可重试。深链: kunlun://app/{slug}[/project/{id}]
+(function () {
+  var ALLOWED = ['https://aigc.fushtn.com', 'http://127.0.0.1:3000', 'http://localhost:3000'];
+
+  function getTarget() {
+    try {
+      var q = new URLSearchParams(location.search);
+      var t = q.get('url') || '';
+      if (!t) return '';
+      // 白名单校验（Rust 侧已校验，此处二次防御）
+      for (var i = 0; i < ALLOWED.length; i++) {
+        if (t.indexOf(ALLOWED[i]) === 0) return t;
+      }
+      return '';
+    } catch (e) { return ''; }
+  }
+
+  var target = getTarget();
+  var sub = document.getElementById('sub');
+  var err = document.getElementById('err');
+
+  function fail(msg) {
+    err.style.display = 'block';
+    err.innerHTML = msg + '<br/>' +
+      '<a href="javascript:location.reload()">重试</a> · ' +
+      (target ? '<a href="' + target + '">直接打开</a>' : '');
+  }
+
+  // onload = WebView2 内核就绪信号（本地 asset 页，加载必然成功）
+  window.addEventListener('load', function () {
+    if (!target) { fail('目标地址无效或不在白名单'); return; }
+    sub.textContent = '正在进入 ' + target.replace('https://aigc.fushtn.com', '');
+    // 短暂展示 loading 后跳转（150ms，视觉顺滑；不猜内核就绪时间）
+    setTimeout(function () {
+      try { window.location.replace(target); } catch (e) { fail('跳转失败: ' + e.message); }
+    }, 150);
+  });
+
+  // 兜底：8 秒未跳转视为异常
+  setTimeout(function () {
+    if (location.href.indexOf('aigc.fushtn.com') < 0 && location.href.indexOf('127.0.0.1:3000') < 0 && location.href.indexOf('localhost:3000') < 0) {
+      fail('连接超时，请检查网络后重试');
+    }
+  }, 8000);
+})();
+</script>
+</body>
+</html>

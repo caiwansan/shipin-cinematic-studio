@@ -99,6 +99,11 @@ fn clear_credentials(app: tauri::AppHandle, state: tauri::State<AppState>) -> Re
 /// 启动线上工作台（新 WebView 窗口；加载完成后注入 token 到 localStorage）
 /// 安全：仅允许 aigc.fushtn.com 域；token 注入后 UI 自持，Rust 不参与业务
 /// RCA-02（2026-08-04 掌柜指令）：补全 open_workspace 全链路可观测性（诊断埋点，零业务行为变更）
+/// Workspace Bridge: query 参数编码（target URL 嵌套进 bridge.html?url=）
+fn encode_query(s: &str) -> String {
+    s.replace('%', "%25").replace('&', "%26").replace('?', "%3F").replace('=', "%3D").replace('#', "%23")
+}
+
 #[tauri::command]
 fn open_workspace(
     app: tauri::AppHandle,
@@ -118,7 +123,8 @@ fn open_workspace(
     let webview = WebviewWindowBuilder::new(
         &app,
         "workspace",
-        WebviewUrl::External(url.clone()),
+        // Workspace Bridge v1.0: 加载本地中转页（asset 协议必然成功），页面 onload 后 redirect 到目标
+        WebviewUrl::App(format!("bridge.html?url={}", encode_query(url.as_str())).into()),
     )
     .title("昆仑镜工作台")
     .inner_size(1440.0, 900.0)
@@ -161,24 +167,6 @@ fn open_workspace(
     .build()
     .map_err(|e| e.to_string())?;
 
-    // GAP-13 fix v3: External 首载导航在 Windows WebView2 上可能丢失（窗口停在 about:blank）。
-    // v2(800ms) 仍失效 → v3: 延迟加长 + navigate 结果日志 + eval 兜底
-    // （CDP Page.navigate 实测可加载，WebView2 本身无问题；问题在 Tauri navigate 调用时机/方式）
-    let nav_url = url.clone();
-    let bridge_app = app.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(1500));
-        let log = |msg: String| {
-            let _ = bridge_app.state::<diag::Diag>().log("webview", &msg);
-        };
-        match webview.navigate(nav_url.clone()) {
-            Ok(_) => log(format!("workspace navigate dispatched: {}", nav_url)),
-            Err(e) => {
-                log(format!("workspace navigate ERR {} — eval fallback", e));
-                let _ = webview.eval(&format!("window.location.replace('{}')", nav_url));
-            }
-        }
-    });
     Ok(())
 }
 
