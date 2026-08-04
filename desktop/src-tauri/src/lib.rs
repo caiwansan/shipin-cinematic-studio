@@ -161,14 +161,23 @@ fn open_workspace(
     .build()
     .map_err(|e| e.to_string())?;
 
-    // GAP-13 fix v2: External 首载导航在 Windows WebView2 上可能丢失（窗口停在 about:blank）。
-    // build 返回时 WebView2 内核可能未就绪，立即 navigate 被吞（竞态）→ 延迟至内核就绪后
-    // 显式调用原生导航（与 CDP Page.navigate 同路径，实测可加载线上工作台）。
-    // token 注入已移至 on_page_load Finished，保证注入到真实页面。
+    // GAP-13 fix v3: External 首载导航在 Windows WebView2 上可能丢失（窗口停在 about:blank）。
+    // v2(800ms) 仍失效 → v3: 延迟加长 + navigate 结果日志 + eval 兜底
+    // （CDP Page.navigate 实测可加载，WebView2 本身无问题；问题在 Tauri navigate 调用时机/方式）
     let nav_url = url.clone();
+    let bridge_app = app.clone();
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(800));
-        let _ = webview.navigate(nav_url);
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        let log = |msg: String| {
+            let _ = bridge_app.state::<diag::Diag>().log("webview", &msg);
+        };
+        match webview.navigate(nav_url.clone()) {
+            Ok(_) => log(format!("workspace navigate dispatched: {}", nav_url)),
+            Err(e) => {
+                log(format!("workspace navigate ERR {} — eval fallback", e));
+                let _ = webview.eval(&format!("window.location.replace('{}')", nav_url));
+            }
+        }
     });
     Ok(())
 }
