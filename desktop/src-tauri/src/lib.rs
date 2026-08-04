@@ -177,6 +177,60 @@ fn get_pending_workspace_url(state: tauri::State<AppState>) -> Option<String> {
     state.pending_workspace_url.lock().unwrap().take()
 }
 
+// ── Ollama 本地模型接入（模型连接管理，Runtime 职责；仅 localhost，不涉业务执行）──
+
+/// 检测本机 Ollama + 模型列表
+#[tauri::command]
+fn ollama_check() -> serde_json::Value {
+    fn models() -> Option<serde_json::Value> {
+        let body = ureq::get("http://127.0.0.1:11434/api/tags")
+            .timeout(std::time::Duration::from_secs(3))
+            .call()
+            .ok()?
+            .into_string()
+            .ok()?;
+        let json: serde_json::Value = serde_json::from_str(&body).ok()?;
+        let list = json.get("models")?.as_array()?;
+        let slim: Vec<serde_json::Value> = list
+            .iter()
+            .map(|m| {
+                serde_json::json!({
+                    "name": m.get("name").and_then(|v| v.as_str()).unwrap_or(""),
+                    "size": m.get("size").and_then(|v| v.as_u64()).unwrap_or(0),
+                    "modifiedAt": m.get("modified_at").and_then(|v| v.as_str()).unwrap_or(""),
+                    "family": m.pointer("/details/family").and_then(|v| v.as_str()).unwrap_or(""),
+                })
+            })
+            .collect();
+        Some(serde_json::json!({ "running": true, "models": slim }))
+    }
+    models().unwrap_or_else(|| serde_json::json!({ "running": false, "models": [] }))
+}
+
+/// 本地模型对话（非流式，超时 120s）
+#[tauri::command]
+fn ollama_chat(model: String, prompt: String) -> Result<String, String> {
+    let payload = serde_json::json!({
+        "model": model,
+        "messages": [ { "role": "user", "content": prompt } ],
+        "stream": false,
+        "options": { "temperature": 0.7 }
+    });
+    let body = ureq::post("http://127.0.0.1:11434/api/chat")
+        .timeout(std::time::Duration::from_secs(120))
+        .set("Content-Type", "application/json")
+        .send_string(&payload.to_string())
+        .map_err(|e| format!("本地模型请求失败: {}", e))?
+        .into_string()
+        .map_err(|e| format!("读取响应失败: {}", e))?;
+    let json: serde_json::Value =
+        serde_json::from_str(&body).map_err(|e| format!("响应解析失败: {}", e))?;
+    json.pointer("/message/content")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| "本地模型无响应内容".to_string())
+}
+
 // ── Diagnostic Mode 命令（SPRINT-RELEASE-WINDOWS-WHITE-SCREEN-ROOT-CAUSE-01）──
 
 /// 诊断状态：前端判断是否 --debug/--diag + 展示环境信息
@@ -272,6 +326,8 @@ pub fn run() {
             clear_credentials,
             open_workspace,
             get_pending_workspace_url,
+            ollama_check,
+            ollama_chat,
             diag_status,
             diag_write,
             diag_read,

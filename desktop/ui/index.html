@@ -744,8 +744,43 @@ async function renderModels() {
   } catch (e) {
     html += `<div class="card plugin-card"><div class="icon">🧠</div><div class="meta"><div class="name">BYOK 模型</div><div class="desc">在工作台中配置你的 API Key，全局生效</div></div><button class="btn sm ghost" onclick="openModelConfig()">去配置</button></div>`;
   }
-  html += `<div class="card plugin-card"><div class="icon">🖥️</div><div class="meta"><div class="name">本地引擎</div><div class="desc">Ollama / ComfyUI / 本地视频</div></div><span class="badge">检测中</span></div></div>`;
+  html += await renderLocalEngine();
   $('models-content').innerHTML = html;
+}
+
+// ══════════ 本地引擎（Ollama）真实接入 ══════════
+async function renderLocalEngine() {
+  try {
+    const r = await invoke('ollama_check');
+    if (!r.running) {
+      return `<div class="card plugin-card"><div class="icon">🖥️</div><div class="meta"><div class="name">本地引擎（Ollama）</div><div class="desc">未检测到 Ollama 服务 · 启动后自动可用</div></div><span class="badge">未运行</span></div>`;
+    }
+    const models = (r.models || []);
+    if (!models.length) {
+      return `<div class="card plugin-card"><div class="icon">🖥️</div><div class="meta"><div class="name">本地引擎（Ollama）</div><div class="desc">Ollama 运行中，暂无模型（ollama pull deepseek-r1:7b）</div></div><span class="badge">空</span></div>`;
+    }
+    const cards = models.map(m => {
+      const size = m.size ? (m.size / 1e9).toFixed(1) + ' GB' : '';
+      return `<div class="card plugin-card"><div class="icon">🖥️</div><div class="meta"><div class="name">${esc(m.name)}</div><div class="desc">本地模型 · ${size} · 免费离线 · ${esc(m.family || '')}</div></div><span class="badge ok">● 可用</span></div>`;
+    }).join('');
+    return cards + `<div class="card plugin-card" style="grid-column:1/-1"><div class="meta" style="width:100%"><div class="name">本地对话测试</div><textarea id="ollama-prompt" rows="2" style="width:100%;margin:8px 0;padding:8px;border-radius:8px;border:1px solid #333;background:#111;color:#eee" placeholder="输入内容，与本地模型对话（免费离线）…"></textarea><button class="btn sm" onclick="ollamaChatNow()">发送</button><div id="ollama-reply" style="margin-top:8px;white-space:pre-wrap;font-size:13px;color:#9be"></div></div></div>`;
+  } catch (e) {
+    return `<div class="card plugin-card"><div class="icon">🖥️</div><div class="meta"><div class="name">本地引擎</div><div class="desc">检测失败：${esc(e)}</div></div><span class="badge">错误</span></div>`;
+  }
+}
+async function ollamaChatNow() {
+  const promptEl = $('ollama-prompt');
+  const replyEl = $('ollama-reply');
+  if (!promptEl || !promptEl.value.trim()) return;
+  let model = 'deepseek-r1:7b';
+  try { const r = await invoke('ollama_check'); if (r.models && r.models[0]) model = r.models[0].name; } catch (e) {}
+  replyEl.textContent = '思考中（本地推理，请稍候）…';
+  try {
+    const reply = await invoke('ollama_chat', { model, prompt: promptEl.value });
+    replyEl.textContent = reply;
+  } catch (e) {
+    replyEl.textContent = '错误: ' + e;
+  }
 }
 function openModelConfig() {
   launchApp('kunlun-drama');
