@@ -424,6 +424,15 @@ async function doLogin() {
     enterApp();
   } catch (e) { $('login-err').textContent = e.message; }
 }
+function enterApp() {
+  $('view-login').classList.add('hidden');
+  $('view-shell').classList.remove('hidden');
+  window.__probe('#ff00ff');
+  renderAccount();
+  renderHome();
+  bootMark('5. view rendered: home');
+  if (__diag.enabled) showDiagFloat();
+}
 $('btn-login') && ($('btn-login').addEventListener('click', doLogin));
 $('login-password') && ($('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); }));
 $('btn-wechat') && ($('btn-wechat').addEventListener('click', function () { launchWebLogin('wechat'); }));
