@@ -14,8 +14,8 @@
           <!-- 用户操作区 -->
           <div class="flex items-center gap-2">
             <template v-if="!isLoggedIn">
-              <button @click="showLogin = true" class="text-xs text-gray-400 hover:text-white px-3 py-1.5 border border-[#1A2D4A] rounded-lg transition">登录</button>
-              <NuxtLink to="/register" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition">注册</NuxtLink>
+              <button @click="openLogin" class="text-xs text-gray-400 hover:text-white px-3 py-1.5 border border-[#1A2D4A] rounded-lg transition">登录</button>
+              <button @click="openRegister" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition">注册</button>
             </template>
             <template v-else>
               <NuxtLink to="/mall/orders" class="text-xs text-gray-400 hover:text-white px-3 py-1.5 border border-[#1A2D4A] rounded-lg transition">📋 订单</NuxtLink>
@@ -26,27 +26,8 @@
       </div>
     </div>
 
-    <!-- ===== 登录弹窗 ===== -->
-    <div v-if="showLogin" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" @click.self="showLogin = false">
-      <div class="bg-[#0D1328] border border-[#1A2240] rounded-2xl p-6 w-[360px] shadow-2xl">
-        <h2 class="text-base font-semibold text-white mb-4 text-center">🔑 登录</h2>
-        <div v-if="loginError" class="text-red-400 text-xs mb-3 text-center">{{ loginError }}</div>
-        <div class="space-y-3">
-          <input v-model="loginForm.account" placeholder="手机号 / 邮箱 / 账号"
-            class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-indigo-500" />
-          <input v-model="loginForm.password" type="password" placeholder="密码"
-            class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-indigo-500" />
-          <button @click="doLogin" :disabled="loginLoading"
-            class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-medium transition border-none cursor-pointer">
-            {{ loginLoading ? '登录中...' : '登录' }}
-          </button>
-        </div>
-        <p class="text-center text-xs text-gray-500 mt-3">
-          还没有账号？<NuxtLink to="/register" class="text-indigo-400 hover:text-indigo-300" @click="showLogin = false">去注册</NuxtLink>
-        </p>
-        <button @click="showLogin = false" class="absolute top-3 right-3 text-gray-500 hover:text-white text-lg leading-none cursor-pointer bg-transparent border-none">✕</button>
-      </div>
-    </div>
+    <!-- ===== 登录/注册弹窗（公共组件 AuthModal，与首页完全一致） ===== -->
+    <AuthModal v-model="showLogin" :initial-mode="authInitialMode" @logged-in="onAuthLoggedIn" />
 
     <div class="max-w-6xl mx-auto px-4 pb-12 space-y-8">
       <!-- ===== Hero 爆品价格轮播 ===== -->
@@ -240,6 +221,7 @@
 
 <script setup lang="ts">
 import { getToken } from '~/utils/token-cache'
+import AuthModal from '~/components/kunlun/business/AuthModal.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 function authHeaders() { return { Authorization: `Bearer ${getToken()}` } }
@@ -267,37 +249,15 @@ const claimingId = ref<string | null>(null)
 // ===== 登录状态 =====
 const isLoggedIn = ref(!!getToken())
 const showLogin = ref(false)
-const loginLoading = ref(false)
-const loginError = ref('')
-const loginForm = ref({ account: '', password: '' })
+const authInitialMode = ref<'login' | 'register'>('login')
 
-async function doLogin() {
-  loginError.value = ''
-  if (!loginForm.value.account || !loginForm.value.password) {
-    loginError.value = '请输入账号和密码'
-    return
-  }
-  loginLoading.value = true
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loginForm.value),
-    })
-    const data = await res.json()
-    if (data.success && data.data?.token) {
-      localStorage.setItem('user_auth_token', data.data.token)
-      isLoggedIn.value = true
-      showLogin.value = false
-      loginForm.value = { account: '', password: '' }
-    } else {
-      loginError.value = data.error || '登录失败'
-    }
-  } catch (e) {
-    loginError.value = '网络错误'
-  } finally {
-    loginLoading.value = false
-  }
+// 统一登录/注册弹窗（AuthModal 与首页一致；token 统一写 auth_token）
+function openLogin() { authInitialMode.value = 'login'; showLogin.value = true }
+function openRegister() { authInitialMode.value = 'register'; showLogin.value = true }
+
+function onAuthLoggedIn() {
+  isLoggedIn.value = true
+  fetchCoupons() // 登录后重新拉取优惠券
 }
 
 // ===== Fetch Functions =====
