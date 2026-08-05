@@ -63,7 +63,7 @@ S3.2.2:  { required, status: AUTHORIZED|NOT_AUTHORIZED|EXPIRED|SUSPENDED|SKILL_P
 
 ---
 
-## 4. Reality Gate SA1-SA5（实测 25 PASS / 0 FAIL）
+## 4. Reality Gate SA1-SA5（实测 23 PASS / 0 FAIL）
 
 | # | 场景 | 预期 | 结果 |
 |---|---|---|---|
