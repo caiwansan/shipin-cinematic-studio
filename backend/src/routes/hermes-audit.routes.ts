@@ -1,21 +1,17 @@
 /**
- * S2.3.2 Task 05 — Hermes Execution Audit（Cloud Authority, H-C）
- * 接收 Hermes 执行事件（agent.*/tool.invoked），落库审计
- * 原则: Cloud = Audit 权威；Desktop/Hermes 本地不保存权威日志
+ * S2.3.2 Task 05 - Hermes Execution Audit (Cloud Authority, H-C)
+ * Receive Hermes execution events, record to audit store
  */
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 
 export async function registerHermesAuditRoutes(app: FastifyInstance) {
-  // Hermes 事件上报（受控来源: 签名/内网；S2.3.2 用 runtime 头标识）
   app.post('/api/audit/hermes-execution', async (request: any, reply: any) => {
     try {
       const ev = request.body || {}
-      // 最小校验: executionId + runtimeId + status 必须
       if (!ev.executionId || !ev.runtimeId || !ev.status) {
         return reply.code(400).send({ error: 'INVALID_AUDIT_EVENT' })
       }
-      // 落库（通用审计表; 若表缺失则用 KernelEvent 替代）
       const rec = await prisma.kernelEvent.create({
         data: {
           type: 'hermes.execution',
@@ -38,7 +34,6 @@ export async function registerHermesAuditRoutes(app: FastifyInstance) {
     }
   })
 
-  // 查询（只读，审计查看）
   app.get('/api/audit/hermes-execution', async (request: any, reply: any) => {
     try {
       const events = await prisma.kernelEvent.findMany({
