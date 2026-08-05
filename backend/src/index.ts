@@ -551,6 +551,7 @@ await app.register(projectV2Routes)
   //       不做推广页面/邀请系统/裂变/发放（仅 ACCRUED 应计）
   // ═══════════════════════════════════════════════════════════
   await app.register((await import('./routes/ecology-partner.routes.js')).registerEcologyPartnerRoutes, { prefix: '/api/ecosystem' })
+  await app.register((await import('./routes/ecology-registry.routes.js')).registerEcologyRegistryRoutes, { prefix: '/api/ecosystem' })
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
   // ═══════════════════════════════════════════════════════════
@@ -968,6 +969,7 @@ await app.register(projectV2Routes)
   // S1.1 Identity Ticket Bridge（ADR-021 身份边界，一次性 ticket）
   await app.register(desktopTicketRoutes)
   await app.register(ticketExchangeRoutes)
+  // S2.1 Plugin Registry Adapter（只读）
   // Brand GEO routes (Phase 2) / Sprint 1A Knowledge Skeleton
   await app.register(await import('./services/geo/routes/geo-project.route.js').then(m => m.default))
   await app.register(await import('./services/geo/routes/geo-entity.route.js').then(m => m.default))
