@@ -27,6 +27,7 @@ export const navCategories: NavCategory[] = [
       { label: '短剧工作台', icon: '🎬', to: '/studio/v2', desc: 'AI短剧策划、剧本、分镜、视频生产', status: 'beta' },
       { label: '音乐创作', icon: '🎵', to: '/workspace/music', desc: 'AI音乐创作、作曲、编曲' },
       { label: '小说创作', icon: '📖', to: '/hdz', desc: 'AI小说生成、世界观、角色创作' },
+      { label: '昆仑茶馆', icon: '🍵', to: '/chat', badge: '⭐新', desc: '公共聊天频道 · 群聊 · 语音视频 · 红包礼物' },
     ],
   },
   {

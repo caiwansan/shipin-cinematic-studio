@@ -10489,3 +10489,20 @@ model EcologyLocalPluginRuntime {
   @@index([lastHeartbeat])
   @@map("ecology_local_plugin_runtime")
 }
+
+// ─────────────────────────────────────────────────────────────
+// SPRINT-IM-CHA-01 — 昆仑茶馆（IM 聊天）— WuKongIM token 会话
+// 用途：昆仑镜签发 wukong token（uid = 昆仑镜 userId），留档供连接鉴权/审计
+// 说明：WuKongIM v1.2.6 连接鉴权代码为注释态，token 先由昆仑镜侧管理，
+//       后续补鉴权中间件查此表验证（tokenAuthOn 启用后）
+model ImTokenSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  userId    String   @map("user_id") @db.Text
+  token     String   @unique @db.VarChar(128)
+  expireAt  DateTime @map("expire_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expireAt])
+  @@map("im_token_session")
+}
