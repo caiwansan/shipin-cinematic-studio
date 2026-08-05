@@ -20,16 +20,23 @@ export default async function adminWalletRoutes(fastify: FastifyInstance) {
           orderBy: { createdAt: 'desc' },
           skip,
           take: limit,
-          include: {
-            user: {
-              select: { username: true, email: true, phone: true },
-            },
-          },
         }),
         prisma.agentWithdraw.count({ where }),
       ])
 
-      return { success: true, data: { items, total: Number(total), page: Number(page), pageSize: Number(pageSize) } }
+      // 批量补充用户信息（AgentWithdraw 无 user relation，单独查）
+      const userIds = [...new Set(items.map((w: any) => w.userId))]
+      const users = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, username: true, email: true, phone: true },
+      })
+      const userMap = new Map(users.map((u: any) => [u.id, u]))
+      const list = items.map((w: any) => {
+        const u = userMap.get(w.userId)
+        return { ...w, user: u ? { username: u.username, email: u.email, phone: u.phone } : null }
+      })
+
+      return { success: true, data: { items: list, total: Number(total), page: Number(page), pageSize: Number(pageSize) } }
     } catch (err: any) {
       console.error('[admin-wallet] list error:', err?.message || err)
       return { success: true, data: { items: [], total: 0, page: 1, pageSize: 20 } }

@@ -146,16 +146,18 @@ export const ADMIN_PUBLIC_GROUP: AdminPlatformGroup = {
 }
 
 /**
- * ─── 💎 VIP 套餐管理 ───
- * 平台级会员商业化（不是某个 Workspace 的业务）。
+ * ─── 💎 会员中心 ───
+ * 平台级会员商业化：VIP 套餐 / 订单 / 钻石充值 / 提现审核。
  */
 export const ADMIN_VIP_GROUP: AdminPlatformGroup = {
   id: 'vip',
-  label: 'VIP套餐管理',
+  label: '会员中心',
   icon: '💎',
   children: [
     { id: 'vip-plans', label: '套餐列表', to: '/admin/aigc/vip' },
     { id: 'vip-orders', label: 'VIP订单', to: '/admin/aigc/vip-orders' },
+    { id: 'recharge-orders', label: '钻石充值管理', to: '/admin/aigc/recharge-orders' },
+    { id: 'withdraws', label: '会员提现管理', to: '/admin/aigc/withdraws' },
   ],
 }
 

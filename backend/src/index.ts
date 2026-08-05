@@ -320,6 +320,7 @@ async function main() {
   await app.register(userAvatarRoutes)
   await app.register(userSecurityRoutes)
   await app.register(userAssetsRoutes)
+  await app.register((await import('./routes/admin-wallet.js')).default)
   // REMOVED: analyticsRoutes
   // REMOVED: optimizeRoutes
 

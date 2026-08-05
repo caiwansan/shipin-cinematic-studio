@@ -690,15 +690,33 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   // 管理员 - 订单列表
   // ============================================================
 
-  // GET /api/admin/payment/orders — 获取充值订单列表
+  // GET /api/admin/payment/orders — 获取充值订单列表（type/status/keyword 筛选 + 分页 + 状态统计）
   fastify.get('/api/admin/payment/orders',  async (request, reply) => {const auth = request.headers.authorization;if (!auth?.startsWith('Bearer ')) return reply.status(401).send({ error: '未授权' });const decoded = verifyToken(auth.slice(7));if (!decoded) return reply.status(401).send({ error: 'token 无效或已过期' });
-    const { status, page = '1', limit = '20' } = request.query as any
+    const { type = 'all', status = 'all', keyword = '', page = '1', pageSize, limit: rawLimit } = request.query as any
 
     const where: any = {}
+    if (type && type !== 'all') where.type = type
     if (status && status !== 'all') where.status = status
+    if (keyword) {
+      // PaymentOrder 无 user relation：先查匹配用户 id，再按 userId 过滤
+      const matched = await prisma.user.findMany({
+        where: {
+          OR: [
+            { username: { contains: keyword } },
+            { email: { contains: keyword } },
+            { phone: { contains: keyword } },
+          ],
+        },
+        select: { id: true },
+      })
+      where.OR = [
+        { orderNo: { contains: keyword } },
+        { userId: { in: matched.map((m: any) => m.id) } },
+      ]
+    }
 
     const pageNum = Math.max(1, Number(page) || 1)
-    const take = Math.min(Math.max(1, Number(limit) || 20), 100)
+    const take = Math.min(Math.max(1, Number(pageSize ?? rawLimit) || 20), 100)
 
     const [paymentOrders, paymentTotal] = await Promise.all([
       prisma.paymentOrder.findMany({
@@ -709,6 +727,23 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }),
       prisma.paymentOrder.count({ where }),
     ])
+
+    // 状态统计（顶部 tab 计数）
+    const statsRaw = await prisma.paymentOrder.groupBy({
+      by: ['status'],
+      where: type && type !== 'all' ? { type } : {},
+      _count: true,
+    })
+    const statsMap: Record<string, number> = {}
+    for (const s of statsRaw) statsMap[s.status] = s._count
+
+    // 批量补充用户信息（避免 N+1）
+    const userIds = [...new Set(paymentOrders.map((o: any) => o.userId))]
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, username: true, email: true, phone: true },
+    })
+    const userMap = new Map(users.map((u: any) => [u.id, u]))
 
     // 也查 rechargeOrder（VIP购买订单）
     const rechargeWhere = { ...(status && status !== 'all' ? { status } : {}) }
@@ -722,15 +757,15 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       prisma.rechargeOrder.count({ where: rechargeWhere }),
     ])
 
-    // 合并两个表的订单
-    const withUserPayment = await Promise.all(paymentOrders.map(async (o) => {
-      const user = await prisma.user.findUnique({ where: { id: o.userId }, select: { id: true, username: true, email: true } })
-      return toApiResponse({...o, user, _orderType: 'payment'}) satisfies ApiResponse<unknown>;
-    }))
+    // 合并两个表的订单（裸对象，不再逐条 toApiResponse 包装）
+    const withUserPayment = paymentOrders.map((o) => {
+      const u = userMap.get(o.userId)
+      return { ...o, user: u ? { username: u.username, email: u.email, phone: u.phone } : null, _orderType: 'payment' }
+    })
 
     const withUserRecharge = await Promise.all(rechargeOrders.map(async (o) => {
       const user = await prisma.user.findUnique({ where: { id: o.userId }, select: { id: true, username: true, email: true } })
-      return toApiResponse({...o, user, _orderType: 'recharge', orderNo: o.id}) satisfies ApiResponse<unknown>;
+      return { ...o, user, _orderType: 'recharge', orderNo: o.id }
     }))
 
     // 合并并按时间排序
@@ -738,7 +773,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, take)
 
-    return toApiResponse({orders: allOrders, total: paymentTotal + rechargeTotal, page: pageNum, totalPages: Math.ceil((paymentTotal + rechargeTotal) / take)}) satisfies ApiResponse<unknown>;
+    return toApiResponse({orders: allOrders, items: allOrders, total: paymentTotal + rechargeTotal, page: pageNum, pageSize: take, totalPages: Math.ceil((paymentTotal + rechargeTotal) / take), stats: statsMap}) satisfies ApiResponse<unknown>;
   })
 
   // ============================================================
