@@ -248,7 +248,7 @@
           <template v-else>
             <div class="panel-section-title">在线 ({{ onlineMembers.length }})</div>
             <div v-if="!onlineMembers.length" class="panel-empty">暂时没有在线茶客</div>
-            <div v-for="m in onlineMembers" :key="m.uid" class="member-item">
+            <div v-for="m in onlineMembers" :key="m.uid" class="member-item clickable" @click="openMemberCard(m, $event)">
               <div class="member-avatar">{{ (m.name || '?').slice(0, 1) }}</div>
               <div class="member-meta">
                 <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.role === 2" class="bot-badge">🤖</span></span>
@@ -257,7 +257,7 @@
             </div>
             <div class="panel-section-title">全部 ({{ members.length }})</div>
             <div v-if="!members.length" class="panel-empty">暂无成员</div>
-            <div v-for="m in members" :key="m.uid" class="member-item">
+            <div v-for="m in members" :key="m.uid" class="member-item clickable" @click="openMemberCard(m, $event)">
               <div class="member-avatar">{{ (m.name || '?').slice(0, 1) }}</div>
               <div class="member-meta">
                 <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.role === 2" class="bot-badge">🤖</span></span>
@@ -346,6 +346,29 @@
         </div>
       </Teleport>
 
+      <!-- ══ 成员头像卡片：公共频道点成员弹出，可关注 / 发消息 ══ -->
+      <Teleport to="body">
+        <div v-if="memberCard" class="member-card" :style="{ left: memberCard.x + 'px', top: memberCard.y + 'px' }" @click.stop>
+          <div class="mc-head">
+            <div class="mc-avatar">{{ (memberCard.m.name || '?').slice(0, 1) }}</div>
+            <div class="mc-meta">
+              <div class="mc-name">{{ memberCard.m.name || shortUid(memberCard.m.uid) }}
+                <span v-if="memberCard.m.role === 2" class="bot-badge">🤖</span>
+              </div>
+              <div class="mc-sub">
+                <span class="status-dot" :class="{ on: memberCard.m.status === 1 }"></span>{{ memberCard.m.status === 1 ? '在线' : '离线' }}
+                <span class="mc-platform">昆仑茶馆茶客</span>
+              </div>
+            </div>
+            <button class="mc-close" @click="closeMemberCard">✕</button>
+          </div>
+          <div class="mc-body">
+            <button class="mc-follow-btn" :class="{ following: followStatus[memberCard.m.uid] }" :disabled="followBusyId === memberCard.m.uid" @click="toggleFollowId(memberCard.m.uid)">{{ followStatus[memberCard.m.uid] ? '✓ 已关注' : '+ 关注' }}</button>
+            <button class="mc-msg-btn" @click="menuSend({ id: memberCard.m.uid, email: '', name: memberCard.m.name || shortUid(memberCard.m.uid) })">💬 发消息</button>
+          </div>
+        </div>
+      </Teleport>
+
       <!-- 好友悬浮下拉菜单：独立弹层（fixed），不撑页面 / 不触发整页滚动 -->
       <Teleport to="body">
         <div
@@ -400,6 +423,7 @@ const friendMenu = ref<{ user: any; x: number; y: number } | null>(null)
 const friendPanel = ref(false)
 const friendSearch = ref('')
 const profileUser = ref<any>(null)
+const memberCard = ref<{ m: any; x: number; y: number } | null>(null)
 
 // ══ USER-FOLLOW-01 关注体系（好友=关注） ══════════════════════
 const friendTab = ref<'following' | 'follower' | 'directory'>('following')
@@ -715,7 +739,7 @@ function toggleFriendPanel() {
 
 /** 统一页面滚动锁：面板或菜单任一打开 → 锁死 body，聊天页面纹丝不动 */
 function syncBodyLock() {
-  document.body.style.overflow = friendPanel.value || friendMenu.value ? 'hidden' : ''
+  document.body.style.overflow = friendPanel.value || friendMenu.value || memberCard.value ? 'hidden' : ''
 }
 
 /** 好友下拉菜单：定位（右侧/底部空间不足自动反弹）+ 锁定页面滚动 */
@@ -740,8 +764,35 @@ function closeFriendMenu() {
   syncBodyLock()
 }
 
+/** 成员头像卡片：公共频道点成员弹出，头像卡片内可关注/发消息 */
+function openMemberCard(m: any, e: MouseEvent) {
+  e.stopPropagation()
+  // 先查关注状态（单用户）
+  if (m.uid && followStatus[m.uid] === undefined) {
+    fetch('/api/user/follow/status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + followToken() },
+      body: JSON.stringify({ targetIds: [m.uid] }),
+    }).then((r) => r.json()).then((j) => {
+      if (j.data?.status) followStatus.value = { ...followStatus.value, ...j.data.status }
+    }).catch(() => {})
+  }
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const W = 300, H = 150
+  let x = Math.min(Math.max(8, rect.left + rect.width / 2 - W / 2), window.innerWidth - W - 8)
+  let y = rect.bottom + 8
+  if (y + H > window.innerHeight) y = Math.max(8, rect.top - H - 8)
+  memberCard.value = { m, x, y }
+  syncBodyLock()
+}
+
+function closeMemberCard() {
+  memberCard.value = null
+  syncBodyLock()
+}
+
 async function menuSend(u: any) {
   closeFriendMenu()
+  closeMemberCard()
   await openPrivate(u)
 }
 
@@ -934,11 +985,13 @@ function handleResize() {
 // 外部点击 / Esc 关闭：菜单 + 好友下拉框
 function onWindowClick() {
   closeFriendMenu()
+  closeMemberCard()
   if (friendPanel.value) toggleFriendPanel()
 }
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     closeFriendMenu()
+    closeMemberCard()
     if (friendPanel.value) toggleFriendPanel()
   }
 }
@@ -1504,6 +1557,76 @@ onBeforeUnmount(() => {
 .profile-follow-btn.following {
   background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.6);
 }
+
+/* ══ 成员头像卡片（公共频道点成员弹出） ══ */
+.member-card {
+  position: fixed;
+  z-index: 9999;
+  width: 300px;
+  background: var(--color-bg-panel, #141a2e);
+  border: 1px solid var(--color-border, #26304d);
+  border-radius: 14px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  padding: 14px;
+  animation: panel-pop 0.18s ease-out;
+}
+.mc-head {
+  display: flex; align-items: center; gap: 12px;
+}
+.mc-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, #1e5aa8, #3b82f6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: #fff; flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+.mc-meta {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;
+}
+.mc-name {
+  font-size: 15px; font-weight: 700; color: var(--color-text, #e2e8f0);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mc-sub {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--color-text-muted, #64748b);
+}
+.mc-platform {
+  font-size: 10px; padding: 1px 6px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.4);
+}
+.mc-close {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 0; background: transparent;
+  color: var(--color-text-muted, #64748b);
+  font-size: 13px; line-height: 1; cursor: pointer;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.mc-close:hover { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.mc-body {
+  display: flex; gap: 8px; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--color-border-primary, #1e293b);
+}
+.mc-follow-btn, .mc-msg-btn {
+  flex: 1;
+  border: 0; font-size: 12px; font-weight: 600;
+  padding: 8px 0; border-radius: 20px; cursor: pointer;
+  transition: all 0.15s;
+}
+.mc-follow-btn {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #141a2e;
+}
+.mc-follow-btn.following {
+  background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.6);
+}
+.mc-follow-btn:disabled { opacity: 0.5; pointer-events: none; }
+.mc-msg-btn {
+  background: rgba(59, 130, 246, 0.18); color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.mc-msg-btn:hover { background: rgba(59, 130, 246, 0.3); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block; }
+.status-dot.on { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.7); }
 .friend-panel-title {
   font-size: 13px; font-weight: 700; color: var(--color-text, #e2e8f0);
   letter-spacing: 0.02em;
