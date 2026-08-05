@@ -63,7 +63,7 @@ export default async function userAssetsRoutes(fastify: FastifyInstance) {
     const user = request.user as any
     const userId = user.id || user.userId
 
-    // 充值钻石 = 所有已支付充值订单的 coins 总和（1 元 = 100 积分）
+    // 充值钻石 = 所有已支付充值订单的 coins 总和（1 元 = 100 积分）—— 历史累计充值统计
     const paidRecharge = await prisma.paymentOrder.aggregate({
       where: { userId, status: { in: ['paid', 'approved'] } },
       _sum: { coins: true },
@@ -72,6 +72,12 @@ export default async function userAssetsRoutes(fastify: FastifyInstance) {
 
     // 收益钻石 = 礼物/创作激励（IM 方案 M5，当前无数据则 0）
     const earnDiamonds = 0
+
+    // ⭐ MEMBER-CENTER-03.4 修复：总余额必须读 membership.credits（唯一真源）
+    // 背景：旧实现 totalDiamonds = 充值订单聚合，管理员后台补发/扣回（只写真源）用户端永远看不到
+    // 真源覆盖：充值到账 / 管理员增减 / 消费扣减 / 兑换扣减 全链路
+    const membership = await prisma.membership.findUnique({ where: { userId } })
+    const totalDiamonds = membership?.credits ?? 0
 
     // 钻石兑换比例（SystemConfig 后台可配，默认 1 元 = 10 钻 → 1 钻 = 0.1 元）
     const rateCfg = await prisma.systemConfig.findUnique({ where: { key: 'diamond_exchange_rate' } })
@@ -90,7 +96,7 @@ export default async function userAssetsRoutes(fastify: FastifyInstance) {
     return toApiResponse({
       rechargeDiamonds,
       earnDiamonds,
-      totalDiamonds: rechargeDiamonds + earnDiamonds,
+      totalDiamonds,
       exchangeRate: +(1 / diamondPerYuan).toFixed(4), // 1 钻 = X 元（收益钻石可兑换）
       diamondPerYuan, // 1 元 = N 钻（充值比例，后台可配）
       logs: coinLogs.map(l => ({

@@ -2,6 +2,7 @@ import type { ApiResponse } from '../contracts/api/base.js';
 import type { MemberResponse } from '../contracts/api/routes.js';
 import { FastifyInstance } from 'fastify'
 import { requireAdmin, extractAdmin } from '../middleware/require-admin.js'
+import bcrypt from 'bcryptjs'
 import { prisma } from '../utils/index.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js'
 
@@ -1109,7 +1110,6 @@ fastify.post('/api/admin/members', { preHandler: [requireAdmin] }, async (reques
   if (!email || !password) return reply.status(400).send({ error: '邮箱和密码不能为空' })
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return reply.status(400).send({ error: '该邮箱已注册' })
-  const bcrypt = await import('bcryptjs')
   const passwordHash = await bcrypt.hash(password, 10)
   const finalUsername = username?.trim() || email.split('@')[0]
   const user = await prisma.user.create({
@@ -1117,13 +1117,15 @@ fastify.post('/api/admin/members', { preHandler: [requireAdmin] }, async (reques
       email,
       username: finalUsername,
       passwordHash,
-      coins: Number(coins) || 0,
       memberTier: tier || 'free',
+      // User 表无 coins 字段（钻石唯一真源 = membership.credits），只写 membership
       membership: { create: { tier: tier || 'free', credits: Number(coins) || 0 } },
     },
     include: { membership: true },
   })
-  return { success: true, data: user } satisfies MemberResponse;
+  // BigInt 序列化修复（membership.storageLimit 是 BigInt）
+  const serialized = JSON.parse(JSON.stringify(user, (k, v) => typeof v === 'bigint' ? Number(v) : v))
+  return { success: true, data: serialized } satisfies MemberResponse;
 })
 
 // ─── 修改会员信息 ───
@@ -1152,7 +1154,6 @@ fastify.put('/api/admin/members/:id', { preHandler: [requireAdmin] }, async (req
     })
   }
   if (password) {
-    const bcrypt = await import('bcryptjs')
     updateData.passwordHash = await bcrypt.hash(password, 10)
   }
   if (coins !== undefined) {
