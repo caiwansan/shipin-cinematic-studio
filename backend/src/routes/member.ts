@@ -812,14 +812,27 @@ export default async function memberRoutes(fastify: FastifyInstance) {
   // ---------- 后台：VIP 订单管理 ----------
 
   // 管理员获取所有 VIP 订单
+  // SPRINT-COMMERCE-SSOT-02: 新链订单在 PaymentOrder（planType=vip_*），存量在 rechargeOrder（planLevel）
+  // 两源合并展示，否则新链支付成功订单在后台永远不可见
   fastify.get("/api/admin/vip-orders", { preHandler: [requireAdmin] }, async (request: any, reply: any) => {
-    const orders = await prisma.rechargeOrder.findMany({
+    // ── 新链：PaymentOrder 订阅单（VIP 商品） ──
+    const payOrders = await prisma.paymentOrder.findMany({
+      where: {
+        type: 'subscription',
+        planType: { startsWith: 'vip_' },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    // ── 存量：rechargeOrder VIP 单 ──
+    const legacyOrders = await prisma.rechargeOrder.findMany({
       where: {
         planLevel: { not: null },
         amount: { gt: 0 },
       },
       orderBy: { createdAt: 'desc' },
     })
+
+    const orders = [...payOrders, ...legacyOrders]
 
     // 批量获取用户信息
     const userIds = [...new Set(orders.map(o => o.userId))]
@@ -829,24 +842,37 @@ export default async function memberRoutes(fastify: FastifyInstance) {
     })
     const userMap = Object.fromEntries(users.map(u => [u.id, u]))
 
-    // 获取所有套餐名
+    // 套餐名映射：PaymentOrder.planType = SubscriptionPlan.code；rechargeOrder.planLevel = memberPlan.level
+    const subPlans = await prisma.subscriptionPlan.findMany({ select: { code: true, name: true } })
+    const subPlanNameMap = Object.fromEntries(subPlans.map(p => [p.code, p.name]))
     const plans = await prisma.memberPlan.findMany({ select: { level: true, name: true } })
     const planNameMap = Object.fromEntries(plans.map(p => [p.level, p.name]))
 
-    return orders.map(o => ({
-      id: o.id,
-      userId: o.userId,
-      username: userMap[o.userId]?.username || userMap[o.userId]?.email || '未知',
-      currentTier: userMap[o.userId]?.memberTier || 'free',
-      planLevel: o.planLevel,
-      planName: planNameMap[o.planLevel || ''] || o.planLevel,
-      amount: o.amount,
-      status: o.status,
-      accountName: o.accountName,
-      payMethod: o.payMethod,
-      payTime: o.payTime,
-      createdAt: o.createdAt,
-    }))
+    const merged = orders.map(o => {
+      const isPay = 'planType' in o
+      return {
+        id: o.id,
+        userId: o.userId,
+        username: userMap[o.userId]?.username || userMap[o.userId]?.email || '未知',
+        currentTier: userMap[o.userId]?.memberTier || 'free',
+        planLevel: isPay ? o.planType : o.planLevel,
+        planName: isPay
+          ? subPlanNameMap[(o as any).planType] || (o as any).planType
+          : planNameMap[(o as any).planLevel || ''] || (o as any).planLevel,
+        amount: o.amount,
+        status: o.status,
+        accountName: isPay ? null : (o as any).accountName,
+        payMethod: isPay ? (o as any).method : (o as any).payMethod,
+        payTime: isPay ? (o as any).payTime : (o as any).payTime,
+        createdAt: o.createdAt,
+        source: isPay ? 'payment' : 'legacy',
+      }
+    })
+
+    // 按创建时间倒序合并排序
+    merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    return merged
   })
 
   // 管理员审核通过（激活 VIP）

@@ -1060,6 +1060,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   // ──────────────────────────────────────────────
   fastify.get('/api/payment/wxpay/status/:orderId', async (request, reply) => {
     const { orderId } = request.params as any
+    // SPRINT-COMMERCE-SSOT-02: 优先统一 PaymentOrder（新 VIP 链），fallback rechargeOrder（存量）
+    const payOrder = await prisma.paymentOrder.findUnique({ where: { id: orderId } })
+    if (payOrder) {
+      return { status: payOrder.status === 'paid' ? 'paid' : 'pending' }
+    }
     const order = await prisma.rechargeOrder.findUnique({ where: { id: orderId } })
     if (!order) return { status: 'error', message: '订单不存在' }
     return { status: order.status === 'paid' ? 'paid' : 'pending' }
