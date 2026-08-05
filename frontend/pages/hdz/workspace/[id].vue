@@ -215,7 +215,15 @@
             <div class="hdz-panel-header-actions">
               <button v-if="chapters.length > 0" class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="continueWriting">✏️ 续写</button>
               <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="generateOutline">🔄 生成全文大纲</button>
+              <button v-if="outlineGaps.length > 0 && !fillingGaps" class="hdz-btn hdz-btn-warning hdz-btn-xs" @click="fillOutlineGaps">🧩 补全缺失大纲（{{ outlineGaps.length }} 章）</button>
             </div>
+          </div>
+          <div v-if="outlineGaps.length > 0" class="hdz-outline-gap-bar">
+            ⚠️ 章节编号不连续：缺失第 {{ outlineGaps[0] }} - {{ outlineGaps[outlineGaps.length - 1] }} 章，点击右上角「🧩 补全缺失大纲」将从第 {{ outlineGaps[0] }} 章开始生成
+          </div>
+          <div v-if="fillingGaps" class="hdz-panel-empty">
+            <p>⏳ 正在补全缺失章节大纲（每批最多 15 章，约 1-2 分钟）...</p>
+            <p class="hdz-chat-empty-hint">生成完成后自动刷新，若缺失较多请再次点击补全</p>
           </div>
           <div v-if="chapters.length === 0" class="hdz-panel-empty">
             还没有章节，点击上方按钮或通过对话创建
@@ -3652,6 +3660,48 @@ function goToOutlinePage(page: number) {
   if (page >= 1 && page <= outlineTotalPages.value) outlinePage.value = page
 }
 
+// ---- 章节空洞检测（编号不连续） ----
+const outlineGaps = computed(() => {
+  if (!chapters.value || chapters.value.length === 0) return []
+  const nos = chapters.value.map(c => Number(c.chapterNo) || 0).filter(n => n > 0).sort((a, b) => a - b)
+  const gaps: number[] = []
+  let expected = 1
+  for (const n of nos) {
+    while (expected < n) { gaps.push(expected); expected++ }
+    expected = n + 1
+  }
+  return gaps
+})
+const fillingGaps = ref(false)
+async function fillOutlineGaps() {
+  if (outlineGaps.value.length === 0) return
+  if (fillingGaps.value) return
+  fillingGaps.value = true
+  const beforeCount = outlineGaps.value.length
+  try {
+    const res = await $api.post('/api/hdz/agent/generate', {
+      projectId: projectId.value,
+      mode: 'full',
+      userInput: `请从第 ${outlineGaps.value[0]} 章开始补全缺失的章节大纲，与已有章节剧情保持连贯。`,
+    })
+    const body = res?.data
+    if (!body?.success) throw new Error(body?.error || '补全失败')
+    // 轮询等待生成完成（最多 3 分钟）：每 10s 刷新，直到缺失数减少
+    let waited = 0
+    while (waited < 180) {
+      await new Promise(r => setTimeout(r, 10000))
+      waited += 10
+      await refreshChapters()
+      if (outlineGaps.value.length < beforeCount) break
+    }
+  } catch (e: any) {
+    console.error('补全大纲失败:', e)
+  } finally {
+    fillingGaps.value = false
+    await refreshChapters()
+  }
+}
+
 const cancellingWriting = ref(false)
 const scrollChapterRefs = ref<any[]>([])
 
@@ -5189,6 +5239,18 @@ async function showLibraryReader() {
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+/* 大纲空洞提示条 */
+.hdz-outline-gap-bar {
+  background: #fff8e6;
+  border: 1px solid #f0c36d;
+  color: #8a6d1a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
 .hdz-page-btn {
   padding: 6px 12px;

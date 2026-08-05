@@ -505,37 +505,61 @@ async function autoSaveOutlineFromChat(projectId: string, response: string): Pro
     const data = JSON.parse(jsonStr)
     if (!data?.batchCreate || !Array.isArray(data?.chapters) || data.chapters.length === 0) return
 
-    // 获取已有章节数
+    // 获取已有章节编号 → 计算第一个空洞（firstGap）
     const existing = await prisma.hdzChapter.findMany({
       where: { projectId },
       orderBy: { chapterNo: 'asc' },
       select: { chapterNo: true, title: true },
     })
     const existingNos = new Set(existing.map(c => c.chapterNo))
+    let firstGap = 1
+    while (existingNos.has(firstGap)) firstGap++
 
     let created = 0
     let skipped = 0
-    for (const ch of data.chapters) {
+    const chapters = data.chapters as any[]
+    // ★ 编号钳制：多章输出按顺序从 firstGap 连续重编号（LLM 飘号不再造成空洞）；
+    //   单章输出尊重 LLM 的 no（明确指定章节，如“写第 200 章”），已存在则跳过
+    if (chapters.length >= 2) {
+      for (let i = 0; i < chapters.length; i++) {
+        const no = firstGap + i
+        if (existingNos.has(no)) { skipped++; continue }
+        const ch = chapters[i]
+        await prisma.hdzChapter.create({
+          data: {
+            projectId,
+            chapterNo: no,
+            title: ch.title || `第${no}章`,
+            outline: ch.outline || '',
+            status: 'outline',
+            wordCount: ch.wordCount || 0,
+          },
+        })
+        created++
+        existingNos.add(no)
+      }
+    } else {
+      const ch = chapters[0]
       const no = ch.no
       if (!no || existingNos.has(no)) {
-        skipped++
-        continue
+        skipped = 1
+      } else {
+        await prisma.hdzChapter.create({
+          data: {
+            projectId,
+            chapterNo: no,
+            title: ch.title || `第${no}章`,
+            outline: ch.outline || '',
+            status: 'outline',
+            wordCount: ch.wordCount || 0,
+          },
+        })
+        created++
+        existingNos.add(no)
       }
-      await prisma.hdzChapter.create({
-        data: {
-          projectId,
-          chapterNo: no,
-          title: ch.title || `第${no}章`,
-          outline: ch.outline || '',
-          status: 'outline',
-          wordCount: ch.wordCount || 0,
-        },
-      })
-      created++
-      existingNos.add(no)
     }
 
-    console.log(`[HDZ/Batch] ✅ 对话自动创建 ${created} 章大纲（跳过 ${skipped} 章）- project=${projectId}`)
+    console.log(`[HDZ/Batch] ✅ 对话自动创建 ${created} 章大纲（跳过 ${skipped} 章，从第 ${firstGap} 章起连续编号）- project=${projectId}`)
   } catch (err: any) {
     console.error(`[HDZ/Batch] ❌ 自动创建大纲失败: ${err.message}`)
   }

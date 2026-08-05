@@ -91,7 +91,7 @@ export async function callLLM(
   llmCfg: LLMConfig,
   systemPrompt: string,
   userMessage: string,
-  options?: { maxTokens?: number; temperature?: number },
+  options?: { maxTokens?: number; temperature?: number; timeoutMs?: number },
 ): Promise<string> {
   const url = getBaseUrl(llmCfg.provider, llmCfg.baseUrl)
   // 自动转换废弃模型名（如 deepseek-chat → deepseek-v4-flash）
@@ -120,7 +120,7 @@ export async function callLLM(
         'Authorization': `Bearer ${llmCfg.apiKey}`,
       },
       body: bodyStr,
-      signal: AbortSignal.timeout(240000), // 4 分钟超时（glm-4-flash 批量 JSON 生成较慢）
+      signal: AbortSignal.timeout(options?.timeoutMs || 240000), // 默认 4 分钟超时（glm-4-flash 批量 JSON 生成较慢）
     })
   } catch (fetchErr: any) {
     console.error(`[callLLM] ❌ fetch failed: ${fetchErr.cause ? JSON.stringify(fetchErr.cause) : fetchErr.message}`)
