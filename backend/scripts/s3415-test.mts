@@ -88,7 +88,9 @@ if (!DEV_KEY || !DEV_ENABLED) {
     input: { messages: [{ role: 'user', content: '回复 OK 两个字母' }] },
   })
   check('PR1 调用成功', r.status === 'success', { status: r.status, error: r.error })
-  check('PR1 有输出内容', !!r.output?.content, r.output?.content?.slice(0, 50))
+  // deepseek provider 返回 { text }; 兼容 content/text 两种形态
+  const outputText = r.output?.content || r.output?.text || ''
+  check('PR1 有输出内容', outputText.length > 0, outputText.slice(0, 60))
   check('PR1 provider = deepseek', r.model?.provider === 'deepseek', r.model)
 
   const log = await prisma.invocationLog.findFirst({
