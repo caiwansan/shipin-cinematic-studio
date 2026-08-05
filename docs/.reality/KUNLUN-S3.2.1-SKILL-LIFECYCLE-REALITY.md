@@ -2,7 +2,7 @@
 
 > S3.2.1 Skill Lifecycle Adapter — Reality Gate
 > 日期: 2026-08-06 04:45 (CST) | 状态: ✅ **SL1-SL5 全 PASS**
-> 提交: feat(skill): add lifecycle adapter
+> 提交: a7de3c36（feat: add lifecycle adapter）+ 4ee63e32（fix: tsc clean）
 > 定位: **Skill 拥有真实生命周期状态（只读），仍不执行**
 
 ---
