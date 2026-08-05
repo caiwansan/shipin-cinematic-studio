@@ -338,7 +338,7 @@ async function refreshApps() {
 
 function launchApp(slug, entry) {
   const url = `${WORKSPACE_BASE}${entry || '/workspace/media'}`;
-  invoke('open_workspace', { url, access_token: creds.access_token });
+  invoke('open_workspace', { url });
 }
 
 // ── 插件授权状态 + 本地运行时（ECO-11.3）────────────────────

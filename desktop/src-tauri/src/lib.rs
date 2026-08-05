@@ -104,7 +104,6 @@ fn open_workspace(
     app: tauri::AppHandle,
     diag: tauri::State<diag::Diag>,
     url: String,
-    access_token: Option<String>,
 ) -> Result<(), String> {
     // 域名白名单：只允许昆仑镜线上域（本地调试可放行 127.0.0.1:3000）
     let allowed = ["https://aigc.fushtn.com", "http://127.0.0.1:3000", "http://localhost:3000"];
@@ -114,7 +113,7 @@ fn open_workspace(
     }
     diag.log("webview", &format!("open_workspace -> {}", url));
     let workspace_app = app.clone();
-    let webview = WebviewWindowBuilder::new(
+    let _webview = WebviewWindowBuilder::new(
         &app,
         "workspace",
         WebviewUrl::External(url.parse::<tauri::Url>().map_err(|e| e.to_string())?),
@@ -151,24 +150,6 @@ fn open_workspace(
     .build()
     .map_err(|e| e.to_string())?;
 
-    // 注入 token（保持原有业务时机不变：build 后立即 eval）
-    // RCA-02：记录注入时间点与载荷长度（安全：绝不落 token 明文）
-    if let Some(token) = access_token {
-        let diag = app.state::<diag::Diag>();
-        diag.log(
-            "webview",
-            &format!("workspace token inject: begin len={}", token.len()),
-        );
-        let js = format!(
-            "window.__KUNLUN_DESKTOP__={{}}; localStorage.setItem('auth_token','{}');",
-            token
-        );
-        webview.eval(&js).map_err(|e| e.to_string())?;
-        diag.log(
-            "webview",
-            &format!("workspace token inject: eval dispatched len={}", token.len()),
-        );
-    }
     Ok(())
 }
 
