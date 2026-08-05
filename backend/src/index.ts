@@ -553,6 +553,7 @@ await app.register(projectV2Routes)
   // ═══════════════════════════════════════════════════════════
   await app.register((await import('./routes/ecology-partner.routes.js')).registerEcologyPartnerRoutes, { prefix: '/api/ecosystem' })
   await app.register((await import('./routes/ecology-registry.routes.js')).registerEcologyRegistryRoutes, { prefix: '/api/ecosystem' })
+  await app.register((await import('./routes/hermes-audit.routes.js')).registerHermesAuditRoutes)
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
   // ═══════════════════════════════════════════════════════════
