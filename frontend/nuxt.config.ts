@@ -7,7 +7,7 @@ const BUILD_VERSION = process.env.BUILD_VERSION || `dev-${Date.now()}`
 const BUILD_TIME = process.env.BUILD_TIME || new Date().toISOString()
 
 export default defineNuxtConfig({
-  ssr: false,
+  ssr: true,
   telemetry: false,
   css: [
     '~/assets/styles/enterprise-tokens.css',
@@ -36,6 +36,8 @@ export default defineNuxtConfig({
     },
     routeRules: {
       '/login': { redirect: '/' },
+      // 桌面端旧工作台：浏览器访问降级为 client-only（SSR 渲染会访问 window.electronAPI 直接 500）
+      '/studio/v2': { ssr: false },
 
       // 📍 SSOT Route Redirect Phase 1 — unified in middleware/enterprise-redirect.global.ts
       // FRONTEND-RECRUITMENT-ENTRY-CONSOLIDATION-01 SubTask 1: Nuxt config redirects removed,
@@ -48,10 +50,33 @@ export default defineNuxtConfig({
           'X-Frame-Options': 'DENY',
           'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
           'Referrer-Policy': 'no-referrer-when-downgrade',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
           'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https: https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com https://dashscope-result-wlcb.oss-cn-wulanchabu.aliyuncs.com; connect-src 'self' https://aigc.fushtn.com http://127.0.0.1:* ws://127.0.0.1:*; font-src 'self' data:; object-src 'none'; frame-ancestors 'none';",
+        },
+      },
+      // 📄 HTML 页面 — 允许爬虫缓存
+      '/': {
+        headers: {
+          'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+        },
+      },
+      '/about': {
+        headers: {
+          'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+        },
+      },
+      '/pricing': {
+        headers: {
+          'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+        },
+      },
+      '/community': {
+        headers: {
+          'Cache-Control': 'public, max-age=300, s-maxage=3600',
+        },
+      },
+      '/community/post/**': {
+        headers: {
+          'Cache-Control': 'public, max-age=300, s-maxage=3600',
         },
       },
     },
@@ -164,6 +189,20 @@ export default defineNuxtConfig({
         { rel: 'apple-touch-icon', href: '/logo.png' },
       ],
       script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: '昆仑镜',
+            description: 'AI 短剧制作平台',
+            url: 'https://aigc.fushtn.com',
+            logo: 'https://aigc.fushtn.com/logo.png',
+            sameAs: [
+              'https://aigc.fushtn.com',
+            ],
+          }),
+        },
         {
           src: '/__tc-bridge.js?v=' + BUILD_VERSION,
           type: 'text/javascript',

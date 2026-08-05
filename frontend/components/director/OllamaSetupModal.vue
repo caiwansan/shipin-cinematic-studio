@@ -140,7 +140,7 @@ const localModelCards = reactive([
 // 桌面版直连本地 127.0.0.1:11434，不走后端代理（后端在云服务器上）
 async function checkOllama() {
   try {
-    const isDesktop = Boolean((window as any).electronAPI)
+    const isDesktop = typeof window !== 'undefined' && Boolean((window as any).electronAPI)
 
     if (isDesktop) {
       // 桌面版：直接请求本地 Ollama
@@ -161,7 +161,7 @@ async function checkOllama() {
       }
 
       // 桌面版 Electron 安装检测
-      const installResult = await (window as any).electronAPI.ollamaInstallCheck()
+      const installResult = await (window as any)?.electronAPI?.ollamaInstallCheck()
       ollamaInstalled.value = installResult.installed
     }
 
