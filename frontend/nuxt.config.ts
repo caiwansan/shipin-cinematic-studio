@@ -38,6 +38,10 @@ export default defineNuxtConfig({
       '/login': { redirect: '/' },
       // 桌面端旧工作台：浏览器访问降级为 client-only（SSR 渲染会访问 window.electronAPI 直接 500）
       '/studio/v2': { ssr: false },
+      // 小说工作台：登录后使用的旧工作台，SSR 无 SEO 价值且自身存在 hydration mismatch → client-only
+      '/hdz': { ssr: false },
+      // 商城：商品数据客户端 API 加载，SSR 无 SEO 收益；登录态恢复会造成 hydration mismatch → client-only
+      '/mall': { ssr: false },
 
       // 📍 SSOT Route Redirect Phase 1 — unified in middleware/enterprise-redirect.global.ts
       // FRONTEND-RECRUITMENT-ENTRY-CONSOLIDATION-01 SubTask 1: Nuxt config redirects removed,
