@@ -57,6 +57,19 @@
         </div>
       </div>
 
+      <!-- 财务/钻石兑换 -->
+      <div class="border-t border-[#1A2240] pt-4">
+        <h3 class="text-xs text-white/60 font-medium mb-3">💎 钻石兑换比例</h3>
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label class="text-[11px] text-gray-500 block mb-1.5">充值比例（1 元 = N 钻石）</label>
+            <input v-model="cfg.diamond_exchange_rate" type="number" min="1" max="10000"
+              class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/80 focus:outline-none focus:border-blue-500/50" />
+            <p class="text-[9px] text-gray-700 mt-1">默认 10（1:10）。影响充值钻石发放、档位展示与兑换汇率（1 钻 = {{ (1 / Math.max(1, Number(cfg.diamond_exchange_rate) || 10)).toFixed(2) }} 元）</p>
+          </div>
+        </div>
+      </div>
+
       <!-- ICP -->
       <div class="border-t border-[#1A2240] pt-4">
         <h3 class="text-xs text-white/60 font-medium mb-3">ICP 备案信息</h3>
@@ -152,6 +165,7 @@ const cfg = reactive<Record<string, string>>({
   site_intro: '', site_logo: '/logo.png', site_favicon: '/favicon.ico',
   site_domain: '', og_image: '', icp_beian: '', icp_license: '',
   icp_company: '', icp_business: '', icp_copyright: '',
+  diamond_exchange_rate: '10',
   seo_title: '', seo_keywords: '', seo_description: '',
   seo_robots: '', seo_sitemap_urls: '', seo_verify_baidu: '', seo_verify_google: '',
 })

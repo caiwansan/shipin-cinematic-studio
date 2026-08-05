@@ -31,6 +31,9 @@ export const SYSTEM_CONFIG_DEFAULTS: Record<string, { group: string; value: stri
   icp_business: { group: 'site', value: '' },
   icp_copyright: { group: 'site', value: '' },
   og_image: { group: 'site', value: '' },
+  // ── 财务/钻石兑换 ──
+  // 钻石兑换比例：1 元 = N 钻石（掌柜 2026-08-06 定调 1:10，后台可改）
+  diamond_exchange_rate: { group: 'site', value: '10' },
   // ── seo 设置 ──
   seo_title: { group: 'seo', value: '昆仑镜 – AI 短剧创作平台' },
   seo_keywords: { group: 'seo', value: '昆仑镜, AI, 短剧, 创作平台' },
@@ -65,7 +68,12 @@ export async function getSystemConfig(group?: string): Promise<Record<string, st
 export async function saveSystemConfig(body: Record<string, string>, updatedBy?: string): Promise<void> {
   for (const [key, rawValue] of Object.entries(body)) {
     if (!KEY_GROUPS[key]) continue // 白名单过滤
-    const value = String(rawValue ?? '')
+    let value = String(rawValue ?? '')
+    // 钻石兑换比例：强制 1~10000 的正整数（防 0/负数/非数字）
+    if (key === 'diamond_exchange_rate') {
+      const n = Math.floor(Number(value))
+      value = String(Number.isFinite(n) ? Math.min(Math.max(n, 1), 10000) : 10)
+    }
     await prisma.systemConfig.upsert({
       where: { key },
       update: { value, group: KEY_GROUPS[key], updatedBy },

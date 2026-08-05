@@ -22,13 +22,13 @@
       </div>
 
       <div class="diamond-tip">
-        💡 充值钻石用于红包/礼物等消费，不可提现；收益钻石（礼物分成 65%）可兑换余额（1 钻石 = 0.1 元）
+        💡 充值钻石用于红包/礼物等消费，不可提现；收益钻石（礼物分成 65%）可兑换余额（1 钻石 = {{ (1 / diamondPerYuan).toFixed(2) }} 元）
       </div>
 
       <!-- 充值钻石卡 -->
       <div class="recharge-section">
         <h2 class="section-title">⚡ 充值钻石</h2>
-        <p class="section-sub">1 元 = 100 钻石 · 微信 / 支付宝扫码支付</p>
+        <p class="section-sub">1 元 = {{ diamondPerYuan }} 钻石 · 微信 / 支付宝扫码支付</p>
 
         <!-- 金额档位 -->
         <div class="amount-grid">
@@ -36,7 +36,7 @@
             @click="selectedAmount = opt.amount; currentOrder = null; payMsg = ''"
             :class="['amount-card', selectedAmount === opt.amount ? 'amount-card--active' : '']">
             <span class="amount-card-price">¥{{ opt.amount }}</span>
-            <span class="amount-card-coins">+{{ opt.coins.toLocaleString() }} 钻</span>
+            <span class="amount-card-coins">+{{ (opt.amount * diamondPerYuan).toLocaleString() }} 钻</span>
             <span v-if="opt.popular" class="amount-card-badge">推荐</span>
           </button>
         </div>
@@ -138,15 +138,16 @@ const token = () => { try { return window.localStorage?.getItem('auth_token') ||
 const diamonds = ref<any>({ totalDiamonds: 0, rechargeDiamonds: 0, earnDiamonds: 0 })
 const logs = ref<any[]>([])
 const loading = ref(true)
+const diamondPerYuan = ref(10) // 1 元 = N 钻（后台 SystemConfig 可配，默认 1:10）
 
 // 充值状态
 const rechargeOptions = [
-  { amount: 10, coins: 1000, popular: false },
-  { amount: 30, coins: 3000, popular: true },
-  { amount: 50, coins: 5000, popular: false },
-  { amount: 100, coins: 11000, popular: false },
-  { amount: 200, coins: 22000, popular: false },
-  { amount: 500, coins: 60000, popular: false },
+  { amount: 10, popular: false },
+  { amount: 30, popular: true },
+  { amount: 50, popular: false },
+  { amount: 100, popular: false },
+  { amount: 200, popular: false },
+  { amount: 500, popular: false },
 ]
 const payMethods = ref<any[]>([])
 const selectedMethod = ref('')
@@ -180,6 +181,7 @@ async function loadDiamonds() {
       const data = await res.json()
       diamonds.value = data.data || {}
       logs.value = diamonds.value.logs || []
+      if (diamonds.value.diamondPerYuan) diamondPerYuan.value = diamonds.value.diamondPerYuan
     }
   } catch (e) {
     console.warn('[Diamonds] failed', e)

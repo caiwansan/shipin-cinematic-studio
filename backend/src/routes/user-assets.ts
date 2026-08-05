@@ -73,6 +73,10 @@ export default async function userAssetsRoutes(fastify: FastifyInstance) {
     // 收益钻石 = 礼物/创作激励（IM 方案 M5，当前无数据则 0）
     const earnDiamonds = 0
 
+    // 钻石兑换比例（SystemConfig 后台可配，默认 1 元 = 10 钻 → 1 钻 = 0.1 元）
+    const rateCfg = await prisma.systemConfig.findUnique({ where: { key: 'diamond_exchange_rate' } })
+    const diamondPerYuan = Math.max(1, Number(rateCfg?.value || 10) || 10)
+
     // 流水（最近充值 + 消费）
     const [coinLogs, coinTotal] = await Promise.all([
       prisma.coinLog.findMany({
@@ -87,7 +91,8 @@ export default async function userAssetsRoutes(fastify: FastifyInstance) {
       rechargeDiamonds,
       earnDiamonds,
       totalDiamonds: rechargeDiamonds + earnDiamonds,
-      exchangeRate: 0.1, // 1 钻石 = 0.1 元（收益钻石可兑换）
+      exchangeRate: +(1 / diamondPerYuan).toFixed(4), // 1 钻 = X 元（收益钻石可兑换）
+      diamondPerYuan, // 1 元 = N 钻（充值比例，后台可配）
       logs: coinLogs.map(l => ({
         id: l.id,
         amount: l.amount,

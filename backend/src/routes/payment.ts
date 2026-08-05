@@ -290,8 +290,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: '该支付方式未启用' })
     }
 
-    // 汇率：1元 = 100积分（钻石）
-    const coins = Math.floor(amount * 100)
+    // 钻石兑换比例：1 元 = N 钻（SystemConfig.diamond_exchange_rate，后台可配，默认 10 = 1:10）
+    const rateCfg = await prisma.systemConfig.findUnique({ where: { key: 'diamond_exchange_rate' } })
+    const diamondRate = Math.max(1, Number(rateCfg?.value || 10) || 10)
+    const coins = Math.floor(amount * diamondRate)
 
     // 创建订单
     const order = await prisma.paymentOrder.create({
@@ -439,13 +441,15 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     // 创建支付订单（统一 PaymentOrder，planType = productCode）
     const amount = plan.price || 9.9
     const orderNo = generateOrderNo()
+    const rateCfg = await prisma.systemConfig.findUnique({ where: { key: 'diamond_exchange_rate' } })
+    const diamondRate = Math.max(1, Number(rateCfg?.value || 10) || 10)
     const order = await prisma.paymentOrder.create({
       data: {
         userId,
         orderNo,
         type: 'subscription',
         amount,
-        coins: Math.floor(amount * 100),
+        coins: Math.floor(amount * diamondRate),
         method: validMethod,
         status: 'pending',
         planType: productCode,
