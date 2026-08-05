@@ -37,7 +37,7 @@
             <div>
               <label class="text-[10px] text-gray-500 block mb-1">API V3 密钥</label>
               <div class="flex gap-2">
-                <input v-model="wechat.apiV3KeyDisplay" type="password" placeholder="API v3 Key" class="flex-1 bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50" />
+                <input v-model="wechatV3KeyDisplay" type="password" placeholder="API v3 Key" class="flex-1 bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50" />
                 <button @click="toggleWechatV3KeyEdit" class="px-2 py-1 text-[10px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-lg hover:bg-indigo-500/20 transition-all whitespace-nowrap cursor-pointer">
                   {{ wechatV3KeyEditing ? '取消' : '编辑' }}
                 </button>
