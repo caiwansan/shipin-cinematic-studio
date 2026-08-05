@@ -58,7 +58,7 @@ export interface SkillLifecycleSource {
   license: {
     status: string
     licenseType: string
-    expireAt: string
+    expireAt: string | null
   } | null
 }
 
