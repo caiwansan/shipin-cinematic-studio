@@ -3,7 +3,7 @@
     <div v-if="toastMsg" class="tea-toast">{{ toastMsg }}</div>
     <!-- 顶栏 -->
     <header class="tea-header">
-      <div class="tea-brand">
+      <div class="tea-brand" @click="goHome" title="返回首页">
         <span class="tea-logo">🍵</span>
         <div class="tea-title-wrap">
           <h1 class="tea-title">昆仑茶馆</h1>
@@ -542,6 +542,11 @@ async function handleSend() {
   }
 }
 
+function goHome() {
+  // 顶栏 logo / 标题 → 返回首页（工作台）
+  if (typeof window !== 'undefined') window.location.href = '/'
+}
+
 function handleDisconnect() {
   tea.disconnect()
 }
@@ -665,7 +670,8 @@ onBeforeUnmount(() => {
   top: 0;
   z-index: 10;
 }
-.tea-brand { display: flex; align-items: center; gap: 12px; }
+.tea-brand { display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 10px; padding: 4px 8px; margin-left: -8px; transition: background 0.2s; }
+.tea-brand:hover { background: rgba(124, 92, 52, 0.1); }
 .tea-logo {
   font-size: 26px;
   width: 46px; height: 46px;
