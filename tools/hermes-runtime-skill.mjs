@@ -55,9 +55,27 @@ const TOOL_REGISTRY = {
     if (op === 'mul') return { ok: true, result: { value: Number(a) * Number(b) } }
     return { ok: false, error: 'UNSUPPORTED_OP' }
   },
+  // ── S3.3.2 测试工具（Test Harness 专用, 无真实业务）──
+  // mock.flaky: 同一 (invocationId:runId) 首次调用 transient 失败, 之后成功（SC7 retry 验证）
+  'mock.flaky': (input = {}, ctx = {}) => {
+    const key = `${ctx.invocationId || 'inv'}:${input.runId || 'run'}`
+    if (flakySeen.has(key)) {
+      return { ok: true, result: { flaky: false, note: 'succeeded after retry' } }
+    }
+    flakySeen.add(key)
+    return { ok: false, error: 'TRANSIENT_FAILURE' }
+  },
+  // mock.slow: 延迟 input.sleepMs 后成功（SC8 timeout 验证）
+  'mock.slow': async (input = {}) => {
+    const sleepMs = Math.min(Number(input.sleepMs) || 0, 20000)
+    await new Promise((r) => setTimeout(r, sleepMs))
+    return { ok: true, result: { sleptMs: sleepMs } }
+  },
 }
 
 const H_D_DENIED = ['payment.*', 'identity.modify', 'registry.write', 'native.exec']
+// S3.3.2: mock.flaky 首次失败记忆（Test Harness）
+const flakySeen = new Set()
 
 function policyDenied(tool, allowedTools) {
   if (!Array.isArray(allowedTools) || allowedTools.length === 0) return true
@@ -98,7 +116,7 @@ const server = createServer((req, res) => {
   if (req.method === 'POST' && url.pathname === '/invocations') {
     let body = ''
     req.on('data', (c) => (body += c))
-    req.on('end', () => {
+    req.on('end', async () => {
       let inv
       try { inv = JSON.parse(body) } catch { inv = null }
       if (!inv || !inv.invocationId || !inv.skillId || !Array.isArray(inv.policy?.allowedTools)) {
@@ -123,8 +141,8 @@ const server = createServer((req, res) => {
         return
       }
 
-      // ── 执行（mock 沙箱）──
-      const out = TOOL_REGISTRY[tool](inv.input || {})
+      // ── 执行（mock 沙箱, 支持 async 工具）──
+      const out = await TOOL_REGISTRY[tool](inv.input || {}, { invocationId: inv.invocationId })
       const completed = {
         status: 'COMPLETED',
         executionId,

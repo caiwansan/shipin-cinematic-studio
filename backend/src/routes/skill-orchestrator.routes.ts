@@ -33,6 +33,10 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
         employeeDefinitionId: body.employeeDefinitionId ?? null,
         steps: body.steps,
         fallback: body.fallback,
+        timeoutMs: body.timeoutMs,
+        deadlineMs: body.deadlineMs,
+        retry: body.retry,
+        maxParallel: body.maxParallel,
       })
       if (result.errors.length) {
         return reply.code(400).send({ error: 'INVALID_PLAN', errors: result.errors })
