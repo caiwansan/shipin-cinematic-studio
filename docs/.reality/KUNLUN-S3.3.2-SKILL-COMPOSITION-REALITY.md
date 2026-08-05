@@ -58,7 +58,7 @@ steps 明细: { stepId, skillId, tool, status, errorType, failureReason, attempt
 result:    { skillSet, fallback, timeoutMs, deadlineMs, retry, maxParallel, planDurationMs, failureReason }
 ```
 
-## 5. Reality Test SC7-SC11（实测 22 PASS / 0 FAIL）
+## 5. Reality Test SC7-SC11（实测 21 PASS / 0 FAIL）
 
 | # | 关卡 | 判定 | 证据 |
 |---|---|---|---|
