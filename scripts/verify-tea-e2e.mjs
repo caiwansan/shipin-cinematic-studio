@@ -152,7 +152,7 @@ const panelRes = await send('Runtime.evaluate', {
 const panel = panelRes?.result?.value || {}
 console.log('📐 三栏结构:', JSON.stringify(panel, null, 2))
 
-// 10. 切好友 tab → 点第一个好友开私聊
+// 10. 切好友 tab → 点好友 → 应弹独立下拉菜单（不再直接切中栏）
 const friendRes = await send('Runtime.evaluate', {
   expression: `(() => {
     const tabs = [...document.querySelectorAll('.panel-tab')];
@@ -174,8 +174,8 @@ const friendListRes = await send('Runtime.evaluate', {
 })
 console.log('👥 好友列表:', JSON.stringify(friendListRes?.result?.value || {}))
 
-// 11. 点第一个好友开私聊 → 中栏切换 → 发消息
-const openDmRes = await send('Runtime.evaluate', {
+// 11b. 点第一个好友 → 验证弹出独立菜单（body 滚动锁定 + fixed 弹层）
+const openMenuRes = await send('Runtime.evaluate', {
   expression: `(() => {
     const item = document.querySelector('.tea-panel .member-item.clickable');
     if (!item) return { ok: false, reason: '无好友可点' };
@@ -184,44 +184,113 @@ const openDmRes = await send('Runtime.evaluate', {
   })()`,
   returnByValue: true,
 })
-console.log('📋 点好友开私聊:', JSON.stringify(openDmRes?.result?.value || {}))
+await sleep(600)
+const menuRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const menu = document.querySelector('.friend-menu');
+    if (!menu) return { menu: false, bodyOverflow: document.body.style.overflow };
+    const style = getComputedStyle(menu);
+    const rect = menu.getBoundingClientRect();
+    const items = [...menu.querySelectorAll('.friend-menu-item')].map(b => b.textContent.trim());
+    const name = menu.querySelector('.friend-menu-name')?.textContent?.trim() || '';
+    return {
+      menu: true,
+      name,
+      items,
+      position: style.position,
+      inBody: menu.parentElement === document.body,
+      left: Math.round(rect.left), top: Math.round(rect.top),
+      bodyOverflow: document.body.style.overflow,
+      chatHead: document.querySelector('.chat-head-name')?.textContent?.trim() || '',
+    };
+  })()`,
+  returnByValue: true,
+})
+const menu = menuRes?.result?.value || {}
+console.log('🍵 好友菜单:', JSON.stringify(menu, null, 2))
+
+// 11c. 菜单点「💬 发消息」→ 进入私聊
+const menuClickSend = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const btn = [...document.querySelectorAll('.friend-menu-item')].find(b => b.textContent.includes('发消息'));
+    if (!btn) return { ok: false, reason: '无发消息按钮' };
+    btn.click();
+    return { ok: true };
+  })()`,
+  returnByValue: true,
+})
 await sleep(3500)
 const dmStateRes = await send('Runtime.evaluate', {
   expression: `(() => {
     const head = document.querySelector('.chat-head-name')?.textContent?.trim() || '';
-    const dms = [...document.querySelectorAll('.side-group .channel-item')].map(i => i.querySelector('.channel-name')?.textContent?.trim() || '');
-    const peerCard = !!document.querySelector('.peer-card');
-    return { chatHead: head, dms, peerCard };
+    const menuGone = !document.querySelector('.friend-menu');
+    const unlocked = document.body.style.overflow === '';
+    return { chatHead: head, menuGone, unlocked };
   })()`,
   returnByValue: true,
 })
-console.log('💬 私聊状态:', JSON.stringify(dmStateRes?.result?.value || {}))
+console.log('💬 发消息后:', JSON.stringify(dmStateRes?.result?.value || {}))
 
-const dmSendRes = await send('Runtime.evaluate', {
+// 11d. 回好友 tab 再点 → 菜单点「👤 查看资料」→ 右栏资料卡
+await send('Runtime.evaluate', {
   expression: `(() => {
-    const ta = document.querySelector('.msg-input');
-    if (!ta) return { ok: false, reason: '无输入框' };
-    ta.value = '🤝 E2E私聊：悄悄话测试';
-    ta.dispatchEvent(new Event('input', { bubbles: true }));
-    return { ok: true };
+    const tabs = [...document.querySelectorAll('.panel-tab')];
+    tabs.find(t => t.textContent.trim() === '好友')?.click();
+    return 'ok';
   })()`,
   returnByValue: true,
 })
 await sleep(800)
 await send('Runtime.evaluate', {
-  expression: `document.querySelector('.tea-btn.primary')?.click(); 'clicked'`,
+  expression: `document.querySelector('.tea-panel .member-item.clickable')?.click(); 'ok'`,
   returnByValue: true,
 })
-await sleep(4000)
-const dmAfterRes = await send('Runtime.evaluate', {
+await sleep(600)
+const menuProfileRes = await send('Runtime.evaluate', {
   expression: `(() => {
-    const rows = [...document.querySelectorAll('.msg-row')];
-    const texts = rows.map(r => r.querySelector('.msg-content')?.textContent?.trim() || '');
-    return { msgCount: rows.length, last: texts.slice(-1)[0] };
+    const btn = [...document.querySelectorAll('.friend-menu-item')].find(b => b.textContent.includes('查看资料'));
+    if (!btn) return { ok: false, reason: '无查看资料按钮' };
+    btn.click();
+    return { ok: true };
   })()`,
   returnByValue: true,
 })
-console.log('📤 私聊发送后:', JSON.stringify(dmAfterRes?.result?.value || {}))
+await sleep(800)
+const profileRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const card = document.querySelector('.peer-card');
+    const activeTab = [...document.querySelectorAll('.panel-tab')].find(t => t.classList.contains('active'))?.textContent?.trim();
+    return {
+      card: !!card,
+      cardName: card?.querySelector('.peer-name')?.textContent?.trim() || '',
+      activeTab,
+      chatHead: document.querySelector('.chat-head-name')?.textContent?.trim() || '',
+    };
+  })()`,
+  returnByValue: true,
+})
+console.log('👤 查看资料后:', JSON.stringify(profileRes?.result?.value || {}))
+
+// 11e. Esc 关闭菜单验证：再点好友 → Esc → 菜单消失 + 滚动解锁
+await send('Runtime.evaluate', {
+  expression: `document.querySelector('.tea-panel .member-item.clickable')?.click(); 'ok'`,
+  returnByValue: true,
+})
+await sleep(600)
+const escRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const menuOpen = !!document.querySelector('.friend-menu');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    return { menuOpen };
+  })()`,
+  returnByValue: true,
+})
+await sleep(400)
+const escAfter = await send('Runtime.evaluate', {
+  expression: `(() => ({ menuGone: !document.querySelector('.friend-menu'), unlocked: document.body.style.overflow === '' }))()`,
+  returnByValue: true,
+})
+console.log('🛡 Esc关闭:', JSON.stringify(escRes?.result?.value || {}), '→', JSON.stringify(escAfter?.result?.value || {}))
 
 ws.close()
 chrome.kill()

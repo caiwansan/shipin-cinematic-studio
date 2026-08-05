@@ -142,9 +142,19 @@
           <button class="panel-tab" :class="{ active: rightTab === 'friends' }" @click="rightTab = 'friends'">好友</button>
         </div>
 
-        <!-- 成员 tab：私聊显示对方资料卡，频道显示成员列表 -->
+        <!-- 成员 tab：资料卡（好友菜单查看资料） > 私聊资料卡 > 频道成员列表 -->
         <div v-if="rightTab === 'members'" class="panel-body">
-          <template v-if="currentChannel && currentChannel.kind === 'dm'">
+          <template v-if="profileUser">
+            <div class="peer-card">
+              <div class="peer-avatar">{{ profileUser.name.slice(0, 1) }}</div>
+              <div class="peer-name">{{ profileUser.name }}</div>
+              <div class="peer-sub">{{ profileUser.email || '平台茶客 · 茶馆名录' }}</div>
+              <div class="peer-badge" :class="{ online: profileUser.online }">
+                <span class="status-dot"></span>{{ profileUser.online ? '在线' : '离线' }}
+              </div>
+            </div>
+          </template>
+          <template v-else-if="currentChannel && currentChannel.kind === 'dm'">
             <div class="peer-card">
               <div class="peer-avatar">{{ (peerInfo?.name || currentChannel.name || '?').slice(0, 1) }}</div>
               <div class="peer-name">{{ peerInfo?.name || currentChannel.name }}</div>
@@ -176,7 +186,7 @@
           </template>
         </div>
 
-        <!-- 好友 tab：用户列表（点 → 开私聊） -->
+        <!-- 好友 tab：用户列表（点 → 悬浮菜单：发消息 / 查看资料） -->
         <div v-else class="panel-body">
           <div class="panel-section-title">茶客名录 ({{ users.length }})</div>
           <div v-if="!users.length" class="panel-empty">暂时没有其他茶客</div>
@@ -185,7 +195,7 @@
             :key="u.id"
             class="member-item clickable"
             :class="{ active: currentChannel?.kind === 'dm' && currentChannel.peerUid === u.id }"
-            @click="openPrivate(u)"
+            @click="openFriendMenu(u, $event)"
           >
             <div class="member-avatar">{{ u.name.slice(0, 1) }}</div>
             <div class="member-meta">
@@ -197,6 +207,29 @@
           </div>
         </div>
       </aside>
+
+      <!-- 好友悬浮下拉菜单：独立弹层（fixed），不撑页面 / 不触发整页滚动 -->
+      <Teleport to="body">
+        <div
+          v-if="friendMenu"
+          class="friend-menu"
+          :style="{ left: friendMenu.x + 'px', top: friendMenu.y + 'px' }"
+          @click.stop
+        >
+          <div class="friend-menu-head">
+            <div class="friend-menu-avatar">{{ friendMenu.user.name.slice(0, 1) }}</div>
+            <div class="friend-menu-meta">
+              <div class="friend-menu-name">{{ friendMenu.user.name }}</div>
+              <div class="friend-menu-sub">
+                <span class="mini-dot" :class="{ on: friendMenu.user.online }"></span>
+                {{ friendMenu.user.online ? '在线' : (friendMenu.user.email || '离线') }}
+              </div>
+            </div>
+          </div>
+          <button class="friend-menu-item" @click="menuSend(friendMenu.user)">💬 发消息</button>
+          <button class="friend-menu-item" @click="menuProfile(friendMenu.user)">👤 查看资料</button>
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -223,6 +256,8 @@ const msgListRef = ref<HTMLElement | null>(null)
 const search = ref('')
 const rightTab = ref<'members' | 'friends'>('members')
 const rightPanelOpen = ref(true)
+const friendMenu = ref<{ user: any; x: number; y: number } | null>(null)
+const profileUser = ref<any>(null)
 
 const displayMessages = computed(() => messages.value)
 const onlineMembers = computed(() => members.value.filter((m) => m.status === 1))
@@ -319,6 +354,7 @@ async function loadHistory() {
 }
 
 async function switchChannel(ch: any) {
+  profileUser.value = null
   currentChannel.value = ch
   messages.value = []
   members.value = []
@@ -326,7 +362,7 @@ async function switchChannel(ch: any) {
   scrollBottom()
 }
 
-/** 点好友 → 创建/复用私聊频道 → 切到中栏 */
+/** 点好友 → 创建/复用私聊频道 → 切到中栏（资料卡保留同人） */
 async function openPrivate(u: any) {
   const data = await tea.ensurePrivate(u.id)
   if (!data) return
@@ -346,6 +382,36 @@ async function openPrivate(u: any) {
   members.value = []
   await loadHistory()
   scrollBottom()
+}
+
+/** 好友下拉菜单：定位（右侧/底部空间不足自动反弹）+ 锁定页面滚动 */
+function openFriendMenu(u: any, e: MouseEvent) {
+  // 关键：阻止本次 click 继续冒泡到 window 关闭监听器（否则菜单刚打开就被自己关掉）
+  e.stopPropagation()
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const MENU_W = 190
+  const MENU_H = 138
+  let x = Math.min(rect.left, window.innerWidth - MENU_W - 8)
+  let y = rect.bottom + 6
+  if (y + MENU_H > window.innerHeight) y = Math.max(8, rect.top - MENU_H - 6)
+  friendMenu.value = { user: u, x, y }
+  document.body.style.overflow = 'hidden'
+}
+
+function closeFriendMenu() {
+  friendMenu.value = null
+  document.body.style.overflow = ''
+}
+
+async function menuSend(u: any) {
+  closeFriendMenu()
+  await openPrivate(u)
+}
+
+function menuProfile(u: any) {
+  closeFriendMenu()
+  profileUser.value = u
+  rightTab.value = 'members'
 }
 
 async function handleSend() {
@@ -378,6 +444,14 @@ function handleResize() {
   }
 }
 
+// 菜单外部点击 / Esc 关闭
+function onWindowClick() {
+  closeFriendMenu()
+}
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeFriendMenu()
+}
+
 onMounted(async () => {
   tea.onMessage((msg: any) => {
     const ch = currentChannel.value
@@ -397,10 +471,16 @@ onMounted(async () => {
   }
   handleResize()
   window.addEventListener('resize', handleResize)
+  // 点好友弹独立菜单：外部点击 / Esc 关闭
+  window.addEventListener('click', onWindowClick)
+  window.addEventListener('keydown', onKeydown)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('click', onWindowClick)
+  window.removeEventListener('keydown', onKeydown)
+  closeFriendMenu()
 })
 </script>
 
@@ -622,6 +702,46 @@ onBeforeUnmount(() => {
 .bot-badge { font-size: 11px; }
 .mini-dot { width: 6px; height: 6px; border-radius: 50%; background: #64748b; display: inline-block; margin-right: 4px; }
 .mini-dot.on { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.7); }
+
+/* 好友悬浮下拉菜单：独立弹层（fixed），不撑页面 / 不触发整页滚动 */
+.friend-menu {
+  position: fixed;
+  z-index: 9999;
+  width: 190px;
+  background: var(--color-bg-panel, #141a2e);
+  border: 1px solid var(--color-border, #26304d);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  padding: 8px;
+  animation: menu-pop 0.15s ease-out;
+}
+@keyframes menu-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.friend-menu-head {
+  display: flex; gap: 9px; align-items: center;
+  padding: 4px 8px 9px;
+  border-bottom: 1px solid var(--color-border, #26304d);
+  margin-bottom: 6px;
+}
+.friend-menu-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #b45309);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; flex-shrink: 0;
+}
+.friend-menu-meta { min-width: 0; }
+.friend-menu-name { font-size: 13px; font-weight: 600; color: var(--color-text, #e2e8f0); }
+.friend-menu-sub { font-size: 11px; color: var(--color-text-muted, #64748b); margin-top: 2px; }
+.friend-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; text-align: left;
+  padding: 8px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--color-text, #e2e8f0);
+  font-size: 13px; cursor: pointer;
+}
+.friend-menu-item:hover { background: rgba(59, 130, 246, 0.15); }
 
 /* 私聊资料卡 */
 .peer-card {
