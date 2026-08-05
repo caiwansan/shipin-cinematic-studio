@@ -67,7 +67,7 @@ export default async function walletRoutes(fastify: FastifyInstance) {
 
     // 查已有
     const existing = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT id FROM "AgentWithdraw" WHERE "userId" = $1 AND "accountType" IN ('alipay','wechat') AND status = 'active' LIMIT 1`,
+      `SELECT id FROM "AgentWithdraw" WHERE "userId" = $1::uuid AND "accountType" IN ('alipay','wechat') AND status = 'active' LIMIT 1`,
       userId
     )
 
@@ -80,7 +80,7 @@ export default async function walletRoutes(fastify: FastifyInstance) {
     } else {
       // 插入
       await prisma.$executeRawUnsafe(
-        `INSERT INTO "AgentWithdraw" ("userId", "amount", "accountType", "accountName", "accountNo", "qrCodeUrl", "status") VALUES ($1, 0, $2, $3, $4, $5, 'active')`,
+        `INSERT INTO "AgentWithdraw" ("id", "userId", "amount", "accountType", "accountName", "accountNo", "qrCodeUrl", "status") VALUES (gen_random_uuid(), $1::uuid, 0, $2, $3, $4, $5, 'active')`,
         userId, accountType, accountName, accountNo || '', qrCodeUrl || ''
       )
     }
@@ -92,7 +92,7 @@ export default async function walletRoutes(fastify: FastifyInstance) {
   fastify.get('/api/wallet/account', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const userId = request.user.id
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT "accountType", "accountName", "accountNo", "qrCodeUrl" FROM "AgentWithdraw" WHERE "userId" = $1 AND status = 'active' LIMIT 1`,
+      `SELECT "accountType", "accountName", "accountNo", "qrCodeUrl" FROM "AgentWithdraw" WHERE "userId" = $1::uuid AND status = 'active' LIMIT 1`,
       userId
     )
     return { success: true, data: rows && rows.length > 0 ? rows[0] : null }
@@ -119,7 +119,7 @@ export default async function walletRoutes(fastify: FastifyInstance) {
 
     // 查是否绑定了收款账号
     const accountRows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT "accountType", "accountName" FROM "AgentWithdraw" WHERE "userId" = $1 AND status = 'active' LIMIT 1`,
+      `SELECT "accountType", "accountName" FROM "AgentWithdraw" WHERE "userId" = $1::uuid AND status = 'active' LIMIT 1`,
       userId
     )
     const account = accountRows && accountRows.length > 0 ? accountRows[0] : null
@@ -131,11 +131,11 @@ export default async function walletRoutes(fastify: FastifyInstance) {
     try {
       const result = await prisma.$transaction([
         prisma.$executeRawUnsafe(
-          `UPDATE "User" SET "walletBalance" = "walletBalance" - $1 WHERE id = $2 AND "walletBalance" >= $1`,
+          `UPDATE "User" SET "wallet_balance" = "wallet_balance" - $1 WHERE id = $2::uuid AND "wallet_balance" >= $1`,
           withdrawAmount, userId
         ),
         prisma.$executeRawUnsafe(
-          `INSERT INTO "AgentWithdraw" ("userId", "amount", "accountType", "accountName", "accountNo", "qrCodeUrl", "status") VALUES ($1, $2, $3, $4, '', '', 'pending')`,
+          `INSERT INTO "AgentWithdraw" ("id", "userId", "amount", "accountType", "accountName", "accountNo", "qrCodeUrl", "status") VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, '', '', 'pending')`,
           userId, withdrawAmount, account.accountType, account.accountName
         ),
       ])
@@ -172,12 +172,12 @@ export default async function walletRoutes(fastify: FastifyInstance) {
 
     await prisma.$transaction([
       prisma.$executeRawUnsafe(
-        `UPDATE "User" SET "walletBalance" = "walletBalance" - $1, "memberTier" = $2, "memberExpiresAt" = $3 WHERE id = $4`,
+        `UPDATE "User" SET "wallet_balance" = "wallet_balance" - $1, "memberTier" = $2, "memberExpiresAt" = $3 WHERE id = $4::uuid`,
         price, plan.level, expiresAt, userId
       ),
       prisma.$executeRawUnsafe(
         `INSERT INTO "PaymentOrder" ("userId", "orderNo", "type", "amount", "coins", "method", "status", "planType", "payTime", "remark") ` +
-        `VALUES ($1, $2, 'credit', $3, 0, 'wallet', 'paid', $4, NOW(), '钱包余额支付')`,
+        `VALUES ($1::uuid, $2, 'credit', $3, 0, 'wallet', 'paid', $4, NOW(), '钱包余额支付')`,
         userId, `WALLET_${Date.now()}_${userId.substring(0, 8)}`, price, plan.level
       ),
     ])

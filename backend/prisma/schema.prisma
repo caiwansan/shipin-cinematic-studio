@@ -36,6 +36,7 @@ model User {
   alipayBoundAt         DateTime?              @map("alipay_bound_at") // MEMBER-CENTER-02 支付宝绑定时间
   memberTier            String                 @default("free")
   memberExpiresAt       DateTime?
+  walletBalance         Float                  @default(0) @map("wallet_balance") // MEMBER-CENTER-03 可提现余额（推广佣金）
   createdAt             DateTime               @default(now())
   wechatOpenId          String?                @unique
   tokenVersion          Int                    @default(1)
@@ -1866,7 +1867,10 @@ model AgentWithdraw {
   id          String    @id @default(uuid())
   userId      String    @db.Uuid
   amount      Float
+  accountType String    @default("") // MEMBER-CENTER-03 收款类型 alipay/wechat
   accountName String    @default("")
+  accountNo   String    @default("") // MEMBER-CENTER-03 收款账号
+  qrCodeUrl   String    @default("") // MEMBER-CENTER-03 收款码
   status      String    @default("pending")
   remark      String    @default("")
   createdAt   DateTime  @default(now())

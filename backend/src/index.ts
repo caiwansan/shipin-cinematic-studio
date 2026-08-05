@@ -20,6 +20,7 @@ import communityPostRoutes from './routes/community/posts.js'
 import communityCommentRoutes from './routes/community/comments.js'
 import communityLikeRoutes from './routes/community/likes.js'
 import authRoutes from './routes/auth.js'
+import walletRoutes from './routes/wallet.js'
 import captchaRoutes from './routes/captcha.js'
 import smsRoutes from './routes/sms.js'
 import smsAuthRoutes from './routes/sms-auth.js'
@@ -282,6 +283,7 @@ async function main() {
 
   // Register routes
   await app.register(authRoutes)
+  await app.register(walletRoutes)
   registerSSEStream(app)
   await app.register(systemVersionRoutes)
   await app.register(imRoutes)
@@ -565,6 +567,7 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/skill-catalog.routes.js')).registerSkillCatalogRoutes)
   await app.register((await import('./routes/skill-lifecycle.routes.js')).registerSkillLifecycleRoutes)
   await app.register((await import('./routes/skill-execution.routes.js')).registerSkillExecutionRoutes)
+  await app.register((await import('./routes/skill-orchestrator.routes.js')).registerSkillOrchestratorRoutes)
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
   // ═══════════════════════════════════════════════════════════

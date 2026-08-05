@@ -137,7 +137,7 @@
           <span class="module-arrow">→</span>
         </router-link>
 
-        <router-link to="/user/wallet" class="member-module">
+        <div class="member-module" style="cursor:pointer" @click="openWallet">
           <div class="module-icon-area" style="background: rgba(16,185,129,0.12);">
             <span class="module-icon">💰</span>
           </div>
@@ -146,7 +146,7 @@
             <p class="module-desc">收益余额 · 提现 · 绑卡</p>
           </div>
           <span class="module-arrow">→</span>
-        </router-link>
+        </div>
 
         <router-link to="/user/diamonds" class="member-module">
           <div class="module-icon-area" style="background: rgba(59,130,246,0.12);">
@@ -280,6 +280,112 @@
       </div>
     </div>
   </div>
+
+  <!-- MEMBER-CENTER-03 我的余额弹窗：钱包 / 充值 / 提现设置 / 余额明细 -->
+  <teleport to="body">
+    <div v-if="walletOpen" class="wallet-modal-mask" @click.self="walletOpen = false">
+      <div class="wallet-modal">
+        <div class="wallet-modal-head">
+          <h2 class="wallet-modal-title">💰 我的钱包</h2>
+          <button class="wallet-modal-close" @click="walletOpen = false">✕</button>
+        </div>
+
+        <!-- Tab 导航 -->
+        <div class="wallet-tabs">
+          <button class="wallet-tab" :class="{ active: walletTab === 'wallet' }" @click="walletTab = 'wallet'">钱包</button>
+          <button class="wallet-tab" :class="{ active: walletTab === 'withdraw' }" @click="walletTab = 'withdraw'">提现设置</button>
+          <button class="wallet-tab" :class="{ active: walletTab === 'detail' }" @click="walletTab = 'detail'">余额明细</button>
+        </div>
+
+        <!-- Tab 1 钱包总览 -->
+        <div v-if="walletTab === 'wallet'" class="wallet-tab-pane">
+          <div class="wallet-balance-card">
+            <p class="wallet-balance-label">当前可提现余额</p>
+            <p class="wallet-balance-value">¥{{ walletBalance.toFixed(2) }}</p>
+            <p class="wallet-balance-sub">收益佣金实时结算 · 满 ¥100 可提现</p>
+          </div>
+          <div class="wallet-quick-actions">
+            <button class="wallet-quick-btn primary" @click="goRecharge">⚡ 充值钻石</button>
+            <button class="wallet-quick-btn" @click="goUpgrade">👑 升级VIP</button>
+          </div>
+          <div class="wallet-tip">
+            💡 充值请前往「我的钻石」；升级会员请前往「我的VIP」。本页余额为推广佣金收益，可提现至支付宝/微信。
+          </div>
+        </div>
+
+        <!-- Tab 2 提现设置 -->
+        <div v-if="walletTab === 'withdraw'" class="wallet-tab-pane">
+          <div class="wallet-section-title">收款账号</div>
+          <div v-if="paymentAccount" class="wallet-account-bound">
+            <span class="wallet-account-type">{{ paymentAccount.accountType === 'alipay' ? '支付宝' : '微信' }}</span>
+            <span class="wallet-account-name">{{ paymentAccount.accountName }}</span>
+            <span class="wallet-account-no">{{ maskAccountNo(paymentAccount.accountNo) }}</span>
+            <button class="wallet-link-btn" @click="bindFormOpen = !bindFormOpen">修改</button>
+          </div>
+          <div v-else class="wallet-account-empty" @click="bindFormOpen = true">
+            未绑定收款账号，点击绑定 →
+          </div>
+          <div v-if="bindFormOpen" class="wallet-bind-form">
+            <div class="wallet-form-row">
+              <select v-model="bindForm.accountType" class="wallet-input">
+                <option value="alipay">支付宝</option>
+                <option value="wechat">微信</option>
+              </select>
+            </div>
+            <div class="wallet-form-row">
+              <input v-model="bindForm.accountName" class="wallet-input" placeholder="收款人真实姓名" />
+            </div>
+            <div class="wallet-form-row">
+              <input v-model="bindForm.accountNo" class="wallet-input" placeholder="收款账号（支付宝账号/微信手机号）" />
+            </div>
+            <div class="wallet-form-row">
+              <button class="wallet-btn full" :disabled="binding" @click="saveBindAccount">
+                {{ binding ? '保存中...' : '保存收款账号' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="wallet-section-title">申请提现</div>
+          <div class="wallet-form-row">
+            <input v-model.number="withdrawAmount" type="number" min="100" class="wallet-input" placeholder="提现金额（≥ ¥100）" />
+          </div>
+          <div class="wallet-form-row">
+            <button class="wallet-btn full primary" :disabled="withdrawing" @click="submitWithdraw">
+              {{ withdrawing ? '提交中...' : '确认提现' }}
+            </button>
+          </div>
+          <p v-if="withdrawMsg" class="wallet-msg">{{ withdrawMsg }}</p>
+        </div>
+
+        <!-- Tab 3 余额明细 -->
+        <div v-if="walletTab === 'detail'" class="wallet-tab-pane">
+          <div class="wallet-section-title">佣金收入</div>
+          <div v-if="walletData.commissions.length" class="wallet-list">
+            <div v-for="c in walletData.commissions" :key="c.id" class="wallet-list-item">
+              <div class="wallet-list-main">
+                <p class="wallet-list-title">{{ c.title || '推广佣金' }}</p>
+                <p class="wallet-list-sub">{{ formatTime(c.createdAt) }}</p>
+              </div>
+              <span class="wallet-list-amount plus">+¥{{ Number(c.amount || 0).toFixed(2) }}</span>
+            </div>
+          </div>
+          <div v-else class="wallet-empty">暂无佣金收入</div>
+
+          <div class="wallet-section-title">提现记录</div>
+          <div v-if="walletData.withdraws.length" class="wallet-list">
+            <div v-for="w in walletData.withdraws" :key="w.id" class="wallet-list-item">
+              <div class="wallet-list-main">
+                <p class="wallet-list-title">提现 ¥{{ Number(w.amount || 0).toFixed(2) }}</p>
+                <p class="wallet-list-sub">{{ formatTime(w.createdAt) }} · {{ withdrawStatusLabel(w.status) }}</p>
+              </div>
+              <span class="wallet-list-amount">-¥{{ Number(w.amount || 0).toFixed(2) }}</span>
+            </div>
+          </div>
+          <div v-else class="wallet-empty">暂无提现记录</div>
+        </div>
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
@@ -416,6 +522,119 @@ function goHome() {
 
 function handlePlaceholder(msg: string) {
   alert(msg)
+}
+
+// MEMBER-CENTER-03 我的余额弹窗
+const walletOpen = ref(false)
+const walletTab = ref<'wallet' | 'withdraw' | 'detail'>('wallet')
+const walletBalance = ref(0)
+const walletData = ref<{ commissions: any[]; withdraws: any[] }>({ commissions: [], withdraws: [] })
+const paymentAccount = ref<any>(null)
+const bindFormOpen = ref(false)
+const bindForm = ref({ accountType: 'alipay', accountName: '', accountNo: '' })
+const binding = ref(false)
+const withdrawing = ref(false)
+const withdrawAmount = ref<number | null>(null)
+const withdrawMsg = ref('')
+
+function _token() { try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' } }
+
+async function loadWallet() {
+  const token = _token()
+  if (!token) return
+  try {
+    const [walletRes, accountRes] = await Promise.all([
+      fetch('/api/wallet', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/wallet/account', { headers: { Authorization: `Bearer ${token}` } }),
+    ])
+    if (walletRes.ok) {
+      const d = await walletRes.json()
+      if (d.success && d.data) {
+        walletBalance.value = Number(d.data.balance || 0)
+        walletData.value = {
+          commissions: d.data.commissions || [],
+          withdraws: d.data.withdraws || [],
+        }
+      }
+    }
+    if (accountRes.ok) {
+      const d = await accountRes.json()
+      if (d.success && d.data) paymentAccount.value = d.data
+    }
+  } catch (e) { console.warn('[WalletModal] load failed', e) }
+}
+
+function openWallet() {
+  walletOpen.value = true
+  walletTab.value = 'wallet'
+  withdrawMsg.value = ''
+  loadWallet()
+}
+
+function goRecharge() { router.push('/user/diamonds') }
+function goUpgrade() { router.push('/user/membership') }
+
+function maskAccountNo(no?: string) {
+  if (!no || no.length < 4) return no || ''
+  return no.slice(0, 2) + '****' + no.slice(-2)
+}
+
+async function saveBindAccount() {
+  if (!bindForm.value.accountName || bindForm.value.accountName.length < 2) {
+    alert('请填写收款人真实姓名')
+    return
+  }
+  binding.value = true
+  try {
+    const res = await fetch('/api/wallet/bind-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token()}` },
+      body: JSON.stringify(bindForm.value),
+    })
+    const d = await res.json()
+    if (!res.ok) { alert(d.error || '保存失败'); return }
+    paymentAccount.value = { ...bindForm.value }
+    bindFormOpen.value = false
+    alert('收款账号已保存 ✅')
+  } catch (e: any) {
+    alert('保存失败: ' + (e.message || ''))
+  } finally { binding.value = false }
+}
+
+async function submitWithdraw() {
+  withdrawMsg.value = ''
+  const amount = Number(withdrawAmount.value)
+  if (!amount || amount < 100) { withdrawMsg.value = '提现金额不能小于 ¥100'; return }
+  if (amount > walletBalance.value) { withdrawMsg.value = '余额不足'; return }
+  if (!paymentAccount.value) { withdrawMsg.value = '请先绑定收款账号'; walletTab.value = 'withdraw'; return }
+  withdrawing.value = true
+  try {
+    const res = await fetch('/api/wallet/withdraw', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token()}` },
+      body: JSON.stringify({ amount }),
+    })
+    const d = await res.json()
+    if (!res.ok) { withdrawMsg.value = d.error || '提现失败'; return }
+    withdrawMsg.value = '提现申请已提交 ✅ 等待管理员审核打款'
+    withdrawAmount.value = null
+    loadWallet()
+  } catch (e: any) {
+    withdrawMsg.value = '提现失败: ' + (e.message || '')
+  } finally { withdrawing.value = false }
+}
+
+function formatTime(t?: string) {
+  if (!t) return ''
+  try {
+    const d = new Date(t)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  } catch { return '' }
+}
+
+function withdrawStatusLabel(s?: string) {
+  const map: Record<string, string> = { pending: '待审核', paid: '已打款', rejected: '已驳回', active: '绑定中' }
+  return map[s || ''] || s || ''
 }
 
 onMounted(async () => {
@@ -1194,5 +1413,257 @@ onMounted(async () => {
 .agent-panel-loading {
   padding: 16px 0;
   text-align: center;
+}
+
+/* MEMBER-CENTER-03 我的余额弹窗 */
+.wallet-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.wallet-modal {
+  width: 480px;
+  max-width: 100%;
+  max-height: 84vh;
+  overflow-y: auto;
+  background: #12141d;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  padding: 22px;
+}
+.wallet-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.wallet-modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.92);
+  margin: 0;
+}
+.wallet-modal-close {
+  background: rgba(255,255,255,0.06);
+  border: none;
+  color: rgba(255,255,255,0.6);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.wallet-modal-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.wallet-tabs {
+  display: flex;
+  gap: 6px;
+  background: rgba(255,255,255,0.05);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.wallet-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.wallet-tab.active {
+  background: rgba(16,185,129,0.18);
+  color: #34d399;
+  font-weight: 600;
+}
+.wallet-tab-pane { min-height: 220px; }
+.wallet-balance-card {
+  background: linear-gradient(135deg, rgba(16,185,129,0.22), rgba(16,185,129,0.06));
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.wallet-balance-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin: 0 0 6px;
+}
+.wallet-balance-value {
+  font-size: 34px;
+  font-weight: 800;
+  color: #34d399;
+  margin: 0 0 6px;
+}
+.wallet-balance-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  margin: 0;
+}
+.wallet-quick-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.wallet-quick-btn {
+  flex: 1;
+  padding: 11px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.wallet-quick-btn:hover { background: rgba(255,255,255,0.1); }
+.wallet-quick-btn.primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+}
+.wallet-quick-btn.primary:hover { opacity: 0.9; }
+.wallet-tip {
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.wallet-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  margin: 14px 0 8px;
+}
+.wallet-account-bound {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 12px;
+}
+.wallet-account-type {
+  background: rgba(16,185,129,0.2);
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.wallet-account-name { font-size: 13px; color: rgba(255,255,255,0.9); }
+.wallet-account-no { font-size: 12px; color: rgba(255,255,255,0.45); }
+.wallet-link-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #60a5fa;
+  font-size: 12px;
+  cursor: pointer;
+}
+.wallet-account-empty {
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  cursor: pointer;
+}
+.wallet-account-empty:hover { border-color: rgba(16,185,129,0.4); color: #34d399; }
+.wallet-bind-form {
+  margin-top: 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 12px;
+}
+.wallet-form-row { margin-bottom: 10px; }
+.wallet-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.9);
+  font-size: 13px;
+  outline: none;
+}
+.wallet-input:focus { border-color: rgba(16,185,129,0.5); }
+.wallet-input::placeholder { color: rgba(255,255,255,0.3); }
+.wallet-btn {
+  width: 100%;
+  padding: 11px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  cursor: pointer;
+}
+.wallet-btn.full { width: 100%; }
+.wallet-btn.primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+}
+.wallet-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.wallet-msg {
+  font-size: 12px;
+  color: #fbbf24;
+  margin: 8px 0 0;
+}
+.wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wallet-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.wallet-list-main { min-width: 0; }
+.wallet-list-title {
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+  margin: 0 0 2px;
+}
+.wallet-list-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  margin: 0;
+}
+.wallet-list-amount {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  margin-left: 10px;
+}
+.wallet-list-amount.plus { color: #34d399; }
+.wallet-list-amount:not(.plus) { color: rgba(255,255,255,0.6); }
+.wallet-empty {
+  text-align: center;
+  color: rgba(255,255,255,0.35);
+  font-size: 12px;
+  padding: 20px 0;
 }
 </style>
