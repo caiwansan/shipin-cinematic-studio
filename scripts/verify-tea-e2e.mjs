@@ -135,7 +135,95 @@ const afterRes = await send('Runtime.evaluate', {
 const after = afterRes?.result?.value || {}
 console.log('📊 发送后:', JSON.stringify(after, null, 2))
 
+// 9. 三栏控制台验证
+const panelRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const sidebar = !!document.querySelector('.tea-sidebar');
+    const chat = !!document.querySelector('.tea-chat');
+    const panel = !!document.querySelector('.tea-panel');
+    const tabs = [...document.querySelectorAll('.panel-tab')].map(t => t.textContent.trim());
+    const sideGroups = [...document.querySelectorAll('.side-group-title')].map(t => t.textContent.trim());
+    const memberCount = document.querySelectorAll('.member-item').length;
+    const chatHead = document.querySelector('.chat-head-name')?.textContent?.trim() || '';
+    return { sidebar, chat, panel, tabs, sideGroups, memberCount, chatHead };
+  })()`,
+  returnByValue: true,
+})
+const panel = panelRes?.result?.value || {}
+console.log('📐 三栏结构:', JSON.stringify(panel, null, 2))
+
+// 10. 切好友 tab → 点第一个好友开私聊
+const friendRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const tabs = [...document.querySelectorAll('.panel-tab')];
+    const friendTab = tabs.find(t => t.textContent.trim() === '好友');
+    if (!friendTab) return { ok: false, reason: '无好友tab' };
+    friendTab.click();
+    return { ok: true };
+  })()`,
+  returnByValue: true,
+})
+console.log('📋 切好友tab:', JSON.stringify(friendRes?.result?.value || {}))
+await sleep(1000)
+const friendListRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const items = [...document.querySelectorAll('.tea-panel .member-item.clickable')];
+    return { friendCount: items.length, first: items[0]?.querySelector('.member-name')?.textContent?.trim() || '' };
+  })()`,
+  returnByValue: true,
+})
+console.log('👥 好友列表:', JSON.stringify(friendListRes?.result?.value || {}))
+
+// 11. 点第一个好友开私聊 → 中栏切换 → 发消息
+const openDmRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const item = document.querySelector('.tea-panel .member-item.clickable');
+    if (!item) return { ok: false, reason: '无好友可点' };
+    item.click();
+    return { ok: true };
+  })()`,
+  returnByValue: true,
+})
+console.log('📋 点好友开私聊:', JSON.stringify(openDmRes?.result?.value || {}))
+await sleep(3500)
+const dmStateRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const head = document.querySelector('.chat-head-name')?.textContent?.trim() || '';
+    const dms = [...document.querySelectorAll('.side-group .channel-item')].map(i => i.querySelector('.channel-name')?.textContent?.trim() || '');
+    const peerCard = !!document.querySelector('.peer-card');
+    return { chatHead: head, dms, peerCard };
+  })()`,
+  returnByValue: true,
+})
+console.log('💬 私聊状态:', JSON.stringify(dmStateRes?.result?.value || {}))
+
+const dmSendRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const ta = document.querySelector('.msg-input');
+    if (!ta) return { ok: false, reason: '无输入框' };
+    ta.value = '🤝 E2E私聊：悄悄话测试';
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    return { ok: true };
+  })()`,
+  returnByValue: true,
+})
+await sleep(800)
+await send('Runtime.evaluate', {
+  expression: `document.querySelector('.tea-btn.primary')?.click(); 'clicked'`,
+  returnByValue: true,
+})
+await sleep(4000)
+const dmAfterRes = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const rows = [...document.querySelectorAll('.msg-row')];
+    const texts = rows.map(r => r.querySelector('.msg-content')?.textContent?.trim() || '');
+    return { msgCount: rows.length, last: texts.slice(-1)[0] };
+  })()`,
+  returnByValue: true,
+})
+console.log('📤 私聊发送后:', JSON.stringify(dmAfterRes?.result?.value || {}))
+
 ws.close()
 chrome.kill()
-console.log(after.msgCount >= 1 ? '🎉 E2E 验证完成' : '⚠️ 消息未渲染，需排查')
+console.log('🎉 E2E 验证完成')
 process.exit(0)

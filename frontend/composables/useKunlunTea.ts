@@ -1,4 +1,5 @@
 // useKunlunTea.ts — 昆仑茶馆 IM 连接 composable（client-only，SDK 动态加载防 SSR 崩溃）
+// P1.2：三栏控制台数据（频道分组 / 成员 / 私聊 / 用户 / 在线状态上报）
 import { ref, computed } from 'vue'
 
 // 带登录态的 fetch（localStorage auth_token → Authorization）
@@ -11,6 +12,7 @@ function authFetch(input: string, init?: RequestInit): Promise<Response> {
       ''
   }
   const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
     ...((init?.headers as Record<string, string>) || {}),
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -66,9 +68,33 @@ export function useKunlunTea() {
     sdk.config.token = token
     userId.value = uid
 
+    // SDK provider：频道成员列表走昆仑镜 API（WuKongIM v1.2.6 无订阅者查询接口）
+    try {
+      if (sdk.config.provider) {
+        sdk.config.provider.channelInfoCallback = async (ch: any) => {
+          return { channel: ch, name: ch.channelID === 'kl_public_tea' ? '昆仑茶馆 · 大堂' : '', avatar: '' }
+        }
+        sdk.config.provider.syncSubscribersCallback = async (ch: any, _version: number) => {
+          const res = await authFetch(`/api/im/channels/${encodeURIComponent(ch.channelID)}/members?type=${ch.channelType}`)
+          const json = await res.json()
+          const members = json.success ? (json.data?.members || []) : []
+          return members.map((m: any) => ({
+            ...m,
+            channel: sdk.newChannel(m.channel.channelID, m.channel.channelType),
+          }))
+        }
+        sdk.config.provider.syncConversationsCallback = async () => []
+      }
+    } catch (e) {
+      console.warn('[昆仑茶馆] provider 配置失败（非致命）', e)
+    }
+
     // 连接状态监听
     sdk.connectManager.addConnectStatusListener((st: number) => {
       status.value = st
+      // 连接/断开 → 上报在线状态（fire-and-forget）
+      if (st === CONNECT_STATUS.Connected) reportPresence(true)
+      if (st === CONNECT_STATUS.Disconnect) reportPresence(false)
     })
     // 消息监听
     if (messageHandler) {
@@ -79,6 +105,7 @@ export function useKunlunTea() {
 
   async function disconnect() {
     if (!sdk) return
+    reportPresence(false)
     sdk.disconnect()
     status.value = 0
   }
@@ -100,12 +127,51 @@ export function useKunlunTea() {
   async function loadHistory(channelId: string, channelType: number, startSeq = 0, limit = 50) {
     const res = await authFetch('/api/im/messages/history', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ channelId, channelType, startSeq, limit, pullMode: 1 }),
     })
     const json = await res.json()
     return json.success ? (json.data?.messages || []) : []
   }
 
-  return { status, userId, connected, connecting, statusLabel, connect, disconnect, onMessage, sendText, loadHistory }
+  /** 频道列表（三栏左栏：公共频道 / 我的频道 / 最近私聊） */
+  async function loadChannels() {
+    const res = await authFetch('/api/im/channels')
+    const json = await res.json()
+    return json.success ? json.data : { public: [], groups: [], dms: [] }
+  }
+
+  /** 频道成员列表 */
+  async function loadMembers(channelId: string, channelType: number) {
+    const res = await authFetch(`/api/im/channels/${encodeURIComponent(channelId)}/members?type=${channelType}`)
+    const json = await res.json()
+    return json.success ? (json.data?.members || []) : []
+  }
+
+  /** 创建/复用私聊频道 */
+  async function ensurePrivate(peerUid: string) {
+    const res = await authFetch('/api/im/channels/ensure-private', {
+      method: 'POST',
+      body: JSON.stringify({ peerUid }),
+    })
+    const json = await res.json()
+    return json.success ? json.data : null
+  }
+
+  /** 用户列表（右栏好友 tab） */
+  async function loadUsers(q = '') {
+    const res = await authFetch(`/api/im/users${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+    const json = await res.json()
+    return json.success ? (json.data?.users || []) : []
+  }
+
+  /** 在线状态上报 */
+  async function reportPresence(online: boolean) {
+    try {
+      await authFetch('/api/im/presence', { method: 'POST', body: JSON.stringify({ online }) })
+    } catch (e) {
+      /* 非致命 */
+    }
+  }
+
+  return { status, userId, connected, connecting, statusLabel, connect, disconnect, onMessage, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, reportPresence }
 }

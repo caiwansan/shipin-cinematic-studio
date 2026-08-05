@@ -10506,3 +10506,32 @@ model ImTokenSession {
   @@index([expireAt])
   @@map("im_token_session")
 }
+
+// ─────────────────────────────────────────────────────────────
+// SPRINT-IM-CHA-02 — 昆仑茶馆三栏控制台 — 频道成员 + 在线状态
+// 用途：WuKongIM v1.2.6 无订阅者查询 API，成员列表由业务侧维护
+//       （SDK provider.syncSubscribersCallback 从本表拉取）；
+//       在线状态由前端 SDK 连接事件上报（避免 protobuf webhook 解析）
+model ImChannelMember {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  channelId   String   @map("channel_id") @db.Text
+  channelType Int      @map("channel_type")
+  uid         String   @db.Text
+  role        Int      @default(0) // 0 成员 / 1 管理员 / 2 机器人
+  name        String   @default("") @db.Text
+  avatar      String   @default("") @db.Text
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  @@unique([channelId, channelType, uid])
+  @@index([channelId, channelType])
+  @@index([uid])
+  @@map("im_channel_members")
+}
+
+model ImUserPresence {
+  uid       String   @id @db.Text
+  online    Boolean  @default(false)
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@map("im_user_presence")
+}
