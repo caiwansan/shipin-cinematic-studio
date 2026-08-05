@@ -1,5 +1,6 @@
 <template>
   <div class="tea-page">
+    <div v-if="toastMsg" class="tea-toast">{{ toastMsg }}</div>
     <!-- 顶栏 -->
     <header class="tea-header">
       <div class="tea-brand">
@@ -312,7 +313,10 @@ function renderMsg(msg: any) {
     else if (msg.content.content) text = msg.content.content
   } else if (msg.payload) {
     try {
-      const decoded = JSON.parse(atob(msg.payload))
+      // 正确 UTF-8 解码（atob 返回 latin1 字符串会导致中文乱码 →「刷新后消息不见」）
+      const bin = atob(msg.payload)
+      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+      const decoded = JSON.parse(new TextDecoder().decode(bytes))
       text = decoded.content || ''
     } catch {
       text = ''
@@ -448,6 +452,40 @@ function menuProfile(u: any) {
   rightTab.value = 'members'
 }
 
+// 发送送达追踪：SDK send 返回本地消息（messageSeq=0），服务端 Sendack 回执（clientSeq + reasonCode）
+// 才是真正送达确认；超时未收到回执 = 连接异常静默丢消息 → toast 提示
+const pendingSends = new Map<number, { clientSeq: number; clientMsgNo: string; warnTimer: ReturnType<typeof setTimeout> }>()
+const toastMsg = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+function showToast(text: string) {
+  toastMsg.value = text
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastMsg.value = ''
+  }, 4000)
+}
+
+function trackSend(clientSeq: number, clientMsgNo: string, text: string) {
+  const warnTimer = setTimeout(() => {
+    if (pendingSends.has(clientSeq)) {
+      pendingSends.delete(clientSeq)
+      // 静默丢失：恢复草稿方便重试 + toast 提示（不再假装已发出）
+      if (!draft.value) draft.value = text
+      showToast('⚠ 消息可能未送达（网络不稳定），草稿已保留，请重试')
+    }
+  }, 4000)
+  pendingSends.set(clientSeq, { clientSeq, clientMsgNo, warnTimer })
+}
+
+function markDelivered(clientSeq: number) {
+  const p = pendingSends.get(clientSeq)
+  if (p) {
+    clearTimeout(p.warnTimer)
+    pendingSends.delete(clientSeq)
+  }
+}
+
 async function handleSend() {
   const text = draft.value.trim()
   if (!text || !tea.connected.value || !currentChannel.value) return
@@ -455,9 +493,14 @@ async function handleSend() {
   try {
     const msg = await tea.sendText(text, currentChannel.value.id, currentChannel.value.type)
     messages.value.push({ ...msg, key: msgKey(msg) })
+    // clientSeq 在 SDK 本地消息对象上（send 返回的 message），Sendack 用它配对
+    const clientSeq = msg.clientSeq ?? (msg as any).clientSeq
+    if (typeof clientSeq === 'number') trackSend(clientSeq, msg.clientMsgNo || '', text)
     scrollBottom()
   } catch (e) {
     console.error('[昆仑茶馆] 发送失败', e)
+    draft.value = text
+    showToast('⚠ 发送失败，草稿已保留')
   }
 }
 
@@ -500,6 +543,19 @@ onMounted(async () => {
     messages.value.push({ ...msg, key: msgKey(msg) })
     scrollBottom()
   })
+  // 发送回执：reasonCode=0 送达；非 0 或超时 → 提示
+  tea.onSendStatus((p: any) => {
+    const clientSeq = p?.clientSeq
+    if (typeof clientSeq !== 'number') return
+    const pend = pendingSends.get(clientSeq)
+    if (!pend) return
+    if (p.reasonCode === 0 || p.reasonCode === undefined || p.reasonCode === null) {
+      markDelivered(clientSeq)
+    } else {
+      pendingSends.delete(clientSeq)
+      showToast('⚠ 消息发送失败（' + (p.reason || '连接异常') + '）')
+    }
+  })
 
   await Promise.all([loadChannels(), loadUsers()])
   try {
@@ -525,6 +581,25 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.tea-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.92);
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  animation: teaToastIn 0.25s ease;
+}
+@keyframes teaToastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
 .tea-page {
   min-height: 100vh;
   background:

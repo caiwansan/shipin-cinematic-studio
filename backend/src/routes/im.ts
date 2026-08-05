@@ -35,6 +35,21 @@ async function wkApi(path: string, body?: unknown) {
   return data
 }
 
+// 解码 WuKongIM 消息 payload（base64 → UTF-8 → JSON），供前端直接消费 content
+// 避免前端 atob 按 latin1 解码导致中文乱码（「刷新后消息不见了」根因）
+export function decodeMessagePayload(payload: string | null | undefined): any {
+  if (!payload) return null
+  try {
+    const raw = Buffer.from(payload, 'base64')
+    const text = raw.toString('utf8')
+    const obj = JSON.parse(text)
+    if (obj && typeof obj === 'object' && obj.content !== undefined) return obj
+    return obj
+  } catch {
+    return null
+  }
+}
+
 // 确保公共频道存在（幂等）
 export async function ensurePublicChannel() {
   try {
@@ -315,7 +330,13 @@ export default async function imRoutes(fastify: FastifyInstance) {
         limit,
         pull_mode: pullMode,
       })
-      return { success: true, data }
+      // 服务端解码 payload → 前端直接读 content（修复中文乱码：atob latin1 解码导致「刷新后消息不见」）
+      const messages = (data?.messages || []).map((m: any) => ({
+        ...m,
+        payload: m.payload ?? null,
+        content: decodeMessagePayload(m.payload),
+      }))
+      return { success: true, data: { ...data, messages } }
     } catch (e) {
       return reply.status(502).send({ success: false, error: (e as Error).message })
     }

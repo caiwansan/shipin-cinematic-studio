@@ -51,6 +51,7 @@ export function useKunlunTea() {
 
   let sdk: any = null
   let messageHandler: ((msg: any) => void) | null = null
+  let sendStatusHandler: ((p: any) => void) | null = null
 
   async function connect() {
     const tokenRes = await authFetch('/api/im/token', { method: 'POST' })
@@ -100,6 +101,10 @@ export function useKunlunTea() {
     if (messageHandler) {
       sdk.chatManager.addMessageListener(messageHandler)
     }
+    // 发送回执监听（SendackPacket：服务端确认发送结果）
+    if (sendStatusHandler) {
+      sdk.chatManager.addMessageStatusListener(sendStatusHandler)
+    }
     sdk.connect()
   }
 
@@ -113,6 +118,12 @@ export function useKunlunTea() {
   function onMessage(handler: (msg: any) => void) {
     messageHandler = handler
     if (sdk) sdk.chatManager.addMessageListener(handler)
+  }
+
+  /** 发送回执（SendackPacket：clientSeq + reasonCode，0=成功） */
+  function onSendStatus(handler: (p: any) => void) {
+    sendStatusHandler = handler
+    if (sdk) sdk.chatManager.addMessageStatusListener(handler)
   }
 
   /** 发送文本消息 */
@@ -173,5 +184,5 @@ export function useKunlunTea() {
     }
   }
 
-  return { status, userId, connected, connecting, statusLabel, connect, disconnect, onMessage, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, reportPresence }
+  return { status, userId, connected, connecting, statusLabel, connect, disconnect, onMessage, onSendStatus, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, reportPresence }
 }
