@@ -37,6 +37,7 @@ model User {
   memberTier            String                 @default("free")
   memberExpiresAt       DateTime?
   walletBalance         Float                  @default(0) @map("wallet_balance") // MEMBER-CENTER-03 可提现余额（推广佣金）
+  goldCoins             Int                    @default(0) @map("gold_coins") // GIFT-GOLD-ECO-01 金币（礼物收益，10:1 兑余额）
   createdAt             DateTime               @default(now())
   wechatOpenId          String?                @unique
   tokenVersion          Int                    @default(1)
@@ -1873,6 +1874,7 @@ model AgentWithdraw {
   qrCodeUrl   String    @default("") // MEMBER-CENTER-03 收款码
   status      String    @default("pending")
   remark      String    @default("")
+  fee         Float     @default(0) // GIFT-GOLD-ECO-01 提现手续费（5%，到账 = amount - fee）
   createdAt   DateTime  @default(now())
   approvedAt  DateTime?
   adminId     Int?
@@ -10543,4 +10545,55 @@ model ImUserPresence {
   updatedAt DateTime @default(now()) @map("updated_at")
 
   @@map("im_user_presence")
+}
+
+// ============================================
+// GIFT-GOLD-ECO-01 礼物金币体系（2026-08-06 掌柜定稿）
+// 链条：钻石(充值,只花不提) → 礼物(打赏,65%钻石价值即时转金币) → 金币(10:1兑余额,200起) → 余额(可提现,5%手续费)
+// ============================================
+
+model GiftProduct {
+  id            String        @id @default(uuid()) @db.Uuid
+  name          String // 礼物名称
+  priceDiamonds Int           @default(1) // 钻石价格
+  iconUrl       String        @default("") // 礼物图标（emoji 或图片 URL）
+  category      String        @default("热门") // 热门 / 豪华 / 专属（抖音式分类）
+  sortOrder     Int           @default(0)
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  giftRecords   GiftRecord[]
+
+  @@map("gift_product")
+}
+
+model GiftRecord {
+  id            String       @id @default(uuid()) @db.Uuid
+  senderId      String       @db.Uuid // 赠送人
+  receiverId    String       @db.Uuid // 接收人
+  giftProductId String       @db.Uuid
+  giftProduct   GiftProduct  @relation(fields: [giftProductId], references: [id])
+  priceDiamonds Int // 快照：礼物钻石价
+  coinsAwarded  Int // 快照：接收方金币 = priceDiamonds * 65 / 100
+  channelId     String       @default("") // 送礼场景（大堂/群/私聊）
+  channelType   Int          @default(0)
+  status        String       @default("completed")
+  createdAt     DateTime     @default(now())
+
+  @@index([senderId, createdAt])
+  @@index([receiverId, createdAt])
+  @@map("gift_record")
+}
+
+model GoldCoinLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  amount    Int // +收礼 / -兑换
+  type      String // gift_in / exchange_out
+  remark    String?
+  relatedId String? // GiftRecord.id
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("gold_coin_log")
 }

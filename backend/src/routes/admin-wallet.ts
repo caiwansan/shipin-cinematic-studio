@@ -81,7 +81,7 @@ export default async function adminWalletRoutes(fastify: FastifyInstance) {
 
       await prisma.$transaction([
         prisma.$executeRawUnsafe(
-          `UPDATE "User" SET "walletBalance" = COALESCE("walletBalance", 0) + $1 WHERE id = $2`,
+          `UPDATE "User" SET "wallet_balance" = COALESCE("wallet_balance", 0) + $1 WHERE id = $2::uuid`,
           record.amount, record.userId
         ),
         prisma.agentWithdraw.update({

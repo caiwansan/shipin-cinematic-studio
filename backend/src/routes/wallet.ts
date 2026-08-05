@@ -35,7 +35,15 @@ export default async function walletRoutes(fastify: FastifyInstance) {
       data: {
         balance: user.walletBalance || 0,
         memberTier: user.membership?.tier || 'free',
-        withdraws,
+        withdrawFeeRate: 0.05, // GIFT-GOLD-ECO-01 提现手续费 5%
+        withdraws: withdraws.map((w: any) => ({
+          id: w.id,
+          amount: w.amount,
+          fee: w.fee || 0,
+          payout: Math.round((w.amount - (w.fee || 0)) * 100) / 100,
+          status: w.status,
+          createdAt: w.createdAt,
+        })),
         commissions,
       },
     }
@@ -98,7 +106,7 @@ export default async function walletRoutes(fastify: FastifyInstance) {
     return { success: true, data: rows && rows.length > 0 ? rows[0] : null }
   })
 
-  // POST /api/wallet/withdraw — 申请提现
+  // POST /api/wallet/withdraw — 申请提现（GIFT-GOLD-ECO-01：手续费 5%，到账 = 金额 - 手续费）
   fastify.post('/api/wallet/withdraw', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const userId = request.user.id
     const { amount } = request.body as any
@@ -107,6 +115,10 @@ export default async function walletRoutes(fastify: FastifyInstance) {
     if (!withdrawAmount || withdrawAmount < 100) {
       return reply.status(400).send({ error: '提现金额不能小于100元' })
     }
+
+    // 手续费 5%（四舍五入到分）；到账 = 申请金额 - 手续费
+    const fee = Math.round(withdrawAmount * 0.05 * 100) / 100
+    const payout = Math.round((withdrawAmount - fee) * 100) / 100
 
     // 查用户余额
     const user = await prisma.user.findUnique({
@@ -127,7 +139,7 @@ export default async function walletRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: '请先绑定收款账号（支付宝/微信收款码）' })
     }
 
-    // 扣余额 + 创建提现记录（事务）
+    // 扣余额 + 创建提现记录（事务）；fee 单独记录，到账金额 = amount - fee
     try {
       const result = await prisma.$transaction([
         prisma.$executeRawUnsafe(
@@ -135,11 +147,11 @@ export default async function walletRoutes(fastify: FastifyInstance) {
           withdrawAmount, userId
         ),
         prisma.$executeRawUnsafe(
-          `INSERT INTO "AgentWithdraw" ("id", "userId", "amount", "accountType", "accountName", "accountNo", "qrCodeUrl", "status") VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, '', '', 'pending')`,
-          userId, withdrawAmount, account.accountType, account.accountName
+          `INSERT INTO "AgentWithdraw" ("id", "userId", "amount", "fee", "accountType", "accountName", "accountNo", "qrCodeUrl", "status") VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, $5, '', '', 'pending')`,
+          userId, withdrawAmount, fee, account.accountType, account.accountName
         ),
       ])
-      return { success: true, data: { amount: withdrawAmount } }
+      return { success: true, data: { amount: withdrawAmount, fee, payout } }
     } catch (e) {
       return reply.status(500).send({ error: '提现失败，请重试' })
     }
