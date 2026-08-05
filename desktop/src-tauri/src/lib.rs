@@ -23,6 +23,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::webview::PageLoadEvent;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+#[cfg(target_os = "windows")]
+use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
 

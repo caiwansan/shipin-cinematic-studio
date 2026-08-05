@@ -86,6 +86,14 @@ jobs:
           Get-Content desktop/src-tauri/tauri.conf.json | Select-String 'productName|version'
           Get-ChildItem desktop/ui | Select-Object Name, Length
 
+      # S1.2-B B3 诊断: 构建前先跑 Windows cargo check（暴露编译错误到日志）
+      - name: Cargo Check (Windows target, diagnostic)
+        shell: pwsh
+        run: |
+          cd desktop/src-tauri
+          cargo check --target x86_64-pc-windows-msvc 2>&1 | Select-Object -Last 40
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Clean Stale Bundle (cache residue)
         working-directory: desktop
         run: |
