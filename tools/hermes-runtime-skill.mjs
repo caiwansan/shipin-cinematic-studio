@@ -14,18 +14,36 @@ import { randomUUID } from 'crypto'
 const RUNTIME_ID = 'hermes-skill-001'
 const PORT = 9457
 const AUDIT_URL = process.env.KUNLUN_AUDIT_URL || 'http://127.0.0.1:4002/api/audit/hermes-execution'
+const BACKEND_URL = process.env.KUNLUN_BACKEND_URL || 'http://127.0.0.1:4002'
 
-// ── Tool Sandbox（仅 mock，安全执行，无 eval）──
+// 内部 token: 优先进程 env, 回退读 backend/.env（与后端同一秘密源, 不入 git）
+function resolveInternalToken() {
+  if (process.env.KUNLUN_INTERNAL_TOKEN) return process.env.KUNLUN_INTERNAL_TOKEN
+  try {
+    const { readFileSync } = require('node:fs')
+    const envFile = readFileSync('/root/shipin-cinematic-studio/backend/.env', 'utf-8')
+    const m = envFile.match(/^KUNLUN_INTERNAL_TOKEN=(.+)$/m)
+    return m ? m[1].trim().replace(/["']/g, '') : ''
+  } catch {
+    return ''
+  }
+}
+const INTERNAL_TOKEN = resolveInternalToken()
+
+// ── Tool Sandbox（安全执行, 无 eval; resume.parse 为真实后端解析, 零 LLM）──
 const TOOL_REGISTRY = {
-  'resume.parse': (input = {}) => ({
-    ok: true,
-    result: {
-      applicant: 'Mock Applicant',
-      summary: 'resume parsed (mock)',
-      sections: ['experience', 'education', 'skills'],
-      inputHint: input,
-    },
-  }),
+  // S3.4.1-BLOCKED Task 01: 真实简历解析（后端确定性 Agent）
+  'resume.parse': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/resume-parse`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ text: input.text, filePath: input.filePath }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'RESUME_PARSE_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0) return { ok: false, error: body.error || 'RESUME_PARSE_FAILED' }
+    return { ok: true, result: body.data }
+  },
   'profile.extract': (input = {}) => ({
     ok: true,
     result: {

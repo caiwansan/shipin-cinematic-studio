@@ -118,6 +118,8 @@ import userCenterRoutes from './routes/user-center.js'
 import userAvatarRoutes from './routes/user-avatar.js'
 import userSecurityRoutes from './routes/user-security.js'
 import userAssetsRoutes from './routes/user-assets.js'
+import giftRoutes from './routes/gifts.js'
+import goldCoinRoutes from './routes/gold-coins.js'
 
 import pipelineRoutes from './routes/pipeline.js'
 import pipelineJobRoutes from './routes/pipeline-jobs.js'
@@ -320,6 +322,8 @@ async function main() {
   await app.register(userAvatarRoutes)
   await app.register(userSecurityRoutes)
   await app.register(userAssetsRoutes)
+  await app.register(giftRoutes)
+  await app.register(goldCoinRoutes)
   await app.register((await import('./routes/admin-wallet.js')).default)
   // REMOVED: analyticsRoutes
   // REMOVED: optimizeRoutes
@@ -569,6 +573,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/skill-lifecycle.routes.js')).registerSkillLifecycleRoutes)
   await app.register((await import('./routes/skill-execution.routes.js')).registerSkillExecutionRoutes)
   await app.register((await import('./routes/skill-orchestrator.routes.js')).registerSkillOrchestratorRoutes)
+  await app.register((await import('./routes/skill-assets.routes.js')).registerSkillAssetsRoutes)
+  await app.register((await import('./routes/skill-tools-internal.routes.js')).registerSkillToolsInternalRoutes)
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
   // ═══════════════════════════════════════════════════════════
