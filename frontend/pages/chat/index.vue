@@ -601,7 +601,10 @@ onBeforeUnmount(() => {
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 .tea-page {
-  min-height: 100vh;
+  /* 微信群模式：页面锁死在视口高度，消息再多也不撑高页面、不挤走输入框 */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background:
     radial-gradient(1200px 500px at 20% -10%, rgba(59, 130, 246, 0.12), transparent 60%),
     radial-gradient(900px 400px at 90% 0%, rgba(139, 92, 246, 0.08), transparent 55%),
@@ -658,6 +661,8 @@ onBeforeUnmount(() => {
   flex: 1;
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 260px;
+  /* 行高锁死为剩余高度：中栏消息区内部滚动，输入框永不被挤出视口 */
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
 
@@ -724,7 +729,16 @@ onBeforeUnmount(() => {
 .empty-emoji { font-size: 48px; opacity: 0.6; }
 .go-login { text-decoration: none; margin-top: 6px; }
 
-.msg-list { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.msg-list {
+  flex: 1;
+  min-height: 0; /* 允许收缩：消息多时在框内滚动，不撑高页面 */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .msg-row { display: flex; }
 .msg-row.mine { justify-content: flex-end; }
 .msg-bubble {
