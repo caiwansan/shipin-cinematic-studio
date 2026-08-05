@@ -39,6 +39,7 @@ import desktopTicketRoutes from './routes/desktop-ticket.js'
 import ticketExchangeRoutes from './routes/ticket-exchange.js'
 import pluginTicketRoutes from './routes/plugin-ticket.js'
 import healthRoutes from './routes/health.js'
+import imRoutes from './routes/im.js'
 import siteConfigRoutes from './routes/site-config.js'
 import observabilityRoutes from './routes/observability.js'
 import providerRoutes from './routes/providers.js'
@@ -280,6 +281,7 @@ async function main() {
   await app.register(authRoutes)
   registerSSEStream(app)
   await app.register(systemVersionRoutes)
+  await app.register(imRoutes)
   await app.register(captchaRoutes)
   await app.register(smsRoutes)
   await app.register(smsAuthRoutes)
@@ -554,6 +556,7 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/ecology-partner.routes.js')).registerEcologyPartnerRoutes, { prefix: '/api/ecosystem' })
   await app.register((await import('./routes/ecology-registry.routes.js')).registerEcologyRegistryRoutes, { prefix: '/api/ecosystem' })
   await app.register((await import('./routes/hermes-audit.routes.js')).registerHermesAuditRoutes)
+  await app.register((await import('./routes/skill-catalog.routes.js')).registerSkillCatalogRoutes)
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
   // ═══════════════════════════════════════════════════════════
