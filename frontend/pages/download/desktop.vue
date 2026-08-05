@@ -2,8 +2,8 @@
   <div class="download-page">
     <KunlunNav
       :is-logged-in="isLoggedIn"
-      @show-login="showLogin = true; isRegisterMode = false"
-      @show-register="showLogin = true; isRegisterMode = true"
+      @show-login="showLogin = true"
+      @show-register="goRegister"
       @logout="doLogout"
     />
 
@@ -89,28 +89,25 @@
 
     <KunlunFooter />
 
-    <!-- 登录/注册 Modal（复用首页） -->
+    <!-- 登录 Modal（复用昆仑镜真实登录系统 /api/auth/login，与首页同源） -->
     <div v-if="showLogin" class="modal-overlay" @click.self="showLogin = false">
       <div class="modal-card">
         <button class="modal-close" @click="showLogin = false">✕</button>
         <div class="modal-header">
           <span class="logo-icon"><img src="/logo.png" alt="昆仑镜" class="modal-logo-img" /></span>
-          <h2>{{ isRegisterMode ? '创建账号' : '登录昆仑镜' }}</h2>
+          <h2>登录昆仑镜</h2>
         </div>
-        <div class="modal-tabs">
-          <button :class="['tab-btn', !isRegisterMode && 'tab-active']" @click="isRegisterMode = false">登录</button>
-          <button :class="['tab-btn', isRegisterMode && 'tab-active']" @click="isRegisterMode = true">注册</button>
-        </div>
-        <form v-if="!isRegisterMode" @submit.prevent="doLogin" class="modal-form">
-          <input v-model="loginForm.email" type="email" placeholder="邮箱" required class="modal-input" />
+        <form @submit.prevent="doLogin" class="modal-form">
+          <input v-model="loginForm.account" placeholder="手机号 / 邮箱 / 用户名" required class="modal-input" />
           <input v-model="loginForm.password" type="password" placeholder="密码" required class="modal-input" />
-          <button type="submit" class="btn btn-primary btn-full">登录</button>
+          <div v-if="authError" class="auth-error">{{ authError }}</div>
+          <button type="submit" class="btn btn-primary btn-full" :disabled="authLoading">
+            {{ authLoading ? '登录中…' : '登录' }}
+          </button>
         </form>
-        <form v-else @submit.prevent="doRegister" class="modal-form">
-          <input v-model="loginForm.email" type="email" placeholder="邮箱" required class="modal-input" />
-          <input v-model="loginForm.password" type="password" placeholder="密码（至少 8 位）" required class="modal-input" />
-          <button type="submit" class="btn btn-primary btn-full">创建账号</button>
-        </form>
+        <p class="modal-foot">
+          没有账号？<a href="/register?redirect=/download/desktop" class="modal-link">前往注册</a>
+        </p>
       </div>
     </div>
   </div>
@@ -118,16 +115,70 @@
 
 <script setup lang="ts">
 // RELEASE-01.1 Task 04：昆仑镜桌面版下载入口（唯一用户下载源 = aigc.fushtn.com，禁止 GitHub 直链）
+// FIX-DOWNLOAD-LOGIN：登录/注册与昆仑镜真实认证系统兼容（复用 /api/auth/login + auth/token，注册跳完整注册页）
 import { ref, onMounted } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 import KunlunFooter from '~/components/kunlun/business/KunlunFooter.vue'
+import { getAuthToken, setAuthToken, clearAuthToken } from '~/utils/auth/token'
 
 useHead({ title: '下载桌面版 - 昆仑镜 Kunlun Media' })
 
 const isLoggedIn = ref(false)
 const showLogin = ref(false)
-const isRegisterMode = ref(false)
-const loginForm = ref({ email: '', password: '' })
+const authName = ref('')
+const loginForm = ref({ account: '', password: '' })
+const authLoading = ref(false)
+const authError = ref('')
+
+// 注册：昆仑镜完整注册页（短信验证码 + 地区选择 + 套餐），不在下载页内嵌简化版
+function goRegister() {
+  window.location.href = '/register?redirect=/download/desktop'
+}
+
+// 登录：与首页同源的昆仑镜认证系统
+async function doLogin() {
+  authError.value = ''
+  const account = loginForm.value.account.trim()
+  if (!account || !loginForm.value.password) {
+    authError.value = '请输入账号和密码'
+    return
+  }
+  authLoading.value = true
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account, password: loginForm.value.password }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || '登录失败')
+    const token = data.accessToken || data.token
+    if (!token) throw new Error('登录响应缺少 token')
+    setAuthToken(token)
+    document.cookie = `auth_token=${token}; path=/; max-age=86400; samesite=lax`
+    if (data.user) localStorage.setItem('auth_user', JSON.stringify(data.user))
+    isLoggedIn.value = true
+    authName.value = data.user?.name || data.user?.username || data.user?.phone || ''
+    showLogin.value = false
+  } catch (e: any) {
+    authError.value = e.message || '登录失败，请重试'
+  } finally {
+    authLoading.value = false
+  }
+}
+
+function doLogout() {
+  clearAuthToken()
+  ;['auth_token', 'auth_user', 'token', 'accessToken', 'refreshToken'].forEach(k => {
+    try { localStorage.removeItem(k) } catch {}
+  })
+  ;['auth_token', 'auth_user', 'token', 'accessToken', 'refreshToken'].forEach(k => {
+    document.cookie = `${k}=; path=/; max-age=0; samesite=lax`
+  })
+  isLoggedIn.value = false
+  authName.value = ''
+  window.location.reload()
+}
 
 interface ReleaseMeta {
   version: string
@@ -142,6 +193,15 @@ interface ReleaseMeta {
 const meta = ref<ReleaseMeta | null>(null)
 
 onMounted(async () => {
+  // 恢复昆仑镜登录态（与首页同源：auth/token 内存 + localStorage + cookie）
+  isLoggedIn.value = !!getAuthToken()
+  const raw = localStorage.getItem('auth_user')
+  if (raw) {
+    try {
+      const u = JSON.parse(raw)
+      authName.value = u.name || u.username || u.phone || ''
+    } catch {}
+  }
   try {
     const res = await fetch('/releases/desktop/latest.json', { cache: 'no-store' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -193,10 +253,6 @@ const diagPacks = [
     url: '/releases/desktop/diagnostics/KunlunMediaDiagB_1.1.0_x64-setup.exe',
   },
 ]
-
-function doLogin() { /* 登录走 /login 完整流程，此处仅占位 */ }
-function doRegister() { /* 注册走 /register 完整流程 */ }
-function doLogout() { isLoggedIn.value = false }
 </script>
 
 <style scoped>
@@ -270,7 +326,9 @@ function doLogout() { isLoggedIn.value = false }
 .modal-close { position: absolute; top: 14px; right: 18px; background: none; border: none; color: #8a92b0; font-size: 1.2rem; cursor: pointer; }
 .modal-header { text-align: center; margin-bottom: 18px; }
 .modal-header h2 { font-size: 1.25rem; }
-.modal-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+.auth-error { color: #f87171; font-size: .85rem; padding: 8px 10px; border-radius: 8px; background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.25); }
+.modal-foot { text-align: center; color: #7c84a3; font-size: .85rem; margin-top: 14px; }
+.modal-link { color: #a5b4fc; text-decoration: underline; }
 .tab-btn { flex: 1; padding: 8px; border-radius: 10px; border: 1px solid #262d4e; background: transparent; color: #8a92b0; cursor: pointer; }
 .tab-active { background: #6366f1; color: #fff; border-color: #6366f1; }
 .modal-form { display: flex; flex-direction: column; gap: 12px; }
