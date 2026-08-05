@@ -152,7 +152,7 @@ const panelRes = await send('Runtime.evaluate', {
 const panel = panelRes?.result?.value || {}
 console.log('📐 三栏结构:', JSON.stringify(panel, null, 2))
 
-// 10. 切好友 tab → 点好友 → 应弹独立下拉菜单（不再直接切中栏）
+// 10. 点「好友」tab → 应弹出独立下拉框（fixed 悬浮层，列表框内滚动，页面锁定）
 const friendRes = await send('Runtime.evaluate', {
   expression: `(() => {
     const tabs = [...document.querySelectorAll('.panel-tab')];
@@ -163,21 +163,51 @@ const friendRes = await send('Runtime.evaluate', {
   })()`,
   returnByValue: true,
 })
-console.log('📋 切好友tab:', JSON.stringify(friendRes?.result?.value || {}))
+console.log('📋 点好友tab:', JSON.stringify(friendRes?.result?.value || {}))
 await sleep(1000)
-const friendListRes = await send('Runtime.evaluate', {
+const friendPanelRes = await send('Runtime.evaluate', {
   expression: `(() => {
-    const items = [...document.querySelectorAll('.tea-panel .member-item.clickable')];
-    return { friendCount: items.length, first: items[0]?.querySelector('.member-name')?.textContent?.trim() || '' };
+    const p = document.querySelector('.friend-panel');
+    if (!p) return { panel: false, bodyOverflow: document.body.style.overflow };
+    const style = getComputedStyle(p);
+    const rect = p.getBoundingClientRect();
+    const list = p.querySelector('.friend-panel-list');
+    const items = [...p.querySelectorAll('.member-item.clickable')];
+    return {
+      panel: true,
+      position: style.position,
+      inBody: p.parentElement === document.body,
+      width: Math.round(rect.width), height: Math.round(rect.height),
+      listOverflowY: getComputedStyle(list).overflowY,
+      friendCount: items.length,
+      first: items[0]?.querySelector('.member-name')?.textContent?.trim() || '',
+      bodyOverflow: document.body.style.overflow,
+      chatHead: document.querySelector('.chat-head-name')?.textContent?.trim() || '',
+    };
   })()`,
   returnByValue: true,
 })
-console.log('👥 好友列表:', JSON.stringify(friendListRes?.result?.value || {}))
+const friendPanel = friendPanelRes?.result?.value || {}
+console.log('🪟 好友下拉框:', JSON.stringify(friendPanel, null, 2))
 
-// 11b. 点第一个好友 → 验证弹出独立菜单（body 滚动锁定 + fixed 弹层）
+// 10b. 滚动隔离验证：面板列表内部滚动 → 聊天页面 scrollY 必须纹丝不动
+const scrollIso = await send('Runtime.evaluate', {
+  expression: `(() => {
+    const list = document.querySelector('.friend-panel-list');
+    if (!list) return { ok: false, reason: '无面板列表' };
+    const before = window.scrollY;
+    list.scrollTop = 300; // 模拟框内滚动
+    list.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true }));
+    return { listScrollTop: list.scrollTop, pageScrollY: window.scrollY, pageScrollYBefore: before };
+  })()`,
+  returnByValue: true,
+})
+console.log('🛞 滚动隔离:', JSON.stringify(scrollIso?.result?.value || {}))
+
+// 11b. 点面板内第一个好友 → 弹出独立小菜单（fixed 弹层）
 const openMenuRes = await send('Runtime.evaluate', {
   expression: `(() => {
-    const item = document.querySelector('.tea-panel .member-item.clickable');
+    const item = document.querySelector('.friend-panel .member-item.clickable');
     if (!item) return { ok: false, reason: '无好友可点' };
     item.click();
     return { ok: true };
@@ -231,7 +261,7 @@ const dmStateRes = await send('Runtime.evaluate', {
 })
 console.log('💬 发消息后:', JSON.stringify(dmStateRes?.result?.value || {}))
 
-// 11d. 回好友 tab 再点 → 菜单点「👤 查看资料」→ 右栏资料卡
+// 11d. 回好友 tab 再开面板 → 点好友 → 菜单点「👤 查看资料」→ 右栏资料卡 + 面板关闭
 await send('Runtime.evaluate', {
   expression: `(() => {
     const tabs = [...document.querySelectorAll('.panel-tab')];
@@ -242,7 +272,7 @@ await send('Runtime.evaluate', {
 })
 await sleep(800)
 await send('Runtime.evaluate', {
-  expression: `document.querySelector('.tea-panel .member-item.clickable')?.click(); 'ok'`,
+  expression: `document.querySelector('.friend-panel .member-item.clickable')?.click(); 'ok'`,
   returnByValue: true,
 })
 await sleep(600)
@@ -264,6 +294,7 @@ const profileRes = await send('Runtime.evaluate', {
       card: !!card,
       cardName: card?.querySelector('.peer-name')?.textContent?.trim() || '',
       activeTab,
+      panelGone: !document.querySelector('.friend-panel'),
       chatHead: document.querySelector('.chat-head-name')?.textContent?.trim() || '',
     };
   })()`,
@@ -271,23 +302,27 @@ const profileRes = await send('Runtime.evaluate', {
 })
 console.log('👤 查看资料后:', JSON.stringify(profileRes?.result?.value || {}))
 
-// 11e. Esc 关闭菜单验证：再点好友 → Esc → 菜单消失 + 滚动解锁
+// 11e. 再开面板 → Esc → 面板消失 + 滚动解锁
 await send('Runtime.evaluate', {
-  expression: `document.querySelector('.tea-panel .member-item.clickable')?.click(); 'ok'`,
+  expression: `(() => {
+    const tabs = [...document.querySelectorAll('.panel-tab')];
+    tabs.find(t => t.textContent.trim() === '好友')?.click();
+    return 'ok';
+  })()`,
   returnByValue: true,
 })
-await sleep(600)
+await sleep(700)
 const escRes = await send('Runtime.evaluate', {
   expression: `(() => {
-    const menuOpen = !!document.querySelector('.friend-menu');
+    const panelOpen = !!document.querySelector('.friend-panel');
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    return { menuOpen };
+    return { panelOpen };
   })()`,
   returnByValue: true,
 })
 await sleep(400)
 const escAfter = await send('Runtime.evaluate', {
-  expression: `(() => ({ menuGone: !document.querySelector('.friend-menu'), unlocked: document.body.style.overflow === '' }))()`,
+  expression: `(() => ({ panelGone: !document.querySelector('.friend-panel'), unlocked: document.body.style.overflow === '' }))()`,
   returnByValue: true,
 })
 console.log('🛡 Esc关闭:', JSON.stringify(escRes?.result?.value || {}), '→', JSON.stringify(escAfter?.result?.value || {}))

@@ -139,7 +139,7 @@
       <aside class="tea-panel" :class="{ open: rightPanelOpen }">
         <div class="panel-tabs">
           <button class="panel-tab" :class="{ active: rightTab === 'members' }" @click="rightTab = 'members'">成员</button>
-          <button class="panel-tab" :class="{ active: rightTab === 'friends' }" @click="rightTab = 'friends'">好友</button>
+          <button class="panel-tab" :class="{ active: friendPanel }" @click.stop="toggleFriendPanel">好友</button>
         </div>
 
         <!-- 成员 tab：资料卡（好友菜单查看资料） > 私聊资料卡 > 频道成员列表 -->
@@ -185,28 +185,37 @@
             </div>
           </template>
         </div>
+      </aside>
 
-        <!-- 好友 tab：用户列表（点 → 悬浮菜单：发消息 / 查看资料） -->
-        <div v-else class="panel-body">
-          <div class="panel-section-title">茶客名录 ({{ users.length }})</div>
-          <div v-if="!users.length" class="panel-empty">暂时没有其他茶客</div>
-          <div
-            v-for="u in users"
-            :key="u.id"
-            class="member-item clickable"
-            :class="{ active: currentChannel?.kind === 'dm' && currentChannel.peerUid === u.id }"
-            @click="openFriendMenu(u, $event)"
-          >
-            <div class="member-avatar">{{ u.name.slice(0, 1) }}</div>
-            <div class="member-meta">
-              <span class="member-name">{{ u.name }}</span>
-              <span class="member-sub">
-                <span class="mini-dot" :class="{ on: u.online }"></span>{{ u.online ? '在线' : (u.email || '离线') }}
-              </span>
+      <!-- ══ 好友独立下拉框：Teleport 到 body + fixed，列表在框内滚动，绝不影响聊天页面 ══ -->
+      <Teleport to="body">
+        <div v-if="friendPanel" class="friend-panel" @click.stop>
+          <div class="friend-panel-head">
+            <span class="friend-panel-title">👥 茶客名录 ({{ users.length }})</span>
+            <button class="friend-panel-close" @click="toggleFriendPanel">✕</button>
+          </div>
+          <input v-model="friendSearch" class="friend-panel-search" placeholder="搜好友…" />
+          <div class="friend-panel-list" @wheel.stop>
+            <div v-if="!filteredUsers.length" class="panel-empty">没有匹配的茶客</div>
+            <div
+              v-for="u in filteredUsers"
+              :key="u.id"
+              class="member-item clickable"
+              :class="{ active: currentChannel?.kind === 'dm' && currentChannel.peerUid === u.id }"
+              @click="openFriendMenu(u, $event)"
+            >
+              <div class="member-avatar">{{ u.name.slice(0, 1) }}</div>
+              <div class="member-meta">
+                <span class="member-name">{{ u.name }}</span>
+                <span class="member-sub">
+                  <span class="mini-dot" :class="{ on: u.online }"></span>{{ u.online ? '在线' : (u.email || '离线') }}
+                </span>
+              </div>
             </div>
           </div>
+          <div class="friend-panel-foot">点茶客弹出菜单 · Esc 关闭</div>
         </div>
-      </aside>
+      </Teleport>
 
       <!-- 好友悬浮下拉菜单：独立弹层（fixed），不撑页面 / 不触发整页滚动 -->
       <Teleport to="body">
@@ -257,6 +266,8 @@ const search = ref('')
 const rightTab = ref<'members' | 'friends'>('members')
 const rightPanelOpen = ref(true)
 const friendMenu = ref<{ user: any; x: number; y: number } | null>(null)
+const friendPanel = ref(false)
+const friendSearch = ref('')
 const profileUser = ref<any>(null)
 
 const displayMessages = computed(() => messages.value)
@@ -268,6 +279,7 @@ const peerOnline = computed(() => peerInfo.value?.online ?? false)
 const filteredPublic = computed(() => channels.value.filter((c) => !search.value || c.name.includes(search.value)))
 const filteredGroups = computed(() => groups.value.filter((c) => !search.value || c.name.includes(search.value)))
 const filteredDms = computed(() => dms.value.filter((c) => !search.value || c.name.includes(search.value)))
+const filteredUsers = computed(() => users.value.filter((u) => !friendSearch.value || u.name.includes(friendSearch.value)))
 
 function isActive(ch: any) {
   return currentChannel.value && currentChannel.value.id === ch.id && currentChannel.value.type === ch.type
@@ -374,14 +386,31 @@ async function openPrivate(u: any) {
     kind: 'dm',
     peerUid: data.peer.id,
   }
-  // 左栏最近私聊去重 + 置顶；右栏自动切「成员」tab 显示对方资料卡
+  // 左栏最近私聊去重 + 置顶；关闭好友下拉框，右栏切「成员」tab 显示对方资料卡
   dms.value = [ch, ...dms.value.filter((d) => d.id !== ch.id)]
   currentChannel.value = ch
+  friendPanel.value = false
   rightTab.value = 'members'
+  syncBodyLock()
   messages.value = []
   members.value = []
   await loadHistory()
   scrollBottom()
+}
+
+/** 好友独立下拉框：打开/关闭（打开时锁定页面滚动，滚动只发生在框内） */
+function toggleFriendPanel() {
+  friendPanel.value = !friendPanel.value
+  if (friendPanel.value) {
+    rightTab.value = 'friends'
+    closeFriendMenu()
+  }
+  syncBodyLock()
+}
+
+/** 统一页面滚动锁：面板或菜单任一打开 → 锁死 body，聊天页面纹丝不动 */
+function syncBodyLock() {
+  document.body.style.overflow = friendPanel.value || friendMenu.value ? 'hidden' : ''
 }
 
 /** 好友下拉菜单：定位（右侧/底部空间不足自动反弹）+ 锁定页面滚动 */
@@ -394,13 +423,16 @@ function openFriendMenu(u: any, e: MouseEvent) {
   let x = Math.min(rect.left, window.innerWidth - MENU_W - 8)
   let y = rect.bottom + 6
   if (y + MENU_H > window.innerHeight) y = Math.max(8, rect.top - MENU_H - 6)
+  // 兜底：任何情况下菜单都在视口内（防滚动后的项 rect 异常）
+  x = Math.max(8, x)
+  y = Math.max(8, y)
   friendMenu.value = { user: u, x, y }
-  document.body.style.overflow = 'hidden'
+  syncBodyLock()
 }
 
 function closeFriendMenu() {
   friendMenu.value = null
-  document.body.style.overflow = ''
+  syncBodyLock()
 }
 
 async function menuSend(u: any) {
@@ -410,6 +442,8 @@ async function menuSend(u: any) {
 
 function menuProfile(u: any) {
   closeFriendMenu()
+  friendPanel.value = false
+  syncBodyLock()
   profileUser.value = u
   rightTab.value = 'members'
 }
@@ -444,12 +478,16 @@ function handleResize() {
   }
 }
 
-// 菜单外部点击 / Esc 关闭
+// 外部点击 / Esc 关闭：菜单 + 好友下拉框
 function onWindowClick() {
   closeFriendMenu()
+  if (friendPanel.value) toggleFriendPanel()
 }
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') closeFriendMenu()
+  if (e.key === 'Escape') {
+    closeFriendMenu()
+    if (friendPanel.value) toggleFriendPanel()
+  }
 }
 
 onMounted(async () => {
@@ -481,6 +519,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('click', onWindowClick)
   window.removeEventListener('keydown', onKeydown)
   closeFriendMenu()
+  friendPanel.value = false
+  syncBodyLock()
 })
 </script>
 
@@ -702,6 +742,70 @@ onBeforeUnmount(() => {
 .bot-badge { font-size: 11px; }
 .mini-dot { width: 6px; height: 6px; border-radius: 50%; background: #64748b; display: inline-block; margin-right: 4px; }
 .mini-dot.on { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.7); }
+
+/* ══ 好友独立下拉框：fixed 悬浮层，列表在框内滚动，聊天页面零影响 ══ */
+.friend-panel {
+  position: fixed;
+  z-index: 9998;
+  top: 64px;
+  right: 12px;
+  width: 300px;
+  max-height: calc(100vh - 84px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-panel, #141a2e);
+  border: 1px solid var(--color-border, #26304d);
+  border-radius: 14px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  animation: panel-pop 0.18s ease-out;
+}
+@keyframes panel-pop {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.friend-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px 8px;
+}
+.friend-panel-title {
+  font-size: 13px; font-weight: 700; color: var(--color-text, #e2e8f0);
+  letter-spacing: 0.02em;
+}
+.friend-panel-close {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 0; background: transparent;
+  color: var(--color-text-muted, #64748b);
+  font-size: 13px; line-height: 1; cursor: pointer;
+  transition: all 0.2s;
+}
+.friend-panel-close:hover { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.friend-panel-search {
+  margin: 0 12px 8px;
+  background: rgba(7, 11, 22, 0.6);
+  border: 1px solid var(--color-border-primary, #1e293b);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--color-text-primary, #f1f5f9);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.friend-panel-search:focus { border-color: rgba(59, 130, 246, 0.6); }
+/* 核心：列表固定区域 + 框内独立滚动（overscroll 不穿透到页面） */
+.friend-panel-list {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 8px 8px;
+  min-height: 60px;
+}
+.friend-panel-foot {
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border-primary, #1e293b);
+  font-size: 11px; color: var(--color-text-disabled, #475569);
+  text-align: center;
+}
 
 /* 好友悬浮下拉菜单：独立弹层（fixed），不撑页面 / 不触发整页滚动 */
 .friend-menu {
