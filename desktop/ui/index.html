@@ -500,9 +500,23 @@ async function launchPlugin(pluginId, action) {
     if (ticket) sessionStorage.setItem('kunlun_plugin_ticket', JSON.stringify({
       ticket, pluginId, action: action || null, ts: Date.now(),
     }));
+    // S2.3.1 Task 03: Hermes Bridge 握手（只请求 Hermes 接收，不执行）
+    setState('PLUGIN_HERMES_HANDSHAKE');
+    const handshake = await HermesRuntime.invoke({
+      invocationId: 'inv-' + Date.now(),
+      pluginId,
+      agentDefinitionId: (data?.data?.agentDefinitionId) || null,
+      ticket,
+      context: { action: action || null, source: 'desktop-ui' }
+    });
+
     setState('PLUGIN_READY');
-    console.info('[RuntimeRouter] plugin invocation authorized (no execution):', pluginId, action || '');
-    return { ok: true, state: 'PLUGIN_READY', ticket };
+    if (handshake.status === 'ACCEPTED') {
+      console.info('[RuntimeRouter] plugin invocation ACKED by Hermes (no execution):', pluginId, handshake.runtimeId, handshake.executionId);
+      return { ok: true, state: 'PLUGIN_READY', ticket, hermes: handshake };
+    }
+    console.warn('[RuntimeRouter] plugin invocation NOT ACKED by Hermes:', handshake.status, handshake.reason || '');
+    return { ok: true, state: 'PLUGIN_READY', ticket, hermes: handshake };
   } catch (e) {
     console.warn('[RuntimeRouter] plugin launch failed:', e?.message || e);
     return { ok: false, error: 'SESSION_FAILED' };
