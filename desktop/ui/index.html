@@ -256,7 +256,7 @@ async function invoke(cmd, args = {}) {
     }
     if (cmd === 'clear_credentials') { localStorage.removeItem('dbg_device_id'); localStorage.removeItem('dbg_token'); return {}; }
     if (cmd === 'generate_device_fingerprint') return crypto.randomUUID();
-    if (cmd === 'open_workspace') { window.open(args.url, '_blank'); return {}; }
+    if (cmd === 'open_workspace') { throw new Error('open_workspace must go through RuntimeRouter'); }
     return {};
   }
   return window.__TAURI__.core.invoke(cmd, args);
@@ -336,9 +336,144 @@ async function refreshApps() {
   } catch (e) { $('sub-apps').textContent = `❌ ${e.message}`; }
 }
 
+// ═══════════════════════════════════════════════════════════
+// RuntimeRouter — AI OS Invocation Layer（S1.2-A 冻结）
+// 唯一入口: launch()；状态机 INIT→DISCOVER→AUTH→ISSUE_TICKET→CONNECT→READY
+// 能力协议族: workspace(实现) / app / skill / plugin(预留)
+// 复用: S1.1 ticket 接口 + bridge.html + from_config
+// ═══════════════════════════════════════════════════════════
+const RuntimeRouter = (() => {
+  const PROTOCOLS = ['workspace', 'app', 'skill', 'plugin']; // 预留扩展
+  let _state = 'idle';
+
+  function setState(s) {
+    _state = s;
+    try {
+      if (window.__TAURI_INTERNALS__) {
+        window.__TAURI__.core.invoke('diag_write', { key: 'router_state', value: s });
+      }
+    } catch (e) { /* 静默 */ }
+  }
+
+  // 深链解析: kunlun://workspace/{slug}[/project/{id}]（含 decode + 防注入）
+  function parseDeepLink(uri) {
+    try {
+      const m = String(uri).match(/^kunlun:\/\/(workspace|app|skill|plugin)\/([^\/?]+)(?:\/project\/([^\/?]+))?/);
+      if (!m) return null;
+      return {
+        protocol: m[1],
+        id: decodeURIComponent(m[2]),
+        projectId: m[3] ? decodeURIComponent(m[3]) : undefined,
+      };
+    } catch (e) { return null; }
+  }
+
+  // Registry 解析（消费 ecosystem/applications；本版只实现 workspace）
+  function resolveTarget(kind, id) {
+    if (kind === 'workspace') {
+      const app = (window.__KUNLUN_APPS__ || []).find(a => a.slug === id);
+      const entry = app?.workspaceEntry || '';
+      return { connectUrl: `${WORKSPACE_BASE}${entry || '/workspace/media'}` };
+    }
+    return null; // app/skill/plugin 预留
+  }
+
+  // ticket 签发（S1.1 后端接口）
+  async function issueTicket() {
+    const token = creds.access_token;
+    if (!token) throw Object.assign(new Error('AUTH_REQUIRED'), { code: 'AUTH_REQUIRED' });
+    const res = await fetch(`${API_BASE}/api/auth/desktop/ticket`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) throw Object.assign(new Error('SESSION_FAILED'), { code: 'SESSION_FAILED' });
+    const data = await res.json();
+    return data?.data?.ticket;
+  }
+
+  // 打开桥页（S1.1 bridge.html + from_config；非 Tauri 调试 = 直接跳转）
+  function openBridge(connectUrl, ticket) {
+    if (isTauri) {
+      invoke('open_workspace', { url: connectUrl });
+      // ticket 由壳内 Rust 侧注入 bridge 参数（S1.2-B 壳构建时接线）
+      // 本版桥页透传在 Rust 侧实现；前端负责签发与传递目标
+      sessionStorage.setItem('kunlun_pending_ticket', ticket || '');
+      sessionStorage.setItem('kunlun_pending_url', connectUrl);
+    } else {
+      // 浏览器调试模式: 直接带 ticket 跳转（模拟桥页行为，S1.1 R4 已验证该链路）
+      const sep = connectUrl.indexOf('?') >= 0 ? '&' : '?';
+      window.location.href = connectUrl + sep + 'ticket=' + encodeURIComponent(ticket);
+    }
+  }
+
+  // 唯一入口（launch）
+  async function launch(spec) {
+    try {
+      setState('INIT');
+      let kind = 'workspace', id, projectId;
+
+      if (spec.kind === 'deepLink') {
+        setState('DISCOVER');
+        const dl = parseDeepLink(spec.uri);
+        if (!dl) return { ok: false, error: 'INVALID_LINK' };
+        kind = dl.protocol; id = dl.id; projectId = dl.projectId;
+        if (kind !== 'workspace') return { ok: false, error: 'TARGET_NOT_FOUND' }; // 预留协议暂未实现
+      } else if (spec.kind === 'app' || spec.kind === 'continue') {
+        setState('DISCOVER');
+        kind = 'workspace'; id = spec.slug || spec.appSlug; projectId = spec.projectId;
+      } else if (spec.kind === 'workspace') {
+        setState('DISCOVER');
+        kind = 'workspace'; id = spec.slug; projectId = spec.projectId;
+      } else {
+        return { ok: false, error: 'INVALID_LINK' };
+      }
+
+      // AUTH_CHECK
+      setState('AUTH_CHECK');
+      if (!creds.access_token) {
+        showLogin();
+        return { ok: false, error: 'AUTH_REQUIRED' };
+      }
+
+      // ISSUE_TICKET
+      setState('ISSUE_TICKET');
+      const ticket = await issueTicket();
+
+      // CONNECT（目标解析 + 打开桥页）
+      setState('CONNECT');
+      const target = resolveTarget(kind, id);
+      if (!target) return { ok: false, error: 'TARGET_NOT_FOUND' };
+      let url = target.connectUrl;
+      if (projectId) {
+        url += (url.indexOf('?') >= 0 ? '&' : '?') + 'project=' + encodeURIComponent(projectId);
+      }
+      openBridge(url, ticket);
+
+      // READY（桥页接管；诊断状态由 bridge.html connection_state 上报）
+      setState('READY');
+      return { ok: true, state: 'READY' };
+    } catch (e) {
+      const code = e?.code || 'SESSION_FAILED';
+      console.warn('[RuntimeRouter]', e?.message || e);
+      return { ok: false, error: code };
+    }
+  }
+
+  // 暴露内部（诊断/测试）
+  return { launch, parseDeepLink, resolveTarget, getState: () => _state };
+})();
+
+// 兼容旧调用点: launchApp = RuntimeRouter.launch（应用中心点击）
 function launchApp(slug, entry) {
-  const url = `${WORKSPACE_BASE}${entry || '/workspace/media'}`;
-  invoke('open_workspace', { url });
+  return RuntimeRouter.launch({ kind: 'workspace', slug, projectId: undefined });
+}
+
+// 深链入口（S1.2-B 壳注册 kunlun:// 后调用；当前留接口）
+window.__runtimeRouter__ = RuntimeRouter;
+if (typeof window.__KUNLUN_DEEP_LINK__ !== 'undefined') {
+  const dl = window.__KUNLUN_DEEP_LINK__;
+  RuntimeRouter.launch({ kind: 'deepLink', uri: dl });
 }
 
 // ── 插件授权状态 + 本地运行时（ECO-11.3）────────────────────
