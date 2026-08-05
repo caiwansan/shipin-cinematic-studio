@@ -56,13 +56,8 @@
     }
   },
   "plugins": {
-    "deepLink": {
+    "deep-link": {
       "desktop": {
-        "schemes": [
-          "kunlun"
-        ]
-      },
-      "mobile": {
         "schemes": [
           "kunlun"
         ]
