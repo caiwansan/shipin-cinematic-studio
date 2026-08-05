@@ -331,15 +331,48 @@ export default async function imRoutes(fastify: FastifyInstance) {
         pull_mode: pullMode,
       })
       // 服务端解码 payload → 前端直接读 content（修复中文乱码：atob latin1 解码导致「刷新后消息不见」）
+      // 附加 authorName（账号昵称，User 表 username || email 前缀）→ 群里说话显示昵称，不显示短 UID
+      const fromUids = [...new Set((data?.messages || []).map((m: any) => m.from_uid).filter(Boolean))]
+      const authorNames = new Map<string, string>()
+      if (fromUids.length) {
+        const senders = await prisma.user.findMany({
+          where: { id: { in: fromUids } },
+          select: { id: true, username: true, email: true },
+        })
+        for (const u of senders) {
+          authorNames.set(u.id, u.username || u.email.split('@')[0])
+        }
+      }
       const messages = (data?.messages || []).map((m: any) => ({
         ...m,
         payload: m.payload ?? null,
         content: decodeMessagePayload(m.payload),
+        authorName: authorNames.get(m.from_uid) || '',
       }))
       return { success: true, data: { ...data, messages } }
     } catch (e) {
       return reply.status(502).send({ success: false, error: (e as Error).message })
     }
+  })
+
+  // POST /api/im/users/resolve — 批量解析 uid → 账号昵称（群里说话显示昵称；User 表 username || email 前缀）
+  fastify.post('/api/im/users/resolve', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { uids } = (request.body as any) || {}
+    // User.id 是 UUID 列：过滤非法 UUID，避免 Prisma P2023 崩
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const list = Array.isArray(uids)
+      ? [...new Set(uids.filter((u: any) => typeof u === 'string' && u && uuidRe.test(u)))].slice(0, 200)
+      : []
+    if (!list.length) return { success: true, data: { names: {} } }
+    const users = await prisma.user.findMany({
+      where: { id: { in: list } },
+      select: { id: true, username: true, email: true },
+    })
+    const names: Record<string, string> = {}
+    for (const u of users) {
+      names[u.id] = u.username || u.email.split('@')[0]
+    }
+    return { success: true, data: { names } }
   })
 
   // POST /api/im/messages/send — 服务端代发消息（机器人/系统消息用；普通用户走 SDK 直发）

@@ -114,7 +114,7 @@
             <div v-for="msg in displayMessages" :key="msg.key" class="msg-row" :class="{ mine: msg.fromUID === tea.userId.value }">
               <div class="msg-bubble">
                 <div class="msg-meta">
-                  <span class="msg-author">{{ msg.authorName || (msg.fromUID === tea.userId.value ? '我' : memberName(msg.fromUID)) }}</span>
+                  <span class="msg-author">{{ msg.authorName || (msg.fromUID === tea.userId.value ? '我' : memberName(msg.fromUID) || shortUid(msg.fromUID)) }}</span>
                   <span class="msg-time">{{ fmtTime(msg.timestamp) }}</span>
                 </div>
                 <div class="msg-content" v-html="renderMsg(msg)"></div>
@@ -291,8 +291,41 @@ function shortUid(uid: string) {
 }
 
 function memberName(uid: string) {
+  if (!uid) return ''
+  // ① 当前频道成员表（imChannelMember，含平台昵称）
   const m = members.value.find((x) => x.uid === uid)
-  return m?.name || shortUid(uid)
+  if (m?.name) return m.name
+  // ② 平台用户列表（好友 tab 数据源，username 即账号昵称）
+  const u = users.value.find((x) => x.id === uid)
+  if (u?.name) return u.name
+  // ③ 按需批量解析（User 表）
+  resolveNamesFor([uid])
+  return ''
+}
+
+// 按需批量解析 uid → 账号昵称（异步补名，防抖去重）
+let nameResolveTimer: ReturnType<typeof setTimeout> | null = null
+let nameResolveQueue: string[] = []
+async function resolveNamesFor(uids: string[]) {
+  nameResolveQueue = [...new Set([...nameResolveQueue, ...uids])]
+  if (nameResolveTimer) return
+  nameResolveTimer = setTimeout(async () => {
+    const q = [...nameResolveQueue]
+    nameResolveQueue = []
+    nameResolveTimer = null
+    try {
+      const names = await tea.resolveNames(q)
+      if (!Object.keys(names).length) return
+      // 补名后刷新消息作者显示（依赖 members/users 引用不变，直接更新消息对象）
+      for (const [uid, name] of Object.entries(names)) {
+        messages.value = messages.value.map((m: any) =>
+          m.fromUID === uid && !m.authorName ? { ...m, authorName: name } : m
+        )
+      }
+    } catch (e) {
+      console.warn('[昆仑茶馆] 昵称解析失败', e)
+    }
+  }, 120)
 }
 
 function fmtTime(ts: number) {
@@ -363,7 +396,12 @@ async function loadHistory() {
   loadingHistory.value = true
   const msgs = await tea.loadHistory(currentChannel.value.id, currentChannel.value.type, 0, 50)
   messages.value = msgs
-    .map((m: any) => ({ ...m, key: msgKey(m) }))
+    .map((m: any) => ({
+      ...m,
+      // WuKongIM 历史消息字段是 from_uid（下划线），实时消息是 fromUID → 统一驼峰
+      fromUID: m.fromUID || m.from_uid,
+      key: msgKey(m),
+    }))
     .sort((a: any, b: any) => (a.timestamp || 0) - (b.timestamp || 0))
   loadingHistory.value = false
   scrollBottom()
@@ -540,7 +578,7 @@ onMounted(async () => {
     const msgChannel = msg.channel
     if (msgChannel && (msgChannel.channelID !== ch.id || msgChannel.channelType !== ch.type)) return
     if (msg.fromUID === tea.userId.value) return
-    messages.value.push({ ...msg, key: msgKey(msg) })
+    messages.value.push({ ...msg, fromUID: msg.fromUID || msg.from_uid, key: msgKey(msg) })
     scrollBottom()
   })
   // 发送回执：reasonCode=0 送达；非 0 或超时 → 提示

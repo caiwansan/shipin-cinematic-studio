@@ -175,6 +175,13 @@ export function useKunlunTea() {
     return json.success ? (json.data?.users || []) : []
   }
 
+  /** 批量解析 uid → 账号昵称（群里说话显示昵称） */
+  async function resolveNames(uids: string[]) {
+    const res = await authFetch('/api/im/users/resolve', { method: 'POST', body: JSON.stringify({ uids }) })
+    const json = await res.json()
+    return json.success ? (json.data?.names || {}) : {}
+  }
+
   /** 在线状态上报 */
   async function reportPresence(online: boolean) {
     try {
@@ -184,5 +191,5 @@ export function useKunlunTea() {
     }
   }
 
-  return { status, userId, connected, connecting, statusLabel, connect, disconnect, onMessage, onSendStatus, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, reportPresence }
+  return { status, userId, connected, connecting, statusLabel, connect, disconnect, onMessage, onSendStatus, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
 }
