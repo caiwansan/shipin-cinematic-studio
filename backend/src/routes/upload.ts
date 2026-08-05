@@ -67,12 +67,16 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
       if (!userId) {
         return reply.status(400).send({ error: '用户身份无效，请重新登录' })
       }
-      // 兼容 AdminUser（id 为 Int）→ 转为 User 表的 UUID
+      // 兼容 AdminUser（id 为 Int）→ 转为 User 表的 UUID；无对应 User 账号 → 管理后台上传模式
+      let isAdminUpload = false
       if (typeof userId === 'number') {
         const adminUser = await prisma.adminUser.findUnique({ where: { id: userId } })
         if (adminUser) {
           const realUser = await prisma.user.findUnique({ where: { username: adminUser.username } })
           if (realUser) userId = realUser.id
+          else isAdminUpload = true
+        } else {
+          return reply.status(401).send({ error: '管理员身份无效' })
         }
       }
       const data = await request.file()
@@ -102,6 +106,13 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
       // 从文件名提取标题（去掉扩展名）
       const title = data.filename?.replace(/\.[^/.]+$/, '') || '未命名'
       const type = ext === 'mp4' ? 'video' : 'image'
+
+      // 管理后台（AdminUser 且 User 表无对应账号）上传：仅存文件返回 URL，不进用户资产体系
+      // （商城管理/Banner 等后台图片上传场景，资产权益链路无意义且会因 UUID FK 失败）
+      if (isAdminUpload) {
+        console.log(`[upload] 管理后台上传: adminId=${userId}, file=${filename}`)
+        return toApiResponse({ id: null, title, type, url: publicUrl, admin: true, message: '上传成功' }) satisfies ApiResponse<unknown>
+      }
 
       // 确保 Membership 存在
       const existingMembership = await prisma.membership.findUnique({ where: { userId } })

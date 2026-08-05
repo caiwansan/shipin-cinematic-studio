@@ -274,7 +274,7 @@ const bannersLoading = ref(false)
 const banners = ref<any[]>([])
 const showBannerForm = ref(false)
 const editingBanner = ref<any>(null)
-const bannerForm = ref<any>({ image: '', link: '', sortOrder: 0, isActive: true })
+const bannerForm = ref<any>({ image: '', imageUrl: '', link: '', linkValue: '', linkType: '', sortOrder: 0, isActive: true })
 
 async function fetchBanners() {
   bannersLoading.value = true
@@ -285,22 +285,30 @@ async function fetchBanners() {
 
 function openBannerCreate() {
   editingBanner.value = null
-  bannerForm.value = { image: '', link: '', sortOrder: 0, isActive: true }
+  bannerForm.value = { image: '', imageUrl: '', link: '', linkValue: '', linkType: '', sortOrder: 0, isActive: true }
   showBannerForm.value = true
 }
 function openBannerEdit(b: any) {
   editingBanner.value = b
-  bannerForm.value = { image: b.image || b.imageUrl || '', link: b.link || b.linkValue || '', sortOrder: b.sortOrder ?? b.sort ?? 0, isActive: b.isActive }
+  bannerForm.value = { image: b.image || b.imageUrl || '', imageUrl: b.imageUrl || b.image || '', link: b.link || b.linkValue || '', linkValue: b.linkValue || b.link || '', linkType: b.linkType || '', sortOrder: b.sortOrder ?? b.sort ?? 0, isActive: b.isActive }
   showBannerForm.value = true
 }
 function closeBannerForm() { showBannerForm.value = false; editingBanner.value = null }
 
 async function saveBanner() {
   try {
+    // 映射后端字段（imageUrl/linkType/linkValue/sort）
+    const payload = {
+      imageUrl: bannerForm.value.imageUrl || bannerForm.value.image,
+      linkType: bannerForm.value.linkType || null,
+      linkValue: bannerForm.value.linkValue || bannerForm.value.link || '',
+      sort: bannerForm.value.sortOrder ?? 0,
+      isActive: bannerForm.value.isActive,
+    }
     if (editingBanner.value) {
-      await api('PUT', `/banners/${editingBanner.value.id}`, bannerForm.value)
+      await api('PUT', `/banners/${editingBanner.value.id}`, payload)
     } else {
-      await api('POST', '/banners', bannerForm.value)
+      await api('POST', '/banners', payload)
     }
     closeBannerForm()
     fetchBanners()
