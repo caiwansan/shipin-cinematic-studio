@@ -197,8 +197,12 @@
               </template>
               <span v-else class="gift-foot-empty">选择一份礼物</span>
             </div>
-            <button class="gift-send-btn" :disabled="!giftSelected || !giftReceiverOk || giftSending" @click="sendGift">
-              {{ giftSending ? '发送中...' : '赠送' }}
+            <button
+              class="gift-send-btn"
+              :disabled="!giftSelected || !giftReceiverOk || giftSending"
+              @click="sendGift"
+            >
+              {{ giftSending ? '发送中...' : (!giftSelected ? '选择礼物' : (!giftReceiverOk ? '选择接收人' : '赠送')) }}
             </button>
           </div>
         </div>
@@ -684,9 +688,11 @@ async function openGiftPanel() {
   giftPanelOpen.value = true
   giftSelected.value = null
   giftReceiverUid.value = ''
-  // 非私聊默认选第一个成员
-  if (!isDmChannel.value && members.value.length) {
-    giftReceiverUid.value = members.value[0].uid
+  // 群里必须显式指定接收人（掌柜 08-06：群里未指定接收人必须无法送）；私聊直接送给对方
+  if (isDmChannel.value) {
+    giftReceiverUid.value = peerUid.value
+  } else {
+    giftReceiverUid.value = ''
   }
   try {
     const r = await fetch('/api/gifts/products', { headers: { Authorization: 'Bearer ' + giftToken() } })
