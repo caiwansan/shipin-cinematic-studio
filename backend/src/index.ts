@@ -37,6 +37,7 @@ import desktopComfyRoutes from './routes/desktop-comfy.js'
 import desktopVideoRoutes from './routes/desktop-video.js'
 import desktopTicketRoutes from './routes/desktop-ticket.js'
 import ticketExchangeRoutes from './routes/ticket-exchange.js'
+import pluginTicketRoutes from './routes/plugin-ticket.js'
 import healthRoutes from './routes/health.js'
 import siteConfigRoutes from './routes/site-config.js'
 import observabilityRoutes from './routes/observability.js'
@@ -969,6 +970,8 @@ await app.register(projectV2Routes)
   // S1.1 Identity Ticket Bridge（ADR-021 身份边界，一次性 ticket）
   await app.register(desktopTicketRoutes)
   await app.register(ticketExchangeRoutes)
+  // S2.2 Plugin Invocation Ticket（复用 ticket 机制, 不执行）
+  await app.register(pluginTicketRoutes)
   // S2.1 Plugin Registry Adapter（只读）
   // Brand GEO routes (Phase 2) / Sprint 1A Knowledge Skeleton
   await app.register(await import('./services/geo/routes/geo-project.route.js').then(m => m.default))
