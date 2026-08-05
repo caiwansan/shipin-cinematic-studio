@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps<{
   post: {
@@ -53,9 +53,20 @@ const tagList = computed(() => {
   return tags.split(',').map(t => t.trim()).filter(Boolean)
 })
 
-const timeAgo = computed(() => {
+// ─── 时间显示（hydration-safe）───
+// SSR 首帧输出时区无关的绝对时间（服务器/客户端完全一致），
+// 客户端 onMounted 后切换为相对时间并定时刷新，避免 hydration mismatch。
+function formatAbsolute(iso: string) {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  // 用 UTC 组件，避免服务器/客户端时区差异
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`
+}
+
+function formatRelative(iso: string) {
   const now = Date.now()
-  const created = new Date(props.post.createdAt).getTime()
+  const created = new Date(iso).getTime()
   const diff = now - created
   const minutes = Math.floor(diff / 60000)
   if (minutes < 1) return '刚刚'
@@ -66,6 +77,23 @@ const timeAgo = computed(() => {
   if (days < 30) return `${days}天前`
   const months = Math.floor(days / 30)
   return `${months}个月前`
+}
+
+// 初始值：绝对时间（SSR 与客户端 hydration 首帧一致）
+const timeAgo = ref<string>(formatAbsolute(props.post.createdAt))
+
+let timer: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  // 挂载后切换为相对时间
+  timeAgo.value = formatRelative(props.post.createdAt)
+  // 每分钟刷新，保持相对时间新鲜
+  timer = setInterval(() => {
+    timeAgo.value = formatRelative(props.post.createdAt)
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
 })
 </script>
 

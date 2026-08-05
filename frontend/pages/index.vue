@@ -186,6 +186,7 @@ import CreationLawScene from '~/components/kunlun/scenes/CreationLawScene.vue'
 import FourStepScene from '~/components/kunlun/scenes/FourStepScene.vue'
 import CreatorVoicesScene from '~/components/kunlun/scenes/CreatorVoicesScene.vue'
 import FinalCTAScene from '~/components/kunlun/scenes/FinalCTAScene.vue'
+import EnterpriseGrowthBanner from '~/components/kunlun/scenes/EnterpriseGrowthBanner.vue'
 import RegionPicker from '~/components/RegionPicker.vue'
 import { useRegions } from '~/composables/useRegions'
 

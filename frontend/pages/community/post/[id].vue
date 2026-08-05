@@ -15,52 +15,54 @@
           <button v-if="!isLoggedIn" class="btn btn-outline" @click="showLogin = true">登录</button>
           <button v-if="!isLoggedIn" class="btn btn-primary" @click="showLogin = true; isRegisterMode = true">免费注册</button>
           <template v-else>
-            <button class="btn btn-primary" @click="goToStudio">进入工作台 →</button>
-            <div class="nav-user-badge" @click="goMemberCenter" title="会员中心">
-              <div class="nav-user-avatar" :class="`nav-user-avatar--${tierClass}`">
-                {{ avatarChar }}
+              <button class="btn btn-primary" @click="goToStudio">进入工作台 →</button>
+              <div class="nav-user-badge" @click="goMemberCenter" title="会员中心">
+                <div class="nav-user-avatar" :class="`nav-user-avatar--${tierClass}`">
+                  {{ avatarChar }}
+                </div>
+                <span class="nav-tier-tag" :class="`nav-tier-tag--${tierClass}`">
+                  {{ tierLabel }}
+                </span>
               </div>
-              <span class="nav-tier-tag" :class="`nav-tier-tag--${tierClass}`">
-                {{ tierLabel }}
-              </span>
-            </div>
-          </template>
+            </template>
         </div>
       </div>
     </nav>
     <div class="page-content">
       <NuxtLink to="/community" class="back-link">← 返回社区</NuxtLink>
 
-      <div v-if="loading" class="loading-state">
+      <div v-if="pending" class="loading-state">
         <div class="spinner" />
         <p>加载中...</p>
       </div>
 
       <div v-else-if="error" class="error-state">
-        <p>{{ error }}</p>
+        <p>{{ error.value?.message || '加载失败' }}</p>
         <NuxtLink to="/community" class="back-link">返回社区</NuxtLink>
       </div>
 
       <template v-else-if="post">
         <!-- 帖子主体 -->
-        <article class="post-main">
+        <article class="post-main" itemprop="mainEntity" itemscope itemtype="https://schema.org/Article">
           <div class="post-header">
             <div class="post-badges">
               <span v-if="post.isPinned" class="badge badge-pin">📌 置顶</span>
               <span v-if="post.isEssence" class="badge badge-essence">⭐ 精华</span>
               <span class="badge badge-category">{{ post.category }}</span>
             </div>
-            <h1 class="post-title">{{ post.title }}</h1>
+            <h1 class="post-title" itemprop="headline">{{ post.title }}</h1>
             <div class="post-meta">
-              <span class="meta-author">👤 {{ post.user?.username || '匿名' }}</span>
+              <span class="meta-author" itemprop="author">👤 {{ post.user?.username || '匿名' }}</span>
               <span>👁️ {{ post.viewCount }}</span>
               <span>👍 {{ post.likeCount }}</span>
               <span>💬 {{ post.commentCount }}</span>
-              <span class="meta-time">{{ formatTime(post.createdAt) }}</span>
+              <span class="meta-time">
+                <time itemprop="datePublished" :datetime="post.createdAt">{{ formatTime(post.createdAt) }}</time>
+              </span>
             </div>
           </div>
 
-          <div class="post-content" v-html="renderContent(post.content)" />
+          <div class="post-content" itemprop="articleBody" v-html="renderContent(post.content)" />
 
           <!-- 附件媒体 -->
           <div v-if="postMedia.length > 0" class="post-media">
@@ -94,12 +96,14 @@
 
           <!-- 评论列表 -->
           <div v-if="post.comments && post.comments.length > 0" class="comments-list">
-            <div v-for="comment in post.comments" :key="comment.id" class="comment-item">
+            <div v-for="comment in post.comments" :key="comment.id" class="comment-item" itemprop="comment" itemscope itemtype="https://schema.org/Comment">
               <div class="comment-header">
-                <span class="comment-author">👤 {{ comment.user?.username || '匿名' }}</span>
-                <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
+                <span class="comment-author" itemprop="author">👤 {{ comment.user?.username || '匿名' }}</span>
+                <span class="comment-time">
+                  <time itemprop="dateCreated" :datetime="comment.createdAt">{{ formatTime(comment.createdAt) }}</time>
+                </span>
               </div>
-              <div class="comment-content">{{ comment.content }}</div>
+              <div class="comment-content" itemprop="text">{{ comment.content }}</div>
               <div class="comment-actions">
                 <button class="action-btn" @click="toggleReply(comment.id)">
                   💬 回复 ({{ comment.replies?.length || 0 }})
@@ -125,12 +129,14 @@
 
               <!-- 子回复 -->
               <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
-                <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
+                <div v-for="reply in comment.replies" :key="reply.id" class="reply-item" itemprop="comment" itemscope itemtype="https://schema.org/Comment">
                   <div class="comment-header">
-                    <span class="comment-author">👤 {{ reply.user?.username || '匿名' }}</span>
-                    <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
+                    <span class="comment-author" itemprop="author">👤 {{ reply.user?.username || '匿名' }}</span>
+                    <span class="comment-time">
+                      <time itemprop="dateCreated" :datetime="reply.createdAt">{{ formatTime(reply.createdAt) }}</time>
+                    </span>
                   </div>
-                  <div class="comment-content">{{ reply.content }}</div>
+                  <div class="comment-content" itemprop="text">{{ reply.content }}</div>
                 </div>
               </div>
             </div>
@@ -148,6 +154,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAsyncData } from '#app'
+
+// SSR 端直连后端（/api/* 是外部 4002 服务）；客户端用相对路径走 nginx
+const apiBase = import.meta.server ? (process.env.BACKEND_URL || 'http://127.0.0.1:4002') : ''
 
 const route = useRoute()
 const router = useRouter()
@@ -155,115 +165,115 @@ const isLoggedIn = ref(false)
 const isRegisterMode = ref(false)
 const showLogin = ref(false)
 const authUser = ref<any>(null)
-const post = ref<any>(null)
-const loading = ref(true)
-const error = ref('')
 const commentContent = ref('')
 const replyContent = ref('')
 const replyToId = ref<string | null>(null)
 const submitting = ref(false)
 
-// 解析媒体附件
-const postMedia = computed(() => {
-  if (!post.value?.mediaJson) return []
-  try {
-    const parsed = typeof post.value.mediaJson === 'string'
-      ? JSON.parse(post.value.mediaJson)
-      : post.value.mediaJson
-    return Array.isArray(parsed) ? parsed : []
-  } catch { return [] }
+// ─── SSR 数据获取 ───
+const { data: post, pending, error, refresh } = await useAsyncData(
+  `post-${route.params.id}`,
+  async () => {
+    const data = await $fetch(`${apiBase}/api/community/posts/${route.params.id}`)
+    if (!data || !data.post) throw new Error('帖子不存在或已被删除')
+    return data.post
+  },
+  { lazy: false }
+)
+
+// ─── 动态 Meta 标签 ───
+const postDescription = computed(() => {
+  if (!post.value?.content) return '昆仑镜社区 - AI 短剧制作交流平台'
+  const text = post.value.content
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`[^`]+`/g, '')
+    .replace(/!?\[[^\]]*\]\([^)]+\)/g, '')
+    .replace(/[#*>`~\[\]()]/g, '')
+    .trim()
+  return text.length > 160 ? text.substring(0, 160) + '...' : text
 })
 
-function previewImage(url: string) {
-  window.open(url, '_blank')
-}
+const postImageUrl = computed(() => {
+  if (!post.value?.mediaJson) return 'https://aigc.fushtn.com/logo.png'
+  try {
+    const media = JSON.parse(post.value.mediaJson)
+    if (Array.isArray(media) && media.length > 0 && media[0].type === 'image') {
+      return media[0].url
+    }
+  } catch {}
+  return 'https://aigc.fushtn.com/logo.png'
+})
 
-/**
- * 安全的 HTML 净化 — 使用 DOMPurify CDN 方案
- * 在浏览器端动态加载 DOMPurify 脚本（无需 npm 安装），
- * 如果 DOMPurify 不可用，则回退到安全的纯文本模式。
- *
- * DOMPurify 是目前业界最成熟的 HTML 净化库，被 Mozilla、GitHub 等广泛使用，
- * 能防御包括但不限于：
- * - 各种 XSS payload（script、事件处理器、javascript: 等）
- * - SVG/namespace 污染攻击
- * - mXSS（突变 XSS）绕过
- * - HTML 实体编码混淆攻击
- *
- * Sanitizer API 兼容提醒：Chrome 105+ 支持原生 Sanitizer API，
- * 但考虑到兼容性和成熟度，此处优先使用 DOMPurify。
- */
-const DOMPURIFY_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js'
+const postUrl = computed(() => `https://aigc.fushtn.com/community/post/${route.params.id}`)
 
-function sanitizeHtml(html: string): string {
-  if (!html) return ''
-  if (typeof window === 'undefined') return html
+useHead({
+  title: post.value ? `${post.value.title} - 昆仑镜社区` : '帖子详情 - 昆仑镜社区',
+  meta: [
+    { name: 'description', content: postDescription },
+    // Open Graph
+    { property: 'og:title', content: post.value?.title || '昆仑镜社区' },
+    { property: 'og:description', content: postDescription },
+    { property: 'og:type', content: 'article' },
+    { property: 'og:url', content: postUrl },
+    { property: 'og:image', content: postImageUrl },
+    { property: 'og:site_name', content: '昆仑镜' },
+    { property: 'article:published_time', content: post.value?.createdAt || '' },
+    { property: 'article:modified_time', content: post.value?.updatedAt || post.value?.createdAt || '' },
+    { property: 'article:section', content: post.value?.category || '社区' },
+    // Twitter Card
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: post.value?.title || '昆仑镜社区' },
+    { name: 'twitter:description', content: postDescription },
+    { name: 'twitter:image', content: postImageUrl },
+  ],
+  link: [
+    { rel: 'canonical', href: postUrl },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: post.value?.title || '',
+        description: postDescription.value,
+        image: postImageUrl.value,
+        datePublished: post.value?.createdAt || '',
+        dateModified: post.value?.updatedAt || post.value?.createdAt || '',
+        author: {
+          '@type': 'Person',
+          name: post.value?.user?.username || '匿名',
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: '昆仑镜',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://aigc.fushtn.com/logo.png',
+          },
+        },
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': postUrl.value,
+        },
+        interactionStatistic: [
+          {
+            '@type': 'InteractionCounter',
+            interactionType: 'https://schema.org/CommentAction',
+            userInteractionCount: post.value?.commentCount || 0,
+          },
+          {
+            '@type': 'InteractionCounter',
+            interactionType: 'https://schema.org/LikeAction',
+            userInteractionCount: post.value?.likeCount || 0,
+          },
+        ],
+      }),
+    },
+  ],
+})
 
-  // 检测 DOMPurify 是否已加载
-  const purify = (window as any).DOMPurify
-  if (purify?.sanitize) {
-    return purify.sanitize(html, {
-      ALLOWED_TAGS: ['a', 'img', 'video', 'source', 'br', 'p', 'b', 'i', 'strong', 'em', 'ul', 'ol', 'li', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-      ALLOWED_ATTR: ['href', 'src', 'target', 'rel', 'class', 'controls', 'alt', 'title', 'width', 'height'],
-      ALLOW_DATA_ATTR: false,
-      ADD_ATTR: ['target'],
-      FORBID_TAGS: ['style', 'form', 'input', 'textarea', 'select', 'button', 'script', 'iframe', 'object', 'embed', 'link', 'meta', 'svg', 'math', 'noscript'],
-      FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'onsubmit', 'onchange'],
-    })
-  }
-
-  // 回退方案 — 纯文本模式（不渲染任何 HTML）
-  const div = document.createElement('div')
-  div.textContent = html
-  return div.innerHTML
-}
-
-/**
- * 异步加载 DOMPurify（非阻塞），只加载一次
- */
-let dompurifyLoading = false
-function ensureDompurify(): void {
-  if (typeof window === 'undefined') return
-  if ((window as any).DOMPurify || dompurifyLoading) return
-  dompurifyLoading = true
-  const script = document.createElement('script')
-  script.src = DOMPURIFY_CDN
-  script.async = true
-  script.onload = () => { dompurifyLoading = false }
-  script.onerror = () => { dompurifyLoading = false; console.warn('[Sanitize] DOMPurify 加载失败，使用纯文本回退') }
-  document.head.appendChild(script)
-}
-
-function renderContent(text: string): string {
-  if (!text) return ''
-  // 转义 HTML — 先完全转义，再安全地替换自定义标记
-  let html = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-  // 图片标记 [img:URL]
-  html = html.replace(/\[img:([^\]]+)\]/g, (_match, url) => {
-    return `<div class="inline-media"><a href="${url}" target="_blank" rel="noopener" class="post-link"><img src="${url}" class="inline-img" loading="lazy" /></a></div>`
-  })
-  // 视频标记 [video:URL]
-  html = html.replace(/\[video:([^\]]+)\]/g, (_match, url) => {
-    return `<div class="inline-media"><video src="${url}" class="inline-video" controls preload="none"></video></div>`
-  })
-  // 超链接 [text](url)
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, linkText, url) => {
-    return `<a href="${url}" target="_blank" rel="noopener" class="post-link">${linkText}</a>`
-  })
-  // 纯 URL 自动转链接
-  html = html.replace(/(https?:\/\/[^\s<]+)/g, (_match, url) => {
-    return `<a href="${url}" target="_blank" rel="noopener" class="post-link">${url}</a>`
-  })
-  // 换行转 <br>
-  html = html.replace(/\n/g, '<br />')
-  // 最终安全净化
-  html = sanitizeHtml(html)
-  return html
-}
-
+// ─── 客户端-only 逻辑 ───
 const tierClass = computed(() => {
   const coins = authUser.value?.coins ?? 0
   if (coins >= 10000) return 'ultra'
@@ -282,22 +292,134 @@ const avatarChar = computed(() => {
 function goToStudio() { router.push('/studio/v2') }
 function goMemberCenter() { router.push('/user/center') }
 
-async function fetchPost() {
-  loading.value = true
+// 解析媒体附件
+const postMedia = computed(() => {
+  if (!post.value?.mediaJson) return []
   try {
-    const res = await fetch(`/api/community/posts/${route.params.id}`)
-    if (!res.ok) {
-      throw new Error('帖子不存在或已被删除')
-    }
-    const data = await res.json()
-    post.value = data.post
-  } catch (err: any) {
-    error.value = err.message || '加载失败'
-  } finally {
-    loading.value = false
-  }
+    const parsed = typeof post.value.mediaJson === 'string'
+      ? JSON.parse(post.value.mediaJson)
+      : post.value.mediaJson
+    return Array.isArray(parsed) ? parsed : []
+  } catch { return [] }
+})
+
+function previewImage(url: string) {
+  window.open(url, '_blank')
 }
 
+// ─── HTML 净化 ───
+const SAFE_TAGS = new Set(['a','img','video','source','br','p','b','i','strong','em','ul','ol','li','div','span','h1','h2','h3','h4','h5','h6','pre','code','blockquote'])
+const SAFE_ATTR = new Set(['href','src','target','rel','class','controls','alt','title','width','height','loading','preload'])
+const DANGEROUS_ATTR_PREFIX = /^on/i
+
+function sanitizeHtml(html: string): string {
+  if (!html) return ''
+  if (typeof document === 'undefined') return html
+  const div = document.createElement('div')
+  div.innerHTML = html
+  function clean(node: Element): void {
+    if (node.nodeType === 1) {
+      const tag = node.tagName.toLowerCase()
+      if (!SAFE_TAGS.has(tag)) {
+        const fragment = document.createDocumentFragment()
+        while (node.firstChild) fragment.appendChild(node.firstChild)
+        node.parentNode?.replaceChild(fragment, node)
+        return
+      }
+      for (let i = node.attributes.length - 1; i >= 0; i--) {
+        const attrName = node.attributes[i].name.toLowerCase()
+        const attrVal = node.attributes[i].value
+        if (!SAFE_ATTR.has(attrName) || DANGEROUS_ATTR_PREFIX.test(attrName) || attrVal.trim().startsWith('javascript:')) {
+          node.removeAttribute(attrName)
+        }
+      }
+    }
+    for (let i = node.childNodes.length - 1; i >= 0; i--) {
+      const child = node.childNodes[i]
+      if (child.nodeType === 1) clean(child as Element)
+    }
+  }
+  for (let i = div.childNodes.length - 1; i >= 0; i--) {
+    const child = div.childNodes[i]
+    if (child.nodeType === 1) clean(child as Element)
+  }
+  return div.innerHTML
+}
+
+// ─── Markdown 渲染 ───
+function renderContent(text: string): string {
+  if (!text) return ''
+  const codeBlocks: string[] = []
+  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_match: string, lang: string, code: string) => {
+    const idx = codeBlocks.length
+    const langClass = lang ? ` language-${lang}` : ''
+    codeBlocks.push(`<pre><code class="${langClass}">${escapeHtml(code.trim())}</code></pre>`)
+    return `\x00CODEBLOCK${idx}\x00`
+  })
+  const inlineCodes: string[] = []
+  text = text.replace(/`([^`]+)`/g, (_match: string, code: string) => {
+    const idx = inlineCodes.length
+    inlineCodes.push(`<code>${escapeHtml(code)}</code>`)
+    return `\x00INLINECODE${idx}\x00`
+  })
+  const lines = text.split('\n')
+  const blocks: string[] = []
+  let inList = false
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+    if (!trimmed) { if (inList) { blocks.push('</ul>'); inList = false } continue }
+    const headerMatch = trimmed.match(/^(#{1,6})\s+(.*)$/)
+    if (headerMatch) {
+      if (inList) { blocks.push('</ul>'); inList = false }
+      const level = headerMatch[1].length
+      blocks.push(`<h${level}>${headerMatch[2]}</h${level}>`)
+      continue
+    }
+    const ulMatch = trimmed.match(/^[-*]\s+(.*)$/)
+    if (ulMatch) {
+      if (!inList) { blocks.push('<ul>'); inList = true }
+      blocks.push(`<li>${ulMatch[1]}</li>`)
+      continue
+    }
+    const quoteMatch = trimmed.match(/^>\s*(.*)$/)
+    if (quoteMatch) {
+      if (inList) { blocks.push('</ul>'); inList = false }
+      blocks.push(`<blockquote>${quoteMatch[1]}</blockquote>`)
+      continue
+    }
+    if (inList) { blocks.push('</ul>'); inList = false }
+    blocks.push(`<p>${line}</p>`)
+  }
+  if (inList) blocks.push('</ul>')
+  let html = blocks.join('\n')
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  html = html.replace(/\x00INLINECODE(\d+)\x00/g, (_match: string, idx: string) => inlineCodes[parseInt(idx)])
+  html = html.replace(/\x00CODEBLOCK(\d+)\x00/g, (_match: string, idx: string) => codeBlocks[parseInt(idx)])
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match: string, alt: string, url: string) => {
+    return `<div class="inline-media"><img src="${url}" alt="${alt}" class="inline-img" loading="lazy" /></div>`
+  })
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match: string, linkText: string, url: string) => {
+    return `<a href="${url}" target="_blank" rel="noopener" class="post-link">${linkText}</a>`
+  })
+  html = html.replace(/\[img:([^\]]+)\]/g, (_match: string, url: string) => {
+    return `<div class="inline-media"><a href="${url}" target="_blank" rel="noopener" class="post-link"><img src="${url}" class="inline-img" loading="lazy" /></a></div>`
+  })
+  html = html.replace(/\[video:([^\]]+)\]/g, (_match: string, url: string) => {
+    return `<div class="inline-media"><video src="${url}" class="inline-video" controls preload="none"></video></div>`
+  })
+  html = html.replace(/(https?:\/\/[^\s<]+)/g, (_match: string, url: string) => {
+    return `<a href="${url}" target="_blank" rel="noopener" class="post-link">${url}</a>`
+  })
+  return sanitizeHtml(html)
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// ─── 评论交互 ───
 function toggleReply(commentId: string) {
   replyToId.value = replyToId.value === commentId ? null : commentId
   replyContent.value = ''
@@ -307,24 +429,15 @@ async function submitComment() {
   if (!commentContent.value.trim()) return
   submitting.value = true
   try {
-    const _gt = () => { try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' } }; const token = _gt()
+    const token = window.localStorage?.getItem('auth_token') || ''
     const res = await fetch('/api/community/comments', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        postId: route.params.id,
-        content: commentContent.value.trim(),
-      }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ postId: route.params.id, content: commentContent.value.trim() }),
     })
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error || '提交失败')
-    }
+    if (!res.ok) { const data = await res.json(); throw new Error(data.error || '提交失败') }
     commentContent.value = ''
-    fetchPost()
+    await refresh()
   } catch (err: any) {
     alert(err.message)
   } finally {
@@ -336,26 +449,16 @@ async function submitReply(parentId: string) {
   if (!replyContent.value.trim()) return
   submitting.value = true
   try {
-    const _gt = () => { try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' } }; const token = _gt()
+    const token = window.localStorage?.getItem('auth_token') || ''
     const res = await fetch('/api/community/comments', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        postId: route.params.id,
-        content: replyContent.value.trim(),
-        parentId,
-      }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ postId: route.params.id, content: replyContent.value.trim(), parentId }),
     })
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error || '提交失败')
-    }
+    if (!res.ok) { const data = await res.json(); throw new Error(data.error || '提交失败') }
     replyContent.value = ''
     replyToId.value = null
-    fetchPost()
+    await refresh()
   } catch (err: any) {
     alert(err.message)
   } finally {
@@ -365,27 +468,19 @@ async function submitReply(parentId: string) {
 
 function formatTime(dateStr: string) {
   const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  if (isNaN(date.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  // 固定 UTC pad 格式：服务器（UTC+8）与客户端浏览器（可能任何时区）输出完全一致，避免 hydration mismatch
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`
 }
 
 onMounted(() => {
-  const _gt = () => { try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' } }; const token = _gt()
+  const token = window.localStorage?.getItem('auth_token') || ''
   isLoggedIn.value = !!token
   try {
-    const authUserRaw = window.localStorage?.getItem("auth_user")
-    if (authUserRaw) {
-      try { authUser.value = JSON.parse(authUserRaw) } catch {}
-    }
+    const authUserRaw = window.localStorage?.getItem('auth_user')
+    if (authUserRaw) { try { authUser.value = JSON.parse(authUserRaw) } catch {} }
   } catch {}
-  // 异步加载 DOMPurify（非阻塞），确保渲染帖子内容时安全工具已就绪
-  ensureDompurify()
-  fetchPost()
 })
 </script>
 
@@ -594,12 +689,91 @@ onMounted(() => {
   color: rgba(255,255,255,0.7);
   white-space: normal;
 }
-.post-link {
+
+/* v-html 内部元素使用 :deep() 选择器
+ * scoped 样式默认不作用于 v-html 动态插入的内容，
+ * 必须用 :deep() 穿透才能渲染帖子内的图片、视频、链接样式 */
+:deep(.post-link) {
   color: #60a5fa;
   text-decoration: underline;
   transition: color 0.2s;
 }
-.post-link:hover { color: #93c5fd; }
+:deep(.post-link:hover) { color: #93c5fd; }
+:deep(.inline-media) {
+  margin: 12px 0;
+  max-width: 500px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+:deep(.inline-img) {
+  width: 100%;
+  display: block;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+:deep(.inline-img:hover) { opacity: 0.9; }
+:deep(.inline-video) {
+  width: 100%;
+  display: block;
+  max-height: 400px;
+}
+
+/* ─── Markdown 块级元素 ─── */
+:deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
+  color: #fff;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.2em 0 0.6em;
+}
+:deep(h1) { font-size: 1.6rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; }
+:deep(h2) { font-size: 1.35rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px; }
+:deep(h3) { font-size: 1.15rem; }
+:deep(h4) { font-size: 1rem; }
+:deep(h5) { font-size: 0.9rem; }
+:deep(h6) { font-size: 0.85rem; color: rgba(255,255,255,0.6); }
+:deep(p) { margin: 0.4em 0; }
+:deep(ul), :deep(ol) {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+:deep(li) {
+  margin: 0.25em 0;
+  line-height: 1.7;
+}
+:deep(strong) { color: #fff; font-weight: 600; }
+:deep(em) { color: rgba(255,255,255,0.75); font-style: italic; }
+:deep(blockquote) {
+  border-left: 3px solid rgba(249,115,22,0.4);
+  background: rgba(249,115,22,0.04);
+  margin: 0.8em 0;
+  padding: 8px 16px;
+  color: rgba(255,255,255,0.6);
+  border-radius: 0 8px 8px 0;
+}
+:deep(code) {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.85em;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+:deep(pre) {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 16px 20px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+:deep(pre code) {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
 
 /* 附件媒体 */
 .post-media {
@@ -630,26 +804,7 @@ onMounted(() => {
   max-height: 400px;
 }
 
-/* 内联媒体（图文混排） */
-.inline-media {
-  margin: 12px 0;
-  max-width: 500px;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.04);
-}
-.inline-img {
-  width: 100%;
-  display: block;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.inline-img:hover { opacity: 0.9; }
-.inline-video {
-  width: 100%;
-  display: block;
-  max-height: 400px;
-}
+/* 内联媒体样式已移至上方 :deep() 选择器中 */
 
 /* Comments */
 .comments-section { margin-top: 24px; }
@@ -770,4 +925,15 @@ onMounted(() => {
   border: 1px solid rgba(249,115,22,0.2);
 }
 .btn-sm:hover { background: rgba(249,115,22,0.15); }
+
+/* ─── 移动端适配 ─── */
+@media (max-width: 768px) {
+  .post-main { padding: 20px; }
+  .post-title { font-size: 1.2rem; }
+  .post-meta { gap: 10px; }
+  .meta-time { margin-left: 0; width: 100%; }
+  .comment-form { padding: 12px; }
+  .comment-item { padding: 12px 14px; }
+  .replies-list, .reply-form { padding-left: 10px; }
+}
 </style>

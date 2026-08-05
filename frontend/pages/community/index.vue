@@ -31,9 +31,9 @@
 
     <CommunityHero />
 
-    <div class="page-content">
+    <div class="page-content" itemscope itemtype="https://schema.org/WebPage">
       <!-- 分类 Tabs -->
-      <div class="category-tabs">
+      <nav class="category-tabs" aria-label="社区分类">
         <button
           :class="['tab-btn', !activeCategory && 'tab-active']"
           @click="activeCategory = ''"
@@ -49,7 +49,7 @@
           {{ cat.icon || '#' }} {{ cat.name }}
         </button>
         <NuxtLink to="/community/new" class="btn btn-primary btn-sm" style="margin-left:auto;">✏️ 发帖</NuxtLink>
-      </div>
+      </nav>
 
       <div class="content-layout">
         <!-- 左侧：帖子列表 -->
@@ -197,8 +197,13 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAsyncData } from '#app'
+
+// SSR 端直连后端（/api/* 是外部 4002 服务，非 Nitro 内部路由）；客户端用相对路径走 nginx
+const apiBase = import.meta.server ? (process.env.BACKEND_URL || 'http://127.0.0.1:4002') : ''
 
 const router = useRouter()
+const isBrowser = typeof window !== 'undefined'
 
 interface Category {
   id: string
@@ -231,13 +236,83 @@ interface Pagination {
   totalPages: number
 }
 
-const categories = ref<Category[]>([])
-const posts = ref<Post[]>([])
-const pagination = ref<Pagination | null>(null)
-const sidebar = ref<{ pinned: any[]; essence: any[]; hot: any[] }>({ pinned: [], essence: [], hot: [] })
 const activeCategory = ref('')
-const loading = ref(true)
 const currentPage = ref(1)
+
+// ─── SSR 数据获取 ───
+const { data: categoriesData } = await useAsyncData('community-categories', async () => {
+  const res = await $fetch(`${apiBase}/api/community/categories`)
+  return (res.categories || []) as Category[]
+})
+
+const { data: postsData, refresh: refreshPosts } = await useAsyncData(
+  'community-posts',
+  async () => {
+    const params = new URLSearchParams()
+    params.set('page', String(currentPage.value))
+    params.set('pageSize', '20')
+    if (activeCategory.value) params.set('categorySlug', activeCategory.value)
+    const res = await $fetch(`${apiBase}/api/community/posts?${params.toString()}`)
+    return { posts: res.posts || [], pagination: res.pagination || null }
+  },
+  { lazy: false, watch: [currentPage, activeCategory] }
+)
+
+const { data: sidebarData } = await useAsyncData('community-sidebar', async () => {
+  const res = await $fetch(`${apiBase}/api/community/sidebar`)
+  return { pinned: res.pinned || [], essence: res.essence || [], hot: res.hot || [] }
+})
+
+const categories = computed(() => categoriesData.value || [])
+const posts = computed(() => postsData.value?.posts || [])
+const pagination = computed(() => postsData.value?.pagination || null)
+const sidebar = computed(() => sidebarData.value || { pinned: [], essence: [], hot: [] })
+const loading = computed(() => postsData.value === null)
+
+// ─── 动态 Meta ───
+useHead({
+  title: '昆仑镜社区 - AI 短剧制作交流平台',
+  meta: [
+    { name: 'description', content: '昆仑镜社区是 AI 短剧制作者的交流聚集地，分享创作经验、讨论技术问题、发现行业趋势。' },
+    { property: 'og:title', content: '昆仑镜社区 - AI 短剧制作交流平台' },
+    { property: 'og:description', content: '昆仑镜社区是 AI 短剧制作者的交流聚集地，分享创作经验、讨论技术问题、发现行业趋势。' },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:url', content: 'https://aigc.fushtn.com/community' },
+    { property: 'og:image', content: 'https://aigc.fushtn.com/logo.png' },
+    { property: 'og:site_name', content: '昆仑镜' },
+  ],
+  link: [
+    { rel: 'canonical', href: 'https://aigc.fushtn.com/community' },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: '昆仑镜社区',
+        description: '昆仑镜社区是 AI 短剧制作者的交流聚集地',
+        url: 'https://aigc.fushtn.com/community',
+        publisher: {
+          '@type': 'Organization',
+          name: '昆仑镜',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://aigc.fushtn.com/logo.png',
+          },
+        },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: 'https://aigc.fushtn.com/community?q={search_term_string}',
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      }),
+    },
+  ],
+})
 
 // --- 登录状态（与首页同步） ---
 const isLoggedIn = ref(false)
@@ -268,70 +343,22 @@ function goMemberCenter() {
   router.push('/user/center')
 }
 
-async function fetchCategories() {
-  try {
-    const res = await fetch('/api/community/categories')
-    const data = await res.json()
-    categories.value = data.categories || []
-  } catch (err) {
-    console.error('Failed to fetch categories:', err)
-  }
-}
-
-async function fetchPosts() {
-  loading.value = true
-  try {
-    const params = new URLSearchParams()
-    params.set('page', String(currentPage.value))
-    params.set('pageSize', '20')
-    if (activeCategory.value) {
-      params.set('categorySlug', activeCategory.value)
-    }
-    const res = await fetch(`/api/community/posts?${params.toString()}`)
-    const data = await res.json()
-    posts.value = data.posts || []
-    pagination.value = data.pagination || null
-  } catch (err) {
-    console.error('Failed to fetch posts:', err)
-    posts.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-async function fetchSidebar() {
-  try {
-    const res = await fetch('/api/community/sidebar')
-    const data = await res.json()
-    sidebar.value = { pinned: data.pinned || [], essence: data.essence || [], hot: data.hot || [] }
-  } catch (err) {
-    console.error('Failed to fetch sidebar:', err)
-  }
-}
-
 function changePage(page: number) {
   currentPage.value = page
-  fetchPosts()
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  if (isBrowser) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 watch(activeCategory, () => {
   currentPage.value = 1
-  fetchPosts()
 })
 
 onMounted(() => {
-  // 登录态检查
   const { getToken: _gtok } = require("~/utils/token-cache") as typeof import("~/utils/token-cache"); const token = _gtok()
   isLoggedIn.value = !!token
   const authUserRaw = localStorage.getItem('auth_user')
   if (authUserRaw) {
     try { authUser.value = JSON.parse(authUserRaw) } catch {}
   }
-
-  fetchCategories()
-  fetchPosts()
-  fetchSidebar()
 })
 
 // ─── 登录相关 ───

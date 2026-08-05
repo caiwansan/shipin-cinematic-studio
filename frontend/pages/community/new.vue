@@ -111,6 +111,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAsyncData } from '#app'
+
+// SSR 端直连后端（/api/* 是外部 4002 服务）；客户端用相对路径走 nginx
+const apiBase = import.meta.server ? (process.env.BACKEND_URL || 'http://127.0.0.1:4002') : ''
 
 const router = useRouter()
 const isLoggedIn = ref(false)
@@ -122,6 +126,54 @@ const authName = ref('')
 const authPassword = ref('')
 const authError = ref('')
 const authLoading = ref(false)
+
+const title = ref('')
+const content = ref('')
+const category = ref('')
+const tags = ref('')
+const error = ref('')
+const submitting = ref(false)
+
+// ─── SSR 数据获取 ───
+const { data: categoriesData } = await useAsyncData('community-categories-new', async () => {
+  const res = await $fetch(`${apiBase}/api/community/categories`)
+  return (res.categories || []) as Array<{ slug: string; name: string; icon?: string }>
+})
+
+const categories = computed(() => categoriesData.value || [])
+
+// ─── 动态 Meta ───
+useHead({
+  title: '发布帖子 - 昆仑镜社区',
+  meta: [
+    { name: 'description', content: '在昆仑镜社区发布新帖子，分享你的 AI 短剧创作经验、技巧或疑问。' },
+    { property: 'og:title', content: '发布帖子 - 昆仑镜社区' },
+    { property: 'og:description', content: '在昆仑镜社区发布新帖子，分享你的 AI 短剧创作经验、技巧或疑问。' },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:url', content: 'https://aigc.fushtn.com/community/new' },
+    { property: 'og:image', content: 'https://aigc.fushtn.com/logo.png' },
+  ],
+  link: [
+    { rel: 'canonical', href: 'https://aigc.fushtn.com/community/new' },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: '发布帖子 - 昆仑镜社区',
+        description: '在昆仑镜社区发布新帖子',
+        url: 'https://aigc.fushtn.com/community/new',
+        isPartOf: {
+          '@type': 'WebSite',
+          name: '昆仑镜',
+          url: 'https://aigc.fushtn.com',
+        },
+      }),
+    },
+  ],
+})
 
 const tierClass = computed(() => {
   const coins = authUser.value?.coins ?? 0
@@ -139,15 +191,6 @@ const avatarChar = computed(() => {
   return (authUser.value?.username || authUser.value?.email || 'U').charAt(0).toUpperCase()
 })
 
-const title = ref('')
-const content = ref('')
-const category = ref('')
-const tags = ref('')
-const error = ref('')
-const submitting = ref(false)
-const categories = ref<Array<{ slug: string; name: string; icon?: string }>>([])
-
-// 内容编辑区 ref
 const contentTextarea = ref<HTMLTextAreaElement | null>(null)
 const uploadingText = ref('')
 
@@ -184,11 +227,9 @@ async function doAuth() {
 async function onFileChange(event: Event, type: 'image' | 'video') {
   const input = event.target as HTMLInputElement
   if (!input.files || input.files.length === 0) return
-
   const file = input.files[0]
   const formData = new FormData()
   formData.append('file', file)
-
   uploadingText.value = `正在上传 ${file.name}...`
   try {
     const { getToken: _gtok } = require("~/utils/token-cache") as typeof import("~/utils/token-cache"); const token = _gtok()
@@ -199,12 +240,8 @@ async function onFileChange(event: Event, type: 'image' | 'video') {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '上传失败')
-
-    // 在 content 末尾插入标记
     const tag = type === 'image' ? `[img:${data.url}]` : `[video:${data.url}]`
     content.value = (content.value || '') + '\n' + tag + '\n'
-
-    // 滚动到输入框底部
     await nextTick()
     if (contentTextarea.value) {
       contentTextarea.value.scrollTop = contentTextarea.value.scrollHeight
@@ -212,31 +249,23 @@ async function onFileChange(event: Event, type: 'image' | 'video') {
   } catch (err: any) {
     error.value = `上传失败: ${err.message}`
   }
-
   uploadingText.value = ''
-  input.value = '' // reset
+  input.value = ''
 }
 
-onMounted(async () => {
+onMounted(() => {
   const { getToken: _gtok } = require("~/utils/token-cache") as typeof import("~/utils/token-cache"); const token = _gtok()
   isLoggedIn.value = !!token
   const authUserRaw = localStorage.getItem('auth_user')
   if (authUserRaw) { try { authUser.value = JSON.parse(authUserRaw) } catch {} }
-  try {
-    const res = await fetch('/api/community/categories')
-    const data = await res.json()
-    categories.value = data.categories || []
-  } catch {}
 })
 
 async function submitPost() {
   if (!title.value.trim() || !content.value.trim()) { error.value = '标题和内容不能为空'; return }
   submitting.value = true; error.value = ''
-
   try {
     const { getToken: _gtok } = require("~/utils/token-cache") as typeof import("~/utils/token-cache"); const token = _gtok()
     if (!token) { error.value = '请先登录'; return }
-
     const res = await fetch('/api/community/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -362,7 +391,6 @@ async function submitPost() {
 .form-select { cursor: pointer; appearance: auto; }
 .form-textarea { resize: vertical; min-height: 200px; line-height: 1.6; }
 
-/* 媒体上传 */
 /* 内容编辑区 */
 .content-editor-area {
   display: flex;
@@ -379,18 +407,6 @@ async function submitPost() {
   color: rgba(249,115,22,0.6);
   margin: 0;
 }
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0,0,0,0.7);
-  color: #fff;
-  font-size: 0.65rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.8;
-.upload-status { font-size: 0.78rem; color: rgba(249,115,22,0.6); margin: 0; }
 
 .form-error { color: #ef4444; font-size: 0.8rem; margin-bottom: 16px; text-align: center; }
 .form-actions { display: flex; gap: 12px; justify-content: flex-end; padding-top: 8px; }
@@ -452,4 +468,13 @@ async function submitPost() {
 }
 .modal-btn:disabled { opacity: 0.5; }
 .modal-switch { text-align: center; font-size: 0.78rem; color: rgba(249,115,22,0.5); cursor: pointer; margin: 4px 0 0; }
+
+/* ─── 移动端适配 ─── */
+@media (max-width: 768px) {
+  .form-card { padding: 20px; }
+  .form-title { font-size: 1.2rem; }
+  .form-actions { flex-direction: column-reverse; }
+  .form-actions .btn { width: 100%; justify-content: center; }
+  .content-toolbar { flex-wrap: wrap; }
+}
 </style>
