@@ -226,7 +226,8 @@ const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
 // ===== 平台检测 =====
-const api = (window as any).electronAPI
+// SSR 无 window：防御性取空，由 isDesktop computed 判定降级
+const api = typeof window !== 'undefined' ? (window as any).electronAPI : undefined
 // ⭐ 桌面版判断：仅当 Electron API 存在时才视为桌面版
 // 浏览器访问 web 版时即使非移动端也应走后端代理，不直连本地 Ollama
 const isDesktop = computed(() => {
