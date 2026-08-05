@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { createServer } from 'http'
 import { randomUUID } from 'crypto'
+import { readFileSync } from 'node:fs'
 
 const RUNTIME_ID = 'hermes-skill-001'
 const PORT = 9457
@@ -20,7 +21,6 @@ const BACKEND_URL = process.env.KUNLUN_BACKEND_URL || 'http://127.0.0.1:4002'
 function resolveInternalToken() {
   if (process.env.KUNLUN_INTERNAL_TOKEN) return process.env.KUNLUN_INTERNAL_TOKEN
   try {
-    const { readFileSync } = require('node:fs')
     const envFile = readFileSync('/root/shipin-cinematic-studio/backend/.env', 'utf-8')
     const m = envFile.match(/^KUNLUN_INTERNAL_TOKEN=(.+)$/m)
     return m ? m[1].trim().replace(/["']/g, '') : ''
@@ -51,14 +51,20 @@ const TOOL_REGISTRY = {
       inputHint: input,
     },
   }),
-  'candidate.score': (input = {}) => ({
-    ok: true,
-    result: {
-      score: 87,
-      dimensions: { skill: 0.9, experience: 0.85, culture: 0.8 },
-      inputHint: input,
-    },
-  }),
+  // S3.4.2-B: 真实候选评分（经后端内部路由 → Unified AI Gateway, CS2）
+  'candidate.score': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/candidate-score`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ resumeProfile: input.resumeProfile, jobRequirement: input.jobRequirement }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'SCORE_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'SCORE_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
   'interview.evaluate': (input = {}) => ({
     ok: true,
     result: {

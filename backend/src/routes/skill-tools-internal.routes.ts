@@ -49,4 +49,44 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'INTERNAL', message: e.message })
     }
   })
+
+  // S3.4.2-B: 真实候选评分（Skill LLM Tool, 经 Unified AI Gateway — CS2）
+  // 输入: { resumeProfile, jobRequirement } → DeepSeek 评分 → Schema 校验（CS3）
+  app.post('/api/internal/skill-tools/candidate-score', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.resumeProfile) {
+        return reply.code(400).send({ error: 'RESUME_PROFILE_REQUIRED' })
+      }
+      const { buildScorePrompt, parseScoreResult } = await import('../ecosystem/score-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildScorePrompt({ resumeProfile: body.resumeProfile, jobRequirement: body.jobRequirement })
+      // dev 模式工具调用身份（合成 UUID, 无用户配置 → dev provider）; S4 起解析调用方 BYOK
+      const result = await unifiedAIGateway.invokeAI({
+        userId: '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'SCORE_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseScoreResult(result.output.text)
+      if (!parsed) {
+        // CS3: LLM 输出非法 → 拒绝, 不当最终结果
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal candidate-score failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
 }
