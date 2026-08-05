@@ -261,6 +261,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   // ============================================================
 
   // POST /api/payment/recharge — 创建充值订单（展示收款码）
+  // MEMBER-CENTER-03: 接入昆仑镜统一支付（与 VIP 开通一致）
+  //  - 密钥模式（PaymentSecret 配置完整）→ native 支付二维码（支付宝当面付/微信 NATIVE），回调自动到账
+  //  - 收款码模式（PaymentConfig）→ 展示收款码/账号，管理员 confirm 到账
   fastify.post('/api/payment/recharge', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id: userId } = request.user as any
     const { amount, method } = request.body as any
@@ -276,16 +279,18 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     const secretConfig = await prisma.paymentSecret.findUnique({ where: { channel: method } })
     const qrConfig = await prisma.paymentConfig.findUnique({ where: { method } })
 
-    const isSecretEnabled = secretConfig?.enabled && (() => {
-      const config = (typeof secretConfig.config === 'string' ? JSON.parse(secretConfig.config) : secretConfig.config) || {}
-      return Object.values(config).some((v: any) => typeof v === 'string' && v.length > 0)
-    })()
+    const parseSecretConfig = (raw: string | null | undefined) => {
+      if (!raw) return {}
+      try { return typeof raw === 'string' ? JSON.parse(raw) : raw } catch { return {} }
+    }
+    const secretCfg = parseSecretConfig(secretConfig?.config)
+    const isSecretEnabled = !!(secretConfig?.enabled && Object.values(secretCfg).some((v: any) => typeof v === 'string' && v.length > 0))
 
     if (!isSecretEnabled && (!qrConfig || !qrConfig.enabled)) {
       return reply.status(400).send({ error: '该支付方式未启用' })
     }
 
-    // 汇率：1元 = 100积分
+    // 汇率：1元 = 100积分（钻石）
     const coins = Math.floor(amount * 100)
 
     // 创建订单
@@ -293,23 +298,86 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       data: {
         userId,
         orderNo: generateOrderNo(),
+        type: 'credit',
         amount,
         coins,
         method,
         status: 'pending',
-        remark: `用户充值 ¥${amount}，获得 ${coins} 积分`,
+        remark: `用户充值 ¥${amount}，获得 ${coins} 钻石`,
       },
     })
 
-    return toApiResponse({orderId: order.id,
+    // ─── 密钥模式：生成 native 支付二维码（与 VIP checkout 同一套引擎）───
+    let paymentUrl: string | null = null
+    let qrCode: string | null = null
+    let codeUrl: string | null = null
+
+    if (isSecretEnabled) {
+      try {
+        if (method === 'alipay') {
+          if (secretCfg.appId && secretCfg.privateKey) {
+            let privateKey = secretCfg.privateKey
+            if (privateKey && !privateKey.includes('-----BEGIN')) {
+              privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`
+            }
+            const { AlipayProvider } = await import('../payment/providers/alipay/index.js')
+            const provider = new AlipayProvider({
+              appId: secretCfg.appId,
+              privateKey,
+              alipayPublicKey: secretCfg.publicKey || secretCfg.alipayPublicKey || '',
+              gateway: 'https://openapi.alipay.com/gateway.do',
+              notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
+              returnUrl: 'https://aigc.fushtn.com/user/diamonds',
+            })
+            const result = await provider.createOrder({
+              outTradeNo: order.orderNo,
+              description: `充值 ${coins} 钻石 ¥${amount}`,
+              amount,
+              notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
+              returnUrl: 'https://aigc.fushtn.com/user/diamonds',
+            })
+            paymentUrl = result.payUrl || null
+            qrCode = result.qrCode || null
+          }
+        } else {
+          if (secretCfg.appId && secretCfg.mchId && secretCfg.apiV3Key && secretCfg.keyPem) {
+            const { createWxpayNativeQrCode } = await import('../services/wxpay.service.js')
+            const result = await createWxpayNativeQrCode({
+              outTradeNo: order.orderNo,
+              description: `充值 ${coins} 钻石 ¥${amount}`,
+              totalAmount: amount,
+              notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
+            })
+            codeUrl = result.codeUrl || null
+          }
+        }
+      } catch (err: any) {
+        console.error(`[recharge] ${method} 支付链接生成失败:`, err.message)
+      }
+
+      // 保存支付凭据
+      if (paymentUrl || qrCode || codeUrl) {
+        await prisma.paymentOrder.update({
+          where: { id: order.id },
+          data: { qrCode: codeUrl || qrCode || paymentUrl, payUrl: paymentUrl },
+        })
+      }
+    }
+
+    return toApiResponse({
+      orderId: order.id,
       orderNo: order.orderNo,
       amount: order.amount,
       coins: order.coins,
       method: order.method,
       status: order.status,
-      qrCodeUrl: config.qrCodeUrl || null,
-      account: config.account || null,
-      payeeName: config.name,}) satisfies ApiResponse<unknown>;
+      paymentUrl,
+      qrCode,
+      codeUrl,
+      qrCodeUrl: qrConfig?.qrCodeUrl || null,
+      account: qrConfig?.account || null,
+      payeeName: qrConfig?.name || null,
+    }) satisfies ApiResponse<unknown>
   })
 
   // ============================================================
@@ -969,10 +1037,15 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       // 更新 paymentOrder 状态
       const payOrder = await prisma.paymentOrder.findFirst({ where: { orderNo: parsed.outTradeNo } })
       if (payOrder && payOrder.status === 'pending') {
-        await prisma.paymentOrder.update({
-          where: { id: payOrder.id },
-          data: { status: 'paid', payTime: parsed.paidAt || new Date() },
-        })
+        // MEMBER-CENTER-03: 充值订单（type=credit / CZ 前缀）→ 自动到账钻石（与管理员 confirm 同款发放，幂等）
+        if (payOrder.type === 'credit' || parsed.outTradeNo?.startsWith('CZ')) {
+          await handleCreditRecharge(payOrder, parsed.tradeNo, parsed.paidAt || new Date())
+        } else {
+          await prisma.paymentOrder.update({
+            where: { id: payOrder.id },
+            data: { status: 'paid', payTime: parsed.paidAt || new Date() },
+          })
+        }
       }
 
       // 处理 VIP 升级订单
@@ -1040,10 +1113,15 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         // 通用：更新 paymentOrder 状态
         const payOrder = await prisma.paymentOrder.findFirst({ where: { orderNo: outTradeNo } })
         if (payOrder && payOrder.status === 'pending') {
-          await prisma.paymentOrder.update({
-            where: { id: payOrder.id },
-            data: { status: 'paid', payTime: new Date() },
-          })
+          // MEMBER-CENTER-03: 充值订单（type=credit / CZ 前缀）→ 自动到账钻石（与管理员 confirm 同款发放，幂等）
+          if (payOrder.type === 'credit' || outTradeNo?.startsWith('CZ')) {
+            await handleCreditRecharge(payOrder, transactionId || '', new Date())
+          } else {
+            await prisma.paymentOrder.update({
+              where: { id: payOrder.id },
+              data: { status: 'paid', payTime: new Date() },
+            })
+          }
         }
 
         if (outTradeNo?.startsWith('VIP')) {
@@ -1085,6 +1163,38 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     if (!order) return { status: 'error', message: '订单不存在' }
     return { status: order.status === 'paid' ? 'paid' : 'pending' }
   })
+}
+
+/** MEMBER-CENTER-03: 充值订单回调自动到账钻石（幂等：仅 pending→paid 时发放） */
+async function handleCreditRecharge(payOrder: any, tradeNo: string, payTime: Date) {
+  try {
+    await prisma.paymentOrder.update({
+      where: { id: payOrder.id },
+      data: { status: 'paid', payTime, outTradeNo: tradeNo || undefined },
+    })
+    const coins = payOrder.coins || 0
+    if (coins > 0) {
+      // 加钻石（membership.credits 是用户积分余额真源）
+      await prisma.membership.upsert({
+        where: { userId: payOrder.userId },
+        create: { userId: payOrder.userId, credits: coins },
+        update: { credits: { increment: coins } },
+      }).catch((e: any) => console.error('[recharge] membership upsert 失败:', e.message))
+      // 记流水
+      await prisma.coinLog.create({
+        data: {
+          userId: payOrder.userId,
+          amount: coins,
+          type: 'recharge',
+          remark: `充值 ${coins} 钻石 (¥${payOrder.amount}，${payOrder.method === 'wechat' ? '微信' : '支付宝'})`,
+          relatedId: payOrder.id,
+        },
+      }).catch((e: any) => console.error('[recharge] coinLog 失败:', e.message))
+    }
+    console.log(`[recharge] 订单 ${payOrder.orderNo} 到账 ${coins} 钻石 (tradeNo=${tradeNo})`)
+  } catch (err: any) {
+    console.error('[recharge] 自动到账失败:', err.message)
+  }
 }
 
 /** 处理 VIP 充值订单回调 */
