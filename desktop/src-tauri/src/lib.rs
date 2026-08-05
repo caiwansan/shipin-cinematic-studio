@@ -238,6 +238,17 @@ pub fn run() {
                 "startup",
                 &format!("main window created label={} title={}", win.label(), win.title().unwrap_or_default()),
             );
+            // ── S1.2-B B3: 注册 kunlun:// 协议（Windows, 幂等）──
+            // register_all 读取 tauri.conf.json plugins.deepLink.desktop.schemes
+            #[cfg(target_os = "windows")]
+            if let Err(e) = app.deep_link().register_all() {
+                app.state::<diag::Diag>()
+                    .log("startup", &format!("deep-link register_all failed: {}", e));
+            } else {
+                app.state::<diag::Diag>()
+                    .log("startup", "deep-link register_all OK (kunlun://)");
+            }
+
             app.state::<diag::Diag>().log("startup", "setup done — waiting for frontend BOOT handshake");
             Ok(())
         })
