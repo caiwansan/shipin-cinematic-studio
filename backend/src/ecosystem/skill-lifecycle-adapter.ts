@@ -13,6 +13,8 @@
  */
 import { prisma } from '../utils/index.js'
 import type { SkillDefinition } from './skill-manifest-adapter.js'
+import { composeAuthorization } from './skill-authorization-adapter.js'
+import type { SkillAuthorizationState, SkillAuthorizationSource } from './skill-authorization-adapter.js'
 
 /** S3.2.1 生效的 Skill 生命周期状态 */
 export type SkillLifecycleStateName =
@@ -29,8 +31,14 @@ export type SkillLifecycleStateName =
 export type LicenseStatus = 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'NONE'
 
 export interface SkillLifecycleAuthorization {
+  /** 是否要求授权（商业化载体或存在 License） */
   required: boolean
-  status: LicenseStatus
+  /** S3.2.2 升级: 授权态（AUTHORIZED/NOT_AUTHORIZED/EXPIRED/SUSPENDED/SKILL_PERMISSION_DENIED/NONE） */
+  status: SkillAuthorizationState
+  /** 授权来源（entitlementSource） */
+  source: SkillAuthorizationSource
+  /** 判定原因 */
+  reason: string
   licenseId: string | null
   licenseType: string | null
   expireAt: string | null
@@ -170,11 +178,27 @@ export function composeLifecycleState(input: LifecycleComposeInput): {
   return buildResult('DISABLED')
 
   function buildResult(state: SkillLifecycleStateName) {
-    // 授权维度（License 管授权，独立于 Lifecycle 状态 — SL3）
+    // 授权维度（S3.2.2: Entitlement Check 合成；License 管授权，独立于 Lifecycle 状态 — SL3）
+    // lifecycle 视图无 Agent 上下文（agentBound=null），agent 级判定见 authorization 端点
     const authRequired = Boolean(plugin?.commercial) || Boolean(license)
+    const licenseStatus = license
+      ? (license.status as 'ACTIVE' | 'EXPIRED' | 'SUSPENDED')
+      : null
+    const licenseExpired = Boolean(
+      license?.expireAt && new Date(license.expireAt as any) <= new Date()
+    )
+    const auth = composeAuthorization({
+      required: authRequired,
+      isRuntimeSkill: skill.id.startsWith('runtime:'),
+      licenseStatus,
+      licenseExpired,
+      agentBound: null,
+    })
     const authorization: SkillLifecycleAuthorization = {
       required: authRequired,
-      status: license ? (license.status as LicenseStatus) : 'NONE',
+      status: auth.authorizationState,
+      source: auth.entitlementSource,
+      reason: auth.reason,
       licenseId: null,
       licenseType: license?.licenseType ?? null,
       expireAt: iso(license?.expireAt),
