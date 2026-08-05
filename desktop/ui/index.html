@@ -300,7 +300,7 @@ async function doLogin() {
     await invoke('save_credentials', { access_token: token, user_name: creds.user_name, organization_id: creds.organization_id });
     await ensureDevice();
     showMain();
-    await refreshApps(); await refreshPlugins(); await refreshDevice();
+    await refreshApps(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus();
   } catch (e) { $('login-err').textContent = e.message; }
 }
 
@@ -619,6 +619,112 @@ async function refreshDevice() {
   } catch (e) { $('device-info').innerHTML = `<div class="err-msg">${e.message}</div>`; }
 }
 
+// ═══════════════════════════════════════════════════════════
+// S2.3.1 Hermes Runtime — 发现 + 契约连接（不执行 Agent）
+// 依据: KUNLUN-HERMES-RUNTIME-CONTRACT.md / AI-EMPLOYEE-RUNTIME-MODEL.md
+// 铁律: Desktop 只发现/请求/呈现；不执行 Agent / 不建 Sub-Agent
+// Task 01: HermesRuntimeStatus 模型 + discovery
+// Task 02: HermesBridgeClient（Hermes Contract API）
+// Task 03: Invocation Handshake（Accept/Reject）
+// ═══════════════════════════════════════════════════════════
+const HERMES_DEFAULT_PORT = 9456; // Hermes 本地服务端口（契约约定）
+const HermesRuntime = (() => {
+  // Task 01: 状态模型（冻结）
+  const STATUS = {
+    NOT_INSTALLED: 'NOT_INSTALLED', INSTALLING: 'INSTALLING', READY: 'READY',
+    RUNNING: 'RUNNING', FAILED: 'FAILED', UNKNOWN: 'UNKNOWN'
+  };
+
+  let _status = {
+    runtimeId: null, desktopId: null, tenantId: null, userId: null,
+    status: STATUS.NOT_INSTALLED, version: null, lastHeartbeat: null
+  };
+
+  // Task 02: Bridge Client（只走 Hermes Contract API，禁止直连 Agent）
+  const HERMES_BASE = () => {
+    // 本地 Hermes 服务地址（契约约定; 可由配置覆盖）
+    return window.__HERMES_BASE__ || `http://127.0.0.1:${HERMES_DEFAULT_PORT}`;
+  };
+
+  async function discovery() {
+    try {
+      const res = await fetch(`${HERMES_BASE()}/health`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) throw new Error('health ' + res.status);
+      const h = await res.json();
+      _status = {
+        runtimeId: h.runtimeId || null,
+        desktopId: h.desktopId || null,
+        tenantId: h.tenantId || null,
+        userId: h.userId || null,
+        status: h.status === 'running' ? STATUS.RUNNING : (h.status === 'ready' ? STATUS.READY : STATUS.UNKNOWN),
+        version: h.version || null,
+        lastHeartbeat: new Date().toISOString()
+      };
+      return _status;
+    } catch (e) {
+      _status = { ..._status, status: STATUS.NOT_INSTALLED, lastHeartbeat: null };
+      return _status;
+    }
+  }
+
+  // Task 03: Invocation Handshake（仅请求 Hermes 接收，不执行）
+  // 输入: plugin ticket（S2.2 签发）+ agentDefinitionId + context
+  async function invoke(invocation) {
+    // 先确认 Hermes 可发现
+    const st = await discovery();
+    if (st.status !== STATUS.READY && st.status !== STATUS.RUNNING) {
+      return { status: 'REJECTED', reason: 'HERMES_UNAVAILABLE' };
+    }
+    try {
+      const res = await fetch(`${HERMES_BASE()}/invocations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invocationId: invocation.invocationId,
+          pluginId: invocation.pluginId,
+          agentDefinitionId: invocation.agentDefinitionId,
+          ticket: invocation.ticket,
+          context: invocation.context || {}
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+      const data = await res.json().catch(() => ({}));
+      return {
+        status: res.ok ? (data.status || 'ACCEPTED') : 'REJECTED',
+        runtimeId: data.runtimeId || null,
+        executionId: data.executionId || null,
+        reason: data.reason || null
+      };
+    } catch (e) {
+      return { status: 'REJECTED', reason: 'HERMES_UNREACHABLE' };
+    }
+  }
+
+  function getStatus() { return { ..._status }; }
+  return { discovery, invoke, getStatus, STATUS };
+})();
+
+// Task 04: Hermes 状态 UI（设备页内呈现）
+async function refreshHermesStatus() {
+  try {
+    const st = await HermesRuntime.discovery();
+    const el = document.getElementById('hermes-status');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="card" style="margin-top:12px;padding:12px;background:var(--panel2);border-radius:8px">
+        <div style="font-weight:600;margin-bottom:8px">Hermes Runtime</div>
+        <div>Status: <b>${st.status}</b></div>
+        <div>Runtime ID: ${st.runtimeId || '—'}</div>
+        <div>Version: ${st.version || '—'}</div>
+        <div>Last Heartbeat: ${st.lastHeartbeat || '—'}</div>
+        <div style="margin-top:8px;color:var(--dim);font-size:11px">
+          Hermes = 本地 AI Employee Runtime（S2.3.1 仅发现与连接，不执行 Agent）
+        </div>
+      </div>`;
+  } catch (e) { /* 静默 */ }
+}
+
+
 // ── 退出 ────────────────────────────────────
 async function logout() {
   await invoke('clear_credentials');
@@ -803,7 +909,7 @@ async function boot() {
     try {
       await ensureDevice();
       showMain();
-      await refreshApps(); await refreshPlugins(); await refreshDevice();
+      await refreshApps(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus();
       bootMark('5. view rendered: main');
     } catch (e) {
       diagLog('error', 'boot main flow FAILED: ' + (e && e.message ? e.message : String(e)));
