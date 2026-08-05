@@ -4,6 +4,8 @@
 // 底座：WuKongIM v1.2.6（docker，端口 5001 HTTP API / 5200 WS）
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import crypto from 'node:crypto'
+import { resolve, extname } from 'node:path'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { prisma } from '../utils/index.js'
 
 // ── 配置（env 可覆盖）──────────────────────────────────────────
@@ -332,7 +334,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
       })
       // 服务端解码 payload → 前端直接读 content（修复中文乱码：atob latin1 解码导致「刷新后消息不见」）
       // 附加 authorName（账号昵称，User 表 username || email 前缀）→ 群里说话显示昵称，不显示短 UID
-      const fromUids = [...new Set((data?.messages || []).map((m: any) => m.from_uid).filter(Boolean))]
+      const fromUids = [...new Set((data?.messages || []).map((m: any) => m.from_uid).filter(Boolean))] as string[]
       const authorNames = new Map<string, string>()
       if (fromUids.length) {
         const senders = await prisma.user.findMany({
@@ -373,6 +375,33 @@ export default async function imRoutes(fastify: FastifyInstance) {
       names[u.id] = u.username || u.email.split('@')[0]
     }
     return { success: true, data: { names } }
+  })
+
+  // POST /api/im/upload — 聊天媒体上传（图片/文件/短视频），普通用户可用
+  fastify.post('/api/im/upload', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const file = await request.file()
+    if (!file) return reply.status(400).send({ success: false, error: '缺少文件' })
+    try {
+      const buf = await file.toBuffer()
+      const ext = (extname(file.filename || '').toLowerCase() || '.bin').slice(0, 10)
+      const name = file.filename || ('file' + ext)
+      const id = crypto.randomUUID()
+      const dir = resolve(process.cwd(), 'public/uploads/im')
+      await mkdir(dir, { recursive: true })
+      const filename = id + ext
+      await writeFile(resolve(dir, filename), buf)
+      return {
+        success: true,
+        data: {
+          url: `/uploads/im/${filename}`,
+          name,
+          size: buf.length,
+          mime: file.mimetype || 'application/octet-stream',
+        },
+      }
+    } catch (e) {
+      return reply.status(500).send({ success: false, error: (e as Error).message })
+    }
   })
 
   // POST /api/im/messages/send — 服务端代发消息（机器人/系统消息用；普通用户走 SDK 直发）

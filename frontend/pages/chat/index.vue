@@ -125,6 +125,10 @@
 
           <div class="msg-input-bar">
             <button class="gift-btn" title="送礼物" @click="openGiftPanel">🎁</button>
+            <button class="gift-btn" title="表情" @click.stop="emojiPanelOpen = !emojiPanelOpen">😊</button>
+            <button class="gift-btn" title="上传图片" @click="pickFile('image')">📷</button>
+            <button class="gift-btn" title="上传文档" @click="pickFile('file')">📄</button>
+            <input ref="fileInputRef" type="file" class="hidden-file-input" @change="onFilePicked" />
             <textarea
               v-model="draft"
               class="msg-input"
@@ -132,7 +136,14 @@
               rows="2"
               @keydown.enter.exact.prevent="handleSend"
             ></textarea>
-            <button class="tea-btn primary" :disabled="!draft.trim() || !tea.connected.value" @click="handleSend">发送</button>
+            <button class="tea-btn primary" :disabled="(!draft.trim() && !sendingMedia) || !tea.connected.value" @click="handleSend">{{ sendingMedia ? '上传中…' : '发送' }}</button>
+            <Teleport to="body">
+              <div v-if="emojiPanelOpen" class="emoji-panel" @click.stop>
+                <div class="emoji-panel-grid">
+                  <button v-for="e in emojiList" :key="e" class="emoji-cell" @click="insertEmoji(e)">{{ e }}</button>
+                </div>
+              </div>
+            </Teleport>
           </div>
         </template>
       </section>
@@ -622,27 +633,161 @@ function renderMsg(msg: any) {
   if (giftInfo) {
     return `<span class="gift-inline">🎁 ${escapeHtml(giftInfo.giftName || '礼物')} ${giftInfo.priceDiamonds ? `<b class="gift-inline-price">💎${giftInfo.priceDiamonds}</b>` : ''}</span>`
   }
-  let text = ''
-  if (msg.content) {
-    if (typeof msg.content === 'string') text = msg.content
-    else if (typeof msg.content.text === 'string') text = msg.content.text
-    else if (typeof msg.content.content === 'string') text = msg.content.content
-  } else if (msg.payload) {
-    try {
-      // 正确 UTF-8 解码（atob 返回 latin1 字符串会导致中文乱码 →「刷新后消息不见」）
-      const bin = atob(msg.payload)
-      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
-      const decoded = JSON.parse(new TextDecoder().decode(bytes))
-      text = typeof decoded.content === 'string' ? decoded.content : decoded.content?.text || ''
-    } catch {
-      text = ''
-    }
+  const parsed = parseContentObj(msg)
+  if (!parsed) return ''
+  const { type, content } = parsed
+  // 图片（type=2）
+  if (type === 2 && content && content.url) {
+    const src = absUrl(content.url)
+    return `<img class="msg-img" src="${src}" loading="lazy" onclick="window.__klImgView && window.__klImgView('${src}')" />`
   }
+  // 文件/文档（type=3）
+  if (type === 3 && content && content.url) {
+    const name = escapeHtml(content.name || '文件')
+    const size = fmtSize(content.size)
+    return `<a class="msg-file" href="${absUrl(content.url)}" target="_blank" rel="noopener"><span class="msg-file-icon">📄</span><span class="msg-file-main"><span class="msg-file-name">${name}</span>${size ? `<small class="msg-file-size">${size}</small>` : ''}</span></a>`
+  }
+  // 视频（type=4）
+  if (type === 4 && content && content.url) {
+    return `<video class="msg-video" src="${absUrl(content.url)}" controls preload="metadata"></video>`
+  }
+  // 文本（type=1）
+  const text = typeof content === 'string' ? content : typeof content?.text === 'string' ? content.text : typeof content?.content === 'string' ? content.content : ''
   return escapeHtml(text).replace(/\n/g, '<br/>')
 }
 
 function escapeHtml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+/* ══ 表情 + 媒体上传（EMOJI-MEDIA-01） ══════════════════ */
+const emojiPanelOpen = ref(false)
+const sendingMedia = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+let pendingPickKind: 'image' | 'file' = 'image'
+
+const emojiList = [
+  '😀', '😄', '😁', '😂', '🤣', '😊', '😍', '🥰', '😘', '😜',
+  '🤔', '🤗', '😎', '🥳', '😏', '😴', '🤤', '😭', '😤', '😡',
+  '👍', '👏', '🙏', '💪', '👌', '🤝', '✌️', '🤞', '👀', '💯',
+  '🔥', '✨', '🎉', '🎊', '💖', '💎', '🍵', '🐟', '🌙', '☀️',
+  '🐼', '🦊', '🐱', '🐶', '🍀', '🎵', '⚡', '🌈',
+]
+
+function insertEmoji(e: string) {
+  draft.value += e
+  emojiPanelOpen.value = false
+}
+
+function pickFile(kind: 'image' | 'file') {
+  pendingPickKind = kind
+  const input = fileInputRef.value
+  if (!input) return
+  input.accept = kind === 'image' ? 'image/*' : ''
+  input.value = ''
+  input.click()
+}
+
+async function onFilePicked(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const kind = pendingPickKind
+  input.value = ''
+  if (sendingMedia.value) return showToast('⏳ 正在上传上一份，稍等')
+  await sendMedia(file, kind)
+}
+
+function absUrl(u: string) {
+  if (!u) return ''
+  return /^https?:\/\//.test(u) ? u : 'https://aigc.fushtn.com' + (u.startsWith('/') ? u : '/' + u)
+}
+
+async function sendMedia(file: File, kind: 'image' | 'file') {
+  if (!currentChannel.value || !tea.connected.value) return showToast('⚠ 请先连接茶馆')
+  sendingMedia.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const up = await fetch('/api/im/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + giftToken() },
+      body: fd,
+    }).then((r) => r.json())
+    if (!up.success) throw new Error(up.error || '上传失败')
+    const { url, name, size } = up.data
+    let width = 0, height = 0
+    if (kind === 'image') {
+      try {
+        const img = new Image()
+        img.src = absUrl(url)
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej })
+        width = img.naturalWidth; height = img.naturalHeight
+      } catch { /* 非致命 */ }
+    }
+    const res = await fetch('/api/im/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({
+        channelId: currentChannel.value.id,
+        channelType: currentChannel.value.type,
+        contentType: kind === 'image' ? 2 : 3,
+        content: { url, name, size, width, height },
+      }),
+    }).then((r) => r.json())
+    if (!res.success) throw new Error(res.error || '发送失败')
+    messages.value.push({
+      fromUID: tea.userId.value,
+      timestamp: Date.now(),
+      content: { type: kind === 'image' ? 2 : 3, content: { url, name, size, width, height } },
+      key: 'media-' + Math.random().toString(36).slice(2, 8),
+    })
+    scrollBottom()
+    showToast(kind === 'image' ? '📷 图片已发送' : '📄 文档已发送')
+  } catch (err) {
+    console.error('[昆仑茶馆] 媒体发送失败', err)
+    showToast('⚠ ' + ((err as Error).message || '发送失败'))
+  } finally {
+    sendingMedia.value = false
+  }
+}
+
+/* 图片灯箱 */
+function viewImage(src: string) {
+  const mask = document.createElement('div')
+  mask.className = 'img-lightbox'
+  const img = document.createElement('img')
+  img.src = src
+  mask.appendChild(img)
+  mask.onclick = () => mask.remove()
+  document.body.appendChild(mask)
+}
+
+function parseContentObj(msg: any): { type: number; content: any } | null {
+  if (msg.content) {
+    if (typeof msg.content === 'string') return { type: 1, content: msg.content }
+    if (typeof msg.content.type === 'number' && msg.content.content !== undefined) return { type: msg.content.type, content: msg.content.content }
+    if (typeof msg.content.text === 'string') return { type: 1, content: msg.content.text }
+    if (msg.content.url) return { type: 2, content: msg.content }
+  }
+  if (msg.payload) {
+    try {
+      const bin = atob(msg.payload)
+      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+      const decoded = JSON.parse(new TextDecoder().decode(bytes))
+      if (decoded && typeof decoded === 'object') {
+        return { type: decoded.type || 1, content: decoded.content ?? decoded }
+      }
+    } catch { /* 非致命 */ }
+  }
+  return null
+}
+
+function fmtSize(n: number) {
+  if (!n) return ''
+  if (n < 1024) return n + ' B'
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
+  return (n / 1024 / 1024).toFixed(1) + ' MB'
 }
 
 function msgKey(msg: any) {
@@ -986,17 +1131,20 @@ function handleResize() {
 function onWindowClick() {
   closeFriendMenu()
   closeMemberCard()
+  emojiPanelOpen.value = false
   if (friendPanel.value) toggleFriendPanel()
 }
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     closeFriendMenu()
     closeMemberCard()
+    emojiPanelOpen.value = false
     if (friendPanel.value) toggleFriendPanel()
   }
 }
 
 onMounted(async () => {
+  ;(window as any).__klImgView = (src: string) => viewImage(src)
   tea.onMessage((msg: any) => {
     const ch = currentChannel.value
     if (!ch) return
@@ -1054,6 +1202,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('click', onWindowClick)
   window.removeEventListener('keydown', onKeydown)
+  ;(window as any).__klImgView = undefined
   closeFriendMenu()
   friendPanel.value = false
   syncBodyLock()
@@ -1627,6 +1776,97 @@ onBeforeUnmount(() => {
 .mc-msg-btn:hover { background: rgba(59, 130, 246, 0.3); }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block; }
 .status-dot.on { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.7); }
+
+/* ══ 表情面板 + 媒体消息（EMOJI-MEDIA-01） ══ */
+.hidden-file-input { display: none; }
+.emoji-panel {
+  position: fixed;
+  z-index: 9999;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 372px;
+  max-width: calc(100vw - 32px);
+  background: var(--color-bg-panel, #141a2e);
+  border: 1px solid var(--color-border, #26304d);
+  border-radius: 14px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  padding: 10px;
+  animation: panel-pop 0.18s ease-out;
+}
+.emoji-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.emoji-cell {
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+  line-height: 1.4;
+  padding: 4px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.emoji-cell:hover { background: rgba(255, 255, 255, 0.08); }
+
+.msg-img {
+  max-width: 260px;
+  max-height: 300px;
+  border-radius: 10px;
+  display: block;
+  cursor: zoom-in;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.msg-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+  color: var(--color-text, #e2e8f0);
+  max-width: 260px;
+  transition: background 0.15s;
+}
+.msg-file:hover { background: rgba(255, 255, 255, 0.12); }
+.msg-file-icon { font-size: 24px; }
+.msg-file-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.msg-file-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #60a5fa;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.msg-file-size { font-size: 11px; color: var(--color-text-muted, #64748b); }
+.msg-video {
+  max-width: 280px;
+  max-height: 300px;
+  border-radius: 10px;
+  display: block;
+}
+.img-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  animation: panel-pop 0.15s ease-out;
+}
+.img-lightbox img {
+  max-width: 92vw;
+  max-height: 92vh;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
 .friend-panel-title {
   font-size: 13px; font-weight: 700; color: var(--color-text, #e2e8f0);
   letter-spacing: 0.02em;
