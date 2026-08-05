@@ -75,6 +75,18 @@
                 </div>
               </div>
             </div>
+            <!-- USER-FOLLOW-01 关注/粉丝（掌柜：积分下方） -->
+            <div class="member-hero-follow">
+              <button class="follow-stat" @click="openFollowPanel('following')">
+                <span class="follow-stat-value">{{ followStats.followingCount }}</span>
+                <span class="follow-stat-label">关注</span>
+              </button>
+              <span class="follow-divider">·</span>
+              <button class="follow-stat" @click="openFollowPanel('follower')">
+                <span class="follow-stat-value">{{ followStats.followerCount }}</span>
+                <span class="follow-stat-label">粉丝</span>
+              </button>
+            </div>
           </div>
           <div v-if="tierClass !== 'vip_platinum'" class="member-hero-upgrade">
             <a href="/user/membership" class="upgrade-main-btn" style="text-decoration:none;display:inline-block;">
@@ -386,6 +398,43 @@
       </div>
     </div>
   </teleport>
+
+  <!-- USER-FOLLOW-01 关注/粉丝弹窗 -->
+  <teleport to="body">
+    <div v-if="followPanelOpen" class="follow-mask" @click.self="followPanelOpen = false">
+      <div class="follow-panel">
+        <div class="follow-panel-head">
+          <div class="follow-tabs">
+            <button class="follow-tab" :class="{ active: followTab === 'following' }" @click="switchFollowTab('following')">关注 {{ followStats.followingCount }}</button>
+            <button class="follow-tab" :class="{ active: followTab === 'follower' }" @click="switchFollowTab('follower')">粉丝 {{ followStats.followerCount }}</button>
+          </div>
+          <button class="follow-close" @click="followPanelOpen = false">✕</button>
+        </div>
+        <div class="follow-list">
+          <div v-if="followLoading" class="follow-empty">加载中…</div>
+          <div v-else-if="!followList.length" class="follow-empty">{{ followTab === 'following' ? '还没有关注任何人' : '还没有粉丝，去茶馆坐坐吧' }}</div>
+          <div v-for="u in followList" :key="u.id" class="follow-item">
+            <UserAvatar :src="u.avatar" :name="u.name || 'U'" size="md" class="follow-item-avatar" />
+            <div class="follow-item-meta">
+              <span class="follow-item-name">{{ u.name }}
+                <span class="mini-dot" :class="{ on: u.online }"></span>
+                <span v-if="u.relation === 'mutual'" class="rel-badge rel-mutual">互相关注</span>
+                <span v-else-if="u.relation === 'following'" class="rel-badge rel-following">已关注</span>
+                <span v-else class="rel-badge rel-follower">关注了我</span>
+              </span>
+              <span class="follow-item-sub">{{ u.online ? '在线' : (u.email || '离线') }}</span>
+            </div>
+            <div class="follow-item-actions">
+              <button class="follow-act-btn" @click="goPrivate(u)">发消息</button>
+              <button class="follow-btn" :class="{ following: u.relation !== 'follower', busy: followBusyId === u.id }" @click="toggleFollow(u)" :disabled="followBusyId === u.id">
+                {{ u.relation === 'mutual' ? '互相关注' : u.relation === 'following' ? '已关注' : '回关' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
@@ -407,6 +456,75 @@ interface UserInfo {
 
 const userInfo = ref<UserInfo | null>(null)
 const agentStats = ref<any>(null)
+
+// ══ USER-FOLLOW-01 关注体系 ══════════════════════
+const followStats = ref({ followingCount: 0, followerCount: 0 })
+const followPanelOpen = ref(false)
+const followTab = ref<'following' | 'follower'>('following')
+const followList = ref<any[]>([])
+const followLoading = ref(false)
+const followBusyId = ref('')
+
+async function loadFollowStats() {
+  try {
+    const res = await fetch('/api/user/follow/stats', { headers: { Authorization: `Bearer ${_token()}` } })
+    if (res.ok) {
+      const j = await res.json()
+      if (j.data) followStats.value = j.data
+    }
+  } catch { /* 非致命 */ }
+}
+
+async function openFollowPanel(tab: 'following' | 'follower') {
+  followTab.value = tab
+  followPanelOpen.value = true
+  await loadFollowList()
+}
+
+async function switchFollowTab(tab: 'following' | 'follower') {
+  followTab.value = tab
+  await loadFollowList()
+}
+
+async function loadFollowList() {
+  followLoading.value = true
+  try {
+    const res = await fetch(`/api/user/follow/list?type=${followTab.value}`, { headers: { Authorization: `Bearer ${_token()}` } })
+    if (res.ok) {
+      const j = await res.json()
+      followList.value = j.data?.users || []
+    }
+  } catch { followList.value = [] } finally { followLoading.value = false }
+}
+
+async function toggleFollow(u: any) {
+  if (followBusyId.value) return
+  followBusyId.value = u.id
+  try {
+    if (u.relation === 'follower') {
+      // 回关
+      const res = await fetch('/api/user/follow', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token()}` },
+        body: JSON.stringify({ targetId: u.id }),
+      })
+      if (res.ok) u.relation = 'mutual'
+    } else {
+      // 已关注/互相关注 → 取关
+      const res = await fetch('/api/user/unfollow', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token()}` },
+        body: JSON.stringify({ targetId: u.id }),
+      })
+      if (res.ok) u.relation = 'follower'
+    }
+    await loadFollowStats()
+    followList.value = [...followList.value]
+  } catch { /* 非致命 */ } finally { followBusyId.value = '' }
+}
+
+function goPrivate(u: any) {
+  followPanelOpen.value = false
+  router.push('/chat?dm=' + u.id)
+}
 
 // MEMBER-CENTER-02 头像上传
 const avatarInput = ref<HTMLInputElement | null>(null)
@@ -639,6 +757,9 @@ function withdrawStatusLabel(s?: string) {
 
 onMounted(async () => {
   const _gt = () => { try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' } }; const token = _gt()
+
+  // USER-FOLLOW-01 关注/粉丝统计（昵称卡片积分下方）
+  loadFollowStats()
 
   // 先调 storage API 获取真实 tier（更快，不需要 auth/me）
   if (token) {
@@ -1167,6 +1288,238 @@ onMounted(async () => {
   color: rgba(255, 255, 255, 0.3);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* USER-FOLLOW-01 关注/粉丝（积分下方） */
+.member-hero-follow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.follow-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.follow-stat:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.follow-stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.follow-stat-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.follow-divider {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* 关注/粉丝弹窗 */
+.follow-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.follow-panel {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  max-height: 70vh;
+  background: #1b1f2b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.follow-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.follow-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.follow-tab {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.follow-tab.active {
+  color: #fff;
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.follow-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.follow-list {
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.follow-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.85rem;
+}
+
+.follow-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+
+.follow-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.follow-item-avatar {
+  flex-shrink: 0;
+}
+
+.follow-item-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.follow-item-name {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.follow-item-sub {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.mini-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4b5563;
+  margin-left: 4px;
+}
+
+.mini-dot.on {
+  background: #34d399;
+}
+
+.rel-badge {
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.rel-mutual {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.rel-following {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.rel-follower {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.follow-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.follow-act-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  padding: 5px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.follow-act-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.follow-btn {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border: none;
+  color: #1b1f2b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.follow-btn.following {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.follow-btn.busy {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .member-hero-upgrade {

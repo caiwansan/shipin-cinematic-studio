@@ -232,6 +232,7 @@
               <div class="peer-badge" :class="{ online: profileUser.online }">
                 <span class="status-dot"></span>{{ profileUser.online ? '在线' : '离线' }}
               </div>
+              <button class="profile-follow-btn" :class="{ following: followStatus[profileUser.id] }" @click="toggleFollowId(profileUser.id)">{{ followStatus[profileUser.id] ? '✓ 已关注' : '+ 关注' }}</button>
             </div>
           </template>
           <template v-else-if="currentChannel && currentChannel.kind === 'dm'">
@@ -271,29 +272,77 @@
       <Teleport to="body">
         <div v-if="friendPanel" class="friend-panel" @click.stop>
           <div class="friend-panel-head">
-            <span class="friend-panel-title">👥 茶客名录 ({{ users.length }})</span>
+            <div class="friend-panel-tabs">
+              <button class="friend-panel-tab" :class="{ active: friendTab === 'following' }" @click="switchFriendTab('following')">关注 {{ followStats.followingCount }}</button>
+              <button class="friend-panel-tab" :class="{ active: friendTab === 'follower' }" @click="switchFriendTab('follower')">粉丝 {{ followStats.followerCount }}</button>
+              <button class="friend-panel-tab" :class="{ active: friendTab === 'directory' }" @click="switchFriendTab('directory')">茶客名录</button>
+            </div>
             <button class="friend-panel-close" @click="toggleFriendPanel">✕</button>
           </div>
-          <input v-model="friendSearch" class="friend-panel-search" placeholder="搜好友…" />
+          <input v-if="friendTab === 'directory'" v-model="friendSearch" class="friend-panel-search" placeholder="搜茶客…" />
           <div class="friend-panel-list" @wheel.stop>
-            <div v-if="!filteredUsers.length" class="panel-empty">没有匹配的茶客</div>
-            <div
-              v-for="u in filteredUsers"
-              :key="u.id"
-              class="member-item clickable"
-              :class="{ active: currentChannel?.kind === 'dm' && currentChannel.peerUid === u.id }"
-              @click="openFriendMenu(u, $event)"
-            >
-              <div class="member-avatar">{{ u.name.slice(0, 1) }}</div>
-              <div class="member-meta">
-                <span class="member-name">{{ u.name }}</span>
-                <span class="member-sub">
-                  <span class="mini-dot" :class="{ on: u.online }"></span>{{ u.online ? '在线' : (u.email || '离线') }}
-                </span>
+            <!-- 我的关注（含互相关注） -->
+            <template v-if="friendTab === 'following'">
+              <div v-if="followLoading" class="panel-empty">加载中…</div>
+              <div v-else-if="!followUsers.length" class="panel-empty">还没有关注任何人 · 去茶客名录看看</div>
+              <div v-for="u in followUsers" :key="u.id" class="member-item">
+                <div class="member-avatar">{{ (u.name || '?').slice(0, 1) }}</div>
+                <div class="member-meta">
+                  <span class="member-name">{{ u.name }}
+                    <span v-if="u.relation === 'mutual'" class="rel-badge rel-mutual">互相关注</span>
+                    <span v-else class="rel-badge rel-following">已关注</span>
+                  </span>
+                  <span class="member-sub"><span class="mini-dot" :class="{ on: u.online }"></span>{{ u.online ? '在线' : (u.email || '离线') }}</span>
+                </div>
+                <div class="member-actions">
+                  <button class="mini-act-btn" @click="menuSend(u)">💬</button>
+                  <button class="mini-follow-btn following" @click="toggleFollowUser(u)">{{ u.relation === 'mutual' ? '互相关注' : '已关注' }}</button>
+                </div>
               </div>
-            </div>
+            </template>
+            <!-- 粉丝（关注我的，可回关） -->
+            <template v-else-if="friendTab === 'follower'">
+              <div v-if="followLoading" class="panel-empty">加载中…</div>
+              <div v-else-if="!followerUsers.length" class="panel-empty">还没有粉丝 · 去茶馆坐坐吧</div>
+              <div v-for="u in followerUsers" :key="u.id" class="member-item">
+                <div class="member-avatar">{{ (u.name || '?').slice(0, 1) }}</div>
+                <div class="member-meta">
+                  <span class="member-name">{{ u.name }}
+                    <span v-if="u.relation === 'mutual'" class="rel-badge rel-mutual">互相关注</span>
+                    <span v-else class="rel-badge rel-follower">关注了我</span>
+                  </span>
+                  <span class="member-sub"><span class="mini-dot" :class="{ on: u.online }"></span>{{ u.online ? '在线' : (u.email || '离线') }}</span>
+                </div>
+                <div class="member-actions">
+                  <button class="mini-act-btn" @click="menuSend(u)">💬</button>
+                  <button class="mini-follow-btn" @click="toggleFollowUser(u)">{{ u.relation === 'mutual' ? '互相关注' : '回关' }}</button>
+                </div>
+              </div>
+            </template>
+            <!-- 茶客名录（全部用户，可搜索 + 关注） -->
+            <template v-else>
+              <div v-if="!filteredUsers.length" class="panel-empty">没有匹配的茶客</div>
+              <div
+                v-for="u in filteredUsers"
+                :key="u.id"
+                class="member-item clickable"
+                :class="{ active: currentChannel?.kind === 'dm' && currentChannel.peerUid === u.id }"
+                @click="openFriendMenu(u, $event)"
+              >
+                <div class="member-avatar">{{ u.name.slice(0, 1) }}</div>
+                <div class="member-meta">
+                  <span class="member-name">{{ u.name }}</span>
+                  <span class="member-sub">
+                    <span class="mini-dot" :class="{ on: u.online }"></span>{{ u.online ? '在线' : (u.email || '离线') }}
+                  </span>
+                </div>
+                <div class="member-actions" @click.stop>
+                  <button class="mini-follow-btn" :class="{ following: followStatus[u.id] }" @click="toggleFollowId(u.id)">{{ followStatus[u.id] ? '已关注' : '+ 关注' }}</button>
+                </div>
+              </div>
+            </template>
           </div>
-          <div class="friend-panel-foot">点茶客弹出菜单 · Esc 关闭</div>
+          <div class="friend-panel-foot">{{ friendTab === 'directory' ? '点茶客弹出菜单 · Esc 关闭' : '单方面关注 · 互相关注成好友' }}</div>
         </div>
       </Teleport>
 
@@ -328,9 +377,11 @@
 // 左栏：会话导航（公共频道 / 我的频道 / 最近私聊）｜中栏：聊天｜右栏：成员 / 好友
 // SDK 仅浏览器可用，SSR 阶段不渲染逻辑
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { useKunlunTea } from '~/composables/useKunlunTea'
 
 const tea = useKunlunTea()
+const route = useRoute()
 const channels = ref<any[]>([])
 const groups = ref<any[]>([])
 const dms = ref<any[]>([])
@@ -350,6 +401,15 @@ const friendPanel = ref(false)
 const friendSearch = ref('')
 const profileUser = ref<any>(null)
 
+// ══ USER-FOLLOW-01 关注体系（好友=关注） ══════════════════════
+const friendTab = ref<'following' | 'follower' | 'directory'>('following')
+const followStats = ref({ followingCount: 0, followerCount: 0 })
+const followUsers = ref<any[]>([])
+const followerUsers = ref<any[]>([])
+const followLoading = ref(false)
+const followBusyId = ref('')
+const followStatus = ref<Record<string, boolean>>({})
+
 const displayMessages = computed(() => messages.value)
 const onlineMembers = computed(() => members.value.filter((m) => m.status === 1))
 const peerUid = computed(() => (currentChannel.value?.kind === 'dm' ? currentChannel.value.peerUid : ''))
@@ -360,6 +420,91 @@ const filteredPublic = computed(() => channels.value.filter((c) => !search.value
 const filteredGroups = computed(() => groups.value.filter((c) => !search.value || c.name.includes(search.value)))
 const filteredDms = computed(() => dms.value.filter((c) => !search.value || c.name.includes(search.value)))
 const filteredUsers = computed(() => users.value.filter((u) => !friendSearch.value || u.name.includes(friendSearch.value)))
+
+function followToken() {
+  try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' }
+}
+
+async function loadFollowStats() {
+  try {
+    const res = await fetch('/api/user/follow/stats', { headers: { Authorization: 'Bearer ' + followToken() } })
+    if (res.ok) { const j = await res.json(); if (j.data) followStats.value = j.data }
+  } catch { /* 非致命 */ }
+}
+
+async function loadFollowList(type: 'following' | 'follower') {
+  followLoading.value = true
+  try {
+    const res = await fetch('/api/user/follow/list?type=' + type, { headers: { Authorization: 'Bearer ' + followToken() } })
+    if (res.ok) {
+      const j = await res.json()
+      if (type === 'following') followUsers.value = j.data?.users || []
+      else followerUsers.value = j.data?.users || []
+    }
+  } catch { /* 非致命 */ } finally { followLoading.value = false }
+}
+
+async function switchFriendTab(tab: 'following' | 'follower' | 'directory') {
+  friendTab.value = tab
+  if (tab === 'following') {
+    await loadFollowList('following')
+  } else if (tab === 'follower') {
+    await loadFollowList('follower')
+  } else {
+    await refreshFollowStatus()
+  }
+}
+
+async function refreshFollowStatus() {
+  const ids = users.value.map((u) => u.id).filter(Boolean)
+  if (!ids.length) { followStatus.value = {}; return }
+  try {
+    const res = await fetch('/api/user/follow/status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + followToken() },
+      body: JSON.stringify({ targetIds: ids }),
+    })
+    if (res.ok) { const j = await res.json(); followStatus.value = j.data?.status || {} }
+  } catch { /* 非致命 */ }
+}
+
+async function toggleFollowId(targetId: string) {
+  if (followBusyId.value) return
+  followBusyId.value = targetId
+  try {
+    const isFollowing = followStatus.value[targetId]
+    const res = await fetch(isFollowing ? '/api/user/unfollow' : '/api/user/follow', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + followToken() },
+      body: JSON.stringify({ targetId }),
+    })
+    if (res.ok) {
+      followStatus.value = { ...followStatus.value, [targetId]: !isFollowing }
+      loadFollowStats()
+    }
+  } catch { /* 非致命 */ } finally { followBusyId.value = '' }
+}
+
+async function toggleFollowUser(u: any) {
+  if (followBusyId.value) return
+  followBusyId.value = u.id
+  try {
+    if (u.relation === 'follower') {
+      const res = await fetch('/api/user/follow', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + followToken() },
+        body: JSON.stringify({ targetId: u.id }),
+      })
+      if (res.ok) u.relation = 'mutual'
+    } else {
+      const res = await fetch('/api/user/unfollow', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + followToken() },
+        body: JSON.stringify({ targetId: u.id }),
+      })
+      if (res.ok) u.relation = 'follower'
+    }
+    loadFollowStats()
+    followUsers.value = [...followUsers.value]
+    followerUsers.value = [...followerUsers.value]
+  } catch { /* 非致命 */ } finally { followBusyId.value = '' }
+}
 
 function isActive(ch: any) {
   return currentChannel.value && currentChannel.value.id === ch.id && currentChannel.value.type === ch.type
@@ -560,6 +705,10 @@ function toggleFriendPanel() {
   if (friendPanel.value) {
     rightTab.value = 'friends'
     closeFriendMenu()
+    // 打开时按当前 tab 预载数据（USER-FOLLOW-01）
+    if (friendTab.value === 'following') loadFollowList('following')
+    else if (friendTab.value === 'follower') loadFollowList('follower')
+    else refreshFollowStatus()
   }
   syncBodyLock()
 }
@@ -825,10 +974,21 @@ onMounted(async () => {
   })
 
   await Promise.all([loadChannels(), loadUsers()])
+  // USER-FOLLOW-01：关注统计 + 关注列表 + 名录关注状态点亮
+  loadFollowStats()
+  loadFollowList('following')
+  loadFollowList('follower')
+  refreshFollowStatus()
   try {
     await tea.connect()
   } catch (e) {
     console.error('[昆仑茶馆] 连接失败', e)
+  }
+  // ?dm=<uid> 直达私聊（会员中心关注列表「发消息」跳转）
+  const dmUid = route.query.dm as string | undefined
+  if (dmUid && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dmUid)) {
+    const target = users.value.find((u) => u.id === dmUid)
+    await openPrivate(target || { id: dmUid, email: '', name: '茶客' })
   }
   handleResize()
   window.addEventListener('resize', handleResize)
@@ -1289,6 +1449,60 @@ onBeforeUnmount(() => {
 .friend-panel-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 14px 8px;
+  gap: 8px;
+}
+.friend-panel-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+.friend-panel-tab {
+  background: none; border: 1px solid transparent;
+  color: var(--color-text-muted, #64748b);
+  font-size: 12px; font-weight: 600;
+  padding: 4px 10px; border-radius: 20px;
+  cursor: pointer; transition: all 0.15s;
+}
+.friend-panel-tab.active {
+  color: #fff;
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+/* 列表项右侧操作（关注/发消息） */
+.member-actions {
+  display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0;
+}
+.mini-act-btn {
+  width: 26px; height: 26px; border-radius: 8px;
+  border: 0; background: rgba(255, 255, 255, 0.06);
+  font-size: 13px; cursor: pointer; transition: all 0.15s;
+}
+.mini-act-btn:hover { background: rgba(59, 130, 246, 0.25); }
+.mini-follow-btn {
+  border: 0; font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 20px; cursor: pointer;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #141a2e; transition: all 0.15s;
+}
+.mini-follow-btn:hover { filter: brightness(1.1); }
+.mini-follow-btn.following {
+  background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.55);
+}
+.rel-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 4px;
+  white-space: nowrap; vertical-align: 1px;
+}
+.rel-mutual { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+.rel-following { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.rel-follower { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+/* 资料卡关注按钮 */
+.profile-follow-btn {
+  margin-top: 10px;
+  border: 0; font-size: 12px; font-weight: 600;
+  padding: 6px 16px; border-radius: 20px; cursor: pointer;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #141a2e;
+  transition: all 0.15s;
+}
+.profile-follow-btn.following {
+  background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.6);
 }
 .friend-panel-title {
   font-size: 13px; font-weight: 700; color: var(--color-text, #e2e8f0);
