@@ -5,7 +5,7 @@
  *  - 复用现有 SSOT（AgentDefinition / EcologyPlugin / EcologyPluginPublishRequest / EcologyLicense）
  *  - 只读 Adapter，不修改原模型，零新表（SL2）
  *  - Lifecycle 管状态 / License 管授权 / Hermes 管执行 —— 三者不合并（SL3/SL4）
- *  - executionReady 恒 false：S3.2.1 只让 Skill 拥有真实生命周期状态，不执行
+ *  - executionReady: S3.2.1/3.2.2 恒 false（边界）→ S3.2.3 打开: AUTHORIZED = 具备执行条件（实际执行仍经 Hermes Policy）
  * 状态机（S3.2.1 生效子集）:
  *   DRAFT → SUBMITTED → APPROVED → PUBLISHED → AVAILABLE
  *   出口: REJECTED / DEPRECATED / DISABLED（任意阶段可废弃）
@@ -76,8 +76,8 @@ export interface SkillLifecycleState {
   state: SkillLifecycleStateName
   version: string
   authorization: SkillLifecycleAuthorization
-  /** S3.2.1 边界: Lifecycle 不执行（Hermes 执行属 S3.3，SL4） */
-  executionReady: false
+  /** S3.2.3: AUTHORIZED = 具备执行条件（实际执行经 Hermes Tool Policy, SE3） */
+  executionReady: boolean
   source: SkillLifecycleSource
   updatedAt: string
 }
@@ -334,7 +334,8 @@ export async function resolveSkillLifecycle(skill: SkillDefinition): Promise<Ski
     state: composed.state,
     version: skill.version,
     authorization: { ...composed.authorization, licenseId },
-    executionReady: false,
+    // S3.2.3: 授权通过 = 具备执行条件（执行仍受 Hermes Policy 约束）
+    executionReady: composed.authorization.status === 'AUTHORIZED',
     source,
     updatedAt: composed.updatedAt,
   }
