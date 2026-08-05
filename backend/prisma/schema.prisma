@@ -29,6 +29,11 @@ model User {
   passwordHash          String
   phone                 String?                @unique
   phoneVerified         Boolean                @default(false)
+  avatarUrl             String?                @map("avatar_url") @db.Text // MEMBER-CENTER-02 用户头像
+  payPasswordHash       String?                @map("pay_password_hash") @db.Text // MEMBER-CENTER-02 支付密码（bcrypt）
+  alipayOpenId          String?                @unique @map("alipay_open_id") // MEMBER-CENTER-02 支付宝绑定
+  wechatBoundAt         DateTime?              @map("wechat_bound_at") // MEMBER-CENTER-02 微信绑定时间
+  alipayBoundAt         DateTime?              @map("alipay_bound_at") // MEMBER-CENTER-02 支付宝绑定时间
   memberTier            String                 @default("free")
   memberExpiresAt       DateTime?
   createdAt             DateTime               @default(now())

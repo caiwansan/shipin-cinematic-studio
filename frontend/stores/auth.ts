@@ -4,7 +4,8 @@ import { getToken as getCachedToken, setToken, clearAuth, setUser as setCachedUs
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: '' as string,
-    user: null as null | { id: string; username: string; email: string; credits?: number; memberTier?: string },
+    user: null as null | { id: string; username: string; email: string; credits?: number; memberTier?: string; avatarUrl?: string | null },
+    avatarVersion: 0 as number, // MEMBER-CENTER-02 头像更新版本号（用于全站即时刷新）
     enterpriseContext: null as null | {
       userId: string
       governanceTenantId: string | null
@@ -20,6 +21,7 @@ export const useAuthStore = defineStore('auth', {
     credits: (state) => 0,
     memberTier: (state) => state.user?.memberTier || 'free',
     userId: (state) => state.user?.id || '',
+    userAvatar: (state) => state.user?.avatarUrl || '',
     tenantId: (state) => state.enterpriseContext?.governanceTenantId || state.user?.id || '',
     userRole: (state) => state.enterpriseContext?.roles?.[0] || 'ceo',
   },
@@ -94,6 +96,16 @@ export const useAuthStore = defineStore('auth', {
         setCachedUser(this.user as Record<string, any>)
         document.cookie = `auth_user=${encodeURIComponent(JSON.stringify(this.user))}; path=/; max-age=86400; samesite=lax`
       }
+    },
+    /**
+     * MEMBER-CENTER-02 更新用户头像（本地同步，全站即时生效）
+     */
+    setAvatar(avatarUrl: string | null) {
+      if (this.user) {
+        this.user.avatarUrl = avatarUrl
+        setCachedUser(this.user as Record<string, any>)
+      }
+      this.avatarVersion++
     },
     async logout() {
       try {

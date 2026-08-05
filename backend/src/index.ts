@@ -114,6 +114,9 @@ import wechatOAuthRoutes from './routes/wechat-oauth.js'
 import qqOAuthRoutes from './routes/qq-oauth.js'
 import memberRoutes from './routes/member.js'
 import userCenterRoutes from './routes/user-center.js'
+import userAvatarRoutes from './routes/user-avatar.js'
+import userSecurityRoutes from './routes/user-security.js'
+import userAssetsRoutes from './routes/user-assets.js'
 
 import pipelineRoutes from './routes/pipeline.js'
 import pipelineJobRoutes from './routes/pipeline-jobs.js'
@@ -312,6 +315,9 @@ async function main() {
   await app.register(adminMembersStorageRoutes)
   await app.register(memberRoutes)
   await app.register(userCenterRoutes)
+  await app.register(userAvatarRoutes)
+  await app.register(userSecurityRoutes)
+  await app.register(userAssetsRoutes)
   // REMOVED: analyticsRoutes
   // REMOVED: optimizeRoutes
 

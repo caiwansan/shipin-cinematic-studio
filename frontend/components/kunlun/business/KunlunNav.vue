@@ -89,8 +89,12 @@
         </template>
         <template v-else>
           <div class="user-menu hide-mobile">
+            <NuxtLink to="/user/center" class="user-menu-entry">
+              <UserAvatar :src="userAvatar" :name="userName" size="sm" class="user-menu-avatar" />
+              <span class="user-menu-name">{{ userName }}</span>
+            </NuxtLink>
             <NuxtLink to="/user/center" class="btn btn-primary btn-sm">
-              进入会员中心 →
+              会员中心 →
             </NuxtLink>
             <button class="btn btn-logout btn-sm" @click="handleLogout">退出</button>
           </div>
@@ -143,6 +147,22 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { navCategories as rawNavCategories, primaryNav } from '~/config/navigation'
 import { workspaces } from '~/config/workspaces'
+import UserAvatar from '~/components/common/UserAvatar.vue'
+
+// MEMBER-CENTER-02 全站头像：登录态从 localStorage 读取用户头像/昵称
+const userAvatar = ref('')
+const userName = ref('用户')
+
+function refreshUserMeta() {
+  try {
+    const raw = window.localStorage?.getItem('auth_user')
+    if (raw) {
+      const u = JSON.parse(raw)
+      userAvatar.value = u.avatarUrl || ''
+      userName.value = u.username || u.email?.split('@')[0] || '用户'
+    }
+  } catch {}
+}
 
 // 过滤掉 hidden 工作台的导航分类
 const navCategories = computed(() =>
@@ -199,6 +219,7 @@ function handleClickOutside(e: MouseEvent) {
 }
 
 onMounted(() => {
+  refreshUserMeta()
   const handleScroll = () => {
     scrolled.value = window.scrollY > 50
   }
@@ -488,6 +509,32 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* MEMBER-CENTER-02 用户头像入口 */
+.user-menu-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 3px 3px;
+  border-radius: 20px;
+  border: 1px solid rgba(248, 246, 241, 0.08);
+  background: rgba(248, 246, 241, 0.03);
+  text-decoration: none;
+  transition: all 0.25s;
+}
+.user-menu-entry:hover {
+  background: rgba(248, 246, 241, 0.07);
+  border-color: rgba(201, 168, 108, 0.3);
+}
+.user-menu-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(248, 246, 241, 0.85);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .btn-logout {

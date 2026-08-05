@@ -38,9 +38,14 @@
         <div class="member-hero-glow" />
         <div class="member-hero-inner">
           <div class="member-hero-avatar-area">
-            <div class="member-hero-avatar" :class="`member-hero-avatar--${tierClass}`">
-              <span class="member-hero-avatar-text">{{ avatarChar }}</span>
+            <div class="member-hero-avatar-wrap" @click="triggerAvatarUpload" :title="avatarUrl ? '点击更换头像' : '点击上传头像'">
+              <UserAvatar :src="avatarUrl" :name="userInfo?.username || userInfo?.email || 'U'" size="hero" class="member-hero-avatar-img" />
+              <div class="member-hero-avatar-edit">
+                <span v-if="avatarUploading">⏳</span>
+                <span v-else>{{ avatarUrl ? '换' : '传' }}</span>
+              </div>
             </div>
+            <input ref="avatarInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="avatar-file-input" @change="onAvatarFileChange" />
             <div class="member-tier-badge" :class="`member-tier-badge--${tierClass}`">
               <span class="member-tier-icon">{{ tierInfo.icon }}</span>
               <span class="member-tier-label">{{ tierInfo.label }}</span>
@@ -119,8 +124,111 @@
         </div>
       </div>
 
-      <!-- 四大功能模块 -->
+      <!-- 九大功能模块（会员中心重构） -->
       <div class="member-modules">
+        <router-link to="/user/settings" class="member-module">
+          <div class="module-icon-area" style="background: rgba(107,114,128,0.12);">
+            <span class="module-icon">⚙️</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">设置中心</h3>
+            <p class="module-desc">手机/微信/支付宝绑定 · 密码</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/user/wallet" class="member-module">
+          <div class="module-icon-area" style="background: rgba(16,185,129,0.12);">
+            <span class="module-icon">💰</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的余额</h3>
+            <p class="module-desc">收益余额 · 提现 · 绑卡</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/user/diamonds" class="member-module">
+          <div class="module-icon-area" style="background: rgba(59,130,246,0.12);">
+            <span class="module-icon">💎</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的钻石</h3>
+            <p class="module-desc">充值钻石 · 收益钻石 · 流水</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/user/membership" class="member-module">
+          <div class="module-icon-area" style="background: rgba(245,158,11,0.12);">
+            <span class="module-icon">👑</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的VIP</h3>
+            <p class="module-desc">会员等级 · 升级 · 续费</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/user/orders" class="member-module">
+          <div class="module-icon-area" style="background: rgba(139,92,246,0.12);">
+            <span class="module-icon">📋</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的订单</h3>
+            <p class="module-desc">充值 · VIP · 消费记录</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/user/referral" class="member-module">
+          <div class="module-icon-area" style="background: rgba(245,158,11,0.1);">
+            <span class="module-icon">📣</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我要推广</h3>
+            <p class="module-desc">邀请链接 · 奖励 · 佣金</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/user/team" class="member-module">
+          <div class="module-icon-area" style="background: rgba(251,191,36,0.1);">
+            <span class="module-icon">👥</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的团队</h3>
+            <p class="module-desc">推广成员 · 团队规模</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/chat?view=friends" class="member-module">
+          <div class="module-icon-area" style="background: rgba(236,72,153,0.1);">
+            <span class="module-icon">💬</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的好友</h3>
+            <p class="module-desc">聊天好友 · 私聊</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/chat?view=groups" class="member-module">
+          <div class="module-icon-area" style="background: rgba(52,211,153,0.1);">
+            <span class="module-icon">🏘️</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的社群</h3>
+            <p class="module-desc">聊天频道 · 群聊</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+      </div>
+
+      <!-- 创作工作区 -->
+      <div class="member-modules member-modules--work">
+        <div class="work-module-title">创作工作区</div>
         <router-link to="/studio/v2" class="member-module">
           <div class="module-icon-area" style="background: rgba(59,130,246,0.1);">
             <span class="module-icon">🎬</span>
@@ -159,17 +267,6 @@
           <span class="module-arrow">→</span>
         </router-link>
 
-        <router-link to="/user/referral" class="member-module">
-          <div class="module-icon-area" style="background: rgba(245,158,11,0.1);">
-            <span class="module-icon">📣</span>
-          </div>
-          <div class="module-text">
-            <h3 class="module-title">推荐有奖</h3>
-            <p class="module-desc">分享链接给好友，好友开通VIP你可得5%佣金</p>
-          </div>
-          <span class="module-arrow">→</span>
-        </router-link>
-
         <router-link to="/user/agent" class="member-module">
           <div class="module-icon-area" :style="{ background: userInfo?.agentStatus === 'active' ? 'rgba(251,191,36,0.15)' : 'rgba(107,114,128,0.1)' }">
             <span class="module-icon">{{ userInfo?.agentStatus === 'active' ? '🤝' : '📋' }}</span>
@@ -188,6 +285,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import UserAvatar from '~/components/common/UserAvatar.vue'
 
 const router = useRouter()
 
@@ -197,11 +295,69 @@ interface UserInfo {
   username?: string
   coins?: number
   memberExpiresAt?: string
+  avatarUrl?: string | null
   [key: string]: any
 }
 
 const userInfo = ref<UserInfo | null>(null)
 const agentStats = ref<any>(null)
+
+// MEMBER-CENTER-02 头像上传
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarUploading = ref(false)
+const avatarUrl = computed(() => userInfo.value?.avatarUrl || '')
+
+function triggerAvatarUpload() {
+  avatarInput.value?.click()
+}
+
+async function onAvatarFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) {
+    alert('头像文件不能超过 5MB')
+    input.value = ''
+    return
+  }
+  const token = (() => { try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' } })()
+  if (!token) { alert('请先登录'); return }
+
+  avatarUploading.value = true
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch('/api/user/avatar', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      alert(data.error || '头像上传失败')
+      return
+    }
+    const url = data.data?.avatarUrl || data.avatarUrl
+    if (url && userInfo.value) {
+      userInfo.value.avatarUrl = url
+      // 同步 localStorage + auth store（全站即时生效）
+      const cached = JSON.parse(localStorage.getItem('auth_user') || '{}')
+      cached.avatarUrl = url
+      localStorage.setItem('auth_user', JSON.stringify(cached))
+      try {
+        const { useAuthStore } = await import('~/stores/auth')
+        const auth = useAuthStore()
+        auth.setAvatar(url)
+      } catch {}
+    }
+    alert('头像更新成功 ✅')
+  } catch (err: any) {
+    alert('头像上传失败: ' + (err.message || ''))
+  } finally {
+    avatarUploading.value = false
+    input.value = ''
+  }
+}
 
 import { getTierLabel } from '~/constants/membership'
 
@@ -619,6 +775,44 @@ onMounted(async () => {
   gap: 12px;
 }
 
+/* MEMBER-CENTER-02 头像上传 */
+.member-hero-avatar-wrap {
+  position: relative;
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.04));
+  transition: all 0.25s;
+}
+.member-hero-avatar-wrap:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.25);
+}
+.member-hero-avatar-img {
+  border-radius: 50%;
+  display: block;
+}
+.member-hero-avatar-edit {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #0B1320;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.avatar-file-input {
+  display: none;
+}
+
 .member-hero-avatar {
   width: 72px;
   height: 72px;
@@ -778,17 +972,32 @@ onMounted(async () => {
   box-shadow: 0 6px 24px rgba(249, 115, 22, 0.3);
 }
 
-/* 四大功能模块 */
+/* 九大功能模块（MEMBER-CENTER-02 双列网格） */
 .member-modules {
   display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
+}
+
+.member-modules--work {
+  margin-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 22px;
+}
+
+.work-module-title {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 1px;
 }
 
 .member-module {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 18px 20px;
+  gap: 14px;
+  padding: 16px 18px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 14px;
@@ -800,7 +1009,7 @@ onMounted(async () => {
 .member-module:hover {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.1);
-  transform: translateX(4px);
+  transform: translateY(-2px);
 }
 
 .module-icon-area {
@@ -863,6 +1072,12 @@ onMounted(async () => {
   transition: width 0.5s ease;
 }
 
+@media (max-width: 768px) {
+  .member-modules {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 640px) {
   .member-hero-inner {
     flex-direction: column;
@@ -876,6 +1091,10 @@ onMounted(async () => {
 
   .nav-links {
     display: none;
+  }
+
+  .member-modules {
+    grid-template-columns: 1fr;
   }
 }
 /* agent badge */

@@ -161,7 +161,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
     return {
       accessToken,
-      user: { id: u.id, email: u.email, username: u.username, phone: maskPhone(u.phone), memberTier: u.memberTier, credits: u.membership?.credits ?? 0, agentStatus: u.agentStatus, agentLevel: u.agentLevel, organizationId: registerOrgId || null },
+      user: { id: u.id, email: u.email, username: u.username, phone: maskPhone(u.phone), memberTier: u.memberTier, credits: u.membership?.credits ?? 0, agentStatus: u.agentStatus, agentLevel: u.agentLevel, organizationId: registerOrgId || null, avatarUrl: u.avatarUrl || null },
     }
   })
 
@@ -283,7 +283,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (!email) return reply.status(400).send({ error: '缺少邮箱参数' })
     const dbUser = await prisma.user.findUnique({
       where: { email: String(email) },
-      select: { id: true, email: true, username: true, memberTier: true, phone: true, createdAt: true, memberExpiresAt: true, membership: true, agentStatus: true, agentLevel: true, agentPlanId: true, agentExpiresAt: true },
+      select: { id: true, email: true, username: true, memberTier: true, phone: true, createdAt: true, memberExpiresAt: true, membership: true, agentStatus: true, agentLevel: true, agentPlanId: true, agentExpiresAt: true, avatarUrl: true, payPasswordHash: true, wechatOpenId: true, qqOpenId: true, alipayOpenId: true, wechatBoundAt: true, alipayBoundAt: true },
     })
     if (!dbUser) return reply.status(404).send({ error: '用户不存在' })
     const serialized: any = JSON.parse(JSON.stringify(dbUser, (k, v) => typeof v === 'bigint' ? Number(v) : v))
@@ -297,6 +297,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
     } catch {}
     serialized.coins = serialized.membership?.credits ?? 0
     serialized.phone = maskPhone(serialized.phone)
+    // MEMBER-CENTER-02 安全字段（供设置中心展示）
+    serialized.hasPayPassword = !!serialized.payPasswordHash
+    serialized.wechatBound = !!serialized.wechatOpenId
+    serialized.alipayBound = !!serialized.alipayOpenId
+    delete serialized.payPasswordHash
     return toApiResponse({user: serialized}) satisfies ApiResponse<unknown>;
   })
 
@@ -309,7 +314,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
     const dbUser = await prisma.user.findUnique({
       where: { id: jwtUser.id },
-      select: { id: true, email: true, username: true, memberTier: true, phone: true, createdAt: true, memberExpiresAt: true, membership: true, agentStatus: true, agentLevel: true, agentPlanId: true, agentExpiresAt: true },
+      select: { id: true, email: true, username: true, memberTier: true, phone: true, createdAt: true, memberExpiresAt: true, membership: true, agentStatus: true, agentLevel: true, agentPlanId: true, agentExpiresAt: true, avatarUrl: true, payPasswordHash: true, wechatOpenId: true, qqOpenId: true, alipayOpenId: true, wechatBoundAt: true, alipayBoundAt: true },
     })
     if (!dbUser) {
       return reply.status(404).send({ error: '用户不存在' })
@@ -337,6 +342,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
     } catch {}
     serialized.coins = serialized.membership?.credits ?? 0
     serialized.phone = maskPhone(serialized.phone)
+    // MEMBER-CENTER-02 安全字段（供设置中心展示）
+    serialized.hasPayPassword = !!serialized.payPasswordHash
+    serialized.wechatBound = !!serialized.wechatOpenId
+    serialized.alipayBound = !!serialized.alipayOpenId
+    delete serialized.payPasswordHash
     // displayName: 优先使用会话中的 displayName，否则 fallback 到 username
     // 允许用户通过 PATCH /api/user/profile 更新 displayName（存储在 username 字段）
     serialized.displayName = serialized.username
