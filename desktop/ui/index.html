@@ -236,7 +236,7 @@ window.onerror = function (msg, src, line, col, err) {
 // ─────────────────────────────────────────────
 const API_BASE = (window.__KUNLUN_API__) || 'https://aigc.fushtn.com';
 const WORKSPACE_BASE = 'https://aigc.fushtn.com';
-const isTauri = !!(window.__TAURI_INTERNALS__);
+const isKunlunTauri = !!(window.__TAURI_INTERNALS__) || !!window.isTauri;
 
 let creds = { device_id: null, device_token: null, device_fingerprint: null, access_token: null, user_name: null, organization_id: null };
 let apps = [];
@@ -246,7 +246,7 @@ const $ = (id) => document.getElementById(id);
 
 // ── Tauri 桥 ────────────────────────────────
 async function invoke(cmd, args = {}) {
-  if (!isTauri) {
+  if (!isKunlunTauri) {
     // 浏览器调试模式：本地模拟（不落盘）
     if (cmd === 'get_credentials') return { device_id: localStorage.getItem('dbg_device_id'), access_token: localStorage.getItem('dbg_token') };
     if (cmd === 'save_credentials') {
@@ -394,7 +394,7 @@ const RuntimeRouter = (() => {
 
   // 打开桥页（S1.1 bridge.html + from_config；非 Tauri 调试 = 直接跳转）
   function openBridge(connectUrl, ticket) {
-    if (isTauri) {
+    if (isKunlunTauri) {
       invoke('open_workspace', { url: connectUrl });
       // ticket 由壳内 Rust 侧注入 bridge 参数（S1.2-B 壳构建时接线）
       // 本版桥页透传在 Rust 侧实现；前端负责签发与传递目标
@@ -478,7 +478,7 @@ if (typeof window.__KUNLUN_DEEP_LINK__ !== 'undefined') {
 
 // S1.2-B B2b: Rust Host 转发 OS 协议事件 → RuntimeRouter（零业务）
 // Rust 侧只发原始 URL 字符串，前端负责解析与调度
-if (isTauri) {
+if (isKunlunTauri) {
   try {
     // deep-link 插件自动 emit 'deep-link://new-url'，payload = [url]
     window.__TAURI__.event.listen('deep-link://new-url', (ev) => {
@@ -714,7 +714,7 @@ async function boot() {
 
   // RCA-01：诊断状态先行（--debug / --diag）
   try {
-    if (isTauri) {
+    if (isKunlunTauri) {
       var ds = await invoke('diag_status');
       __diag.enabled = !!ds.enabled;
       __diag.diagShell = !!ds.diag_shell;
