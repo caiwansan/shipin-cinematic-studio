@@ -35,6 +35,8 @@ import desktopOllamaRoutes from './routes/desktop-ollama.js'
 import desktopTtsRoutes from './routes/desktop-tts.js'
 import desktopComfyRoutes from './routes/desktop-comfy.js'
 import desktopVideoRoutes from './routes/desktop-video.js'
+import desktopTicketRoutes from './routes/desktop-ticket.js'
+import ticketExchangeRoutes from './routes/ticket-exchange.js'
 import healthRoutes from './routes/health.js'
 import siteConfigRoutes from './routes/site-config.js'
 import observabilityRoutes from './routes/observability.js'
@@ -963,6 +965,9 @@ await app.register(projectV2Routes)
   await app.register(desktopComfyRoutes)
   // Desktop video routes（本地视频引擎检测）
   await app.register(desktopVideoRoutes)
+  // S1.1 Identity Ticket Bridge（ADR-021 身份边界，一次性 ticket）
+  await app.register(desktopTicketRoutes)
+  await app.register(ticketExchangeRoutes)
   // Brand GEO routes (Phase 2) / Sprint 1A Knowledge Skeleton
   await app.register(await import('./services/geo/routes/geo-project.route.js').then(m => m.default))
   await app.register(await import('./services/geo/routes/geo-entity.route.js').then(m => m.default))
@@ -1389,14 +1394,6 @@ await app.register(projectV2Routes)
 
   // G Product Layer
   // REMOVED: productRoutes
-
-  // Ecom Image Workbench — 电商图片工作台
-  try {
-    await app.register(await import('./routes/ecom-image/ecom-image.route.js').then(m => m.default))
-    console.log('[EcomImage] ✅ Routes registered')
-  } catch (err) {
-    console.warn('[EcomImage] Failed to register:', (err as Error).message)
-  }
 
   // S3 Route Redirect (deprecated routes)
 

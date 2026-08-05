@@ -104,15 +104,6 @@ export const workspaces: WorkspaceConfig[] = [
     note: '企业招聘中心，AI岗位解析+人才匹配+招聘管理',
   },
   {
-    id: 'ecom-image',
-    name: '电商图片',
-    status: 'preview',
-    visibleOnHome: true,
-    routeAccessible: true,
-    completion: 50,
-    note: '简化版工作台，项目 CRUD + AI 分析/生成',
-  },
-  {
     id: 'media-department',
     name: '媒体部门（旧）',
     status: 'hidden',

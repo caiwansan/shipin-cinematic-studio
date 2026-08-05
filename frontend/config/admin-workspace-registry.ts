@@ -114,7 +114,6 @@ export const ADMIN_WORKSPACE_REGISTRY: AdminWorkspaceEntry[] = [
   //   ],
   // },
   // { code: 'music', name: '音乐制作工作台', icon: '🎵', entry: '/admin/workspace/music/data', children: [] },
-  // { code: 'ecom-image', name: '电商图片工作台', icon: '🖼️', entry: '/admin/workspace/ecom-image/data', children: [] },
   // { code: 'ad-create', name: '广告制作工作台', icon: '📣', entry: '/admin/workspace/ad-create/data', children: [] },
 ]
 

@@ -224,7 +224,6 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       { code: 'geo', label: 'GEO优化', icon: '🌎', projects: geoProjects, calls: 0, users: 0, cost: 0, status: 'active' },
       { code: 'novel', label: '小说', icon: '📖', projects: 0, calls: 0, users: 0, cost: 0, status: 'offline', note: '业务未上线' },
       { code: 'music', label: '音乐制作', icon: '🎵', projects: 0, calls: 0, users: 0, cost: 0, status: 'offline', note: '业务未上线' },
-      { code: 'ecom-image', label: '电商图片', icon: '🖼️', projects: 0, calls: 0, users: 0, cost: 0, status: 'offline', note: '业务未上线' },
     ]
 
     // SPRINT-AGENT-OUTCOME-01: 价值层 — 真实 AI 员工结果聚合（agent_outcome）
