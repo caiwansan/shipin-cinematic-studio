@@ -3,6 +3,7 @@
     <!-- ==================== 登录/注册 Modal ==================== -->
     <div class="modal-overlay" @click.self="close">
       <div class="modal-card">
+        <div class="qhp-fret" aria-hidden="true"></div>
         <button class="modal-close" @click="close">✕</button>
         <div class="modal-header">
           <span class="logo-icon"><img src="/logo.png" alt="昆仑镜" class="modal-logo-img" /></span>
@@ -568,49 +569,139 @@ async function doAuth() {
 
 <style scoped>
 /* ========================================
-   登录/注册 Modal（从首页 pages/index.vue 提取的公共组件）
-   scoped：不影响其他页面各自的 .modal-overlay 样式
+   雨过天青 · 青花瓷 主题（掌柜 2026-08-06 中国传统美学）
+   白瓷卡面 + 青花钴蓝 + 天青晕染 + 描金点缀
+   scoped：不影响其他页面各自的 .modal-overlay
    ======================================== */
+
+/* 变量：供嵌套 RegionPicker（白瓷模式） */
+.modal-card {
+  --rp-color: #3a4c5e;
+  --rp-bg: rgba(255, 255, 255, 0.78);
+  --rp-border: rgba(31, 78, 121, 0.22);
+  --rp-focus: #6fa8c9;
+}
+
+/* RegionPicker 白瓷模式：:deep 后代选择器直接覆盖（特异性高于组件内部规则，
+   规避 select 原生控件对 background 简写 + var() 的计算异常） */
+.modal-card :deep(.region-select) {
+  color: #3a4c5e;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(31, 78, 121, 0.22);
+}
+.modal-card :deep(.region-select:focus) {
+  border-color: #6fa8c9;
+}
+.modal-card :deep(.region-select:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.modal-card :deep(.region-select option) {
+  background: #fcfaf5;
+  color: #3a4c5e;
+}
+.modal-card :deep(.region-select option:hover),
+.modal-card :deep(.region-select option:checked) {
+  background: #dceaf2;
+  color: #1f4e79;
+}
+
+/* ── 夜幕天青 overlay ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(8px);
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(107, 164, 200, 0.22), transparent 55%),
+    linear-gradient(165deg, #14283c 0%, #0c1b2c 55%, #0a1626 100%);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
+/* ── 白瓷卡面 ── */
 .modal-card {
-  background: #0d0d12;
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 20px;
-  width: 380px;
-  padding: 40px 32px 32px;
+  background:
+    radial-gradient(130% 50% at 50% -12%, rgba(127, 181, 213, 0.16), transparent 60%),
+    linear-gradient(180deg, #fcfaf5 0%, #f5f1e7 100%);
+  border: 1px solid rgba(31, 78, 121, 0.22);
+  border-radius: 18px;
+  width: 384px;
+  padding: 30px 32px 30px;
   position: relative;
+  color: #2b3a4a;
+  box-shadow:
+    0 24px 64px rgba(6, 18, 32, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(201, 160, 99, 0.16);
 }
+
+/* ── 青花回纹装饰带 ── */
+.qhp-fret {
+  width: 148px;
+  height: 7px;
+  margin: 0 auto 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='7' viewBox='0 0 28 7'%3E%3Cpath d='M0 0h8v7H6V2H0zM12 0h8v7h-2V2h-6zM24 0h4v7h-2V2h-2z' fill='%232e5a88'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 28px 7px;
+  opacity: 0.55;
+}
+
 .modal-close {
   position: absolute;
   top: 16px;
   right: 16px;
   background: none;
   border: none;
-  color: rgba(255,255,255,0.3);
+  color: #93a3b0;
   font-size: 1rem;
   cursor: pointer;
+  transition: color 0.2s;
 }
-.modal-close:hover { color: #fff; }
-.modal-header { text-align: center; margin-bottom: 24px; }
-.modal-header .logo-icon { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-.modal-logo-img { width: 48px; height: 48px; }
-.modal-header h2 { font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0 0 6px; }
-.modal-header p { font-size: 0.8rem; color: rgba(255,255,255,0.35); margin: 0; }
+.modal-close:hover { color: #1f4e79; }
+
+/* ── 头部：青花瓷盘 + 钴蓝标题 ── */
+.modal-header { text-align: center; margin-bottom: 22px; }
+.modal-header .logo-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66px;
+  height: 66px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #f4fafc 0%, #dceaf2 45%, #a9c9dc 100%);
+  border: 1.5px solid rgba(31, 78, 121, 0.45);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85), 0 6px 16px rgba(31, 78, 121, 0.28);
+}
+.modal-header .logo-icon::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 160, 99, 0.5);
+  pointer-events: none;
+}
+.modal-logo-img { width: 40px; height: 40px; border-radius: 8px; }
+.modal-header h2 {
+  font-size: 1.22rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #1f4e79;
+  margin: 0 0 6px;
+}
+.modal-header p { font-size: 0.8rem; color: #7e8e9c; margin: 0; }
+
+/* ── 青花晕染 tabs ── */
 .modal-tabs {
   display: flex;
-  background: rgba(255,255,255,0.02);
+  background: rgba(31, 78, 121, 0.05);
+  border: 1px solid rgba(31, 78, 121, 0.14);
   border-radius: 10px;
   padding: 3px;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 .tab-btn {
   flex: 1;
@@ -620,62 +711,98 @@ async function doAuth() {
   font-size: 0.82rem;
   cursor: pointer;
   background: transparent;
-  color: rgba(255,255,255,0.3);
+  color: #6b7c8c;
   transition: all 0.2s;
 }
 .tab-active {
-  background: rgba(249,115,22,0.15);
-  color: #f97316;
+  background: linear-gradient(180deg, #3571a8, #1f4e79);
+  color: #f8f4e9;
+  box-shadow: 0 2px 10px rgba(31, 78, 121, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
+
+/* ── 表单：白瓷凹槽 ── */
 .modal-form .form-group { margin-bottom: 16px; }
-.modal-form label { display: block; font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+.modal-form label { display: block; font-size: 0.75rem; color: #4a5c6e; margin-bottom: 6px; }
 .form-input {
   width: 100%;
   box-sizing: border-box;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(31, 78, 121, 0.2);
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 0.85rem;
-  color: rgba(255,255,255,0.7);
+  color: #2b3a4a;
   outline: none;
-  transition: border-color 0.2s;
+  box-shadow: inset 0 1px 3px rgba(31, 78, 121, 0.06);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.form-input:focus { border-color: rgba(249,115,22,0.4); }
-.form-error { color: #ef4444; font-size: 0.78rem; margin-bottom: 12px; text-align: center; }
-.form-success { color: #22c55e; font-size: 0.78rem; margin-bottom: 12px; text-align: center; }
-.sms-code-row {
-  display: flex;
-  gap: 8px;
+.form-input::placeholder { color: #a9b5bf; }
+.form-input:focus {
+  border-color: #6fa8c9;
+  box-shadow: 0 0 0 3px rgba(127, 181, 213, 0.18), inset 0 1px 3px rgba(31, 78, 121, 0.05);
 }
+.form-error { color: #b03a2e; font-size: 0.78rem; margin-bottom: 12px; text-align: center; }
+.form-success { color: #3a6b5a; font-size: 0.78rem; margin-bottom: 12px; text-align: center; }
+.sms-code-row { display: flex; gap: 8px; }
 .sms-code-input { flex: 1; }
-.btn-sm-code {
-  white-space: nowrap;
-  min-width: 100px;
-  height: 40px;
-  font-size: 0.78rem;
+.btn-sm-code { white-space: nowrap; min-width: 100px; height: 40px; font-size: 0.78rem; }
+
+/* ── 按钮 ── */
+.btn-full { width: 100%; justify-content: center; padding: 11px; }
+.btn-primary {
+  background: linear-gradient(180deg, #3a76ae 0%, #23568c 55%, #1a446e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #f8f4e9;
+  border-radius: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 16px rgba(26, 68, 110, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.2s;
 }
+.btn-primary:hover {
+  background: linear-gradient(180deg, #4a85bc 0%, #2a6398 55%, #1f4e79 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(26, 68, 110, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-outline {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(31, 78, 121, 0.3);
+  color: #1f4e79;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+.btn-outline:hover {
+  background: rgba(31, 78, 121, 0.07);
+  border-color: #1f4e79;
+}
+.btn-ghost { background: transparent; color: #6b7c8c; }
+.btn-ghost:hover { color: #1f4e79; }
+
+/* ── 忘记密码 ── */
 .reset-pwd-link {
   text-align: center;
   margin-top: 12px;
   font-size: 0.78rem;
-  color: rgba(96,165,250,0.6);
+  color: #4e7fa8;
   cursor: pointer;
   transition: color 0.2s;
 }
-.reset-pwd-link:hover { color: #60a5fa; }
-.btn-full { width: 100%; justify-content: center; padding: 11px; }
-.btn-ghost { background: transparent; color: rgba(255,255,255,0.5); }
-.btn-ghost:hover { color: rgba(255,255,255,0.8); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.reset-pwd-link:hover { color: #1f4e79; }
+
+/* ── 描金分隔 + 第三方登录 ── */
 .wechat-divider {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 16px 0 12px;
+  margin: 18px 0 12px;
 }
-.divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
-.divider-text { font-size: 11px; color: rgba(255,255,255,0.3); white-space: nowrap; }
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 160, 99, 0.55), transparent);
+}
+.divider-text { font-size: 11px; color: #b08d57; white-space: nowrap; letter-spacing: 0.2em; }
 .social-login-row { display: flex; flex-direction: column; gap: 8px; }
 .social-icon { font-size: 16px; }
 </style>

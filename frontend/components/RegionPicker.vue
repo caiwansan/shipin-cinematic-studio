@@ -136,21 +136,23 @@ defineOptions({ name: 'RegionPicker' })
 </script>
 
 <style scoped>
+/* CSS 变量化：默认保持深色风格（user/mall 等深色页面不变）；
+   浅色容器（如 AuthModal 白瓷弹窗）通过 --rp-* 变量覆盖为白瓷风格 */
 .region-select {
   flex: 1;
   min-width: 0;
   padding: 8px 6px;
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.7);
-  background: #0b1020;
-  border: 1px solid #1a2240;
+  color: var(--rp-color, rgba(255, 255, 255, 0.7));
+  background: var(--rp-bg, #0b1020);
+  border: 1px solid var(--rp-border, #1a2240);
   border-radius: 8px;
   outline: none;
   appearance: none;
   cursor: pointer;
 }
 .region-select:focus {
-  border-color: rgba(59, 130, 246, 0.5);
+  border-color: var(--rp-focus, rgba(59, 130, 246, 0.5));
 }
 .region-select:disabled {
   opacity: 0.5;
