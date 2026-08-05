@@ -185,7 +185,8 @@ async function main() {
   const diagAll = tags.filter(r => /^diag-/.test(r.tag))
   const diagReleases = diagAll.slice(0, 1)
   const diagArchived = diagAll.slice(1)
-  const stableReleases = tags.filter(r => /^v\d/.test(r.tag))
+  // 修复(2026-08-05): RC/pre-release 不进 stable（掌柜约束: RC 不碰 latest.json）
+  const stableReleases = tags.filter(r => /^v\d/.test(r.tag) && !/-rc|-pre|-beta|-alpha/.test(r.tag))
   const currentStable = (() => {
     try { return JSON.parse(readFileSync(LATEST_MANIFEST, 'utf-8')).version || '0.0.0' }
     catch { return '0.0.0' }
