@@ -472,6 +472,43 @@ const RuntimeRouter = (() => {
 })();
 
 // 兼容旧调用点: launchApp = RuntimeRouter.launch（应用中心点击）
+// ═══════════════════════════════════════════════════════════
+// S2.2 Plugin Invocation — 只识别调用意图，不执行（S2.3 接管执行）
+// 链路: Registry(Cloud) → Permission(Cloud Authority) → InvocationTicket → 等待 S2.3
+// 错误: PLUGIN_NOT_FOUND / PLUGIN_PERMISSION_REQUIRED / PLUGIN_DISABLED / PLUGIN_ACTION_UNSUPPORTED
+// ═══════════════════════════════════════════════════════════
+async function launchPlugin(pluginId, action) {
+  try {
+    setState('PLUGIN_LOOKUP');
+    if (!creds.access_token) {
+      showLogin();
+      return { ok: false, error: 'AUTH_REQUIRED' };
+    }
+    setState('PLUGIN_PERMISSION');
+    const res = await fetch(`${API_BASE}/api/auth/plugin/ticket`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${creds.access_token}` },
+      body: JSON.stringify({ pluginId, action: action || undefined }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 404) return { ok: false, error: 'PLUGIN_NOT_FOUND' };
+    if (res.status === 403 && data?.error === 'PLUGIN_DISABLED') return { ok: false, error: 'PLUGIN_DISABLED' };
+    if (res.status === 403) return { ok: false, error: 'PLUGIN_PERMISSION_REQUIRED' };
+    if (res.status === 400 && data?.error === 'PLUGIN_ACTION_UNSUPPORTED') return { ok: false, error: 'PLUGIN_ACTION_UNSUPPORTED' };
+    if (!res.ok) return { ok: false, error: 'SESSION_FAILED' };
+    const ticket = data?.data?.ticket;
+    if (ticket) sessionStorage.setItem('kunlun_plugin_ticket', JSON.stringify({
+      ticket, pluginId, action: action || null, ts: Date.now(),
+    }));
+    setState('PLUGIN_READY');
+    console.info('[RuntimeRouter] plugin invocation authorized (no execution):', pluginId, action || '');
+    return { ok: true, state: 'PLUGIN_READY', ticket };
+  } catch (e) {
+    console.warn('[RuntimeRouter] plugin launch failed:', e?.message || e);
+    return { ok: false, error: 'SESSION_FAILED' };
+  }
+}
+
 function launchApp(slug, entry) {
   return RuntimeRouter.launch({ kind: 'workspace', slug, projectId: undefined });
 }
