@@ -1,18 +1,19 @@
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div>
       <h2 class="text-sm text-white/70 font-medium">商城管理</h2>
-      <div class="flex gap-2">
-        <select v-model="activeTab"
-          class="bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-1.5 text-xs text-white/60 outline-none focus:border-blue-500/50">
-          <option value="products">商品管理</option>
-          <option value="categories">分类管理</option>
-          <option value="banners">Banner 管理</option>
-          <option value="recommend">推荐管理</option>
-          <option value="coupons">营销管理</option>
-          <option value="orders">订单管理</option>
-        </select>
-      </div>
+    </div>
+
+    <!-- 横向导航（参照法律工作台管理页） -->
+    <div class="mall-tabs">
+      <button
+        v-for="tab in tabItems"
+        :key="tab.id"
+        :class="['mall-tab', { 'mall-tab--active': activeTab === tab.id }]"
+        @click="activeTab = tab.id"
+      >
+        {{ tab.label }}
+      </button>
     </div>
 
     <AdminMallProductsTab
@@ -147,6 +148,14 @@ async function api(method: string, path: string, body?: any) {
 }
 
 const activeTab = ref('products')
+const tabItems = [
+  { id: 'products', label: '商品管理' },
+  { id: 'categories', label: '分类管理' },
+  { id: 'banners', label: 'Banner 管理' },
+  { id: 'recommend', label: '推荐管理' },
+  { id: 'coupons', label: '营销管理' },
+  { id: 'orders', label: '订单管理' },
+]
 const error = ref('')
 
 // ─── Products ───
@@ -425,6 +434,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 横向导航（参照法律工作台管理页设计） */
+.mall-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(248,246,241,0.08); margin-bottom: 4px; flex-wrap: wrap; }
+.mall-tab { padding: 10px 18px; font-size: 13px; background: transparent; border: none; color: rgba(248,246,241,0.5); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.mall-tab:hover { color: rgba(248,246,241,0.7); }
+.mall-tab--active { color: #FBBF24; border-bottom-color: #FBBF24; }
+
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s ease; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 </style>
