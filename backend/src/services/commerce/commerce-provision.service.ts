@@ -55,6 +55,15 @@ function calcEndDate(start: Date, months: number): Date {
 }
 
 /**
+ * 顺延到期时间（掌柜指令 2026-08-05：重复付款必须延长 VIP 时限，禁止重置吃剩余时间）
+ * 有效期内续费 → 从原到期日顺延；已过期/无到期日 → 从当前时间起算
+ */
+function extendEndDate(current: Date | null | undefined, start: Date, months: number): Date {
+  const base = current && current.getTime() > start.getTime() ? current : start
+  return new Date(base.getTime() + Math.max(1, months) * 24 * 60 * 60 * 1000)
+}
+
+/**
  * 统一支付成功 Provision 入口
  * 所有支付成功来源（验签回调 / 管理员确认 / 代金券免支付）必须走这里，禁止旁路激活
  */
@@ -103,15 +112,23 @@ export async function provisionFromPayment(payOrder: {
   let sub: any
   if (existingSub) {
     if (existingSub.status === 'active') {
-      console.log(`[commerce-provision] 订阅已激活，跳过: userId=${userId.slice(0, 8)}`)
-      sub = existingSub
+      // 有效期内重复购买：顺延 endDate，不重置（幂等锚点 + 顺延语义）
+      const endDate = extendEndDate(existingSub.endDate, now, productMeta.months)
+      sub = await prisma.subscription.update({
+        where: { id: existingSub.id },
+        data: {
+          endDate,
+          metadata: mergeMetadata(existingSub.metadata, { lastExtendedAt: now.toISOString() }),
+        },
+      })
+      console.log(`[commerce-provision] 订阅顺延: userId=${userId.slice(0, 8)}, endDate=${endDate.toISOString()}`)
     } else {
       sub = await prisma.subscription.update({
         where: { id: existingSub.id },
         data: {
           status: 'active',
           startDate: now,
-          endDate: calcEndDate(now, productMeta.months),
+          endDate: extendEndDate(existingSub.endDate, now, productMeta.months),
           metadata: mergeMetadata(existingSub.metadata, { provisioningStatus: 'pending', provisioningUpdatedAt: now.toISOString() }),
         },
       })
@@ -153,7 +170,8 @@ export async function provisionFromPayment(payOrder: {
     where: { userId, subscriptionId: sub.id, planCode: productCode },
   })
   let entitlement: any
-  const effectiveUntil = calcEndDate(now, productMeta.months)
+  // 权益到期：有效期内续费 → 从原到期日顺延；否则从当前时间起算（掌柜 2026-08-05：重复付款延长时限）
+  const effectiveUntil = extendEndDate(existingEnt?.effectiveUntil, now, productMeta.months)
   if (existingEnt) {
     entitlement = await prisma.personalEntitlement.update({
       where: { id: existingEnt.id },
