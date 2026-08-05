@@ -136,7 +136,9 @@ export const useAuthStore = defineStore('auth', {
           this.user = data.user
           // 同步更新 token-cache（内存 + localStorage）
           setCachedUser(this.user as Record<string, any>)
-          document.cookie = `auth_user=${encodeURIComponent(JSON.stringify(this.user))}; path=/; max-age=86400; samesite=lax`
+          if (import.meta.client) {
+            document.cookie = `auth_user=${encodeURIComponent(JSON.stringify(this.user))}; path=/; max-age=86400; samesite=lax`
+          }
         }
       } catch {
         this.token = ''
@@ -162,7 +164,9 @@ export const useAuthStore = defineStore('auth', {
             if (data.user) {
               this.user = data.user
               setCachedUser(this.user as Record<string, any>)
-              document.cookie = `auth_user=${encodeURIComponent(JSON.stringify(this.user))}; path=/; max-age=86400; samesite=lax`
+              if (import.meta.client) {
+                document.cookie = `auth_user=${encodeURIComponent(JSON.stringify(this.user))}; path=/; max-age=86400; samesite=lax`
+              }
               return
             }
           }
@@ -181,6 +185,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     _getCookie(name: string): string {
+      if (import.meta.server) return '' // SSR 无 document，由 middleware 的 SSR 分支处理
       const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`))
       return match ? decodeURIComponent(match[2]) : ''
     },
