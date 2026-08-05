@@ -139,28 +139,43 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         const values = Object.values(config).filter(v => typeof v === 'string' && v.length > 0)
         if (values.length === 0) continue
 
-        // 🛡️ 安全保护：如果某个字段包含 '****' 掩码，说明前端传回了遮盖后的值，
-        // 此时保留数据库中该字段的原始值而非覆盖
         const existing = await prisma.paymentSecret.findUnique({ where: { channel } })
         const { configured, ...cleanConfig } = config as Record<string, any>
-        if (existing) {
-          const existingConfig = JSON.parse(existing.config) as Record<string, any>
-          for (const key of Object.keys(cleanConfig)) {
-            const val = cleanConfig[key]
-            if (typeof val === 'string' && val.includes('****') && existingConfig[key]) {
-              cleanConfig[key] = existingConfig[key]
-            }
+        const existingConfig = existing
+          ? (JSON.parse(existing.config) as Record<string, any>)
+          : {}
+
+        // 🛡️ 安全保护：如果字段值是遮盖掩码（含 '****'），说明前端回传了遮盖值，保留 DB 原值
+        for (const key of Object.keys(cleanConfig)) {
+          const val = cleanConfig[key]
+          if (typeof val === 'string' && val.includes('****') && existingConfig[key]) {
+            cleanConfig[key] = existingConfig[key]
           }
         }
 
+        // ✅ 校验：提交了 apiV3Key 且非掩码回退 → 必须 32 位（微信 APIv3 密钥要求）
+        if (typeof cleanConfig.apiV3Key === 'string' && cleanConfig.apiV3Key.length > 0 && cleanConfig.apiV3Key !== existingConfig.apiV3Key) {
+          if (cleanConfig.apiV3Key.length !== 32) {
+            return reply.status(400).send({ success: false, error: 'APIv3 密钥必须是 32 位，当前输入 ' + cleanConfig.apiV3Key.length + ' 位' })
+          }
+        }
+        // 同样的 32 位校验也适用于 apiKey（V2 密钥，同为 32 位要求，宽松处理：非空时校验）
+        if (typeof cleanConfig.apiKey === 'string' && cleanConfig.apiKey.length > 0 && cleanConfig.apiKey !== existingConfig.apiKey) {
+          if (cleanConfig.apiKey.length !== 32) {
+            return reply.status(400).send({ success: false, error: '微信支付 API 密钥必须是 32 位，当前输入 ' + cleanConfig.apiKey.length + ' 位' })
+          }
+        }
+
+        // 合并更新：只覆盖本次提交的字段，未提交字段（如未编辑的掩码字段）保留 DB 原值
+        const mergedConfig = { ...existingConfig, ...cleanConfig }
         if (existing) {
           await prisma.paymentSecret.update({
             where: { channel },
-            data: { config: JSON.stringify(cleanConfig), enabled: true },
+            data: { config: JSON.stringify(mergedConfig), enabled: true },
           })
         } else {
           await prisma.paymentSecret.create({
-            data: { channel, config: JSON.stringify(cleanConfig), enabled: true },
+            data: { channel, config: JSON.stringify(mergedConfig), enabled: true },
           })
         }
       }

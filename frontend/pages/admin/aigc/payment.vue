@@ -181,7 +181,8 @@ function maskLongValue(val: string): string {
 function toggleWechatV3KeyEdit() {
   wechatV3KeyEditing.value = !wechatV3KeyEditing.value
   if (wechatV3KeyEditing.value) {
-    wechatV3KeyDisplay.value = wechat.apiV3Key
+    // 编辑时输入框置空，避免遮盖值混入新密钥导致保存被掩码保护拦截
+    wechatV3KeyDisplay.value = ''
   } else {
     wechatV3KeyDisplay.value = wechat.apiV3Key ? maskValue(wechat.apiV3Key) : ''
   }
@@ -283,9 +284,24 @@ async function savePaymentConfig() {
   saveMsg.value = ''
   try {
     const token = getToken()
+    // 只提交编辑状态下且非空的敏感字段；未编辑字段不提交，后端合并时保留原值
+    const wechatBody: Record<string, any> = { appId: wechat.appId, mchId: wechat.mchId }
+    if (wechat.serialNo) wechatBody.serialNo = wechat.serialNo
+    if (wechat.apiKey && wechat.apiKey.includes('****')) wechatBody.apiKey = wechat.apiKey
+    else if (wechat.apiKey) wechatBody.apiKey = wechat.apiKey
+    if (wechatV3KeyEditing.value && wechat.apiV3Key) wechatBody.apiV3Key = wechat.apiV3Key
+    else if (wechat.apiV3Key && wechat.apiV3Key.includes('****')) wechatBody.apiV3Key = wechat.apiV3Key
+    if (wechatKeyPemEditing.value && wechat.keyPem) wechatBody.keyPem = wechat.keyPem
+    else if (wechat.keyPem && wechat.keyPem.includes('****')) wechatBody.keyPem = wechat.keyPem
+    const alipayBody: Record<string, any> = {}
+    if (alipayPrivateKeyEditing.value && alipay.privateKey) alipayBody.privateKey = alipay.privateKey
+    else if (alipay.privateKey && alipay.privateKey.includes('****')) alipayBody.privateKey = alipay.privateKey
+    if (alipayPublicKeyEditing.value && alipay.publicKey) alipayBody.publicKey = alipay.publicKey
+    else if (alipay.publicKey && alipay.publicKey.includes('****')) alipayBody.publicKey = alipay.publicKey
+    if (alipay.appId) alipayBody.appId = alipay.appId
     const body = {
-      wechat: { appId: wechat.appId, mchId: wechat.mchId, apiKey: wechat.apiKey, apiV3Key: wechat.apiV3Key, keyPem: wechat.keyPem, serialNo: wechat.serialNo },
-      alipay: { appId: alipay.appId, privateKey: alipay.privateKey, publicKey: alipay.publicKey },
+      wechat: wechatBody,
+      alipay: alipayBody,
     }
     const res = await fetch('/api/admin/payment/config', {
       method: 'POST',
@@ -301,16 +317,18 @@ async function savePaymentConfig() {
       wechat.configured = !!wechat.appId
       alipay.configured = !!alipay.appId
     } else {
-      saveMsg.value = '保存成功 (演示模式)'
-      saveMsgType.value = 'success'
-      wechat.configured = !!wechat.appId
-      alipay.configured = !!alipay.appId
+      // 真实错误提示（不再假装成功）
+      let msg = '保存失败'
+      try {
+        const err = await res.json()
+        msg = err.error || err.message || '保存失败 (HTTP ' + res.status + ')'
+      } catch { msg = '保存失败 (HTTP ' + res.status + ')' }
+      saveMsg.value = msg
+      saveMsgType.value = 'error'
     }
-  } catch {
-    saveMsg.value = '保存成功 (演示模式)'
-    saveMsgType.value = 'success'
-    wechat.configured = !!wechat.appId
-    alipay.configured = !!alipay.appId
+  } catch (e: any) {
+    saveMsg.value = '保存失败: ' + (e?.message || '网络错误')
+    saveMsgType.value = 'error'
   }
   // 保存后恢复掩码
   wechatV3KeyEditing.value = false
