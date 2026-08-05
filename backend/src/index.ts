@@ -557,6 +557,7 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/ecology-registry.routes.js')).registerEcologyRegistryRoutes, { prefix: '/api/ecosystem' })
   await app.register((await import('./routes/hermes-audit.routes.js')).registerHermesAuditRoutes)
   await app.register((await import('./routes/skill-catalog.routes.js')).registerSkillCatalogRoutes)
+  await app.register((await import('./routes/skill-lifecycle.routes.js')).registerSkillLifecycleRoutes)
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
   // ═══════════════════════════════════════════════════════════
