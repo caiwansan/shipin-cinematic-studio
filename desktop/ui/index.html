@@ -418,7 +418,14 @@ const RuntimeRouter = (() => {
         const dl = parseDeepLink(spec.uri);
         if (!dl) return { ok: false, error: 'INVALID_LINK' };
         kind = dl.protocol; id = dl.id; projectId = dl.projectId;
-        if (kind !== 'workspace') return { ok: false, error: 'TARGET_NOT_FOUND' }; // 预留协议暂未实现
+        // S2.2: plugin 协议走 plugin 分支（仅识别调用意图，不执行）
+        if (kind === 'plugin') {
+          return launchPlugin(id, dl.action);
+        }
+        if (kind !== 'workspace') return { ok: false, error: 'TARGET_NOT_FOUND' }; // app/skill 预留
+      } else if (spec.kind === 'plugin') {
+        setState('DISCOVER');
+        return launchPlugin(id, spec.action);
       } else if (spec.kind === 'app' || spec.kind === 'continue') {
         setState('DISCOVER');
         kind = 'workspace'; id = spec.slug || spec.appSlug; projectId = spec.projectId;
