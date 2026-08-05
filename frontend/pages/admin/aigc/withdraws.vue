@@ -28,6 +28,7 @@
             <th>申请时间</th>
             <th>用户</th>
             <th>提现金额</th>
+            <th>手续费</th>
             <th>收款方式</th>
             <th>收款账号</th>
             <th>收款人</th>
@@ -44,6 +45,10 @@
               <div class="td-user-sub">{{ w.user?.email || w.user?.phone || '' }}</div>
             </td>
             <td class="td-amount">¥{{ Number(w.amount).toFixed(2) }}</td>
+            <td class="td-fee">
+              <span v-if="w.fee">¥{{ Number(w.fee).toFixed(2) }}</span><span v-else>-</span>
+              <div class="td-fee-sub" v-if="w.fee">到账 ¥{{ Number(w.amount - (w.fee || 0)).toFixed(2) }}</div>
+            </td>
             <td>{{ accountTypeLabel(w.accountType) }}</td>
             <td class="td-account">{{ w.accountNo || '-' }}</td>
             <td>{{ w.accountName || '-' }}</td>
@@ -221,6 +226,8 @@ onMounted(fetchWithdraws)
 .td-user { font-weight: 500; }
 .td-user-sub { font-size: 0.68rem; color: #71717a; }
 .td-amount { font-weight: 600; white-space: nowrap; color: #fbbf24; }
+.td-fee { color: #fbbf24; font-weight: 600; white-space: nowrap; }
+.td-fee-sub { font-size: 11px; color: rgba(255, 255, 255, 0.45); font-weight: 400; }
 .td-account { font-family: monospace; font-size: 0.74rem; }
 .td-remark { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; color: #71717a; }
 .td-time { white-space: nowrap; color: #71717a; font-size: 0.7rem; }

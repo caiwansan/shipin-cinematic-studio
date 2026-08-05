@@ -13,16 +13,16 @@
         <div class="diamond-hero-info">
           <div class="diamond-hero-label">我的钻石</div>
           <div class="diamond-hero-value">{{ diamonds.totalDiamonds || 0 }}</div>
-          <div class="diamond-hero-legend">
+      <div class="diamond-hero-legend">
             <span class="legend-item"><i class="legend-dot legend-dot--recharge" />充值钻石 {{ diamonds.rechargeDiamonds || 0 }}</span>
-            <span class="legend-item"><i class="legend-dot legend-dot--earn" />收益钻石 {{ diamonds.earnDiamonds || 0 }}</span>
+            <span class="legend-item"><i class="legend-dot legend-dot--earn" />礼物收益 → <router-link to="/user/gold-coins" class="legend-link">金币钱包</router-link></span>
           </div>
         </div>
-        <router-link to="/user/wallet" class="exchange-btn">余额兑换 →</router-link>
+        <router-link to="/user/gold-coins" class="exchange-btn">🎁 礼物金币 →</router-link>
       </div>
 
       <div class="diamond-tip">
-        💡 充值钻石用于红包/礼物等消费，不可提现；收益钻石（礼物分成 65%）可兑换余额（1 钻石 = {{ (1 / diamondPerYuan).toFixed(2) }} 元）
+        💡 钻石仅可充值消费（购买礼物打赏茶客），不可提现、不可兑换余额；收礼方按礼物钻石价值的 <b>65%</b> 自动获得金币（即时到账），金币可 <b>10:1</b> 兑换余额（最低 200 金币起兑）。
       </div>
 
       <!-- 充值钻石卡 -->

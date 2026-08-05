@@ -124,6 +124,7 @@
           </div>
 
           <div class="msg-input-bar">
+            <button class="gift-btn" title="送礼物" @click="openGiftPanel">🎁</button>
             <textarea
               v-model="draft"
               class="msg-input"
@@ -135,6 +136,80 @@
           </div>
         </template>
       </section>
+
+      <!-- ══ 礼物弹窗（抖音式礼物墙 + 钻石余额 + 充值） ══ -->
+      <div v-if="giftPanelOpen" class="gift-modal-mask" @click.self="giftPanelOpen = false">
+        <div class="gift-modal">
+          <div class="gift-modal-head">
+            <div class="gift-modal-title">🎁 送礼物</div>
+            <div class="gift-diamond-balance">
+              <span class="gift-diamond-icon">💎</span>
+              <span class="gift-diamond-num">{{ diamondBalance }}</span>
+              <router-link to="/user/diamonds" class="gift-recharge-btn">充值</router-link>
+            </div>
+            <button class="gift-modal-close" @click="giftPanelOpen = false">✕</button>
+          </div>
+
+          <!-- 接收人选择（非私聊需指定茶客） -->
+          <div v-if="!isDmChannel" class="gift-receiver-row">
+            <span class="gift-receiver-label">送给</span>
+            <div class="gift-receiver-list">
+              <button
+                v-for="m in members"
+                :key="m.uid"
+                :class="['gift-receiver-chip', giftReceiverUid === m.uid ? 'gift-receiver-chip--active' : '']"
+                @click="giftReceiverUid = m.uid"
+              >{{ m.name || m.uid.slice(0, 6) }}</button>
+              <span v-if="!members.length" class="gift-receiver-empty">暂无在线茶客</span>
+            </div>
+          </div>
+
+          <!-- 礼物墙：分类 tab + 格子 -->
+          <div class="gift-wall">
+            <div class="gift-tabs">
+              <button
+                v-for="g in giftGroups"
+                :key="g.category"
+                :class="['gift-tab', giftActiveTab === g.category ? 'gift-tab--active' : '']"
+                @click="giftActiveTab = g.category"
+              >{{ g.category }}</button>
+            </div>
+            <div class="gift-grid">
+              <button
+                v-for="g in activeGiftItems"
+                :key="g.id"
+                :class="['gift-item', giftSelected?.id === g.id ? 'gift-item--active' : '']"
+                @click="giftSelected = g"
+              >
+                <span class="gift-item-icon">{{ g.iconUrl || '🎁' }}</span>
+                <span class="gift-item-name">{{ g.name }}</span>
+                <span class="gift-item-price">💎{{ g.priceDiamonds }}</span>
+              </button>
+              <div v-if="!activeGiftItems.length" class="gift-grid-empty">该分类暂无礼物</div>
+            </div>
+          </div>
+
+          <div class="gift-modal-foot">
+            <div class="gift-foot-info">
+              <template v-if="giftSelected">
+                <span class="gift-foot-name">{{ giftSelected.iconUrl }} {{ giftSelected.name }}</span>
+                <span class="gift-foot-price">💎 {{ giftSelected.priceDiamonds }}</span>
+              </template>
+              <span v-else class="gift-foot-empty">选择一份礼物</span>
+            </div>
+            <button class="gift-send-btn" :disabled="!giftSelected || !giftReceiverOk || giftSending" @click="sendGift">
+              {{ giftSending ? '发送中...' : '赠送' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 礼物全屏动画（收到/送出时播放） ══ -->
+      <div v-if="giftAnimation" class="gift-anim">
+        <div class="gift-anim-icon">{{ giftAnimation.icon || '🎁' }}</div>
+        <div class="gift-anim-name">{{ giftAnimation.name }}</div>
+        <div class="gift-anim-from">{{ giftAnimation.fromName }} 送给 {{ giftAnimation.toName }}</div>
+      </div>
 
       <!-- ══ 右栏：成员 / 好友 ══ -->
       <aside class="tea-panel" :class="{ open: rightPanelOpen }">
@@ -338,19 +413,54 @@ function fmtTime(ts: number) {
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+// 提取礼物信息（三种形态：A content={kind:'gift'} / B content={type:2,content:{kind:'gift'}} / C payload base64 解码）
+function extractGiftInfo(msg: any): any {
+  if (!msg) return null
+  const probe = (obj: any) => (obj && typeof obj === 'object' && obj.kind === 'gift' ? obj : null)
+  // A：content 直接是礼物对象
+  if (msg.content && typeof msg.content === 'object') {
+    const a = probe(msg.content)
+    if (a) return a
+    // B：content = {type:2, content:{kind:'gift'}}
+    const b = probe(msg.content.content)
+    if (b) return b
+  }
+  // C：payload base64 解码
+  if (msg.payload) {
+    try {
+      const bin = atob(msg.payload)
+      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+      const decoded = JSON.parse(new TextDecoder().decode(bytes))
+      const c = decoded.content
+      const hit = probe(c)
+      if (hit) return hit
+      if (c && typeof c === 'object') {
+        const hit2 = probe(c.content)
+        if (hit2) return hit2
+      }
+      return probe(decoded)
+    } catch { return null }
+  }
+  return null
+}
+
 function renderMsg(msg: any) {
+  const giftInfo = extractGiftInfo(msg)
+  if (giftInfo) {
+    return `<span class="gift-inline">🎁 ${escapeHtml(giftInfo.giftName || '礼物')} ${giftInfo.priceDiamonds ? `<b class="gift-inline-price">💎${giftInfo.priceDiamonds}</b>` : ''}</span>`
+  }
   let text = ''
   if (msg.content) {
     if (typeof msg.content === 'string') text = msg.content
-    else if (msg.content.text) text = msg.content.text
-    else if (msg.content.content) text = msg.content.content
+    else if (typeof msg.content.text === 'string') text = msg.content.text
+    else if (typeof msg.content.content === 'string') text = msg.content.content
   } else if (msg.payload) {
     try {
       // 正确 UTF-8 解码（atob 返回 latin1 字符串会导致中文乱码 →「刷新后消息不见」）
       const bin = atob(msg.payload)
       const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
       const decoded = JSON.parse(new TextDecoder().decode(bytes))
-      text = decoded.content || ''
+      text = typeof decoded.content === 'string' ? decoded.content : decoded.content?.text || ''
     } catch {
       text = ''
     }
@@ -542,6 +652,108 @@ async function handleSend() {
   }
 }
 
+// ══ 礼物体系（GIFT-GOLD-ECO-01） ══════════════════════
+const giftPanelOpen = ref(false)
+const giftGroups = ref<any[]>([])
+const giftActiveTab = ref('热门')
+const giftSelected = ref<any>(null)
+const giftReceiverUid = ref('')
+const giftSending = ref(false)
+const diamondBalance = ref(0)
+const giftAnimation = ref<any>(null)
+let giftAnimTimer: ReturnType<typeof setTimeout> | null = null
+
+function giftToken() {
+  try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' }
+}
+
+const isDmChannel = computed(() => currentChannel.value?.kind === 'dm')
+const giftReceiverOk = computed(() => (isDmChannel.value ? !!peerUid.value : !!giftReceiverUid.value))
+const activeGiftItems = computed(() => giftGroups.value.find((g) => g.category === giftActiveTab.value)?.items || [])
+
+async function loadDiamondBalance() {
+  try {
+    const r = await fetch('/api/user/diamonds', { headers: { Authorization: 'Bearer ' + giftToken() } })
+    const j = await r.json()
+    diamondBalance.value = (j.data || j).totalDiamonds || 0
+  } catch { diamondBalance.value = 0 }
+}
+
+async function openGiftPanel() {
+  if (!currentChannel.value) return
+  giftPanelOpen.value = true
+  giftSelected.value = null
+  giftReceiverUid.value = ''
+  // 非私聊默认选第一个成员
+  if (!isDmChannel.value && members.value.length) {
+    giftReceiverUid.value = members.value[0].uid
+  }
+  try {
+    const r = await fetch('/api/gifts/products', { headers: { Authorization: 'Bearer ' + giftToken() } })
+    const j = await r.json()
+    giftGroups.value = (j.data || {}).gifts || []
+    if (giftGroups.value.length) giftActiveTab.value = giftGroups.value[0].category
+  } catch { giftGroups.value = [] }
+  loadDiamondBalance()
+}
+
+function playGiftAnimation(gift: any, toName: string) {
+  const g = {
+    icon: gift.iconUrl || '🎁',
+    name: gift.giftName || gift.name || '礼物',
+    fromName: '我',
+    toName: toName || '茶客',
+  }
+  giftAnimation.value = g
+  if (giftAnimTimer) clearTimeout(giftAnimTimer)
+  giftAnimTimer = setTimeout(() => { giftAnimation.value = null }, 3200)
+}
+
+async function sendGift() {
+  if (!giftSelected.value || !giftReceiverOk.value || giftSending.value || !currentChannel.value) return
+  const receiverUid = isDmChannel.value ? peerUid.value : giftReceiverUid.value
+  giftSending.value = true
+  try {
+    const r = await fetch('/api/gifts/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({
+        giftId: giftSelected.value.id,
+        receiverUid,
+        channelId: currentChannel.value.id,
+        channelType: currentChannel.value.type,
+      }),
+    })
+    const j = await r.json()
+    if (j.success) {
+      diamondBalance.value = Math.max(0, diamondBalance.value - (j.data?.gift?.priceDiamonds || giftSelected.value.priceDiamonds))
+      const toName = isDmChannel.value
+        ? currentChannel.value.name || '茶客'
+        : (members.value.find((m) => m.uid === receiverUid)?.name || '茶客')
+      playGiftAnimation(giftSelected.value, toName)
+      // 服务端已代发礼物消息，本地即时补一条（不等 WS 推送）
+      messages.value.push({
+        fromUID: tea.userId.value,
+        authorName: '我',
+        timestamp: Math.floor(Date.now() / 1000),
+        content: { kind: 'gift', giftName: giftSelected.value.name, giftIcon: giftSelected.value.iconUrl, priceDiamonds: giftSelected.value.priceDiamonds, receiverUid },
+        key: 'gift-' + Date.now(),
+      })
+      scrollBottom()
+      giftPanelOpen.value = false
+      showToast(`🎁 已送出「${giftSelected.value.name}」`)
+    } else {
+      showToast('⚠ ' + (j.error || '赠送失败'))
+      if (j.code === 'DIAMOND_INSUFFICIENT') loadDiamondBalance()
+    }
+  } catch (e) {
+    console.error('[昆仑茶馆] 送礼失败', e)
+    showToast('⚠ 赠送失败，请重试')
+  } finally {
+    giftSending.value = false
+  }
+}
+
 function goHome() {
   // 顶栏 logo / 标题 → 返回首页（工作台）
   if (typeof window !== 'undefined') window.location.href = '/'
@@ -584,6 +796,12 @@ onMounted(async () => {
     if (msgChannel && (msgChannel.channelID !== ch.id || msgChannel.channelType !== ch.type)) return
     if (msg.fromUID === tea.userId.value) return
     messages.value.push({ ...msg, fromUID: msg.fromUID || msg.from_uid, key: msgKey(msg) })
+    // 他人送的礼物 → 全屏动画（服务端代发 payload: {type:2, content:{kind:'gift'}}）
+    const giftInfo = extractGiftInfo(msg)
+    if (giftInfo) {
+      const toName = giftInfo.receiverUid ? (members.value.find((m) => m.uid === giftInfo.receiverUid)?.name || '茶客') : '茶客'
+      playGiftAnimation(giftInfo, toName)
+    }
     scrollBottom()
   })
   // 发送回执：reasonCode=0 送达；非 0 或超时 → 提示
@@ -808,6 +1026,171 @@ onBeforeUnmount(() => {
   padding: 14px 20px 18px;
   border-top: 1px solid var(--color-border-primary, #1e293b);
   background: rgba(13, 19, 40, 0.8);
+}
+
+/* ══ 礼物体系（GIFT-GOLD-ECO-01） ══ */
+.gift-btn {
+  flex-shrink: 0;
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-primary, #1e293b);
+  background: linear-gradient(135deg, #1e2a4a, #0f172a);
+  color: #fbbf24;
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.gift-btn:hover { transform: scale(1.08); background: linear-gradient(135deg, #2a3a63, #16203a); }
+
+.gift-inline {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.08));
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  padding: 4px 10px;
+  font-size: 14px;
+  color: #fbbf24;
+}
+.gift-inline-price { color: #fff; font-weight: 700; }
+
+/* 礼物弹窗 */
+.gift-modal-mask {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+}
+.gift-modal {
+  width: 520px; max-width: 94vw;
+  background: linear-gradient(180deg, #101a35, #0b1126);
+  border: 1px solid #1e2b4f;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+.gift-modal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.gift-modal-title { font-size: 17px; font-weight: 700; color: #fff; flex: 1; }
+.gift-diamond-balance {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+.gift-diamond-icon { font-size: 15px; }
+.gift-diamond-num { font-size: 15px; font-weight: 800; color: #fbbf24; min-width: 28px; text-align: center; }
+.gift-recharge-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff; border: none; border-radius: 999px;
+  padding: 4px 14px; font-size: 12px; font-weight: 700;
+  cursor: pointer; text-decoration: none;
+}
+.gift-modal-close {
+  background: none; border: none; color: rgba(255, 255, 255, 0.4);
+  font-size: 18px; cursor: pointer; padding: 4px;
+}
+.gift-modal-close:hover { color: #fff; }
+
+.gift-receiver-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+}
+.gift-receiver-label { font-size: 12px; color: rgba(255, 255, 255, 0.5); flex-shrink: 0; }
+.gift-receiver-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 44px; overflow-y: auto; }
+.gift-receiver-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px; padding: 3px 10px;
+  cursor: pointer;
+}
+.gift-receiver-chip--active { background: rgba(251, 191, 36, 0.2); border-color: #fbbf24; color: #fbbf24; }
+.gift-receiver-empty { font-size: 12px; color: rgba(255, 255, 255, 0.35); }
+
+.gift-wall { margin-bottom: 14px; }
+.gift-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.gift-tab {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px; padding: 5px 16px;
+  cursor: pointer;
+}
+.gift-tab--active { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: transparent; color: #fff; font-weight: 700; }
+.gift-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+  max-height: 220px; overflow-y: auto;
+}
+.gift-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 10px 4px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+}
+.gift-item:hover { transform: translateY(-2px); border-color: rgba(251, 191, 36, 0.4); }
+.gift-item--active { border-color: #fbbf24; background: rgba(251, 191, 36, 0.12); box-shadow: 0 0 0 1px #fbbf24; }
+.gift-item-icon { font-size: 30px; line-height: 1; }
+.gift-item-name { font-size: 12px; color: rgba(255, 255, 255, 0.85); }
+.gift-item-price { font-size: 11px; color: #fbbf24; font-weight: 700; }
+.gift-grid-empty { grid-column: 1 / -1; text-align: center; color: rgba(255, 255, 255, 0.35); padding: 24px 0; font-size: 13px; }
+
+.gift-modal-foot {
+  display: flex; align-items: center; gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.gift-foot-info { flex: 1; display: flex; align-items: center; gap: 8px; min-height: 20px; }
+.gift-foot-name { font-size: 14px; color: #fff; font-weight: 600; }
+.gift-foot-price { font-size: 14px; color: #fbbf24; font-weight: 800; }
+.gift-foot-empty { font-size: 13px; color: rgba(255, 255, 255, 0.35); }
+.gift-send-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: none; border-radius: 12px;
+  color: #fff; font-size: 14px; font-weight: 700;
+  padding: 10px 30px;
+  cursor: pointer;
+}
+.gift-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 礼物全屏动画 */
+.gift-anim {
+  position: fixed; inset: 0; z-index: 10000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.18), rgba(2, 6, 23, 0.35) 70%);
+  pointer-events: none;
+  animation: gift-anim-fade 3.2s ease forwards;
+}
+.gift-anim-icon {
+  font-size: 96px;
+  animation: gift-anim-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  filter: drop-shadow(0 12px 32px rgba(251, 191, 36, 0.5));
+}
+.gift-anim-name {
+  margin-top: 12px;
+  font-size: 26px; font-weight: 800; color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+.gift-anim-from {
+  margin-top: 6px;
+  font-size: 15px; color: rgba(255, 255, 255, 0.85);
+}
+@keyframes gift-anim-pop {
+  0% { transform: scale(0.2); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes gift-anim-fade {
+  0% { opacity: 1; }
+  72% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
 }
 .msg-input {
   flex: 1;

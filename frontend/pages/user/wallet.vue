@@ -83,6 +83,7 @@
           <div v-for="w in withdraws" :key="w.id" class="commission-item">
             <div class="commission-left">
               <span class="withdraw-amount">-¥{{ Number(w.amount).toFixed(2) }}</span>
+              <span v-if="w.fee" class="withdraw-fee">手续费 ¥{{ Number(w.fee).toFixed(2) }} · 到账 ¥{{ Number(w.payout ?? (w.amount - w.fee)).toFixed(2) }}</span>
               <span :class="'withdraw-status withdraw-status--' + w.status">
                 {{ w.status === 'pending' ? '审核中' : w.status === 'approved' ? '已通过' : '已拒绝' }}
               </span>
@@ -103,6 +104,9 @@
             <label>提现金额（元）</label>
             <input v-model.number="withdrawAmount" type="number" min="100" :max="balance" class="form-input" />
             <p class="form-hint">可提现余额 ¥{{ balance.toFixed(2) }}，最低 ¥100</p>
+            <p v-if="withdrawAmount >= 100" class="form-hint fee-hint">
+              手续费 5%：¥{{ (withdrawAmount * 0.05).toFixed(2) }}，实际到账 ¥{{ (withdrawAmount * 0.95).toFixed(2) }}
+            </p>
           </div>
           <p v-if="withdrawError" class="form-error">{{ withdrawError }}</p>
           <button class="btn btn-primary btn-full" @click="doWithdraw" :disabled="withdrawLoading">
@@ -453,7 +457,9 @@ onMounted(() => {
 .form-group label { font-size: 11px; color: rgba(255,255,255,0.4); }
 .form-input { background: #0B1020; border: 1px solid #1A2240; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: rgba(255,255,255,0.7); outline: none; }
 .form-input:focus { border-color: rgba(16,185,129,0.5); }
-.form-hint { font-size: 10px; color: rgba(255,255,255,0.2); margin: 4px 0 0; }
+.form-hint { font-size: 12px; color: rgba(255,255,255,0.45); margin: 4px 0 0; }
+.fee-hint { color: #fbbf24; }
+.withdraw-fee { font-size: 11px; color: #fbbf24; margin-left: 8px; }
 .form-error { font-size: 11px; color: #ef4444; }
 .btn-full { width: 100%; }
 .plan-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }

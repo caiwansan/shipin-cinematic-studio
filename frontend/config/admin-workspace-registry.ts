@@ -157,6 +157,7 @@ export const ADMIN_VIP_GROUP: AdminPlatformGroup = {
     { id: 'vip-plans', label: '套餐列表', to: '/admin/aigc/vip' },
     { id: 'vip-orders', label: 'VIP订单', to: '/admin/aigc/vip-orders' },
     { id: 'recharge-orders', label: '钻石充值管理', to: '/admin/aigc/recharge-orders' },
+    { id: 'gifts', label: '礼物商品管理', to: '/admin/aigc/gifts' },
     { id: 'withdraws', label: '会员提现管理', to: '/admin/aigc/withdraws' },
   ],
 }
