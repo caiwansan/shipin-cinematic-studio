@@ -1,11 +1,11 @@
 // ═══════════════════════════════════════════════════════════════
-// Hermes Skill Runtime (mock) — S3.2.3 首次 Skill 真执行路径（提交固化）
+// Hermes Skill Runtime Reference Implementation — S3.3.1 起官方定位（S3 Final Archive T1 冻结更名）
 // 链路: Skill Authorization → runtimePolicy → Sub-Agent → Tool Sandbox → Result → Cloud Audit
 // 原则:
 //  - 只执行 policy.allowedTools 内的工具（SE3 Tool Policy 强制）
 //  - 越权工具 → POLICY_REJECTED（含 H-D 禁止集: payment/identity.modify/registry.write/native.exec）
 //  - 完成后自动上报 Cloud Audit（KernelEvent, SE5）
-//  - 仅 mock 工具（resume.parse / profile.extract / mock-calc），无真实业务、无真实 AI
+//  - 仅 mock 工具（resume.parse / profile.extract / candidate.score / interview.evaluate / mock-calc）
 // 运行: node tools/hermes-runtime-skill.mjs（127.0.0.1:9457）
 // ═══════════════════════════════════════════════════════════════
 import { createServer } from 'http'
@@ -30,6 +30,22 @@ const TOOL_REGISTRY = {
     ok: true,
     result: {
       profile: { skills: ['video-editing', 'copywriting'], yearsExperience: 5 },
+      inputHint: input,
+    },
+  }),
+  'candidate.score': (input = {}) => ({
+    ok: true,
+    result: {
+      score: 87,
+      dimensions: { skill: 0.9, experience: 0.85, culture: 0.8 },
+      inputHint: input,
+    },
+  }),
+  'interview.evaluate': (input = {}) => ({
+    ok: true,
+    result: {
+      verdict: 'PASS',
+      notes: 'mock interview evaluation',
       inputHint: input,
     },
   }),
