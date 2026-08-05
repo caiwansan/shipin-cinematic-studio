@@ -158,6 +158,7 @@
             </div>
             <!-- 快捷操作区（消息区域上方，固定在 header 下方，不随消息滚动） -->
             <div class="hdz-chat-actions-bar">
+              <button class="hdz-chat-action-btn hdz-chat-action-btn--primary" @click="goMasterPlan">📖 总纲编写</button>
               <button class="hdz-chat-action-btn" @click="showCreateChar = true">👤 创建角色</button>
               <button class="hdz-chat-action-btn" @click="showCreateFaction = true">🏛️ 创建组织</button>
               <button class="hdz-chat-action-btn hdz-chat-action-btn--primary" @click="generateOutlineFromChat">📋 生成大纲</button>
@@ -3614,6 +3615,18 @@ onMounted(() => {
   loadScreenplays()
 })
 
+// ─── 总纲编写（文曲星对话窗口顶部快捷入口） ──────────
+function goMasterPlan() {
+  tab.value = 'masterplan'
+  // 尚未生成总纲 → 自动展开规划向导，直达生成入口
+  if (!masterPlan.value && !masterPlanLoading.value) {
+    showPlanWizard.value = true
+  }
+  nextTick(() => {
+    window.scrollTo?.({ top: 0, behavior: 'smooth' })
+  })
+}
+
 // ─── tab 切换时加载数据 ──────────────────────────
 watch(tab, (val) => {
   if (val === 'screenplay') {
@@ -3723,7 +3736,7 @@ async function saveStyleDna() {
 
 console.log('📖 混沌珠工作台已挂载, projectId:', projectId.value)
 console.log('📖 当前阅读器 tab:', tab.value, '阅读模式:', readerMode.value, '章节数:', chapters.value?.length)
-console.log('📖 token:', (document.cookie || 'no cookie'))
+console.log('📖 token:', typeof document !== 'undefined' ? (document.cookie || 'no cookie') : 'ssr')
 fetchMembership()
 loadProject()
 // _loadStatus() moved after const
