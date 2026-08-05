@@ -1,7 +1,7 @@
 import type { ApiResponse } from '../contracts/api/base.js';
 import type { MemberResponse } from '../contracts/api/routes.js';
 import { FastifyInstance } from 'fastify'
-import { requireAdmin } from '../middleware/require-admin.js'
+import { requireAdmin, extractAdmin } from '../middleware/require-admin.js'
 import { prisma } from '../utils/index.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js'
 
@@ -1156,14 +1156,17 @@ fastify.put('/api/admin/members/:id', { preHandler: [requireAdmin] }, async (req
     updateData.passwordHash = await bcrypt.hash(password, 10)
   }
   if (coins !== undefined) {
-    const current = await prisma.user.findUnique({ where: { id }, select: { coins: true } })
-    const diff = Number(coins) - ((current?.membership?.credits) ?? 0)
-    updateData.credits = Number(coins)
+    // 掌柜 2026-08-06: 修复 diff 计算 bug（原代码 findUnique 未 include membership → diff=NaN，credits 字段写错表）
+    const target = Number(coins) || 0
+    const current = await prisma.membership.findUnique({ where: { userId: id } })
+    const cur = current?.credits ?? 0
+    const diff = target - cur
+    // User 表无 coins 字段（钻石唯一真源 = Membership.credits），只同步 membership
     // 同步 membership credits
     await prisma.membership.upsert({
       where: { userId: id },
       update: { credits: { increment: diff } },
-      create: { userId: id, tier: 'free', credits: Math.max(0, Number(coins)) },
+      create: { userId: id, tier: 'free', credits: Math.max(0, target) },
     })
     // 记录积分流水
     if (diff !== 0) {
@@ -1183,6 +1186,43 @@ fastify.put('/api/admin/members/:id', { preHandler: [requireAdmin] }, async (req
   // BigInt 序列化修复
   const serialized = JSON.parse(JSON.stringify(user, (k, v) => typeof v === 'bigint' ? Number(v) : v))
   return { success: true, data: serialized } satisfies MemberResponse;
+})
+
+// ─── 增减会员钻石（掌柜 2026-08-06: 后台补发/扣回，专用接口 + 审计留痕）───
+fastify.post('/api/admin/members/:id/credits', { preHandler: [requireAdmin] }, async (request: any, reply: any) => {
+  const { id } = request.params as any
+  const { amount, remark } = request.body as any
+  const num = Number(amount)
+  if (!Number.isInteger(num) || num === 0) return reply.status(400).send({ error: '数量必须是非零整数' })
+  const reason = String(remark || '').trim()
+  if (!reason) return reply.status(400).send({ error: '操作原因必填（审计要求）' })
+  const admin = extractAdmin(request)
+  const actor = admin?.username || 'admin'
+
+  try {
+    const credits = await prisma.$transaction(async (tx) => {
+      const membership = await tx.membership.upsert({
+        where: { userId: id },
+        update: {},
+        create: { userId: id, tier: 'free', credits: 0 },
+      })
+      const newCredits = membership.credits + num
+      if (newCredits < 0) throw new Error(`余额不足：当前 ${membership.credits} 钻，扣减 ${-num} 钻后为负`)
+      await tx.membership.update({ where: { userId: id }, data: { credits: newCredits } })
+      await tx.coinLog.create({
+        data: {
+          userId: id,
+          amount: num,
+          type: 'admin_adjust',
+          remark: `管理员(${actor}) ${num > 0 ? '增加' : '扣减'} ${Math.abs(num)} 钻：${reason}`,
+        },
+      })
+      // User 表无 coins 字段（钻石唯一真源 = Membership.credits）
+      return newCredits    })
+    return { success: true, data: { credits } } satisfies MemberResponse
+  } catch (e: any) {
+    return reply.status(400).send({ error: e.message || '调整失败' })
+  }
 })
 
 // ─── 删除会员 ───
