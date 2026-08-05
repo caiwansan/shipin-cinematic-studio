@@ -55,5 +55,18 @@
       }
     }
   },
-  "plugins": {}
+  "plugins": {
+    "deepLink": {
+      "desktop": {
+        "schemes": [
+          "kunlun"
+        ]
+      },
+      "mobile": {
+        "schemes": [
+          "kunlun"
+        ]
+      }
+    }
+  }
 }

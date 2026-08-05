@@ -476,6 +476,22 @@ if (typeof window.__KUNLUN_DEEP_LINK__ !== 'undefined') {
   RuntimeRouter.launch({ kind: 'deepLink', uri: dl });
 }
 
+// S1.2-B B2b: Rust Host 转发 OS 协议事件 → RuntimeRouter（零业务）
+// Rust 侧只发原始 URL 字符串，前端负责解析与调度
+if (isTauri) {
+  try {
+    // deep-link 插件自动 emit 'deep-link://new-url'，payload = [url]
+    window.__TAURI__.event.listen('deep-link://new-url', (ev) => {
+      const payload = ev.payload;
+      const uri = Array.isArray(payload) ? payload[0] : (typeof payload === 'string' ? payload : '');
+      if (uri) {
+        console.info('[RuntimeRouter] deep-link received:', uri);
+        RuntimeRouter.launch({ kind: 'deepLink', uri });
+      }
+    });
+  } catch (e) { console.warn('[RuntimeRouter] deep-link listen failed:', e?.message || e); }
+}
+
 // ── 插件授权状态 + 本地运行时（ECO-11.3）────────────────────
 // 本地 = 入口 + 状态管理；云端 = AI 执行真相（本地零代码执行）
 async function startPlugin(pluginId) {
