@@ -51,7 +51,7 @@ prepareSkillExecution({ skillId, agentDefinitionId? })
 
 ---
 
-## 2. Reality Gate SE1-SE7（实测 19 PASS / 0 FAIL）
+## 2. Reality Gate SE1-SE7（实测 16 PASS / 0 FAIL）
 
 | # | 关卡 | 判定 | 证据 |
 |---|---|---|---|
