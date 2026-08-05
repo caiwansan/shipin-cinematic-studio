@@ -439,17 +439,17 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
 
     // 创建支付订单（统一 PaymentOrder，planType = productCode）
+    // MEMBER-CENTER-03.3 隔离铁律：订阅/套餐订单 coins 必须 = 0（购买 VIP/套餐 ≠ 充值钻石）
+    // 钻石只在 type=credit 充值链路产生；套餐赠送积分走 provision 的 productMeta.coins（type=reward）
     const amount = plan.price || 9.9
     const orderNo = generateOrderNo()
-    const rateCfg = await prisma.systemConfig.findUnique({ where: { key: 'diamond_exchange_rate' } })
-    const diamondRate = Math.max(1, Number(rateCfg?.value || 10) || 10)
     const order = await prisma.paymentOrder.create({
       data: {
         userId,
         orderNo,
         type: 'subscription',
         amount,
-        coins: Math.floor(amount * diamondRate),
+        coins: 0,
         method: validMethod,
         status: 'pending',
         planType: productCode,
@@ -555,23 +555,27 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       data: { status: 'paid', payTime: now, confirmAdminId: adminId, confirmTime: now },
     })
 
-    // 加积分 — 确保 membership 记录存在
-    await prisma.membership.upsert({
-      where: { userId: order.userId },
-      create: { userId: order.userId, credits: order.coins },
-      update: { credits: { increment: order.coins } },
-    }).catch(() => {})
+    // MEMBER-CENTER-03.3 隔离铁律：钻石只属于 type=credit 充值订单。
+    // 曾无条件 membership.credits += order.coins → 管理员确认订阅/套餐订单也发钻石（购买VIP=充值钻石）
+    if (order.type === 'credit') {
+      // 加积分 — 确保 membership 记录存在
+      await prisma.membership.upsert({
+        where: { userId: order.userId },
+        create: { userId: order.userId, credits: order.coins },
+        update: { credits: { increment: order.coins } },
+      }).catch(() => {})
 
-    // 记流水
-    await prisma.coinLog.create({
-      data: {
-        userId: order.userId,
-        amount: order.coins,
-        type: 'recharge',
-        remark: `充值 ${order.coins} 积分 (¥${order.amount}，${order.method === 'wechat' ? '微信' : '支付宝'})`,
-        relatedId: order.id,
-      },
-    }).catch(() => {})
+      // 记流水
+      await prisma.coinLog.create({
+        data: {
+          userId: order.userId,
+          amount: order.coins,
+          type: 'recharge',
+          remark: `充值 ${order.coins} 积分 (¥${order.amount}，${order.method === 'wechat' ? '微信' : '支付宝'})`,
+          relatedId: order.id,
+        },
+      }).catch(() => {})
+    }
 
     // ⭐ 如果是会员购买订单（planType=member），同时更新 memberTier
     if (order.planType === 'member') {
@@ -692,10 +696,24 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
   // GET /api/admin/payment/orders — 获取充值订单列表（type/status/keyword 筛选 + 分页 + 状态统计）
   fastify.get('/api/admin/payment/orders',  async (request, reply) => {const auth = request.headers.authorization;if (!auth?.startsWith('Bearer ')) return reply.status(401).send({ error: '未授权' });const decoded = verifyToken(auth.slice(7));if (!decoded) return reply.status(401).send({ error: 'token 无效或已过期' });
-    const { type = 'all', status = 'all', keyword = '', page = '1', pageSize, limit: rawLimit } = request.query as any
+    const { type = 'all', status = 'all', keyword = '', planKind = 'all', page = '1', pageSize, limit: rawLimit } = request.query as any
+
+    // MEMBER-CENTER-03.3 四类业务隔离：充值钻石(type=credit) / VIP(planKind=VIP) / 工作台套餐(planKind=workspace) / 商城(MallOrder 独立表)
+    // VIP 与工作台套餐同属 type=subscription，按 SubscriptionPlan.metadata.productType 细分
+    const plans = await prisma.subscriptionPlan.findMany({ select: { code: true, metadata: true } })
+    const vipCodes: string[] = []
+    const workspaceCodes: string[] = []
+    for (const pl of plans) {
+      let md: Record<string, any> = {}
+      try { md = JSON.parse(pl.metadata || '{}') } catch {}
+      if (md.productType === 'VIP') vipCodes.push(pl.code)
+      else workspaceCodes.push(pl.code)
+    }
 
     const where: any = {}
     if (type && type !== 'all') where.type = type
+    if (planKind === 'vip') { where.type = 'subscription'; where.planType = { in: vipCodes } }
+    else if (planKind === 'workspace') { where.type = 'subscription'; where.planType = { in: workspaceCodes } }
     if (status && status !== 'all') where.status = status
     if (keyword) {
       // PaymentOrder 无 user relation：先查匹配用户 id，再按 userId 过滤
@@ -745,27 +763,37 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     })
     const userMap = new Map(users.map((u: any) => [u.id, u]))
 
-    // 也查 rechargeOrder（VIP购买订单）
+    // 也查 rechargeOrder（VIP 老链订单，只属于 VIP 业务）
+    // MEMBER-CENTER-03.3 隔离：rechargeOrder 仅在 planKind=all/vip 时合并，绝不混入 钻石充值/工作台套餐 tab
+    const includeRecharge = (planKind === 'all' || planKind === 'vip') && type !== 'credit'
     const rechargeWhere = { ...(status && status !== 'all' ? { status } : {}) }
-    const [rechargeOrders, rechargeTotal] = await Promise.all([
-      prisma.rechargeOrder.findMany({
-        where: rechargeWhere,
-        orderBy: { createdAt: 'desc' },
-        take,
-        skip: (pageNum - 1) * take,
-      }),
-      prisma.rechargeOrder.count({ where: rechargeWhere }),
-    ])
+    const [rechargeOrders, rechargeTotal] = includeRecharge
+      ? await Promise.all([
+          prisma.rechargeOrder.findMany({
+            where: rechargeWhere,
+            orderBy: { createdAt: 'desc' },
+            take,
+            skip: (pageNum - 1) * take,
+          }),
+          prisma.rechargeOrder.count({ where: rechargeWhere }),
+        ])
+      : [[], 0]
 
     // 合并两个表的订单（裸对象，不再逐条 toApiResponse 包装）
+    const planMap = new Map(plans.map((pl: any) => [pl.code, pl]))
     const withUserPayment = paymentOrders.map((o) => {
       const u = userMap.get(o.userId)
-      return { ...o, user: u ? { username: u.username, email: u.email, phone: u.phone } : null, _orderType: 'payment' }
+      const pl = o.planType ? planMap.get(o.planType) : null
+      let productType = ''
+      if (pl) { try { productType = (JSON.parse(pl.metadata || '{}') as any).productType || '' } catch {} }
+      const planKind = o.type === 'credit' ? 'credit' : o.type === 'mall' ? 'mall' : productType === 'VIP' ? 'vip' : o.planType ? 'workspace' : ''
+      const typeLabel = planKind === 'credit' ? '💎 钻石充值' : planKind === 'vip' ? '👑 VIP订阅' : planKind === 'workspace' ? '🖥️ 工作台套餐' : planKind === 'mall' ? '🛒 商城购物' : '订阅'
+      return { ...o, planKind, planName: pl?.name || null, typeLabel, user: u ? { username: u.username, email: u.email, phone: u.phone } : null, _orderType: 'payment' }
     })
 
     const withUserRecharge = await Promise.all(rechargeOrders.map(async (o) => {
       const user = await prisma.user.findUnique({ where: { id: o.userId }, select: { id: true, username: true, email: true } })
-      return { ...o, user, _orderType: 'recharge', orderNo: o.id }
+      return { ...o, planKind: 'vip', typeLabel: '👑 VIP订阅', planName: o.planLevel || null, user, _orderType: 'recharge', orderNo: o.id }
     }))
 
     // 合并并按时间排序
@@ -1074,10 +1102,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       console.log('[alipay/notify] 回调成功:', parsed.outTradeNo, parsed.tradeNo)
 
       // 更新 paymentOrder 状态
+      // MEMBER-CENTER-03.3 隔离铁律：只认 type=credit 发钻石（禁止 CZ 前缀判断——generateOrderNo 全平台共用 CZ 前缀，
+      // 曾导致订阅/套餐订单（type=subscription）回调时被 startsWith('CZ') 误判为充值 → 购买 VIP = 充值钻石）
       const payOrder = await prisma.paymentOrder.findFirst({ where: { orderNo: parsed.outTradeNo } })
       if (payOrder && payOrder.status === 'pending') {
-        // MEMBER-CENTER-03: 充值订单（type=credit / CZ 前缀）→ 自动到账钻石（与管理员 confirm 同款发放，幂等）
-        if (payOrder.type === 'credit' || parsed.outTradeNo?.startsWith('CZ')) {
+        if (payOrder.type === 'credit') {
           await handleCreditRecharge(payOrder, parsed.tradeNo, parsed.paidAt || new Date())
         } else {
           await prisma.paymentOrder.update({
@@ -1085,6 +1114,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
             data: { status: 'paid', payTime: parsed.paidAt || new Date() },
           })
         }
+      }
+
+      // 处理商城订单（MALL 前缀）——独立业务，绝不给钻石/VIP
+      if (parsed.outTradeNo?.startsWith('MALL')) {
+        await handleMallPayment(parsed.outTradeNo, parsed.tradeNo, parsed.paidAt || new Date())
       }
 
       // 处理 VIP 升级订单
@@ -1150,10 +1184,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
       if (tradeState === 'SUCCESS') {
         // 通用：更新 paymentOrder 状态
+        // MEMBER-CENTER-03.3 隔离铁律：只认 type=credit 发钻石（禁止 CZ 前缀判断，见 alipay notify 注释）
         const payOrder = await prisma.paymentOrder.findFirst({ where: { orderNo: outTradeNo } })
         if (payOrder && payOrder.status === 'pending') {
-          // MEMBER-CENTER-03: 充值订单（type=credit / CZ 前缀）→ 自动到账钻石（与管理员 confirm 同款发放，幂等）
-          if (payOrder.type === 'credit' || outTradeNo?.startsWith('CZ')) {
+          if (payOrder.type === 'credit') {
             await handleCreditRecharge(payOrder, transactionId || '', new Date())
           } else {
             await prisma.paymentOrder.update({
@@ -1161,6 +1195,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
               data: { status: 'paid', payTime: new Date() },
             })
           }
+        }
+
+        // 处理商城订单（MALL 前缀）——独立业务，绝不给钻石/VIP
+        if (outTradeNo?.startsWith('MALL')) {
+          await handleMallPayment(outTradeNo, transactionId || '', new Date())
         }
 
         if (outTradeNo?.startsWith('VIP')) {
@@ -1236,6 +1275,44 @@ async function handleCreditRecharge(payOrder: any, tradeNo: string, payTime: Dat
   }
 }
 
+/**
+ * 处理商城订单支付回调（MALL 前缀）— MEMBER-CENTER-03.3 隔离：商城购物是独立业务
+ * 幂等：PaymentOrder + RechargeOrder(支付流水) + MallOrder(业务单) 三表状态推进
+ * 绝不发放钻石 / VIP / 套餐权益
+ */
+async function handleMallPayment(orderNo: string, tradeNo: string, payTime: Date) {
+  try {
+    // 1. 支付流水单（PaymentOrder，type=mall）
+    const payOrder = await prisma.paymentOrder.findFirst({ where: { orderNo } })
+    if (payOrder && payOrder.status === 'pending') {
+      await prisma.paymentOrder.update({
+        where: { id: payOrder.id },
+        data: { status: 'paid', payTime, outTradeNo: tradeNo || undefined },
+      })
+    }
+    // 2. 支付流水（RechargeOrder，MALL 共用支付流水表，coins=0/planLevel=null 无权益）
+    const ro = await prisma.rechargeOrder.findFirst({ where: { orderNo } })
+    if (ro && ro.status === 'pending') {
+      await prisma.rechargeOrder.update({
+        where: { id: ro.id },
+        data: { status: 'paid', payTime, tradeNo },
+      })
+      // 3. 商城业务单（remark 格式：`商城订单 ${mallOrder.orderNo} 支付 ...`）
+      const m = ro.remark?.match(/商城订单 (\S+)/)
+      if (m?.[1]) {
+        const updated = await prisma.mallOrder.updateMany({
+          where: { orderNo: m[1], status: 'pending' },
+          data: { status: 'paid', paidAt: payTime },
+        })
+        console.log(`[mall] 商城订单 ${m[1]} 已标记支付 (${updated.count} 行)`)
+      }
+    }
+    console.log(`[mall] 商城支付回调完成: ${orderNo}, tradeNo=${tradeNo}`)
+  } catch (err: any) {
+    console.error('[mall] 商城支付回调处理失败:', err.message)
+  }
+}
+
 /** 处理 VIP 充值订单回调 */
 async function handleVipRechargeOrder(orderNo: string, tradeNo: string, payTime: Date) {
   try {
@@ -1279,7 +1356,8 @@ async function handleVipRechargeOrder(orderNo: string, tradeNo: string, payTime:
         data: {
           userId: order.userId,
           amount: plan.coins,
-          type: 'recharge',
+          // MEMBER-CENTER-03.3 隔离：VIP 赠送积分是 reward 不是 recharge（充值≠购买VIP）
+          type: 'reward',
           remark: `开通VIP「${plan.name}」赠送 ${plan.coins} 积分`,
           relatedId: order.id,
         },

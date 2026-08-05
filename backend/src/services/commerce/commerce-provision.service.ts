@@ -254,8 +254,14 @@ export async function provisionFromPayment(payOrder: {
           create: { userId, tier, expiresAt: effectiveUntil, credits: 0 },
         })
         if (productMeta.coins > 0) {
+          // MEMBER-CENTER-03.3 隔离：套餐赠送积分 ≠ 充值钻石 → coinLog type='reward' 且必须真正到账 credits（此前只记流水不到账）
+          await prisma.membership.upsert({
+            where: { userId },
+            update: { credits: { increment: productMeta.coins } },
+            create: { userId, tier, expiresAt: effectiveUntil, credits: productMeta.coins },
+          })
           await prisma.coinLog.create({
-            data: { userId, amount: productMeta.coins, type: 'recharge', remark: `会员商品「${plan.name}」赠送`, relatedId: payOrder.id },
+            data: { userId, amount: productMeta.coins, type: 'reward', remark: `会员商品「${plan.name}」赠送 ${productMeta.coins} 钻石`, relatedId: payOrder.id },
           })
         }
         console.log(`[commerce-provision] VIP 兼容层同步: userId=${userId.slice(0, 8)}, tier=${tier}`)

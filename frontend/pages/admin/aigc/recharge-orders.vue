@@ -2,7 +2,7 @@
   <div class="orders-page">
     <div class="page-header">
       <h2 class="page-title">💎 钻石充值管理</h2>
-      <p class="page-subtitle">平台全部充值订单（钻石充值 / VIP 订阅），实时同步支付回调</p>
+      <p class="page-subtitle">四类业务隔离：钻石充值 / VIP 订阅 / 工作台套餐（商城购物见商城管理页），实时同步支付回调</p>
     </div>
 
     <!-- 筛选 -->
@@ -60,7 +60,7 @@
             </td>
             <td>{{ o.typeLabel }}</td>
             <td class="td-amount">¥{{ o.amount.toFixed(2) }}</td>
-            <td class="td-coins">{{ o.coins ? '+' + o.coins.toLocaleString() : '-' }}</td>
+            <td class="td-coins">{{ o.planKind === 'credit' && o.coins ? '+' + o.coins.toLocaleString() : '-' }}</td>
             <td>{{ methodLabel(o.method) }}</td>
             <td>
               <span class="status-badge" :class="`status-badge--${o.status}`">
@@ -90,9 +90,11 @@ import { getToken } from '~/utils/token-cache'
 
 const typeTabs = [
   { value: 'all', label: '全部订单' },
-  { value: 'credit', label: '钻石充值' },
-  { value: 'subscription', label: 'VIP订阅' },
+  { value: 'credit', label: '💎 钻石充值' },
+  { value: 'vip', label: '👑 VIP订阅' },
+  { value: 'workspace', label: '🖥️ 工作台套餐' },
 ]
+// MEMBER-CENTER-03.3 隔离：credit 走 type 参数；vip/workspace 走 planKind（同属 subscription 按 productType 细分）
 const statusTabs = [
   { value: 'all', label: '全部状态' },
   { value: 'pending', label: '待支付' },
@@ -102,6 +104,7 @@ const statusTabs = [
 ]
 
 const type = ref('all')
+const planKind = ref('all')
 const status = ref('all')
 const keyword = ref('')
 const orders = ref<any[]>([])
@@ -150,7 +153,7 @@ async function fetchOrders() {
   error.value = ''
   try {
     const token = getToken()
-    const qs = new URLSearchParams({ type: type.value, status: status.value, page: String(page.value), pageSize: String(pageSize) })
+    const qs = new URLSearchParams({ type: type.value === 'credit' ? 'credit' : 'all', planKind: type.value === 'all' ? 'all' : type.value, status: status.value, page: String(page.value), pageSize: String(pageSize) })
     if (keyword.value.trim()) qs.set('keyword', keyword.value.trim())
     const res = await fetch(`/api/admin/payment/orders?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
