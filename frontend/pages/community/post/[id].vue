@@ -386,14 +386,24 @@ const avatarChar = computed(() => {
 })
 function goMemberCenter() { router.push('/user/center') }
 
-// 解析媒体附件
+// 解析媒体附件（排除 content 已内联渲染的 [img:]/[video:] → 防止同一媒体显示两遍）
 const postMedia = computed(() => {
   if (!post.value?.mediaJson) return []
   try {
     const parsed = typeof post.value.mediaJson === 'string'
       ? JSON.parse(post.value.mediaJson)
       : post.value.mediaJson
-    return Array.isArray(parsed) ? parsed : []
+    const arr = Array.isArray(parsed) ? parsed : []
+    if (!arr.length) return []
+    // content 内联媒体 URL 集合（正文里已渲染过，附件区不再重复）
+    const inlineUrls = new Set<string>()
+    const content = post.value?.content || ''
+    let m: RegExpExecArray | null
+    const imgRe = /\[img:([^\]]+)\]/g
+    const vidRe = /\[video:([^\]]+)\]/g
+    while ((m = imgRe.exec(content))) if (m[1]) inlineUrls.add(m[1])
+    while ((m = vidRe.exec(content))) if (m[1]) inlineUrls.add(m[1])
+    return arr.filter((x: any) => !(x?.url && inlineUrls.has(x.url)))
   } catch { return [] }
 })
 
