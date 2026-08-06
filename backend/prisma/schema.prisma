@@ -10568,6 +10568,43 @@ model ImUserPresence {
   @@map("im_user_presence")
 }
 
+// ─────────────────────────────────────────────────────────────
+// SPRINT-IM-CHA-03 — M3 敏感词库 + 审核日志（内容治理）
+// 用途：敏感词即时替换（客户端+服务端双保险）与机器人管理员处置留痕
+// category: leader(领导人姓名)/politics(政治)/religion(宗教)/porn(色情)/drug(毒品)/gambling(赌博)/body(性器官)/other
+// level: 2 替换+审计 / 3 替换+审计+警告 / 4 替换+审计+踢出（高敏）
+model ChatSensitiveWord {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  word      String   @unique @db.Text
+  category  String   @default("other") @db.Text
+  level     Int      @default(2)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([isActive])
+  @@map("chat_sensitive_word")
+}
+
+model ChatModerationLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  channelId   String   @map("channel_id") @db.Text
+  channelType Int      @map("channel_type")
+  uid         String   @db.Text
+  messageId   String   @map("message_id") @db.Text
+  content     String   @db.Text
+  matched     String   @db.Text // 命中词（逗号分隔）
+  level       Int      @default(2)
+  action      String   @default("replace") @db.Text // replace/notice/kick
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([channelId, channelType])
+  @@index([uid])
+  @@index([messageId])
+  @@map("chat_moderation_log")
+}
+
 // ============================================
 // GIFT-GOLD-ECO-01 礼物金币体系（2026-08-06 掌柜定稿）
 // 链条：钻石(充值,只花不提) → 礼物(打赏,65%钻石价值即时转金币) → 金币(10:1兑余额,200起) → 余额(可提现,5%手续费)

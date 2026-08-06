@@ -42,6 +42,8 @@ import ticketExchangeRoutes from './routes/ticket-exchange.js'
 import pluginTicketRoutes from './routes/plugin-ticket.js'
 import healthRoutes from './routes/health.js'
 import imRoutes from './routes/im.js'
+import imModerationRoutes from './routes/im-moderation.routes.js'
+import { prisma } from './utils/index.js'
 import siteConfigRoutes from './routes/site-config.js'
 import observabilityRoutes from './routes/observability.js'
 import providerRoutes from './routes/providers.js'
@@ -291,12 +293,25 @@ async function main() {
   registerSSEStream(app)
   await app.register(systemVersionRoutes)
   await app.register(imRoutes)
+  await app.register(imModerationRoutes)
   // 启动时恢复公共频道订阅（WuKongIM 容器重启后订阅丢失的自愈；非致命）
   try {
     const { restorePublicChannelSubscriptions } = await import('./routes/im.js')
     restorePublicChannelSubscriptions()
   } catch (e) {
     console.warn('[昆仑茶馆] 启动恢复订阅未执行:', (e as Error).message)
+  }
+  // 启动时初始化 M3 内容治理：内置词库（表空时导入）+ 引擎重建 + 机器人入公共频道
+  try {
+    const { seedSensitiveWordsIfEmpty } = await import('./im/sensitive-word-seed.js')
+    const { loadSensitiveWordsIntoEngine } = await import('./im/sensitive-engine.js')
+    const { ensureBotInPublicChannel } = await import('./routes/im-moderation.routes.js')
+    const seeded = await seedSensitiveWordsIfEmpty()
+    const size = await loadSensitiveWordsIntoEngine(prisma)
+    await ensureBotInPublicChannel()
+    console.log(`[昆仑茶馆] M3 内容治理就绪：内置词库 ${seeded.seeded ? '已导入' : '已存在'}，引擎生效 ${size} 词，机器人管理员已入公共频道`)
+  } catch (e) {
+    console.warn('[昆仑茶馆] M3 初始化未执行:', (e as Error).message)
   }
   await app.register(captchaRoutes)
   await app.register(smsRoutes)

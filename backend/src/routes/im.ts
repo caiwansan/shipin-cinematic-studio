@@ -393,14 +393,19 @@ export default async function imRoutes(fastify: FastifyInstance) {
     const list = Array.isArray(uids)
       ? [...new Set(uids.filter((u: any) => typeof u === 'string' && u && uuidRe.test(u)))].slice(0, 200)
       : []
-    if (!list.length) return { success: true, data: { names: {} } }
-    const users = await prisma.user.findMany({
-      where: { id: { in: list } },
-      select: { id: true, username: true, email: true },
-    })
     const names: Record<string, string> = {}
-    for (const u of users) {
-      names[u.id] = u.username || u.email.split('@')[0]
+    // 机器人管理员（M3）
+    if (Array.isArray(uids) && uids.includes('kunlun_tea_bot')) {
+      names['kunlun_tea_bot'] = '昆仑镜小管家'
+    }
+    if (list.length) {
+      const users = await prisma.user.findMany({
+        where: { id: { in: list } },
+        select: { id: true, username: true, email: true },
+      })
+      for (const u of users) {
+        names[u.id] = u.username || u.email.split('@')[0]
+      }
     }
     return { success: true, data: { names } }
   })

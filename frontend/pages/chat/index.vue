@@ -984,8 +984,15 @@ function markDelivered(clientSeq: number) {
 }
 
 async function handleSend() {
-  const text = draft.value.trim()
+  let text = draft.value.trim()
   if (!text || !tea.connected.value || !currentChannel.value) return
+  // M3 敏感词即时替换（客户端，无感知）：词库缓存 5 分钟，命中替换为等长 *
+  await ensureSensitiveWords()
+  const safe = sanitizeText(text)
+  if (safe !== text) {
+    text = safe
+    showToast('⚠ 已自动过滤敏感词汇')
+  }
   draft.value = ''
   try {
     const msg = await tea.sendText(text, currentChannel.value.id, currentChannel.value.type)
@@ -999,6 +1006,34 @@ async function handleSend() {
     draft.value = text
     showToast('⚠ 发送失败，草稿已保留')
   }
+}
+
+// ══ M3 敏感词即时替换（SPRINT-IM-CHA-03） ═════════════════
+const sensitiveWords = ref<string[]>([])
+let sensitiveFetchedAt = 0
+
+function authToken() {
+  try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' }
+}
+
+async function ensureSensitiveWords() {
+  if (sensitiveWords.value.length && Date.now() - sensitiveFetchedAt < 5 * 60 * 1000) return
+  try {
+    const res = await fetch('/api/im/sensitive-words', { headers: { Authorization: 'Bearer ' + authToken() } })
+    if (res.ok) {
+      const j = await res.json()
+      if (j.data?.words) { sensitiveWords.value = j.data.words; sensitiveFetchedAt = Date.now() }
+    }
+  } catch { /* 非致命：服务端 webhook 兜底 */ }
+}
+
+function sanitizeText(text: string) {
+  let out = text
+  for (const w of sensitiveWords.value) {
+    if (!w || !out.includes(w)) continue
+    out = out.split(w).join('*'.repeat(w.length))
+  }
+  return out
 }
 
 // ══ 礼物体系（GIFT-GOLD-ECO-01） ══════════════════════
