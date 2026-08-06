@@ -70,12 +70,52 @@ const TOOL_REGISTRY = {
     const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/interview-evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
-      body: JSON.stringify({ resume: input.resume, interviewTranscript: input.interviewTranscript, jobRequirement: input.jobRequirement, tenantUserId: input.tenantUserId }),
+      body: JSON.stringify({ resume: input.resume, interviewTranscript: input.interviewTranscript, interviewRecord: input.interviewRecord, jobRequirement: input.jobRequirement, tenantUserId: input.tenantUserId }),
     }).catch(() => null)
     if (!res) return { ok: false, error: 'INTERVIEW_BACKEND_UNREACHABLE' }
     const body = await res.json().catch(() => ({}))
     if (body.code !== 0 || body.data?.error) {
       return { ok: false, error: body.data?.error || body.error || 'INTERVIEW_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  // S5.1: 短剧导演 3 薄工具（经后端内部路由 → Unified AI Gateway; 禁 narrativeGateway 直连）
+  'script.analysis': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/script-analysis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ scriptText: input.scriptText, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'SCRIPT_ANALYSIS_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'SCRIPT_ANALYSIS_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  'storyboard.plan': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/storyboard-plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ sceneText: input.sceneText, shots: input.shots, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'STORYBOARD_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'STORYBOARD_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  'prompt.optimize': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/prompt-optimize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ shotDescription: input.shotDescription, style: input.style, model: input.model, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'PROMPT_OPTIMIZE_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'PROMPT_OPTIMIZE_FAILED' }
     }
     return { ok: true, result: body.data }
   },

@@ -193,3 +193,61 @@ export async function deliverSkillAssets(input: SkillAssetInput): Promise<SkillA
 
   return { taskId, files, assets, userAssets }
 }
+
+/**
+ * S5.1: 短剧导演资产交付（3 JSON, 复用 Asset/UserAsset, 零新表）
+ * 输入: scriptAnalysis / storyboardPlan / promptOptimize（真实 LLM 结构化输出）
+ * 输出: script-analysis.json + storyboard-plan.json + optimized-prompts.json → Asset + UserAsset
+ */
+export async function deliverShortDramaAssets(input: {
+  userId: string
+  taskId?: string
+  title?: string
+  scriptAnalysis?: any
+  storyboardPlan?: any
+  promptOptimize?: any
+}): Promise<SkillAssetResult> {
+  const taskId = input.taskId || 'task-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
+  const dir = path.join(ASSET_DIR, taskId)
+  fs.mkdirSync(dir, { recursive: true })
+
+  const payload = {
+    taskId,
+    title: input.title || '短剧创作分析',
+    generatedAt: new Date().toISOString(),
+    pipeline: 'S5.1-shortdrama',
+    llmInvolved: true,
+    scriptAnalysis: input.scriptAnalysis || null,
+    storyboardPlan: input.storyboardPlan || null,
+    promptOptimize: input.promptOptimize || null,
+  }
+  const entries: { fileName: string; data: string }[] = []
+  if (input.scriptAnalysis) entries.push({ fileName: 'script-analysis.json', data: JSON.stringify(payload.scriptAnalysis, null, 2) })
+  if (input.storyboardPlan) entries.push({ fileName: 'storyboard-plan.json', data: JSON.stringify(payload.storyboardPlan, null, 2) })
+  if (input.promptOptimize) entries.push({ fileName: 'optimized-prompts.json', data: JSON.stringify(payload.promptOptimize, null, 2) })
+  if (!entries.length) throw new Error('SHORTDRAMA_ASSET_EMPTY: 无资产内容')
+
+  const files: SkillAssetResult['files'] = []
+  for (const e of entries) {
+    fs.writeFileSync(path.join(dir, e.fileName), e.data)
+    files.push({ fileName: e.fileName, url: `/uploads/skill-assets/${taskId}/${e.fileName}`, mimeType: 'application/json', size: fs.statSync(path.join(dir, e.fileName)).size })
+  }
+
+  const membership = await prisma.membership.findUnique({ where: { userId: input.userId } }).catch(() => null)
+  if (!membership) {
+    throw new Error('USER_NO_MEMBERSHIP: 用户无会员关系, UserAsset 无法创建')
+  }
+  const assets: any[] = []
+  const userAssets: any[] = []
+  for (const f of files) {
+    const asset = await prisma.asset.create({
+      data: { type: 'other', fileName: f.fileName, filePath: f.url, mimeType: f.mimeType, fileSize: f.size },
+    })
+    assets.push(asset)
+    const ua = await prisma.userAsset.create({
+      data: { userId: input.userId, title: `${input.title || '短剧创作'}-${f.fileName}`, type: 'document', url: f.url, fileSize: f.size, source: 'skill_task' },
+    })
+    userAssets.push(ua)
+  }
+  return { taskId, files, assets, userAssets }
+}

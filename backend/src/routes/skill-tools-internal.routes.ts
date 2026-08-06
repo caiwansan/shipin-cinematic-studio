@@ -91,6 +91,118 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
     }
   })
 
+  // S5.1: 短剧导演 3 Skill（Skill LLM Tool, 经 Unified AI Gateway; 禁 narrativeGateway 直连）
+  // SD-01 script.analysis: { scriptText } → { summary, characters, structure }
+  app.post('/api/internal/skill-tools/script-analysis', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.scriptText) {
+        return reply.code(400).send({ error: 'SCRIPT_TEXT_REQUIRED' })
+      }
+      const { buildScriptAnalysisPrompt, parseScriptAnalysisResult } = await import('../ecosystem/shortdrama-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildScriptAnalysisPrompt({ scriptText: String(body.scriptText) })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'SCRIPT_ANALYSIS_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseScriptAnalysisResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal script-analysis failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
+  // SD-02 storyboard.plan: { sceneText, shots? } → { shots, summary }（shots 数量限制）
+  app.post('/api/internal/skill-tools/storyboard-plan', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.sceneText) {
+        return reply.code(400).send({ error: 'SCENE_TEXT_REQUIRED' })
+      }
+      const { buildStoryboardPrompt, parseStoryboardResult } = await import('../ecosystem/shortdrama-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildStoryboardPrompt({ sceneText: String(body.sceneText), shots: body.shots })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'STORYBOARD_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseStoryboardResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal storyboard-plan failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
+  // SD-03 prompt.optimize: { shotDescription, style? } → { prompt, keywords, negativePrompt }
+  app.post('/api/internal/skill-tools/prompt-optimize', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.shotDescription) {
+        return reply.code(400).send({ error: 'SHOT_DESCRIPTION_REQUIRED' })
+      }
+      const { buildPromptOptimizePrompt, parsePromptOptimizeResult } = await import('../ecosystem/shortdrama-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildPromptOptimizePrompt({ shotDescription: String(body.shotDescription), style: body.style, model: body.model })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'PROMPT_OPTIMIZE_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parsePromptOptimizeResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal prompt-optimize failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
   // S3.4.2-C: 真实面试评估（Skill LLM Tool, 经 Unified AI Gateway）
   // 输入: { resume, interviewTranscript, jobRequirement } → DeepSeek → Schema 校验（IE2/IE3）
   app.post('/api/internal/skill-tools/interview-evaluate', async (request: any, reply: any) => {
