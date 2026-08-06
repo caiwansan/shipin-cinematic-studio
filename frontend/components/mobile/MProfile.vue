@@ -2,7 +2,8 @@
   <MPageShell title="个人主页" @close="$emit('close')">
     <!-- 会员卡 -->
     <div class="mp-hero">
-      <div class="mp-avatar">{{ (my.nickname || my.username || '?').slice(0, 1) }}</div>
+      <img v-if="my.avatarUrl" class="mp-avatar mp-avatar-img" :src="my.avatarUrl" alt="" />
+      <div v-else class="mp-avatar">{{ (my.nickname || my.username || '?').slice(0, 1) }}</div>
       <div class="mp-info">
         <div class="mp-name">{{ my.nickname || my.username || '未登录' }}</div>
         <div class="mp-tier">{{ tierLabel }}<span v-if="tierExpiry" class="mp-tier-exp">{{ tierExpiry }}</span></div>
@@ -107,6 +108,7 @@ function logout() {
 <style scoped>
 .mp-hero { display: flex; align-items: center; gap: 12px; padding: 18px 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: #fff; }
 .mp-avatar { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; }
+.mp-avatar-img { object-fit: cover; }
 .mp-name { font-size: 17px; font-weight: 700; }
 .mp-tier { font-size: 12px; opacity: .85; margin-top: 3px; }
 .mp-tier-exp { opacity: .7; margin-left: 4px; }

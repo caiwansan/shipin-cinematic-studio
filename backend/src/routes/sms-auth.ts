@@ -6,6 +6,10 @@ import { prisma } from '../utils/index.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js';
 import { verifyToken } from './admin-auth.js'
 import { requireAdmin } from '../middleware/require-admin.js'
+import { createRequire } from 'node:module'
+
+// ESM 环境：require 不可用，用 createRequire 加载 CJS 版腾讯云 SDK
+const require = createRequire(import.meta.url)
 
 // 获取腾讯云短信配置
 async function getSmsConfig() {

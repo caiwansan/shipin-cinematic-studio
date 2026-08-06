@@ -234,7 +234,8 @@
       <!-- ── Tab4 我的：会员卡 + 资产 + 功能入口 ── -->
       <section v-else class="tab-pane mine-pane">
         <div class="mine-hero" @click="openMobilePage('profile')">
-          <div class="mine-avatar">{{ myName.slice(0, 1) || '👤' }}</div>
+          <img v-if="myAvatar" class="mine-avatar mine-avatar-img" :src="myAvatar" alt="" />
+          <div v-else class="mine-avatar">{{ myName.slice(0, 1) || '👤' }}</div>
           <div class="mine-info">
             <div class="mine-name">{{ myName || '未登录' }}</div>
             <div class="mine-tier">{{ tierLabel }}<span v-if="tierExpiry" class="mine-tier-exp">{{ tierExpiry }}</span></div>
@@ -1560,6 +1561,7 @@ if (typeof window !== 'undefined') {
   background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center;
   font-size: 22px; flex-shrink: 0;
 }
+.mine-avatar-img { object-fit: cover; }
 .mine-info { flex: 1; min-width: 0; }
 .mine-name { font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mine-tier { font-size: 12px; opacity: 0.8; margin-top: 3px; }

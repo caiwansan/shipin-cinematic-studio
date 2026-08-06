@@ -43,9 +43,12 @@ onMounted(() => {
   setTimeout(() => {
     if (window.opener) {
       window.close()
+    } else if (token) {
+      // 无 opener（手机整页跳转授权）：已存 token，直接进手机版
+      window.location.href = '/mobile-app'
     } else {
-      // 没有 opener（直接访问），重定向到首页
-      window.location.href = '/'
+      // 没有 opener 且无 token（直接访问），重定向到手机版登录
+      window.location.href = '/mobile-login'
     }
   }, 500)
 })

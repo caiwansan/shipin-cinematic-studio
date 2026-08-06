@@ -55,6 +55,19 @@
           {{ loading ? '登录中…' : '登 录' }}
         </button>
       </div>
+
+      <!-- 第三方登录 -->
+      <div v-if="qqStatus.enabled" class="ml-oauth">
+        <div class="ml-divider"><span>其他登录方式</span></div>
+        <button class="ml-qq-btn" :disabled="qqLoading" @click="qqLogin">
+          <span class="ml-qq-icon">🐧</span>
+          <span>{{ qqLoading ? '跳转中…' : 'QQ 登录' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="ml-register">
+      还没有账号？<span class="ml-register-link" @click="goRegister">立即注册</span>
     </div>
 
     <div class="ml-footer">
@@ -64,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { safeRedirect } from '~/utils/mobile-detect'
 
@@ -81,6 +94,64 @@ const showPwd = ref(false)
 const remember = ref(true)
 const loading = ref(false)
 const error = ref('')
+
+// ── QQ 登录 ──
+const qqStatus = ref({ enabled: false, appId: '' })
+const qqLoading = ref(false)
+let oauthListener: ((e: MessageEvent) => void) | null = null
+
+function startOAuth(authUrl: string, onSuccess: (token: string, user: any) => void, onError: (err: string) => void) {
+  const w = window.open(authUrl, '_blank', 'width=600,height=700')
+  if (!w) { window.location.href = authUrl; return }
+  if (oauthListener) window.removeEventListener('message', oauthListener)
+  oauthListener = (e: MessageEvent) => {
+    if (e.origin !== window.location.origin) return
+    if (e.data?.type === 'OAUTH_LOGIN') { onSuccess(e.data.token, e.data.user); window.removeEventListener('message', oauthListener); oauthListener = null }
+    else if (e.data?.type === 'OAUTH_ERROR') { onError(e.data.error); window.removeEventListener('message', oauthListener); oauthListener = null }
+  }
+  window.addEventListener('message', oauthListener)
+  const pollClose = setInterval(() => {
+    if (w.closed) {
+      clearInterval(pollClose)
+      if (oauthListener) { window.removeEventListener('message', oauthListener); oauthListener = null; qqLoading.value = false }
+    }
+  }, 1000)
+}
+
+async function qqLogin() {
+  if (!qqStatus.value.enabled) return
+  qqLoading.value = true; error.value = ''
+  try {
+    const r = await fetch('/api/auth/qq/authorize')
+    const data = await r.json()
+    const authUrl = data.data?.authUrl || data.authUrl
+    if (!authUrl) { error.value = data.error || 'QQ 登录启动失败'; qqLoading.value = false; return }
+    startOAuth(authUrl, async (token) => {
+      // 同步 token：localStorage + cookie + token-cache（mobile-app 用 localStorage auth_token）
+      window.localStorage?.setItem('auth_token', token)
+      document.cookie = `auth_token=${token}; path=/; max-age=86400; samesite=lax`
+      const { setToken, setUser } = await import('~/utils/token-cache')
+      setToken(token)
+      setUser({ username: token.split('.')[0] || '用户' })
+      qqLoading.value = false
+      const target = safeRedirect(route.query.redirect, '/mobile-app')
+      await router.replace(target)
+    }, (err) => { error.value = err; qqLoading.value = false })
+  } catch {
+    error.value = 'QQ 登录暂时不可用'; qqLoading.value = false
+  }
+}
+
+function goRegister() {
+  router.push('/mobile-register')
+}
+
+onMounted(() => {
+  fetch('/api/auth/qq/status')
+    .then(r => r.json())
+    .then(d => { if (d.data) qqStatus.value = d.data })
+    .catch(() => {})
+})
 
 async function doLogin() {
   const acc = account.value.trim()
@@ -216,6 +287,30 @@ function goHome() {
 .ml-btn:active { transform: scale(0.98); }
 .ml-btn:disabled { opacity: 0.6; }
 
-.ml-footer { margin-top: 28px; font-size: 13px; color: rgba(255,255,255,0.75); cursor: pointer; }
+/* ── QQ 登录 ── */
+.ml-oauth { margin-top: 22px; }
+.ml-divider { display: flex; align-items: center; gap: 10px; color: #94a3b8; font-size: 12px; margin-bottom: 14px; }
+.ml-divider::before, .ml-divider::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+.ml-qq-btn {
+  width: 100%; height: 48px;
+  border: 1.5px solid #e2e8f0; border-radius: 12px;
+  background: #fff; color: #334155;
+  font-size: 15px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  cursor: pointer; transition: background 0.2s, border-color 0.2s;
+}
+.ml-qq-btn:active { background: #f8fafc; }
+.ml-qq-btn:disabled { opacity: 0.6; }
+.ml-qq-icon { font-size: 18px; }
+
+/* ── 注册入口 ── */
+.ml-register {
+  margin-top: 22px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.85);
+}
+.ml-register-link { color: #fbbf24; font-weight: 600; text-decoration: underline; padding: 4px; cursor: pointer; }
+
+.ml-footer { margin-top: 26px; font-size: 13px; color: rgba(255,255,255,0.75); cursor: pointer; }
 .ml-footer span { padding: 8px 12px; }
 </style>
