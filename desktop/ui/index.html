@@ -165,7 +165,7 @@
           <div class="home-date" id="home-date"></div>
           <div class="home-quick" id="home-quick"></div>
         </div>
-        <div class="emp-strip" id="home-employees"></div>
+        <div class="emp-strip" id="home-employees"><div class="empty-note">正在唤醒你的 AI 团队…</div></div>
         <div class="home-col">
           <div class="card"><h3>今日任务</h3><div id="home-tasks"><div class="empty-note">加载中…</div></div></div>
           <div class="card"><h3>最近成果</h3><div id="home-results"><div class="empty-note">加载中…</div></div></div>
@@ -427,21 +427,28 @@ async function renderHome() {
         <div class="role">${e.identity?.title || ''} <span class="status-dot ${on ? 'on' : ''}" style="margin-left:4px"></span></div>
         <div class="stat"><span>${on ? '已授权' : '待授权'}</span><span>${e.usage?.executions || 0} 次</span></div>
       </div>`;
-    }).join('') || '<div class="empty-note">暂无员工</div>';
+    }).join('') || '<div class="empty-note">你的 AI 团队正在准备 · 去应用商城看看新员工</div>';
     document.querySelectorAll('[data-home-emp]').forEach((c) => c.addEventListener('click', () => { mktCategory = ''; mktKeyword = ''; showView('apps'); refreshEmployees(); showEmployeeDetail(c.dataset.homeEmp); }));
     $('home-quick').innerHTML = `<button data-home-quick="alice">给 Alice 一个招聘需求</button> <button class="secondary" data-home-go-mkt>看看新员工</button>`;
     $('home-quick').querySelector('[data-home-go-mkt]')?.addEventListener('click', () => { mktCategory = ''; mktKeyword = ''; showView('apps'); refreshEmployees(); });
     $('home-quick').querySelector('[data-home-quick="alice"]')?.addEventListener('click', () => { if (creds.device_id) openWorkspaceHome('def-recruiter-alice'); });
     // 今日任务 + 最近成果（复用 usage.recent, 零新 API）
     const aliceUsage = items.find((i) => i.code === 'def-recruiter-alice')?.usage || { executions: 0, successRate: 0 };
+    if (!items.length) {
+      $('home-tasks').innerHTML = '<div class="empty-note">员工尚未就绪 · 授权后这里会出现今日任务</div>';
+      $('home-results').innerHTML = '<div class="empty-note">完成的任务成果会沉淀在这里</div>';
+    } else {
     $('home-tasks').innerHTML = `
       <div class="task-item"><span>Alice 招聘执行</span><span class="task-status">${aliceUsage.executions} 次 · 成功率 ${aliceUsage.successRate || 0}%</span></div>
       <div class="task-item"><span>企业员工授权同步</span><span class="task-status">已完成</span></div>
       <div class="task-item"><span>增强包状态</span><span class="task-status">${aliceUsage.executions ? '已启用' : '待启用'}</span></div>`;
     const recent = items.filter((i) => (i.usage?.executions || 0) > 0).slice(0, 4);
-    $('home-results').innerHTML = recent.map((i) => `<div class="result-item"><span>${i.identity?.title || i.name}</span><span class="muted">${i.usage?.executions || 0} 次执行</span></div>`).join('') || '<div class="empty-note">暂无成果</div>';
+    $('home-results').innerHTML = recent.map((i) => `<div class="result-item"><span>${i.identity?.title || i.name}</span><span class="muted">${i.usage?.executions || 0} 次执行</span></div>`).join('') || '<div class="empty-note">完成的任务成果会沉淀在这里</div>';
+    }
   } catch (e) {
-    $('home-greet').textContent = '首页加载失败: ' + e.message;
+    $('home-greet').textContent = '昆仑镜暂时无法连接云端，请检查网络后重试';
+    $('home-employees').innerHTML = `<div class="empty-note"><button data-home-retry>重新连接</button></div>`;
+    $('home-employees').querySelector('[data-home-retry]')?.addEventListener('click', () => renderHome());
   }
 }
 function openWorkspaceHome(code) {
@@ -491,7 +498,7 @@ async function refreshEmployees() {
     }).join('') || '<div class="muted">无匹配员工</div>';
     document.querySelectorAll('[data-employee]').forEach(b => b.addEventListener('click', () => { if (!b.disabled) launchEmployee(b.dataset.employee); }));
     document.querySelectorAll('[data-detail]').forEach(b => b.addEventListener('click', () => showEmployeeDetail(b.dataset.detail)));
-  } catch (e) { $('sub-employees').textContent = `❌ ${e.message}`; }
+  } catch (e) { $('sub-employees').textContent = '昆仑镜暂时无法连接云端，请检查网络'; }
 }
 document.addEventListener('DOMContentLoaded', () => {
   const searchEl = document.getElementById('mkt-search');
@@ -615,7 +622,7 @@ async function refreshApps() {
         </div>
       </div>`).join('');
     document.querySelectorAll('[data-app-slug]').forEach(b => b.addEventListener('click', () => launchApp(b.dataset.appSlug, b.dataset.appEntry)));
-  } catch (e) { $('sub-apps').textContent = `❌ ${e.message}`; }
+  } catch (e) { $('sub-apps').textContent = '昆仑镜暂时无法连接云端，请检查网络'; }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -896,7 +903,7 @@ async function refreshPlugins() {
           ${actions}
         </div>`;
         }).join('');
-  } catch (e) { $('sub-plugins').textContent = `❌ ${e.message}`; }
+  } catch (e) { $('sub-plugins').textContent = '昆仑镜暂时无法连接云端，请检查网络'; }
 }
 
 // ── 设备信息 ────────────────────────────────
