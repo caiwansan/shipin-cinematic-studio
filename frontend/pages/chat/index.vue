@@ -268,8 +268,8 @@
       </Teleport>
 
       <!-- ══ 创建群弹窗（R10） ══ -->
-      <div v-if="createGroupOpen" class="gift-modal-mask" @click.self="createGroupOpen = false">
-        <div class="gift-modal">
+      <div v-if="createGroupOpen" class="gift-modal-mask grp-modal-mask" @click.self="createGroupOpen = false">
+        <div class="gift-modal grp-modal">
           <div class="gift-modal-head">
             <div class="gift-modal-title">👥 创建群</div>
             <button class="gift-modal-close" @click="createGroupOpen = false">✕</button>
@@ -290,8 +290,8 @@
       </div>
 
       <!-- ══ 群管理弹窗（R10：群主/管理员/成员三级权限 + 申请流） ══ -->
-      <div v-if="groupManagerOpen" class="gift-modal-mask" @click.self="closeGroupManager">
-        <div class="gift-modal grp-manager-modal">
+      <div v-if="groupManagerOpen" class="gift-modal-mask grp-modal-mask" @click.self="closeGroupManager">
+        <div class="gift-modal grp-manager-modal grp-modal">
           <div class="gift-modal-head">
             <div class="gift-modal-title">⚙️ 群管理 · {{ groupDetail?.group?.name || '' }}</div>
             <button class="gift-modal-close" @click="closeGroupManager">✕</button>
@@ -4250,48 +4250,83 @@ onBeforeUnmount(() => {
 }
 .chat-head-action:hover { background: rgba(251, 191, 36, 0.26); }
 .grp-form { display: flex; flex-direction: column; gap: 8px; }
-.grp-label { font-size: 12px; color: #CBBF9E; }
-.grp-label em { color: #E05B4D; font-style: normal; }
+.grp-label { font-size: 12px; color: #333; }
+.grp-label em { color: #D32F2F; font-style: normal; }
 .grp-input {
-  width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 8px; color: #FBF8EF;
+  width: 100%; box-sizing: border-box; background: #fff;
+  border: 1px solid #B9B09E; border-radius: 8px; color: #141414;
   padding: 9px 11px; font-size: 13px; outline: none;
 }
-.grp-input:focus { border-color: rgba(251, 191, 36, 0.6); }
+.grp-input:focus { border-color: #1e2b4f; box-shadow: 0 0 0 2px rgba(30, 43, 79, 0.15); }
+.grp-input::placeholder { color: #9A9181; }
 .grp-textarea { min-height: 64px; resize: vertical; }
-.grp-tip { font-size: 11px; color: #A79B7F; line-height: 1.5; }
-.grp-error { font-size: 12px; color: #E05B4D; }
+.grp-tip { font-size: 11px; color: #6B6B6B; line-height: 1.5; }
+.grp-error { font-size: 12px; color: #D32F2F; }
 .grp-manager-modal { max-width: 400px; width: calc(100vw - 40px); }
 .grp-mgr-body { max-height: 62vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-.grp-mgr-info { display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px; }
+.grp-mgr-info { display: flex; flex-direction: column; gap: 6px; background: #F4EFE3; border-radius: 8px; padding: 10px; }
 .grp-info-row { display: flex; gap: 8px; font-size: 13px; }
-.grp-info-key { color: #A79B7F; min-width: 48px; }
-.grp-info-val { color: #FBF8EF; word-break: break-all; }
+.grp-info-key { color: #6B6B6B; min-width: 48px; }
+.grp-info-val { color: #141414; word-break: break-all; }
 .grp-mgr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .grp-act {
-  background: rgba(251, 191, 36, 0.12); color: #F7D488; border: 1px solid rgba(251, 191, 36, 0.3);
+  background: #fff; color: #1A1A1A; border: 1px solid #555;
   border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer;
 }
-.grp-act:hover { background: rgba(251, 191, 36, 0.24); }
-.grp-act-danger { background: rgba(224, 91, 77, 0.14); color: #F0907F; border-color: rgba(224, 91, 77, 0.35); }
+.grp-act:hover { background: #F4EFE3; border-color: #1e2b4f; color: #000; }
+.grp-act-danger { background: #D32F2F; color: #fff; border-color: #D32F2F; }
+.grp-act-danger:hover { background: #B71C1C; color: #fff; border-color: #B71C1C; }
 .grp-mgr-foot { padding: 8px 0 0; }
 .grp-mgr-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.grp-mgr-count { font-size: 12px; color: #A79B7F; }
+.grp-mgr-count { font-size: 12px; color: #6B6B6B; }
 .grp-member-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px; }
-.grp-member-row:hover { background: rgba(255, 255, 255, 0.04); }
+.grp-member-row:hover { background: #F4EFE3; }
 .grp-member-meta { flex: 1; min-width: 0; }
 .grp-member-ops { display: flex; gap: 4px; }
 .grp-op {
-  background: rgba(255, 255, 255, 0.07); color: #CBBF9E; border: none; border-radius: 6px;
+  background: #F4EFE3; color: #333; border: 1px solid #B9B09E; border-radius: 6px;
   width: 26px; height: 26px; font-size: 13px; cursor: pointer; line-height: 1;
 }
-.grp-op:hover { background: rgba(255, 255, 255, 0.16); }
-.grp-op-ok { color: #7BD88F; }
-.grp-op-no { color: #F0907F; }
+.grp-op:hover { background: #E8E0CE; border-color: #555; color: #000; }
+.grp-op-ok { background: #2E7D32; color: #fff; border-color: #2E7D32; }
+.grp-op-ok:hover { background: #1B5E20; color: #fff; }
+.grp-op-no { background: #D32F2F; color: #fff; border-color: #D32F2F; }
+.grp-op-no:hover { background: #B71C1C; color: #fff; }
 .grp-invite-search { margin: 2px 0; }
 .grp-invite-btn { font-size: 12px; padding: 4px 10px; }
-.grp-invited { font-size: 12px; color: #7BD88F; }
-.grp-mgr-empty { font-size: 12px; color: #A79B7F; text-align: center; padding: 14px 0; }
+.grp-invited { font-size: 12px; color: #2E7D32; font-weight: 600; }
+.grp-mgr-empty { font-size: 12px; color: #8A8A8A; text-align: center; padding: 14px 0; }
+
+/* ══ R10 群弹窗浅色化：白底黑字，图标与 UI 高反差（掌柜 2026-08-06 指令） ══ */
+.grp-modal-mask { background: rgba(20, 16, 10, 0.55) !important; backdrop-filter: blur(4px); }
+.grp-modal {
+  background: #FFFDF6 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45) !important;
+}
+.grp-modal .gift-modal-title { color: #141414 !important; }
+.grp-modal .gift-modal-close {
+  background: #EFE9DC !important; color: #141414 !important;
+  border-radius: 6px; line-height: 1; width: 26px; height: 26px;
+}
+.grp-modal .gift-modal-close:hover { background: #DCD3BF !important; color: #000 !important; }
+.grp-modal .gift-modal-foot { border-top: 1px solid rgba(0, 0, 0, 0.1); }
+.grp-modal .gift-modal-cancel {
+  background: #fff; color: #333; border: 1px solid #8A8175; border-radius: 8px;
+  padding: 7px 16px; font-size: 13px; cursor: pointer;
+}
+.grp-modal .gift-modal-cancel:hover { background: #F4EFE3; color: #000; }
+.grp-modal .gift-modal-send {
+  background: #1e2b4f; color: #fff; border: none; border-radius: 8px;
+  padding: 7px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.grp-modal .gift-modal-send:hover { background: #2A3B6E; }
+.grp-modal .gift-modal-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.grp-modal .member-name { color: #141414 !important; }
+.grp-modal .member-sub { color: #6B6B6B !important; }
+.grp-modal .bot-badge { color: #141414 !important; }
+.grp-modal .grp-mgr-body::-webkit-scrollbar { width: 6px; }
+.grp-modal .grp-mgr-body::-webkit-scrollbar-thumb { background: #C9C0AE; border-radius: 3px; }
 /* 礼物 inline（v-html） */
 .gift-inline {
   display: inline-flex; align-items: center; gap: 6px;
