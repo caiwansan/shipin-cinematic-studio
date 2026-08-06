@@ -78,4 +78,24 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'INTERNAL' })
     }
   })
+
+  // S6.1: 员工增强包（只读; JWT 鉴权; 数据源 = EcologyLicense + manifest.enhancements, S5.3 复用）
+  // Desktop 只展示不判断授权（授权判定仍在 Cloud）
+  app.get('/api/skills/employees/:code/enhancements', { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
+    try {
+      const tenantUserId = request.user?.id
+      if (!tenantUserId) return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      const emp = await getEmployeeSkillSet(request.params.code)
+      if (!emp) return reply.code(404).send({ error: 'EMPLOYEE_NOT_FOUND' })
+      const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+      const { getOrgEnhancementsForSkills } = await import('../ecosystem/plugin-enhancement.js')
+      const orgId = await getOrganizationIdForUser(tenantUserId).catch(() => null)
+      if (!orgId) return reply.send({ code: 0, data: { employeeCode: request.params.code, enhancements: [] } })
+      const enhs = await getOrgEnhancementsForSkills(String(orgId), emp.capabilities).catch(() => [])
+      return reply.send({ code: 0, data: { employeeCode: request.params.code, enhancements: enhs } })
+    } catch (e: any) {
+      request.log.error(e, 'employee enhancements failed')
+      return reply.code(500).send({ error: 'INTERNAL' })
+    }
+  })
 }
