@@ -299,3 +299,52 @@ export async function deliverNewMediaAssets(input: {
   }
   return { taskId, files, assets, userAssets }
 }
+
+/**
+ * S7.0: 法务合同审查资产交付（3 JSON, 复用 Asset/UserAsset, 零新表）
+ * 输入: contractReview / riskAnalysis / clauseOptimize（真实 LLM 结构化输出）
+ * 输出: contract-review.json + risk-analysis.json + clause-optimization.json → Asset + UserAsset
+ */
+export async function deliverLegalAssets(input: {
+  userId: string
+  taskId?: string
+  title?: string
+  contractReview?: any
+  riskAnalysis?: any
+  clauseOptimize?: any
+}): Promise<SkillAssetResult> {
+  const taskId = input.taskId || 'task-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
+  const dir = path.join(ASSET_DIR, taskId)
+  fs.mkdirSync(dir, { recursive: true })
+
+  const entries: { fileName: string; data: string }[] = []
+  if (input.contractReview) entries.push({ fileName: 'contract-review.json', data: JSON.stringify(input.contractReview, null, 2) })
+  if (input.riskAnalysis) entries.push({ fileName: 'risk-analysis.json', data: JSON.stringify(input.riskAnalysis, null, 2) })
+  if (input.clauseOptimize) entries.push({ fileName: 'clause-optimization.json', data: JSON.stringify(input.clauseOptimize, null, 2) })
+  if (!entries.length) throw new Error('LEGAL_ASSET_EMPTY: 无资产内容')
+
+  const files: SkillAssetResult['files'] = []
+  for (const e of entries) {
+    fs.writeFileSync(path.join(dir, e.fileName), e.data)
+    files.push({ fileName: e.fileName, url: `/uploads/skill-assets/${taskId}/${e.fileName}`, mimeType: 'application/json', size: fs.statSync(path.join(dir, e.fileName)).size })
+  }
+
+  const membership = await prisma.membership.findUnique({ where: { userId: input.userId } }).catch(() => null)
+  if (!membership) {
+    throw new Error('USER_NO_MEMBERSHIP: 用户无会员关系, UserAsset 无法创建')
+  }
+  const assets: any[] = []
+  const userAssets: any[] = []
+  for (const f of files) {
+    const asset = await prisma.asset.create({
+      data: { type: 'other', fileName: f.fileName, filePath: f.url, mimeType: f.mimeType, fileSize: f.size },
+    })
+    assets.push(asset)
+    const ua = await prisma.userAsset.create({
+      data: { userId: input.userId, title: `${input.title || '法务合同审查'}-${f.fileName}`, type: 'document', url: f.url, fileSize: f.size, source: 'skill_task' },
+    })
+    userAssets.push(ua)
+  }
+  return { taskId, files, assets, userAssets }
+}
+

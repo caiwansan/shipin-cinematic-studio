@@ -369,4 +369,116 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'INTERNAL', message: e.message })
     }
   })
+
+  // S7.0: 法务合同审查 3 Skill（Skill LLM Tool, 经 Unified AI Gateway; 禁 narrativeGateway/regulation 直连/自动法律行为）
+  // LG-01 contract.review: { contractText, contractType? } -> { summary, keyClauses(<=10), risks(<=10) }
+  app.post('/api/internal/skill-tools/contract-review', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.contractText) {
+        return reply.code(400).send({ error: 'CONTRACT_TEXT_REQUIRED' })
+      }
+      const { buildContractReviewPrompt, parseContractReviewResult } = await import('../ecosystem/legal-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildContractReviewPrompt({ contractText: String(body.contractText), contractType: body.contractType })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'CONTRACT_REVIEW_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseContractReviewResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal contract-review failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
+  // LG-02 risk.analysis: { contractText, focus? } -> { riskLevel, riskItems(<=10), suggestions(<=5) }
+  app.post('/api/internal/skill-tools/risk-analysis', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.contractText) {
+        return reply.code(400).send({ error: 'CONTRACT_TEXT_REQUIRED' })
+      }
+      const { buildRiskAnalysisPrompt, parseRiskAnalysisResult } = await import('../ecosystem/legal-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildRiskAnalysisPrompt({ contractText: String(body.contractText), focus: body.focus })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'RISK_ANALYSIS_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseRiskAnalysisResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal risk-analysis failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
+  // LG-03 clause.optimize: { clauseText, goal } -> { optimizedClause, reason, tradeoff }
+  app.post('/api/internal/skill-tools/clause-optimize', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.clauseText || !body.goal) {
+        return reply.code(400).send({ error: 'CLAUSE_AND_GOAL_REQUIRED' })
+      }
+      const { buildClauseOptimizePrompt, parseClauseOptimizeResult } = await import('../ecosystem/legal-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildClauseOptimizePrompt({ clauseText: String(body.clauseText), goal: String(body.goal) })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'CLAUSE_OPTIMIZE_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseClauseOptimizeResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal clause-optimize failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
 }

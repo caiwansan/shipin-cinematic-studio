@@ -159,6 +159,46 @@ const TOOL_REGISTRY = {
     }
     return { ok: true, result: body.data }
   },
+  // S7.0: 法务合同审查 3 薄工具（经后端内部路由 → Unified AI Gateway; 禁 narrativeGateway/regulation 直连）
+  'contract.review': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/contract-review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ contractText: input.contractText, contractType: input.contractType, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'CONTRACT_REVIEW_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'CONTRACT_REVIEW_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  'risk.analysis': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/risk-analysis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ contractText: input.contractText, focus: input.focus, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'RISK_ANALYSIS_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'RISK_ANALYSIS_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  'clause.optimize': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/clause-optimize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ clauseText: input.clauseText, goal: input.goal, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'CLAUSE_OPTIMIZE_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'CLAUSE_OPTIMIZE_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
   'mock-calc': (input = {}) => {
     const { a, b, op } = input
     if (op === 'add') return { ok: true, result: { value: Number(a) + Number(b) } }
