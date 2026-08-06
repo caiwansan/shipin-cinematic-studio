@@ -1055,11 +1055,11 @@ function msgAvatar(msg: any) {
   return av || ''
 }
 
-// 消息发送者昵称：authorName → 成员表 → 用户列表 → 异步解析 → 短 UID
+// 消息发送者昵称：自己 → authorName → 成员表 → 用户列表 → 异步解析 → 短 UID
 function msgAuthorName(msg: any) {
   if (!msg) return '茶客'
-  if (msg.authorName) return msg.authorName
   if (msg.fromUID === tea.userId.value) return '我'
+  if (msg.authorName) return msg.authorName
   const m = members.value.find((x) => x.uid === msg.fromUID)
   if (m?.name) return m.name
   const u = users.value.find((x) => x.id === msg.fromUID)

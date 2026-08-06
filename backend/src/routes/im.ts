@@ -358,16 +358,22 @@ export default async function imRoutes(fastify: FastifyInstance) {
       ? await prisma.imUserPresence.findMany({ where: { uid: { in: uids } } })
       : []
     const presenceMap = new Map(presences.map((p) => [p.uid, p.online]))
-    // 频道成员头像同步：imChannelMember.avatar 为空时回填 User.avatarUrl（会员中心上传的头像实时同步）
+    // 频道成员名字/头像同步：imChannelMember 快照落后时回填 User 最新昵称/头像（改昵称后茶馆全局生效）
     const uidsAll = members.map((m) => m.uid).filter((u) => UUID_RE.test(u))
     if (uidsAll.length) {
-      const userRows = await prisma.user.findMany({ where: { id: { in: uidsAll } }, select: { id: true, avatarUrl: true } })
-      const avatarMap = new Map(userRows.map((u) => [u.id, u.avatarUrl || '']))
+      const userRows = await prisma.user.findMany({ where: { id: { in: uidsAll } }, select: { id: true, username: true, nickname: true, email: true, avatarUrl: true } })
+      const userMap = new Map(userRows.map((u) => [u.id, u]))
       for (const m of members) {
-        const fresh = avatarMap.get(m.uid) || ''
-        if (fresh && m.avatar !== fresh) {
-          await prisma.imChannelMember.update({ where: { id: m.id }, data: { avatar: fresh } })
-          m.avatar = fresh
+        const row = userMap.get(m.uid)
+        const freshAvatar = row?.avatarUrl || ''
+        if (freshAvatar && m.avatar !== freshAvatar) {
+          await prisma.imChannelMember.update({ where: { id: m.id }, data: { avatar: freshAvatar } })
+          m.avatar = freshAvatar
+        }
+        const freshName = row ? (row.nickname || row.username || row.email?.split('@')[0] || m.name) : ''
+        if (freshName && m.name !== freshName) {
+          await prisma.imChannelMember.update({ where: { id: m.id }, data: { name: freshName } })
+          m.name = freshName
         }
       }
     }
