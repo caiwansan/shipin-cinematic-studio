@@ -81,6 +81,7 @@
               <span class="channel-name">{{ ch.name }}</span>
               <span class="channel-desc">{{ ch.desc }}</span>
             </div>
+            <span v-if="unreadMap[`${ch.type}:${ch.id}`]" class="unread-badge">{{ unreadMap[`${ch.type}:${ch.id}`] > 99 ? '99+' : unreadMap[`${ch.type}:${ch.id}`] }}</span>
           </div>
         </div>
 
@@ -591,7 +592,7 @@
 // 昆仑茶馆 — 三栏控制台（SPRINT-IM-CHA-02）
 // 左栏：会话导航（公共频道 / 我的频道 / 最近私聊）｜中栏：聊天｜右栏：成员 / 好友
 // SDK 仅浏览器可用，SSR 阶段不渲染逻辑
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, watchEffect } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useKunlunTea } from '~/composables/useKunlunTea'
 import { useRtcCall } from '~/composables/useRtcCall'
@@ -605,6 +606,8 @@ const route = useRoute()
 const channels = ref<any[]>([])
 const groups = ref<any[]>([])
 const dms = ref<any[]>([])
+// 私聊未读红点（非当前频道收到消息时累计，打开频道清零）
+const unreadMap = reactive<Record<string, number>>({})
 const currentChannel = ref<any>(null)
 const messages = ref<any[]>([])
 const members = ref<any[]>([])
@@ -648,6 +651,7 @@ const rtcRemoteAudioVideoRef = ref<HTMLVideoElement | null>(null)
 const rtcLocalVideoRef = ref<HTMLVideoElement | null>(null)
 const rtcDurText = ref('00:00')
 let rtcDurTimer: ReturnType<typeof setInterval> | null = null
+let dmPoll: ReturnType<typeof setInterval> | null = null
 // 视频流绑定（watchEffect：依赖 ref 挂载/流/状态任何变化都重试绑定，主叫/被叫时序都覆盖）
 watchEffect(() => {
   if (rtcRemoteVideoRef.value && rtc.remoteStream.value) {
@@ -1162,6 +1166,11 @@ async function loadChannels() {
   channels.value = data.public || []
   groups.value = data.groups || []
   dms.value = data.dms || []
+  // 全量订阅当前可见频道（幂等）：私聊/私有频道必须显式订阅才能收到实时消息；
+  // 新私聊会话通过定时刷新自动补订阅（B 在线未开私聊窗口也能实时收到）
+  for (const ch of [...channels.value, ...groups.value, ...dms.value]) {
+    tea.subscribeChannel(ch.id, ch.type)
+  }
   // 默认进入公共频道
   if (!currentChannel.value && channels.value.length) {
     switchChannel(channels.value[0])
@@ -1231,6 +1240,9 @@ async function switchChannel(ch: any) {
   currentChannel.value = ch
   messages.value = []
   members.value = []
+  // 打开频道 → 清未读
+  if (unreadMap[`${ch.type}:${ch.id}`]) unreadMap[`${ch.type}:${ch.id}`] = 0
+  tea.subscribeChannel(ch.id, ch.type)
   await Promise.all([loadHistory(), loadMembersFor(ch)])
   scrollBottom()
 }
@@ -1255,6 +1267,9 @@ async function openPrivate(u: any) {
   syncBodyLock()
   messages.value = []
   members.value = []
+  // 打开频道 → 清未读
+  if (unreadMap[`${ch.type}:${ch.id}`]) unreadMap[`${ch.type}:${ch.id}`] = 0
+  tea.subscribeChannel(ch.id, ch.type)
   await loadHistory()
   scrollBottom()
 }
@@ -1691,9 +1706,16 @@ onMounted(async () => {
   }
   tea.onMessage((msg: any) => {
     const ch = currentChannel.value
-    if (!ch) return
     const msgChannel = msg.channel
-    if (msgChannel && (msgChannel.channelID !== ch.id || msgChannel.channelType !== ch.type)) return
+    const isCurrent = ch && msgChannel && msgChannel.channelID === ch.id && msgChannel.channelType === ch.type
+    // 非当前频道的私聊消息：累计未读红点（不打断当前聊天）；当前频道消息才渲染
+    if (!isCurrent) {
+      const cid = msgChannel ? `${msgChannel.channelType}:${msgChannel.channelID}` : ''
+      if (cid && msg.fromUID !== tea.userId.value && msgChannel.channelType === 4) {
+        unreadMap[cid] = (unreadMap[cid] || 0) + 1
+      }
+      return
+    }
     if (msg.fromUID === tea.userId.value) return
     messages.value.push({ ...msg, fromUID: msg.fromUID || msg.from_uid, key: msgKey(msg) })
     // 红包消息 → 拉取实时状态（卡片显示「领取红包/已被领完」）
@@ -1744,6 +1766,8 @@ onMounted(async () => {
   })
 
   await Promise.all([loadChannels(), loadUsers()])
+  // 会话列表定时刷新：新私聊频道 20s 内自动订阅（在线未开窗也能实时收到）
+  dmPoll = setInterval(() => { loadChannels().catch(() => {}) }, 20000)
   // USER-FOLLOW-01：关注统计 + 关注列表 + 名录关注状态点亮
   loadFollowStats()
   loadFollowList('following')
@@ -1773,6 +1797,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (dmPoll) clearInterval(dmPoll)
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('click', onWindowClick)
   window.removeEventListener('keydown', onKeydown)
@@ -1927,6 +1952,7 @@ onBeforeUnmount(() => {
 .channel-meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .channel-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .channel-desc { font-size: 11px; color: var(--color-text-muted, #6F6A5C); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.unread-badge { flex-shrink: 0; min-width: 18px; height: 18px; padding: 0 5px; margin-left: auto; border-radius: 9px; background: #E4572E; color: #FFF; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
 .sidebar-foot { margin-top: auto; padding: 8px 8px 0; font-size: 11px; color: var(--color-text-disabled, #A39D8E); }
 
 /* 中栏 */

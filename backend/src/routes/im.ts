@@ -139,7 +139,10 @@ async function userDisplay(user: { id: string; username: string; email: string; 
   return { id: user.id, name: user.username || user.email.split('@')[0], avatar: user.avatarUrl || '', role: 0 }
 }
 
-// 私聊频道 ID：dm_<小uid>_<大uid>（uuid 字符串序）
+// 私聊频道 ID：dm_<小uid>_<大uid>（uuid 字符串序，保证幂等）
+// ⚠️ 不用单聊（channel_type=1）：WuKongIM v1.2.6 fake 单聊频道投递目标 = 按 '@' 拆分频道 ID，
+//    但 fake 频道无 channel_members 记录 → 用户连接不自动订阅 → 对端在线也收不到；
+//    私聊改用显式私有频道（channel_type=4，与 RTC 信令同模式）：subscriber_add 双方 → 连接自动订阅，投递/历史/会话全通
 export function dmChannelId(a: string, b: string) {
   const [lo, hi] = a < b ? [a, b] : [b, a]
   return `dm_${lo}_${hi}`
@@ -205,9 +208,9 @@ export default async function imRoutes(fastify: FastifyInstance) {
         kind: 'public',
       },
     ]
-    // 我参与的私聊频道（channel_type=1），带对方信息
+    // 我参与的私聊频道（channel_type=4 显式私有频道），带对方信息
     const myMemberships = await prisma.imChannelMember.findMany({
-      where: { uid: userId, channelType: 1 },
+      where: { uid: userId, channelType: 4 },
       orderBy: { joinedAt: 'desc' },
       take: 50,
     })
@@ -303,29 +306,34 @@ export default async function imRoutes(fastify: FastifyInstance) {
 
     const channelId = dmChannelId(userId, peerUid)
     const me = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, username: true, email: true, avatarUrl: true } })
+    // 私聊 = 显式私有频道（channel_type=4，RTC 信令同模式）：创建频道 + 订阅双方。
+    // 不能用单聊(type=1)：fake 频道无成员记录，对端连接不自动订阅 → 收不到消息（R11 后掌柜真机实证）
     try {
-      // 单聊频道（channel_type=1）为隐式频道：WuKongIM 不支持显式创建（报「暂不支持个人频道」），
-      // 只需订阅双方（subscribers 为 uid 字符串数组）；业务侧写成员表供三栏成员列表使用
+      await wkApi('/channel', { channel_id: channelId, channel_type: 4 })
+    } catch (e) {
+      console.warn('[im] ensure-private 创建频道跳过:', (e as Error).message)
+    }
+    try {
       await wkApi('/channel/subscriber_add', {
         channel_id: channelId,
-        channel_type: 1,
+        channel_type: 4,
         subscribers: [userId, peerUid],
       })
     } catch (e) {
-      console.warn('[im] ensure-private subscriber_add 跳过:', (e as Error).message)
+      return reply.status(502).send({ success: false, error: '订阅私聊频道失败: ' + (e as Error).message })
     }
     try {
       const myDisp = me ? await userDisplay(me) : { id: userId, name: userId, avatar: '', role: 0 }
       const peerDisp = await userDisplay(peer)
-      await ensureMember({ channelId, channelType: 1, uid: userId, name: myDisp.name, avatar: myDisp.avatar })
-      await ensureMember({ channelId, channelType: 1, uid: peerUid, name: peerDisp.name, avatar: peerDisp.avatar })
+      await ensureMember({ channelId, channelType: 4, uid: userId, name: myDisp.name, avatar: myDisp.avatar })
+      await ensureMember({ channelId, channelType: 4, uid: peerUid, name: peerDisp.name, avatar: peerDisp.avatar })
     } catch (e) {
       console.warn('[im] ensure-private 写成员表失败:', (e as Error).message)
     }
     return {
       success: true,
       data: {
-        channel: { id: channelId, type: 1, name: peer.username, kind: 'dm', peerUid },
+        channel: { id: channelId, type: 4, name: peer.username, kind: 'dm', peerUid },
         peer: { id: peer.id, name: peer.username, email: peer.email },
       },
     }

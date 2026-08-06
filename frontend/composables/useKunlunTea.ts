@@ -185,6 +185,13 @@ export function useKunlunTea() {
     return sdk.chatManager.send(content, channel)
   }
 
+  /** 订阅频道（显式订阅：私聊/私有频道必须订阅才能收到实时消息；listener 置空避免与全局 onMessage 双渲染） */
+  function subscribeChannel(channelId: string, channelType: number) {
+    if (!sdk) return
+    const channel = sdk.newChannel(channelId, channelType)
+    sdk.onSubscribe(channel, () => {})
+  }
+
   /** 拉取频道历史消息（走昆仑镜代理） */
   async function loadHistory(channelId: string, channelType: number, startSeq = 0, limit = 50) {
     const res = await authFetch('/api/im/messages/history', {
@@ -242,5 +249,5 @@ export function useKunlunTea() {
     }
   }
 
-  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, onMessage, onCMD, sendCMD, onSendStatus, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
+  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, onMessage, onCMD, sendCMD, onSendStatus, sendText, subscribeChannel, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
 }
