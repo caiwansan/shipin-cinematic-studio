@@ -79,6 +79,38 @@ export function useKunlunTea() {
     sdk.config.token = token
     userId.value = uid
 
+    // IM-CHA-M10.2 修复：SDK 默认把 type=2 当图片（MessageImage）解码，服务端代发消息
+    // （红包/礼物/抢红包/撤回）payload={type:2, content:{kind,...}} 嵌套字段全被丢弃
+    // → 好友实时收到的红包/礼物渲染为空（history 正常因前端自己解 payload）。
+    // 注册增强解码类：平铺嵌套 content，图片（url/width/height）与代发消息（kind）双兼容
+    try {
+      const mod = await getSDKModule()
+      const JSONContentClass = class JSONContent extends mod.MessageContent {
+        raw: any = null
+        content: any = null
+        constructor() { super() }
+        get contentType() { return 2 }
+        decodeJSON(c: any) {
+          this.raw = c
+          if (c && typeof c === 'object') {
+            if (c.content && typeof c.content === 'object') {
+              this.content = c.content
+              Object.assign(this, c.content)
+            } else if (typeof c.content === 'string') {
+              this.content = c.content
+            }
+            if (c.type !== undefined) this.type = c.type
+          }
+        }
+        encodeJSON() {
+          return this.raw?.content && typeof this.raw.content === 'object' ? this.raw.content : this.raw || {}
+        }
+      }
+      sdk.register(2, () => new JSONContentClass())
+    } catch (e) {
+      console.warn('[昆仑茶馆] type=2 解码增强注册失败（非致命）', e)
+    }
+
     // SDK provider：频道成员列表走昆仑镜 API（WuKongIM v1.2.6 无订阅者查询接口）
     try {
       if (sdk.config.provider) {
