@@ -36,6 +36,7 @@ struct LocalCredentials {
     device_fingerprint: Option<String>,
     access_token: Option<String>,
     user_name: Option<String>,
+    user_id: Option<String>,
     organization_id: Option<String>,
 }
 
@@ -62,6 +63,7 @@ fn save_credentials(
     device_fingerprint: Option<String>,
     access_token: Option<String>,
     user_name: Option<String>,
+    user_id: Option<String>,
     organization_id: Option<String>,
 ) -> Result<(), String> {
     let store = app.store(CRED_STORE).map_err(|e| e.to_string())?;
@@ -71,6 +73,7 @@ fn save_credentials(
     if let Some(v) = device_fingerprint { creds.device_fingerprint = Some(v); }
     if let Some(v) = access_token { creds.access_token = Some(v); }
     if let Some(v) = user_name { creds.user_name = Some(v); }
+    if let Some(v) = user_id { creds.user_id = Some(v); }
     if let Some(v) = organization_id { creds.organization_id = Some(v); }
     store.set("credentials", serde_json::to_value(&creds).map_err(|e| e.to_string())?);
     store.save().map_err(|e| e.to_string())?;

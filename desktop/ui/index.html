@@ -91,6 +91,9 @@
         <h1>我的应用</h1>
         <div class="sub" id="sub-apps">加载中…</div>
         <div class="grid" id="apps-grid"></div>
+        <h2 style="margin-top:28px">AI 员工</h2>
+        <div class="sub" id="sub-employees">加载中…</div>
+        <div class="grid" id="employees-grid"></div>
       </div>
       <div id="page-plugins" class="hidden">
         <h1>插件授权</h1>
@@ -238,7 +241,7 @@ const API_BASE = (window.__KUNLUN_API__) || 'https://aigc.fushtn.com';
 const WORKSPACE_BASE = 'https://aigc.fushtn.com';
 const isKunlunTauri = !!(window.__TAURI_INTERNALS__) || !!window.isTauri;
 
-let creds = { device_id: null, device_token: null, device_fingerprint: null, access_token: null, user_name: null, organization_id: null };
+let creds = { device_id: null, device_token: null, device_fingerprint: null, access_token: null, user_name: null, user_id: null, organization_id: null };
 let apps = [];
 let plugins = [];
 
@@ -296,12 +299,47 @@ async function doLogin() {
     if (!token) throw new Error(data.message || '登录失败');
     creds.access_token = token;
     creds.user_name = data.user?.email || data.user?.name || account;
+    creds.user_id = data.user?.id || null;
     creds.organization_id = data.user?.organizationId || null;
-    await invoke('save_credentials', { access_token: token, user_name: creds.user_name, organization_id: creds.organization_id });
+    await invoke('save_credentials', { access_token: token, user_name: creds.user_name, user_id: creds.user_id, organization_id: creds.organization_id });
     await ensureDevice();
     showMain();
-    await refreshApps(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus();
+    await refreshApps(); await refreshEmployees(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus();
   } catch (e) { $('login-err').textContent = e.message; }
+}
+
+// ── AI 员工（S4.3 DP1/DP3: 岗位化入口 + 授权状态展示）──
+// 铁律: 授权判断来源 = Cloud API（/api/skills/employees/:code/entitlement）; Desktop 不本地判断
+// 启动 = 请求打开线上工作台员工页; Desktop 不执行 Skill/不承载 Hermes
+async function refreshEmployees() {
+  try {
+    const data = await api('/api/skills/mapping/agent-definitions');
+    const defs = (data?.defs || []).filter(d => d.status === 'active');
+    $('sub-employees').textContent = `${defs.length} 位 AI 员工 · 授权状态来自云端`;
+    $('employees-grid').innerHTML = (await Promise.all(defs.map(async (d) => {
+      let state = 'NONE', reason = '';
+      try {
+        const ent = await api(`/api/skills/employees/${encodeURIComponent(d.code)}/entitlement?tenantUserId=${encodeURIComponent(creds.user_id || '')}`);
+        state = ent?.entitlementState || 'NONE'; reason = ent?.reason || '';
+      } catch (e) { /* 状态未知按未授权展示 */ }
+      const authorized = state === 'ACTIVE';
+      return `<div class="app-card">
+        <div class="name">${d.code.replace(/^def-/, '')} ${authorized ? '<span class="badge ok">已授权</span>' : '<span class="badge warn">需要购买</span>'}</div>
+        <div class="desc">${(d.capabilities || []).map(c => '<span class="badge">' + c + '</span>').join(' ')}</div>
+        <div class="row">
+          <span class="muted">${authorized ? '可启动' : (reason || '未授权')}</span>
+          <button data-employee="${d.code}" ${authorized ? '' : 'disabled title="该企业未授权此员工（需购买）"'}>启动</button>
+        </div>
+      </div>`;
+    }))).join('');
+    document.querySelectorAll('[data-employee]').forEach(b => b.addEventListener('click', () => {
+      if (b.disabled) return;
+      // 启动 = 请求打开线上工作台员工页（白名单域; Desktop 不执行 Skill/不承载 Hermes）
+      const url = `${WORKSPACE_BASE}/media-department/workspace?employee=${encodeURIComponent(b.dataset.employee)}`;
+      if (isKunlunTauri) invoke('open_workspace', { url }).catch(e => { $('sub-employees').textContent = '❌ ' + e.message; });
+      else window.open(url, '_blank');
+    }));
+  } catch (e) { $('sub-employees').textContent = `❌ ${e.message}`; }
 }
 
 // ── 设备注册（首次：随机指纹 + 签名 token + 用户确认=已登录）──

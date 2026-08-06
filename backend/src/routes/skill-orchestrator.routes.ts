@@ -49,6 +49,20 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
     }
   })
 
+  // S4.3 DP3: 员工授权状态（Cloud 来源; Desktop 只展示不判断; S4.3 后改 JWT）
+  app.get('/api/skills/employees/:code/entitlement', async (request: any, reply: any) => {
+    try {
+      const tenantUserId = request.query?.tenantUserId
+      if (!tenantUserId) return reply.code(400).send({ error: 'TENANT_USER_ID_REQUIRED' })
+      const ent = await checkEmployeeEntitlement(tenantUserId, request.params.code)
+      const state = ent.allowed ? 'ACTIVE' : /NO_ORGANIZATION|NO_ENTITLEMENT/.test(ent.reason) ? 'NONE' : 'NOT_ENTITLED'
+      return reply.send({ code: 0, data: { employeeCode: request.params.code, entitlementState: state, reason: ent.reason } })
+    } catch (e: any) {
+      request.log.error(e, 'employee entitlement failed')
+      return reply.code(500).send({ error: 'INTERNAL' })
+    }
+  })
+
   // S4.2 Task 05: Usage Meter（只读; tenantUserId 从 query 传, S4.3 改 JWT）
   app.get('/api/skills/employees/:code/usage', async (request: any, reply: any) => {
     try {
