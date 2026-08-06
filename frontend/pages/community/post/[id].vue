@@ -85,8 +85,8 @@
           <!-- 打赏名单 + 礼物记录 -->
           <div v-if="tipsData.records.length > 0" class="tips-list">
             <div v-for="(t, i) in tipsData.records" :key="i" class="tip-item">
-              <span class="tip-avatar">{{ t.senderAvatar ? '' : '👤' }}<img v-if="t.senderAvatar" :src="t.senderAvatar" class="tip-avatar-img" /></span>
-              <span class="tip-name">{{ t.senderName }}</span>
+              <span class="tip-avatar clickable" :title="`查看 ${t.senderName} 资料`" @click="openUserCard(t, $event)">{{ t.senderAvatar ? '' : '👤' }}<img v-if="t.senderAvatar" :src="t.senderAvatar" class="tip-avatar-img" /></span>
+              <span class="tip-name clickable" :title="`查看 ${t.senderName} 资料`" @click="openUserCard(t, $event)">{{ t.senderName }}</span>
               <span class="tip-gift">送 <span class="tip-gift-icon">{{ t.giftIcon || '🎁' }}</span> {{ t.giftName }} × {{ t.count }}</span>
               <span class="tip-diamonds">{{ t.totalDiamonds }} 钻</span>
               <span class="tip-time">{{ formatTime(t.lastAt) }}</span>
@@ -94,6 +94,9 @@
           </div>
           <p v-else class="tips-empty">还没有人打赏，喜欢这个帖子就送楼主一份礼物吧～</p>
         </section>
+
+        <!-- COMMUNITY-TIP-01.1 打赏人资料卡（点头像/名字弹出） -->
+        <CommunityUserCardPopover ref="userCardRef" @require-login="showLogin = true" />
 
         <!-- 评论区 -->
         <section class="comments-section">
@@ -232,6 +235,12 @@ const tipSending = ref(false)
 const tipping = ref(false)
 const coinsPercent = ref(65)
 const tipsData = ref<{ total: number; totalDiamonds: number; records: any[] }>({ total: 0, totalDiamonds: 0, records: [] })
+
+// ─── COMMUNITY-TIP-01.1 打赏人资料卡 ───
+const userCardRef = ref<any>(null)
+function openUserCard(t: any, event: MouseEvent) {
+  userCardRef.value?.open({ id: t.senderId, name: t.senderName, avatar: t.senderAvatar || '' }, event)
+}
 
 // ─── SSR 数据获取 ───
 const { data: post, pending, error, refresh } = await useAsyncData(
@@ -1104,6 +1113,8 @@ onMounted(() => {
   background: rgba(249,115,22,0.1);
   overflow: hidden;
 }
+.tip-avatar.clickable, .tip-name.clickable { cursor: pointer; }
+.tip-avatar.clickable:hover, .tip-name.clickable:hover { filter: brightness(1.25); }
 .tip-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .tip-name { color: rgba(249,115,22,0.85); font-weight: 600; }
 .tip-gift { color: rgba(255,255,255,0.65); }

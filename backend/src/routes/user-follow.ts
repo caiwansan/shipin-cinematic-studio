@@ -151,4 +151,49 @@ export default async function userFollowRoutes(fastify: FastifyInstance) {
     const mutual = followers.filter((f) => followingSet.has(f.followerId)).map((f) => f.followerId)
     return toApiResponse({ mutual }) satisfies unknown
   })
+
+  // GET /api/user/card/:id — 用户公开资料卡（打赏名单点头像弹出；未登录可看，登录附加关注状态）
+  fastify.get('/api/user/card/:id', async (request: any, reply: FastifyReply) => {
+    const targetId = (request.params as any).id as string
+    if (!uuidRe.test(targetId)) return reply.code(400).send(toApiResponse({ error: '无效用户' }) satisfies unknown)
+    const u = await prisma.user.findUnique({
+      where: { id: targetId },
+      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true },
+    })
+    if (!u) return reply.code(404).send(toApiResponse({ error: '用户不存在' }) satisfies unknown)
+    const [followingCount, followerCount, presence] = await Promise.all([
+      prisma.userFollow.count({ where: { followerId: targetId } }),
+      prisma.userFollow.count({ where: { followingId: targetId } }),
+      prisma.imUserPresence.findUnique({ where: { uid: targetId } }),
+    ])
+    // 可选登录：附加我对该用户的关注状态（无效 token 静默降级为未登录）
+    let isSelf = false
+    let isFollowing: boolean | null = null
+    const authHeader = (request.headers as any).authorization || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+    if (token) {
+      try {
+        const decoded: any = (request.server as any).jwt.verify(token)
+        if (decoded && decoded.id) {
+          isSelf = decoded.id === targetId
+          if (!isSelf) {
+            const f = await prisma.userFollow.findUnique({
+              where: { followerId_followingId: { followerId: decoded.id, followingId: targetId } },
+            })
+            isFollowing = !!f
+          } else isFollowing = false
+        }
+      } catch { /* 无效 token 忽略 */ }
+    }
+    return toApiResponse({
+      id: u.id,
+      name: u.username || u.email.split('@')[0],
+      avatar: u.avatarUrl || '',
+      online: presence?.online ?? false,
+      followingCount,
+      followerCount,
+      isSelf,
+      isFollowing,
+    }) satisfies unknown
+  })
 }
