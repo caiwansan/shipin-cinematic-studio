@@ -283,7 +283,8 @@
             <button class="gift-modal-close" @click="rpPanelOpen = false">✕</button>
           </div>
           <div class="rp-body">
-            <div class="rp-mode-row">
+            <!-- 私聊 = 直接红包（微信风格）：固定金额单个，无拼手气/个数 -->
+            <div v-if="!isDmChannel" class="rp-mode-row">
               <button :class="['rp-mode-btn', rpForm.mode === 'lucky' ? 'is-on' : '']" @click="rpForm.mode = 'lucky'">
                 <span class="rp-mode-icon">🎲</span>拼手气红包
                 <small>每人随机</small>
@@ -294,7 +295,7 @@
               </button>
             </div>
             <div class="rp-field">
-              <label>单个金额</label>
+              <label>{{ isDmChannel ? '金额' : '单个金额' }}</label>
               <div class="rp-amount-row">
                 <div class="rp-amount-box">
                   <input v-model.number="rpForm.amount" type="number" min="1" class="rp-amount-input" />
@@ -305,7 +306,7 @@
                 </div>
               </div>
             </div>
-            <div class="rp-field">
+            <div v-if="!isDmChannel" class="rp-field">
               <label>红包个数</label>
               <div class="rp-amount-box">
                 <input v-model.number="rpForm.count" type="number" min="1" max="200" class="rp-amount-input" />
@@ -346,7 +347,7 @@
                 <div class="rp-big-amount">+{{ rpDetail.mine.amount }}<small>钻石</small></div>
               </template>
               <template v-else-if="rpDetail.status === 'completed' || rpDetail.remainCount <= 0">
-                <div class="rp-big-msg">😅 手慢了，被抢完了</div>
+                <div class="rp-big-msg">{{ rpDetail.dm ? '红包已被领取' : '😅 手慢了，被抢完了' }}</div>
               </template>
               <template v-else-if="rpDetail.status === 'refunded'">
                 <div class="rp-big-msg">🕰️ 已过期退回</div>
@@ -357,11 +358,12 @@
             </div>
             <div class="rp-detail-note">{{ rpDetail.note || '恭喜发财，大吉大利！' }}</div>
             <div class="rp-detail-from">{{ rpDetail.sender?.name || '茶客' }} 的红包</div>
-            <div class="rp-detail-remain">剩 {{ rpDetail.remainCount }} 个 · {{ rpDetail.remainDiamonds }} 钻石</div>
+            <div v-if="rpDetail.dm" class="rp-detail-remain">共 {{ rpDetail.totalDiamonds }} 钻石{{ rpDetail.mine ? ' · 已领取' : ' · 待领取' }}</div>
+            <div v-else class="rp-detail-remain">剩 {{ rpDetail.remainCount }} 个 · {{ rpDetail.remainDiamonds }} 钻石</div>
           </div>
           <div class="rp-detail-grabs">
-            <div class="rp-grabs-title">抢红包记录</div>
-            <div v-if="!rpDetail.grabs.length" class="rp-grabs-empty">还没有人抢到</div>
+            <div class="rp-grabs-title">{{ rpDetail.dm ? '领取记录' : '抢红包记录' }}</div>
+            <div v-if="!rpDetail.grabs.length" class="rp-grabs-empty">{{ rpDetail.dm ? '还没有领取' : '还没有人抢到' }}</div>
             <div v-for="g in rpDetail.grabs" :key="g.userId" class="rp-grab-item">
               <div class="msg-avatar rp-grab-avatar">
                 <img v-if="g.avatar" :src="g.avatar" alt="" />
@@ -372,7 +374,7 @@
             </div>
           </div>
           <div class="gift-modal-foot rp-detail-foot">
-            <div class="gift-foot-info"><span class="gift-foot-empty">{{ rpDetail.totalDiamonds }} 钻石 · {{ rpDetail.count }} 个</span></div>
+            <div class="gift-foot-info"><span class="gift-foot-empty">{{ rpDetail.totalDiamonds }} 钻石{{ rpDetail.dm ? '' : ' · ' + rpDetail.count + ' 个' }}</span></div>
             <button class="gift-send-btn" @click="closeRpDetail">收下</button>
           </div>
         </div>
@@ -958,11 +960,17 @@ function renderMsg(msg: any) {
     const note = escapeHtml(rpInfo.note || '恭喜发财，大吉大利！')
     const st: any = (msg as any)._rpStatus
     const isMine = typeof tea.userId.value === 'string' && msg.fromUID === tea.userId.value
+    const isDmRp = !!rpInfo.dm // 私聊直接红包（微信风格）：无个数/抢包概念
     let statusLine = '…'
     let done = false
     if (st) {
       done = st.status === 'completed' || st.status === 'refunded' || st.remainCount <= 0
-      if (st.grabbedByMe) statusLine = `查看红包 · 已抢 ${st.mine?.amount ?? '?'} 钻`
+      if (isDmRp) {
+        if (st.grabbedByMe) statusLine = `已领取 +${st.mine?.amount ?? ''} 钻`
+        else if (st.status === 'refunded') statusLine = '红包已过期退回'
+        else if (st.status === 'completed') statusLine = '红包已被领取'
+        else statusLine = isMine ? '查看红包' : '领取红包'
+      } else if (st.grabbedByMe) statusLine = `查看红包 · 已抢 ${st.mine?.amount ?? '?'} 钻`
       else if (st.status === 'refunded') statusLine = '红包已过期退回'
       else if (st.status === 'completed' || st.remainCount <= 0) statusLine = '红包已被领完'
       else statusLine = isMine ? `查看红包 · 剩 ${st.remainCount} 个` : `领取红包 · 剩 ${st.remainCount} 个`
@@ -975,6 +983,13 @@ function renderMsg(msg: any) {
       `<div class="rp-card-mid"><span class="rp-open">開</span></div>` +
       `<div class="rp-card-status${mineCls}">${statusLine}</div>` +
       `</div></div>`
+  }
+  // 私聊领取通知（微信风格：XX 领取了红包）
+  const grabbedInfo = extractRedPacketGrabbedInfo(msg)
+  if (grabbedInfo) {
+    const isMine = typeof tea.userId.value === 'string' && msg.fromUID === tea.userId.value
+    const who = isMine ? '你' : escapeHtml(grabbedInfo.userName || memberName(msg.fromUID) || shortUid(msg.fromUID))
+    return `<span class="rp-grab-inline rp-grabbed-notice">🧧 ${who} 领取了红包</span>`
   }
   // 抢红包结果（服务端代发「XX 抢到 X 钻石」）
   const grabInfo = extractRedPacketGrabInfo(msg)
@@ -1062,7 +1077,7 @@ function extractRedPacketInfo(msg: any): any {
   return null
 }
 
-// 提取抢红包结果信息
+// 提取抢红包结果信息（群聊：XX 抢到 X 钻石）
 function extractRedPacketGrabInfo(msg: any): any {
   if (!msg) return null
   const probe = (obj: any) => (obj && typeof obj === 'object' && obj.kind === 'red_packet_grab' ? obj : null)
@@ -1091,6 +1106,34 @@ function extractRedPacketGrabInfo(msg: any): any {
 }
 
 // 提取撤回通知信息（kind=recall；服务端代发 type=6）
+// 提取私聊领取通知（微信风格：XX 领取了红包）
+function extractRedPacketGrabbedInfo(msg: any): any {
+  if (!msg) return null
+  const probe = (obj: any) => (obj && typeof obj === 'object' && obj.kind === 'red_packet_grabbed' ? obj : null)
+  if (msg.content && typeof msg.content === 'object') {
+    const a = probe(msg.content)
+    if (a) return a
+    const b = probe(msg.content.content)
+    if (b) return b
+  }
+  if (msg.payload) {
+    try {
+      const bin = atob(msg.payload)
+      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+      const decoded = JSON.parse(new TextDecoder().decode(bytes))
+      const c = decoded.content
+      const hit = probe(c)
+      if (hit) return hit
+      if (c && typeof c === 'object') {
+        const hit2 = probe(c.content)
+        if (hit2) return hit2
+      }
+      return probe(decoded)
+    } catch { return null }
+  }
+  return null
+}
+
 function extractRecallInfo(msg: any): any {
   if (!msg) return null
   const probe = (obj: any) => (obj && typeof obj === 'object' && obj.kind === 'recall' ? obj : null)
@@ -1939,6 +1982,9 @@ let rpDetailLoadSeq = 0 // 防止异步详情覆盖新弹窗
 
 function openRedPacketPanel() {
   if (!currentChannel.value) return
+  if (isDmChannel.value) {
+    rpForm.value = { mode: 'normal', amount: 10, count: 1, note: '恭喜发财，大吉大利！' }
+  }
   loadDiamondBalance()
   rpPanelOpen.value = true
 }
@@ -1946,7 +1992,11 @@ function openRedPacketPanel() {
 async function sendRedPacket() {
   if (!currentChannel.value || rpSending.value) return
   const { mode, amount, count, note } = rpForm.value
-  if (!amount || !count || amount * count < count) return showToast('⚠ 金额不能少于个数')
+  // 私聊直接红包：强制单个固定金额（后端同规则防御）
+  const isDm = currentChannel.value.kind === 'dm'
+  const finalCount = isDm ? 1 : count
+  const finalMode = isDm ? 'normal' : mode
+  if (!amount || !finalCount || amount * finalCount < finalCount) return showToast('⚠ 金额不能少于个数')
   rpSending.value = true
   try {
     const r = await fetch('/api/im/red-packets', {
@@ -1955,27 +2005,27 @@ async function sendRedPacket() {
       body: JSON.stringify({
         channelId: currentChannel.value.id,
         channelType: currentChannel.value.type,
-        totalDiamonds: amount * count,
-        count,
-        mode,
+        totalDiamonds: amount * finalCount,
+        count: finalCount,
+        mode: finalMode,
         note,
       }),
     })
     const j = await r.json()
     if (j.success) {
-      diamondBalance.value = Math.max(0, diamondBalance.value - amount * count)
+      diamondBalance.value = Math.max(0, diamondBalance.value - amount * finalCount)
       // 本地即时补红包卡片（服务端已代发，不等 WS 推送）
       messages.value.push({
         fromUID: tea.userId.value,
         authorName: '我',
         timestamp: Math.floor(Date.now() / 1000),
-        content: { kind: 'red_packet', id: j.data.id, note, totalDiamonds: amount * count, count, mode },
+        content: { kind: 'red_packet', id: j.data.id, note, totalDiamonds: amount * finalCount, count: finalCount, mode: finalMode, dm: isDm },
         key: 'rp-' + Date.now(),
       })
       scrollBottom()
       refreshRpStatuses() // 卡片状态（自己发的显示「查看红包 · 剩 N 个」）
       rpPanelOpen.value = false
-      showToast(`🧧 红包已发出（${amount * count} 钻石）`)
+      showToast(`🧧 红包已发出（${amount * finalCount} 钻石）`)
     } else {
       showToast('⚠ ' + (j.error || '发红包失败'))
       if (j.code === 'DIAMOND_INSUFFICIENT') loadDiamondBalance()
@@ -2019,6 +2069,7 @@ async function grabRedPacket() {
       rpAnimTimer = setTimeout(() => { rpAnim.value = null }, 3200)
       // 重新拉详情显示「我抢到」+ 抢包记录
       await openRpDetail(rpDetail.value.id)
+      refreshRpStatuses() // 领取后卡片状态即时更新（私聊：已领取 +X 钻）
     } else {
       showToast('⚠ ' + (j.error || '抢红包失败'))
       await openRpDetail(rpDetail.value.id) // 刷新状态（可能已被抢完）
@@ -2108,7 +2159,7 @@ onMounted(async () => {
     }
     messages.value.push({ ...msg, fromUID: msg.fromUID || msg.from_uid, key: msgKey(msg) })
     // 红包消息 → 拉取实时状态（卡片显示「领取红包/已被领完」）
-    if (extractRedPacketInfo(msg)) refreshRpStatuses()
+    if (extractRedPacketInfo(msg) || extractRedPacketGrabbedInfo(msg)) refreshRpStatuses()
     // 他人送的礼物 → 全屏动画（服务端代发 payload: {type:2, content:{kind:'gift'}}）
     const giftInfo = extractGiftInfo(msg)
     if (giftInfo) {
@@ -3259,6 +3310,7 @@ onBeforeUnmount(() => {
 .rp-card.is-done .rp-card-status { color: #F5EFE6; }
 .rp-card.is-done .rp-card-note { color: rgba(255, 250, 242, 0.85); }
 .rp-grab-inline { font-size: 12px; color: #6F6A5C; }
+.rp-grabbed-notice { display: inline-block; background: rgba(0, 0, 0, 0.04); border-radius: 4px; padding: 2px 8px; }
 .rp-grab-amt-inline { color: #B03A2E; font-weight: 700; }
 
 /* ══ 抢红包弹窗（大红包一体式） ══ */

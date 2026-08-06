@@ -93,7 +93,11 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
     if (!Number.isInteger(total) || total < 1) return reply.status(400).send({ success: false, error: '红包金额必须 ≥ 1 钻石' })
     if (!Number.isInteger(cnt) || cnt < 1 || cnt > 200) return reply.status(400).send({ success: false, error: '红包个数必须为 1-200' })
     if (total < cnt) return reply.status(400).send({ success: false, error: '金额不能少于个数（每人至少 1 钻石）' })
-    const m = mode === 'normal' ? 'normal' : 'lucky'
+    // 私聊红包 = 直接红包（微信风格，IM-CHA-M10.3）：固定金额单个，不允许拼手气/多个
+    const isDm = String(channelId).startsWith('dm_')
+    const finalCnt = isDm ? 1 : cnt
+    const m = isDm ? 'normal' : mode === 'normal' ? 'normal' : 'lucky'
+    if (total < finalCnt) return reply.status(400).send({ success: false, error: '金额不能少于个数（每人至少 1 钻石）' })
     const cleanNote = String(note || '').slice(0, 50)
 
     let rpId = ''
@@ -114,9 +118,9 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
             channelType: Number(channelType),
             mode: m,
             totalDiamonds: total,
-            count: cnt,
+            count: finalCnt,
             remainDiamonds: total,
-            remainCount: cnt,
+            remainCount: finalCnt,
             note: cleanNote,
             expiredAt: new Date(Date.now() + RED_PACKET_TTL_MS),
           },
@@ -124,7 +128,7 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
         rpId = rp.id
         return rp
       })
-      console.log(`[红包] ${senderId.slice(0, 8)} 发 ${total}钻/${cnt}个 (${m}) → ${channelId}`)
+      console.log(`[红包] ${senderId.slice(0, 8)} 发 ${total}钻/${finalCnt}个 (${m}) → ${channelId}`)
     } catch (e: any) {
       if ((e as Error).message === 'DIAMOND_INSUFFICIENT') {
         return reply.status(400).send({ success: false, error: '钻石余额不足，请先充值', code: 'DIAMOND_INSUFFICIENT' })
@@ -137,13 +141,13 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
     try {
       await wkSend(channelId, Number(channelType), senderId, {
         type: 2,
-        content: { kind: 'red_packet', id: rpId, note: cleanNote, totalDiamonds: total, count: cnt, mode: m },
+        content: { kind: 'red_packet', id: rpId, note: cleanNote, totalDiamonds: total, count: finalCnt, mode: m, dm: isDm },
       })
       imSent = true
     } catch (e) {
       console.warn('[红包] IM 代发失败（不影响结算）:', (e as Error).message)
     }
-    return { success: true, data: { id: rpId, totalDiamonds: total, count: cnt, mode: m, imSent } }
+    return { success: true, data: { id: rpId, totalDiamonds: total, count: finalCnt, mode: m, dm: isDm, imSent } }
   })
 
   // POST /api/im/red-packets/:id/grab — 抢红包（行锁防超抢；自己不能抢自己的；抢完状态 completed）
@@ -202,16 +206,23 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
           create: { userId, tier: 'free', credits: amount },
           update: { credits: { increment: amount } },
         })
-        return { amount, finished: newRemainCount <= 0, remainCount: newRemainCount, remainDiamonds: newRemainDiamonds, note: rp.note, mode: rp.mode, totalDiamonds: rp.totalDiamonds }
+        return { amount, finished: newRemainCount <= 0, remainCount: newRemainCount, remainDiamonds: newRemainDiamonds, note: rp.note, mode: rp.mode, totalDiamonds: rp.totalDiamonds, channelId: rp.channelId }
       })
 
-      // 抢包结果 → IM 代发「XX 抢到 X 钻石」（群里可见）
+      // 抢包结果 → IM 代发（群里：XX 抢到 X 钻石；私聊直接红包：XX 领取了红包，微信风格）
       try {
         const me = await userBrief(userId)
-        await wkSend(request.body?.channelId || '', Number(request.body?.channelType) || 0, userId, {
-          type: 2,
-          content: { kind: 'red_packet_grab', id: rpId, userId, userName: me.name, avatar: me.avatar, amount: result.amount, remainCount: result.remainCount },
-        })
+        if (String(result.channelId || '').startsWith('dm_')) {
+          await wkSend(request.body?.channelId || '', Number(request.body?.channelType) || 0, userId, {
+            type: 2,
+            content: { kind: 'red_packet_grabbed', id: rpId, userId, userName: me.name, avatar: me.avatar, amount: result.amount },
+          })
+        } else {
+          await wkSend(request.body?.channelId || '', Number(request.body?.channelType) || 0, userId, {
+            type: 2,
+            content: { kind: 'red_packet_grab', id: rpId, userId, userName: me.name, avatar: me.avatar, amount: result.amount, remainCount: result.remainCount },
+          })
+        }
       } catch (e) {
         console.warn('[红包] 抢包结果 IM 代发失败:', (e as Error).message)
       }
@@ -255,6 +266,7 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
       success: true,
       data: {
         id: rp.id,
+        dm: String(rp.channelId || '').startsWith('dm_'),
         mode: rp.mode,
         note: rp.note,
         totalDiamonds: rp.totalDiamonds,
