@@ -968,10 +968,13 @@ function renderMsg(msg: any) {
       else statusLine = isMine ? `查看红包 · 剩 ${st.remainCount} 个` : `领取红包 · 剩 ${st.remainCount} 个`
     }
     const mineCls = st?.grabbedByMe ? ' is-mine' : ''
+    // 微信风格红包卡片（IM-CHA-M10.2）：红色渐变 + 金色開 + 上文案下状态
     return `<div class="rp-card${done ? ' is-done' : ''}" onclick="window.__klOpenRedPacket && window.__klOpenRedPacket('${rpInfo.id}')">` +
-      `<div class="rp-envelope"><span class="rp-envelope-open">開</span></div>` +
-      `<div class="rp-card-main"><div class="rp-card-note">${note}</div>` +
-      `<div class="rp-card-status${mineCls}">${statusLine}</div></div></div>`
+      `<div class="rp-card-inner">` +
+      `<div class="rp-card-note">${note}</div>` +
+      `<div class="rp-card-mid"><span class="rp-open">開</span></div>` +
+      `<div class="rp-card-status${mineCls}">${statusLine}</div>` +
+      `</div></div>`
   }
   // 抢红包结果（服务端代发「XX 抢到 X 钻石」）
   const grabInfo = extractRedPacketGrabInfo(msg)
@@ -3213,41 +3216,48 @@ onBeforeUnmount(() => {
 
 /* ══ 红包卡片（消息内 · 微信式红信封 + 金「開」封口） ══ */
 .rp-card {
-  display: inline-flex; align-items: center; gap: 10px;
-  min-width: 236px; max-width: 300px;
-  padding: 9px 12px; border-radius: 10px; cursor: pointer;
-  background: #FBF8EF;
-  border: 1px solid rgba(176, 58, 46, 0.3);
-  box-shadow: 0 1px 6px rgba(140, 46, 36, 0.14);
+  display: inline-flex;
+  min-width: 240px; max-width: 300px;
+  padding: 12px 14px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(150deg, #F0564A 0%, #E23A30 55%, #C62828 100%);
+  border: 1px solid rgba(255, 235, 210, 0.28);
+  box-shadow: 0 3px 12px rgba(140, 46, 36, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22);
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.rp-card:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(140, 46, 36, 0.22); }
-.rp-card.is-done { opacity: 0.78; }
-.rp-envelope {
-  width: 42px; height: 52px; border-radius: 5px; flex-shrink: 0; position: relative;
-  background: linear-gradient(155deg, #E2574C 0%, #C93A2E 55%, #A92C22 100%);
-  box-shadow: inset 0 0 0 1.5px rgba(255, 205, 160, 0.55), 0 2px 5px rgba(140, 46, 36, 0.35);
+.rp-card:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(140, 46, 36, 0.45); }
+.rp-card:active { transform: scale(0.985); }
+.rp-card-inner { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 100%; }
+/* 上：祝福语（半透明白，微信风格） */
+.rp-card-note {
+  font-size: 13px; font-weight: 500;
+  color: rgba(255, 245, 235, 0.92);
+  letter-spacing: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* 中：金色開 */
+.rp-card-mid { display: flex; align-items: center; justify-content: center; }
+.rp-open {
+  width: 46px; height: 46px;
+  border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 32% 28%, #FFF3C4, #FFD34D 55%, #F5B90F 100%);
+  box-shadow: 0 2px 6px rgba(120, 40, 20, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  color: #B03A2E;
+  font-size: 26px; font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
-.rp-envelope::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 9px;
-  background: linear-gradient(180deg, rgba(255, 225, 180, 0.9), rgba(255, 225, 180, 0));
-  border-radius: 5px 5px 0 0;
-}
-.rp-envelope-open {
-  width: 22px; height: 22px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #FFE3A3, #D9A441 70%);
-  color: #8C2E24; font-size: 12px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'KaiTi', 'STKaiti', serif;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.6);
-}
-.rp-card.is-done .rp-envelope { filter: grayscale(0.45) brightness(0.92); }
-.rp-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.rp-card-note { font-size: 14px; font-weight: 600; color: #33302A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rp-card-status { font-size: 11px; color: #B03A2E; font-weight: 600; }
-.rp-card-status.is-mine { color: #8C5E24; }
-.rp-card.is-done .rp-card-status { color: #A39D8E; font-weight: 400; }
+/* 下：状态（金色） */
+.rp-card-status { font-size: 12px; color: #FFE9B8; font-weight: 600; letter-spacing: 1px; }
+.rp-card-status.is-mine { color: #FFD9A0; }
+/* 已领完 / 已过期：卡片变灰，開变淡 */
+.rp-card.is-done { background: linear-gradient(150deg, #C9BCAE, #B5A89A); border-color: rgba(120, 110, 100, 0.3); box-shadow: 0 2px 8px rgba(100, 90, 80, 0.25); }
+.rp-card.is-done .rp-open { background: radial-gradient(circle at 32% 28%, #EDE6DA, #D8CFC0); box-shadow: 0 1px 4px rgba(100, 90, 80, 0.3); color: #9A8E80; }
+.rp-card.is-done .rp-card-status { color: #F5EFE6; }
+.rp-card.is-done .rp-card-note { color: rgba(255, 250, 242, 0.85); }
 .rp-grab-inline { font-size: 12px; color: #6F6A5C; }
 .rp-grab-amt-inline { color: #B03A2E; font-weight: 700; }
 
@@ -3453,4 +3463,145 @@ onBeforeUnmount(() => {
 .rtc-ctl-hangup { background: #B03A2E; }
 .rtc-ctl-hangup:hover { background: #d14a3c; }
 
+</style>
+
+<!-- ══ v-html 渲染内容样式（非 scoped：scoped 选择器不匹配 v-html 生成的 DOM，IM-CHA-M10.2 修复红包/图片/文件/语音样式从未生效的 bug） ══ -->
+<style>
+/* 礼物 inline（v-html） */
+.gift-inline {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, rgba(185, 138, 62, 0.18), rgba(185, 138, 62, 0.12));
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  padding: 4px 10px;
+  font-size: 14px;
+  color: #B98A3E;
+}
+.gift-inline-price { color: #FBF8EF; font-weight: 700; }
+
+/* 图片（v-html） */
+.msg-img {
+  max-width: 260px;
+  max-height: 300px;
+  border-radius: 10px;
+  display: block;
+  cursor: zoom-in;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 文件（v-html） */
+.msg-file {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-width: 200px; max-width: 280px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.msg-file:hover { background: rgba(255, 255, 255, 0.12); }
+.msg-file-icon { font-size: 24px; }
+.msg-file-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.msg-file-name {
+  font-size: 13px; font-weight: 600;
+  color: var(--color-text-primary, #33302A);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px;
+}
+.msg-file-size { font-size: 11px; color: var(--color-text-muted, #6F6A5C); }
+
+/* 撤回占位（v-html） */
+.msg-recalled {
+  font-size: 12px; color: var(--color-text-disabled, #A39D8E);
+  font-style: italic;
+}
+
+/* 媒体 TTL 提示（v-html） */
+.msg-ttl { font-size: 10px; color: var(--color-text-disabled, #A39D8E); display: block; margin-top: 3px; }
+
+/* 翻译 / 转写结果（v-html 外，但同属消息内容区） */
+.msg-translation {
+  margin-top: 6px; font-size: 12px; color: #B98A3E;
+  background: rgba(185, 138, 62, 0.1); border-radius: 8px; padding: 4px 8px;
+}
+.msg-transcript {
+  margin-top: 6px; font-size: 12px; color: #3E7F99;
+  background: rgba(62, 127, 153, 0.1); border-radius: 8px; padding: 4px 8px;
+}
+
+/* 语音气泡（v-html） */
+.msg-voice {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-width: 84px; padding: 9px 14px;
+  background: rgba(95, 168, 190, 0.18);
+  border: 1px solid rgba(95, 168, 190, 0.4);
+  border-radius: 18px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.msg-voice:hover { background: rgba(95, 168, 190, 0.3); }
+.msg-voice--mine { background: rgba(95, 168, 190, 0.3); }
+.voice-play-icon {
+  font-size: 13px;
+  color: #7cc4d8;
+  width: 18px;
+  text-align: center;
+}
+.voice-dur-text {
+  font-size: 12px;
+  color: #cfe8ef;
+}
+
+/* ══ 微信风格红包卡片（v-html，IM-CHA-M10.2） ══ */
+.rp-card {
+  display: inline-flex;
+  min-width: 240px; max-width: 300px;
+  padding: 12px 14px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(150deg, #F0564A 0%, #E23A30 55%, #C62828 100%);
+  border: 1px solid rgba(255, 235, 210, 0.28);
+  box-shadow: 0 3px 12px rgba(140, 46, 36, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.rp-card:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(140, 46, 36, 0.45); }
+.rp-card:active { transform: scale(0.985); }
+.rp-card-inner { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 100%; }
+.rp-card-note {
+  font-size: 13px; font-weight: 500;
+  color: rgba(255, 245, 235, 0.92);
+  letter-spacing: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.rp-card-mid { display: flex; align-items: center; justify-content: center; }
+.rp-open {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 32% 28%, #FFF3C4, #FFD34D 55%, #F5B90F 100%);
+  box-shadow: 0 2px 6px rgba(120, 40, 20, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  color: #B03A2E;
+  font-size: 26px; font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.rp-card-status { font-size: 12px; color: #FFE9B8; font-weight: 600; letter-spacing: 1px; }
+.rp-card-status.is-mine { color: #FFD9A0; }
+.rp-card.is-done {
+  background: linear-gradient(150deg, #C9BCAE, #B5A89A);
+  border-color: rgba(120, 110, 100, 0.3);
+  box-shadow: 0 2px 8px rgba(100, 90, 80, 0.25);
+}
+.rp-card.is-done .rp-open {
+  background: radial-gradient(circle at 32% 28%, #EDE6DA, #D8CFC0);
+  box-shadow: 0 1px 4px rgba(100, 90, 80, 0.3);
+  color: #9A8E80;
+}
+.rp-card.is-done .rp-card-status { color: #F5EFE6; }
+.rp-card.is-done .rp-card-note { color: rgba(255, 250, 242, 0.85); }
+.rp-grab-inline { font-size: 12px; color: #6F6A5C; }
+.rp-grab-amt-inline { color: #B03A2E; font-weight: 700; }
 </style>
