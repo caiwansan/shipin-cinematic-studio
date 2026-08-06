@@ -1,5 +1,5 @@
 <template>
-  <div class="member-center-page">
+  <div class="member-center-page cn-member-page cn-page">
     <!-- 背景 -->
     <div class="bg-grid" />
     <div class="bg-glow top-left" />
@@ -10,11 +10,11 @@
       <div class="nav-inner">
         <div class="nav-logo">
           <span class="logo-icon"><img src="/logo.png" alt="昆仑镜" class="nav-logo-img" /></span>
-          <span class="logo-text">会员中心</span>
+          <span class="logo-text">昆仑镜</span>
         </div>
         <div class="nav-links">
           <router-link to="/" class="nav-link">首页</router-link>
-          <router-link to="/studio/v2" class="nav-link">工作台</router-link>
+          <router-link to="/user/center" class="nav-link">会员中心</router-link>
         </div>
         <div class="nav-actions">
           <div v-if="userInfo" class="nav-user-badge" @click="router.push('/user/center')">
@@ -94,7 +94,7 @@
             </a>
           </div>
           <div v-else style="margin-top:16px;">
-            <a href="/user/membership" class="upgrade-main-btn" style="text-decoration:none;display:inline-block;background:linear-gradient(135deg,#9333ea,#7c3aed);">
+            <a href="/user/membership" class="upgrade-main-btn">
               会员中心 →
             </a>
           </div>
@@ -119,15 +119,15 @@
             <p class="agent-stat-label">旗下客户</p>
           </div>
           <div class="agent-stat-card">
-            <p class="agent-stat-value" style="color:#60a5fa">¥{{ (agentStats.totalCommission || 0).toFixed(1) }}</p>
+            <p class="agent-stat-value">¥{{ (agentStats.totalCommission || 0).toFixed(1) }}</p>
             <p class="agent-stat-label">累计佣金</p>
           </div>
           <div class="agent-stat-card">
-            <p class="agent-stat-value" style="color:#fbbf24">¥{{ (agentStats.pendingCommission || 0).toFixed(1) }}</p>
+            <p class="agent-stat-value">¥{{ (agentStats.pendingCommission || 0).toFixed(1) }}</p>
             <p class="agent-stat-label">待结算</p>
           </div>
           <div class="agent-stat-card">
-            <p class="agent-stat-value" style="color:#34d399">¥{{ (agentStats.settledCommission || 0).toFixed(1) }}</p>
+            <p class="agent-stat-value">¥{{ (agentStats.settledCommission || 0).toFixed(1) }}</p>
             <p class="agent-stat-label">已结算</p>
           </div>
         </div>
@@ -2019,4 +2019,233 @@ onMounted(async () => {
   font-size: 12px;
   padding: 20px 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   会员中心中式化（雨过天青 × 青花瓷 × 朱砂印章）
+   COMMUNITY-CN-01.2 — 掌柜 2026-08-06
+   ═══════════════════════════════════════════════════════════════ */
+.cn-member-page.member-center-page {
+  background-color: var(--cn-paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%2326547C' stroke-width='1.1' opacity='0.05'%3E%3Ccircle cx='90' cy='90' r='26'/%3E%3Ccircle cx='90' cy='90' r='14'/%3E%3Cpath d='M90 64c-9-7-18-9-27-9 0 9 4 16 13 21'/%3E%3Cpath d='M90 64c9-7 18-9 27-9 0 9-4 16-13 21'/%3E%3Cpath d='M90 116c-9 7-18 9-27 9 0-9 4-16 13-21'/%3E%3Cpath d='M90 116c9 7 18 9 27 9 0-9-4-16-13-21'/%3E%3Cpath d='M90 64v-18M90 116v18M64 90H46M116 90h18'/%3E%3Cpath d='M30 30c7-9 21-9 28 0-9 5-19 5-28 0z'/%3E%3Cpath d='M150 30c-7-9-21-9-28 0 9 5 19 5 28 0z'/%3E%3Cpath d='M30 150c7 9 21 9 28 0-9-5-19-5-28 0z'/%3E%3Cpath d='M150 150c-7 9 21 9 28 0 9-5 19-5 28 0z'/%3E%3Cpath d='M90 90m-40 0a40 40 0 1 0 80 0a40 40 0 1 0-80 0' stroke-dasharray='3 6'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  color: var(--cn-ink);
+  font-family: var(--cn-body);
+}
+.cn-member-page .bg-grid { display: none; }
+.cn-member-page .bg-glow { opacity: 0.18; filter: blur(130px); }
+.cn-member-page .bg-glow.top-left { background: var(--cn-celadon); }
+.cn-member-page .bg-glow.bottom-right { background: var(--cn-cobalt); }
+
+/* ── 导航栏：浅色宣纸 + 青花下边线 ── */
+.cn-member-page .nav-bar {
+  background: rgba(246, 241, 227, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(38, 84, 124, 0.18);
+}
+.cn-member-page .logo-text {
+  color: var(--cn-cobalt-deep);
+  font-family: var(--cn-serif);
+  font-size: 1.05rem;
+  letter-spacing: 3px;
+}
+.cn-member-page .nav-link { color: var(--cn-ink-soft); }
+.cn-member-page .nav-link:hover { color: var(--cn-cinnabar); }
+.cn-member-page .nav-user-badge {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(38, 84, 124, 0.25);
+  box-shadow: rgba(246, 241, 227, 0.9) 0 0 0 2px inset;
+  border-radius: 22px;
+}
+.cn-member-page .nav-user-badge:hover { background: #fff; }
+.cn-member-page .btn-outline { border-color: rgba(38, 84, 124, 0.4); color: var(--cn-cobalt); }
+.cn-member-page .btn-outline:hover { border-color: var(--cn-cinnabar); color: var(--cn-cinnabar); }
+.cn-member-page .center-content { padding-top: 96px; }
+
+/* ── 会员 hero 卡：雨过天青 + 青花双线框 ── */
+.cn-member-page .member-hero-card {
+  background: linear-gradient(135deg, #7FB6C9 0%, var(--cn-celadon) 45%, var(--cn-celadon-deep) 100%) !important;
+  border: none !important;
+  border-radius: 20px;
+  box-shadow: rgba(246, 241, 227, 0.9) 0 0 0 4px inset, rgba(38, 84, 124, 0.55) 0 0 0 6px inset, 0 10px 30px rgba(38, 84, 124, 0.18);
+}
+.cn-member-page .member-hero-card--free:hover,
+.cn-member-page .member-hero-card--basic:hover,
+.cn-member-page .member-hero-card--pro:hover,
+.cn-member-page .member-hero-card--enterprise:hover,
+.cn-member-page .member-hero-card--premium:hover,
+.cn-member-page .member-hero-card--vip_year:hover,
+.cn-member-page .member-hero-card--vip_platinum:hover {
+  box-shadow: rgba(246, 241, 227, 0.9) 0 0 0 4px inset, rgba(38, 84, 124, 0.55) 0 0 0 6px inset, 0 14px 36px rgba(38, 84, 124, 0.25);
+}
+.cn-member-page .member-hero-card:hover { transform: translateY(-3px); }
+.cn-member-page .member-hero-glow { opacity: 0.3; }
+.cn-member-page .member-hero-name { color: var(--cn-paper-card); font-family: var(--cn-serif); letter-spacing: 1px; }
+.cn-member-page .member-hero-email { color: rgba(251, 248, 239, 0.75); }
+.cn-member-page .member-hero-stat-value { color: var(--cn-paper-card); }
+.cn-member-page .member-hero-stat-label { color: rgba(251, 248, 239, 0.7); }
+.cn-member-page .member-hero-stat-icon { filter: saturate(0.9); }
+.cn-member-page .follow-stat-value { color: var(--cn-paper-card); }
+.cn-member-page .follow-stat-label { color: rgba(251, 248, 239, 0.7); }
+.cn-member-page .follow-divider { color: rgba(251, 248, 239, 0.6); }
+
+/* 等级徽章 → 朱砂印章（高级等级保留金属色） */
+.cn-member-page .member-tier-badge {
+  background: var(--cn-cinnabar);
+  color: var(--cn-paper-card);
+  border: 1px solid rgba(140, 46, 36, 0.6);
+  border-radius: 6px;
+  box-shadow: rgba(251, 248, 239, 0.75) 0 0 0 2px inset;
+  font-family: var(--cn-serif);
+  letter-spacing: 1px;
+  padding: 5px 14px;
+}
+.cn-member-page .member-tier-badge--premium { background: var(--cn-gold); border-color: rgba(139, 102, 45, 0.6); }
+.cn-member-page .member-tier-badge--vip_platinum { background: #6A5ACD; border-color: rgba(82, 68, 161, 0.7); }
+.cn-member-page .member-tier-badge--enterprise { background: var(--cn-celadon-deep); }
+
+/* 升级按钮 → 朱砂印章 */
+.cn-member-page .upgrade-main-btn {
+  background: linear-gradient(135deg, #C24432, var(--cn-cinnabar)) !important;
+  border-radius: 10px;
+  box-shadow: rgba(251, 248, 239, 0.6) 0 0 0 2px inset, 0 4px 14px rgba(140, 46, 36, 0.35);
+  color: var(--cn-paper-card);
+  font-family: var(--cn-serif);
+  letter-spacing: 2px;
+  padding: 12px 28px;
+  font-weight: 600;
+}
+.cn-member-page .upgrade-main-btn:hover { opacity: 0.92; }
+
+/* ── 代理商面板 ── */
+.cn-member-page .agent-panel {
+  background: rgba(251, 248, 239, 0.92);
+  border: 1px solid rgba(38, 84, 124, 0.25);
+  border-radius: 16px;
+  box-shadow: rgba(38, 84, 124, 0.16) 0 0 0 2px inset, 0 8px 24px rgba(38, 84, 124, 0.08);
+}
+.cn-member-page .agent-panel-title { color: var(--cn-cobalt); font-family: var(--cn-serif); }
+.cn-member-page .agent-panel-desc { color: var(--cn-ink-soft); }
+.cn-member-page .agent-panel-btn {
+  background: var(--cn-cinnabar);
+  color: var(--cn-paper-card);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: rgba(251, 248, 239, 0.5) 0 0 0 1.5px inset;
+}
+.cn-member-page .agent-panel-btn:hover { background: var(--cn-cinnabar-deep); }
+.cn-member-page .agent-stat-card {
+  background: var(--cn-paper);
+  border: 1px solid rgba(38, 84, 124, 0.18);
+  border-radius: 12px;
+}
+.cn-member-page .agent-stat-value { color: var(--cn-cobalt); }
+.cn-member-page .agent-stat-card:nth-child(2) .agent-stat-value { color: var(--cn-celadon-deep); }
+.cn-member-page .agent-stat-card:nth-child(3) .agent-stat-value { color: var(--cn-gold); }
+.cn-member-page .agent-stat-card:nth-child(4) .agent-stat-value { color: var(--cn-cinnabar); }
+.cn-member-page .agent-stat-label { color: var(--cn-ink-soft); }
+.cn-member-page .agent-panel-loading { color: var(--cn-ink-soft); }
+
+/* ── 功能模块：宣纸青花卡片 ── */
+.cn-member-page .member-modules--work { border-top-color: rgba(38, 84, 124, 0.15); }
+.cn-member-page .work-module-title {
+  font-family: var(--cn-serif);
+  color: var(--cn-cobalt);
+  font-size: 1.02rem;
+  letter-spacing: 5px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.cn-member-page .work-module-title::before,
+.cn-member-page .work-module-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+}
+.cn-member-page .work-module-title::before {
+  background: linear-gradient(90deg, transparent, rgba(38, 84, 124, 0.4));
+}
+.cn-member-page .work-module-title::after {
+  background: linear-gradient(90deg, rgba(38, 84, 124, 0.4), transparent);
+}
+.cn-member-page .member-module {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(38, 84, 124, 0.2);
+  border-radius: 14px;
+  box-shadow: rgba(38, 84, 124, 0.12) 0 0 0 1px inset, 0 2px 8px rgba(38, 84, 124, 0.06);
+}
+.cn-member-page .member-module:hover {
+  background: #fff;
+  border-color: rgba(38, 84, 124, 0.45);
+  transform: translateY(-3px);
+  box-shadow: rgba(38, 84, 124, 0.22) 0 0 0 1px inset, 0 8px 20px rgba(38, 84, 124, 0.1);
+}
+.cn-member-page .module-icon-area {
+  background: linear-gradient(135deg, rgba(95, 168, 190, 0.22), rgba(38, 84, 124, 0.14)) !important;
+  border: 1px solid rgba(38, 84, 124, 0.25);
+  border-radius: 14px;
+  box-shadow: rgba(246, 241, 227, 0.9) 0 0 0 1px inset;
+}
+.cn-member-page .module-title { color: var(--cn-ink); font-family: var(--cn-serif); font-size: 0.95rem; }
+.cn-member-page .module-desc { color: var(--cn-ink-soft); }
+.cn-member-page .module-arrow { color: var(--cn-celadon-deep); }
+.cn-member-page .member-module:hover .module-arrow { color: var(--cn-cinnabar); }
+.cn-member-page .storage-bar { background: rgba(38, 84, 124, 0.12); }
+.cn-member-page .storage-bar-fill { background: linear-gradient(90deg, var(--cn-celadon), var(--cn-cobalt)); }
+
+/* ── 弹窗（teleport 至 body → 全局覆盖） ── */
+:global(html body .wallet-modal-mask), :global(html body .follow-mask){background: rgba(22, 58, 92, 0.5) !important; backdrop-filter: blur(6px)}
+:global(html body .wallet-modal), :global(html body .follow-panel){background: var(--cn-paper-card) !important; border: 1px solid rgba(38, 84, 124, 0.3) !important; border-radius: 18px; box-shadow: rgba(38, 84, 124, 0.2) 0 0 0 3px inset, 0 24px 60px rgba(22, 58, 92, 0.35) !important}
+:global(html body .wallet-modal-title){color: var(--cn-cobalt-deep) !important; font-family: var(--cn-serif); letter-spacing: 2px}
+:global(html body .wallet-modal-close){background: rgba(38, 84, 124, 0.08) !important; color: var(--cn-cobalt) !important}
+:global(html body .wallet-modal-close:hover){background: rgba(176, 58, 46, 0.12) !important; color: var(--cn-cinnabar) !important}
+:global(html body .wallet-tabs){background: rgba(38, 84, 124, 0.08) !important}
+:global(html body .wallet-tab){color: var(--cn-ink-soft) !important}
+:global(html body .wallet-tab.active){background: var(--cn-cobalt) !important; color: var(--cn-paper-card) !important; font-weight: 600}
+:global(html body .wallet-balance-card){background: linear-gradient(135deg, rgba(95, 168, 190, 0.25), rgba(38, 84, 124, 0.08)) !important; border: 1px solid rgba(38, 84, 124, 0.25) !important}
+:global(html body .wallet-balance-label){color: var(--cn-ink-soft) !important}
+:global(html body .wallet-balance-value){color: var(--cn-cobalt) !important; font-family: var(--cn-serif); letter-spacing: 1px}
+:global(html body .wallet-balance-sub){color: var(--cn-ink-soft) !important}
+:global(html body .wallet-quick-btn){border-color: rgba(38, 84, 124, 0.25) !important; background: rgba(255, 255, 255, 0.85) !important; color: var(--cn-ink) !important}
+:global(html body .wallet-quick-btn:hover){background: #fff !important}
+:global(html body .wallet-quick-btn.primary){background: linear-gradient(135deg, #C24432, var(--cn-cinnabar)) !important; border: none !important; color: var(--cn-paper-card) !important; font-weight: 600}
+:global(html body .wallet-tip){color: var(--cn-ink-soft) !important; background: rgba(38, 84, 124, 0.06) !important}
+:global(html body .wallet-section-title){color: var(--cn-cobalt) !important; font-weight: 600}
+:global(html body .wallet-account-bound){background: rgba(255, 255, 255, 0.85) !important}
+:global(html body .wallet-account-type){background: rgba(95, 168, 190, 0.2) !important; color: var(--cn-celadon-deep) !important}
+:global(html body .wallet-account-name){color: var(--cn-ink) !important}
+:global(html body .wallet-account-no){color: var(--cn-ink-soft) !important}
+:global(html body .wallet-link-btn){color: var(--cn-celadon-deep) !important}
+:global(html body .wallet-account-empty){background: rgba(255, 255, 255, 0.7) !important; border: 1px dashed rgba(38, 84, 124, 0.35) !important; color: var(--cn-ink-soft) !important}
+:global(html body .wallet-account-empty:hover){border-color: var(--cn-cinnabar) !important; color: var(--cn-cinnabar) !important}
+:global(html body .wallet-bind-form){background: rgba(255, 255, 255, 0.7) !important}
+:global(html body .wallet-input){border-color: rgba(38, 84, 124, 0.25) !important; background: #fff !important; color: var(--cn-ink) !important}
+:global(html body .wallet-input:focus){border-color: var(--cn-celadon) !important}
+:global(html body .wallet-input::placeholder){color: var(--cn-ink-faint) !important}
+:global(html body .wallet-btn){border-color: rgba(38, 84, 124, 0.25) !important; background: rgba(255, 255, 255, 0.85) !important; color: var(--cn-ink) !important}
+:global(html body .wallet-btn.primary){background: linear-gradient(135deg, #C24432, var(--cn-cinnabar)) !important; border: none !important; color: var(--cn-paper-card) !important; font-weight: 600}
+:global(html body .wallet-btn:disabled){opacity: 0.6}
+:global(html body .wallet-msg){color: var(--cn-cinnabar) !important}
+:global(html body .wallet-list-item){background: rgba(255, 255, 255, 0.7) !important}
+:global(html body .wallet-list-title){color: var(--cn-ink) !important}
+:global(html body .wallet-list-sub){color: var(--cn-ink-soft) !important}
+:global(html body .wallet-list-amount.plus){color: var(--cn-celadon-deep) !important}
+:global(html body .wallet-list-amount:not(.plus)){color: var(--cn-cinnabar) !important}
+:global(html body .wallet-empty){color: var(--cn-ink-faint) !important}
+:global(html body .follow-panel-head){border-bottom: 1px solid rgba(38, 84, 124, 0.12) !important}
+:global(html body .follow-tab){color: var(--cn-ink-soft) !important}
+:global(html body .follow-tab.active){color: var(--cn-cinnabar) !important; background: rgba(176, 58, 46, 0.1) !important}
+:global(html body .follow-close){background: rgba(38, 84, 124, 0.08) !important; color: var(--cn-cobalt) !important; border-radius: 6px}
+:global(html body .follow-empty){color: var(--cn-ink-faint) !important}
+:global(html body .follow-item){border-bottom: 1px solid rgba(38, 84, 124, 0.08) !important}
+:global(html body .follow-item-name){color: var(--cn-ink) !important}
+:global(html body .follow-item-sub){color: var(--cn-ink-soft) !important}
+:global(html body .follow-act-btn){background: rgba(38, 84, 124, 0.08) !important; color: var(--cn-cobalt) !important}
+:global(html body .follow-act-btn:hover){background: rgba(38, 84, 124, 0.15) !important}
+:global(html body .follow-btn){background: var(--cn-cinnabar) !important; color: var(--cn-paper-card) !important}
+:global(html body .follow-btn.following){background: rgba(38, 84, 124, 0.1) !important; color: var(--cn-cobalt) !important}
+:global(html body .rel-badge.rel-mutual){background: rgba(176, 58, 46, 0.12) !important; color: var(--cn-cinnabar) !important}
+:global(html body .rel-badge.rel-following){background: rgba(38, 84, 124, 0.1) !important; color: var(--cn-cobalt) !important}
+:global(html body .rel-badge.rel-follower){background: rgba(95, 168, 190, 0.15) !important; color: var(--cn-celadon-deep) !important}
 </style>
