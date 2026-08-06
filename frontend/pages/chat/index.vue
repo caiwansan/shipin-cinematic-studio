@@ -299,46 +299,26 @@
       <div v-if="rpDetail" class="gift-modal-mask" @click.self="closeRpDetail">
         <div class="gift-modal rp-detail-modal">
           <div class="rp-detail-top">
-            <div class="rp-detail-icon">🧧</div>
+            <div class="rp-big-envelope" :class="{ 'is-opened': rpDetail.mine }" @click="grabRedPacket">
+              <template v-if="rpGrabbing">
+                <div class="rp-big-msg">拆开红包…</div>
+              </template>
+              <template v-else-if="rpDetail.mine">
+                <div class="rp-big-amount">+{{ rpDetail.mine.amount }}<small>钻石</small></div>
+              </template>
+              <template v-else-if="rpDetail.status === 'completed' || rpDetail.remainCount <= 0">
+                <div class="rp-big-msg">😅 手慢了，被抢完了</div>
+              </template>
+              <template v-else-if="rpDetail.status === 'refunded'">
+                <div class="rp-big-msg">🕰️ 已过期退回</div>
+              </template>
+              <template v-else>
+                <span class="rp-big-open">開</span>
+              </template>
+            </div>
             <div class="rp-detail-note">{{ rpDetail.note || '恭喜发财，大吉大利！' }}</div>
             <div class="rp-detail-from">{{ rpDetail.sender?.name || '茶客' }} 的红包</div>
-          </div>
-          <div class="rp-detail-body">
-            <template v-if="rpGrabbing">
-              <div class="rp-grab-anim">
-                <div class="rp-grab-envelope">🧧</div>
-                <div class="rp-grab-text">拆开红包…</div>
-              </div>
-            </template>
-            <template v-else-if="rpDetail.mine">
-              <div class="rp-grab-result">
-                <div class="rp-grab-amount">{{ rpDetail.mine.amount }}</div>
-                <div class="rp-grab-unit">钻石</div>
-                <div class="rp-grab-sub">{{ rpDetail.mode === 'lucky' ? '拼手气红包' : '普通红包' }} · 手气不错！</div>
-              </div>
-            </template>
-            <template v-else-if="rpDetail.status === 'completed' || rpDetail.remainCount <= 0">
-              <div class="rp-grab-finished">
-                <div class="rp-finished-icon">😅</div>
-                <div class="rp-finished-text">手慢了，红包被抢完了</div>
-              </div>
-            </template>
-            <template v-else-if="rpDetail.status === 'refunded'">
-              <div class="rp-grab-finished">
-                <div class="rp-finished-icon">🕰️</div>
-                <div class="rp-finished-text">红包已过期退回</div>
-              </div>
-            </template>
-            <template v-else>
-              <div class="rp-grab-ready">
-                <div class="rp-ready-remain">剩 {{ rpDetail.remainCount }} 个 · {{ rpDetail.remainDiamonds }} 钻石</div>
-                <button class="rp-open-btn" @click="grabRedPacket">
-                  <span class="rp-open-envelope">🧧</span>
-                  <span>开</span>
-                </button>
-                <div class="rp-ready-note">手快有，手慢无</div>
-              </div>
-            </template>
+            <div class="rp-detail-remain">剩 {{ rpDetail.remainCount }} 个 · {{ rpDetail.remainDiamonds }} 钻石</div>
           </div>
           <div class="rp-detail-grabs">
             <div class="rp-grabs-title">抢红包记录</div>
@@ -802,12 +782,22 @@ function renderMsg(msg: any) {
   const rpInfo = extractRedPacketInfo(msg)
   if (rpInfo) {
     const note = escapeHtml(rpInfo.note || '恭喜发财，大吉大利！')
-    const modeLabel = rpInfo.mode === 'normal' ? '普通红包' : '拼手气红包'
-    return `<div class="rp-card" onclick="window.__klOpenRedPacket && window.__klOpenRedPacket('${rpInfo.id}')">` +
-      `<div class="rp-card-icon">🧧</div>` +
+    const st: any = (msg as any)._rpStatus
+    const isMine = typeof tea.userId.value === 'string' && msg.fromUID === tea.userId.value
+    let statusLine = '…'
+    let done = false
+    if (st) {
+      done = st.status === 'completed' || st.status === 'refunded' || st.remainCount <= 0
+      if (st.grabbedByMe) statusLine = `查看红包 · 已抢 ${st.mine?.amount ?? '?'} 钻`
+      else if (st.status === 'refunded') statusLine = '红包已过期退回'
+      else if (st.status === 'completed' || st.remainCount <= 0) statusLine = '红包已被领完'
+      else statusLine = isMine ? `查看红包 · 剩 ${st.remainCount} 个` : `领取红包 · 剩 ${st.remainCount} 个`
+    }
+    const mineCls = st?.grabbedByMe ? ' is-mine' : ''
+    return `<div class="rp-card${done ? ' is-done' : ''}" onclick="window.__klOpenRedPacket && window.__klOpenRedPacket('${rpInfo.id}')">` +
+      `<div class="rp-envelope"><span class="rp-envelope-open">開</span></div>` +
       `<div class="rp-card-main"><div class="rp-card-note">${note}</div>` +
-      `<div class="rp-card-meta">${modeLabel} · 💎${rpInfo.totalDiamonds} · ${rpInfo.count}个</div></div>` +
-      `<div class="rp-card-open">开</div></div>`
+      `<div class="rp-card-status${mineCls}">${statusLine}</div></div></div>`
   }
   // 抢红包结果（服务端代发「XX 抢到 X 钻石」）
   const grabInfo = extractRedPacketGrabInfo(msg)
@@ -1057,6 +1047,37 @@ async function loadUsers() {
   users.value = await tea.loadUsers()
 }
 
+// 红包卡片状态批量刷新（历史 + 实时消息统一走这里，卡片显示真实状态）
+async function refreshRpStatuses() {
+  const ids = [
+    ...new Set(
+      messages.value
+        .map((m: any) => extractRedPacketInfo(m)?.id)
+        .filter((id: any) => typeof id === 'string' && id.length > 10),
+    ),
+  ]
+  if (!ids.length) return
+  try {
+    const r = await fetch('/api/im/red-packets/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({ ids }),
+    })
+    const j = await r.json()
+    if (!j.success) return
+    messages.value = messages.value.map((m: any) => {
+      const info = extractRedPacketInfo(m)
+      if (info && j.data[info.id]) {
+        const st = j.data[info.id]
+        if ((m as any)._rpStatus !== st) return { ...m, _rpStatus: st }
+      }
+      return m
+    })
+  } catch (e) {
+    console.error('[昆仑茶馆] 红包状态刷新失败', e)
+  }
+}
+
 async function loadHistory() {
   if (!currentChannel.value) return
   loadingHistory.value = true
@@ -1071,6 +1092,7 @@ async function loadHistory() {
     .sort((a: any, b: any) => (a.timestamp || 0) - (b.timestamp || 0))
   loadingHistory.value = false
   scrollBottom()
+  refreshRpStatuses()
 }
 
 async function switchChannel(ch: any) {
@@ -1430,6 +1452,7 @@ async function sendRedPacket() {
         key: 'rp-' + Date.now(),
       })
       scrollBottom()
+      refreshRpStatuses() // 卡片状态（自己发的显示「查看红包 · 剩 N 个」）
       rpPanelOpen.value = false
       showToast(`🧧 红包已发出（${amount * count} 钻石）`)
     } else {
@@ -1536,6 +1559,8 @@ onMounted(async () => {
     if (msgChannel && (msgChannel.channelID !== ch.id || msgChannel.channelType !== ch.type)) return
     if (msg.fromUID === tea.userId.value) return
     messages.value.push({ ...msg, fromUID: msg.fromUID || msg.from_uid, key: msgKey(msg) })
+    // 红包消息 → 拉取实时状态（卡片显示「领取红包/已被领完」）
+    if (extractRedPacketInfo(msg)) refreshRpStatuses()
     // 他人送的礼物 → 全屏动画（服务端代发 payload: {type:2, content:{kind:'gift'}}）
     const giftInfo = extractGiftInfo(msg)
     if (giftInfo) {
@@ -2462,32 +2487,47 @@ onBeforeUnmount(() => {
 .msg-row.mine .msg-avatar { order: 1; }
 .msg-row.mine .msg-bubble { background: linear-gradient(135deg, #26547C, #5FA8BE); color: #FBF8EF; border: none; }
 
-/* ══ 红包卡片（消息内） ══ */
+/* ══ 红包卡片（消息内 · 微信式红信封 + 金「開」封口） ══ */
 .rp-card {
-  display: flex; align-items: center; gap: 10px;
-  min-width: 240px; max-width: 300px;
-  padding: 10px 12px; border-radius: 10px; cursor: pointer;
-  background: linear-gradient(135deg, #B03A2E, #8C2E24);
-  color: #FBF8EF;
-  box-shadow: 0 2px 8px rgba(140, 46, 36, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  transition: transform 0.15s;
+  display: inline-flex; align-items: center; gap: 10px;
+  min-width: 236px; max-width: 300px;
+  padding: 9px 12px; border-radius: 10px; cursor: pointer;
+  background: #FBF8EF;
+  border: 1px solid rgba(176, 58, 46, 0.3);
+  box-shadow: 0 1px 6px rgba(140, 46, 36, 0.14);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-.rp-card:hover { transform: translateY(-1px); }
-.rp-card-icon { font-size: 30px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
-.rp-card-main { flex: 1; min-width: 0; }
-.rp-card-note { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rp-card-meta { font-size: 11px; opacity: 0.85; margin-top: 2px; }
-.rp-card-open {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: #B98A3E; color: #FBF8EF; font-weight: 700; font-size: 13px;
+.rp-card:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(140, 46, 36, 0.22); }
+.rp-card.is-done { opacity: 0.78; }
+.rp-envelope {
+  width: 42px; height: 52px; border-radius: 5px; flex-shrink: 0; position: relative;
+  background: linear-gradient(155deg, #E2574C 0%, #C93A2E 55%, #A92C22 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 205, 160, 0.55), 0 2px 5px rgba(140, 46, 36, 0.35);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.2);
 }
+.rp-envelope::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 9px;
+  background: linear-gradient(180deg, rgba(255, 225, 180, 0.9), rgba(255, 225, 180, 0));
+  border-radius: 5px 5px 0 0;
+}
+.rp-envelope-open {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFE3A3, #D9A441 70%);
+  color: #8C2E24; font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'KaiTi', 'STKaiti', serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+}
+.rp-card.is-done .rp-envelope { filter: grayscale(0.45) brightness(0.92); }
+.rp-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rp-card-note { font-size: 14px; font-weight: 600; color: #33302A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-card-status { font-size: 11px; color: #B03A2E; font-weight: 600; }
+.rp-card-status.is-mine { color: #8C5E24; }
+.rp-card.is-done .rp-card-status { color: #A39D8E; font-weight: 400; }
 .rp-grab-inline { font-size: 12px; color: #6F6A5C; }
 .rp-grab-amt-inline { color: #B03A2E; font-weight: 700; }
 
-/* ══ 发红包弹窗 ══ */
+/* ══ 抢红包弹窗（大红包一体式） ══ */
 .rp-btn { }
 .rp-body { padding: 14px 18px 6px; display: flex; flex-direction: column; gap: 14px; }
 .rp-mode-row { display: flex; gap: 10px; }
@@ -2528,44 +2568,56 @@ onBeforeUnmount(() => {
 .rp-warn { color: #B03A2E; font-size: 12px; font-weight: 600; }
 .rp-send-btn { background: linear-gradient(135deg, #B03A2E, #8C2E24) !important; }
 
-/* ══ 抢红包弹窗 ══ */
 .rp-detail-modal { max-width: 340px; }
 .rp-detail-top {
-  text-align: center; padding: 18px 18px 8px;
-  background: linear-gradient(135deg, #B03A2E, #8C2E24);
+  position: relative; text-align: center; padding: 22px 18px 16px;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 210, 140, 0.35), transparent 55%),
+    linear-gradient(160deg, #E2574C 0%, #C93A2E 60%, #A92C22 100%);
   color: #FBF8EF; border-radius: 12px 12px 0 0; margin: -18px -18px 0;
+  border-bottom: 2px solid rgba(255, 210, 140, 0.55);
+  overflow: hidden;
 }
-.rp-detail-icon { font-size: 46px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
-.rp-detail-note { font-size: 15px; font-weight: 700; margin-top: 6px; }
+.rp-big-envelope {
+  width: 108px; height: 132px; margin: 0 auto; border-radius: 8px; position: relative;
+  background: linear-gradient(160deg, #E2574C, #A92C22);
+  box-shadow: inset 0 0 0 2px rgba(255, 205, 160, 0.6), 0 6px 18px rgba(0, 0, 0, 0.3);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: transform 0.15s;
+}
+.rp-big-envelope:hover { transform: scale(1.04); }
+.rp-big-envelope.is-opened { box-shadow: inset 0 0 0 2px rgba(255, 205, 160, 0.6), 0 6px 18px rgba(0, 0, 0, 0.3), 0 0 24px rgba(255, 210, 140, 0.4); }
+.rp-big-envelope::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 16px;
+  background: linear-gradient(180deg, rgba(255, 225, 180, 0.85), rgba(255, 225, 180, 0));
+  border-radius: 8px 8px 0 0;
+}
+.rp-big-envelope::after {
+  content: ''; position: absolute; bottom: 8px; left: 12%; right: 12%; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 210, 140, 0.8), transparent);
+}
+.rp-big-open {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFE3A3, #D9A441 70%);
+  color: #8C2E24; font-size: 26px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'KaiTi', 'STKaiti', serif;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 2px 3px rgba(255, 255, 255, 0.7);
+  animation: rpBreath 1.6s ease-in-out infinite;
+}
+@keyframes rpBreath {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.rp-big-amount { font-size: 42px; font-weight: 800; color: #FFE3A3; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
+.rp-big-amount small { font-size: 14px; font-weight: 400; letter-spacing: 2px; margin-left: 4px; }
+.rp-big-msg { font-size: 14px; color: rgba(251, 248, 239, 0.92); }
+.rp-detail-note { font-size: 15px; font-weight: 700; margin-top: 10px; color: #FBF8EF; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
 .rp-detail-from { font-size: 12px; opacity: 0.85; margin-top: 3px; }
-.rp-detail-body { min-height: 130px; display: flex; align-items: center; justify-content: center; padding: 14px 0 4px; }
-.rp-grab-ready { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.rp-ready-remain { font-size: 12px; color: #6F6A5C; }
-.rp-open-btn {
-  width: 92px; height: 92px; border-radius: 50%; cursor: pointer; position: relative;
-  background: radial-gradient(circle at 35% 30%, #B98A3E, #8C5E24);
-  color: #FBF8EF; font-size: 22px; font-weight: 700;
-  border: 3px solid #B03A2E; box-shadow: 0 4px 14px rgba(140, 46, 36, 0.4);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  transition: transform 0.15s;
-}
-.rp-open-btn:hover { transform: scale(1.05); }
-.rp-open-btn:active { transform: scale(0.96); }
-.rp-open-envelope { font-size: 26px; }
-.rp-ready-note { font-size: 11px; color: #A39D8E; }
-.rp-grab-result { text-align: center; }
-.rp-grab-amount { font-size: 46px; font-weight: 800; color: #B03A2E; line-height: 1.1; }
-.rp-grab-unit { font-size: 13px; color: #6F6A5C; }
-.rp-grab-sub { font-size: 12px; color: #A39D8E; margin-top: 6px; }
-.rp-grab-finished { text-align: center; }
-.rp-finished-icon { font-size: 40px; }
-.rp-finished-text { font-size: 13px; color: #6F6A5C; margin-top: 8px; }
-.rp-grab-anim { text-align: center; }
-.rp-grab-envelope { font-size: 52px; animation: rpShake 0.8s infinite; }
-.rp-grab-text { font-size: 12px; color: #6F6A5C; margin-top: 6px; }
-@keyframes rpShake {
-  0%, 100% { transform: rotate(-8deg) scale(1); }
-  50% { transform: rotate(8deg) scale(1.08); }
+.rp-detail-remain {
+  display: inline-block; margin-top: 10px; font-size: 11px;
+  padding: 3px 12px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18); color: rgba(255, 240, 220, 0.95);
 }
 .rp-detail-grabs { max-height: 150px; overflow-y: auto; padding: 4px 18px 8px; border-top: 1px dashed #A8CDD8; margin: 0 8px; }
 .rp-grabs-title { font-size: 11px; color: #6F6A5C; font-weight: 600; padding: 8px 0 4px; }

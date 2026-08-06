@@ -113,9 +113,19 @@ try {
   await sleep(2500)
   const card = await evalJS(`(() => {
     const cards = [...document.querySelectorAll('.rp-card')]
-    return cards.length ? { count: cards.length, note: cards[cards.length - 1].querySelector('.rp-card-note')?.textContent } : null
+    if (!cards.length) return null
+    const last = cards[cards.length - 1]
+    return {
+      count: cards.length,
+      envelope: !!last.querySelector('.rp-envelope'),
+      openChar: last.querySelector('.rp-envelope-open')?.textContent,
+      note: last.querySelector('.rp-card-note')?.textContent,
+      status: last.querySelector('.rp-card-status')?.textContent,
+      isDone: last.classList.contains('is-done'),
+    }
   })()`)
-  check('红包卡片渲染', !!card, JSON.stringify(card))
+  check('红包卡片渲染', !!card && card.envelope && card.openChar === '開', JSON.stringify(card))
+  check('红包状态显示', !!card && /领取红包|已被领完|查看红包|过期退回/.test(card.status || ''), card?.status)
 
   // 4. 点卡片 → 抢红包弹窗
   await evalJS(`window.__klOpenRedPacket(${JSON.stringify(rpId)})`)
@@ -124,13 +134,15 @@ try {
     const m = document.querySelector('.rp-detail-modal')
     if (!m) return null
     return {
+      bigEnvelope: !!m.querySelector('.rp-big-envelope'),
+      openChar: m.querySelector('.rp-big-open')?.textContent,
       note: m.querySelector('.rp-detail-note')?.textContent,
       from: m.querySelector('.rp-detail-from')?.textContent,
-      hasOpen: !!m.querySelector('.rp-open-btn'),
+      remain: m.querySelector('.rp-detail-remain')?.textContent,
       grabs: m.querySelectorAll('.rp-grab-item').length,
     }
   })()`)
-  check('抢红包弹窗', !!detail, JSON.stringify(detail))
+  check('大红包弹窗', !!detail && detail.bigEnvelope && detail.openChar === '開', JSON.stringify(detail))
   check('弹窗祝福语/来源', detail && detail.note.includes('青花瓷红包测试') && detail.from.includes('tenant'), JSON.stringify(detail))
 
   // 5. 截图

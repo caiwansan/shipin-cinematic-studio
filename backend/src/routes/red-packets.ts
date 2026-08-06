@@ -271,4 +271,31 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
       },
     }
   })
+
+  // 批量状态查询（消息流红包卡片渲染用，一次查最多 20 个）
+  fastify.post('/api/im/red-packets/status', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const ids: string[] = Array.isArray(request.body?.ids) ? request.body.ids.slice(0, 20) : []
+    if (!ids.length) return { success: true, data: {} }
+    const rows = await prisma.redPacket.findMany({
+      where: { id: { in: ids } },
+      include: { grabs: { select: { userId: true, amount: true } } },
+    })
+    const data: Record<string, any> = {}
+    for (const rp of rows) {
+      const my = rp.grabs.find((g) => g.userId === userId)
+      data[rp.id] = {
+        id: rp.id,
+        mode: rp.mode,
+        note: rp.note,
+        totalDiamonds: rp.totalDiamonds,
+        count: rp.count,
+        remainCount: rp.remainCount,
+        status: rp.status,
+        grabbedByMe: !!my,
+        mine: my ? { amount: my.amount } : null,
+      }
+    }
+    return { success: true, data }
+  })
 }
