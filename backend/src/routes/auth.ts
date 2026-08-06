@@ -161,7 +161,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
     return {
       accessToken,
-      user: { id: u.id, email: u.email, username: u.username, phone: maskPhone(u.phone), memberTier: u.memberTier, credits: u.membership?.credits ?? 0, agentStatus: u.agentStatus, agentLevel: u.agentLevel, organizationId: registerOrgId || null, avatarUrl: u.avatarUrl || null },
+      user: { id: u.id, email: u.email, username: u.username, nickname: u.nickname || null, displayName: u.nickname || u.username, phone: maskPhone(u.phone), memberTier: u.memberTier, credits: u.membership?.credits ?? 0, agentStatus: u.agentStatus, agentLevel: u.agentLevel, organizationId: registerOrgId || null, avatarUrl: u.avatarUrl || null },
     }
   })
 
@@ -283,7 +283,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (!email) return reply.status(400).send({ error: '缺少邮箱参数' })
     const dbUser = await prisma.user.findUnique({
       where: { email: String(email) },
-      select: { id: true, email: true, username: true, memberTier: true, phone: true, createdAt: true, memberExpiresAt: true, membership: true, agentStatus: true, agentLevel: true, agentPlanId: true, agentExpiresAt: true, avatarUrl: true, payPasswordHash: true, wechatOpenId: true, qqOpenId: true, alipayOpenId: true, wechatBoundAt: true, alipayBoundAt: true },
+      select: { id: true, email: true, username: true, nickname: true, memberTier: true, phone: true, createdAt: true, memberExpiresAt: true, membership: true, agentStatus: true, agentLevel: true, agentPlanId: true, agentExpiresAt: true, avatarUrl: true, payPasswordHash: true, wechatOpenId: true, qqOpenId: true, alipayOpenId: true, wechatBoundAt: true, alipayBoundAt: true },
     })
     if (!dbUser) return reply.status(404).send({ error: '用户不存在' })
     const serialized: any = JSON.parse(JSON.stringify(dbUser, (k, v) => typeof v === 'bigint' ? Number(v) : v))
@@ -314,7 +314,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
     const dbUser = await prisma.user.findUnique({
       where: { id: jwtUser.id },
-      select: { id: true, email: true, username: true, memberTier: true, phone: true, createdAt: true, memberExpiresAt: true, membership: true, agentStatus: true, agentLevel: true, agentPlanId: true, agentExpiresAt: true, avatarUrl: true, payPasswordHash: true, wechatOpenId: true, qqOpenId: true, alipayOpenId: true, wechatBoundAt: true, alipayBoundAt: true },
+      select: { id: true, email: true, username: true, nickname: true, memberTier: true, phone: true, createdAt: true, memberExpiresAt: true, membership: true, agentStatus: true, agentLevel: true, agentPlanId: true, agentExpiresAt: true, avatarUrl: true, payPasswordHash: true, wechatOpenId: true, qqOpenId: true, alipayOpenId: true, wechatBoundAt: true, alipayBoundAt: true },
     })
     if (!dbUser) {
       return reply.status(404).send({ error: '用户不存在' })
@@ -347,9 +347,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
     serialized.wechatBound = !!serialized.wechatOpenId
     serialized.alipayBound = !!serialized.alipayOpenId
     delete serialized.payPasswordHash
-    // displayName: 优先使用会话中的 displayName，否则 fallback 到 username
-    // 允许用户通过 PATCH /api/user/profile 更新 displayName（存储在 username 字段）
-    serialized.displayName = serialized.username
+    // displayName: 优先 nickname（用户昵称，可自行修改），否则 fallback 到 username
+    // USER-SETTINGS-01：PATCH /api/user/profile 只更新 nickname，username 保持唯一登录标识不变
+    serialized.displayName = serialized.nickname || serialized.username
 
     // SPRINT-MEDIA-IDENTITY-ALIGN-01 T03: 统一身份链注入 — organizationId/orgName/tenantId
     // 让所有 Workspace（短剧/招聘/新媒体）从 auth/me 单一权威获取企业上下文
@@ -392,29 +392,34 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (!userId) return reply.status(401).send({ success: false, error: '未授权' })
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, username: true, memberTier: true, memberExpiresAt: true, createdAt: true, membership: { select: { credits: true } } },
+      select: { id: true, email: true, username: true, nickname: true, memberTier: true, memberExpiresAt: true, createdAt: true, membership: { select: { credits: true } } },
     })
     if (!user) return reply.status(404).send({ success: false, error: '用户不存在' })
-    return toApiResponse({success: true, data: { ...user, displayName: user.username }}) satisfies ApiResponse<unknown>;
+    return toApiResponse({ ...user, displayName: user.nickname || user.username }) satisfies ApiResponse<unknown>;
   })
 
-  // PATCH /api/user/profile — 更新用户显示名
+  // PATCH /api/user/profile — 更新用户昵称（只改 nickname，不动 username 登录标识）
   fastify.patch('/api/user/profile', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = (request as any).user?.id
     if (!userId) return reply.status(401).send({ success: false, error: '未授权' })
-    const { displayName } = request.body as any
-    if (!displayName || typeof displayName !== 'string' || displayName.trim().length === 0) {
-      return reply.status(400).send({ success: false, error: '请输入有效显示名' })
+    const { displayName, nickname } = request.body as any
+    const raw = (nickname ?? displayName) as string | undefined
+    if (!raw || typeof raw !== 'string' || raw.trim().length === 0) {
+      return reply.status(400).send({ success: false, error: '请输入有效昵称' })
     }
-    if (displayName.trim().length > 50) {
-      return reply.status(400).send({ success: false, error: '显示名不能超过50个字符' })
+    const name = raw.trim()
+    if (name.length > 30) {
+      return reply.status(400).send({ success: false, error: '昵称不能超过30个字符' })
+    }
+    if (/[\x00-\x1f]/.test(name)) {
+      return reply.status(400).send({ success: false, error: '昵称不能包含控制字符' })
     }
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { username: displayName.trim() },
-      select: { id: true, username: true, email: true },
+      data: { nickname: name },
+      select: { id: true, username: true, nickname: true, email: true },
     })
-    return toApiResponse({success: true, data: { ...updated, displayName: updated.username }}) satisfies ApiResponse<unknown>;
+    return toApiResponse({ ...updated, displayName: updated.nickname || updated.username }) satisfies ApiResponse<unknown>;
   })
 
   // POST /api/auth/logout — 退出登录（清除 cookie）

@@ -30,6 +30,7 @@ model User {
   phone                 String?                @unique
   phoneVerified         Boolean                @default(false)
   avatarUrl             String?                @map("avatar_url") @db.Text // MEMBER-CENTER-02 用户头像
+  nickname              String?                @map("nickname") // USER-SETTINGS-01 用户昵称（展示用；username 保持唯一登录标识不变）
   payPasswordHash       String?                @map("pay_password_hash") @db.Text // MEMBER-CENTER-02 支付密码（bcrypt）
   alipayOpenId          String?                @unique @map("alipay_open_id") // MEMBER-CENTER-02 支付宝绑定
   wechatBoundAt         DateTime?              @map("wechat_bound_at") // MEMBER-CENTER-02 微信绑定时间

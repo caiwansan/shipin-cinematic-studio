@@ -37,9 +37,9 @@ async function getActiveGroup(groupId: string) {
 
 async function displayOf(uid: string): Promise<{ name: string; avatar: string }> {
   if (!UUID_RE.test(uid)) return { name: uid === BOT_UID ? BOT_NAME : uid, avatar: '' }
-  const u = await prisma.user.findUnique({ where: { id: uid }, select: { username: true, email: true, avatarUrl: true } })
+  const u = await prisma.user.findUnique({ where: { id: uid }, select: { username: true, nickname: true, email: true, avatarUrl: true } })
   if (!u) return { name: uid, avatar: '' }
-  return { name: u.username || u.email.split('@')[0], avatar: u.avatarUrl || '' }
+  return { name: u.nickname || u.username || u.email.split('@')[0], avatar: u.avatarUrl || '' }
 }
 
 /** 代发群内系统消息（群创建/角色变更/审批结果等，bot 名义） */
@@ -149,13 +149,17 @@ export default async function imGroupRoutes(fastify: FastifyInstance) {
     const presenceMap = new Map(presences.map((p) => [p.uid, p.online]))
     const uidsAll = members.map((m) => m.uid).filter((u) => UUID_RE.test(u))
     const avatarMap = new Map<string, string>()
+    const nameMap = new Map<string, string>()
     if (uidsAll.length) {
-      const users = await prisma.user.findMany({ where: { id: { in: uidsAll } }, select: { id: true, avatarUrl: true } })
-      for (const u of users) avatarMap.set(u.id, u.avatarUrl || '')
+      const users = await prisma.user.findMany({ where: { id: { in: uidsAll } }, select: { id: true, username: true, nickname: true, email: true, avatarUrl: true } })
+      for (const u of users) {
+        avatarMap.set(u.id, u.avatarUrl || '')
+        nameMap.set(u.id, u.nickname || u.username || u.email.split('@')[0])
+      }
     }
     const memberList = members.map((m) => ({
       uid: m.uid,
-      name: m.name,
+      name: nameMap.get(m.uid) || m.name,
       avatar: avatarMap.get(m.uid) ?? m.avatar,
       role: m.role, // 2 群主 / 1 管理员 / 0 成员 / (bot 成员角色 0)
       isBot: m.uid === BOT_UID,
@@ -332,11 +336,11 @@ export default async function imGroupRoutes(fastify: FastifyInstance) {
       take: 100,
     })
     const uids = [...new Set(applies.map((a) => a.uid))]
-    const userRows = await prisma.user.findMany({ where: { id: { in: uids.filter((u) => UUID_RE.test(u)) } }, select: { id: true, username: true, email: true, avatarUrl: true } })
+    const userRows = await prisma.user.findMany({ where: { id: { in: uids.filter((u) => UUID_RE.test(u)) } }, select: { id: true, username: true, nickname: true, email: true, avatarUrl: true } })
     const userMap = new Map(userRows.map((u) => [u.id, u]))
     const data = applies.map((a) => {
       const u = userMap.get(a.uid)
-      return { id: a.id, uid: a.uid, name: u ? u.username || u.email.split('@')[0] : a.uid, avatar: u?.avatarUrl || '', type: a.type, status: a.status, reason: a.reason, handledBy: a.handledBy, createdAt: a.createdAt, handledAt: a.handledAt }
+      return { id: a.id, uid: a.uid, name: u ? u.nickname || u.username || u.email.split('@')[0] : a.uid, avatar: u?.avatarUrl || '', type: a.type, status: a.status, reason: a.reason, handledBy: a.handledBy, createdAt: a.createdAt, handledAt: a.handledAt }
     })
     return { success: true, data: { applies: data } }
   })

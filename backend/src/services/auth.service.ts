@@ -59,7 +59,7 @@ export const authService = {
     const token = (fastify as any).jwt.sign({ id: user.id, email: user.email, tokenVersion: newVersion, organizationId } as any)
     return {
       accessToken: token,
-      user: { id: user.id, email: user.email, username: user.username, memberTier: user.memberTier, credits: (user as any).membership?.credits ?? 0, agentStatus: user.agentStatus, agentLevel: user.agentLevel, organizationId: organizationId || null },
+      user: { id: user.id, email: user.email, username: user.username, nickname: (user as any).nickname || null, displayName: (user as any).nickname || user.username, memberTier: user.memberTier, credits: (user as any).membership?.credits ?? 0, agentStatus: user.agentStatus, agentLevel: user.agentLevel, organizationId: organizationId || null },
     }
   },
 }

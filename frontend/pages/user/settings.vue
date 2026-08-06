@@ -7,6 +7,28 @@
     </div>
 
     <div class="settings-body">
+      <!-- 账号信息 -->
+      <div class="settings-section">
+        <h2 class="section-title">👤 账号信息</h2>
+        <div class="settings-card">
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">用户昵称</div>
+              <div class="setting-desc">茶馆聊天、群聊等场景展示的名字</div>
+            </div>
+            <button class="setting-btn" @click="openNickname">修改昵称</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">当前昵称</div>
+              <div class="setting-desc">{{ currentNickname || '—' }}</div>
+            </div>
+            <span class="setting-static">{{ userInfo?.username ? `登录账号：${userInfo.username}` : '' }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 账号安全 -->
       <div class="settings-section">
         <h2 class="section-title">🔐 账号安全</h2>
@@ -82,6 +104,20 @@
         </div>
       </div>
 
+      <!-- 修改昵称弹窗 -->
+      <div v-if="showNickname" class="modal-mask" @click.self="showNickname = false">
+        <div class="modal-box">
+          <h3>修改用户昵称</h3>
+          <p class="modal-tip">昵称用于茶馆、群聊等场景展示，最长 30 个字符</p>
+          <input v-model="nicknameInput" class="modal-input" placeholder="请输入新昵称" maxlength="30" @keyup.enter="saveNickname" />
+          <div class="modal-actions">
+            <button class="modal-cancel" @click="showNickname = false">取消</button>
+            <button class="modal-confirm" @click="saveNickname" :disabled="nicknameSaving">{{ nicknameSaving ? '保存中...' : '保存' }}</button>
+          </div>
+          <p v-if="nicknameError" class="modal-error">{{ nicknameError }}</p>
+        </div>
+      </div>
+
       <!-- 重置密码弹窗 -->
       <div v-if="showResetPwd" class="modal-mask" @click.self="showResetPwd = false">
         <div class="modal-box">
@@ -123,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -196,6 +232,61 @@ function bindAlipay() {
   qrTip.value = '使用支付宝扫一扫，完成账号绑定'
   qrIcon.value = '💙'
   qrPlaceholder.value = '支付宝扫码绑定（即将上线）'
+}
+
+const showNickname = ref(false)
+const nicknameInput = ref('')
+const nicknameSaving = ref(false)
+const nicknameError = ref('')
+
+const currentNickname = computed(() => userInfo.value?.displayName || userInfo.value?.nickname || userInfo.value?.username || '')
+
+function openNickname() {
+  nicknameError.value = ''
+  nicknameInput.value = currentNickname.value
+  showNickname.value = true
+}
+
+async function saveNickname() {
+  nicknameError.value = ''
+  const name = (nicknameInput.value || '').trim()
+  if (!name) { nicknameError.value = '昵称不能为空'; return }
+  if (name.length > 30) { nicknameError.value = '昵称不能超过 30 个字符'; return }
+  nicknameSaving.value = true
+  try {
+    const res = await fetch('/api/user/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+      body: JSON.stringify({ displayName: name }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      nicknameError.value = data.error || '保存失败'
+      return
+    }
+    // 同步本地缓存（auth_user：cookie + localStorage）
+    const updated = data.data || {}
+    if (userInfo.value) {
+      userInfo.value.nickname = updated.nickname || name
+      userInfo.value.displayName = updated.displayName || name
+      userInfo.value.username = updated.username || userInfo.value.username
+    }
+    try {
+      const cached = JSON.parse(localStorage.getItem('auth_user') || '{}')
+      cached.nickname = updated.nickname || name
+      cached.displayName = updated.displayName || name
+      localStorage.setItem('auth_user', JSON.stringify(cached))
+    } catch {}
+    try {
+      document.cookie = `auth_user=${encodeURIComponent(JSON.stringify({ ...JSON.parse(decodeURIComponent(document.cookie.match(/(?:^|;\s*)auth_user=([^;]+)/)?.[1] || '{}')), nickname: updated.nickname || name, displayName: updated.displayName || name }))}; path=/; max-age=604800`
+    } catch {}
+    alert('昵称修改成功 ✅')
+    showNickname.value = false
+  } catch (err: any) {
+    nicknameError.value = '保存失败: ' + (err.message || '')
+  } finally {
+    nicknameSaving.value = false
+  }
 }
 
 async function sendResetCode() {
