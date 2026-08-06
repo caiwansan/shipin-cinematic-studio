@@ -42,6 +42,14 @@ function getSDKModule() {
   return sdkModulePromise
 }
 
+// ── 双发修复：SDK 是 module 级单例（shared），消息 listener 必须全局只注册一次。
+// 每次组件挂载 onMessage/connect 若直接 addMessageListener → listener 累积 →
+// 同一条消息被 push N 次（「发一条消息变成发两条」根因）。
+// 方案：模块级单例包装 listener，内部转发给当前实例的 handler；connect 幂等注册。
+let sdkMessageListener: any = null
+let sdkCmdListener: any = null
+let sdkStatusListener: any = null
+
 export function useKunlunTea() {
   const status = ref(0)
   const userId = ref('')
@@ -62,6 +70,22 @@ export function useKunlunTea() {
   let messageHandler: ((msg: any) => void) | null = null
   let cmdHandler: ((msg: any) => void) | null = null
   let sendStatusHandler: ((p: any) => void) | null = null
+
+  function ensureSdkListeners() {
+    if (!sdk) return
+    if (!sdkMessageListener) {
+      sdkMessageListener = (msg: any) => { messageHandler?.(msg) }
+      sdk.chatManager.addMessageListener(sdkMessageListener)
+    }
+    if (!sdkCmdListener) {
+      sdkCmdListener = (msg: any) => { cmdHandler?.(msg) }
+      sdk.chatManager.addCMDListener(sdkCmdListener)
+    }
+    if (!sdkStatusListener) {
+      sdkStatusListener = (p: any) => { sendStatusHandler?.(p) }
+      sdk.chatManager.addMessageStatusListener(sdkStatusListener)
+    }
+  }
 
   async function connect() {
     const tokenRes = await authFetch('/api/im/token', { method: 'POST' })
@@ -139,18 +163,8 @@ export function useKunlunTea() {
       if (st === CONNECT_STATUS.Connected) reportPresence(true)
       if (st === CONNECT_STATUS.Disconnect) reportPresence(false)
     })
-    // 消息监听
-    if (messageHandler) {
-      sdk.chatManager.addMessageListener(messageHandler)
-    }
-    // CMD 信令监听（RTC 语音/视频 1v1 走 WuKongIM 命令消息，不落历史、实时直达）
-    if (cmdHandler) {
-      sdk.chatManager.addCMDListener(cmdHandler)
-    }
-    // 发送回执监听（SendackPacket：服务端确认发送结果）
-    if (sendStatusHandler) {
-      sdk.chatManager.addMessageStatusListener(sendStatusHandler)
-    }
+    // 消息监听（单例包装：防重复注册双发）
+    ensureSdkListeners()
     sdk.connect()
   }
 
@@ -180,13 +194,13 @@ export function useKunlunTea() {
 
   function onMessage(handler: (msg: any) => void) {
     messageHandler = handler
-    if (sdk) sdk.chatManager.addMessageListener(handler)
+    if (sdk) ensureSdkListeners()
   }
 
   /** CMD 信令监听（RTC 通话信令；WuKongIM 命令消息 contentType=99，不落历史） */
   function onCMD(handler: (msg: any) => void) {
     cmdHandler = handler
-    if (sdk) sdk.chatManager.addCMDListener(handler)
+    if (sdk) ensureSdkListeners()
   }
 
   /** 发送 CMD 信令消息（RTC 语音/视频 1v1）
@@ -206,7 +220,7 @@ export function useKunlunTea() {
   /** 发送回执（SendackPacket：clientSeq + reasonCode，0=成功） */
   function onSendStatus(handler: (p: any) => void) {
     sendStatusHandler = handler
-    if (sdk) sdk.chatManager.addMessageStatusListener(handler)
+    if (sdk) ensureSdkListeners()
   }
 
   /** 发送文本消息 */

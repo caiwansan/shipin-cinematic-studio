@@ -342,7 +342,52 @@ export default async function imRoutes(fastify: FastifyInstance) {
       })
       .filter((g): g is any => g !== null)
 
-    return { success: true, data: { public: publicChannels, groups, dms } }
+    // ── 会话摘要：每个频道最近一条消息（文字取内容，图片/视频/语音取类型占位）──
+    // 手机版/桌面版会话列表展示最后一条消息（掌柜反馈：群里发消息会话列表不显示文字）
+    const lastMsgByChannel = new Map<string, string>()
+    try {
+      const allChannels = [
+        ...publicChannels.map((c: any) => ({ id: c.id, type: c.type })),
+        ...groups.map((g: any) => ({ id: g.id, type: g.type })),
+        ...dms.map((d: any) => ({ id: d.id, type: d.type })),
+      ]
+      const results = await Promise.allSettled(
+        allChannels.map((ch: any) =>
+          wkApi('/channel/messagesync', {
+            login_uid: userId,
+            channel_id: ch.id,
+            channel_type: ch.type,
+            start_message_seq: 0,
+            limit: 1,
+            pull_mode: 2, // 最近消息
+          }).then((data: any) => {
+            const m = data?.messages?.[0]
+            if (!m) return
+            const decoded = decodeMessagePayload(m.payload)
+            let text = ''
+            if (decoded && typeof decoded === 'object') {
+              const c = decoded.content
+              if (typeof c === 'string') text = c
+              else if (c && typeof c === 'object') {
+                if (typeof c.text === 'string') text = c.text
+                else if (typeof c.content === 'string') text = c.content
+                else if (c.url) text = c.kind === 'voice' ? '[语音]' : '[图片]'
+                else if (c.kind === 'red_packet') text = '[红包]'
+                else if (c.kind === 'gift') text = '[礼物]'
+                else if (c.kind === 'recall') text = '[撤回通知]'
+                else if (c.name) text = `[${c.name}]`
+              }
+            }
+            lastMsgByChannel.set(ch.id, text || '')
+          })
+        )
+      )
+      for (const r of results) if (r.status === 'rejected') { /* 单个频道摘要失败不阻塞 */ }
+    } catch (e) {
+      console.warn('[im/channels] lastMsg 摘要加载失败（非致命）:', (e as Error).message)
+    }
+
+    return { success: true, data: { public: publicChannels.map((c: any) => ({ ...c, lastMsg: lastMsgByChannel.get(c.id) || '' })), groups: groups.map((g: any) => ({ ...g, lastMsg: lastMsgByChannel.get(g.id) || '' })), dms: dms.map((d: any) => ({ ...d, lastMsg: lastMsgByChannel.get(d.id) || '' })) } }
   })
 
   // GET /api/im/channels/:id/members — 频道成员列表（SDK syncSubscribersCallback 数据源）

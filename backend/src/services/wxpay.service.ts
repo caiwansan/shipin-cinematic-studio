@@ -1,7 +1,57 @@
-// wxpay.service.ts — 微信 NATIVE 扫码支付（API v3 版）
+// wxpay.service.ts — 微信支付（API v3 版）：NATIVE 扫码 + H5 手机支付
 // 需要：appId, mchId, apiV3Key（API v3 密钥）, keyPem（商户私钥证书文本）
 import { prisma } from '../utils/index.js'
 import crypto from 'crypto'
+
+/** 读取微信支付密钥配置（appId/mchId/apiV3Key/keyPem/serialNo） */
+async function getWxpayConfig(): Promise<{ appId: string; mchId: string; apiV3Key: string; keyPem: string; serialNo: string }> {
+  const secret = await prisma.paymentSecret.findUnique({ where: { channel: 'wechat' } })
+  if (!secret || !secret.enabled) {
+    throw new Error('微信支付未配置')
+  }
+  const config = typeof secret.config === 'string' ? JSON.parse(secret.config) : secret.config
+  const { appId, mchId, apiV3Key, keyPem } = config
+  if (!appId || !mchId || !apiV3Key || !keyPem) {
+    throw new Error('微信支付密钥不完整，需要 appId, mchId, apiV3Key, keyPem（商户私钥证书）')
+  }
+  if (!keyPem.includes('PRIVATE KEY')) {
+    throw new Error('商户私钥证书填写错误：应该是包含 -----BEGIN PRIVATE KEY----- 的 apiclient_key.pem 文件，不是公钥证书')
+  }
+  return { appId, mchId, apiV3Key, keyPem, serialNo: config.serialNo || '' }
+}
+
+/** 构建 API v3 认证头 + 发送请求（path 形如 /v3/pay/transactions/h5） */
+async function wxpayRequest(path: string, bodyObj: Record<string, unknown>): Promise<any> {
+  const cfg = await getWxpayConfig()
+  const nonceStr = crypto.randomBytes(16).toString('hex')
+  const timestamp = Math.floor(Date.now() / 1000).toString()
+  const body = JSON.stringify(bodyObj)
+
+  const message = `POST\n${path}\n${timestamp}\n${nonceStr}\n${body}\n`
+  const sign = crypto.createSign('SHA256')
+  sign.update(message)
+  sign.end()
+  const signature = sign.sign(cfg.keyPem, 'base64')
+  const token = `WECHATPAY2-SHA256-RSA2048 mchid="${cfg.mchId}",nonce_str="${nonceStr}",signature="${signature}",timestamp="${timestamp}",serial_no="${cfg.serialNo}"`
+
+  const { default: axios } = await import('axios')
+  try {
+    const resp = await axios.post(`https://api.mch.weixin.qq.com${path}`, body, {
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'scs-wxpay/1.0',
+      },
+      timeout: 10000,
+    })
+    return resp.data
+  } catch (err: any) {
+    const errData = err.response?.data
+    console.error(`[wxpay] ${path} failed:`, JSON.stringify(errData || err.message))
+    throw new Error(`微信支付下单失败: ${errData?.message || err.message}`)
+  }
+}
 
 /**
  * 生成微信 NATIVE 支付二维码链接（API v3）
@@ -12,66 +62,55 @@ export async function createWxpayNativeQrCode(params: {
   totalAmount: number  // 元
   notifyUrl: string
 }): Promise<{ codeUrl: string }> {
-  const secret = await prisma.paymentSecret.findUnique({ where: { channel: 'wechat' } })
-  if (!secret || !secret.enabled) {
-    throw new Error('微信支付未配置')
-  }
-
-  const config = typeof secret.config === 'string' ? JSON.parse(secret.config) : secret.config
-  const { appId, mchId, apiV3Key, keyPem } = config
-  if (!appId || !mchId || !apiV3Key || !keyPem) {
-    throw new Error('微信支付密钥不完整，需要 appId, mchId, apiV3Key, keyPem（商户私钥证书）')
-  }
-  if (!keyPem.includes('PRIVATE KEY')) {
-    throw new Error('商户私钥证书填写错误：应该是包含 -----BEGIN PRIVATE KEY----- 的 apiclient_key.pem 文件，不是公钥证书')
-  }
-
-  const nonceStr = crypto.randomBytes(16).toString('hex')
-  const timestamp = Math.floor(Date.now() / 1000).toString()
+  const cfg = await getWxpayConfig()
   const amountFen = Math.round(params.totalAmount * 100)
-
-  const body = JSON.stringify({
-    mchid: mchId,
+  const data = await wxpayRequest('/v3/pay/transactions/native', {
+    mchid: cfg.mchId,
     out_trade_no: params.outTradeNo,
-    appid: appId,
+    appid: cfg.appId,
     description: params.description,
     notify_url: params.notifyUrl,
     amount: { total: amountFen, currency: 'CNY' },
   })
+  console.log('[wxpay] create native order success')
+  return { codeUrl: data.code_url }
+}
 
-  // 构建签名
-  const message = `POST\n/v3/pay/transactions/native\n${timestamp}\n${nonceStr}\n${body}\n`
-  const sign = crypto.createSign('SHA256')
-  sign.update(message)
-  sign.end()
-  const signature = sign.sign(keyPem, 'base64')
-
-  // 从 keyPem 中提取证书序列号（用户在后台填写）
-  const serialNo = config.serialNo || ''
-
-  const token = `WECHATPAY2-SHA256-RSA2048 mchid="${mchId}",nonce_str="${nonceStr}",signature="${signature}",timestamp="${timestamp}",serial_no="${serialNo}"`
-
-  const { default: axios } = await import('axios')
-
-  try {
-    const resp = await axios.post('https://api.mch.weixin.qq.com/v3/pay/transactions/native', body, {
-      headers: {
-        'Authorization': token,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'scs-wxpay/1.0',
+/**
+ * 生成微信 H5 支付链接（手机浏览器唤起微信收银台；API v3 /v3/pay/transactions/h5）
+ * 注意：H5 支付需商户号已开通 H5 支付权限；wap_url 为发起支付页面的域名
+ */
+export async function createWxpayH5Order(params: {
+  outTradeNo: string
+  description: string
+  totalAmount: number  // 元
+  notifyUrl: string
+  wapUrl?: string
+  wapName?: string
+}): Promise<{ h5Url: string }> {
+  const cfg = await getWxpayConfig()
+  const amountFen = Math.round(params.totalAmount * 100)
+  const data = await wxpayRequest('/v3/pay/transactions/h5', {
+    mchid: cfg.mchId,
+    out_trade_no: params.outTradeNo,
+    appid: cfg.appId,
+    description: params.description,
+    notify_url: params.notifyUrl,
+    amount: { total: amountFen, currency: 'CNY' },
+    scene_info: {
+      payer_client_ip: '127.0.0.1',
+      h5_info: {
+        type: 'Wap',
+        wap_url: params.wapUrl || 'https://aigc.fushtn.com',
+        wap_name: params.wapName || '昆仑镜',
       },
-      timeout: 10000,
-    })
-
-    console.log('[wxpay] create order success')
-    return { codeUrl: resp.data.code_url }
-
-  } catch (err: any) {
-    const errData = err.response?.data
-    console.error('[wxpay] create order failed:', JSON.stringify(errData || err.message))
-    throw new Error(`微信支付下单失败: ${errData?.message || err.message}`)
+    },
+  })
+  if (!data.h5_url) {
+    throw new Error('微信 H5 下单未返回支付链接（商户号可能未开通 H5 支付）')
   }
+  console.log('[wxpay] create h5 order success')
+  return { h5Url: data.h5_url }
 }
 
 /**

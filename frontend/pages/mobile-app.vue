@@ -98,12 +98,16 @@
               <span v-if="currentChannel.kind === 'group'" class="chat-head-opt" @click="openGroupDetail">⋯</span>
             </div>
             <div class="chat-msgs">
-              <div v-for="m in messages" :key="msgKey(m)" class="msg-row" :class="{ mine: m.fromUID === tea.userId.value }">
+              <div v-for="m in messages" :key="msgKey(m)" class="msg-row" :class="{ mine: m.fromUID === tea.userId.value }" @touchstart="msgTouchStart(m, $event)" @touchmove="msgTouchMove" @touchend="msgTouchEnd" @contextmenu.prevent="openMsgMenuAt(m, $event)">
                 <div v-if="!m.isSystem" class="msg-avatar">{{ msgName(m) === '我' ? (myName || '我').slice(0,1) : msgName(m).slice(0,1) }}</div>
                 <div class="msg-main">
                   <div v-if="!m.isSystem" class="msg-author">{{ msgName(m) }}</div>
+                  <!-- 已撤回占位 -->
+                  <div v-if="m.recalled && !isRedPacket(m) && !isGift(m)" class="msg-bubble recalled-bubble">
+                    <template>{{ m.fromUID === tea.userId.value ? '你撤回了一条消息' : '该消息已撤回' }}</template>
+                  </div>
                   <!-- 红包卡片 -->
-                  <div v-if="isRedPacket(m)" class="rp-card" @click="openRpDetailMsg(m)">
+                  <div v-else-if="isRedPacket(m)" class="rp-card" @click="openRpDetailMsg(m)">
                     <div class="rp-card-icon">🧧</div>
                     <div class="rp-card-info">
                       <div class="rp-card-title">{{ rpCardTitle(m) }}</div>
@@ -130,7 +134,11 @@
                     <span class="voice-dur">{{ voiceDur(m) }}"</span>
                   </div>
                   <div v-else class="msg-bubble" :class="{ system: m.isSystem }">
-                    <template>{{ msgText(m) }}</template>
+                    <template v-if="m.isSystem">{{ msgText(m) }}</template>
+                    <template v-else>
+                      {{ msgText(m) }}
+                      <span v-if="m.translation" class="msg-translation">{{ m.translation }}</span>
+                    </template>
                   </div>
                   <div class="msg-time">{{ msgTime(m) }}</div>
                 </div>
@@ -402,6 +410,17 @@
       <div class="gift-anim-text">{{ giftAnimation.fromName }} 送出 {{ giftAnimation.name }} 给 {{ giftAnimation.toName }}</div>
     </div>
 
+    <!-- ══ 消息长按操作菜单（复制/收藏/翻译/撤回） ══ -->
+    <div v-if="msgMenu" class="msg-action-mask" @click.self="closeMsgMenu">
+      <div class="msg-action-sheet">
+        <div v-if="msgMenu.canCopy" class="msg-action-item" @click="copyMsg(msgMenu.msg)">📋 复制</div>
+        <div class="msg-action-item" @click="favMsg(msgMenu.msg)">⭐ 收藏</div>
+        <div v-if="msgMenu.canTranslate" class="msg-action-item" @click="translateMsg(msgMenu.msg)">🌐 翻译</div>
+        <div v-if="msgMenu.canRecall" class="msg-action-item danger" @click="recallMsg(msgMenu.msg)">↩ 撤回</div>
+        <div class="msg-action-cancel" @click="closeMsgMenu">取消</div>
+      </div>
+    </div>
+
     <!-- 全局 toast（子页面 mobileToast 事件） -->
     <div v-if="toast" class="tea-toast">{{ toast }}</div>
 
@@ -582,6 +601,8 @@ const filteredFriends = computed(() => {
 })
 
 async function openChannel(ch: any, silent = false) {
+  // 通讯录/好友列表点进聊天 → 切到茶馆 tab（原 bug：停留通讯录页看不到聊天窗）
+  if (activeTab.value !== 'chat') activeTab.value = 'chat'
   currentChannel.value = ch
   chatPanel.value = ''
   unreadMap.value[ch.id + ':' + ch.type] = 0
@@ -1115,6 +1136,162 @@ function msgKey(m: any) {
 const previewUrl = ref('')
 function previewImg(url: string) { previewUrl.value = url }
 
+// ═══ 消息长按操作菜单（复制/收藏/翻译/撤回）— 对齐桌面版 chat/index.vue ═══
+const msgMenu = ref<{ msg: any; canCopy: boolean; canTranslate: boolean; canRecall: boolean } | null>(null)
+let msgHoldTimer: ReturnType<typeof setTimeout> | null = null
+let msgHoldFired = false
+let msgTouchStartPos: { x: number; y: number } | null = null
+
+function msgMessageId(m: any): string {
+  return String(m?.message_idstr || m?.messageID || m?.message_id || m?.clientMsgNo || '')
+}
+function msgMenuable(m: any): boolean {
+  if (!m || m.recalled || m.isSystem) return false
+  if (isRedPacket(m) || isGift(m)) return false
+  const parsed = parseContent(m)
+  if (!parsed) return false
+  return parsed.type === 1 || parsed.type === 2 || parsed.type === 4
+}
+function canRecall(m: any): boolean {
+  if (!m || m.recalled) return false
+  if (typeof tea.userId.value !== 'string' || m.fromUID !== tea.userId.value) return false
+  const mid = msgMessageId(m)
+  if (!mid || mid === 'undefined' || mid === 'null') return false
+  const ts = Number(m.timestamp) || 0
+  if (ts > 0 && Date.now() / 1000 - ts > 10 * 60) return false
+  return true
+}
+function canTranslateMsg(m: any): boolean {
+  if (!m || m.recalled || m.translation || m.translating) return false
+  const parsed = parseContent(m)
+  if (!parsed || parsed.type !== 1) return false
+  const text = typeof parsed.content === 'string' ? parsed.content : parsed.content?.text || ''
+  if (!text) return false
+  return /[a-zA-Z]{4,}/.test(text) && !/[\u4e00-\u9fa5]/.test(text)
+}
+function openMsgMenuAt(m: any, e: MouseEvent) {
+  if (!msgMenuable(m)) return
+  msgMenu.value = { msg: m, canCopy: true, canTranslate: canTranslateMsg(m), canRecall: canRecall(m) }
+}
+function closeMsgMenu() { msgMenu.value = null }
+function msgTouchStart(m: any, e: TouchEvent) {
+  const t = e.touches?.[0]
+  msgTouchStartPos = t ? { x: t.clientX, y: t.clientY } : null
+  if (!msgMenuable(m)) return
+  msgHoldCancel()
+  msgHoldFired = false
+  msgHoldTimer = setTimeout(() => {
+    msgHoldFired = true
+    msgMenu.value = { msg: m, canCopy: true, canTranslate: canTranslateMsg(m), canRecall: canRecall(m) }
+  }, 500)
+}
+function msgTouchMove(e: TouchEvent) {
+  const t = e.touches?.[0]
+  if (t && msgTouchStartPos) {
+    const dx = Math.abs(t.clientX - msgTouchStartPos.x)
+    const dy = Math.abs(t.clientY - msgTouchStartPos.y)
+    if (dx > 10 || dy > 10) msgHoldCancel()
+  }
+}
+function msgTouchEnd() { msgHoldEnd() }
+function msgHoldEnd() {
+  if (msgHoldTimer) { clearTimeout(msgHoldTimer); msgHoldTimer = null }
+}
+function msgHoldCancel() { msgHoldEnd() }
+function extractMsgText(m: any): string {
+  const parsed = parseContent(m)
+  if (!parsed) return ''
+  const c = parsed.content
+  if (typeof c === 'string') return c
+  if (typeof c?.text === 'string') return c.text
+  if (typeof c?.content === 'string') return c.content
+  return ''
+}
+async function copyText(text: string, tip = '✅ 已复制') {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    try { document.execCommand('copy') } catch { /* noop */ }
+    ta.remove()
+  }
+  showToast(tip)
+}
+function copyMsg(m: any) {
+  const text = extractMsgText(m)
+  if (!text) return showToast('⚠ 无法复制该消息')
+  closeMsgMenu()
+  copyText(text)
+}
+async function favMsg(m: any) {
+  const parsed = parseContent(m)
+  if (!parsed) return
+  closeMsgMenu()
+  try {
+    const res = await fetch('/api/im/favorites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({
+        messageId: msgMessageId(m),
+        channelId: currentChannel.value?.id || '',
+        channelType: currentChannel.value?.type || 4,
+        contentType: parsed.type,
+        content: parsed,
+        fromUid: m.fromUID || '',
+        fromName: msgName(m),
+        channelName: currentChannel.value?.name || '',
+      }),
+    })
+    const j = await res.json()
+    if (j.success) showToast(j.duplicated ? '⭐ 已收藏过' : '⭐ 已收藏')
+    else showToast('⚠ ' + (j.error || '收藏失败'))
+  } catch { showToast('⚠ 收藏失败') }
+}
+async function translateMsg(m: any) {
+  if (m.translating || m.translation) return
+  const parsed = parseContent(m)
+  const text = parsed && typeof parsed.content === 'string' ? parsed.content : parsed?.content?.text || ''
+  if (!text) return
+  m.translating = true
+  try {
+    const res = await fetch('/api/im/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ text }),
+    })
+    const j = await res.json()
+    if (j.success) m.translation = j.data.translated
+    else showToast('⚠ ' + (j.error || '翻译失败'))
+  } catch { showToast('⚠ 翻译失败，请重试') } finally { m.translating = false }
+}
+async function recallMsg(m: any) {
+  if (!currentChannel.value) return
+  const messageId = msgMessageId(m)
+  if (!messageId) return showToast('⚠ 该消息暂不支持撤回')
+  if (!window.confirm('确定撤回这条消息吗？')) return
+  closeMsgMenu()
+  try {
+    const res = await fetch('/api/im/messages/recall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ messageId, channelId: currentChannel.value.id, channelType: currentChannel.value.type }),
+    })
+    const j = await res.json()
+    if (j.success) {
+      m.recalled = true
+      showToast('✅ 已撤回')
+    } else {
+      showToast('⚠ ' + (j.error || '撤回失败'))
+      if (j.code === 'NOT_OWNER' || j.code === 'EXPIRED' || j.code === 'NOT_FOUND') loadHistory()
+    }
+  } catch { showToast('⚠ 撤回失败，请重试') }
+}
+
 // ── 群详情 ──
 const groupDetailOpen = ref(false)
 const groupDetail = ref<any>(null)
@@ -1285,6 +1462,36 @@ function switchTab(key: string) {
   if (key !== 'chat' && currentChannel.value) closeChannel()
 }
 
+// ══ 充值回跳轮询：H5 支付完成后 returnUrl 回手机版，检测待支付订单并轮询到账 ══
+function pollPendingRecharge() {
+  try {
+    const raw = sessionStorage.getItem('pendingRecharge')
+    if (!raw) return
+    sessionStorage.removeItem('pendingRecharge')
+    const info = JSON.parse(raw)
+    if (!info?.orderId) return
+    showToast('⏳ 正在确认支付结果…')
+    let tries = 0
+    const timer = setInterval(async () => {
+      tries++
+      try {
+        const r = await authFetch('/api/payment/wxpay/status/' + info.orderId)
+        const j = await r.json()
+        if (j.status === 'paid') {
+          clearInterval(timer)
+          showToast(`✅ 充值成功，${info.coins || ''} 钻石已到账`)
+          loadMine()
+        } else if (tries >= 30) { // 60s 超时
+          clearInterval(timer)
+          showToast('⚠ 未检测到支付结果，请查看支付账单')
+        }
+      } catch {
+        if (tries >= 30) { clearInterval(timer); showToast('⚠ 查询支付状态失败') }
+      }
+    }, 2000)
+  } catch { /* ignore */ }
+}
+
 // 实时消息：当前频道追加，其他频道累计未读
 watch(() => tea.connected.value, (v) => { if (v) { loadChannels(); loadFriends() } })
 onMounted(() => {
@@ -1313,6 +1520,8 @@ onMounted(() => {
   // 定时刷新会话/好友
   const iv = setInterval(() => { if (tea.connected.value) loadChannels() }, 30000)
   onBeforeUnmount(() => clearInterval(iv))
+  // 充值回跳轮询：微信/支付宝 H5 支付完成后 returnUrl 回手机版，检测待支付订单并轮询到账
+  pollPendingRecharge()
 })
 
 // 全局消息事件（chat 页同款桥接：CLIENT_MSG 等）
@@ -1716,6 +1925,16 @@ if (typeof window !== 'undefined') {
 }
 .gift-anim-icon { font-size: 64px; animation: giftPop .5s ease; }
 .gift-anim-text { color: #fff; background: rgba(0,0,0,.55); border-radius: 16px; padding: 6px 14px; font-size: 13px; margin-top: 6px; white-space: nowrap; }
+
+/* ═══ 消息长按操作菜单 ═══ */
+.msg-action-mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 120; display: flex; align-items: flex-end; justify-content: center; }
+.msg-action-sheet { width: 100%; max-width: 640px; background: #fff; border-radius: 14px 14px 0 0; padding: 8px 0 calc(14px + env(safe-area-inset-bottom)); }
+.msg-action-item { text-align: center; padding: 15px 0; font-size: 16px; border-bottom: 1px solid #f2f2f2; }
+.msg-action-item:active { background: #f5f5f5; }
+.msg-action-item.danger { color: #e5484d; border-bottom: none; }
+.msg-action-cancel { text-align: center; padding: 14px 0; font-size: 15px; color: #888; }
+.msg-translation { display: block; margin-top: 4px; color: #576b95; font-size: 13px; }
+.recalled-bubble { color: #999 !important; font-size: 13px; background: #f0f0f0 !important; }
 @keyframes giftPop { 0% { transform: scale(.3); opacity: 0 } 60% { transform: scale(1.2) } 100% { transform: scale(1); opacity: 1 } }
 .tea-toast {
   position: fixed; top: 12%; left: 50%; transform: translateX(-50%);

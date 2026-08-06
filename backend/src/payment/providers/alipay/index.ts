@@ -46,6 +46,38 @@ export class AlipayProvider {
     }
   }
 
+  /** 创建手机网站支付订单（alipay.trade.wap.pay — 手机浏览器直接唤起支付宝收银台） */
+  async createWapOrder(params: {
+    outTradeNo: string
+    description: string
+    amount: number
+    notifyUrl: string
+    returnUrl?: string
+    quitUrl?: string
+  }): Promise<{ outTradeNo: string; payUrl: string; qrCode?: string }> {
+    if (!this.config.privateKey) {
+      return this.mockCreateOrder(params)
+    }
+
+    const bizContent: Record<string, any> = {
+      out_trade_no: params.outTradeNo,
+      total_amount: params.amount.toFixed(2),
+      subject: params.description,
+      product_code: 'QUICK_WAP_WAY',
+    }
+    if (params.quitUrl) bizContent.quit_url = params.quitUrl
+
+    const requestBody = this.buildRequest({
+      method: 'alipay.trade.wap.pay',
+      biz_content: JSON.stringify(bizContent),
+      notify_url: String(params.notifyUrl || this.config.notifyUrl),
+      return_url: String(params.returnUrl || this.config.returnUrl),
+    })
+
+    const payUrl = String(`${this.config.gateway}?${new URLSearchParams(requestBody).toString()}`)
+    return { outTradeNo: params.outTradeNo, payUrl, qrCode: payUrl }
+  }
+
   /** 验证回调签名 */
   verifyNotify(payload: any): boolean {
     if (!this.config.privateKey) return true // mock模式

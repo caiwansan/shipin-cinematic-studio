@@ -14,7 +14,27 @@
         </div>
         <div class="mpd-actions">
           <button class="mpd-act" :class="{ liked: liked }" @click="toggleLike">👍 {{ likeCount }}</button>
-          <button class="mpd-act" @click="tipPost">💰 打赏</button>
+          <button class="mpd-act" @click="openTipModal">💰 打赏</button>
+        </div>
+      </div>
+
+      <!-- 打赏礼物选择弹窗（对齐桌面版：礼物列表 → giftId） -->
+      <div v-if="tipOpen" class="mpd-mask" @click.self="tipOpen = false">
+        <div class="mpd-tip-panel">
+          <div class="mpd-tip-title">🎁 打赏楼主</div>
+          <div v-if="tipLoading" class="mpd-empty">加载礼物中…</div>
+          <div v-else-if="!tipGifts.length" class="mpd-empty">暂无可用礼物</div>
+          <div v-else class="mpd-tip-grid">
+            <button v-for="g in tipGifts" :key="g.id" class="mpd-tip-gift" :class="{ on: tipSelectedId === g.id }" @click="tipSelectedId = g.id">
+              <span class="mpd-tip-gift-icon">{{ g.iconUrl || '🎁' }}</span>
+              <span class="mpd-tip-gift-name">{{ g.giftName || g.name }}</span>
+              <span class="mpd-tip-gift-price">💎{{ g.priceDiamonds }}</span>
+            </button>
+          </div>
+          <div class="mpd-tip-actions">
+            <button class="mpd-act" @click="tipOpen = false">取消</button>
+            <button class="mpd-act primary" :disabled="!tipSelectedId || tipSending" @click="sendTip">{{ tipSending ? '赠送中…' : '确定打赏' }}</button>
+          </div>
         </div>
       </div>
 
@@ -142,6 +162,42 @@ async function tipPost() {
     else mobileToast('⚠ ' + (j.error || '打赏失败'))
   } catch { mobileToast('⚠ 网络错误') }
 }
+
+// ══ 打赏（对齐桌面版：选礼物 → POST {giftId}；旧实现传 {diamonds:1} 与后端 giftId 必填不符，永远 400） ══
+const tipOpen = ref(false)
+const tipGifts = ref<any[]>([])
+const tipLoading = ref(false)
+const tipSelectedId = ref('')
+const tipSending = ref(false)
+async function openTipModal() {
+  tipOpen.value = true
+  tipSelectedId.value = ''
+  if (tipGifts.value.length) return
+  tipLoading.value = true
+  try {
+    const r = await mobileAuthFetch('/api/gifts/products')
+    const j = await r.json()
+    const groups = j.data?.gifts || []
+    tipGifts.value = groups.flatMap((g: any) => g.items || [])
+  } catch { tipGifts.value = [] } finally { tipLoading.value = false }
+}
+async function sendTip() {
+  if (!tipSelectedId.value || tipSending.value) return
+  tipSending.value = true
+  try {
+    const r = await mobileAuthFetch(`/api/community/posts/${props.postId}/tip`, {
+      method: 'POST',
+      body: JSON.stringify({ giftId: tipSelectedId.value }),
+    })
+    const j = await r.json()
+    if (j.success) {
+      tipOpen.value = false
+      mobileToast('✅ 打赏成功，感谢支持')
+    } else {
+      mobileToast('⚠ ' + (j.error || '打赏失败'))
+    }
+  } catch { mobileToast('⚠ 网络错误') } finally { tipSending.value = false }
+}
 </script>
 
 <style scoped>
@@ -169,4 +225,15 @@ async function tipPost() {
 .mpd-send:disabled { opacity: .4; }
 .mpd-mask { position: absolute; inset: 0; background: rgba(0,0,0,.85); z-index: 80; display: flex; align-items: center; justify-content: center; }
 .mpd-preview-img { max-width: 94%; max-height: 82%; border-radius: 8px; }
+.mpd-tip-panel { width: 88%; max-width: 340px; background: #fff; border-radius: 14px; padding: 16px; }
+.mpd-tip-title { font-size: 15px; font-weight: 700; text-align: center; margin-bottom: 12px; }
+.mpd-tip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 260px; overflow-y: auto; }
+.mpd-tip-gift { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 0; border: 1px solid #e5e5e5; border-radius: 10px; background: #fff; }
+.mpd-tip-gift.on { border-color: #4f7df9; background: #eef3ff; }
+.mpd-tip-gift-icon { font-size: 22px; }
+.mpd-tip-gift-name { font-size: 12px; }
+.mpd-tip-gift-price { font-size: 11px; color: #f5a623; }
+.mpd-tip-actions { display: flex; gap: 10px; margin-top: 14px; }
+.mpd-act.primary { background: #4f7df9; color: #fff; border-color: #4f7df9; }
+.mpd-act:disabled { opacity: .4; }
 </style>

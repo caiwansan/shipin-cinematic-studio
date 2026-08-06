@@ -370,6 +370,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     // 检查支付方式是否启用（兼容 PaymentSecret 密钥模式和 PaymentConfig 收款码模式）
     const secretConfig = await prisma.paymentSecret.findUnique({ where: { channel: method } })
     const qrConfig = await prisma.paymentConfig.findUnique({ where: { method } })
+    const payMode = (request.body as any)?.payMode // 'h5' = 手机浏览器直接唤起支付（微信 H5 / 支付宝 WAP）
+    // 手机端 H5 支付完成后回到手机版主界面；桌面版保持默认回用户中心
+    const mobileReturnUrl = 'https://aigc.fushtn.com/mobile-app'
+    const returnUrl = (request.body as any)?.returnUrl || (payMode === 'h5' ? mobileReturnUrl : 'https://aigc.fushtn.com/user/diamonds')
 
     const parseSecretConfig = (raw: string | null | undefined) => {
       if (!raw) return {}
@@ -401,10 +405,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       },
     })
 
-    // ─── 密钥模式：生成 native 支付二维码（金额 = 差额）───
+    // ─── 密钥模式：生成支付链接（H5 手机支付 / NATIVE 扫码支付）───
     let paymentUrl: string | null = null
     let qrCode: string | null = null
     let codeUrl: string | null = null
+    let h5Url: string | null = null
 
     if (isSecretEnabled) {
       try {
@@ -421,28 +426,55 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
               alipayPublicKey: secretCfg.publicKey || secretCfg.alipayPublicKey || '',
               gateway: 'https://openapi.alipay.com/gateway.do',
               notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
-              returnUrl: 'https://aigc.fushtn.com/user/diamonds',
+              returnUrl,
             })
-            const result = await provider.createOrder({
-              outTradeNo: order.orderNo,
-              description: `充值 ${coins} 钻石 ¥${amount}`,
-              amount: externalAmount,
-              notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
-              returnUrl: 'https://aigc.fushtn.com/user/diamonds',
-            })
-            paymentUrl = result.payUrl || null
-            qrCode = result.qrCode || null
+            if (payMode === 'h5') {
+              // 手机网站支付：跳转支付宝收银台（手机浏览器直接唤起）
+              const result = await provider.createWapOrder({
+                outTradeNo: order.orderNo,
+                description: `充值 ${coins} 钻石 ¥${amount}`,
+                amount: externalAmount,
+                notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
+                returnUrl,
+                quitUrl: 'https://aigc.fushtn.com/mobile-app',
+              })
+              paymentUrl = result.payUrl || null
+            } else {
+              const result = await provider.createOrder({
+                outTradeNo: order.orderNo,
+                description: `充值 ${coins} 钻石 ¥${amount}`,
+                amount: externalAmount,
+                notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
+                returnUrl,
+              })
+              paymentUrl = result.payUrl || null
+              qrCode = result.qrCode || null
+            }
           }
         } else {
           if (secretCfg.appId && secretCfg.mchId && secretCfg.apiV3Key && secretCfg.keyPem) {
-            const { createWxpayNativeQrCode } = await import('../services/wxpay.service.js')
-            const result = await createWxpayNativeQrCode({
-              outTradeNo: order.orderNo,
-              description: `充值 ${coins} 钻石 ¥${amount}`,
-              totalAmount: externalAmount,
-              notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
-            })
-            codeUrl = result.codeUrl || null
+            if (payMode === 'h5') {
+              // 微信 H5 支付：手机浏览器跳转微信收银台（需商户开通 H5 支付）
+              const { createWxpayH5Order } = await import('../services/wxpay.service.js')
+              const result = await createWxpayH5Order({
+                outTradeNo: order.orderNo,
+                description: `充值 ${coins} 钻石 ¥${amount}`,
+                totalAmount: externalAmount,
+                notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
+                wapUrl: 'https://aigc.fushtn.com',
+                wapName: '昆仑镜',
+              })
+              h5Url = result.h5Url || null
+            } else {
+              const { createWxpayNativeQrCode } = await import('../services/wxpay.service.js')
+              const result = await createWxpayNativeQrCode({
+                outTradeNo: order.orderNo,
+                description: `充值 ${coins} 钻石 ¥${amount}`,
+                totalAmount: externalAmount,
+                notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
+              })
+              codeUrl = result.codeUrl || null
+            }
           }
         }
       } catch (err: any) {
@@ -450,10 +482,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }
 
       // 保存支付凭据
-      if (paymentUrl || qrCode || codeUrl) {
+      if (paymentUrl || qrCode || codeUrl || h5Url) {
         await prisma.paymentOrder.update({
           where: { id: order.id },
-          data: { qrCode: codeUrl || qrCode || paymentUrl, payUrl: paymentUrl },
+          data: { qrCode: codeUrl || qrCode || paymentUrl || h5Url, payUrl: paymentUrl || h5Url },
         })
       }
     }
@@ -467,9 +499,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       status: order.status,
       walletPaid,
       externalAmount,
+      payMode: payMode === 'h5' ? 'h5' : 'native',
       paymentUrl,
       qrCode,
       codeUrl,
+      h5Url,
       qrCodeUrl: qrConfig?.qrCodeUrl || null,
       account: qrConfig?.account || null,
       payeeName: qrConfig?.name || null,
