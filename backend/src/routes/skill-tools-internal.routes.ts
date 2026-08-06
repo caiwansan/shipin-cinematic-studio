@@ -247,4 +247,116 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'INTERNAL', message: e.message })
     }
   })
+
+  // S5.2: 新媒体运营 3 Skill（Skill LLM Tool, 经 Unified AI Gateway; 禁浏览器自动化/平台 API/narrativeGateway）
+  // NM-01 content.strategy: { brand, topic?, goal? } → { strategy, contentPillars, schedule(≤10) }
+  app.post('/api/internal/skill-tools/content-strategy', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.brand) {
+        return reply.code(400).send({ error: 'BRAND_REQUIRED' })
+      }
+      const { buildContentStrategyPrompt, parseContentStrategyResult } = await import('../ecosystem/newmedia-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildContentStrategyPrompt({ brand: String(body.brand), topic: body.topic, goal: body.goal })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'CONTENT_STRATEGY_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseContentStrategyResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal content-strategy failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
+  // NM-02 content.draft: { topic, tone?, format?, length? } → { title, body(≤1200), tags, cta }
+  app.post('/api/internal/skill-tools/content-draft', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.topic) {
+        return reply.code(400).send({ error: 'TOPIC_REQUIRED' })
+      }
+      const { buildContentDraftPrompt, parseContentDraftResult } = await import('../ecosystem/newmedia-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildContentDraftPrompt({ topic: String(body.topic), tone: body.tone, format: body.format, length: body.length })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'CONTENT_DRAFT_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseContentDraftResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal content-draft failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
+  // NM-03 ops.analysis: { operationDataText, question? } → { insights, recommendations, risks }（纯分析, 零平台触达）
+  app.post('/api/internal/skill-tools/ops-analysis', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.operationDataText) {
+        return reply.code(400).send({ error: 'OPERATION_DATA_REQUIRED' })
+      }
+      const { buildOpsAnalysisPrompt, parseOpsAnalysisResult } = await import('../ecosystem/newmedia-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildOpsAnalysisPrompt({ operationDataText: String(body.operationDataText), question: body.question })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'OPS_ANALYSIS_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseOpsAnalysisResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal ops-analysis failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
 }

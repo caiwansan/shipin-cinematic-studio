@@ -119,6 +119,46 @@ const TOOL_REGISTRY = {
     }
     return { ok: true, result: body.data }
   },
+  // S5.2: 新媒体运营 3 薄工具（经后端内部路由 → Unified AI Gateway; 禁浏览器自动化/平台 API）
+  'content.strategy': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/content-strategy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ brand: input.brand, topic: input.topic, goal: input.goal, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'CONTENT_STRATEGY_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'CONTENT_STRATEGY_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  'content.draft': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/content-draft`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ topic: input.topic, tone: input.tone, format: input.format, length: input.length, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'CONTENT_DRAFT_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'CONTENT_DRAFT_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  'ops.analysis': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/ops-analysis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ operationDataText: input.operationDataText, question: input.question, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'OPS_ANALYSIS_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'OPS_ANALYSIS_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
   'mock-calc': (input = {}) => {
     const { a, b, op } = input
     if (op === 'add') return { ok: true, result: { value: Number(a) + Number(b) } }
