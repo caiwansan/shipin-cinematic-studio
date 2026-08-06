@@ -8,6 +8,7 @@
  * 宪法保持: Planner=Cloud / SkillPlan=纯内存 DAG / Hermes=原子执行者（生命周期零修改）/ KernelEvent=审计权威
  */
 import type { SkillDefinition } from './skill-manifest-adapter.js'
+import { prisma } from '../utils/index.js'
 
 /** 组合状态机（掌柜冻结, 不改变） */
 export type PlanStatus =
@@ -99,6 +100,8 @@ export interface ExecutePlanOptions {
   deadlineMs?: number
   retry?: Partial<RetryConfig>
   maxParallel?: number
+  /** S4.1: 租户身份（BYOK 路由）; S4.2: 商业执行需经 Entitlement Gate */
+  tenantUserId?: string | null
 }
 
 const HERMES_SKILL_RUNTIME_URL = process.env.HERMES_SKILL_RUNTIME_URL || 'http://127.0.0.1:9457'
@@ -422,6 +425,87 @@ async function runLevel(
   }
 }
 
+/**
+ * S4.2 Task 02/03: 企业 Entitlement 校验（Cloud 侧, 执行入口 Gate）
+ * 语义: 企业购买员工 = EnterpriseEntitlement.capabilityCodes 含员工 code（License 最小语义）
+ * 禁止: Skill/Desktop 判断授权（授权判定只在 Cloud 执行入口）
+ */
+export async function checkEmployeeEntitlement(
+  tenantUserId: string,
+  employeeCode: string,
+): Promise<{ allowed: boolean; reason: string }> {
+  const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+  const orgId = await getOrganizationIdForUser(tenantUserId).catch(() => null)
+  if (!orgId) return { allowed: false, reason: 'NO_ORGANIZATION' }
+  const ent = await prisma.enterpriseEntitlement
+    .findFirst({ where: { organizationId: orgId, status: 'active' }, orderBy: { createdAt: 'desc' } })
+    .catch(() => null)
+  if (!ent) return { allowed: false, reason: 'NO_ENTITLEMENT' }
+  const denied = parseJsonArr(ent.capabilityDeniedCodes)
+  if (denied.includes(employeeCode)) return { allowed: false, reason: `EMPLOYEE_DENIED:${employeeCode}` }
+  const codes = parseJsonArr(ent.capabilityCodes)
+  if (!codes.length || !codes.includes(employeeCode)) return { allowed: false, reason: `EMPLOYEE_NOT_ENTITLED:${employeeCode}` }
+  return { allowed: true, reason: 'OK' }
+}
+
+function parseJsonArr(raw: any): string[] {
+  if (Array.isArray(raw)) return raw.filter((x) => typeof x === 'string')
+  try {
+    const p = JSON.parse(raw)
+    return Array.isArray(p) ? p.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * S4.2 Task 05: Usage Meter（复用 InvocationLog + KernelEvent, 零新统计体系）
+ * 回答: 谁调用 / 什么能力 / 执行次数 / 结果是否成功
+ */
+export async function getEmployeeUsageMeter(
+  tenantUserId: string,
+  employeeCode: string,
+): Promise<{
+  employeeCode: string
+  executions: number
+  successful: number
+  failed: number
+  skills: Record<string, number>
+  byCaller: Record<string, number>
+  recent: { at: string; tool: string; status: string }[]
+}> {
+  const events = await prisma.kernelEvent
+    .findMany({ where: { eventType: 'hermes.execution' }, orderBy: { createdAt: 'desc' }, take: 500 })
+    .catch(() => [])
+  const mine = (events as any[]).filter((e) => {
+    const p = e.payload || {}
+    return p.definitionId === employeeCode || (p.agentId || '').includes(employeeCode)
+  })
+  const executions = mine.length
+  const successful = mine.filter((e) => e.payload?.status === 'completed').length
+  const failed = executions - successful
+  const skills: Record<string, number> = {}
+  for (const e of mine) {
+    for (const tc of e.payload?.toolCalls || []) {
+      if (tc?.tool) skills[tc.tool] = (skills[tc.tool] || 0) + 1
+    }
+  }
+  const byCaller: Record<string, number> = {}
+  const logs = await prisma.invocationLog
+    .findMany({ where: { userId: tenantUserId }, orderBy: { createdAt: 'desc' }, take: 100 })
+    .catch(() => [])
+  for (const l of logs as any[]) {
+    const key = l.provider || 'unknown'
+    byCaller[key] = (byCaller[key] || 0) + 1
+  }
+  const recent = mine.slice(0, 10).map((e) => ({
+    at: e.createdAt ? new Date(e.createdAt).toISOString() : '',
+    tool: (e.payload?.toolCalls?.[0]?.tool) || '',
+    status: e.payload?.status || '',
+  }))
+  return { employeeCode, executions, successful, failed, skills, byCaller, recent }
+}
+
 /** 执行 SkillPlan（编排层）: 生成 → 分层并行执行 → 聚合状态 → Cloud Audit → 返回（意图即弃, Q3） */
 export async function executeSkillPlan(input: ExecutePlanOptions): Promise<{ plan: SkillPlan; errors: string[] }> {
   const onFailure: FailurePolicy = input.fallback || 'STOP'
@@ -442,6 +526,15 @@ export async function executeSkillPlan(input: ExecutePlanOptions): Promise<{ pla
   // 校验 + 拓扑序 + 分层
   const v = validatePlan({ steps: input.steps, employeeSkillSet })
   if (!v.ok) return { plan: null as any, errors: v.errors }
+
+  // S4.2 Task 03: Entitlement Gate（Cloud 执行入口; 仅企业身份的执行路径）
+  // 无 tenantUserId / 无 employeeDefinitionId = 非商业路径（dev/内部, 行为保持）
+  if (employeeDefinitionId && input.tenantUserId) {
+    const ent = await checkEmployeeEntitlement(input.tenantUserId, employeeDefinitionId)
+    if (!ent.allowed) {
+      return { plan: null as any, errors: [`ENTITLEMENT_DENIED:${ent.reason}`] }
+    }
+  }
 
   const plan = createSkillPlan({
     employeeDefinitionId,

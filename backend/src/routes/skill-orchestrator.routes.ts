@@ -7,7 +7,7 @@
  *  - 每 Skill 独立授权（OC2/OC-0.3）; Hermes 原子执行（OC3）
  */
 import type { FastifyInstance } from 'fastify'
-import { getEmployeeSkillSet, executeSkillPlan } from '../ecosystem/skill-orchestrator.js'
+import { getEmployeeSkillSet, executeSkillPlan, getEmployeeUsageMeter } from '../ecosystem/skill-orchestrator.js'
 
 export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
   // OC1: 多 Skill 绑定视图（只读）
@@ -37,6 +37,7 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
         deadlineMs: body.deadlineMs,
         retry: body.retry,
         maxParallel: body.maxParallel,
+        tenantUserId: body.tenantUserId ?? null,
       })
       if (result.errors.length) {
         return reply.code(400).send({ error: 'INVALID_PLAN', errors: result.errors })
@@ -44,6 +45,19 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
       return reply.send({ code: 0, data: result.plan })
     } catch (e: any) {
       request.log.error(e, 'skill plan execute failed')
+      return reply.code(500).send({ error: 'INTERNAL' })
+    }
+  })
+
+  // S4.2 Task 05: Usage Meter（只读; tenantUserId 从 query 传, S4.3 改 JWT）
+  app.get('/api/skills/employees/:code/usage', async (request: any, reply: any) => {
+    try {
+      const tenantUserId = request.query?.tenantUserId
+      if (!tenantUserId) return reply.code(400).send({ error: 'TENANT_USER_ID_REQUIRED' })
+      const meter = await getEmployeeUsageMeter(tenantUserId, request.params.code)
+      return reply.send({ code: 0, data: meter })
+    } catch (e: any) {
+      request.log.error(e, 'employee usage failed')
       return reply.code(500).send({ error: 'INTERNAL' })
     }
   })

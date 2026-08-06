@@ -99,14 +99,16 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
         return reply.code(401).send({ error: 'UNAUTHORIZED' })
       }
       const body = request.body || {}
-      if (!body.interviewTranscript) {
+      if (!body.interviewTranscript && !body.interviewRecord) {
         return reply.code(400).send({ error: 'INTERVIEW_TRANSCRIPT_REQUIRED' })
       }
-      const { buildInterviewPrompt, parseInterviewResult } = await import('../ecosystem/interview-parser.js')
+      const { buildInterviewPrompt, parseInterviewResult, buildInterviewTranscript } = await import('../ecosystem/interview-parser.js')
       const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      // S4.2 D-F: 结构化面试记录 → 文本（人工录入/文件转换; 禁自动联系/三方/爬取）
+      const transcript = body.interviewTranscript || buildInterviewTranscript(body.interviewRecord)
       const prompt = buildInterviewPrompt({
         resume: body.resume,
-        interviewTranscript: body.interviewTranscript,
+        interviewTranscript: transcript,
         jobRequirement: body.jobRequirement,
       })
       const result = await unifiedAIGateway.invokeAI({

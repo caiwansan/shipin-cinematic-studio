@@ -10,6 +10,25 @@ export interface InterviewResult {
   hiringRecommendation: string
 }
 
+/**
+ * S4.2 D-F: Interview Record Adapter（纯函数）
+ * 人工录入/结构化记录 → 面试文本（禁自动联系/三方/爬取）
+ * 支持: 字符串直接透传 / {questions:[{question,answer}]} / {dialog:[{speaker,text}]}
+ */
+export function buildInterviewTranscript(record: any): string {
+  if (typeof record === 'string') return record
+  if (!record || typeof record !== 'object') return ''
+  if (Array.isArray(record.questions) && record.questions.length) {
+    return record.questions
+      .map((q: any, i: number) => `Q${i + 1}: ${q.question || ''}\nA${i + 1}: ${q.answer || ''}`)
+      .join('\n')
+  }
+  if (Array.isArray(record.dialog) && record.dialog.length) {
+    return record.dialog.map((d: any) => `${d.speaker || '访谈者'}: ${d.text || ''}`).join('\n')
+  }
+  return JSON.stringify(record)
+}
+
 /** 面试评估 Prompt（纯函数, 固定评审角色 + JSON 契约 + 注入防护） */
 export function buildInterviewPrompt(params: {
   resume: any
