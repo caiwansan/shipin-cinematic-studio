@@ -10732,3 +10732,71 @@ model RedPacketGrab {
   @@index([userId, createdAt])
   @@map("red_packet_grab")
 }
+
+// ============================================
+// IM-CHA-M10 媒体 TTL 生命周期（2026-08-06 掌柜指令）
+// 上传登记 → 到期自动删除（image 168h / video 72h / file+audio 7d）；缩略图同生命周期
+// ============================================
+
+model MediaObject {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  url       String   @db.Text // 对外 URL（/uploads/im/xxx）
+  filePath  String   @map("file_path") @db.Text // 磁盘绝对路径
+  mimeType  String?  @map("mime_type") @db.Text
+  mediaType String   @map("media_type") @db.Text // image / video / file / audio
+  size      BigInt   @default(0)
+  thumbUrl  String   @default("") @map("thumb_url") @db.Text // 缩略图 URL（仅 image）
+  ttlHours  Int      @default(168) @map("ttl_hours")
+  expiresAt DateTime @map("expires_at")
+  status    String   @default("active") // active / expired
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([status, expiresAt])
+  @@map("media_object")
+}
+
+// ============================================
+// IM-CHA-M10 消息撤回（2026-08-06 掌柜指令）
+// WuKongIM v1.2.6 无内置撤回 API → 业务层：webhook 记录消息归属(ImMessageIndex) →
+// 撤回接口校验本人+时间窗 → ImMessageRecall 落库 → 服务端代发 kind=recall 通知 → 历史接口过滤
+// ============================================
+
+model ImMessageIndex {
+  messageId   String   @id @map("message_id") @db.Text // WuKongIM message_idstr（服务端十进制 ID）
+  clientMsgNo String   @default("") @map("client_msg_no") @db.Text // 客户端消息编号（发送方生成 UUID；撤回双通道匹配）
+  fromUid     String   @map("from_uid") @db.Text
+  channelId   String   @map("channel_id") @db.Text
+  channelType Int      @default(4) @map("channel_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([clientMsgNo])
+  @@index([channelId, channelType, createdAt])
+  @@map("im_message_index")
+}
+
+model ImMessageRecall {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  messageId   String   @map("message_id") @db.Text
+  channelId   String   @map("channel_id") @db.Text
+  channelType Int      @default(4) @map("channel_type")
+  senderUid   String   @map("sender_uid") @db.Text // 消息发送者
+  operatorId  String   @map("operator_id") @db.Text // 撤回操作者
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([messageId])
+  @@index([channelId, channelType, createdAt])
+  @@map("im_message_recall")
+}
+
+// ============================================
+// IM-CHA-M10 语音转写缓存（长按语音提炼文字；同消息不重复转写）
+// ============================================
+
+model ImVoiceTranscript {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  messageId String   @unique @map("message_id") @db.Text
+  text      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("im_voice_transcript")
+}

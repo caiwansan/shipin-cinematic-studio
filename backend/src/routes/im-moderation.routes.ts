@@ -8,6 +8,7 @@ import { requireAdmin } from '../middleware/require-admin.js'
 import { sensitiveEngine, loadSensitiveWordsIntoEngine } from '../im/sensitive-engine.js'
 import { SENSITIVE_WORD_SEED, SENSITIVE_CATEGORIES, seedSensitiveWordsIfEmpty } from '../im/sensitive-word-seed.js'
 import { decodeMessagePayload, PUBLIC_CHANNEL_ID, PUBLIC_CHANNEL_TYPE } from './im.js'
+import { indexMessage } from '../im/im-recall.service.js'
 
 // ── 配置 ───────────────────────────────────────────────────
 const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
@@ -194,14 +195,15 @@ export async function ensureBotInPublicChannel() {
 }
 
 /** 解析 webhook 消息事件（v1.2.6：POST {url}?event=msg.notify，body = MessageResp[]） */
-function parseWebhookMessage(item: any): { channelId: string; channelType: number; fromUid: string; messageId: string; payload: string } | null {
+function parseWebhookMessage(item: any): { channelId: string; channelType: number; fromUid: string; messageId: string; clientMsgNo?: string; payload: string } | null {
   const channelId = item?.channel_id ?? ''
   const channelType = Number(item?.channel_type ?? 4)
   const fromUid = item?.from_uid ?? ''
   const messageId = item?.message_idstr ?? String(item?.message_id ?? '')
+  const clientMsgNo = item?.client_msg_no ?? ''
   const payload = item?.payload ?? ''
   if (!channelId || !fromUid || !payload) return null
-  return { channelId, channelType, fromUid, messageId, payload }
+  return { channelId, channelType, fromUid, messageId, clientMsgNo: clientMsgNo || undefined, payload }
 }
 
 /** webhook 消息复核：命中敏感词 → 处置 + 审计（幂等） */
@@ -273,6 +275,8 @@ export default async function imModerationRoutes(fastify: FastifyInstance) {
       for (const item of body) {
         const msg = parseWebhookMessage(item)
         if (msg) {
+          // IM-CHA-M10 消息归属索引（撤回校验用；幂等 upsert，不阻塞）
+          indexMessage(msg).catch(() => {})
           // 敏感词复核（处置）优先，AI 客服（@小管家）其次，均异步不阻塞 webhook 响应
           handleWebhookMessage(msg).catch((e) => console.warn('[昆仑茶馆] webhook 复核异常:', (e as Error).message))
           handleBotMention(msg).catch((e) => console.warn('[昆仑茶馆] AI 客服异常:', (e as Error).message))

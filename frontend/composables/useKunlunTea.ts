@@ -185,6 +185,54 @@ export function useKunlunTea() {
     return sdk.chatManager.send(content, channel)
   }
 
+  // ══ IM-CHA-M10 语音消息（自定义 contentType=5） ══
+  // 继承 SDK MessageContent：encodeJSON 输出 {url, duration, name, ttlHours}，type 自动=5
+  let VoiceContentClass: any = null
+  async function getVoiceContentClass() {
+    if (VoiceContentClass) return VoiceContentClass
+    const mod = await getSDKModule()
+    VoiceContentClass = class VoiceContent extends mod.MessageContent {
+      url = ''
+      duration = 0
+      name = ''
+      ttlHours = 168
+      constructor(url = '', duration = 0, name = '', ttlHours = 168) {
+        super()
+        this.url = url
+        this.duration = duration
+        this.name = name
+        this.ttlHours = ttlHours
+      }
+      get contentType() {
+        return 5
+      }
+      encodeJSON() {
+        return { url: this.url, duration: this.duration, name: this.name, ttlHours: this.ttlHours }
+      }
+      decodeJSON(c: any) {
+        this.url = c?.url || ''
+        this.duration = c?.duration || 0
+        this.name = c?.name || ''
+        this.ttlHours = c?.ttlHours || 168
+      }
+    }
+    // 注册类型工厂：SDK 收到 type=5 消息时用该类 decodeJSON
+    try {
+      sdk?.register?.(5, () => new VoiceContentClass())
+    } catch { /* SDK 未初始化时注册会在 connect 后由 sendVoice 完成 */ }
+    return VoiceContentClass
+  }
+
+  /** 发送语音消息（先 /api/im/upload 上传，再 SDK 发自定义 type=5） */
+  async function sendVoice(opts: { url: string; duration: number; name: string; ttlHours: number; channelId: string; channelType: number }) {
+    if (!sdk) throw new Error('SDK 未初始化')
+    const VCls = await getVoiceContentClass()
+    sdk.register(5, () => new VCls())
+    const content = new VCls(opts.url, opts.duration, opts.name, opts.ttlHours)
+    const channel = sdk.newChannel(opts.channelId, opts.channelType)
+    return sdk.chatManager.send(content, channel)
+  }
+
   /** 订阅频道（显式订阅：私聊/私有频道必须订阅才能收到实时消息；listener 置空避免与全局 onMessage 双渲染） */
   function subscribeChannel(channelId: string, channelType: number) {
     if (!sdk) return
@@ -249,5 +297,5 @@ export function useKunlunTea() {
     }
   }
 
-  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, onMessage, onCMD, sendCMD, onSendStatus, sendText, subscribeChannel, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
+  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, onMessage, onCMD, sendCMD, onSendStatus, sendText, sendVoice, subscribeChannel, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
 }

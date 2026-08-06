@@ -4,9 +4,12 @@
 // 底座：WuKongIM v1.2.6（docker，端口 5001 HTTP API / 5200 WS）
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import crypto from 'node:crypto'
-import { resolve, extname } from 'node:path'
+import { resolve, extname, basename } from 'node:path'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { prisma } from '../utils/index.js'
+import { classifyMedia, generateThumb, registerMediaObject, startMediaTtlCleaner, MEDIA_UPLOAD_DIR } from '../im/media-ttl.service.js'
+import { indexMessage, recallMessage, recalledMessageIds, RECALL_WINDOW_MS } from '../im/im-recall.service.js'
+import { transcribeVoice, ASR_AVAILABLE } from '../im/voice-asr.service.js'
 
 // ── 配置（env 可覆盖）──────────────────────────────────────────
 const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
@@ -148,7 +151,56 @@ export function dmChannelId(a: string, b: string) {
   return `dm_${lo}_${hi}`
 }
 
+// ── 上传校验（M4 类型/大小限制；掌柜 2026-08-06 指令）──────────────────
+// 白名单：图片/视频/音频/常见文档；单文件大小上限（MB）
+const UPLOAD_MAX_MB: Record<string, number> = {
+  image: 20,
+  video: 200,
+  audio: 30,
+  file: 50,
+}
+const EXT_WHITELIST = new Set([
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg',
+  '.mp4', '.webm', '.mov', '.mkv', '.avi',
+  '.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.amr',
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.md', '.csv', '.zip', '.rar', '.7z', '.json',
+])
+
+// ── 翻译（英→中）LLM key：优先 env DEEPSEEK_API_KEY，否则 DB apiKey deepseek_api_key 解密 ──
+let translateKeyCache: string | null | undefined = undefined
+let translateKeyAt = 0
+async function getTranslateKey(): Promise<string | null> {
+  if (translateKeyCache !== undefined && Date.now() - translateKeyAt < 5 * 60_000) return translateKeyCache
+  if (process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY.startsWith('sk-')) {
+    translateKeyCache = process.env.DEEPSEEK_API_KEY
+  } else {
+    try {
+      const { decryptKey } = await import('../services/crypto.service.js')
+      const row = await prisma.apiKey.findFirst({ where: { keyName: 'deepseek_api_key' } })
+      translateKeyCache = row ? (row.keyValue.startsWith('enc:') || row.keyValue.includes(':') ? await decryptKey(row.keyValue) : row.keyValue) : null
+      if (!translateKeyCache?.startsWith('sk-')) translateKeyCache = null
+    } catch {
+      translateKeyCache = null
+    }
+  }
+  translateKeyAt = Date.now()
+  return translateKeyCache
+}
+
+/** 服务端代发消息（撤回通知等系统消息用） */
+async function serverSend(channelId: string, channelType: number, fromUid: string, contentType: number, content: any) {
+  const payload = Buffer.from(JSON.stringify({ type: contentType, content })).toString('base64')
+  return wkApi('/message/send', {
+    channel_id: channelId,
+    channel_type: channelType,
+    from_uid: fromUid,
+    payload,
+  })
+}
+
 export default async function imRoutes(fastify: FastifyInstance) {
+  // 媒体 TTL 清理定时任务（每 10 分钟；幂等）
+  startMediaTtlCleaner()
   // GET /api/im/config — 连接配置（前端 SDK 初始化用）
   fastify.get('/api/im/config', { preHandler: [fastify.authenticate] }, async (_request: FastifyRequest, reply: FastifyReply) => {
     return { success: true, data: { wsAddr: IM_WS_ADDR, httpAddr: IM_HTTP_ADDR, publicChannelId: PUBLIC_CHANNEL_ID, publicChannelType: PUBLIC_CHANNEL_TYPE } }
@@ -421,6 +473,17 @@ export default async function imRoutes(fastify: FastifyInstance) {
         authorName: authorNames.get(m.from_uid) || '',
         authorAvatar: authorAvatars.get(m.from_uid) || '',
       }))
+      // IM-CHA-M10 撤回过滤：命中撤回集合 → 标记 recalled（前端渲染「已撤回」占位）
+      const msgIdKey = (m: any) => m.message_idstr || String(m.message_id || '')
+      const recalled = await recalledMessageIds(channelId, Number(channelType))
+      if (recalled.size) {
+        for (const m of messages) {
+          const mid = msgIdKey(m)
+          if (mid && recalled.has(mid)) {
+            ;(m as any).recalled = true
+          }
+        }
+      }
       return { success: true, data: { ...data, messages } }
     } catch (e) {
       return reply.status(502).send({ success: false, error: (e as Error).message })
@@ -505,30 +568,136 @@ export default async function imRoutes(fastify: FastifyInstance) {
     return { success: true }
   })
 
-  // POST /api/im/upload — 聊天媒体上传（图片/文件/短视频），普通用户可用
+  // POST /api/im/upload — 聊天媒体上传（图片/文件/短视频/语音）
+  // M4：类型白名单 + 大小限制；图片生成缩略图；登记 MediaObject TTL（image 168h / video 72h / file+audio 7d）
   fastify.post('/api/im/upload', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const file = await request.file()
     if (!file) return reply.status(400).send({ success: false, error: '缺少文件' })
     try {
       const buf = await file.toBuffer()
       const ext = (extname(file.filename || '').toLowerCase() || '.bin').slice(0, 10)
-      const name = file.filename || ('file' + ext)
+      if (!EXT_WHITELIST.has(ext)) {
+        return reply.status(400).send({ success: false, error: '不支持的文件类型（' + ext + '）' })
+      }
+      const { mediaType } = classifyMedia(file.mimetype || '', ext)
+      const maxBytes = (UPLOAD_MAX_MB[mediaType] || 10) * 1024 * 1024
+      if (buf.length > maxBytes) {
+        return reply.status(400).send({ success: false, error: `文件过大（上限 ${UPLOAD_MAX_MB[mediaType] || 10}MB）` })
+      }
       const id = crypto.randomUUID()
-      const dir = resolve(process.cwd(), 'public/uploads/im')
+      const dir = MEDIA_UPLOAD_DIR
       await mkdir(dir, { recursive: true })
       const filename = id + ext
-      await writeFile(resolve(dir, filename), buf)
+      const filePath = resolve(dir, filename)
+      await writeFile(filePath, buf)
+      // 图片生成缩略图（缩略图与主文件同 TTL，一并清理）
+      let thumbUrl = ''
+      if (mediaType === 'image') {
+        thumbUrl = await generateThumb(filePath)
+      }
+      const url = `/uploads/im/${filename}`
+      const ttl = await registerMediaObject({
+        url,
+        filePath,
+        mimeType: file.mimetype || '',
+        mediaType,
+        size: buf.length,
+        thumbUrl,
+      })
       return {
         success: true,
         data: {
-          url: `/uploads/im/${filename}`,
-          name,
+          url,
+          thumbUrl,
+          name: basename(file.filename || ('file' + ext)),
           size: buf.length,
           mime: file.mimetype || 'application/octet-stream',
+          mediaType,
+          ttlHours: ttl.ttlHours,
+          expiresAt: ttl.expiresAt,
         },
       }
     } catch (e) {
       return reply.status(500).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // POST /api/im/messages/recall — 撤回消息（IM-CHA-M10）
+  // 校验：本人消息 + 发送 ≤ 10 分钟（Webhook 归属索引 ImMessageIndex）；落库 + 服务端代发撤回通知
+  fastify.post('/api/im/messages/recall', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { messageId, channelId, channelType } = request.body as any
+    if (!messageId || !channelId || !channelType) {
+      return reply.status(400).send({ success: false, error: 'messageId/channelId/channelType 必填' })
+    }
+    const operatorId = request.user.id as string
+    try {
+      const result = await recallMessage({ messageId, channelId, channelType: Number(channelType), operatorId })
+      if (result.code !== 'ok') {
+        return reply.status(403).send({ success: false, error: result.error, code: result.code })
+      }
+      // 广播撤回通知（系统名义，客户端收到后把原消息渲染为已撤回）
+      if (!result.data?.already) {
+        const me = await prisma.user.findUnique({ where: { id: operatorId }, select: { username: true, email: true } })
+        const operatorName = me?.username || (me?.email || '').split('@')[0] || '茶客'
+        try {
+          await serverSend(channelId, Number(channelType), 'kunlun_tea_bot', 6, {
+            kind: 'recall',
+            messageId,
+            operatorName,
+          })
+        } catch (e) {
+          console.warn('[昆仑茶馆] 撤回通知广播失败（非致命）:', (e as Error).message)
+        }
+      }
+      return { success: true, data: { messageId, recalledAt: new Date().toISOString() } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // POST /api/im/asr — 语音转文字（IM-CHA-M10；长按语音提炼文字）
+  // 链路：本地 faster-whisper（音频不出服务器）；同 messageId 缓存不重复转写
+  fastify.post('/api/im/asr', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { messageId, url } = request.body as any
+    if (!messageId || !url) return reply.status(400).send({ success: false, error: 'messageId/url 必填' })
+    if (!ASR_AVAILABLE) return reply.status(501).send({ success: false, error: '语音转文字未启用' })
+    try {
+      const text = await transcribeVoice(String(messageId), String(url))
+      return { success: true, data: { text } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // POST /api/im/translate — 英译中（IM-CHA-M10；DeepSeek 平台 key，只输出译文）
+  fastify.post('/api/im/translate', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { text } = request.body as any
+    if (!text || typeof text !== 'string' || text.length > 2000) {
+      return reply.status(400).send({ success: false, error: '文本必填且不超过 2000 字符' })
+    }
+    const key = await getTranslateKey()
+    if (!key) return reply.status(501).send({ success: false, error: '翻译服务未配置（DeepSeek key 缺失）' })
+    try {
+      const res = await fetch(`${process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1'}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({
+          model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
+          messages: [
+            { role: 'system', content: '你是专业翻译。将用户消息翻译成简体中文，只输出译文本身，不加解释、不加引号、不改写原文语气。若原文已是中文则原样返回。' },
+            { role: 'user', content: text },
+          ],
+          max_tokens: 1000,
+          temperature: 0.2,
+        }),
+      })
+      if (!res.ok) return reply.status(502).send({ success: false, error: '翻译服务响应异常 (' + res.status + ')' })
+      const j = await res.json()
+      const translated = (j?.choices?.[0]?.message?.content || '').trim()
+      if (!translated) return reply.status(502).send({ success: false, error: '翻译无结果' })
+      return { success: true, data: { translated, source: text } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
     }
   })
 

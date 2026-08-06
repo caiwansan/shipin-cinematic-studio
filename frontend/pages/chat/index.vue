@@ -121,8 +121,15 @@
                 <div class="msg-meta">
                   <span class="msg-author">{{ msgAuthorName(msg) }}</span>
                   <span class="msg-time">{{ fmtTime(msg.timestamp) }}</span>
+                  <span class="msg-actions">
+                    <button v-if="canRecall(msg)" class="msg-act" @click="recallMsg(msg)">↩ 撤回</button>
+                    <button v-if="canTranslate(msg)" class="msg-act" @click="translateMsg(msg)">{{ msg.translating ? '…' : '译' }}</button>
+                  </span>
                 </div>
                 <div class="msg-content" v-html="renderMsg(msg)"></div>
+                <div v-if="msg.translation" class="msg-translation">📖 {{ msg.translation }}</div>
+                <div v-if="msg.transcribing" class="msg-transcript">🔄 正在提炼文字…</div>
+                <div v-else-if="msg.transcript" class="msg-transcript">📝 {{ msg.transcript }}</div>
               </div>
             </div>
             <div v-if="loadingHistory" class="msg-loading">正在烫茶…</div>
@@ -138,6 +145,17 @@
             <button class="gift-btn" title="表情" @click.stop="emojiPanelOpen = !emojiPanelOpen">😊</button>
             <button class="gift-btn" title="上传图片" @click="pickFile('image')">📷</button>
             <button class="gift-btn" title="上传文档" @click="pickFile('file')">📄</button>
+            <button
+              class="gift-btn voice-btn"
+              :class="{ 'voice-btn--recording': recording }"
+              :title="recording ? `录音中 ${recordingSeconds}s…` : '按住说话'"
+              @mousedown.prevent="startRecord"
+              @mouseup="stopRecord"
+              @mouseleave="cancelRecord"
+              @touchstart.prevent="startRecord"
+              @touchend="stopRecord"
+              @touchcancel="cancelRecord"
+            >{{ recording ? `🎤 ${recordingSeconds}s` : '🎤' }}</button>
             <input ref="fileInputRef" type="file" class="hidden-file-input" @change="onFilePicked" />
             <textarea
               v-model="draft"
@@ -909,6 +927,11 @@ function extractGiftInfo(msg: any): any {
 }
 
 function renderMsg(msg: any) {
+  // IM-CHA-M10 撤回：已被撤回的消息显示占位（不展示内容）
+  if (msg.recalled) {
+    const isMine = typeof tea.userId.value === 'string' && msg.fromUID === tea.userId.value
+    return `<span class="msg-recalled">${isMine ? '你撤回了一条消息' : '该消息已撤回'}</span>`
+  }
   const giftInfo = extractGiftInfo(msg)
   if (giftInfo) {
     return `<span class="gift-inline">🎁 ${escapeHtml(giftInfo.giftName || '礼物')} ${giftInfo.priceDiamonds ? `<b class="gift-inline-price">💎${giftInfo.priceDiamonds}</b>` : ''}</span>`
@@ -940,23 +963,52 @@ function renderMsg(msg: any) {
     const who = escapeHtml(grabInfo.userName || memberName(msg.fromUID) || shortUid(msg.fromUID))
     return `<span class="rp-grab-inline">🧧 ${who} 抢到 <b class="rp-grab-amt-inline">${grabInfo.amount}</b> 钻石${grabInfo.remainCount > 0 ? ` · 还剩 ${grabInfo.remainCount} 个` : ' · 已抢完'}</span>`
   }
+  // 撤回通知（服务端代发 kind=recall：XX 撤回了一条消息）
+  const recallInfo = extractRecallInfo(msg)
+  if (recallInfo) {
+    const who = escapeHtml(recallInfo.operatorName || '有人')
+    const isMine = typeof tea.userId.value === 'string' && (msg.fromUID || msg.from_uid) === tea.userId.value
+    return `<span class="msg-recalled">${escapeHtml(who)} 撤回了一条消息</span>`
+  }
   const parsed = parseContentObj(msg)
   if (!parsed) return ''
   const { type, content } = parsed
-  // 图片（type=2）
+  // 图片（type=2）——IM-CHA-M10：列表显示缩略图（thumbUrl），点击看原图大图
   if (type === 2 && content && content.url) {
+    const thumb = absUrl(content.thumbUrl || content.url)
+    const full = absUrl(content.url)
+    const ttlTip = content.ttlHours ? `<small class="msg-ttl">${ttlTipText(content.ttlHours)}</small>` : ''
+    return `<img class="msg-img" src="${thumb}" loading="lazy" onclick="window.__klImgView && window.__klImgView('${full}')" />${ttlTip}`
+  }
+  // 语音（type=5）——IM-CHA-M10：点击播放，长按提炼文字
+  if (type === 5 && content && content.url) {
+    const dur = Math.round(Number(content.duration) || 0)
+    const durText = dur ? `${dur}"` : ''
     const src = absUrl(content.url)
-    return `<img class="msg-img" src="${src}" loading="lazy" onclick="window.__klImgView && window.__klImgView('${src}')" />`
+    const msgId = encodeURIComponent(msg.message_idstr || msg.messageID || content.clientMsgNo || '')
+    const vKey = encodeURIComponent(msg.key || msgKey(msg))
+    const isMine = typeof tea.userId.value === 'string' && msg.fromUID === tea.userId.value
+    return `<div class="msg-voice${isMine ? ' msg-voice--mine' : ''}" data-vkey="${vKey}" data-vmsgid="${msgId}" data-vurl="${src}" data-vdur="${dur}"
+      onclick="window.__klPlayVoice && window.__klPlayVoice(this)"
+      onmousedown="window.__klVoiceHoldStart && window.__klVoiceHoldStart(event, this)"
+      onmouseup="window.__klVoiceHoldEnd && window.__klVoiceHoldEnd(event, this)"
+      onmouseleave="window.__klVoiceHoldCancel && window.__klVoiceHoldCancel()"
+      ontouchstart="window.__klVoiceHoldStart && window.__klVoiceHoldStart(event, this)"
+      ontouchend="window.__klVoiceHoldEnd && window.__klVoiceHoldEnd(event, this)"
+      ontouchcancel="window.__klVoiceHoldCancel && window.__klVoiceHoldCancel()"
+      title="点击播放 · 长按提炼文字"><span class="voice-play-icon">▶</span><span class="voice-dur-text">${durText}</span></div>`
   }
   // 文件/文档（type=3）
   if (type === 3 && content && content.url) {
     const name = escapeHtml(content.name || '文件')
     const size = fmtSize(content.size)
-    return `<a class="msg-file" href="${absUrl(content.url)}" target="_blank" rel="noopener"><span class="msg-file-icon">📄</span><span class="msg-file-main"><span class="msg-file-name">${name}</span>${size ? `<small class="msg-file-size">${size}</small>` : ''}</span></a>`
+    const ttlTip = content.ttlHours ? `<small class="msg-ttl">${ttlTipText(content.ttlHours)}</small>` : ''
+    return `<a class="msg-file" href="${absUrl(content.url)}" target="_blank" rel="noopener"><span class="msg-file-icon">📄</span><span class="msg-file-main"><span class="msg-file-name">${name}</span>${size ? `<small class="msg-file-size">${size}</small>` : ''}</span></a>${ttlTip}`
   }
   // 视频（type=4）
   if (type === 4 && content && content.url) {
-    return `<video class="msg-video" src="${absUrl(content.url)}" controls preload="metadata"></video>`
+    const ttlTip = content.ttlHours ? `<small class="msg-ttl">${ttlTipText(content.ttlHours)}</small>` : ''
+    return `<video class="msg-video" src="${absUrl(content.url)}" controls preload="metadata"></video>${ttlTip}`
   }
   // 文本（type=1）
   const text = typeof content === 'string' ? content : typeof content?.text === 'string' ? content.text : typeof content?.content === 'string' ? content.content : ''
@@ -995,6 +1047,34 @@ function extractRedPacketInfo(msg: any): any {
 function extractRedPacketGrabInfo(msg: any): any {
   if (!msg) return null
   const probe = (obj: any) => (obj && typeof obj === 'object' && obj.kind === 'red_packet_grab' ? obj : null)
+  if (msg.content && typeof msg.content === 'object') {
+    const a = probe(msg.content)
+    if (a) return a
+    const b = probe(msg.content.content)
+    if (b) return b
+  }
+  if (msg.payload) {
+    try {
+      const bin = atob(msg.payload)
+      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+      const decoded = JSON.parse(new TextDecoder().decode(bytes))
+      const c = decoded.content
+      const hit = probe(c)
+      if (hit) return hit
+      if (c && typeof c === 'object') {
+        const hit2 = probe(c.content)
+        if (hit2) return hit2
+      }
+      return probe(decoded)
+    } catch { return null }
+  }
+  return null
+}
+
+// 提取撤回通知信息（kind=recall；服务端代发 type=6）
+function extractRecallInfo(msg: any): any {
+  if (!msg) return null
+  const probe = (obj: any) => (obj && typeof obj === 'object' && obj.kind === 'recall' ? obj : null)
   if (msg.content && typeof msg.content === 'object') {
     const a = probe(msg.content)
     if (a) return a
@@ -1066,6 +1146,14 @@ function absUrl(u: string) {
   return /^https?:\/\//.test(u) ? u : 'https://aigc.fushtn.com' + (u.startsWith('/') ? u : '/' + u)
 }
 
+/** TTL 过期提示文案（IM-CHA-M10） */
+function ttlTipText(ttlHours: number) {
+  const h = Number(ttlHours) || 0
+  if (h <= 0) return ''
+  if (h % 24 === 0) return `${h / 24} 天后过期`
+  return `${h} 小时后过期`
+}
+
 async function sendMedia(file: File, kind: 'image' | 'file') {
   if (!currentChannel.value || !tea.connected.value) return showToast('⚠ 请先连接茶馆')
   sendingMedia.value = true
@@ -1078,7 +1166,7 @@ async function sendMedia(file: File, kind: 'image' | 'file') {
       body: fd,
     }).then((r) => r.json())
     if (!up.success) throw new Error(up.error || '上传失败')
-    const { url, name, size } = up.data
+    const { url, name, size, thumbUrl, ttlHours } = up.data
     let width = 0, height = 0
     if (kind === 'image') {
       try {
@@ -1095,14 +1183,14 @@ async function sendMedia(file: File, kind: 'image' | 'file') {
         channelId: currentChannel.value.id,
         channelType: currentChannel.value.type,
         contentType: kind === 'image' ? 2 : 3,
-        content: { url, name, size, width, height },
+        content: { url, name, size, width, height, thumbUrl: thumbUrl || '', ttlHours: ttlHours || 0 },
       }),
     }).then((r) => r.json())
     if (!res.success) throw new Error(res.error || '发送失败')
     messages.value.push({
       fromUID: tea.userId.value,
       timestamp: Date.now(),
-      content: { type: kind === 'image' ? 2 : 3, content: { url, name, size, width, height } },
+      content: { type: kind === 'image' ? 2 : 3, content: { url, name, size, width, height, thumbUrl: thumbUrl || '', ttlHours: ttlHours || 0 } },
       key: 'media-' + Math.random().toString(36).slice(2, 8),
     })
     scrollBottom()
@@ -1112,6 +1200,244 @@ async function sendMedia(file: File, kind: 'image' | 'file') {
     showToast('⚠ ' + ((err as Error).message || '发送失败'))
   } finally {
     sendingMedia.value = false
+  }
+}
+
+/* ══ IM-CHA-M10 消息撤回 ══════════════════════════ */
+// 只允许撤回自己的消息 + 发送 10 分钟内（后端严格校验，前端宽松展示）
+// messageId 三通道：message_idstr（历史） / messageID（SDK 实时） / clientMsgNo（SDK 发送返回，发送方本地）
+function msgMessageId(msg: any): string {
+  return String(msg?.message_idstr || msg?.messageID || msg?.message_id || msg?.clientMsgNo || '')
+}
+function canRecall(msg: any): boolean {
+  if (!msg || msg.recalled) return false
+  if (typeof tea.userId.value !== 'string' || msg.fromUID !== tea.userId.value) return false
+  const mid = msgMessageId(msg)
+  if (!mid || mid === 'undefined' || mid === 'null') return false
+  const ts = Number(msg.timestamp) || 0
+  if (ts > 0 && Date.now() / 1000 - ts > 10 * 60) return false
+  return true
+}
+async function recallMsg(msg: any) {
+  if (!currentChannel.value) return
+  const messageId = msgMessageId(msg)
+  if (!messageId) return showToast('⚠ 该消息暂不支持撤回')
+  if (!window.confirm('确定撤回这条消息吗？')) return
+  try {
+    const res = await fetch('/api/im/messages/recall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({ messageId, channelId: currentChannel.value.id, channelType: currentChannel.value.type }),
+    })
+    const j = await res.json()
+    if (j.success) {
+      msg.recalled = true
+      showToast('✅ 已撤回')
+    } else {
+      showToast('⚠ ' + (j.error || '撤回失败'))
+      if (j.code === 'NOT_OWNER' || j.code === 'EXPIRED' || j.code === 'NOT_FOUND') loadHistory()
+    }
+  } catch (e) {
+    console.error('[昆仑茶馆] 撤回失败', e)
+    showToast('⚠ 撤回失败，请重试')
+  }
+}
+
+/* ══ IM-CHA-M10 英文翻译 ══════════════════════════ */
+function canTranslate(msg: any): boolean {
+  if (!msg || msg.recalled || msg.translation || msg.translating) return false
+  const parsed = parseContentObj(msg)
+  if (!parsed || parsed.type !== 1) return false
+  const text = typeof parsed.content === 'string' ? parsed.content : parsed.content?.text || ''
+  if (!text) return false
+  const hasEn = /[a-zA-Z]{4,}/.test(text)
+  const hasCn = /[\u4e00-\u9fa5]/.test(text)
+  return hasEn && !hasCn // 英文内容才显示翻译按钮
+}
+async function translateMsg(msg: any) {
+  if (msg.translating || msg.translation) return
+  const parsed = parseContentObj(msg)
+  const text = parsed && typeof parsed.content === 'string' ? parsed.content : parsed?.content?.text || ''
+  if (!text) return
+  msg.translating = true
+  try {
+    const res = await fetch('/api/im/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({ text }),
+    })
+    const j = await res.json()
+    if (j.success) msg.translation = j.data.translated
+    else showToast('⚠ ' + (j.error || '翻译失败'))
+  } catch (e) {
+    console.error('[昆仑茶馆] 翻译失败', e)
+    showToast('⚠ 翻译失败，请重试')
+  } finally {
+    msg.translating = false
+  }
+}
+
+/* ══ IM-CHA-M10 语音消息：录音 → 上传 → SDK 发送 ══════════ */
+const recording = ref(false)
+const recordingSeconds = ref(0)
+let mediaRecorder: MediaRecorder | null = null
+let mediaChunks: Blob[] = []
+let recordTimer: ReturnType<typeof setInterval> | null = null
+let recordStartAt = 0
+
+async function startRecord() {
+  if (recording.value || sendingMedia.value) return
+  if (!currentChannel.value || !tea.connected.value) return showToast('⚠ 请先连接茶馆')
+  if (!navigator.mediaDevices?.getUserMedia) return showToast('⚠ 当前浏览器不支持录音')
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    mediaChunks = []
+    const mime = (MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm') || ''
+    mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
+    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) mediaChunks.push(e.data) }
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop())
+      const dur = Math.round((Date.now() - recordStartAt) / 1000)
+      recording.value = false
+      if (recordTimer) { clearInterval(recordTimer); recordTimer = null }
+      if (dur < 1) return showToast('⏱ 说话时间太短')
+      if (dur > 120) return showToast('⏱ 最长 120 秒')
+      const blob = new Blob(mediaChunks, { type: mediaRecorder?.mimeType || 'audio/webm' })
+      sendVoiceMsg(blob, dur)
+    }
+    mediaRecorder.start()
+    recordStartAt = Date.now()
+    recording.value = true
+    recordingSeconds.value = 0
+    recordTimer = setInterval(() => { recordingSeconds.value++ }, 1000)
+  } catch (e) {
+    console.error('[昆仑茶馆] 录音启动失败', e)
+    showToast('⚠ 无法访问麦克风（请检查浏览器权限）')
+  }
+}
+function stopRecord() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop()
+}
+function cancelRecord() {
+  // 松手时若录音 <1s 或误触：丢弃（不发送）——仅当录音中且非主动停止
+  if (recording.value && mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.onstop = () => { /* 丢弃 */ }
+    try { mediaRecorder.stop() } catch { /* noop */ }
+    recording.value = false
+    if (recordTimer) { clearInterval(recordTimer); recordTimer = null }
+  }
+}
+async function sendVoiceMsg(blob: Blob, duration: number) {
+  if (!currentChannel.value || !tea.connected.value) return
+  sendingMedia.value = true
+  try {
+    const ext = /mp4|aac|m4a/.test(blob.type) ? '.m4a' : '.webm'
+    const fd = new FormData()
+    fd.append('file', new File([blob], 'voice' + ext, { type: blob.type }))
+    const up = await fetch('/api/im/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + giftToken() },
+      body: fd,
+    }).then((r) => r.json())
+    if (!up.success) throw new Error(up.error || '上传失败')
+    const { url, ttlHours } = up.data
+    const sent = await tea.sendVoice({
+      url,
+      duration,
+      name: 'voice',
+      ttlHours: ttlHours || 168,
+      channelId: currentChannel.value.id,
+      channelType: currentChannel.value.type,
+    })
+    const clientMsgNo = sent?.clientMsgNo || ''
+    messages.value.push({
+      fromUID: tea.userId.value,
+      clientMsgNo,
+      timestamp: Math.floor(Date.now() / 1000),
+      content: { type: 5, content: { url, duration, name: '语音', ttlHours: ttlHours || 168, clientMsgNo } },
+      key: 'voice-' + Math.random().toString(36).slice(2, 8),
+    })
+    scrollBottom()
+  } catch (err) {
+    console.error('[昆仑茶馆] 语音发送失败', err)
+    showToast('⚠ ' + ((err as Error).message || '发送失败'))
+  } finally {
+    sendingMedia.value = false
+  }
+}
+
+/* 语音播放 + 长按转写（v-html 内联事件 → window 全局；赋值必须在 onMounted，防 SSR window 未定义） */
+let voiceAudio: HTMLAudioElement | null = null
+let voiceHoldTimer: ReturnType<typeof setTimeout> | null = null
+let voiceHoldEl: HTMLElement | null = null
+let voiceHoldFired = false
+function voiceElMsgId(el: HTMLElement): string {
+  return decodeURIComponent(el.getAttribute('data-vmsgid') || '')
+}
+function installVoiceGlobals() {
+  ;(window as any).__klPlayVoice = (el: HTMLElement) => {
+  const url = el.getAttribute('data-vurl') || ''
+  if (!url) return
+  if (voiceAudio && !voiceAudio.paused) {
+    voiceAudio.pause()
+    voiceAudio.currentTime = 0
+    el.querySelector('.voice-play-icon')!.textContent = '▶'
+    return
+  }
+  voiceAudio = new Audio(url)
+  voiceAudio.playbackRate = 1
+  voiceAudio.onended = () => { el.querySelector('.voice-play-icon')!.textContent = '▶' }
+  voiceAudio.play().catch(() => { el.querySelector('.voice-play-icon')!.textContent = '▶' })
+  el.querySelector('.voice-play-icon')!.textContent = '⏸'
+}
+;(window as any).__klVoiceHoldStart = (ev: Event, el: HTMLElement) => {
+  ev.preventDefault?.()
+  voiceHoldEl = el
+  voiceHoldFired = false
+  if (voiceHoldTimer) clearTimeout(voiceHoldTimer)
+  voiceHoldTimer = setTimeout(() => {
+    if (voiceHoldEl !== el) return
+    voiceHoldFired = true
+    const msgId = voiceElMsgId(el)
+    if (!msgId) return showToast('⚠ 该语音暂不支持转写')
+    transcribeVoiceMsg(el, msgId)
+  }, 600)
+}
+;(window as any).__klVoiceHoldEnd = (ev: Event, el: HTMLElement) => {
+  if (voiceHoldTimer) { clearTimeout(voiceHoldTimer); voiceHoldTimer = null }
+  voiceHoldEl = null
+}
+;(window as any).__klVoiceHoldCancel = () => {
+  if (voiceHoldTimer) { clearTimeout(voiceHoldTimer); voiceHoldTimer = null }
+  voiceHoldEl = null
+}
+}
+async function transcribeVoiceMsg(el: HTMLElement, messageId: string) {
+  const url = el.getAttribute('data-vurl') || ''
+  if (!url) return
+  // 找到对应消息对象，写入转写状态
+  const vkey = decodeURIComponent(el.getAttribute('data-vkey') || '')
+  const msg = messages.value.find((m) => m.key === vkey)
+  if (msg?.transcript) return showToast('📝 ' + msg.transcript)
+  if (msg) msg.transcribing = true
+  showToast('🔄 正在提炼语音文字…')
+  try {
+    const res = await fetch('/api/im/asr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({ messageId, url }),
+    })
+    const j = await res.json()
+    if (j.success && j.data?.text) {
+      if (msg) { msg.transcribing = false; msg.transcript = j.data.text }
+      showToast('📝 ' + j.data.text.slice(0, 40) + (j.data.text.length > 40 ? '…' : ''))
+    } else {
+      if (msg) msg.transcribing = false
+      showToast('⚠ ' + (j.error || '转写失败'))
+    }
+  } catch (e) {
+    if (msg) msg.transcribing = false
+    showToast('⚠ 转写失败，请重试')
   }
 }
 
@@ -1128,10 +1454,18 @@ function viewImage(src: string) {
 
 function parseContentObj(msg: any): { type: number; content: any } | null {
   if (msg.content) {
-    if (typeof msg.content === 'string') return { type: 1, content: msg.content }
-    if (typeof msg.content.type === 'number' && msg.content.content !== undefined) return { type: msg.content.type, content: msg.content.content }
-    if (typeof msg.content.text === 'string') return { type: 1, content: msg.content.text }
-    if (msg.content.url) return { type: 2, content: msg.content }
+    // SDK 实时消息：content 是内容类实例（contentType + 解码字段）。IM-CHA-M10 修复：
+    // 语音/图片实例都有 url，旧逻辑会误判语音(type=5)为图片(type=2) → 先按 contentType 走
+    const c = msg.content
+    if (typeof c === 'object' && typeof c.contentType === 'number' && c.contentType > 0) {
+      const t = c.contentType
+      if (t === 1) return { type: 1, content: typeof c.text === 'string' ? c.text : (c.content ?? '') }
+      return { type: t, content: c }
+    }
+    if (typeof c === 'string') return { type: 1, content: c }
+    if (typeof c.type === 'number' && c.content !== undefined) return { type: c.type, content: c.content }
+    if (typeof c.text === 'string') return { type: 1, content: c.text }
+    if (c.url) return { type: 2, content: c }
   }
   if (msg.payload) {
     try {
@@ -1698,6 +2032,7 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(async () => {
   ;(window as any).__klImgView = (src: string) => viewImage(src)
   ;(window as any).__klOpenRedPacket = (id: string) => openRpDetail(id)
+  installVoiceGlobals()
   // ══ R11：初始化 RTC（拉取 ICE 配置 + 注册 CMD 信令监听，须在 connect 前）══
   try {
     rtcSetIdentity = (await rtc.init({})).setIdentity
@@ -1717,6 +2052,19 @@ onMounted(async () => {
       return
     }
     if (msg.fromUID === tea.userId.value) return
+    // IM-CHA-M10 撤回通知：标记本地对应消息已撤回 + 渲染系统提示条
+    const recallInfo = extractRecallInfo(msg)
+    if (recallInfo) {
+      const mid = String(recallInfo.messageId || '')
+      if (mid) {
+        for (const m of messages.value) {
+          if (msgMessageId(m) === mid) m.recalled = true
+        }
+      }
+      messages.value.push({ ...msg, fromUID: msg.fromUID || msg.from_uid, key: msgKey(msg) })
+      scrollBottom()
+      return
+    }
     messages.value.push({ ...msg, fromUID: msg.fromUID || msg.from_uid, key: msgKey(msg) })
     // 红包消息 → 拉取实时状态（卡片显示「领取红包/已被领完」）
     if (extractRedPacketInfo(msg)) refreshRpStatuses()
@@ -1802,6 +2150,12 @@ onBeforeUnmount(() => {
   window.removeEventListener('click', onWindowClick)
   window.removeEventListener('keydown', onKeydown)
   ;(window as any).__klImgView = undefined
+  ;(window as any).__klPlayVoice = undefined
+  ;(window as any).__klVoiceHoldStart = undefined
+  ;(window as any).__klVoiceHoldEnd = undefined
+  ;(window as any).__klVoiceHoldCancel = undefined
+  if (voiceAudio) { voiceAudio.pause(); voiceAudio = null }
+  if (voiceHoldTimer) { clearTimeout(voiceHoldTimer); voiceHoldTimer = null }
   closeFriendMenu()
   friendPanel.value = false
   syncBodyLock()
@@ -2469,6 +2823,93 @@ onBeforeUnmount(() => {
   max-height: 300px;
   border-radius: 10px;
   display: block;
+}
+/* IM-CHA-M10：撤回 / 翻译 / 转写 / TTL / 语音 */
+.msg-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 8px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.msg-row:hover .msg-actions { opacity: 1; }
+.msg-act {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--color-text-muted, #b8b2a4);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.msg-act:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.msg-recalled {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--color-text-muted, #8a8478);
+  font-style: italic;
+  padding: 2px 0;
+}
+.msg-ttl {
+  display: block;
+  font-size: 10px;
+  color: #d9a441;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+.msg-translation {
+  margin-top: 4px;
+  padding: 6px 10px;
+  border-left: 3px solid #5fa8be;
+  background: rgba(95, 168, 190, 0.08);
+  border-radius: 0 8px 8px 0;
+  font-size: 12px;
+  color: #cfe8ef;
+  max-width: 320px;
+}
+.msg-transcript {
+  margin-top: 4px;
+  padding: 6px 10px;
+  border-left: 3px solid #b03a2e;
+  background: rgba(176, 58, 46, 0.08);
+  border-radius: 0 8px 8px 0;
+  font-size: 12px;
+  color: #ecc9c2;
+  max-width: 320px;
+}
+.msg-voice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 18px;
+  background: rgba(95, 168, 190, 0.18);
+  border: 1px solid rgba(95, 168, 190, 0.35);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.12s;
+}
+.msg-voice:hover { background: rgba(95, 168, 190, 0.3); }
+.msg-voice--mine { background: rgba(95, 168, 190, 0.3); }
+.voice-play-icon {
+  font-size: 13px;
+  color: #7cc4d8;
+  width: 18px;
+  text-align: center;
+}
+.voice-dur-text {
+  font-size: 12px;
+  color: #cfe8ef;
+}
+.voice-btn--recording {
+  background: rgba(176, 58, 46, 0.9) !important;
+  color: #fff !important;
+  animation: voice-pulse 1s ease-in-out infinite;
+}
+@keyframes voice-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
 }
 .img-lightbox {
   position: fixed;
