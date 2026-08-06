@@ -611,6 +611,7 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/skill-planner.routes.js')).registerSkillPlannerRoutes)
   await app.register((await import('./routes/skill-assets.routes.js')).registerSkillAssetsRoutes)
   await app.register((await import('./routes/skill-tools-internal.routes.js')).registerSkillToolsInternalRoutes)
+  await app.register((await import('./routes/enterprise-admin.routes.js')).registerEnterpriseAdminRoutes)
   app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
 
   // ═══════════════════════════════════════════════════════════
