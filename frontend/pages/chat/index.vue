@@ -136,39 +136,55 @@
           </div>
 
           <div class="msg-input-bar">
-            <template v-if="currentChannel && currentChannel.kind === 'dm'">
-              <button class="gift-btn rtc-call-btn" title="语音通话" @click="callPeer('audio')">📞</button>
-              <button class="gift-btn rtc-call-btn" title="视频通话" @click="callPeer('video')">🎥</button>
-            </template>
-            <button class="gift-btn rp-btn" title="发红包" @click="openRedPacketPanel">🧧</button>
-            <button class="gift-btn" title="送礼物" @click="openGiftPanel">🎁</button>
-            <button class="gift-btn" title="表情" @click.stop="emojiPanelOpen = !emojiPanelOpen">😊</button>
-            <button class="gift-btn" title="上传图片" @click="pickFile('image')">📷</button>
-            <button class="gift-btn" title="上传文档" @click="pickFile('file')">📄</button>
-            <button
-              class="gift-btn voice-btn"
-              :class="{ 'voice-btn--recording': recording }"
-              :title="recording ? `录音中 ${recordingSeconds}s…` : '按住说话'"
-              @mousedown.prevent="startRecord"
-              @mouseup="stopRecord"
-              @mouseleave="cancelRecord"
-              @touchstart.prevent="startRecord"
-              @touchend="stopRecord"
-              @touchcancel="cancelRecord"
-            >{{ recording ? `🎤 ${recordingSeconds}s` : '🎤' }}</button>
-            <input ref="fileInputRef" type="file" class="hidden-file-input" @change="onFilePicked" />
+            <!-- 微信风格输入栏：表情独立在外，其余功能收进 ➕（IM-CHA-M10.1） -->
+            <button class="gift-btn emoji-btn" title="表情" @click.stop="toggleEmojiPanel">😊</button>
             <textarea
+              v-if="!voiceMode"
               v-model="draft"
               class="msg-input"
               placeholder="和茶客们聊聊…（Enter 发送，Shift+Enter 换行）"
               rows="2"
               @keydown.enter.exact.prevent="handleSend"
             ></textarea>
+            <div v-else class="voice-hold-wrap">
+              <button
+                class="voice-hold-btn"
+                :class="{ 'voice-hold-btn--recording': recording }"
+                :title="recording ? `录音中 ${recordingSeconds}s…` : '按住 说话'"
+                @mousedown.prevent="startRecord"
+                @mouseup="stopRecord"
+                @mouseleave="cancelRecord"
+                @touchstart.prevent="startRecord"
+                @touchend="stopRecord"
+                @touchcancel="cancelRecord"
+              >{{ recording ? `🎤 松开发送 ${recordingSeconds}s` : '🎤 按住 说话' }}</button>
+            </div>
+            <button v-if="voiceMode" class="gift-btn kb-btn" title="切换到键盘" @click="toggleVoiceMode">⌨️</button>
+            <button
+              class="gift-btn plus-btn"
+              :class="{ 'plus-btn--active': plusPanelOpen }"
+              title="更多功能"
+              @click.stop="togglePlusPanel"
+            >＋</button>
             <button class="tea-btn primary" :disabled="(!draft.trim() && !sendingMedia) || !tea.connected.value" @click="handleSend">{{ sendingMedia ? '上传中…' : '发送' }}</button>
+            <input ref="fileInputRef" type="file" class="hidden-file-input" @change="onFilePicked" />
             <Teleport to="body">
               <div v-if="emojiPanelOpen" class="emoji-panel" @click.stop>
                 <div class="emoji-panel-grid">
                   <button v-for="e in emojiList" :key="e" class="emoji-cell" @click="insertEmoji(e)">{{ e }}</button>
+                </div>
+              </div>
+              <div v-if="plusPanelOpen" class="plus-panel" @click.stop>
+                <div class="plus-panel-grid">
+                  <button class="plus-item" title="上传图片" @click="plusPanelOpen = false; pickFile('image')">📷<span>图片</span></button>
+                  <button class="plus-item" title="上传文档" @click="plusPanelOpen = false; pickFile('file')">📄<span>文件</span></button>
+                  <button class="plus-item" :class="{ 'plus-item--active': voiceMode }" title="语音消息（按住说话）" @click="toggleVoiceMode">🎤<span>语音</span></button>
+                  <template v-if="currentChannel && currentChannel.kind === 'dm'">
+                    <button class="plus-item" title="语音通话" @click="plusPanelOpen = false; callPeer('audio')">📞<span>语音通话</span></button>
+                    <button class="plus-item" title="视频通话" @click="plusPanelOpen = false; callPeer('video')">🎥<span>视频通话</span></button>
+                  </template>
+                  <button class="plus-item" title="发红包" @click="plusPanelOpen = false; openRedPacketPanel()">🧧<span>红包</span></button>
+                  <button class="plus-item" title="送礼物" @click="plusPanelOpen = false; openGiftPanel()">🎁<span>礼物</span></button>
                 </div>
               </div>
             </Teleport>
@@ -1105,6 +1121,28 @@ function escapeHtml(s: string) {
 
 /* ══ 表情 + 媒体上传（EMOJI-MEDIA-01） ══════════════════ */
 const emojiPanelOpen = ref(false)
+/* ══ 微信风格输入栏：表情在外，其余收进 ➕（IM-CHA-M10.1） ══ */
+const plusPanelOpen = ref(false)
+const voiceMode = ref(false)
+
+function toggleEmojiPanel() {
+  // 语音模式下点表情：先切回键盘再弹表情
+  if (voiceMode.value) voiceMode.value = false
+  emojiPanelOpen.value = !emojiPanelOpen.value
+  plusPanelOpen.value = false
+}
+function togglePlusPanel() {
+  plusPanelOpen.value = !plusPanelOpen.value
+  emojiPanelOpen.value = false
+}
+function toggleVoiceMode() {
+  if (recording.value || sendingMedia.value) return
+  voiceMode.value = !voiceMode.value
+  emojiPanelOpen.value = false
+  plusPanelOpen.value = false
+  if (voiceMode.value) draft.value = '' // 切语音模式时清空草稿，避免误发
+}
+
 const sendingMedia = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 let pendingPickKind: 'image' | 'file' = 'image'
@@ -2786,6 +2824,83 @@ onBeforeUnmount(() => {
   transition: background 0.12s;
 }
 .emoji-cell:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* ══ ➕ 更多功能面板（微信风格，IM-CHA-M10.1） ══ */
+.plus-panel {
+  position: fixed;
+  z-index: 9999;
+  bottom: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 372px;
+  max-width: calc(100vw - 32px);
+  background: var(--color-bg-panel, #141a2e);
+  border: 1px solid var(--color-border, #26304d);
+  border-radius: 14px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  padding: 14px 10px 10px;
+  animation: panel-pop 0.18s ease-out;
+}
+.plus-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px 4px;
+}
+.plus-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 4px 8px;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.12s;
+}
+.plus-item:hover { background: rgba(255, 255, 255, 0.12); transform: translateY(-1px); }
+.plus-item:active { transform: scale(0.96); }
+.plus-item span {
+  font-size: 11px;
+  color: var(--color-text-muted, #A39D8E);
+  line-height: 1;
+}
+.plus-item--active {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+.plus-btn--active {
+  background: rgba(59, 130, 246, 0.25) !important;
+  border-color: rgba(59, 130, 246, 0.55) !important;
+  color: #fff !important;
+  transform: scale(1.05);
+}
+.plus-btn { font-size: 24px; font-weight: 700; line-height: 1; }
+.emoji-btn { font-size: 20px; }
+.kb-btn { font-size: 18px; }
+.voice-hold-wrap { flex: 1; min-width: 0; display: flex; }
+.voice-hold-btn {
+  flex: 1;
+  height: 42px;
+  background: var(--color-bg-elevated, #FBF8EF);
+  border: 1px solid var(--color-border-primary, #A8CDD8);
+  border-radius: 12px;
+  color: var(--color-text-primary, #33302A);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background 0.15s;
+}
+.voice-hold-btn:active { background: rgba(59, 130, 246, 0.15); }
+.voice-hold-btn--recording {
+  background: rgba(176, 58, 46, 0.92) !important;
+  color: #fff !important;
+  animation: voice-pulse 1s ease-in-out infinite;
+}
 
 .msg-img {
   max-width: 260px;
