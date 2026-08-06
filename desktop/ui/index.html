@@ -92,7 +92,15 @@
         <h1>我的应用</h1>
         <div class="sub" id="sub-apps">加载中…</div>
         <div class="grid" id="apps-grid"></div>
-        <h2 style="margin-top:28px">AI 员工</h2>
+        <h2 style="margin-top:28px">AI 员工 · Marketplace</h2>
+        <div class="row" style="margin:8px 0">
+          <input id="mkt-search" placeholder="搜索员工/能力/部门…" style="flex:1;padding:6px;background:var(--panel);border:1px solid #242748;border-radius:8px;color:inherit" />
+          <button data-mkt-cat="" style="margin-left:6px">全部</button>
+          <button data-mkt-cat="人力">人力</button>
+          <button data-mkt-cat="内容">内容</button>
+          <button data-mkt-cat="营销">营销</button>
+          <button data-mkt-cat="风险">风险</button>
+        </div>
         <div class="sub" id="sub-employees">加载中…</div>
         <div class="grid" id="employees-grid"></div>
         <div id="employee-detail" class="hidden" style="margin-top:16px"></div>
@@ -333,44 +341,41 @@ function launchEmployee(code) {
   if (isKunlunTauri) invoke('open_workspace', { url }).catch(e => { $('sub-employees').textContent = '❌ ' + e.message; });
   else window.open(url, '_blank');
 }
+let mktCategory = '';
+let mktKeyword = '';
 async function refreshEmployees() {
   try {
-    const data = await api('/api/skills/mapping/agent-definitions');
-    const defs = (data?.defs || []).filter(d => d.status === 'active');
-    $('sub-employees').textContent = `${defs.length} 位 AI 员工 · 商品状态来自云端`;
-    $('employees-grid').innerHTML = (await Promise.all(defs.map(async (d) => {
-      let state = 'NONE', reason = '', usage = 0, enhNames = [];
-      try {
-        const ent = await api(`/api/skills/employees/${encodeURIComponent(d.code)}/entitlement`);
-        state = ent?.entitlementState || 'NONE'; reason = ent?.reason || '';
-      } catch (e) { /* 状态未知按未授权展示 */ }
-      try {
-        const u = await api(`/api/skills/employees/${encodeURIComponent(d.code)}/usage`);
-        usage = u?.executions || 0;
-      } catch (e) { /* usage 不可用则隐藏 */ }
-      try {
-        const enh = await api(`/api/skills/employees/${encodeURIComponent(d.code)}/enhancements`);
-        enhNames = (enh?.enhancements || []).map(x => x.type);
-      } catch (e) { /* 增强不可用则隐藏 */ }
-      const authorized = state === 'ACTIVE';
+    const qs = new URLSearchParams();
+    if (mktCategory) qs.set('category', mktCategory);
+    if (mktKeyword) qs.set('q', mktKeyword);
+    const data = await api(`/api/marketplace/employees?${qs.toString()}`);
+    const items = (data?.employees || []);
+    $('sub-employees').textContent = `${items.length} 位 AI 员工 · 商品目录来自云端（授权状态 Cloud 判定）`;
+    $('employees-grid').innerHTML = items.map((d) => {
+      const authorized = d.entitlement?.available === true;
       return `<div class="app-card">
         <div class="name">${d.code.replace(/^def-/, '')} ${authorized ? '<span class="badge ok">已授权</span>' : '<span class="badge warn">需要购买</span>'}</div>
+        <div class="desc"><b>${d.identity?.title || ''}</b><br/><span class="muted">${d.identity?.description || ''}</span></div>
         <div class="desc">${(d.capabilities || []).map(c => '<span class="badge">' + c + '</span>').join(' ')}</div>
         <div class="row" style="margin:6px 0">
-          ${enhNames.length ? `<span class="muted">增强: ${enhNames.join('、')}</span>` : '<span class="muted">增强: 无</span>'}
-          <span class="muted">用量: ${usage} 次</span>
+          <span class="badge">${d.category || ''}</span>
+          <span class="muted">增强: ${(d.plugins || []).join('、') || '无'} · 用量: ${d.usage?.executions || 0} 次 (${d.usage?.successRate || 0}%)</span>
         </div>
         <div class="row">
-          <span class="muted">${authorized ? '可启动' : (reason || '未授权')}</span>
           <button data-employee="${d.code}" ${authorized ? '' : 'disabled title="该企业未授权此员工（需购买）"'}>启动</button>
           <button data-detail="${d.code}">详情</button>
         </div>
       </div>`;
-    }))).join('');
+    }).join('') || '<div class="muted">无匹配员工</div>';
     document.querySelectorAll('[data-employee]').forEach(b => b.addEventListener('click', () => { if (!b.disabled) launchEmployee(b.dataset.employee); }));
     document.querySelectorAll('[data-detail]').forEach(b => b.addEventListener('click', () => showEmployeeDetail(b.dataset.detail)));
   } catch (e) { $('sub-employees').textContent = `❌ ${e.message}`; }
 }
+document.addEventListener('DOMContentLoaded', () => {
+  const searchEl = document.getElementById('mkt-search');
+  if (searchEl) searchEl.addEventListener('input', (e) => { mktKeyword = e.target.value.trim(); refreshEmployees(); });
+  document.querySelectorAll('[data-mkt-cat]').forEach(b => b.addEventListener('click', () => { mktCategory = b.dataset.mktCat; refreshEmployees(); }));
+});
 
 // ── 员工详情（S6.1: 身份/能力/Skills/增强/用量/启动; 全 Cloud 来源）──
 async function showEmployeeDetail(code) {
