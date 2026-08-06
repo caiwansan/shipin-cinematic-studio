@@ -210,16 +210,29 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: '帖子不存在' })
     }
 
-    // 非公开状态：仅作者本人可看（待审/已驳回），其他人一律 404
+    // 非公开状态：仅作者本人可看（待审/已驳回），管理员（x-admin-token）可看，其他人一律 404
     if (post.status !== 'approved' && post.userId !== viewerId) {
-      return reply.status(404).send({ error: '帖子不存在' })
+      let isAdmin = false
+      try {
+        const adminToken = request.headers['x-admin-token']
+        if (adminToken) {
+          const decoded: any = fastify.jwt.verify(adminToken)
+          const adminUser = await prisma.adminUser.findUnique({ where: { username: decoded.username } })
+          if (adminUser) isAdmin = true
+        }
+      } catch { /* token 无效视为匿名 */ }
+      if (!isAdmin) {
+        return reply.status(404).send({ error: '帖子不存在' })
+      }
     }
 
-    // 增加浏览量
-    await prisma.communityPost.update({
-      where: { id },
-      data: { viewCount: { increment: 1 } },
-    }).catch(() => {})
+    // 增加浏览量（管理员预览不计入）
+    if (post.status === 'approved') {
+      await prisma.communityPost.update({
+        where: { id },
+        data: { viewCount: { increment: 1 } },
+      }).catch(() => {})
+    }
 
     return { post }
   })

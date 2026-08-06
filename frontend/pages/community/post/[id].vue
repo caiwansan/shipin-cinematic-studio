@@ -256,7 +256,7 @@ const { data: post, pending, error, refresh } = await useAsyncData(
   { lazy: false }
 )
 
-// 客户端补救：SSR 无 token 时待审帖会 404 → 挂载后带 token 重试（作者可见自己的待审/被驳帖）
+// 客户端补救：SSR 无 token 时待审帖会 404 → 挂载后带 token 重试（作者可见自己的待审/被驳帖；管理员可看全部）
 onMounted(async () => {
   if (error.value || !post.value) {
     const { getAuthToken } = await import('~/utils/auth/token')
@@ -264,7 +264,7 @@ onMounted(async () => {
     if (token) {
       try {
         const res = await fetch(`/api/community/posts/${route.params.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, 'x-admin-token': token },
         })
         const data = await res.json()
         if (data?.post) {
@@ -503,9 +503,17 @@ function renderContent(text: string): string {
   html = html.replace(/\[video:([^\]]+)\]/g, (_match: string, url: string) => {
     return `<div class="inline-media"><video src="${url}" class="inline-video" controls preload="none"></video></div>`
   })
-  html = html.replace(/(https?:\/\/[^\s<]+)/g, (_match: string, url: string) => {
+  // URL 链接化：先保护已生成标签内的 URL（href/src 属性值），防止二次匹配把 <a href="URL"><img src="URL"/></a> 嵌套损坏
+  const tagUrls: string[] = []
+  html = html.replace(/((?:href|src)=")(https?:\/\/[^"\s]+)"/g, (_match: string, prefix: string, url: string) => {
+    const idx = tagUrls.length
+    tagUrls.push(url)
+    return `${prefix}\x00TAGURL${idx}\x00"`
+  })
+  html = html.replace(/(https?:\/\/[^\s<"']+)/g, (_match: string, url: string) => {
     return `<a href="${url}" target="_blank" rel="noopener" class="post-link">${url}</a>`
   })
+  html = html.replace(/\x00TAGURL(\d+)\x00/g, (_match: string, idx: string) => tagUrls[parseInt(idx)])
   return sanitizeHtml(html)
 }
 

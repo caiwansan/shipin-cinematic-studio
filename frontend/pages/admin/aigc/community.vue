@@ -66,7 +66,7 @@
                 <div class="flex items-center gap-1.5">
                   <span v-if="p.isPinned" class="text-[10px]" title="置顶">📌</span>
                   <span v-if="p.isEssence" class="text-[10px]" title="精华">⭐</span>
-                  <span class="text-white/70 truncate max-w-[220px] block" :title="p.title">{{ p.title }}</span>
+                  <a :href="`/community/post/${p.id}`" target="_blank" rel="noopener" class="text-white/70 hover:text-cyan-300 truncate max-w-[220px] block underline decoration-dotted underline-offset-2" :title="`${p.title}（点击查看详情）`">{{ p.title }}</a>
                 </div>
               </td>
               <td class="px-3 py-2.5 text-gray-400">{{ p.user?.username || '—' }}</td>
