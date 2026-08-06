@@ -199,6 +199,46 @@ const TOOL_REGISTRY = {
     }
     return { ok: true, result: body.data }
   },
+  // S7.3: 财务经营分析 3 薄工具（经后端内部路由 → Unified AI Gateway; 禁 wallet/billing/subscription/narrativeGateway）
+  'financial.report': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/financial-report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ reportText: input.reportText, period: input.period, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'FINANCIAL_REPORT_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'FINANCIAL_REPORT_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  'expense.analysis': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/expense-analysis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ expenseText: input.expenseText, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'EXPENSE_ANALYSIS_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'EXPENSE_ANALYSIS_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
+  'business.insight': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/business-insight`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ metricsText: input.metricsText, question: input.question, tenantUserId: input.tenantUserId }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'BUSINESS_INSIGHT_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'BUSINESS_INSIGHT_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
   'mock-calc': (input = {}) => {
     const { a, b, op } = input
     if (op === 'add') return { ok: true, result: { value: Number(a) + Number(b) } }

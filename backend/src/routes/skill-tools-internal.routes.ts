@@ -481,4 +481,115 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'INTERNAL', message: e.message })
     }
   })
+
+  // S7.3: 财务经营分析 FA-01 financial.report（Skill LLM Tool, 经 Unified AI Gateway; 禁 wallet/billing/subscription/narrativeGateway）
+  app.post('/api/internal/skill-tools/financial-report', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.reportText) {
+        return reply.code(400).send({ error: 'REPORT_TEXT_REQUIRED' })
+      }
+      const { buildFinancialReportPrompt, parseFinancialReportResult } = await import('../ecosystem/finance-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildFinancialReportPrompt({ reportText: String(body.reportText), period: body.period })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'FINANCIAL_REPORT_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseFinancialReportResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal financial-report failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
+  // S7.3: 财务经营分析 FA-02 expense.analysis（Skill LLM Tool, 经 Unified AI Gateway; 禁 wallet/billing/subscription/narrativeGateway）
+  app.post('/api/internal/skill-tools/expense-analysis', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.expenseText) {
+        return reply.code(400).send({ error: 'EXPENSE_TEXT_REQUIRED' })
+      }
+      const { buildExpenseAnalysisPrompt, parseExpenseAnalysisResult } = await import('../ecosystem/finance-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildExpenseAnalysisPrompt({ expenseText: String(body.expenseText) })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'EXPENSE_ANALYSIS_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseExpenseAnalysisResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal expense-analysis failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
+
+  // S7.3: 财务经营分析 FA-03 business.insight（Skill LLM Tool, 经 Unified AI Gateway; 禁 wallet/billing/subscription/narrativeGateway）
+  app.post('/api/internal/skill-tools/business-insight', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.metricsText) {
+        return reply.code(400).send({ error: 'METRICS_TEXT_REQUIRED' })
+      }
+      const { buildBusinessInsightPrompt, parseBusinessInsightResult } = await import('../ecosystem/finance-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildBusinessInsightPrompt({ metricsText: String(body.metricsText), question: body.question })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'BUSINESS_INSIGHT_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseBusinessInsightResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal business-insight failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
 }

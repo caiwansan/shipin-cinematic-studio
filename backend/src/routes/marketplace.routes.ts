@@ -15,6 +15,7 @@ const CATEGORY_MAP: Record<string, string> = {
   'def-shortdrama-director': '内容',
   'def-newmedia-ops': '营销',
   'def-legal-advisor': '风险',
+  'def-finance-analyst': '财务',
 }
 
 /** 员工岗位表达（「员工不是工具」, 详情/列表 identity） */
@@ -23,6 +24,7 @@ const ROLE_MAP: Record<string, { title: string; line: string }> = {
   'def-shortdrama-director': { title: '你的 AI 短剧导演', line: '负责: 剧本分析 / 分镜规划 / 生成优化' },
   'def-newmedia-ops': { title: '你的 AI 新媒体运营', line: '负责: 内容策划 / 内容创作 / 运营分析' },
   'def-legal-advisor': { title: '你的 AI 合同分析员工', line: '负责: 合同审查 / 风险分析 / 条款优化' },
+  'def-finance-analyst': { title: '你的 AI 经营分析员工', line: '负责: 经营摘要 / 费用分析 / 经营洞察' },
 }
 
 export async function registerMarketplaceRoutes(app: FastifyInstance) {
