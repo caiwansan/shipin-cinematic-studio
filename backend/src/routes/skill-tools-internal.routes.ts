@@ -63,7 +63,17 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
       }
       const { buildScorePrompt, parseScoreResult } = await import('../ecosystem/score-parser.js')
       const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
-      const prompt = buildScorePrompt({ resumeProfile: body.resumeProfile, jobRequirement: body.jobRequirement })
+      let prompt = buildScorePrompt({ resumeProfile: body.resumeProfile, jobRequirement: body.jobRequirement })
+      // S5.3: 插件增强注入（企业授权 EcologyLicense + manifest.enhancements; 无授权 → 基础执行, 不拒绝）
+      if (body.tenantUserId) {
+        const { getOrgEnhancementsForSkills, applyEnhancements } = await import('../ecosystem/plugin-enhancement.js')
+        const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
+        const orgId = await getOrganizationIdForUser(String(body.tenantUserId)).catch(() => null)
+        if (orgId) {
+          const enhs = await getOrgEnhancementsForSkills(String(orgId), ['candidate.score']).catch(() => [])
+          if (enhs.length) prompt = applyEnhancements(prompt, enhs)
+        }
+      }
       // dev 模式工具调用身份（合成 UUID, 无用户配置 → dev provider）; S4 起解析调用方 BYOK
       const result = await unifiedAIGateway.invokeAI({
         // S4.1: 租户身份透传（body.tenantUserId）→ 组织 BYOK 凭证; 缺省 dev 身份
