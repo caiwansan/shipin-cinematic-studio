@@ -27,6 +27,35 @@ const ROLE_MAP: Record<string, { title: string; line: string }> = {
   'def-finance-analyst': { title: '你的 AI 经营分析员工', line: '负责: 经营摘要 / 费用分析 / 经营洞察' },
 }
 
+/** S7.4-B: Employee Landing Page（价值表达, 代码级映射零新表; 禁承诺具体节省数字） */
+const LANDING_MAP: Record<string, { positioning: string; fitsFor: string[]; responsibilities: string[] }> = {
+  'def-recruiter-alice': {
+    positioning: '你的 24 小时招聘经理',
+    fitsFor: ['中小企业 HR 团队', '快速扩招的初创团队'],
+    responsibilities: ['分析岗位需求', '筛选简历', '生成面试方案', '输出招聘报告'],
+  },
+  'def-shortdrama-director': {
+    positioning: '你的 24 小时短剧导演',
+    fitsFor: ['短剧/短视频制作团队', '内容工作室'],
+    responsibilities: ['剧本结构分析', '分镜规划', '生成 prompt 优化'],
+  },
+  'def-newmedia-ops': {
+    positioning: '你的 24 小时新媒体运营',
+    fitsFor: ['品牌/市场团队', '个人 IP 运营者'],
+    responsibilities: ['内容策划', '文案创作', '运营数据分析'],
+  },
+  'def-legal-advisor': {
+    positioning: '你的 24 小时合同分析员工',
+    fitsFor: ['中小企业法务/行政', '高频签合同团队'],
+    responsibilities: ['合同要点审查', '风险识别', '条款优化建议'],
+  },
+  'def-finance-analyst': {
+    positioning: '你的 24 小时经营分析员工',
+    fitsFor: ['中小企业主/经营层', '财务团队'],
+    responsibilities: ['经营摘要', '费用分析', '经营洞察与风险提示'],
+  },
+}
+
 export async function registerMarketplaceRoutes(app: FastifyInstance) {
   // 列表: 规则搜索 + 规则排序 + 审核态过滤（只返回 active def）
   app.get('/api/marketplace/employees', async (request: any, reply: any) => {
@@ -117,6 +146,7 @@ export async function registerMarketplaceRoutes(app: FastifyInstance) {
           name: d.name,
           category: cat,
           identity: { title: role.title, description: role.line },
+          landing: LANDING_MAP[code] || null,
           capabilities: caps,
           plugins: enhTypes,
           entitlement: viewerId ? { available: (await checkEmployeeEntitlement(viewerId, code).catch(() => ({ allowed: false, reason: 'ERROR' }))).allowed } : null,

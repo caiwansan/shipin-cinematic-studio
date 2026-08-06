@@ -383,25 +383,28 @@ async function showEmployeeDetail(code) {
   box.classList.remove('hidden');
   box.innerHTML = '<div class="muted">加载中…</div>';
   try {
-    const ent = await api(`/api/skills/employees/${encodeURIComponent(code)}/entitlement`).catch(() => null);
-    const usage = await api(`/api/skills/employees/${encodeURIComponent(code)}/usage`).catch(() => null);
-    const enh = await api(`/api/skills/employees/${encodeURIComponent(code)}/enhancements`).catch(() => null);
-    const skills = await api(`/api/skills/employees/${encodeURIComponent(code)}/skills`).catch(() => null);
-    const authorized = ent?.entitlementState === 'ACTIVE';
-    const enhHtml = (enh?.enhancements || []).map(e => `
-      <div style="margin:4px 0"><b>${e.type}</b>${e.templates?.length ? ` <span class="muted">(${e.templates.length} 模板)</span>` : ''}</div>
-      <ul style="margin:2px 0 8px 18px">${(e.templates || []).map(t => `<li style="font-size:12px">${t}</li>`).join('')}</ul>`).join('') || '<div class="muted">未购买增强包</div>';
-    box.innerHTML = `
+    // S7.4-B: 详情优先走 marketplace API（含 Landing 价值表达）
+    const mkt = await api(`/api/marketplace/employees/${encodeURIComponent(code)}`).catch(() => null);
+    if (mkt?.landing) {
+      const l = mkt.landing;
+      const authorized = mkt.entitlement?.available === true;
+      const enhHtml = (mkt.plugins || []).map(p => `<span class="badge">${p}</span>`).join(' ') || '无';
+      box.innerHTML = `
       <div class="card">
-        <div class="row"><b>${code.replace(/^def-/, '')}</b> ${authorized ? '<span class="badge ok">已授权</span>' : '<span class="badge warn">需要购买</span>'}</div>
-        <div class="row" style="margin:8px 0"><span class="muted">能力</span><span>${(skills?.skills || []).map(s => s.id.replace(/^def-/, '')).join('、') || (ent ? '' : '—')}</span></div>
-        <div class="row" style="margin:4px 0"><span class="muted">用量</span><span>${usage?.executions || 0} 次 · 成功 ${usage?.successful || 0} · 失败 ${usage?.failed || 0}</span></div>
-        <div style="margin:8px 0"><span class="muted">增强包</span><div>${enhHtml}</div></div>
+        <div class="row"><b>${l.positioning}</b> ${authorized ? '<span class="badge ok">已授权</span>' : '<span class="badge warn">需要购买</span>'}</div>
+        <div class="desc" style="margin:8px 0">适合: ${(l.fitsFor || []).join('、')}</div>
+        <div class="desc" style="margin:4px 0">负责: ${(l.responsibilities || []).map(r => '✓ ' + r).join('<br/>')}</div>
+        <div class="row" style="margin:6px 0"><span class="muted">能力</span><span>${(mkt.capabilities || []).join('、')}</span></div>
+        <div class="row" style="margin:4px 0"><span class="muted">增强</span><span>${enhHtml}</span></div>
+        <div class="row" style="margin:4px 0"><span class="muted">用量</span><span>${mkt.usage?.executions || 0} 次 · 成功率 ${mkt.usage?.successRate || 0}%</span></div>
         <div class="row" style="margin-top:10px">
           <button data-employee="${code}" ${authorized ? '' : 'disabled'}>启动</button>
           <button data-close-detail>关闭</button>
         </div>
       </div>`;
+    } else {
+      box.innerHTML = '<div class="muted">商品详情不可用</div>';
+    }
     box.querySelector('[data-employee]')?.addEventListener('click', () => launchEmployee(code));
     box.querySelector('[data-close-detail]')?.addEventListener('click', () => box.classList.add('hidden'));
   } catch (e) { box.innerHTML = `<div class="err-msg">${e.message}</div>`; }
