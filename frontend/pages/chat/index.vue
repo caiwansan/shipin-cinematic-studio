@@ -112,7 +112,20 @@
             </div>
           </div>
           <div ref="msgListRef" class="msg-list">
-            <div v-for="msg in displayMessages" :key="msg.key" class="msg-row" :class="{ mine: msg.fromUID === tea.userId.value }">
+            <div
+              v-for="msg in displayMessages"
+              :key="msg.key"
+              class="msg-row"
+              :class="{ mine: msg.fromUID === tea.userId.value }"
+              @contextmenu.prevent="openMsgMenu(msg, $event)"
+              @mousedown="msgHoldStart(msg, $event)"
+              @mouseup="msgHoldEnd"
+              @mouseleave="msgHoldCancel"
+              @touchstart.passive="msgTouchStart(msg, $event)"
+              @touchend="msgTouchEnd"
+              @touchmove.passive="msgTouchMove"
+              @touchcancel="msgHoldCancel"
+            >
               <div class="msg-avatar" :class="{ bot: msg.fromUID === 'kunlun_tea_bot' }">
                 <img v-if="msgAvatar(msg)" :src="msgAvatar(msg)" alt="" />
                 <span v-else>{{ (msgAuthorName(msg) || '茶').slice(0, 1) }}</span>
@@ -185,12 +198,72 @@
                   </template>
                   <button class="plus-item" title="发红包" @click="plusPanelOpen = false; openRedPacketPanel()">🧧<span>红包</span></button>
                   <button class="plus-item" title="送礼物" @click="plusPanelOpen = false; openGiftPanel()">🎁<span>礼物</span></button>
+                  <button class="plus-item" title="我的收藏" @click="plusPanelOpen = false; openFavPanel()">📌<span>收藏</span></button>
                 </div>
               </div>
             </Teleport>
           </div>
         </template>
       </section>
+
+      <!-- ══ IM-CHA-M10.4 消息长按/右键操作菜单（复制/收藏/转发） ══ -->
+      <Teleport to="body">
+        <div v-if="msgMenu" class="msg-menu-mask" @click="closeMsgMenu" @contextmenu.prevent="closeMsgMenu"></div>
+        <div v-if="msgMenu" class="msg-menu" :style="{ left: msgMenu.x + 'px', top: msgMenu.y + 'px' }" @click.stop>
+          <div v-if="msgMenu.canCopy" class="msg-menu-item" @click="copyMsg(msgMenu.msg)">📋 复制</div>
+          <div class="msg-menu-item" @click="favMsg(msgMenu.msg)">⭐ 收藏</div>
+          <div v-if="msgMenu.canForward" class="msg-menu-item" @click="openForward(msgMenu.msg)">↪ 转发</div>
+        </div>
+      </Teleport>
+
+      <!-- ══ IM-CHA-M10.4 转发选择弹窗 ══ -->
+      <Teleport to="body">
+        <div v-if="forwardPanel" class="fwd-mask" @click.self="forwardPanel = false">
+          <div class="fwd-modal">
+            <div class="fwd-head">
+              <span>↪ 转发到…</span>
+              <button class="fwd-close" @click="forwardPanel = false">✕</button>
+            </div>
+            <div class="fwd-sub">{{ forwardPreview }}</div>
+            <div class="fwd-list">
+              <div v-for="t in forwardTargets" :key="t.key" class="fwd-item" @click="doForward(t)">
+                <span class="fwd-item-icon">{{ t.kind === 'user' ? '👤' : '🏮' }}</span>
+                <span class="fwd-item-name">{{ t.name }}</span>
+                <span class="fwd-item-tag">{{ t.kind === 'user' ? '好友' : (t.kind === 'group' ? '群聊' : '频道') }}</span>
+              </div>
+              <div v-if="!forwardTargets.length" class="fwd-empty">暂无可转发目标（先去加个好友？）</div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <!-- ══ IM-CHA-M10.4 收藏夹弹窗 ══ -->
+      <Teleport to="body">
+        <div v-if="favPanel" class="fwd-mask" @click.self="favPanel = false">
+          <div class="fwd-modal fav-modal">
+            <div class="fwd-head">
+              <span>📌 我的收藏（{{ favList.length }}）</span>
+              <button class="fwd-close" @click="favPanel = false">✕</button>
+            </div>
+            <div class="fav-list">
+              <div v-for="f in favList" :key="f.id" class="fav-item">
+                <div class="fav-item-main" @click="favPreview(f)">
+                  <span class="fav-item-icon">{{ favIcon(f) }}</span>
+                  <div class="fav-item-body">
+                    <div class="fav-item-text" v-html="favText(f)"></div>
+                    <div class="fav-item-meta">{{ favMeta(f) }}</div>
+                  </div>
+                </div>
+                <div class="fav-item-ops">
+                  <button v-if="favKind(f) === 1" class="fav-op" title="复制" @click="copyFav(f)">📋</button>
+                  <button class="fav-op" title="取消收藏" @click="removeFav(f)">🗑</button>
+                </div>
+              </div>
+              <div v-if="!favList.length" class="fwd-empty">还没有收藏 · 长按/右键消息选「收藏」</div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- ══ 礼物弹窗（抖音式礼物墙 + 钻石余额 + 充值） ══ -->
       <div v-if="giftPanelOpen" class="gift-modal-mask" @click.self="giftPanelOpen = false">
@@ -1012,7 +1085,7 @@ function renderMsg(msg: any) {
     const thumb = absUrl(content.thumbUrl || content.url)
     const full = absUrl(content.url)
     const ttlTip = content.ttlHours ? `<small class="msg-ttl">${ttlTipText(content.ttlHours)}</small>` : ''
-    return `<img class="msg-img" src="${thumb}" loading="lazy" onclick="window.__klImgView && window.__klImgView('${full}')" />${ttlTip}`
+    return `<img class="msg-img" src="${thumb}" loading="lazy" onclick="window.__klImgView && window.__klImgView('${full}')" />${fwdMarkHtml(content)}${ttlTip}`
   }
   // 语音（type=5）——IM-CHA-M10：点击播放，长按提炼文字
   if (type === 5 && content && content.url) {
@@ -1042,11 +1115,19 @@ function renderMsg(msg: any) {
   // 视频（type=4）
   if (type === 4 && content && content.url) {
     const ttlTip = content.ttlHours ? `<small class="msg-ttl">${ttlTipText(content.ttlHours)}</small>` : ''
-    return `<video class="msg-video" src="${absUrl(content.url)}" controls preload="metadata"></video>${ttlTip}`
+    return `<video class="msg-video" src="${absUrl(content.url)}" controls preload="metadata"></video>${fwdMarkHtml(content)}${ttlTip}`
   }
   // 文本（type=1）
   const text = typeof content === 'string' ? content : typeof content?.text === 'string' ? content.text : typeof content?.content === 'string' ? content.content : ''
-  return escapeHtml(text).replace(/\n/g, '<br/>')
+  return escapeHtml(text).replace(/\n/g, '<br/>') + fwdMarkHtml(content)
+}
+
+// IM-CHA-M10.4 转发标注（微信风格「转发自 …」；文本/图片/视频转发时 content 带 forwardedFrom）
+function fwdMarkHtml(content: any): string {
+  const fwd = content && typeof content === 'object' ? content.forwardedFrom : null
+  if (!fwd) return ''
+  const from = [fwd.channelName, fwd.userName].filter(Boolean).join(' · ')
+  return `<span class="msg-forwarded">↪ 转发自 ${escapeHtml(from || '未知来源')}</span>`
 }
 
 // 提取红包信息（形态同礼物：content 直/嵌套/payload 解码）
@@ -1324,6 +1405,287 @@ async function recallMsg(msg: any) {
   } catch (e) {
     console.error('[昆仑茶馆] 撤回失败', e)
     showToast('⚠ 撤回失败，请重试')
+  }
+}
+
+/* ══ IM-CHA-M10.4 消息长按/右键操作菜单（复制/收藏/转发） ══════════ */
+const msgMenu = ref<{ msg: any; x: number; y: number; canCopy: boolean; canForward: boolean } | null>(null)
+const forwardPanel = ref(false)
+const forwardMsg = ref<any>(null)
+const forwardPreview = ref('')
+const favPanel = ref(false)
+const favList = ref<any[]>([])
+let msgHoldTimer: ReturnType<typeof setTimeout> | null = null
+let msgHoldFired = false
+let msgTouchStartPos: { x: number; y: number } | null = null
+
+// 转发目标：频道 + 群聊 + 好友（关注）
+const forwardTargets = computed(() => {
+  const list: any[] = []
+  const cur = currentChannel.value
+  for (const c of channels.value) if (!cur || c.id !== cur.id) list.push({ key: 'ch-' + c.id, kind: 'channel', id: c.id, type: c.type, name: c.name })
+  for (const g of groups.value) if (!cur || g.id !== cur.id) list.push({ key: 'g-' + g.id, kind: 'group', id: g.id, type: g.type, name: g.name })
+  for (const u of followUsers.value) if (!cur || u.id !== (cur as any).peerUid) list.push({ key: 'u-' + u.id, kind: 'user', id: u.id, type: 1, name: u.name || '茶客' })
+  return list
+})
+
+// 消息是否可弹操作菜单（文字/图片/视频；红包/礼物/通知/系统消息除外）
+function msgMenuable(msg: any): boolean {
+  if (!msg || msg.recalled) return false
+  if (extractGiftInfo(msg) || extractRedPacketInfo(msg) || extractRedPacketGrabbedInfo(msg) || extractRedPacketGrabInfo(msg) || extractRecallInfo(msg)) return false
+  const parsed = parseContentObj(msg)
+  if (!parsed) return false
+  return parsed.type === 1 || parsed.type === 2 || parsed.type === 4
+}
+
+function openMsgMenu(msg: any, e: { clientX: number; clientY: number }) {
+  if (!msgMenuable(msg)) return
+  const parsed = parseContentObj(msg)!
+  const MENU_W = 148
+  const MENU_H = 134
+  let x = e.clientX, y = e.clientY
+  if (x + MENU_W > window.innerWidth) x = window.innerWidth - MENU_W - 8
+  if (y + MENU_H > window.innerHeight) y = window.innerHeight - MENU_H - 8
+  x = Math.max(8, x)
+  y = Math.max(8, y)
+  msgMenu.value = { msg, x, y, canCopy: parsed.type === 1, canForward: parsed.type === 1 || parsed.type === 2 || parsed.type === 4 }
+  syncBodyLock()
+}
+function closeMsgMenu() {
+  msgMenu.value = null
+  syncBodyLock()
+}
+
+// 鼠标长按（500ms）
+function msgHoldStart(msg: any, e: MouseEvent) {
+  if (e.button !== undefined && e.button !== 0) return
+  if (!msgMenuable(msg)) return
+  msgHoldCancel()
+  msgHoldFired = false
+  msgHoldTimer = setTimeout(() => {
+    msgHoldFired = true
+    openMsgMenu(msg, { clientX: e.clientX, clientY: e.clientY })
+  }, 500)
+}
+function msgHoldEnd() {
+  if (msgHoldTimer) { clearTimeout(msgHoldTimer); msgHoldTimer = null }
+}
+function msgHoldCancel() { msgHoldEnd() }
+
+// 触摸长按（移动端；移动 10px 取消）
+function msgTouchStart(msg: any, e: TouchEvent) {
+  const t = e.touches?.[0]
+  msgTouchStartPos = t ? { x: t.clientX, y: t.clientY } : null
+  if (!msgMenuable(msg)) return
+  const ce = t ? { clientX: t.clientX, clientY: t.clientY } : { clientX: 0, clientY: 0 }
+  msgHoldCancel()
+  msgHoldFired = false
+  msgHoldTimer = setTimeout(() => {
+    msgHoldFired = true
+    openMsgMenu(msg, ce)
+  }, 500)
+}
+function msgTouchMove(e: TouchEvent) {
+  const t = e.touches?.[0]
+  if (t && msgTouchStartPos) {
+    const dx = Math.abs(t.clientX - msgTouchStartPos.x)
+    const dy = Math.abs(t.clientY - msgTouchStartPos.y)
+    if (dx > 10 || dy > 10) msgHoldCancel()
+  }
+}
+function msgTouchEnd() { msgHoldEnd() }
+
+// 长按触发后吞掉紧随的 click（防图片长按弹出菜单时又打开大图）
+function installMsgHoldClickGuard() {
+  document.addEventListener(
+    'click',
+    (e) => {
+      if (msgHoldFired) {
+        e.preventDefault()
+        e.stopPropagation()
+        msgHoldFired = false
+      }
+    },
+    true
+  )
+}
+
+// 提取消息纯文本（复制用）
+function extractMsgText(msg: any): string {
+  const parsed = parseContentObj(msg)
+  if (!parsed) return ''
+  const c = parsed.content
+  if (typeof c === 'string') return c
+  if (typeof c?.text === 'string') return c.text
+  if (typeof c?.content === 'string') return c.content
+  return ''
+}
+
+async function copyText(text: string, tip = '✅ 已复制') {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    try { document.execCommand('copy') } catch { /* noop */ }
+    ta.remove()
+  }
+  showToast(tip)
+}
+
+function copyMsg(msg: any) {
+  const text = extractMsgText(msg)
+  if (!text) return showToast('⚠ 无法复制该消息')
+  closeMsgMenu()
+  copyText(text)
+}
+
+// 收藏消息（幂等：后端同 user+messageId 去重）
+async function favMsg(msg: any) {
+  const parsed = parseContentObj(msg)
+  if (!parsed) return
+  closeMsgMenu()
+  try {
+    const res = await fetch('/api/im/favorites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({
+        messageId: msgMessageId(msg),
+        channelId: currentChannel.value?.id || '',
+        channelType: currentChannel.value?.type || 4,
+        contentType: parsed.type,
+        content: parsed,
+        fromUid: msg.fromUID || '',
+        fromName: msgAuthorName(msg),
+        channelName: currentChannel.value?.name || '',
+      }),
+    })
+    const j = await res.json()
+    if (j.success) showToast(j.duplicated ? '⭐ 已收藏过' : '⭐ 已收藏')
+    else showToast('⚠ ' + (j.error || '收藏失败'))
+  } catch (e) {
+    console.error('[昆仑茶馆] 收藏失败', e)
+    showToast('⚠ 收藏失败')
+  }
+}
+
+// 转发
+function openForward(msg: any) {
+  const parsed = parseContentObj(msg)
+  if (!parsed) return
+  closeMsgMenu()
+  forwardMsg.value = msg
+  const icon = parsed.type === 1 ? '📄' : parsed.type === 2 ? '📷' : '🎬'
+  const preview = parsed.type === 1 ? extractMsgText(msg) : parsed.type === 2 ? '图片' : '视频'
+  forwardPreview.value = `${icon} ${preview.slice(0, 60)}`
+  forwardPanel.value = true
+  syncBodyLock()
+}
+async function doForward(t: any) {
+  const msg = forwardMsg.value
+  forwardPanel.value = false
+  syncBodyLock()
+  forwardMsg.value = null
+  if (!msg) return
+  const parsed = parseContentObj(msg)
+  if (!parsed) return
+  let chId = t.id
+  let chType = t.type
+  try {
+    if (t.kind === 'user') {
+      const data = await tea.ensurePrivate(t.id)
+      if (!data) return showToast('⚠ 无法建立私聊')
+      chId = data.channel.id
+      chType = data.channel.type
+    }
+    const res = await fetch('/api/im/messages/forward', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({
+        targetChannelId: chId,
+        targetChannelType: chType,
+        contentType: parsed.type,
+        content: parsed.content,
+        forwardedFrom: { channelName: currentChannel.value?.name || '', userName: msgAuthorName(msg) },
+      }),
+    })
+    const j = await res.json()
+    if (j.success) showToast('↪ 已转发')
+    else showToast('⚠ ' + (j.error || '转发失败'))
+  } catch (e) {
+    console.error('[昆仑茶馆] 转发失败', e)
+    showToast('⚠ 转发失败')
+  }
+}
+
+// 收藏夹
+async function openFavPanel() {
+  favPanel.value = true
+  syncBodyLock()
+  try {
+    const res = await fetch('/api/im/favorites', { headers: { Authorization: 'Bearer ' + giftToken() } })
+    const j = await res.json()
+    favList.value = (j.data || []).map((f: any) => {
+      let parsed: any = null
+      try { parsed = JSON.parse(f.content) } catch { /* noop */ }
+      return { ...f, _parsed: parsed }
+    })
+  } catch (e) {
+    console.error('[昆仑茶馆] 收藏夹加载失败', e)
+    showToast('⚠ 收藏夹加载失败')
+  }
+}
+function favKind(f: any): number {
+  return f._parsed?.type || 1
+}
+function favIcon(f: any): string {
+  const t = favKind(f)
+  return t === 2 ? '📷' : t === 4 ? '🎬' : t === 5 ? '🎤' : t === 3 ? '📄' : '💬'
+}
+function favText(f: any): string {
+  const c = f._parsed?.content
+  if (typeof c === 'string') return escapeHtml(c)
+  if (typeof c?.text === 'string') return escapeHtml(c.text)
+  if (c?.url) return `<span style="color:#8A8478">媒体消息（点击预览）</span>`
+  return '…'
+}
+function favMeta(f: any): string {
+  const from = [f.channelName, f.fromName].filter(Boolean).join(' · ')
+  const time = f.createdAt ? new Date(f.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
+  return [from, time].filter(Boolean).join('  ')
+}
+function favPreview(f: any) {
+  const c = f._parsed?.content
+  if (c?.url) {
+    const full = absUrl(c.url)
+    const w = window.open('', '_blank')
+    if (w) { w.document.write(`<img src="${full}" style="max-width:100%"/>`); w.document.close() }
+  }
+}
+function copyFav(f: any) {
+  const c = f._parsed?.content
+  const text = typeof c === 'string' ? c : typeof c?.text === 'string' ? c.text : ''
+  if (!text) return showToast('⚠ 该收藏不是文字')
+  copyText(text)
+}
+async function removeFav(f: any) {
+  try {
+    const res = await fetch('/api/im/favorites/' + f.id, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + giftToken() },
+    })
+    const j = await res.json()
+    if (j.success) {
+      favList.value = favList.value.filter((x) => x.id !== f.id)
+      showToast('🗑 已取消收藏')
+    } else showToast('⚠ ' + (j.error || '取消失败'))
+  } catch (e) {
+    console.error('[昆仑茶馆] 取消收藏失败', e)
+    showToast('⚠ 取消失败')
   }
 }
 
@@ -1708,7 +2070,7 @@ function toggleFriendPanel() {
 
 /** 统一页面滚动锁：面板或菜单任一打开 → 锁死 body，聊天页面纹丝不动 */
 function syncBodyLock() {
-  document.body.style.overflow = friendPanel.value || friendMenu.value || memberCard.value ? 'hidden' : ''
+  document.body.style.overflow = friendPanel.value || friendMenu.value || memberCard.value || msgMenu.value || forwardPanel.value || favPanel.value ? 'hidden' : ''
 }
 
 /** 好友下拉菜单：定位（右侧/底部空间不足自动反弹）+ 锁定页面滚动 */
@@ -2125,6 +2487,7 @@ onMounted(async () => {
   ;(window as any).__klImgView = (src: string) => viewImage(src)
   ;(window as any).__klOpenRedPacket = (id: string) => openRpDetail(id)
   installVoiceGlobals()
+  installMsgHoldClickGuard()
   // ══ R11：初始化 RTC（拉取 ICE 配置 + 注册 CMD 信令监听，须在 connect 前）══
   try {
     rtcSetIdentity = (await rtc.init({})).setIdentity
@@ -3033,7 +3396,8 @@ onBeforeUnmount(() => {
   background: rgba(95, 168, 190, 0.08);
   border-radius: 0 8px 8px 0;
   font-size: 12px;
-  color: #cfe8ef;
+  color: #1F1F1F;
+  font-weight: 500;
   max-width: 320px;
 }
 .msg-transcript {
@@ -3582,9 +3946,9 @@ onBeforeUnmount(() => {
 /* 媒体 TTL 提示（v-html） */
 .msg-ttl { font-size: 10px; color: var(--color-text-disabled, #A39D8E); display: block; margin-top: 3px; }
 
-/* 翻译 / 转写结果（v-html 外，但同属消息内容区） */
+/* 翻译 / 转写结果（v-html 外，但同属消息内容区）——IM-CHA-M10.4 掌柜指令：译文必须深黑色 */
 .msg-translation {
-  margin-top: 6px; font-size: 12px; color: #B98A3E;
+  margin-top: 6px; font-size: 12px; color: #1F1F1F; font-weight: 500;
   background: rgba(185, 138, 62, 0.1); border-radius: 8px; padding: 4px 8px;
 }
 .msg-transcript {
@@ -3666,4 +4030,59 @@ onBeforeUnmount(() => {
 .rp-card.is-done .rp-card-note { color: rgba(255, 250, 242, 0.85); }
 .rp-grab-inline { font-size: 12px; color: #6F6A5C; }
 .rp-grab-amt-inline { color: #B03A2E; font-weight: 700; }
+
+/* ══ IM-CHA-M10.4 消息长按菜单 / 转发 / 收藏夹 ══ */
+.msg-forwarded { display: block; font-size: 11px; color: #8A8478; margin-top: 3px; }
+.msg-menu-mask { position: fixed; inset: 0; z-index: 9990; }
+.msg-menu {
+  position: fixed; z-index: 9991; background: #FFFDF7;
+  border: 1px solid rgba(120, 110, 100, 0.18); border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(60, 50, 40, 0.16); padding: 6px; min-width: 128px;
+}
+.msg-menu-item {
+  padding: 9px 14px; font-size: 14px; color: #3A352C; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+}
+.msg-menu-item:hover { background: rgba(185, 138, 62, 0.12); color: #B03A2E; }
+.fwd-mask {
+  position: fixed; inset: 0; background: rgba(20, 16, 10, 0.45); z-index: 9992;
+  display: flex; align-items: center; justify-content: center;
+}
+.fwd-modal {
+  width: 380px; max-width: 92vw; max-height: 70vh; background: #FFFDF7; border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(40, 30, 20, 0.25); display: flex; flex-direction: column; overflow: hidden;
+}
+.fwd-head {
+  display: flex; justify-content: space-between; align-items: center; padding: 14px 16px;
+  font-weight: 700; color: #3A352C; border-bottom: 1px solid rgba(120, 110, 100, 0.12);
+}
+.fwd-close { background: none; border: none; font-size: 16px; cursor: pointer; color: #8A8478; }
+.fwd-sub { padding: 8px 16px; font-size: 12px; color: #8A8478; border-bottom: 1px dashed rgba(120, 110, 100, 0.15); max-height: 60px; overflow: hidden; }
+.fwd-list { overflow-y: auto; padding: 8px; }
+.fwd-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+}
+.fwd-item:hover { background: rgba(185, 138, 62, 0.1); }
+.fwd-item-icon { font-size: 18px; }
+.fwd-item-name { flex: 1; color: #3A352C; font-size: 14px; }
+.fwd-item-tag { font-size: 11px; color: #8A8478; background: rgba(120, 110, 100, 0.1); padding: 2px 8px; border-radius: 10px; }
+.fwd-empty { padding: 24px; text-align: center; color: #A39D8E; font-size: 13px; }
+.fav-list { overflow-y: auto; padding: 8px; }
+.fav-item {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px;
+}
+.fav-item:hover { background: rgba(185, 138, 62, 0.08); }
+.fav-item-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
+.fav-item-icon { font-size: 18px; }
+.fav-item-body { flex: 1; min-width: 0; }
+.fav-item-text {
+  font-size: 13px; color: #3A352C; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fav-item-meta { font-size: 11px; color: #A39D8E; margin-top: 2px; }
+.fav-item-ops { display: flex; gap: 4px; }
+.fav-op {
+  background: rgba(120, 110, 100, 0.08); border: none; border-radius: 8px;
+  padding: 5px 8px; cursor: pointer; font-size: 13px;
+}
+.fav-op:hover { background: rgba(185, 138, 62, 0.15); }
 </style>

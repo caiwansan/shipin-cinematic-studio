@@ -10800,3 +10800,25 @@ model ImVoiceTranscript {
 
   @@map("im_voice_transcript")
 }
+
+// ============================================
+// IM-CHA-M10.4 消息收藏（2026-08-06 掌柜指令：长按每条文字消息可复制可收藏）
+// 收藏 = 内容快照（防源消息过期/被删）；messageId 有则同 user+messageId 幂等
+// ============================================
+
+model ImFavorite {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  userId      String   @map("user_id") @db.Text // 收藏者
+  messageId   String   @default("") @map("message_id") @db.Text // 源消息 ID（WuKongIM message_idstr）
+  channelId   String   @default("") @map("channel_id") @db.Text
+  channelType Int      @default(4) @map("channel_type")
+  contentType Int      @default(1) @map("content_type") // 1 文本 2 图片 3 文件 4 视频 5 语音
+  content     String   @db.Text // 内容快照 JSON { type, content }
+  fromUid     String   @default("") @map("from_uid") @db.Text // 消息发送者
+  fromName    String   @default("") @map("from_name") @db.Text
+  channelName String   @default("") @map("channel_name") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("im_favorite")
+}

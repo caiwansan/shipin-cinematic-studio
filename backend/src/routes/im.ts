@@ -701,6 +701,88 @@ export default async function imRoutes(fastify: FastifyInstance) {
     }
   })
 
+  // POST /api/im/messages/forward — 消息转发（IM-CHA-M10.4：文字/图片/视频可转发到其他频道/私聊）
+  fastify.post('/api/im/messages/forward', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { targetChannelId, targetChannelType, contentType, content, forwardedFrom } = request.body as any
+    if (!targetChannelId || !targetChannelType || content == null) {
+      return reply.status(400).send({ success: false, error: 'targetChannelId/targetChannelType/content 必填' })
+    }
+    try {
+      // 文本消息 content 为字符串 → 转发时包成 { text, forwardedFrom }；媒体消息 content 为对象 → 直接附加 forwardedFrom
+      let fwdContent = content
+      if (typeof content === 'string') {
+        fwdContent = { text: content, forwardedFrom: forwardedFrom || null }
+      } else if (typeof content === 'object') {
+        fwdContent = { ...content, forwardedFrom: forwardedFrom || null }
+      }
+      const payload = Buffer.from(JSON.stringify({ type: contentType || 1, content: fwdContent })).toString('base64')
+      const data = await wkApi('/message/send', {
+        channel_id: targetChannelId,
+        channel_type: targetChannelType,
+        from_uid: request.user.id as string,
+        payload,
+      })
+      return { success: true, data }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // 收藏：POST /api/im/favorites（幂等：同 user+messageId 已收藏则返回已存在）
+  fastify.post('/api/im/favorites', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { messageId, channelId, channelType, contentType, content, fromUid, fromName, channelName } = request.body as any
+    if (content == null) return reply.status(400).send({ success: false, error: 'content 必填' })
+    try {
+      const userId = request.user.id as string
+      const payload = typeof content === 'string' ? content : JSON.stringify(content)
+      if (messageId) {
+        const exist = await prisma.imFavorite.findFirst({ where: { userId, messageId } })
+        if (exist) return { success: true, data: exist, duplicated: true }
+      }
+      const fav = await prisma.imFavorite.create({
+        data: {
+          userId,
+          messageId: String(messageId || ''),
+          channelId: String(channelId || ''),
+          channelType: Number(channelType) || 4,
+          contentType: Number(contentType) || 1,
+          content: payload,
+          fromUid: String(fromUid || ''),
+          fromName: String(fromName || ''),
+          channelName: String(channelName || ''),
+        },
+      })
+      return { success: true, data: fav }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // GET /api/im/favorites — 我的收藏列表（新→旧）
+  fastify.get('/api/im/favorites', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    try {
+      const list = await prisma.imFavorite.findMany({
+        where: { userId: request.user.id as string },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      })
+      return { success: true, data: list }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // DELETE /api/im/favorites/:id — 取消收藏
+  fastify.delete('/api/im/favorites/:id', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as any
+      const del = await prisma.imFavorite.deleteMany({ where: { id: String(id), userId: request.user.id as string } })
+      return { success: true, data: { deleted: del.count } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
   // POST /api/im/messages/send — 服务端代发消息（机器人/系统消息用；普通用户走 SDK 直发）
   fastify.post('/api/im/messages/send', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const { channelId, channelType, content, contentType = 1 } = request.body as any
