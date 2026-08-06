@@ -280,6 +280,8 @@ async function saveNickname() {
     try {
       document.cookie = `auth_user=${encodeURIComponent(JSON.stringify({ ...JSON.parse(decodeURIComponent(document.cookie.match(/(?:^|;\s*)auth_user=([^;]+)/)?.[1] || '{}')), nickname: updated.nickname || name, displayName: updated.displayName || name }))}; path=/; max-age=604800`
     } catch {}
+    // 通知全站导航实时刷新头像边昵称
+    window.dispatchEvent(new Event('user-meta-changed'))
     alert('昵称修改成功 ✅')
     showNickname.value = false
   } catch (err: any) {

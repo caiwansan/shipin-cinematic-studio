@@ -39,7 +39,7 @@
         <div class="member-hero-inner">
           <div class="member-hero-avatar-area">
             <div class="member-hero-avatar-wrap" @click="triggerAvatarUpload" :title="avatarUrl ? '点击更换头像' : '点击上传头像'">
-              <UserAvatar :src="avatarUrl" :name="userInfo?.username || userInfo?.email || 'U'" size="hero" class="member-hero-avatar-img" />
+              <UserAvatar :src="avatarUrl" :name="userDisplayName" size="hero" class="member-hero-avatar-img" />
               <div class="member-hero-avatar-edit">
                 <span v-if="avatarUploading">⏳</span>
                 <span v-else>{{ avatarUrl ? '换' : '传' }}</span>
@@ -53,7 +53,7 @@
           </div>
           <div class="member-hero-info">
             <h2 class="member-hero-name">
-              {{ userInfo?.username || userInfo?.email?.split('@')[0] || '用户' }}
+              {{ userDisplayName }}
               <span v-if="userInfo?.agentStatus === 'active'" class="agent-badge" :class="'agent-badge--' + (userInfo?.agentLevel || 'senior')">
                 {{ userInfo?.agentLevel === 'premium' ? '👑 顶级代理' : '⭐ 高级代理' }}
               </span>
@@ -536,6 +536,8 @@ function goPrivate(u: any) {
 const avatarInput = ref<HTMLInputElement | null>(null)
 const avatarUploading = ref(false)
 const avatarUrl = computed(() => userInfo.value?.avatarUrl || '')
+// 头像边昵称：displayName(nickname 优先) → username 登录标识
+const userDisplayName = computed(() => userInfo.value?.displayName || userInfo.value?.nickname || userInfo.value?.username || userInfo.value?.email?.split('@')[0] || '用户')
 
 function triggerAvatarUpload() {
   avatarInput.value?.click()
@@ -616,7 +618,7 @@ const tierClass = computed(() => {
 const tierInfo = computed(() => tierConfig[tierClass.value] || tierConfig.free)
 
 const avatarChar = computed(() => {
-  return (userInfo.value?.username || userInfo.value?.email || 'U').charAt(0).toUpperCase()
+  return (userDisplayName || 'U').charAt(0).toUpperCase()
 })
 
 const coins = computed(() => userInfo.value?.coins ?? 0)

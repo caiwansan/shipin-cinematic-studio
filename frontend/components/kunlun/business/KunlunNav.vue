@@ -159,7 +159,8 @@ function refreshUserMeta() {
     if (raw) {
       const u = JSON.parse(raw)
       userAvatar.value = u.avatarUrl || ''
-      userName.value = u.username || u.email?.split('@')[0] || '用户'
+      // 头像边昵称：优先 nickname（用户可改），否则 displayName，最后 username 登录标识
+      userName.value = u.nickname || u.displayName || u.username || u.email?.split('@')[0] || '用户'
     }
   } catch {}
 }
@@ -220,6 +221,10 @@ function handleClickOutside(e: MouseEvent) {
 
 onMounted(() => {
   refreshUserMeta()
+  // 用户信息变更（如修改昵称）后实时刷新头像边昵称
+  const onUserMetaChanged = () => refreshUserMeta()
+  window.addEventListener('user-meta-changed', onUserMetaChanged)
+  window.addEventListener('storage', onUserMetaChanged)
   const handleScroll = () => {
     scrolled.value = window.scrollY > 50
   }
@@ -228,6 +233,8 @@ onMounted(() => {
   onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll)
     document.removeEventListener('click', handleClickOutside)
+    window.removeEventListener('user-meta-changed', onUserMetaChanged)
+    window.removeEventListener('storage', onUserMetaChanged)
   })
 })
 </script>
