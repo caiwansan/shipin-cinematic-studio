@@ -68,6 +68,31 @@ export async function ensurePublicChannel() {
   }
 }
 
+/** 启动时全量重建公共频道订阅（WuKongIM 容器重启会清空订阅表，DB imChannelMember 是业务真源） */
+export async function restorePublicChannelSubscriptions() {
+  try {
+    await ensurePublicChannel()
+    const members = await prisma.imChannelMember.findMany({
+      where: { channelId: PUBLIC_CHANNEL_ID, channelType: PUBLIC_CHANNEL_TYPE },
+      select: { uid: true },
+    })
+    const uids = members.map((m) => m.uid)
+    if (!uids.length) return
+    // 分批（WuKongIM subscriber_add 单次上限 500）
+    for (let i = 0; i < uids.length; i += 500) {
+      const batch = uids.slice(i, i + 500)
+      await wkApi('/channel/subscriber_add', {
+        channel_id: PUBLIC_CHANNEL_ID,
+        channel_type: PUBLIC_CHANNEL_TYPE,
+        subscribers: batch,
+      })
+    }
+    console.log(`[昆仑茶馆] 启动恢复公共频道订阅: ${uids.length} 人`)
+  } catch (e) {
+    console.warn('[昆仑茶馆] 启动恢复订阅失败（非致命）:', (e as Error).message)
+  }
+}
+
 // ── 成员管理（业务侧维护，WuKongIM v1.2.6 无订阅者查询 API）──────
 async function ensureMember(opts: { channelId: string; channelType: number; uid: string; role?: number; name?: string; avatar?: string }) {
   const exist = await prisma.imChannelMember.findUnique({
@@ -136,7 +161,10 @@ export default async function imRoutes(fastify: FastifyInstance) {
         const disp = await userDisplay(me)
         await ensureMember({ channelId: PUBLIC_CHANNEL_ID, channelType: PUBLIC_CHANNEL_TYPE, uid: userId, name: disp.name, avatar: disp.avatar })
       }
-    } catch (e) { /* 非致命：加入失败不影响 token 签发 */ }
+    } catch (e) {
+      // 订阅失败不阻断 token 签发，但必须留痕（容器重启后首次 token 是恢复订阅的关键时机）
+      console.warn(`[昆仑茶馆] 公共频道订阅失败 userId=${userId}: ${(e as Error).message}`)
+    }
 
     return {
       success: true,

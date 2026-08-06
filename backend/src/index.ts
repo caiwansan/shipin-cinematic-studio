@@ -290,6 +290,13 @@ async function main() {
   registerSSEStream(app)
   await app.register(systemVersionRoutes)
   await app.register(imRoutes)
+  // 启动时恢复公共频道订阅（WuKongIM 容器重启后订阅丢失的自愈；非致命）
+  try {
+    const { restorePublicChannelSubscriptions } = await import('./routes/im.js')
+    restorePublicChannelSubscriptions()
+  } catch (e) {
+    console.warn('[昆仑茶馆] 启动恢复订阅未执行:', (e as Error).message)
+  }
   await app.register(captchaRoutes)
   await app.register(smsRoutes)
   await app.register(smsAuthRoutes)

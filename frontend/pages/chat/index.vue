@@ -971,8 +971,8 @@ function trackSend(clientSeq: number, clientMsgNo: string, text: string) {
       if (!draft.value) draft.value = text
       showToast('⚠ 消息可能未送达（网络不稳定），草稿已保留，请重试')
     }
-  }, 4000)
-  pendingSends.set(clientSeq, { clientSeq, clientMsgNo, warnTimer })
+  }, 8000)
+  pendingSends.set(clientSeq, { clientSeq, clientMsgNo, text, warnTimer })
 }
 
 function markDelivered(clientSeq: number) {
@@ -1160,18 +1160,41 @@ onMounted(async () => {
     }
     scrollBottom()
   })
-  // 发送回执：reasonCode=0 送达；非 0 或超时 → 提示
-  tea.onSendStatus((p: any) => {
+  // 发送回执：reasonCode 0/1 或 messageSeq>0 = 成功送达（WuKongIM 入库即成功，1 表示已持久化）；
+  // 非 0 且无 seq = 失败；reasonCode=3（不在频道，容器重启丢订阅）→ 自动重订阅 + 重发
+  tea.onSendStatus(async (p: any) => {
     const clientSeq = p?.clientSeq
     if (typeof clientSeq !== 'number') return
     const pend = pendingSends.get(clientSeq)
     if (!pend) return
-    if (p.reasonCode === 0 || p.reasonCode === undefined || p.reasonCode === null) {
+    const delivered = p.reasonCode === 0 || p.reasonCode === 1 || (p.messageSeq && p.messageSeq > 0)
+    if (delivered) {
       markDelivered(clientSeq)
-    } else {
-      pendingSends.delete(clientSeq)
-      showToast('⚠ 消息发送失败（' + (p.reason || '连接异常') + '）')
+      return
     }
+    if (p.reasonCode === 3 && pend.text) {
+      pendingSends.delete(clientSeq)
+      clearTimeout(pend.warnTimer)
+      const text = pend.text
+      showToast('🔄 频道订阅已恢复，正在重发…')
+      try {
+        await tea.rejoin()
+        if (currentChannel.value && tea.connected.value) {
+          const msg = await tea.sendText(text, currentChannel.value.id, currentChannel.value.type)
+          messages.value.push({ ...msg, key: msgKey(msg) })
+          const cs = msg.clientSeq ?? (msg as any).clientSeq
+          if (typeof cs === 'number') trackSend(cs, msg.clientMsgNo || '', text)
+          scrollBottom()
+        }
+      } catch (e) {
+        console.error('[昆仑茶馆] 自动重发失败', e)
+        showToast('⚠ 发送失败，请重试')
+      }
+      return
+    }
+    pendingSends.delete(clientSeq)
+    clearTimeout(pend.warnTimer)
+    showToast('⚠ 消息发送失败（' + (p.reason || '连接异常') + '）')
   })
 
   await Promise.all([loadChannels(), loadUsers()])

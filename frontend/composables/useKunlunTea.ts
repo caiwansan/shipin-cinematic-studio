@@ -115,6 +115,23 @@ export function useKunlunTea() {
     status.value = 0
   }
 
+  /** 频道订阅丢失（容器重启/订阅被清）→ 重新签发 token（幂等 subscriber_add 恢复订阅）+ 重连 */
+  async function rejoin() {
+    if (!sdk) {
+      await connect()
+      return
+    }
+    const tokenRes = await authFetch('/api/im/token', { method: 'POST' })
+    const tokenJson = await tokenRes.json()
+    if (!tokenJson.success) throw new Error(tokenJson.error || '获取 IM token 失败')
+    sdk.config.uid = tokenJson.data.uid
+    sdk.config.token = tokenJson.data.token
+    userId.value = tokenJson.data.uid
+    sdk.disconnect()
+    await new Promise((r) => setTimeout(r, 300))
+    sdk.connect()
+  }
+
   function onMessage(handler: (msg: any) => void) {
     messageHandler = handler
     if (sdk) sdk.chatManager.addMessageListener(handler)
@@ -191,5 +208,5 @@ export function useKunlunTea() {
     }
   }
 
-  return { status, userId, connected, connecting, statusLabel, connect, disconnect, onMessage, onSendStatus, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
+  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, onMessage, onSendStatus, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
 }
