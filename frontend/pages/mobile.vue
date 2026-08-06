@@ -14,6 +14,15 @@
 
     <!-- 入口卡片 -->
     <div class="cards-area">
+      <div class="card card-tea" @click="goTo('/mobile-app')">
+        <div class="card-icon">🍵</div>
+        <div class="card-info">
+          <div class="card-title">昆仑茶馆</div>
+          <div class="card-desc">好友 · 群聊 · 社区 · 会员中心</div>
+        </div>
+        <div class="card-arrow">→</div>
+      </div>
+
       <div class="card card-community" @click="goTo('/community')">
         <div class="card-icon">💬</div>
         <div class="card-info">
@@ -518,6 +527,11 @@ onUnmounted(() => {
   background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(99,102,241,0.04));
   border-color: rgba(59,130,246,0.12);
 }
+.card-tea {
+  background: linear-gradient(135deg, rgba(22,163,74,0.10), rgba(5,150,105,0.05));
+  border-color: rgba(22,163,74,0.14);
+}
+.card-tea .card-icon { background: rgba(22,163,74,0.12); }
 .card-studio {
   background: linear-gradient(135deg, rgba(249,115,22,0.08), rgba(234,88,12,0.04));
   border-color: rgba(249,115,22,0.12);
