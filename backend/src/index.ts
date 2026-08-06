@@ -124,6 +124,7 @@ import userSecurityRoutes from './routes/user-security.js'
 import userAssetsRoutes from './routes/user-assets.js'
 import giftRoutes from './routes/gifts.js'
 import goldCoinRoutes from './routes/gold-coins.js'
+import redPacketRoutes, { startRedPacketSweeper } from './routes/red-packets.js'
 
 import pipelineRoutes from './routes/pipeline.js'
 import pipelineJobRoutes from './routes/pipeline-jobs.js'
@@ -294,6 +295,14 @@ async function main() {
   await app.register(systemVersionRoutes)
   await app.register(imRoutes)
   await app.register(imModerationRoutes)
+  await app.register(redPacketRoutes)
+  // 启动红包过期退回定时器（24h 未领完自动退回）
+  try {
+    startRedPacketSweeper()
+    console.log('[红包] 过期退回定时器已启动')
+  } catch (e) {
+    console.warn('[红包] 定时器启动失败:', (e as Error).message)
+  }
   // 启动时恢复公共频道订阅（WuKongIM 容器重启后订阅丢失的自愈；非致命）
   try {
     const { restorePublicChannelSubscriptions } = await import('./routes/im.js')

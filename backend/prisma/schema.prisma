@@ -10689,3 +10689,44 @@ model TenantProviderCredential {
   @@unique([organizationId]) // 每租户一个 LLM 凭证
   @@map("tenant_provider_credentials")
 }
+
+// ============================================
+// IM-CHA-M6 红包体系（2026-08-06 掌柜定稿）
+// 群红包：拼手气/普通，钻石（Membership.credits）支付；服务端事务+行锁防超抢；24h 未领完自动退回
+// ============================================
+
+model RedPacket {
+  id             String           @id @default(uuid()) @db.Uuid
+  senderId       String           @db.Uuid // 发红包人
+  channelId      String           @default("") @db.Text
+  channelType    Int              @default(0)
+  mode           String           @default("lucky") // lucky 拼手气 / normal 普通
+  totalDiamonds  Int // 总钻石
+  count          Int // 红包个数
+  remainDiamonds Int // 剩余钻石
+  remainCount    Int // 剩余个数
+  note           String           @default("") @db.Text // 祝福语
+  status         String           @default("active") // active / completed / refunded
+  createdAt      DateTime         @default(now())
+  expiredAt      DateTime // 未领完自动退回时间点（24h）
+  refundedAt     DateTime?
+  grabs          RedPacketGrab[]
+
+  @@index([senderId, createdAt])
+  @@index([channelId, channelType, createdAt])
+  @@index([status, expiredAt])
+  @@map("red_packet")
+}
+
+model RedPacketGrab {
+  id           String    @id @default(uuid()) @db.Uuid
+  redPacketId  String    @db.Uuid
+  redPacket    RedPacket @relation(fields: [redPacketId], references: [id], onDelete: Cascade)
+  userId       String    @db.Uuid // 抢红包人
+  amount       Int // 抢得钻石
+  createdAt    DateTime  @default(now())
+
+  @@unique([redPacketId, userId]) // 一人一包
+  @@index([userId, createdAt])
+  @@map("red_packet_grab")
+}

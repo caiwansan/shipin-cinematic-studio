@@ -112,9 +112,13 @@
           </div>
           <div ref="msgListRef" class="msg-list">
             <div v-for="msg in displayMessages" :key="msg.key" class="msg-row" :class="{ mine: msg.fromUID === tea.userId.value }">
-              <div class="msg-bubble">
+              <div class="msg-avatar" :class="{ bot: msg.fromUID === 'kunlun_tea_bot' }">
+                <img v-if="msgAvatar(msg)" :src="msgAvatar(msg)" alt="" />
+                <span v-else>{{ (msgAuthorName(msg) || '茶').slice(0, 1) }}</span>
+              </div>
+              <div class="msg-main">
                 <div class="msg-meta">
-                  <span class="msg-author">{{ msg.authorName || (msg.fromUID === tea.userId.value ? '我' : memberName(msg.fromUID) || shortUid(msg.fromUID)) }}</span>
+                  <span class="msg-author">{{ msgAuthorName(msg) }}</span>
                   <span class="msg-time">{{ fmtTime(msg.timestamp) }}</span>
                 </div>
                 <div class="msg-content" v-html="renderMsg(msg)"></div>
@@ -124,6 +128,7 @@
           </div>
 
           <div class="msg-input-bar">
+            <button class="gift-btn rp-btn" title="发红包" @click="openRedPacketPanel">🧧</button>
             <button class="gift-btn" title="送礼物" @click="openGiftPanel">🎁</button>
             <button class="gift-btn" title="表情" @click.stop="emojiPanelOpen = !emojiPanelOpen">😊</button>
             <button class="gift-btn" title="上传图片" @click="pickFile('image')">📷</button>
@@ -226,6 +231,142 @@
         <div class="gift-anim-from">{{ giftAnimation.fromName }} 送给 {{ giftAnimation.toName }}</div>
       </div>
 
+      <!-- ══ 发红包弹窗（IM-CHA-M6：钻石支付，拼手气/普通） ══ -->
+      <div v-if="rpPanelOpen" class="gift-modal-mask" @click.self="rpPanelOpen = false">
+        <div class="gift-modal rp-modal">
+          <div class="gift-modal-head">
+            <div class="gift-modal-title">🧧 发红包</div>
+            <div class="gift-diamond-balance">
+              <span class="gift-diamond-icon">💎</span>
+              <span class="gift-diamond-num">{{ diamondBalance }}</span>
+              <router-link to="/user/diamonds" class="gift-recharge-btn">充值</router-link>
+            </div>
+            <button class="gift-modal-close" @click="rpPanelOpen = false">✕</button>
+          </div>
+          <div class="rp-body">
+            <div class="rp-mode-row">
+              <button :class="['rp-mode-btn', rpForm.mode === 'lucky' ? 'is-on' : '']" @click="rpForm.mode = 'lucky'">
+                <span class="rp-mode-icon">🎲</span>拼手气红包
+                <small>每人随机</small>
+              </button>
+              <button :class="['rp-mode-btn', rpForm.mode === 'normal' ? 'is-on' : '']" @click="rpForm.mode = 'normal'">
+                <span class="rp-mode-icon">⚖️</span>普通红包
+                <small>每人一样</small>
+              </button>
+            </div>
+            <div class="rp-field">
+              <label>单个金额</label>
+              <div class="rp-amount-row">
+                <div class="rp-amount-box">
+                  <input v-model.number="rpForm.amount" type="number" min="1" class="rp-amount-input" />
+                  <span class="rp-amount-unit">💎 钻石</span>
+                </div>
+                <div class="rp-quick">
+                  <button v-for="q in rpQuickAmounts" :key="q" class="rp-quick-btn" @click="rpForm.amount = q">{{ q }}</button>
+                </div>
+              </div>
+            </div>
+            <div class="rp-field">
+              <label>红包个数</label>
+              <div class="rp-amount-box">
+                <input v-model.number="rpForm.count" type="number" min="1" max="200" class="rp-amount-input" />
+                <span class="rp-amount-unit">个</span>
+              </div>
+            </div>
+            <div class="rp-field">
+              <label>祝福语</label>
+              <input v-model="rpForm.note" maxlength="30" class="rp-note-input" placeholder="恭喜发财，大吉大利！" />
+            </div>
+            <div class="rp-total-hint">共 <b class="rp-total-num">{{ rpForm.amount * rpForm.count }}</b> 钻石</div>
+          </div>
+          <div class="gift-modal-foot">
+            <div class="gift-foot-info">
+              <span v-if="rpForm.amount * rpForm.count > diamondBalance" class="rp-warn">钻石不足，先去充值</span>
+              <span v-else class="gift-foot-empty">钻石在账户里实时扣除</span>
+            </div>
+            <button
+              class="gift-send-btn rp-send-btn"
+              :disabled="rpSending || !rpForm.amount || !rpForm.count || rpForm.amount * rpForm.count > diamondBalance || rpForm.amount * rpForm.count < rpForm.count"
+              @click="sendRedPacket"
+            >
+              {{ rpSending ? '塞钱中…' : '塞钱进红包' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 抢红包弹窗 ══ -->
+      <div v-if="rpDetail" class="gift-modal-mask" @click.self="closeRpDetail">
+        <div class="gift-modal rp-detail-modal">
+          <div class="rp-detail-top">
+            <div class="rp-detail-icon">🧧</div>
+            <div class="rp-detail-note">{{ rpDetail.note || '恭喜发财，大吉大利！' }}</div>
+            <div class="rp-detail-from">{{ rpDetail.sender?.name || '茶客' }} 的红包</div>
+          </div>
+          <div class="rp-detail-body">
+            <template v-if="rpGrabbing">
+              <div class="rp-grab-anim">
+                <div class="rp-grab-envelope">🧧</div>
+                <div class="rp-grab-text">拆开红包…</div>
+              </div>
+            </template>
+            <template v-else-if="rpDetail.mine">
+              <div class="rp-grab-result">
+                <div class="rp-grab-amount">{{ rpDetail.mine.amount }}</div>
+                <div class="rp-grab-unit">钻石</div>
+                <div class="rp-grab-sub">{{ rpDetail.mode === 'lucky' ? '拼手气红包' : '普通红包' }} · 手气不错！</div>
+              </div>
+            </template>
+            <template v-else-if="rpDetail.status === 'completed' || rpDetail.remainCount <= 0">
+              <div class="rp-grab-finished">
+                <div class="rp-finished-icon">😅</div>
+                <div class="rp-finished-text">手慢了，红包被抢完了</div>
+              </div>
+            </template>
+            <template v-else-if="rpDetail.status === 'refunded'">
+              <div class="rp-grab-finished">
+                <div class="rp-finished-icon">🕰️</div>
+                <div class="rp-finished-text">红包已过期退回</div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="rp-grab-ready">
+                <div class="rp-ready-remain">剩 {{ rpDetail.remainCount }} 个 · {{ rpDetail.remainDiamonds }} 钻石</div>
+                <button class="rp-open-btn" @click="grabRedPacket">
+                  <span class="rp-open-envelope">🧧</span>
+                  <span>开</span>
+                </button>
+                <div class="rp-ready-note">手快有，手慢无</div>
+              </div>
+            </template>
+          </div>
+          <div class="rp-detail-grabs">
+            <div class="rp-grabs-title">抢红包记录</div>
+            <div v-if="!rpDetail.grabs.length" class="rp-grabs-empty">还没有人抢到</div>
+            <div v-for="g in rpDetail.grabs" :key="g.userId" class="rp-grab-item">
+              <div class="msg-avatar rp-grab-avatar">
+                <img v-if="g.avatar" :src="g.avatar" alt="" />
+                <span v-else>{{ (g.name || '茶').slice(0, 1) }}</span>
+              </div>
+              <span class="rp-grab-name">{{ g.name }}<span v-if="g.userId === rpDetail.mine?.userId || g.userId === tea.userId.value" class="rp-mine-tag">我</span></span>
+              <span class="rp-grab-amt">+{{ g.amount }} 💎</span>
+            </div>
+          </div>
+          <div class="gift-modal-foot rp-detail-foot">
+            <div class="gift-foot-info"><span class="gift-foot-empty">{{ rpDetail.totalDiamonds }} 钻石 · {{ rpDetail.count }} 个</span></div>
+            <button class="gift-send-btn" @click="closeRpDetail">收下</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 红包开启动画（全屏） ══ -->
+      <div v-if="rpAnim" class="rp-anim">
+        <div class="rp-anim-envelope">🧧</div>
+        <div class="rp-anim-amount">+{{ rpAnim.amount }}</div>
+        <div class="rp-anim-unit">钻石</div>
+        <div class="rp-anim-note">{{ rpAnim.note || '恭喜发财，大吉大利！' }}</div>
+      </div>
+
       <!-- ══ 右栏：成员 / 好友 ══ -->
       <aside class="tea-panel" :class="{ open: rightPanelOpen }">
         <div class="panel-tabs">
@@ -237,7 +378,7 @@
         <div v-if="rightTab === 'members'" class="panel-body">
           <template v-if="profileUser">
             <div class="peer-card">
-              <div class="peer-avatar">{{ profileUser.name.slice(0, 1) }}</div>
+              <div class="peer-avatar"><img v-if="profileUser.avatar" :src="profileUser.avatar" alt="" /><span v-else>{{ profileUser.name.slice(0, 1) }}</span></div>
               <div class="peer-name">{{ profileUser.name }}</div>
               <div class="peer-sub">{{ profileUser.email || '平台茶客 · 茶馆名录' }}</div>
               <div class="peer-badge" :class="{ online: profileUser.online }">
@@ -248,7 +389,7 @@
           </template>
           <template v-else-if="currentChannel && currentChannel.kind === 'dm'">
             <div class="peer-card">
-              <div class="peer-avatar">{{ (peerInfo?.name || currentChannel.name || '?').slice(0, 1) }}</div>
+              <div class="peer-avatar"><img v-if="peerInfo?.avatar || currentChannel.avatar" :src="peerInfo?.avatar || currentChannel.avatar" alt="" /><span v-else>{{ (peerInfo?.name || currentChannel.name || '?').slice(0, 1) }}</span></div>
               <div class="peer-name">{{ peerInfo?.name || currentChannel.name }}</div>
               <div class="peer-sub">{{ peerInfo?.email || '私聊 · 一对一说悄悄话' }}</div>
               <div class="peer-badge" :class="{ online: peerOnline }">
@@ -260,7 +401,7 @@
             <div class="panel-section-title">在线 ({{ onlineMembers.length }})</div>
             <div v-if="!onlineMembers.length" class="panel-empty">暂时没有在线茶客</div>
             <div v-for="m in onlineMembers" :key="m.uid" class="member-item clickable" @click="openMemberCard(m, $event)">
-              <div class="member-avatar">{{ (m.name || '?').slice(0, 1) }}</div>
+              <div class="member-avatar"><img v-if="m.avatar" :src="m.avatar" alt="" /><span v-else>{{ (m.name || '?').slice(0, 1) }}</span></div>
               <div class="member-meta">
                 <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.role === 2" class="bot-badge">🤖</span></span>
                 <span class="member-sub">在线</span>
@@ -269,7 +410,7 @@
             <div class="panel-section-title">全部 ({{ members.length }})</div>
             <div v-if="!members.length" class="panel-empty">暂无成员</div>
             <div v-for="m in members" :key="m.uid" class="member-item clickable" @click="openMemberCard(m, $event)">
-              <div class="member-avatar">{{ (m.name || '?').slice(0, 1) }}</div>
+              <div class="member-avatar"><img v-if="m.avatar" :src="m.avatar" alt="" /><span v-else>{{ (m.name || '?').slice(0, 1) }}</span></div>
               <div class="member-meta">
                 <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.uid === 'kunlun_tea_bot'" class="bot-badge">🤖 AI 客服</span><span v-else-if="m.role === 2" class="bot-badge">🤖</span></span>
                 <span class="member-sub">{{ m.uid === 'kunlun_tea_bot' ? '随时在线 · 喊「小管家」' : (m.status === 1 ? '在线' : '离线') }}</span>
@@ -297,7 +438,7 @@
               <div v-if="followLoading" class="panel-empty">加载中…</div>
               <div v-else-if="!followUsers.length" class="panel-empty">还没有关注任何人 · 去茶客名录看看</div>
               <div v-for="u in followUsers" :key="u.id" class="member-item">
-                <div class="member-avatar">{{ (u.name || '?').slice(0, 1) }}</div>
+                <div class="member-avatar"><img v-if="u.avatar" :src="u.avatar" alt="" /><span v-else>{{ (u.name || '?').slice(0, 1) }}</span></div>
                 <div class="member-meta">
                   <span class="member-name">{{ u.name }}
                     <span v-if="u.relation === 'mutual'" class="rel-badge rel-mutual">互相关注</span>
@@ -316,7 +457,7 @@
               <div v-if="followLoading" class="panel-empty">加载中…</div>
               <div v-else-if="!followerUsers.length" class="panel-empty">还没有粉丝 · 去茶馆坐坐吧</div>
               <div v-for="u in followerUsers" :key="u.id" class="member-item">
-                <div class="member-avatar">{{ (u.name || '?').slice(0, 1) }}</div>
+                <div class="member-avatar"><img v-if="u.avatar" :src="u.avatar" alt="" /><span v-else>{{ (u.name || '?').slice(0, 1) }}</span></div>
                 <div class="member-meta">
                   <span class="member-name">{{ u.name }}
                     <span v-if="u.relation === 'mutual'" class="rel-badge rel-mutual">互相关注</span>
@@ -340,7 +481,7 @@
                 :class="{ active: currentChannel?.kind === 'dm' && currentChannel.peerUid === u.id }"
                 @click="openFriendMenu(u, $event)"
               >
-                <div class="member-avatar">{{ u.name.slice(0, 1) }}</div>
+                <div class="member-avatar"><img v-if="u.avatar" :src="u.avatar" alt="" /><span v-else>{{ u.name.slice(0, 1) }}</span></div>
                 <div class="member-meta">
                   <span class="member-name">{{ u.name }}</span>
                   <span class="member-sub">
@@ -361,7 +502,7 @@
       <Teleport to="body">
         <div v-if="memberCard" class="member-card" :style="{ left: memberCard.x + 'px', top: memberCard.y + 'px' }" @click.stop>
           <div class="mc-head">
-            <div class="mc-avatar">{{ (memberCard.m.name || '?').slice(0, 1) }}</div>
+            <div class="mc-avatar"><img v-if="memberCard.m.avatar" :src="memberCard.m.avatar" alt="" /><span v-else>{{ (memberCard.m.name || '?').slice(0, 1) }}</span></div>
             <div class="mc-meta">
               <div class="mc-name">{{ memberCard.m.name || shortUid(memberCard.m.uid) }}
                 <span v-if="memberCard.m.role === 2" class="bot-badge">🤖</span>
@@ -389,7 +530,7 @@
           @click.stop
         >
           <div class="friend-menu-head">
-            <div class="friend-menu-avatar">{{ friendMenu.user.name.slice(0, 1) }}</div>
+            <div class="friend-menu-avatar"><img v-if="friendMenu.user.avatar" :src="friendMenu.user.avatar" alt="" /><span v-else>{{ friendMenu.user.name.slice(0, 1) }}</span></div>
             <div class="friend-menu-meta">
               <div class="friend-menu-name">{{ friendMenu.user.name }}</div>
               <div class="friend-menu-sub">
@@ -549,6 +690,30 @@ function shortUid(uid: string) {
   return uid ? uid.slice(0, 8) : '未知茶客'
 }
 
+// 消息发送者头像：authorAvatar（后端 User 表同步）→ 频道成员头像 → 空
+function msgAvatar(msg: any) {
+  if (!msg) return ''
+  const av =
+    msg.authorAvatar ||
+    (msg.content && typeof msg.content === 'object' && msg.content.avatar) ||
+    members.value.find((x) => x.uid === msg.fromUID)?.avatar ||
+    ''
+  return av || ''
+}
+
+// 消息发送者昵称：authorName → 成员表 → 用户列表 → 异步解析 → 短 UID
+function msgAuthorName(msg: any) {
+  if (!msg) return '茶客'
+  if (msg.authorName) return msg.authorName
+  if (msg.fromUID === tea.userId.value) return '我'
+  const m = members.value.find((x) => x.uid === msg.fromUID)
+  if (m?.name) return m.name
+  const u = users.value.find((x) => x.id === msg.fromUID)
+  if (u?.name) return u.name
+  resolveNamesFor([msg.fromUID])
+  return shortUid(msg.fromUID)
+}
+
 function memberName(uid: string) {
   if (!uid) return ''
   // ① 当前频道成员表（imChannelMember，含平台昵称）
@@ -633,6 +798,23 @@ function renderMsg(msg: any) {
   if (giftInfo) {
     return `<span class="gift-inline">🎁 ${escapeHtml(giftInfo.giftName || '礼物')} ${giftInfo.priceDiamonds ? `<b class="gift-inline-price">💎${giftInfo.priceDiamonds}</b>` : ''}</span>`
   }
+  // 红包卡片（IM-CHA-M6）：点击 → window.__klOpenRedPacket(id)
+  const rpInfo = extractRedPacketInfo(msg)
+  if (rpInfo) {
+    const note = escapeHtml(rpInfo.note || '恭喜发财，大吉大利！')
+    const modeLabel = rpInfo.mode === 'normal' ? '普通红包' : '拼手气红包'
+    return `<div class="rp-card" onclick="window.__klOpenRedPacket && window.__klOpenRedPacket('${rpInfo.id}')">` +
+      `<div class="rp-card-icon">🧧</div>` +
+      `<div class="rp-card-main"><div class="rp-card-note">${note}</div>` +
+      `<div class="rp-card-meta">${modeLabel} · 💎${rpInfo.totalDiamonds} · ${rpInfo.count}个</div></div>` +
+      `<div class="rp-card-open">开</div></div>`
+  }
+  // 抢红包结果（服务端代发「XX 抢到 X 钻石」）
+  const grabInfo = extractRedPacketGrabInfo(msg)
+  if (grabInfo) {
+    const who = escapeHtml(grabInfo.userName || memberName(msg.fromUID) || shortUid(msg.fromUID))
+    return `<span class="rp-grab-inline">🧧 ${who} 抢到 <b class="rp-grab-amt-inline">${grabInfo.amount}</b> 钻石${grabInfo.remainCount > 0 ? ` · 还剩 ${grabInfo.remainCount} 个` : ' · 已抢完'}</span>`
+  }
   const parsed = parseContentObj(msg)
   if (!parsed) return ''
   const { type, content } = parsed
@@ -654,6 +836,62 @@ function renderMsg(msg: any) {
   // 文本（type=1）
   const text = typeof content === 'string' ? content : typeof content?.text === 'string' ? content.text : typeof content?.content === 'string' ? content.content : ''
   return escapeHtml(text).replace(/\n/g, '<br/>')
+}
+
+// 提取红包信息（形态同礼物：content 直/嵌套/payload 解码）
+function extractRedPacketInfo(msg: any): any {
+  if (!msg) return null
+  const probe = (obj: any) => (obj && typeof obj === 'object' && obj.kind === 'red_packet' ? obj : null)
+  if (msg.content && typeof msg.content === 'object') {
+    const a = probe(msg.content)
+    if (a) return a
+    const b = probe(msg.content.content)
+    if (b) return b
+  }
+  if (msg.payload) {
+    try {
+      const bin = atob(msg.payload)
+      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+      const decoded = JSON.parse(new TextDecoder().decode(bytes))
+      const c = decoded.content
+      const hit = probe(c)
+      if (hit) return hit
+      if (c && typeof c === 'object') {
+        const hit2 = probe(c.content)
+        if (hit2) return hit2
+      }
+      return probe(decoded)
+    } catch { return null }
+  }
+  return null
+}
+
+// 提取抢红包结果信息
+function extractRedPacketGrabInfo(msg: any): any {
+  if (!msg) return null
+  const probe = (obj: any) => (obj && typeof obj === 'object' && obj.kind === 'red_packet_grab' ? obj : null)
+  if (msg.content && typeof msg.content === 'object') {
+    const a = probe(msg.content)
+    if (a) return a
+    const b = probe(msg.content.content)
+    if (b) return b
+  }
+  if (msg.payload) {
+    try {
+      const bin = atob(msg.payload)
+      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+      const decoded = JSON.parse(new TextDecoder().decode(bytes))
+      const c = decoded.content
+      const hit = probe(c)
+      if (hit) return hit
+      if (c && typeof c === 'object') {
+        const hit2 = probe(c.content)
+        if (hit2) return hit2
+      }
+      return probe(decoded)
+    } catch { return null }
+  }
+  return null
 }
 
 function escapeHtml(s: string) {
@@ -1145,6 +1383,116 @@ function goHome() {
   if (typeof window !== 'undefined') window.location.href = '/'
 }
 
+// ══ 红包体系（IM-CHA-M6） ══════════════════════
+const rpPanelOpen = ref(false)
+const rpSending = ref(false)
+const rpForm = ref({ mode: 'lucky', amount: 10, count: 5, note: '恭喜发财，大吉大利！' })
+const rpQuickAmounts = [1, 5, 10, 50, 100]
+const rpDetail = ref<any>(null)
+const rpGrabbing = ref(false)
+const rpAnim = ref<any>(null)
+let rpAnimTimer: ReturnType<typeof setTimeout> | null = null
+let rpDetailLoadSeq = 0 // 防止异步详情覆盖新弹窗
+
+function openRedPacketPanel() {
+  if (!currentChannel.value) return
+  loadDiamondBalance()
+  rpPanelOpen.value = true
+}
+
+async function sendRedPacket() {
+  if (!currentChannel.value || rpSending.value) return
+  const { mode, amount, count, note } = rpForm.value
+  if (!amount || !count || amount * count < count) return showToast('⚠ 金额不能少于个数')
+  rpSending.value = true
+  try {
+    const r = await fetch('/api/im/red-packets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({
+        channelId: currentChannel.value.id,
+        channelType: currentChannel.value.type,
+        totalDiamonds: amount * count,
+        count,
+        mode,
+        note,
+      }),
+    })
+    const j = await r.json()
+    if (j.success) {
+      diamondBalance.value = Math.max(0, diamondBalance.value - amount * count)
+      // 本地即时补红包卡片（服务端已代发，不等 WS 推送）
+      messages.value.push({
+        fromUID: tea.userId.value,
+        authorName: '我',
+        timestamp: Math.floor(Date.now() / 1000),
+        content: { kind: 'red_packet', id: j.data.id, note, totalDiamonds: amount * count, count, mode },
+        key: 'rp-' + Date.now(),
+      })
+      scrollBottom()
+      rpPanelOpen.value = false
+      showToast(`🧧 红包已发出（${amount * count} 钻石）`)
+    } else {
+      showToast('⚠ ' + (j.error || '发红包失败'))
+      if (j.code === 'DIAMOND_INSUFFICIENT') loadDiamondBalance()
+    }
+  } catch (e) {
+    console.error('[昆仑茶馆] 发红包失败', e)
+    showToast('⚠ 发红包失败，请重试')
+  } finally {
+    rpSending.value = false
+  }
+}
+
+async function openRpDetail(id: string) {
+  const seq = ++rpDetailLoadSeq
+  try {
+    const r = await fetch('/api/im/red-packets/' + id, { headers: { Authorization: 'Bearer ' + giftToken() } })
+    const j = await r.json()
+    if (!j.success) return showToast('⚠ ' + (j.error || '红包不存在'))
+    if (seq !== rpDetailLoadSeq) return
+    rpDetail.value = j.data
+    rpGrabbing.value = false
+  } catch (e) {
+    console.error('[昆仑茶馆] 红包详情失败', e)
+  }
+}
+
+async function grabRedPacket() {
+  if (!rpDetail.value || rpGrabbing.value) return
+  rpGrabbing.value = true
+  try {
+    const r = await fetch('/api/im/red-packets/' + rpDetail.value.id + '/grab', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({ channelId: currentChannel.value?.id || '', channelType: currentChannel.value?.type || 0 }),
+    })
+    const j = await r.json()
+    if (j.success) {
+      const amount = j.data.amount
+      rpAnim.value = { amount, note: rpDetail.value.note }
+      if (rpAnimTimer) clearTimeout(rpAnimTimer)
+      rpAnimTimer = setTimeout(() => { rpAnim.value = null }, 3200)
+      // 重新拉详情显示「我抢到」+ 抢包记录
+      await openRpDetail(rpDetail.value.id)
+    } else {
+      showToast('⚠ ' + (j.error || '抢红包失败'))
+      await openRpDetail(rpDetail.value.id) // 刷新状态（可能已被抢完）
+    }
+  } catch (e) {
+    console.error('[昆仑茶馆] 抢红包失败', e)
+    showToast('⚠ 抢红包失败，请重试')
+  } finally {
+    rpGrabbing.value = false
+  }
+}
+
+function closeRpDetail() {
+  rpDetailLoadSeq++
+  rpDetail.value = null
+  rpGrabbing.value = false
+}
+
 function handleDisconnect() {
   tea.disconnect()
 }
@@ -1180,6 +1528,7 @@ function onKeydown(e: KeyboardEvent) {
 
 onMounted(async () => {
   ;(window as any).__klImgView = (src: string) => viewImage(src)
+  ;(window as any).__klOpenRedPacket = (id: string) => openRpDetail(id)
   tea.onMessage((msg: any) => {
     const ch = currentChannel.value
     if (!ch) return
@@ -1277,7 +1626,7 @@ onBeforeUnmount(() => {
   padding: 10px 18px;
   border-radius: 10px;
   background: rgba(239, 68, 68, 0.92);
-  color: #fff;
+  color: #FBF8EF;
   font-size: 13px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
   pointer-events: none;
@@ -1289,16 +1638,29 @@ onBeforeUnmount(() => {
 }
 .tea-page {
   /* 微信群模式：页面锁死在视口高度，消息再多也不撑高页面、不挤走输入框 */
+  /* 青花瓷主题（IM-CHA-M6）：宣纸底 + 雨过天青晕染 + 青花缠枝莲水印 */
+  /* 显式重定义全局深色变量 → 本组件浅色主题（全局 :root 仍为深色品牌变量） */
+  --color-bg-primary: #F6F1E3;
+  --color-text-primary: #33302A;
+  --color-text-muted: #6F6A5C;
+  --color-text-disabled: #A39D8E;
+  --color-border-primary: #A8CDD8;
+  --color-bg-elevated: #FBF8EF;
+  --color-bg-hover: #EDE5CE;
+  --color-decision: #26547C;
+  --color-execution: #3E7F99;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background:
-    radial-gradient(1200px 500px at 20% -10%, rgba(59, 130, 246, 0.12), transparent 60%),
-    radial-gradient(900px 400px at 90% 0%, rgba(139, 92, 246, 0.08), transparent 55%),
-    var(--color-bg-primary, #070b16);
-  color: var(--color-text-primary, #f1f5f9);
+  background-color: var(--color-bg-primary, #F6F1E3);
+  background-image:
+    radial-gradient(1100px 500px at 12% -8%, rgba(95, 168, 190, 0.2), transparent 60%),
+    radial-gradient(850px 420px at 96% 6%, rgba(168, 205, 216, 0.3), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%2326547C' stroke-width='1.1' opacity='0.05'%3E%3Ccircle cx='90' cy='90' r='26'/%3E%3Ccircle cx='90' cy='90' r='14'/%3E%3Cpath d='M90 64c-9-7-18-9-27-9 0 9 4 16 13 21'/%3E%3Cpath d='M90 64c9-7 18-9 27-9 0 9-4 16-13 21'/%3E%3Cpath d='M90 116c-9 7-18 9-27 9 0-9 4-16 13-21'/%3E%3Cpath d='M90 116c9 7 18 9 27 9 0-9-4-16-13-21'/%3E%3Cpath d='M90 64v-18M90 116v18M64 90H46M116 90h18'/%3E%3Cpath d='M30 30c7-9 21-9 28 0-9 5-19 5-28 0z'/%3E%3Cpath d='M150 30c-7-9-21-9-28 0 9 5 19 5 28 0z'/%3E%3Cpath d='M30 150c7 9 21 9 28 0-9-5-19-5-28 0z'/%3E%3Cpath d='M150 150c-7 9-21 9-28 0 9-5 19-5 28 0z'/%3E%3Ccircle cx='30' cy='30' r='5'/%3E%3Ccircle cx='150' cy='30' r='5'/%3E%3Ccircle cx='30' cy='150' r='5'/%3E%3Ccircle cx='150' cy='150' r='5'/%3E%3C/g%3E%3C/svg%3E");
+  color: var(--color-text-primary, #33302A);
   display: flex;
   flex-direction: column;
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Serif SC', system-ui, sans-serif;
 }
 
 /* ── 顶栏 ─────────────────────────── */
@@ -1307,8 +1669,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 16px;
   padding: 12px 20px;
-  border-bottom: 1px solid var(--color-border-primary, #1e293b);
-  background: rgba(13, 19, 40, 0.85);
+  border-bottom: 1px solid var(--color-border-primary, #A8CDD8);
+  box-shadow: 0 1px 0 rgba(38, 84, 124, 0.08);
+  background: rgba(246, 241, 227, 0.94);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
@@ -1320,12 +1683,14 @@ onBeforeUnmount(() => {
   font-size: 26px;
   width: 46px; height: 46px;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #1e5aa8, #3b82f6);
+  background: linear-gradient(135deg, #26547C, #5FA8BE);
   border-radius: 14px;
   box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
 }
-.tea-title { font-size: 20px; font-weight: 700; letter-spacing: 2px; margin: 0; }
-.tea-sub { font-size: 12px; color: var(--color-text-muted, #64748b); margin: 2px 0 0; }
+.tea-title {
+  font-family: 'KaiTi', 'STKaiti', 'Kaiti SC', 'Noto Serif SC', 'Songti SC', serif;
+  letter-spacing: 2px; font-size: 20px; font-weight: 700; letter-spacing: 2px; margin: 0; }
+.tea-sub { font-size: 12px; color: var(--color-text-muted, #6F6A5C); margin: 2px 0 0; }
 
 .tea-status {
   margin-left: auto;
@@ -1333,14 +1698,14 @@ onBeforeUnmount(() => {
   font-size: 13px;
   padding: 5px 12px;
   border-radius: 20px;
-  border: 1px solid var(--color-border-primary, #1e293b);
+  border: 1px solid var(--color-border-primary, #A8CDD8);
   color: var(--color-text-secondary, #94a3b8);
 }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #A39D8E; display: inline-block; }
 .tea-status.is-on { color: #10b981; border-color: rgba(16, 185, 129, 0.4); }
-.tea-status.is-on .status-dot { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.7); }
-.tea-status.is-connecting { color: #f59e0b; }
-.tea-status.is-connecting .status-dot { background: #f59e0b; animation: blink 1s infinite; }
+.tea-status.is-on .status-dot { background: #3E7F99; box-shadow: 0 0 8px rgba(62, 127, 153, 0.7); }
+.tea-status.is-connecting { color: #B98A3E; }
+.tea-status.is-connecting .status-dot { background: #B98A3E; animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity: 0.3; } }
 .member-toggle { display: none; }
 
@@ -1356,8 +1721,8 @@ onBeforeUnmount(() => {
 
 /* 左栏 */
 .tea-sidebar {
-  border-right: 1px solid var(--color-border-primary, #1e293b);
-  background: rgba(13, 19, 40, 0.6);
+  border-right: 1px solid var(--color-border-primary, #A8CDD8);
+  background: rgba(246, 241, 227, 0.88);
   padding: 12px 10px;
   display: flex; flex-direction: column;
   gap: 14px;
@@ -1365,22 +1730,22 @@ onBeforeUnmount(() => {
 }
 .sidebar-search {
   display: flex; align-items: center; gap: 8px;
-  background: var(--color-bg-elevated, #111827);
-  border: 1px solid var(--color-border-primary, #1e293b);
+  background: var(--color-bg-elevated, #FBF8EF);
+  border: 1px solid var(--color-border-primary, #A8CDD8);
   border-radius: 10px;
   padding: 7px 10px;
 }
 .search-icon { font-size: 13px; opacity: 0.7; }
 .search-input {
   flex: 1; background: transparent; border: none; outline: none;
-  color: var(--color-text-primary, #f1f5f9); font-size: 13px;
+  color: var(--color-text-primary, #33302A); font-size: 13px;
 }
 .side-group { display: flex; flex-direction: column; gap: 3px; }
 .side-group-title {
-  font-size: 12px; color: var(--color-text-muted, #64748b);
+  font-size: 12px; color: var(--color-text-muted, #6F6A5C);
   padding: 2px 8px 6px; letter-spacing: 1px; font-weight: 600;
 }
-.side-empty { font-size: 12px; color: var(--color-text-disabled, #475569); padding: 6px 10px; }
+.side-empty { font-size: 12px; color: var(--color-text-disabled, #A39D8E); padding: 6px 10px; }
 .channel-item {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 10px;
@@ -1389,30 +1754,30 @@ onBeforeUnmount(() => {
   transition: background 0.2s;
   border: 1px solid transparent;
 }
-.channel-item:hover { background: var(--color-bg-hover, #1a2240); }
-.channel-item.active { background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); }
+.channel-item:hover { background: var(--color-bg-hover, #EDE5CE); }
+.channel-item.active { background: rgba(95, 168, 190, 0.18); border-color: rgba(38, 84, 124, 0.35); }
 .channel-icon { font-size: 18px; }
 .channel-meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .channel-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.channel-desc { font-size: 11px; color: var(--color-text-muted, #64748b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sidebar-foot { margin-top: auto; padding: 8px 8px 0; font-size: 11px; color: var(--color-text-disabled, #475569); }
+.channel-desc { font-size: 11px; color: var(--color-text-muted, #6F6A5C); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-foot { margin-top: auto; padding: 8px 8px 0; font-size: 11px; color: var(--color-text-disabled, #A39D8E); }
 
 /* 中栏 */
 .tea-chat { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .chat-head {
   padding: 12px 20px;
-  border-bottom: 1px solid var(--color-border-primary, #1e293b);
-  background: rgba(13, 19, 40, 0.5);
+  border-bottom: 1px solid var(--color-border-primary, #A8CDD8);
+  background: rgba(246, 241, 227, 0.82);
   display: flex; align-items: center;
 }
 .chat-head-main { display: flex; align-items: center; gap: 10px; }
 .chat-head-icon { font-size: 22px; }
 .chat-head-name { font-size: 15px; font-weight: 700; }
-.chat-head-sub { font-size: 11px; color: var(--color-text-muted, #64748b); }
+.chat-head-sub { font-size: 11px; color: var(--color-text-muted, #6F6A5C); }
 
 .chat-empty {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; color: var(--color-text-muted, #64748b);
+  gap: 8px; color: var(--color-text-muted, #6F6A5C);
 }
 .empty-emoji { font-size: 48px; opacity: 0.6; }
 .go-login { text-decoration: none; margin-top: 6px; }
@@ -1427,31 +1792,35 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 12px;
 }
-.msg-row { display: flex; }
+.msg-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 6px 14px; display: flex; }
 .msg-row.mine { justify-content: flex-end; }
 .msg-bubble {
   max-width: 62%;
   padding: 10px 14px;
   border-radius: 14px;
-  background: var(--color-bg-elevated, #111827);
-  border: 1px solid var(--color-border-primary, #1e293b);
+  background: var(--color-bg-elevated, #FBF8EF);
+  border: 1px solid var(--color-border-primary, #A8CDD8);
 }
 .msg-row.mine .msg-bubble {
-  background: linear-gradient(135deg, rgba(30, 90, 168, 0.35), rgba(59, 130, 246, 0.25));
+  background: linear-gradient(135deg, rgba(95, 168, 190, 0.3), rgba(168, 205, 216, 0.25));
   border-color: rgba(59, 130, 246, 0.35);
 }
 .msg-meta { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
-.msg-author { font-size: 12px; font-weight: 600; color: var(--color-decision, #3b82f6); }
-.msg-row.mine .msg-author { color: var(--color-execution, #10b981); }
-.msg-time { font-size: 11px; color: var(--color-text-disabled, #475569); }
+.msg-author { font-size: 12px; font-weight: 600; color: var(--color-decision, #26547C); }
+.msg-row.mine .msg-author { color: var(--color-execution, #3E7F99); }
+.msg-time { font-size: 11px; color: var(--color-text-disabled, #A39D8E); }
 .msg-content { font-size: 14px; line-height: 1.6; word-break: break-word; }
-.msg-loading { text-align: center; font-size: 12px; color: var(--color-text-disabled, #475569); }
+.msg-loading { text-align: center; font-size: 12px; color: var(--color-text-disabled, #A39D8E); }
 
 .msg-input-bar {
   display: flex; gap: 10px; align-items: flex-end;
   padding: 14px 20px 18px;
-  border-top: 1px solid var(--color-border-primary, #1e293b);
-  background: rgba(13, 19, 40, 0.8);
+  border-top: 1px solid var(--color-border-primary, #A8CDD8);
+  background: rgba(251, 248, 239, 0.97);
 }
 
 /* ══ 礼物体系（GIFT-GOLD-ECO-01） ══ */
@@ -1459,63 +1828,63 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   width: 42px; height: 42px;
   border-radius: 12px;
-  border: 1px solid var(--color-border-primary, #1e293b);
-  background: linear-gradient(135deg, #1e2a4a, #0f172a);
-  color: #fbbf24;
+  border: 1px solid var(--color-border-primary, #A8CDD8);
+  background: linear-gradient(135deg, #DCEBEE, #F6F1E3);
+  color: #B98A3E;
   font-size: 20px;
   cursor: pointer;
   transition: transform 0.15s;
 }
-.gift-btn:hover { transform: scale(1.08); background: linear-gradient(135deg, #2a3a63, #16203a); }
+.gift-btn:hover { transform: scale(1.08); background: linear-gradient(135deg, #DCEBEE, #DCEBEE); }
 
 .gift-inline {
   display: inline-flex; align-items: center; gap: 6px;
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.08));
+  background: linear-gradient(135deg, rgba(185, 138, 62, 0.18), rgba(185, 138, 62, 0.12));
   border: 1px solid rgba(251, 191, 36, 0.35);
   border-radius: 10px;
   padding: 4px 10px;
   font-size: 14px;
-  color: #fbbf24;
+  color: #B98A3E;
 }
-.gift-inline-price { color: #fff; font-weight: 700; }
+.gift-inline-price { color: #FBF8EF; font-weight: 700; }
 
 /* 礼物弹窗 */
 .gift-modal-mask {
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(2, 6, 23, 0.72);
+  background: rgba(251, 248, 239, 0.94);
   backdrop-filter: blur(3px);
   display: flex; align-items: center; justify-content: center;
 }
 .gift-modal {
   width: 520px; max-width: 94vw;
-  background: linear-gradient(180deg, #101a35, #0b1126);
+  background: linear-gradient(180deg, #FBF8EF, #EDE5CE);
   border: 1px solid #1e2b4f;
   border-radius: 18px;
   padding: 18px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 .gift-modal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.gift-modal-title { font-size: 17px; font-weight: 700; color: #fff; flex: 1; }
+.gift-modal-title { font-size: 17px; font-weight: 700; color: #FBF8EF; flex: 1; }
 .gift-diamond-balance {
   display: flex; align-items: center; gap: 6px;
-  background: rgba(251, 191, 36, 0.12);
+  background: rgba(185, 138, 62, 0.14);
   border: 1px solid rgba(251, 191, 36, 0.3);
   border-radius: 999px;
   padding: 5px 12px;
 }
 .gift-diamond-icon { font-size: 15px; }
-.gift-diamond-num { font-size: 15px; font-weight: 800; color: #fbbf24; min-width: 28px; text-align: center; }
+.gift-diamond-num { font-size: 15px; font-weight: 800; color: #B98A3E; min-width: 28px; text-align: center; }
 .gift-recharge-btn {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #fff; border: none; border-radius: 999px;
+  background: linear-gradient(135deg, #B98A3E, #8C5E24);
+  color: #FBF8EF; border: none; border-radius: 999px;
   padding: 4px 14px; font-size: 12px; font-weight: 700;
   cursor: pointer; text-decoration: none;
 }
 .gift-modal-close {
-  background: none; border: none; color: rgba(255, 255, 255, 0.4);
+  background: none; border: none; color: rgba(51, 48, 42, 0.45);
   font-size: 18px; cursor: pointer; padding: 4px;
 }
-.gift-modal-close:hover { color: #fff; }
+.gift-modal-close:hover { color: #FBF8EF; }
 
 .gift-receiver-row {
   display: flex; align-items: center; gap: 8px;
@@ -1534,7 +1903,7 @@ onBeforeUnmount(() => {
   font-size: 12px; padding: 3px 10px;
   cursor: pointer;
 }
-.gift-receiver-chip--active { background: rgba(251, 191, 36, 0.2); border-color: #fbbf24; color: #fbbf24; }
+.gift-receiver-chip--active { background: rgba(251, 191, 36, 0.2); border-color: #B98A3E; color: #B98A3E; }
 .gift-receiver-empty { font-size: 12px; color: rgba(255, 255, 255, 0.35); }
 
 .gift-wall { margin-bottom: 14px; }
@@ -1543,11 +1912,11 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(51, 48, 42, 0.6);
   font-size: 13px; padding: 5px 16px;
   cursor: pointer;
 }
-.gift-tab--active { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: transparent; color: #fff; font-weight: 700; }
+.gift-tab--active { background: linear-gradient(135deg, #B98A3E, #8C5E24); border-color: transparent; color: #FBF8EF; font-weight: 700; }
 .gift-grid {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
   max-height: 220px; overflow-y: auto;
@@ -1562,10 +1931,10 @@ onBeforeUnmount(() => {
   transition: transform 0.12s, border-color 0.12s;
 }
 .gift-item:hover { transform: translateY(-2px); border-color: rgba(251, 191, 36, 0.4); }
-.gift-item--active { border-color: #fbbf24; background: rgba(251, 191, 36, 0.12); box-shadow: 0 0 0 1px #fbbf24; }
+.gift-item--active { border-color: #B98A3E; background: rgba(185, 138, 62, 0.14); box-shadow: 0 0 0 1px #B98A3E; }
 .gift-item-icon { font-size: 30px; line-height: 1; }
 .gift-item-name { font-size: 12px; color: rgba(255, 255, 255, 0.85); }
-.gift-item-price { font-size: 11px; color: #fbbf24; font-weight: 700; }
+.gift-item-price { font-size: 11px; color: #B98A3E; font-weight: 700; }
 .gift-grid-empty { grid-column: 1 / -1; text-align: center; color: rgba(255, 255, 255, 0.35); padding: 24px 0; font-size: 13px; }
 
 .gift-modal-foot {
@@ -1574,13 +1943,13 @@ onBeforeUnmount(() => {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .gift-foot-info { flex: 1; display: flex; align-items: center; gap: 8px; min-height: 20px; }
-.gift-foot-name { font-size: 14px; color: #fff; font-weight: 600; }
-.gift-foot-price { font-size: 14px; color: #fbbf24; font-weight: 800; }
+.gift-foot-name { font-size: 14px; color: #FBF8EF; font-weight: 600; }
+.gift-foot-price { font-size: 14px; color: #B98A3E; font-weight: 800; }
 .gift-foot-empty { font-size: 13px; color: rgba(255, 255, 255, 0.35); }
 .gift-send-btn {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: linear-gradient(135deg, #B98A3E, #8C5E24);
   border: none; border-radius: 12px;
-  color: #fff; font-size: 14px; font-weight: 700;
+  color: #FBF8EF; font-size: 14px; font-weight: 700;
   padding: 10px 30px;
   cursor: pointer;
 }
@@ -1601,7 +1970,7 @@ onBeforeUnmount(() => {
 }
 .gift-anim-name {
   margin-top: 12px;
-  font-size: 26px; font-weight: 800; color: #fff;
+  font-size: 26px; font-weight: 800; color: #FBF8EF;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 .gift-anim-from {
@@ -1620,10 +1989,10 @@ onBeforeUnmount(() => {
 }
 .msg-input {
   flex: 1;
-  background: var(--color-bg-elevated, #111827);
-  border: 1px solid var(--color-border-primary, #1e293b);
+  background: var(--color-bg-elevated, #FBF8EF);
+  border: 1px solid var(--color-border-primary, #A8CDD8);
   border-radius: 12px;
-  color: var(--color-text-primary, #f1f5f9);
+  color: var(--color-text-primary, #33302A);
   padding: 10px 14px;
   font-size: 14px;
   resize: none;
@@ -1634,35 +2003,35 @@ onBeforeUnmount(() => {
 
 /* 右栏 */
 .tea-panel {
-  border-left: 1px solid var(--color-border-primary, #1e293b);
-  background: rgba(13, 19, 40, 0.6);
+  border-left: 1px solid var(--color-border-primary, #A8CDD8);
+  background: rgba(246, 241, 227, 0.88);
   display: flex; flex-direction: column;
   min-height: 0;
 }
 .panel-tabs {
   display: flex; gap: 4px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border-primary, #1e293b);
+  border-bottom: 1px solid var(--color-border-primary, #A8CDD8);
 }
 .panel-tab {
   flex: 1;
   background: transparent; border: 1px solid transparent;
   border-radius: 8px; padding: 6px 0;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, #6F6A5C);
   font-size: 13px; font-weight: 600; cursor: pointer;
   transition: all 0.2s;
 }
 .panel-tab.active {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: var(--color-text-primary, #f1f5f9);
+  background: rgba(95, 168, 190, 0.18);
+  border-color: rgba(38, 84, 124, 0.35);
+  color: var(--color-text-primary, #33302A);
 }
 .panel-body { flex: 1; overflow-y: auto; padding: 12px; }
 .panel-section-title {
-  font-size: 12px; color: var(--color-text-muted, #64748b);
+  font-size: 12px; color: var(--color-text-muted, #6F6A5C);
   padding: 8px 4px 6px; font-weight: 600;
 }
-.panel-empty { font-size: 12px; color: var(--color-text-disabled, #475569); padding: 8px 4px; }
+.panel-empty { font-size: 12px; color: var(--color-text-disabled, #A39D8E); padding: 8px 4px; }
 
 .member-item {
   display: flex; align-items: center; gap: 10px;
@@ -1670,20 +2039,20 @@ onBeforeUnmount(() => {
   border-radius: 10px;
 }
 .member-item.clickable { cursor: pointer; transition: background 0.2s; }
-.member-item.clickable:hover { background: var(--color-bg-hover, #1a2240); }
-.member-item.active { background: rgba(59, 130, 246, 0.15); }
+.member-item.clickable:hover { background: var(--color-bg-hover, #EDE5CE); }
+.member-item.active { background: rgba(95, 168, 190, 0.18); }
 .member-avatar {
   width: 34px; height: 34px; border-radius: 50%;
-  background: linear-gradient(135deg, #1e5aa8, #3b82f6);
+  background: linear-gradient(135deg, #26547C, #5FA8BE);
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0;
+  font-size: 15px; font-weight: 700; color: #FBF8EF; flex-shrink: 0;
 }
 .member-meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .member-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.member-sub { font-size: 11px; color: var(--color-text-muted, #64748b); }
+.member-sub { font-size: 11px; color: var(--color-text-muted, #6F6A5C); }
 .bot-badge { font-size: 11px; }
-.mini-dot { width: 6px; height: 6px; border-radius: 50%; background: #64748b; display: inline-block; margin-right: 4px; }
-.mini-dot.on { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.7); }
+.mini-dot { width: 6px; height: 6px; border-radius: 50%; background: #A39D8E; display: inline-block; margin-right: 4px; }
+.mini-dot.on { background: #3E7F99; box-shadow: 0 0 6px rgba(62, 127, 153, 0.7); }
 
 /* ══ 好友独立下拉框：fixed 悬浮层，列表在框内滚动，聊天页面零影响 ══ */
 .friend-panel {
@@ -1716,13 +2085,13 @@ onBeforeUnmount(() => {
 }
 .friend-panel-tab {
   background: none; border: 1px solid transparent;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, #6F6A5C);
   font-size: 12px; font-weight: 600;
   padding: 4px 10px; border-radius: 20px;
   cursor: pointer; transition: all 0.15s;
 }
 .friend-panel-tab.active {
-  color: #fff;
+  color: #FBF8EF;
   background: rgba(59, 130, 246, 0.18);
   border-color: rgba(59, 130, 246, 0.35);
 }
@@ -1739,7 +2108,7 @@ onBeforeUnmount(() => {
 .mini-follow-btn {
   border: 0; font-size: 11px; font-weight: 600;
   padding: 4px 10px; border-radius: 20px; cursor: pointer;
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  background: linear-gradient(135deg, #B98A3E, #B98A3E);
   color: #141a2e; transition: all 0.15s;
 }
 .mini-follow-btn:hover { filter: brightness(1.1); }
@@ -1750,19 +2119,19 @@ onBeforeUnmount(() => {
   font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 4px;
   white-space: nowrap; vertical-align: 1px;
 }
-.rel-mutual { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
-.rel-following { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.rel-mutual { background: rgba(185, 138, 62, 0.18); color: #B98A3E; }
+.rel-following { background: rgba(95, 168, 190, 0.18); color: #60a5fa; }
 .rel-follower { background: rgba(16, 185, 129, 0.15); color: #34d399; }
 /* 资料卡关注按钮 */
 .profile-follow-btn {
   margin-top: 10px;
   border: 0; font-size: 12px; font-weight: 600;
   padding: 6px 16px; border-radius: 20px; cursor: pointer;
-  background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #141a2e;
+  background: linear-gradient(135deg, #B98A3E, #B98A3E); color: #141a2e;
   transition: all 0.15s;
 }
 .profile-follow-btn.following {
-  background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.08); color: rgba(51, 48, 42, 0.6);
 }
 
 /* ══ 成员头像卡片（公共频道点成员弹出） ══ */
@@ -1782,9 +2151,9 @@ onBeforeUnmount(() => {
 }
 .mc-avatar {
   width: 52px; height: 52px; border-radius: 50%;
-  background: linear-gradient(135deg, #1e5aa8, #3b82f6);
+  background: linear-gradient(135deg, #26547C, #5FA8BE);
   display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 700; color: #fff; flex-shrink: 0;
+  font-size: 22px; font-weight: 700; color: #FBF8EF; flex-shrink: 0;
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
 }
 .mc-meta {
@@ -1796,23 +2165,23 @@ onBeforeUnmount(() => {
 }
 .mc-sub {
   display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--color-text-muted, #64748b);
+  font-size: 12px; color: var(--color-text-muted, #6F6A5C);
 }
 .mc-platform {
   font-size: 10px; padding: 1px 6px; border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.06); color: rgba(51, 48, 42, 0.45);
 }
 .mc-close {
   width: 24px; height: 24px; border-radius: 50%;
   border: 0; background: transparent;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, #6F6A5C);
   font-size: 13px; line-height: 1; cursor: pointer;
   transition: all 0.2s; flex-shrink: 0;
 }
 .mc-close:hover { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 .mc-body {
   display: flex; gap: 8px; margin-top: 12px;
-  padding-top: 12px; border-top: 1px solid var(--color-border-primary, #1e293b);
+  padding-top: 12px; border-top: 1px solid var(--color-border-primary, #A8CDD8);
 }
 .mc-follow-btn, .mc-msg-btn {
   flex: 1;
@@ -1821,19 +2190,19 @@ onBeforeUnmount(() => {
   transition: all 0.15s;
 }
 .mc-follow-btn {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #141a2e;
+  background: linear-gradient(135deg, #B98A3E, #B98A3E); color: #141a2e;
 }
 .mc-follow-btn.following {
-  background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.08); color: rgba(51, 48, 42, 0.6);
 }
 .mc-follow-btn:disabled { opacity: 0.5; pointer-events: none; }
 .mc-msg-btn {
   background: rgba(59, 130, 246, 0.18); color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(38, 84, 124, 0.35);
 }
-.mc-msg-btn:hover { background: rgba(59, 130, 246, 0.3); }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block; }
-.status-dot.on { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.7); }
+.mc-msg-btn:hover { background: rgba(38, 84, 124, 0.35); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #A39D8E; display: inline-block; }
+.status-dot.on { background: #3E7F99; box-shadow: 0 0 6px rgba(62, 127, 153, 0.7); }
 
 /* ══ 表情面板 + 媒体消息（EMOJI-MEDIA-01） ══ */
 .hidden-file-input { display: none; }
@@ -1901,7 +2270,7 @@ onBeforeUnmount(() => {
   color: #60a5fa;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.msg-file-size { font-size: 11px; color: var(--color-text-muted, #64748b); }
+.msg-file-size { font-size: 11px; color: var(--color-text-muted, #6F6A5C); }
 .msg-video {
   max-width: 280px;
   max-height: 300px;
@@ -1932,7 +2301,7 @@ onBeforeUnmount(() => {
 .friend-panel-close {
   width: 24px; height: 24px; border-radius: 50%;
   border: 0; background: transparent;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, #6F6A5C);
   font-size: 13px; line-height: 1; cursor: pointer;
   transition: all 0.2s;
 }
@@ -1940,10 +2309,10 @@ onBeforeUnmount(() => {
 .friend-panel-search {
   margin: 0 12px 8px;
   background: rgba(7, 11, 22, 0.6);
-  border: 1px solid var(--color-border-primary, #1e293b);
+  border: 1px solid var(--color-border-primary, #A8CDD8);
   border-radius: 8px;
   padding: 7px 10px;
-  color: var(--color-text-primary, #f1f5f9);
+  color: var(--color-text-primary, #33302A);
   font-size: 13px;
   outline: none;
   transition: border-color 0.2s;
@@ -1959,8 +2328,8 @@ onBeforeUnmount(() => {
 }
 .friend-panel-foot {
   padding: 8px 12px;
-  border-top: 1px solid var(--color-border-primary, #1e293b);
-  font-size: 11px; color: var(--color-text-disabled, #475569);
+  border-top: 1px solid var(--color-border-primary, #A8CDD8);
+  font-size: 11px; color: var(--color-text-disabled, #A39D8E);
   text-align: center;
 }
 
@@ -1988,13 +2357,13 @@ onBeforeUnmount(() => {
 }
 .friend-menu-avatar {
   width: 34px; height: 34px; border-radius: 50%;
-  background: linear-gradient(135deg, #f59e0b, #b45309);
-  color: #fff; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #B98A3E, #b45309);
+  color: #FBF8EF; display: flex; align-items: center; justify-content: center;
   font-size: 15px; font-weight: 700; flex-shrink: 0;
 }
 .friend-menu-meta { min-width: 0; }
 .friend-menu-name { font-size: 13px; font-weight: 600; color: var(--color-text, #e2e8f0); }
-.friend-menu-sub { font-size: 11px; color: var(--color-text-muted, #64748b); margin-top: 2px; }
+.friend-menu-sub { font-size: 11px; color: var(--color-text-muted, #6F6A5C); margin-top: 2px; }
 .friend-menu-item {
   display: flex; align-items: center; gap: 8px;
   width: 100%; text-align: left;
@@ -2002,7 +2371,7 @@ onBeforeUnmount(() => {
   background: transparent; color: var(--color-text, #e2e8f0);
   font-size: 13px; cursor: pointer;
 }
-.friend-menu-item:hover { background: rgba(59, 130, 246, 0.15); }
+.friend-menu-item:hover { background: rgba(95, 168, 190, 0.18); }
 
 /* 私聊资料卡 */
 .peer-card {
@@ -2011,22 +2380,22 @@ onBeforeUnmount(() => {
 }
 .peer-avatar {
   width: 72px; height: 72px; border-radius: 50%;
-  background: linear-gradient(135deg, #1e5aa8, #3b82f6);
+  background: linear-gradient(135deg, #26547C, #5FA8BE);
   display: flex; align-items: center; justify-content: center;
-  font-size: 30px; font-weight: 700; color: #fff;
+  font-size: 30px; font-weight: 700; color: #FBF8EF;
   box-shadow: 0 8px 30px rgba(59, 130, 246, 0.35);
 }
 .peer-name { font-size: 16px; font-weight: 700; margin-top: 6px; }
-.peer-sub { font-size: 12px; color: var(--color-text-muted, #64748b); }
+.peer-sub { font-size: 12px; color: var(--color-text-muted, #6F6A5C); }
 .peer-badge {
   display: flex; align-items: center; gap: 5px;
   font-size: 12px; color: #64748b;
   padding: 3px 10px; border-radius: 20px;
-  border: 1px solid var(--color-border-primary, #1e293b);
+  border: 1px solid var(--color-border-primary, #A8CDD8);
   margin-top: 4px;
 }
 .peer-badge.online { color: #10b981; border-color: rgba(16, 185, 129, 0.4); }
-.peer-badge.online .status-dot { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.7); }
+.peer-badge.online .status-dot { background: #3E7F99; box-shadow: 0 0 8px rgba(62, 127, 153, 0.7); }
 
 /* 按钮 */
 .tea-btn {
@@ -2037,15 +2406,15 @@ onBeforeUnmount(() => {
   transition: opacity 0.2s, transform 0.1s;
 }
 .tea-btn.primary {
-  background: linear-gradient(135deg, #1e5aa8, #3b82f6);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, #26547C, #5FA8BE);
+  color: #FBF8EF;
+  box-shadow: 0 4px 16px rgba(38, 84, 124, 0.35);
 }
 .tea-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
 .tea-btn.primary:not(:disabled):hover { transform: translateY(-1px); }
 .tea-btn.ghost {
   background: transparent;
-  border: 1px solid var(--color-border-primary, #1e293b);
+  border: 1px solid var(--color-border-primary, #A8CDD8);
   color: var(--color-text-secondary, #94a3b8);
   padding: 6px 12px; font-size: 12px;
 }
@@ -2060,7 +2429,7 @@ onBeforeUnmount(() => {
     transition: transform 0.25s ease;
     z-index: 20;
     box-shadow: -12px 0 40px rgba(0, 0, 0, 0.4);
-    border-left: 1px solid var(--color-border-primary, #1e293b);
+    border-left: 1px solid var(--color-border-primary, #A8CDD8);
   }
   .tea-panel.open { transform: translateX(0); }
   .member-toggle { display: inline-block; }
@@ -2070,4 +2439,164 @@ onBeforeUnmount(() => {
   .tea-sidebar { display: none; }
   .tea-panel { top: 56px; width: 260px; }
 }
+
+.member-avatar img, .peer-avatar img, .mc-avatar img, .friend-menu-avatar img, .msg-avatar img, .rp-grab-avatar img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+}
+
+/* ══ 消息头像 + 布局（青花瓷圆形） ══ */
+.msg-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #26547C, #5FA8BE);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: #FBF8EF;
+  box-shadow: 0 1px 4px rgba(38, 84, 124, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+}
+.msg-avatar.bot { background: linear-gradient(135deg, #B98A3E, #8C5E24); }
+.msg-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.msg-row.mine { flex-direction: row-reverse; }
+.msg-row.mine .msg-meta { flex-direction: row-reverse; }
+.msg-row.mine .msg-main { align-items: flex-end; }
+.msg-row.mine .msg-avatar { order: 1; }
+.msg-row.mine .msg-bubble { background: linear-gradient(135deg, #26547C, #5FA8BE); color: #FBF8EF; border: none; }
+
+/* ══ 红包卡片（消息内） ══ */
+.rp-card {
+  display: flex; align-items: center; gap: 10px;
+  min-width: 240px; max-width: 300px;
+  padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(135deg, #B03A2E, #8C2E24);
+  color: #FBF8EF;
+  box-shadow: 0 2px 8px rgba(140, 46, 36, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: transform 0.15s;
+}
+.rp-card:hover { transform: translateY(-1px); }
+.rp-card-icon { font-size: 30px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+.rp-card-main { flex: 1; min-width: 0; }
+.rp-card-note { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-card-meta { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+.rp-card-open {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #B98A3E; color: #FBF8EF; font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.2);
+}
+.rp-grab-inline { font-size: 12px; color: #6F6A5C; }
+.rp-grab-amt-inline { color: #B03A2E; font-weight: 700; }
+
+/* ══ 发红包弹窗 ══ */
+.rp-btn { }
+.rp-body { padding: 14px 18px 6px; display: flex; flex-direction: column; gap: 14px; }
+.rp-mode-row { display: flex; gap: 10px; }
+.rp-mode-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px; border-radius: 10px; cursor: pointer;
+  background: #F6F1E3; border: 1px solid #A8CDD8; color: #33302A; font-size: 14px; font-weight: 600;
+  transition: all 0.15s;
+}
+.rp-mode-btn small { font-size: 11px; font-weight: 400; color: #6F6A5C; }
+.rp-mode-btn.is-on { background: linear-gradient(135deg, #26547C, #5FA8BE); border-color: #26547C; color: #FBF8EF; }
+.rp-mode-btn.is-on small { color: rgba(251, 248, 239, 0.8); }
+.rp-mode-icon { font-size: 20px; }
+.rp-field { display: flex; flex-direction: column; gap: 6px; }
+.rp-field label { font-size: 12px; color: #6F6A5C; font-weight: 600; }
+.rp-amount-row { display: flex; gap: 8px; align-items: center; }
+.rp-amount-box {
+  display: flex; align-items: center; gap: 6px; flex: 1;
+  background: #F6F1E3; border: 1px solid #A8CDD8; border-radius: 8px; padding: 8px 10px;
+}
+.rp-amount-input {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+  font-size: 20px; font-weight: 700; color: #26547C;
+}
+.rp-amount-unit { font-size: 12px; color: #6F6A5C; white-space: nowrap; }
+.rp-quick { display: flex; gap: 6px; }
+.rp-quick-btn {
+  padding: 6px 10px; border-radius: 999px; cursor: pointer; font-size: 12px; font-weight: 600;
+  background: #DCEBEE; border: 1px solid #A8CDD8; color: #26547C;
+}
+.rp-quick-btn:hover { background: #A8CDD8; }
+.rp-note-input {
+  width: 100%; padding: 9px 10px; border-radius: 8px; font-size: 14px;
+  background: #F6F1E3; border: 1px solid #A8CDD8; color: #33302A; outline: none;
+}
+.rp-total-hint { text-align: center; font-size: 13px; color: #6F6A5C; padding-bottom: 4px; }
+.rp-total-num { color: #B03A2E; font-size: 16px; }
+.rp-warn { color: #B03A2E; font-size: 12px; font-weight: 600; }
+.rp-send-btn { background: linear-gradient(135deg, #B03A2E, #8C2E24) !important; }
+
+/* ══ 抢红包弹窗 ══ */
+.rp-detail-modal { max-width: 340px; }
+.rp-detail-top {
+  text-align: center; padding: 18px 18px 8px;
+  background: linear-gradient(135deg, #B03A2E, #8C2E24);
+  color: #FBF8EF; border-radius: 12px 12px 0 0; margin: -18px -18px 0;
+}
+.rp-detail-icon { font-size: 46px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+.rp-detail-note { font-size: 15px; font-weight: 700; margin-top: 6px; }
+.rp-detail-from { font-size: 12px; opacity: 0.85; margin-top: 3px; }
+.rp-detail-body { min-height: 130px; display: flex; align-items: center; justify-content: center; padding: 14px 0 4px; }
+.rp-grab-ready { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.rp-ready-remain { font-size: 12px; color: #6F6A5C; }
+.rp-open-btn {
+  width: 92px; height: 92px; border-radius: 50%; cursor: pointer; position: relative;
+  background: radial-gradient(circle at 35% 30%, #B98A3E, #8C5E24);
+  color: #FBF8EF; font-size: 22px; font-weight: 700;
+  border: 3px solid #B03A2E; box-shadow: 0 4px 14px rgba(140, 46, 36, 0.4);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  transition: transform 0.15s;
+}
+.rp-open-btn:hover { transform: scale(1.05); }
+.rp-open-btn:active { transform: scale(0.96); }
+.rp-open-envelope { font-size: 26px; }
+.rp-ready-note { font-size: 11px; color: #A39D8E; }
+.rp-grab-result { text-align: center; }
+.rp-grab-amount { font-size: 46px; font-weight: 800; color: #B03A2E; line-height: 1.1; }
+.rp-grab-unit { font-size: 13px; color: #6F6A5C; }
+.rp-grab-sub { font-size: 12px; color: #A39D8E; margin-top: 6px; }
+.rp-grab-finished { text-align: center; }
+.rp-finished-icon { font-size: 40px; }
+.rp-finished-text { font-size: 13px; color: #6F6A5C; margin-top: 8px; }
+.rp-grab-anim { text-align: center; }
+.rp-grab-envelope { font-size: 52px; animation: rpShake 0.8s infinite; }
+.rp-grab-text { font-size: 12px; color: #6F6A5C; margin-top: 6px; }
+@keyframes rpShake {
+  0%, 100% { transform: rotate(-8deg) scale(1); }
+  50% { transform: rotate(8deg) scale(1.08); }
+}
+.rp-detail-grabs { max-height: 150px; overflow-y: auto; padding: 4px 18px 8px; border-top: 1px dashed #A8CDD8; margin: 0 8px; }
+.rp-grabs-title { font-size: 11px; color: #6F6A5C; font-weight: 600; padding: 8px 0 4px; }
+.rp-grabs-empty { font-size: 12px; color: #A39D8E; padding: 6px 0; }
+.rp-grab-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+.rp-grab-avatar { width: 24px; height: 24px; font-size: 11px; }
+.rp-grab-name { flex: 1; color: #33302A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-mine-tag {
+  display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 4px;
+  background: #DCEBEE; color: #26547C; font-size: 10px;
+}
+.rp-grab-amt { color: #B03A2E; font-weight: 700; }
+.rp-detail-foot { border-top: 1px solid #EDE5CE; }
+
+/* ══ 红包全屏开启动画 ══ */
+.rp-anim {
+  position: fixed; inset: 0; z-index: 9998;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 42%, rgba(140, 46, 36, 0.88), rgba(51, 48, 42, 0.82));
+  animation: rpAnimIn 0.25s ease;
+  color: #FBF8EF;
+}
+@keyframes rpAnimIn { from { opacity: 0; } to { opacity: 1; } }
+.rp-anim-envelope { font-size: 88px; animation: rpPop 0.6s ease; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4)); }
+@keyframes rpPop {
+  0% { transform: scale(0.2) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.rp-anim-amount { font-size: 64px; font-weight: 800; margin-top: 10px; color: #FFD98A; text-shadow: 0 3px 12px rgba(0,0,0,0.4); animation: rpPop 0.5s 0.15s ease backwards; }
+.rp-anim-unit { font-size: 16px; opacity: 0.9; letter-spacing: 4px; margin-top: 2px; }
+.rp-anim-note { font-size: 14px; opacity: 0.85; margin-top: 16px; font-family: 'KaiTi', 'STKaiti', serif; letter-spacing: 2px; }
+
 </style>

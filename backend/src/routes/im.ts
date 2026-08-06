@@ -119,8 +119,8 @@ async function ensureMember(opts: { channelId: string; channelType: number; uid:
   })
 }
 
-async function userDisplay(user: { id: string; username: string; email: string }) {
-  return { id: user.id, name: user.username || user.email.split('@')[0], avatar: '', role: 0 }
+async function userDisplay(user: { id: string; username: string; email: string; avatarUrl?: string | null }) {
+  return { id: user.id, name: user.username || user.email.split('@')[0], avatar: user.avatarUrl || '', role: 0 }
 }
 
 // 私聊频道 ID：dm_<小uid>_<大uid>（uuid 字符串序）
@@ -156,7 +156,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
         channel_type: PUBLIC_CHANNEL_TYPE,
         subscribers: [userId],
       })
-      const me = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, username: true, email: true } })
+      const me = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, username: true, email: true, avatarUrl: true } })
       if (me) {
         const disp = await userDisplay(me)
         await ensureMember({ channelId: PUBLIC_CHANNEL_ID, channelType: PUBLIC_CHANNEL_TYPE, uid: userId, name: disp.name, avatar: disp.avatar })
@@ -208,7 +208,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
     }
     const users = await prisma.user.findMany({
       where: { id: { in: [...dmUids] } },
-      select: { id: true, username: true, email: true, lastActiveAt: true },
+      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true },
     })
     const userMap = new Map(users.map((u) => [u.id, u]))
     const dms = myMemberships
@@ -223,6 +223,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
           type: m.channelType,
           name: peer ? peer.username || peer.email.split('@')[0] : '私聊',
           desc: peer ? peer.email : '',
+          avatar: peer?.avatarUrl || '',
           kind: 'dm',
           peerUid,
           lastActiveAt: peer?.lastActiveAt?.toISOString() ?? null,
@@ -246,6 +247,19 @@ export default async function imRoutes(fastify: FastifyInstance) {
       ? await prisma.imUserPresence.findMany({ where: { uid: { in: uids } } })
       : []
     const presenceMap = new Map(presences.map((p) => [p.uid, p.online]))
+    // 频道成员头像同步：imChannelMember.avatar 为空时回填 User.avatarUrl（会员中心上传的头像实时同步）
+    const uidsAll = members.map((m) => m.uid)
+    if (uidsAll.length) {
+      const userRows = await prisma.user.findMany({ where: { id: { in: uidsAll } }, select: { id: true, avatarUrl: true } })
+      const avatarMap = new Map(userRows.map((u) => [u.id, u.avatarUrl || '']))
+      for (const m of members) {
+        const fresh = avatarMap.get(m.uid) || ''
+        if (fresh && m.avatar !== fresh) {
+          await prisma.imChannelMember.update({ where: { id: m.id }, data: { avatar: fresh } })
+          m.avatar = fresh
+        }
+      }
+    }
     const data = members.map((m, i) => ({
       uid: m.uid,
       name: m.name,
@@ -268,11 +282,11 @@ export default async function imRoutes(fastify: FastifyInstance) {
     if (!peerUid || peerUid === userId) {
       return reply.status(400).send({ success: false, error: 'peerUid 必填且不能是自己' })
     }
-    const peer = await prisma.user.findUnique({ where: { id: peerUid }, select: { id: true, username: true, email: true } })
+    const peer = await prisma.user.findUnique({ where: { id: peerUid }, select: { id: true, username: true, email: true, avatarUrl: true } })
     if (!peer) return reply.status(404).send({ success: false, error: '对方用户不存在' })
 
     const channelId = dmChannelId(userId, peerUid)
-    const me = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, username: true, email: true } })
+    const me = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, username: true, email: true, avatarUrl: true } })
     try {
       // 单聊频道（channel_type=1）为隐式频道：WuKongIM 不支持显式创建（报「暂不支持个人频道」），
       // 只需订阅双方（subscribers 为 uid 字符串数组）；业务侧写成员表供三栏成员列表使用
@@ -322,7 +336,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
         id: { not: userId },
         ...(q ? { OR: [{ username: { contains: q } }, { email: { contains: q } }] } : {}),
       },
-      select: { id: true, username: true, email: true, lastActiveAt: true },
+      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true },
       orderBy: { lastActiveAt: 'desc' },
       take: 100,
     })
@@ -364,13 +378,15 @@ export default async function imRoutes(fastify: FastifyInstance) {
       // 附加 authorName（账号昵称，User 表 username || email 前缀）→ 群里说话显示昵称，不显示短 UID
       const fromUids = [...new Set((data?.messages || []).map((m: any) => m.from_uid).filter(Boolean))] as string[]
       const authorNames = new Map<string, string>()
+      const authorAvatars = new Map<string, string>()
       if (fromUids.length) {
         const senders = await prisma.user.findMany({
           where: { id: { in: fromUids } },
-          select: { id: true, username: true, email: true },
+          select: { id: true, username: true, email: true, avatarUrl: true },
         })
         for (const u of senders) {
           authorNames.set(u.id, u.username || u.email.split('@')[0])
+          authorAvatars.set(u.id, u.avatarUrl || '')
         }
       }
       const messages = (data?.messages || []).map((m: any) => ({
@@ -378,6 +394,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
         payload: m.payload ?? null,
         content: decodeMessagePayload(m.payload),
         authorName: authorNames.get(m.from_uid) || '',
+        authorAvatar: authorAvatars.get(m.from_uid) || '',
       }))
       return { success: true, data: { ...data, messages } }
     } catch (e) {
@@ -394,20 +411,23 @@ export default async function imRoutes(fastify: FastifyInstance) {
       ? [...new Set(uids.filter((u: any) => typeof u === 'string' && u && uuidRe.test(u)))].slice(0, 200)
       : []
     const names: Record<string, string> = {}
+    const avatars: Record<string, string> = {}
     // 机器人管理员（M3）
     if (Array.isArray(uids) && uids.includes('kunlun_tea_bot')) {
       names['kunlun_tea_bot'] = '昆仑镜小管家'
+      avatars['kunlun_tea_bot'] = ''
     }
     if (list.length) {
       const users = await prisma.user.findMany({
         where: { id: { in: list } },
-        select: { id: true, username: true, email: true },
+        select: { id: true, username: true, email: true, avatarUrl: true },
       })
       for (const u of users) {
         names[u.id] = u.username || u.email.split('@')[0]
+        avatars[u.id] = u.avatarUrl || ''
       }
     }
-    return { success: true, data: { names } }
+    return { success: true, data: { names, avatars } }
   })
 
   // POST /api/im/upload — 聊天媒体上传（图片/文件/短视频），普通用户可用
