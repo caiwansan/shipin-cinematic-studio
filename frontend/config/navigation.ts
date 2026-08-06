@@ -27,7 +27,19 @@ export const navCategories: NavCategory[] = [
       { label: '短剧工作台', icon: '🎬', to: '/studio/v2', desc: 'AI短剧策划、剧本、分镜、视频生产', status: 'beta' },
       { label: '音乐创作', icon: '🎵', to: '/workspace/music', desc: 'AI音乐创作、作曲、编曲' },
       { label: '小说创作', icon: '📖', to: '/hdz', desc: 'AI小说生成、世界观、角色创作' },
-      { label: '昆仑茶馆', icon: '🍵', to: '/chat', badge: '⭐新', desc: '公共聊天频道 · 群聊 · 语音视频 · 红包礼物' },
+    ],
+  },
+  {
+    title: '生态入口',
+    items: [
+      // 应用中心：应用生态入口层（掌柜指令 2026-08-04 ECO-09，2026-08-06 移入更多项目）
+      { label: '应用中心', icon: '🧩', to: '/ecosystem/applications', desc: '应用生态入口层' },
+      // 插件中心：AI 能力生态入口层（掌柜指令 2026-08-04 ECO-10.1，2026-08-06 移入更多项目）
+      { label: '插件中心', icon: '🔌', to: '/ecosystem/plugins', desc: 'AI 能力生态入口层' },
+      // AI Center：昆仑镜 AI 生态入口层（掌柜指令 2026-08-01，2026-08-06 移入更多项目）
+      { label: 'AI中心', icon: '🧠', to: '/ai-center', desc: '昆仑镜 AI 生态入口' },
+      // 桌面版下载入口（掌柜指令 2026-08-04 RELEASE-01.1，2026-08-06 移入更多项目）
+      { label: '下载桌面版', icon: '⬇️', to: '/download/desktop', desc: '昆仑镜桌面客户端下载' },
     ],
   },
   {
@@ -52,12 +64,6 @@ export const navCategories: NavCategory[] = [
 export const primaryNav: NavItem[] = [
   { label: '商城', icon: '🛍️', to: '/mall' },
   { label: '社区', icon: '🌐', to: '/community' },
-  // 应用中心：应用生态入口层（掌柜指令 2026-08-04 ECO-09）
-  { label: '应用中心', icon: '🧩', to: '/ecosystem/applications' },
-  // 插件中心：AI 能力生态入口层（掌柜指令 2026-08-04 ECO-10.1，与应用中心并列：应用=使用工具，插件=增强能力）
-  { label: '插件中心', icon: '🔌', to: '/ecosystem/plugins' },
-  // AI Center：昆仑镜 AI 生态入口层（掌柜指令 2026-08-01）
-  { label: 'AI中心', icon: '🧠', to: '/ai-center' },
-  // 桌面版下载入口（掌柜指令 2026-08-04 RELEASE-01.1：用户只能从昆仑镜官网下载，GitHub 非入口）
-  { label: '下载桌面版', icon: '⬇️', to: '/download/desktop' },
+  // 昆仑茶馆：公共聊天频道（掌柜指令 2026-08-06：移到社区后面，保持顶栏直达）
+  { label: '昆仑茶馆', icon: '🍵', to: '/chat', desc: '公共聊天频道 · 群聊 · 语音视频 · 红包礼物' },
 ]
