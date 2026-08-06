@@ -33,6 +33,15 @@ function getSDK() {
   return sdkPromise
 }
 
+// SDK 模块导出（CMDContent 等类）— RTC 信令构造用
+let sdkModulePromise: Promise<any> | null = null
+function getSDKModule() {
+  if (!sdkModulePromise) {
+    sdkModulePromise = import('wukongimjssdk')
+  }
+  return sdkModulePromise
+}
+
 export function useKunlunTea() {
   const status = ref(0)
   const userId = ref('')
@@ -51,6 +60,7 @@ export function useKunlunTea() {
 
   let sdk: any = null
   let messageHandler: ((msg: any) => void) | null = null
+  let cmdHandler: ((msg: any) => void) | null = null
   let sendStatusHandler: ((p: any) => void) | null = null
 
   async function connect() {
@@ -101,6 +111,10 @@ export function useKunlunTea() {
     if (messageHandler) {
       sdk.chatManager.addMessageListener(messageHandler)
     }
+    // CMD 信令监听（RTC 语音/视频 1v1 走 WuKongIM 命令消息，不落历史、实时直达）
+    if (cmdHandler) {
+      sdk.chatManager.addCMDListener(cmdHandler)
+    }
     // 发送回执监听（SendackPacket：服务端确认发送结果）
     if (sendStatusHandler) {
       sdk.chatManager.addMessageStatusListener(sendStatusHandler)
@@ -135,6 +149,26 @@ export function useKunlunTea() {
   function onMessage(handler: (msg: any) => void) {
     messageHandler = handler
     if (sdk) sdk.chatManager.addMessageListener(handler)
+  }
+
+  /** CMD 信令监听（RTC 通话信令；WuKongIM 命令消息 contentType=99，不落历史） */
+  function onCMD(handler: (msg: any) => void) {
+    cmdHandler = handler
+    if (sdk) sdk.chatManager.addCMDListener(handler)
+  }
+
+  /** 发送 CMD 信令消息（RTC 语音/视频 1v1）
+   *  SDK CMDContent.encodeJSON 返回 {}（cmd/param 不随 payload 发送）→ 覆写为携带 cmd+param
+   *  接收端 CMDContent.decodeJSON 解析出 cmd/param → addCMDListener 分流 */
+  async function sendCMD(cmd: string, param: any, channelId: string, channelType: number) {
+    if (!sdk) throw new Error('SDK 未初始化')
+    const mod = await getSDKModule()
+    const content = new mod.CMDContent()
+    content.cmd = cmd
+    content.param = param
+    content.encodeJSON = () => ({ cmd, param })
+    const channel = sdk.newChannel(channelId, channelType)
+    return sdk.chatManager.send(content, channel)
   }
 
   /** 发送回执（SendackPacket：clientSeq + reasonCode，0=成功） */
@@ -208,5 +242,5 @@ export function useKunlunTea() {
     }
   }
 
-  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, onMessage, onSendStatus, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
+  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, onMessage, onCMD, sendCMD, onSendStatus, sendText, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
 }

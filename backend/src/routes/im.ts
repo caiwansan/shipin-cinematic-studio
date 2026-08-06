@@ -15,6 +15,20 @@ const IM_TOKEN_TTL_DAYS = 7
 // 合法 UUID 校验：机器人/外部平台 uid（kunlun_tea_bot、qq_*、wx_*）不是 UUID，传进 User.id 查询会 P2023
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+// ── RTC (R11 语音/视频 1v1) ──
+// TURN/STUN：coturn 部署于本机，安全组放行 UDP 3478 + 49152-65535 后公网可达
+const TURN_PUBLIC_IP = process.env.TURN_PUBLIC_IP || '124.223.208.24'
+const TURN_PORT = parseInt(process.env.TURN_PORT || '3478', 10)
+const TURN_SECRET = process.env.TURN_SECRET || ''
+// TURN REST API 临时凭证：username=过期unix时间戳，credential=HMAC-SHA1(secret, username) base64
+// coturn use-auth-secret 模式直接校验；24h 有效，过期自动失效
+function turnCredential(ttlHours = 24) {
+  if (!TURN_SECRET) return null
+  const unixTs = Math.floor(Date.now() / 1000) + ttlHours * 3600
+  const hmac = crypto.createHmac('sha1', TURN_SECRET).update(String(unixTs)).digest('base64')
+  return { username: String(unixTs), credential: hmac, ttl: ttlHours * 3600 }
+}
+
 // 公共频道 ID（昆仑茶馆大堂）——channel_type 4 = 社区/公共频道
 export const PUBLIC_CHANNEL_ID = 'kl_public_tea'
 export const PUBLIC_CHANNEL_TYPE = 4
@@ -431,6 +445,56 @@ export default async function imRoutes(fastify: FastifyInstance) {
       }
     }
     return { success: true, data: { names, avatars } }
+  })
+
+  // GET /api/im/rtc/config — WebRTC ICE 服务器配置（R11 语音/视频 1v1）
+  // STUN/TURN 地址 + 临时凭证（TURN REST API，24h 有效）；TURN_SECRET 未配置则只给 STUN（P2P 兜底）
+  fastify.get('/api/im/rtc/config', { preHandler: [fastify.authenticate] }, async (_request: FastifyRequest, reply: FastifyReply) => {
+    const cred = turnCredential()
+    const iceServers: any[] = [{ urls: [`stun:${TURN_PUBLIC_IP}:${TURN_PORT}`] }]
+    if (cred) {
+      iceServers.push({
+        urls: [`turn:${TURN_PUBLIC_IP}:${TURN_PORT}?transport=udp`, `turn:${TURN_PUBLIC_IP}:${TURN_PORT}?transport=tcp`],
+        username: cred.username,
+        credential: cred.credential,
+      })
+    }
+    return { success: true, data: { iceServers, turnEnabled: !!cred, turnExpiresIn: cred ? cred.ttl : 0 } }
+  })
+
+  // POST /api/im/rtc/signal-channel — 创建通话信令私有频道（R11）
+  // ⚠️ WuKongIM v1.2.6 单聊(type=1)不支持 subscriber_add（「个人频道不支持添加订阅者」）→ 单聊投递目标解析失败；
+  //    私聊频道信令不可用 → 每次通话创建临时 type=4 私有频道 rtc_<callId>，仅订阅双方，通话结束删除
+  fastify.post('/api/im/rtc/signal-channel', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const { callId, peerUid } = request.body as any
+    if (!callId || !/^[A-Za-z0-9-]{8,64}$/.test(callId)) return reply.status(400).send({ success: false, error: 'callId 非法' })
+    if (!peerUid || peerUid === userId || !UUID_RE.test(peerUid)) return reply.status(400).send({ success: false, error: 'peerUid 非法' })
+    const channelId = `rtc_${callId}`
+    try {
+      await wkApi('/channel', { channel_id: channelId, channel_type: 4 })
+    } catch (e) {
+      console.warn('[rtc] 创建信令频道跳过:', (e as Error).message)
+    }
+    try {
+      await wkApi('/channel/subscriber_add', { channel_id: channelId, channel_type: 4, subscribers: [userId, peerUid] })
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: '订阅信令频道失败: ' + (e as Error).message })
+    }
+    return { success: true, data: { channelId, channelType: 4 } }
+  })
+
+  // POST /api/im/rtc/signal-channel/close — 通话结束删除信令频道（R11，fire-and-forget 清理）
+  fastify.post('/api/im/rtc/signal-channel/close', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { callId } = request.body as any
+    if (!callId || !/^[A-Za-z0-9-]{8,64}$/.test(callId)) return reply.status(400).send({ success: false, error: 'callId 非法' })
+    const channelId = `rtc_${callId}`
+    try {
+      await wkApi('/channel/delete', { channel_id: channelId, channel_type: 4 })
+    } catch (e) {
+      console.warn('[rtc] 删除信令频道跳过:', (e as Error).message)
+    }
+    return { success: true }
   })
 
   // POST /api/im/upload — 聊天媒体上传（图片/文件/短视频），普通用户可用

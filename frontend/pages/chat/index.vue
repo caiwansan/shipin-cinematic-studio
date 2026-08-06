@@ -128,6 +128,10 @@
           </div>
 
           <div class="msg-input-bar">
+            <template v-if="currentChannel && currentChannel.kind === 'dm'">
+              <button class="gift-btn rtc-call-btn" title="语音通话" @click="callPeer('audio')">📞</button>
+              <button class="gift-btn rtc-call-btn" title="视频通话" @click="callPeer('video')">🎥</button>
+            </template>
             <button class="gift-btn rp-btn" title="发红包" @click="openRedPacketPanel">🧧</button>
             <button class="gift-btn" title="送礼物" @click="openGiftPanel">🎁</button>
             <button class="gift-btn" title="表情" @click.stop="emojiPanelOpen = !emojiPanelOpen">😊</button>
@@ -523,6 +527,62 @@
           <button class="friend-menu-item" @click="menuProfile(friendMenu.user)">👤 查看资料</button>
         </div>
       </Teleport>
+
+      <!-- ══ R11 语音/视频 1v1 ══ -->
+      <!-- 来电弹窗（被叫） -->
+      <Teleport to="body">
+        <div v-if="rtc.state.value === 'incoming'" class="rtc-incoming-mask">
+          <div class="rtc-incoming-card">
+            <div class="rtc-incoming-avatar">
+              <img v-if="rtc.peer.value?.avatar" :src="rtc.peer.value.avatar" alt="" />
+              <span v-else>{{ (rtc.peer.value?.name || '?').slice(0, 1) }}</span>
+            </div>
+            <div class="rtc-incoming-name">{{ rtc.peer.value?.name || '茶客' }}</div>
+            <div class="rtc-incoming-sub">{{ rtc.mode.value === 'video' ? '🎥 邀请你视频通话' : '📞 邀请你语音通话' }}</div>
+            <div class="rtc-incoming-actions">
+              <button class="rtc-btn rtc-btn-reject" @click="rtc.rejectCall('declined')">✕ 拒绝</button>
+              <button class="rtc-btn rtc-btn-accept" @click="rtc.acceptCall()">✓ 接听</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <!-- 通话浮层（主叫等待/建立中/通话中） -->
+      <Teleport to="body">
+        <div v-if="['calling','connecting','active'].includes(rtc.state.value)" class="rtc-call-mask">
+          <div class="rtc-call-stage">
+            <!-- 对方画面（视频模式通话中） -->
+            <video v-if="rtc.mode.value === 'video' && rtc.remoteStream.value && rtc.state.value === 'active'" ref="rtcRemoteVideoRef" class="rtc-remote-video" autoplay playsinline></video>
+            <!-- 语音模式：隐藏 video 承载远端音频（autoplay 播放，头像展示） -->
+            <video v-if="rtc.mode.value === 'audio' && rtc.remoteStream.value && rtc.state.value === 'active'" ref="rtcRemoteAudioVideoRef" class="rtc-remote-audio-video" autoplay playsinline></video>
+            <!-- 音频/等待：对方头像 + 状态 -->
+            <div v-else class="rtc-remote-avatar">
+              <img v-if="rtc.peer.value?.avatar" :src="rtc.peer.value.avatar" alt="" />
+              <span v-else>{{ (rtc.peer.value?.name || '?').slice(0, 1) }}</span>
+              <div class="rtc-status-text">
+                <template v-if="rtc.state.value === 'calling'">正在呼叫…</template>
+                <template v-else-if="rtc.state.value === 'connecting'">正在接通…</template>
+                <template v-else-if="rtc.state.value === 'active'">{{ rtc.mode.value === 'video' ? '视频通话中' : '语音通话中' }}</template>
+              </div>
+            </div>
+            <!-- 本地预览（PiP 小窗：视频模式显示；音频模式隐藏画面） -->
+            <video v-if="rtc.mode.value === 'video' && rtc.localStream.value" ref="rtcLocalVideoRef" class="rtc-local-video" autoplay playsinline muted></video>
+            <!-- 通话信息条 -->
+            <div class="rtc-call-head">
+              <div class="rtc-call-peer">{{ rtc.peer.value?.name || '茶客' }}</div>
+              <div class="rtc-call-dur" v-if="rtc.state.value === 'active'">{{ rtcDurText }}</div>
+            </div>
+            <!-- 错误/状态提示 -->
+            <div v-if="rtcToast" class="rtc-toast">{{ rtcToast }}</div>
+            <!-- 控制条 -->
+            <div class="rtc-controls">
+              <button class="rtc-ctl" :class="{ off: rtc.micMuted.value }" :title="rtc.micMuted.value ? '取消静音' : '静音'" @click="rtc.toggleMic()">{{ rtc.micMuted.value ? '🔇' : '🎙️' }}</button>
+              <button v-if="rtc.mode.value === 'video'" class="rtc-ctl" :class="{ off: rtc.camOff.value }" :title="rtc.camOff.value ? '打开摄像头' : '关闭摄像头'" @click="rtc.toggleCam()">{{ rtc.camOff.value ? '🚫' : '📷' }}</button>
+              <button class="rtc-ctl rtc-ctl-hangup" title="挂断" @click="rtc.hangup()">📵</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -531,11 +591,16 @@
 // 昆仑茶馆 — 三栏控制台（SPRINT-IM-CHA-02）
 // 左栏：会话导航（公共频道 / 我的频道 / 最近私聊）｜中栏：聊天｜右栏：成员 / 好友
 // SDK 仅浏览器可用，SSR 阶段不渲染逻辑
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useKunlunTea } from '~/composables/useKunlunTea'
+import { useRtcCall } from '~/composables/useRtcCall'
 
 const tea = useKunlunTea()
+// ══ R11 语音/视频 1v1 ════════════════════════════════
+const rtc = useRtcCall(tea)
+let rtcSetIdentity: (uid: string, name: string, avatar: string) => void = () => {}
+const rtcToast = ref('') // 通话浮层内提示（错误/状态）
 const route = useRoute()
 const channels = ref<any[]>([])
 const groups = ref<any[]>([])
@@ -576,6 +641,72 @@ const filteredPublic = computed(() => channels.value.filter((c) => !search.value
 const filteredGroups = computed(() => groups.value.filter((c) => !search.value || c.name.includes(search.value)))
 const filteredDms = computed(() => dms.value.filter((c) => !search.value || c.name.includes(search.value)))
 const filteredUsers = computed(() => users.value.filter((u) => !friendSearch.value || u.name.includes(friendSearch.value)))
+
+// ══ R11 通话入口（仅私聊频道显示）══
+const rtcRemoteVideoRef = ref<HTMLVideoElement | null>(null)
+const rtcRemoteAudioVideoRef = ref<HTMLVideoElement | null>(null)
+const rtcLocalVideoRef = ref<HTMLVideoElement | null>(null)
+const rtcDurText = ref('00:00')
+let rtcDurTimer: ReturnType<typeof setInterval> | null = null
+// 视频流绑定（watchEffect：依赖 ref 挂载/流/状态任何变化都重试绑定，主叫/被叫时序都覆盖）
+watchEffect(() => {
+  if (rtcRemoteVideoRef.value && rtc.remoteStream.value) {
+    rtcRemoteVideoRef.value.srcObject = rtc.remoteStream.value
+  }
+  // 语音模式远端音频（隐藏 video 播放）
+  if (rtcRemoteAudioVideoRef.value && rtc.remoteStream.value) {
+    rtcRemoteAudioVideoRef.value.srcObject = rtc.remoteStream.value
+  }
+  if (rtcLocalVideoRef.value && rtc.localStream.value) {
+    rtcLocalVideoRef.value.srcObject = rtc.localStream.value
+  }
+})
+// 通话计时
+watch(
+  () => rtc.state.value,
+  (s) => {
+    if (s === 'active') {
+      const t0 = Date.now()
+      rtcDurTimer = setInterval(() => {
+        const sec = Math.floor((Date.now() - t0) / 1000)
+        rtcDurText.value = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
+      }, 1000)
+    } else {
+      if (rtcDurTimer) {
+        clearInterval(rtcDurTimer)
+        rtcDurTimer = null
+      }
+      rtcDurText.value = '00:00'
+    }
+  }
+)
+// 挂断/结束后 3s 隐藏错误提示
+watch(
+  () => rtc.state.value,
+  (s) => {
+    if (s === 'idle' && rtcToast.value) setTimeout(() => (rtcToast.value = ''), 3000)
+  }
+)
+function readMyProfile(): any {
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)auth_user=([^;]+)/)
+    if (m) return JSON.parse(decodeURIComponent(m[1]))
+  } catch { /* ignore */ }
+  try {
+    const raw = localStorage.getItem('auth_user') || localStorage.getItem('user')
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return null
+}
+function callPeer(mode: 'audio' | 'video') {
+  if (!currentChannel.value || currentChannel.value.kind !== 'dm') return
+  const uid = currentChannel.value.peerUid
+  const name = peerInfo.value?.name || currentChannel.value.name || '茶客'
+  const avatar = peerInfo.value?.avatar || currentChannel.value.avatar || ''
+  rtc.startCall(uid, mode, name, avatar)
+}
+// 通话浮层错误提示（防抖：连接状态变化时置空）
+watch(() => rtc.errorMsg.value, (v) => { if (v) rtcToast.value = v })
 
 function followToken() {
   try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' }
@@ -1552,6 +1683,12 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(async () => {
   ;(window as any).__klImgView = (src: string) => viewImage(src)
   ;(window as any).__klOpenRedPacket = (id: string) => openRpDetail(id)
+  // ══ R11：初始化 RTC（拉取 ICE 配置 + 注册 CMD 信令监听，须在 connect 前）══
+  try {
+    rtcSetIdentity = (await rtc.init({})).setIdentity
+  } catch (e) {
+    console.warn('[RTC] 初始化失败（非致命）', e)
+  }
   tea.onMessage((msg: any) => {
     const ch = currentChannel.value
     if (!ch) return
@@ -1617,6 +1754,11 @@ onMounted(async () => {
   } catch (e) {
     console.error('[昆仑茶馆] 连接失败', e)
   }
+  // ══ R11：连接成功后注入本人身份（来电显示用）══
+  try {
+    const me = readMyProfile()
+    rtcSetIdentity(tea.userId.value, me?.username || me?.email?.split('@')[0] || '茶客', me?.avatarUrl || '')
+  } catch { /* 非致命 */ }
   // ?dm=<uid> 直达私聊（会员中心关注列表「发消息」跳转）
   const dmUid = route.query.dm as string | undefined
   if (dmUid && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dmUid)) {
@@ -2650,5 +2792,83 @@ onBeforeUnmount(() => {
 .rp-anim-amount { font-size: 64px; font-weight: 800; margin-top: 10px; color: #FFD98A; text-shadow: 0 3px 12px rgba(0,0,0,0.4); animation: rpPop 0.5s 0.15s ease backwards; }
 .rp-anim-unit { font-size: 16px; opacity: 0.9; letter-spacing: 4px; margin-top: 2px; }
 .rp-anim-note { font-size: 14px; opacity: 0.85; margin-top: 16px; font-family: 'KaiTi', 'STKaiti', serif; letter-spacing: 2px; }
+
+/* ══ R11 语音/视频 1v1 ══ */
+.rtc-call-btn { animation: rtc-pulse 2s infinite; }
+@keyframes rtc-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(38, 84, 124, 0.25); } 50% { box-shadow: 0 0 0 5px rgba(38, 84, 124, 0); } }
+
+.rtc-incoming-mask, .rtc-call-mask {
+  position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;
+  background: rgba(15, 20, 25, 0.82); backdrop-filter: blur(8px);
+}
+.rtc-incoming-card {
+  background: linear-gradient(160deg, #FBF8EF, #F3EBD8); border: 2px solid #26547C; border-radius: 20px;
+  padding: 36px 48px; text-align: center; box-shadow: 0 18px 60px rgba(0,0,0,0.4); animation: rtc-pop 0.3s ease;
+}
+@keyframes rtc-pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.rtc-incoming-avatar, .rtc-remote-avatar {
+  width: 96px; height: 96px; margin: 0 auto 14px; border-radius: 50%; overflow: hidden;
+  background: linear-gradient(135deg, #5FA8BE, #26547C); color: #FBF8EF; font-size: 40px;
+  display: flex; align-items: center; justify-content: center; border: 3px solid #FBF8EF;
+}
+.rtc-incoming-avatar img, .rtc-remote-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rtc-incoming-name { font-size: 22px; font-weight: 700; color: #26547C; }
+.rtc-incoming-sub { margin: 8px 0 22px; color: #6b5f4f; font-size: 14px; }
+.rtc-incoming-actions { display: flex; gap: 16px; justify-content: center; }
+.rtc-btn {
+  border: none; cursor: pointer; border-radius: 999px; padding: 12px 28px; font-size: 16px; font-weight: 700;
+  color: #FBF8EF; transition: transform 0.15s, opacity 0.15s;
+}
+.rtc-btn:active { transform: scale(0.94); }
+.rtc-btn-reject { background: #B03A2E; }
+.rtc-btn-accept { background: #2E8B57; }
+
+.rtc-call-stage {
+  position: relative; width: min(92vw, 860px); height: min(82vh, 620px); border-radius: 18px; overflow: hidden;
+  background: #0d1418; box-shadow: 0 20px 70px rgba(0,0,0,0.55);
+}
+.rtc-remote-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #0d1418; }
+.rtc-remote-avatar {
+  position: absolute; inset: 0; margin: auto; width: 120px; height: 120px; font-size: 52px;
+  animation: rtc-ring 1.6s infinite;
+}
+@keyframes rtc-ring {
+  0% { box-shadow: 0 0 0 0 rgba(95, 168, 190, 0.55); }
+  70% { box-shadow: 0 0 0 26px rgba(95, 168, 190, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(95, 168, 190, 0); }
+}
+.rtc-status-text {
+  position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%);
+  color: #d8e6ea; font-size: 15px; white-space: nowrap; letter-spacing: 1px;
+}
+.rtc-remote-audio-video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.rtc-local-video {
+  position: absolute; right: 14px; bottom: 84px; width: 168px; aspect-ratio: 3/4; border-radius: 12px;
+  object-fit: cover; border: 2px solid rgba(251, 248, 239, 0.6); box-shadow: 0 6px 24px rgba(0,0,0,0.5); background: #222;
+}
+.rtc-call-head {
+  position: absolute; top: 14px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: #FBF8EF; text-shadow: 0 2px 8px rgba(0,0,0,0.6); z-index: 2;
+}
+.rtc-call-peer { font-size: 19px; font-weight: 700; }
+.rtc-call-dur { font-size: 13px; opacity: 0.85; font-variant-numeric: tabular-nums; }
+.rtc-toast {
+  position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 3;
+  background: rgba(176, 58, 46, 0.92); color: #FBF8EF; padding: 8px 18px; border-radius: 999px; font-size: 13px;
+  white-space: nowrap; max-width: 80%; overflow: hidden; text-overflow: ellipsis;
+}
+.rtc-controls {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2;
+  display: flex; gap: 18px; align-items: center; padding: 12px 22px; border-radius: 999px;
+  background: rgba(20, 28, 34, 0.75); backdrop-filter: blur(6px); border: 1px solid rgba(251, 248, 239, 0.15);
+}
+.rtc-ctl {
+  width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer; font-size: 22px;
+  background: rgba(251, 248, 239, 0.14); color: #FBF8EF; transition: transform 0.15s, background 0.15s;
+}
+.rtc-ctl:hover { transform: scale(1.08); background: rgba(251, 248, 239, 0.26); }
+.rtc-ctl.off { background: #B03A2E; }
+.rtc-ctl-hangup { background: #B03A2E; }
+.rtc-ctl-hangup:hover { background: #d14a3c; }
 
 </style>
