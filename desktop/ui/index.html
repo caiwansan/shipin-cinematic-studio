@@ -5,10 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>昆仑镜 Kunlun Desktop</title>
 <style>
-  :root {
-    --bg: #0e0f1a; --panel: #16182b; --panel2: #1d2038;
-    --text: #e8e6f0; --dim: #8a8aa0; --accent: #c8562a; --accent2: #e6c878;
-    --ok: #4ade80; --err: #f87171; --warn: #fbbf24;
+    :root {
+    /* S8.0 东方未来主义色彩令牌: 雨后天青 / 青花瓷蓝 / 宣纸白 / 金色印章 */
+    --kl-primary: #7BA7A3;   /* 雨后天青: 主色/选中/链接 */
+    --kl-primary-deep: #5C8A85;
+    --kl-deep: #24527A;      /* 青花瓷蓝: 深色文字/图表 */
+    --kl-paper: #F7F5EF;     /* 宣纸白: 页面底色 */
+    --kl-panel: #FFFFFF;     /* 卡片白底 */
+    --kl-gold: #C8A951;      /* 金色印章: VIP/认证/高级态(少量) */
+    --kl-ink: #2B2B28;       /* 墨色主文 */
+    --kl-ink-sub: #6B6A63;   /* 次文 */
+    --kl-line: #E5E0D3;      /* 细线 */
+    --kl-ok: #4A7C59; --kl-warn: #C8A951; --kl-err: #A94442;
+    /* 兼容旧令牌名（JS/既有样式引用） */
+    --bg: var(--kl-paper); --panel: var(--kl-panel); --panel2: #EFEBE0;
+    --text: var(--kl-ink); --dim: var(--kl-ink-sub); --accent: var(--kl-primary); --accent2: var(--kl-deep);
+    --ok: var(--kl-ok); --err: var(--kl-err); --warn: var(--kl-warn);
+    --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; height: 100vh; overflow: hidden; }
@@ -16,7 +29,59 @@
   .sidebar { width: 230px; background: var(--panel); padding: 20px 16px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid #242748; }
   .logo { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
   .logo span { color: var(--accent2); }
-  .nav-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--dim); font-size: 14px; }
+    /* ── S8.0 东方未来主义组件层 ── */
+  body { background: var(--kl-paper); }
+  .sidebar { background: var(--kl-panel); border-right: 1px solid var(--kl-line); }
+  .logo span { color: var(--kl-deep); }
+  .nav-item { border-radius: 8px; }
+  .nav-item.active, .nav-item:hover { background: #EFEBE0; color: var(--kl-deep); }
+  .nav-item.active { box-shadow: inset 3px 0 0 var(--kl-primary); }
+  .card { background: var(--kl-panel); border: 1px solid var(--kl-line); border-radius: var(--radius); }
+  .badge { background: #EFEBE0; color: var(--kl-ink-sub); border-radius: 4px; }
+  .badge.ok { background: rgba(74,124,89,.12); color: var(--kl-ok); }
+  .badge.err { background: rgba(169,68,66,.12); color: var(--kl-err); }
+  .badge.warn { background: rgba(200,169,81,.16); color: #8A6D1F; }
+  .badge.seal { border: 1px solid currentColor; background: transparent; font-weight: 600; }
+  button { background: var(--kl-primary); color: #fff; border-radius: 8px; }
+  button:hover { background: var(--kl-primary-deep); }
+  button.secondary { background: var(--kl-panel); color: var(--kl-ink); border: 1px solid var(--kl-line); }
+  input { background: var(--kl-panel); border: 1px solid var(--kl-line); color: var(--kl-ink); border-radius: 8px; }
+  input:focus { outline: none; border-color: var(--kl-primary); box-shadow: 0 0 0 2px rgba(123,167,163,.25); }
+  .app-card { background: var(--kl-panel); border: 1px solid var(--kl-line); border-radius: var(--radius); transition: transform .08s ease, box-shadow .08s ease; }
+  .app-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(43,43,40,.08); }
+  .plugin-item { border-bottom: 1px solid var(--kl-line); }
+  .status-dot { background: var(--kl-ink-sub); }
+  .status-dot.on { background: var(--kl-ok); animation: kl-breathe 2.4s ease-in-out infinite; }
+  @keyframes kl-breathe { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+  @media (prefers-reduced-motion: reduce) {
+    .status-dot.on { animation: none; }
+    .app-card, .emp-card { transition: none; }
+  }
+  .login-box { background: var(--kl-panel); border: 1px solid var(--kl-line); border-radius: 16px; }
+  .diag-log { background: #F1EFE7; border: 1px solid var(--kl-line); color: var(--kl-ink-sub); }
+  a { color: var(--kl-deep); }
+  /* ── 首页: 晨雾青山 + AI 团队入口 ── */
+  .home-hero { position: relative; border-radius: 16px; padding: 36px 32px; margin-bottom: 20px; overflow: hidden;
+    background: linear-gradient(180deg, #DCE8E4 0%, var(--kl-paper) 70%); border: 1px solid var(--kl-line); }
+  .home-hero .mountains { position: absolute; inset: 0; opacity: .5; pointer-events: none; }
+  .home-hero h1 { font-size: 26px; color: var(--kl-deep); position: relative; }
+  .home-hero .sub { margin: 8px 0 0; position: relative; }
+  .home-date { font-size: 12px; color: var(--kl-ink-sub); position: relative; margin-top: 6px; }
+  .home-quick { margin-top: 16px; position: relative; }
+  .emp-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .emp-card { background: var(--kl-panel); border: 1px solid var(--kl-line); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: transform .08s ease, box-shadow .08s ease; }
+  .emp-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(43,43,40,.08); }
+  .emp-card .avatar { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #fff; background: var(--kl-primary); margin-bottom: 10px; }
+  .emp-card .role { font-size: 12px; color: var(--kl-ink-sub); margin: 2px 0 8px; }
+  .emp-card .stat { font-size: 12px; color: var(--kl-ink-sub); display: flex; gap: 12px; }
+  .home-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .home-col .card h3 { font-size: 14px; color: var(--kl-deep); }
+  .task-item, .result-item { padding: 8px 0; border-bottom: 1px solid var(--kl-line); font-size: 13px; display: flex; justify-content: space-between; gap: 10px; }
+  .task-item:last-child, .result-item:last-child { border-bottom: none; }
+  .task-status { font-size: 11px; color: var(--kl-ok); }
+  .empty-note { color: var(--kl-ink-sub); font-size: 12px; padding: 10px 0; }
+.nav-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--dim); font-size: 14px; }
   .nav-item.active, .nav-item:hover { background: var(--panel2); color: var(--text); }
   .main { flex: 1; padding: 28px 36px; overflow-y: auto; }
   h1 { font-size: 22px; margin-bottom: 6px; }
@@ -80,7 +145,8 @@
   <div id="view-main" class="hidden">
     <div class="sidebar">
       <div class="logo">昆仑镜 <span>KUNLUN</span></div>
-      <div class="nav-item active" data-view="apps">我的应用</div>
+      <div class="nav-item active" data-view="home">首页</div>
+      <div class="nav-item" data-view="apps">我的应用</div>
       <div class="nav-item" data-view="plugins">插件授权</div>
       <div class="nav-item" data-view="enterprise" id="nav-enterprise" style="display:none">企业管理</div>
       <div class="nav-item" data-view="device">设备信息</div>
@@ -88,6 +154,23 @@
       <div class="nav-item" id="btn-logout">退出登录</div>
     </div>
     <div class="main">
+      <div id="page-home">
+        <div class="home-hero">
+          <svg class="mountains" viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0,160 L120,70 L240,150 L360,50 L500,150 L620,90 L800,160 L800,200 L0,200 Z" fill="#7BA7A3" opacity="0.35"/>
+            <path d="M0,190 L200,120 L400,180 L600,110 L800,180 L800,200 L0,200 Z" fill="#24527A" opacity="0.18"/>
+          </svg>
+          <h1>你的 AI 团队今天准备好了</h1>
+          <div class="sub" id="home-greet">加载中…</div>
+          <div class="home-date" id="home-date"></div>
+          <div class="home-quick" id="home-quick"></div>
+        </div>
+        <div class="emp-strip" id="home-employees"></div>
+        <div class="home-col">
+          <div class="card"><h3>今日任务</h3><div id="home-tasks"><div class="empty-note">加载中…</div></div></div>
+          <div class="card"><h3>最近成果</h3><div id="home-results"><div class="empty-note">加载中…</div></div></div>
+        </div>
+      </div>
       <div id="page-apps">
         <h1>我的应用</h1>
         <div class="sub" id="sub-apps">加载中…</div>
@@ -289,6 +372,7 @@ function showLogin() { $('view-main').classList.add('hidden'); $('view-login').c
 function switchPage(name) {
   ['apps','plugins','device'].forEach(p => $(`page-${p}`).classList.toggle('hidden', p !== name));
   document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.toggle('active', n.dataset.view === name));
+  if (name === 'home') renderHome();
 }
 
 // ── API ─────────────────────────────────────
@@ -322,8 +406,46 @@ async function doLogin() {
     await invoke('save_credentials', { access_token: token, user_name: creds.user_name, user_id: creds.user_id, organization_id: creds.organization_id });
     await ensureDevice();
     showMain();
-    await refreshApps(); await refreshEmployees(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus(); await refreshBilling(); await refreshEnterprise();
+    await refreshApps(); await refreshEmployees(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus(); await refreshBilling(); await refreshEnterprise(); await renderHome();
   } catch (e) { $('login-err').textContent = e.message; }
+}
+
+// ── 首页（S8.1: AI 员工办公室入口; 消费现有 API 零新增）──
+async function renderHome() {
+  try {
+    const mkt = await api('/api/marketplace/employees');
+    const items = mkt?.employees || [];
+    const d = new Date();
+    const week = ['日','一','二','三','四','五','六'][d.getDay()];
+    $('home-date').textContent = `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日 · 星期${week}`;
+    $('home-greet').textContent = `${creds.user_name || '企业用户'} · ${items.length} 位数字员工待命`;
+    $('home-employees').innerHTML = items.map((e) => {
+      const on = e.entitlement?.available === true;
+      return `<div class="emp-card" data-home-emp="${e.code}">
+        <div class="avatar">${(e.name || '员').replace(/^def-/, '').slice(0, 1)}</div>
+        <div class="name" style="font-weight:600">${e.identity?.positioning || e.name || e.code}</div>
+        <div class="role">${e.identity?.title || ''} <span class="status-dot ${on ? 'on' : ''}" style="margin-left:4px"></span></div>
+        <div class="stat"><span>${on ? '已授权' : '待授权'}</span><span>${e.usage?.executions || 0} 次</span></div>
+      </div>`;
+    }).join('') || '<div class="empty-note">暂无员工</div>';
+    document.querySelectorAll('[data-home-emp]').forEach((c) => c.addEventListener('click', () => { mktCategory = ''; mktKeyword = ''; showView('apps'); refreshEmployees(); showEmployeeDetail(c.dataset.homeEmp); }));
+    $('home-quick').innerHTML = `<button data-home-quick="alice">给 Alice 一个招聘需求</button> <button class="secondary" data-home-go-mkt>看看新员工</button>`;
+    $('home-quick').querySelector('[data-home-go-mkt]')?.addEventListener('click', () => { mktCategory = ''; mktKeyword = ''; showView('apps'); refreshEmployees(); });
+    $('home-quick').querySelector('[data-home-quick="alice"]')?.addEventListener('click', () => { if (creds.device_id) openWorkspaceHome('def-recruiter-alice'); });
+    // 今日任务 + 最近成果（复用 usage.recent, 零新 API）
+    const aliceUsage = items.find((i) => i.code === 'def-recruiter-alice')?.usage || { executions: 0, successRate: 0 };
+    $('home-tasks').innerHTML = `
+      <div class="task-item"><span>Alice 招聘执行</span><span class="task-status">${aliceUsage.executions} 次 · 成功率 ${aliceUsage.successRate || 0}%</span></div>
+      <div class="task-item"><span>企业员工授权同步</span><span class="task-status">已完成</span></div>
+      <div class="task-item"><span>增强包状态</span><span class="task-status">${aliceUsage.executions ? '已启用' : '待启用'}</span></div>`;
+    const recent = items.filter((i) => (i.usage?.executions || 0) > 0).slice(0, 4);
+    $('home-results').innerHTML = recent.map((i) => `<div class="result-item"><span>${i.identity?.title || i.name}</span><span class="muted">${i.usage?.executions || 0} 次执行</span></div>`).join('') || '<div class="empty-note">暂无成果</div>';
+  } catch (e) {
+    $('home-greet').textContent = '首页加载失败: ' + e.message;
+  }
+}
+function openWorkspaceHome(code) {
+  launchEmployee(code);
 }
 
 // ── AI 员工商品（S6.1: 商品卡五要素 = 身份/能力/授权/增强/用量; 全 Cloud 来源）──
@@ -1021,7 +1143,7 @@ function showDiagFloat() {
   var btn = document.createElement('button');
   btn.textContent = '🩺 诊断';
   btn.className = 'diag-float';
-  btn.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;background:#1d2038;color:#e8e6f0;border:1px solid #2d3158;padding:10px 16px;border-radius:10px;cursor:pointer;font-size:13px';
+  btn.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;background:#24527A;color:#fff;border:1px solid #2d3158;padding:10px 16px;border-radius:10px;cursor:pointer;font-size:13px';
   btn.addEventListener('click', renderDiagView);
   document.body.appendChild(btn);
   var line = document.createElement('div');
