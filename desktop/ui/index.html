@@ -82,6 +82,7 @@
       <div class="logo">昆仑镜 <span>KUNLUN</span></div>
       <div class="nav-item active" data-view="apps">我的应用</div>
       <div class="nav-item" data-view="plugins">插件授权</div>
+      <div class="nav-item" data-view="enterprise" id="nav-enterprise" style="display:none">企业管理</div>
       <div class="nav-item" data-view="device">设备信息</div>
       <div style="flex:1"></div>
       <div class="nav-item" id="btn-logout">退出登录</div>
@@ -108,6 +109,11 @@
         <h1>设备信息</h1>
         <div class="sub">设备身份与本地应用安装记录</div>
         <div class="card" id="device-info"></div>
+      </div>
+      <div id="page-enterprise" class="hidden">
+        <h1>企业管理</h1>
+        <div class="sub" id="sub-enterprise">加载中…</div>
+        <div class="card" id="enterprise-overview"></div>
       </div>
     </div>
   </div>
@@ -308,7 +314,7 @@ async function doLogin() {
     await invoke('save_credentials', { access_token: token, user_name: creds.user_name, user_id: creds.user_id, organization_id: creds.organization_id });
     await ensureDevice();
     showMain();
-    await refreshApps(); await refreshEmployees(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus(); await refreshBilling();
+    await refreshApps(); await refreshEmployees(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus(); await refreshBilling(); await refreshEnterprise();
   } catch (e) { $('login-err').textContent = e.message; }
 }
 
@@ -415,6 +421,38 @@ async function refreshBilling() {
     // 非管理员（403）或未授权 → 隐藏企业概览（普通用户流程保持）
     $('sub-billing').textContent = '';
     $('billing-overview').innerHTML = '';
+  }
+}
+
+// ── 企业管理（S6.6 Enterprise Center: 我的企业/AI员工/增强/统计/套餐/成员; 管理员可见）──
+// 铁律: 全部 Cloud 只读; 非管理员 403 → 隐藏入口与内容; 零本地计算
+async function refreshEnterprise() {
+  try {
+    const biz = await api('/api/admin/enterprise');
+    const billing = await api('/api/admin/billing/overview');
+    if (!biz?.organization) throw new Error('NO_ADMIN');
+    $('nav-enterprise').style.display = '';
+    const org = biz.organization;
+    const members = biz.members || [];
+    const b = billing || {};
+    const empRows = (b.employees || []).map((e) => `
+      <div style="margin:6px 0;padding:8px;border:1px solid #242748;border-radius:8px">
+        <div><b>${e.name || e.code.replace(/^def-/, '')}</b> <span class="muted">· 执行 ${e.usage?.executions || 0} / 成功 ${e.usage?.successful || 0}</span></div>
+        <div class="muted" style="font-size:11px;margin-top:4px">${(e.capabilities || []).join(' · ')}</div>
+      </div>`).join('') || '<div class="muted">暂无员工</div>';
+    const plugRows = (b.plugins || []).map((p) => `<div style="margin:2px 0">${p.code} <span class="muted">(${(p.enhancements || []).join('、') || '无增强'})</span></div>`).join('') || '<div class="muted">暂无插件</div>';
+    const memRows = members.map((m) => `<div style="margin:2px 0">${m.name} <span class="muted">${m.email || ''} · ${m.role || ''}</span></div>`).join('') || '<div class="muted">暂无成员</div>';
+    $('sub-enterprise').textContent = `${org.name} · 方案 ${b.plan?.tier || org.plan || 'free'} · AI Employee ${b.plan?.employeeCount || 0}/${b.plan?.employeeLimit || 0}`;
+    $('enterprise-overview').innerHTML = `
+      <div class="row"><span class="muted">我的企业</span><span>${org.name}（owner: ${org.ownerId ? org.ownerId.slice(0, 8) + '…' : '—'}）</span></div>
+      <div style="margin:10px 0"><b>AI 员工</b><div>${empRows}</div></div>
+      <div style="margin:10px 0"><b>插件增强</b><div>${plugRows}</div></div>
+      <div style="margin:10px 0"><b>使用统计</b><div class="row"><span class="muted">本周期</span><span>执行 ${b.activity?.totalExecutions || 0} 次 · 活跃员工 ${b.activity?.activeEmployees || 0} · 增强包 ${b.activity?.enabledEnhancements || 0}</span></div></div>
+      <div style="margin:10px 0"><b>成员权限</b><div>${memRows}</div></div>`;
+  } catch (e) {
+    $('nav-enterprise').style.display = 'none'; // 非管理员隐藏入口
+    $('sub-enterprise').textContent = '';
+    $('enterprise-overview').innerHTML = '';
   }
 }
 

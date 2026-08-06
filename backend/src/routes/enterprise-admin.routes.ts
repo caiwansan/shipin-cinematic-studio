@@ -159,4 +159,31 @@ export async function registerEnterpriseAdminRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'INTERNAL' })
     }
   })
+
+  // S6.6: Enterprise Center 聚合（企业信息 + 成员, 只读; 控制台首页数据源）
+  app.get('/api/admin/enterprise', { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
+    try {
+      const orgId = await requireOrgAdmin(request, reply)
+      if (!orgId) return
+      const org = await prisma.organization.findUnique({
+        where: { id: orgId },
+        select: { id: true, name: true, plan: true, ownerId: true },
+      }).catch(() => null)
+      // 成员: governance_user by tenantId（治理体系, 含 role/status）
+      const govOrg = await prisma.govOrganization.findUnique({ where: { id: orgId }, select: { tenantId: true } }).catch(() => null)
+      const members = govOrg?.tenantId
+        ? await prisma.govUser.findMany({ where: { tenantId: govOrg.tenantId, status: 'active' }, select: { id: true, name: true, email: true, role: true } }).catch(() => [])
+        : []
+      return reply.send({
+        code: 0,
+        data: {
+          organization: org ? { id: org.id, name: org.name, plan: org.plan || 'free', ownerId: org.ownerId } : null,
+          members,
+        },
+      })
+    } catch (e: any) {
+      request.log.error(e, 'admin enterprise failed')
+      return reply.code(500).send({ error: 'INTERNAL' })
+    }
+  })
 }
