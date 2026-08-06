@@ -44,6 +44,7 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
           commentCount: true,
           isPinned: true,
           isEssence: true,
+          giftCount: true,
           createdAt: true,
           user: {
             select: {

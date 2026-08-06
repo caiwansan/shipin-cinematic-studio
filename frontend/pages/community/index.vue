@@ -223,6 +223,7 @@ interface Post {
   viewCount: number
   likeCount: number
   commentCount: number
+  giftCount?: number
   isPinned: boolean
   isEssence: boolean
   createdAt: string

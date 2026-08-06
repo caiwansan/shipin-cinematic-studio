@@ -3107,6 +3107,7 @@ model CommunityPost {
   likeCount    Int                @default(0)
   commentCount Int                @default(0)
   rewardCoins  Int                @default(0)
+  giftCount    Int                @default(0) // COMMUNITY-TIP-01 被打赏次数（>0 标题变红）
   isPinned     Boolean            @default(false)
   isEssence    Boolean            @default(false)
   reviewedBy   String?
@@ -10597,11 +10598,13 @@ model GiftRecord {
   coinsAwarded  Int // 快照：接收方金币 = priceDiamonds * 65 / 100
   channelId     String      @default("") // 送礼场景（大堂/群/私聊）
   channelType   Int         @default(0)
+  postId        String?     @db.Uuid // COMMUNITY-TIP-01 社区帖子打赏场景（非空=帖子打赏）
   status        String      @default("completed")
   createdAt     DateTime    @default(now())
 
   @@index([senderId, createdAt])
   @@index([receiverId, createdAt])
+  @@index([postId, createdAt])
   @@map("gift_record")
 }
 

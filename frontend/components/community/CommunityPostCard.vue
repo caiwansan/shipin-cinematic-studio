@@ -5,7 +5,7 @@
       <span v-if="post.isEssence" class="essence-badge">⭐ 精华</span>
       <span class="category-tag">{{ post.category }}</span>
     </div>
-    <h3 class="card-title">{{ post.title }}</h3>
+    <h3 class="card-title" :class="{ 'card-title-tipped': (post.giftCount || 0) > 0 }">{{ post.title }}</h3>
     <p class="card-excerpt">{{ excerpt }}</p>
     <div v-if="tagList.length > 0" class="card-tags">
       <span v-for="tag in tagList" :key="tag" class="tag">{{ tag }}</span>
@@ -15,6 +15,7 @@
       <span class="meta-stat">👁️ {{ post.viewCount }}</span>
       <span class="meta-stat">👍 {{ post.likeCount }}</span>
       <span class="meta-stat">💬 {{ post.commentCount }}</span>
+      <span v-if="(post.giftCount || 0) > 0" class="meta-stat tip-stat" title="被打赏">🎁 {{ post.giftCount }}</span>
       <span class="meta-time">{{ timeAgo }}</span>
     </div>
   </NuxtLink>
@@ -33,6 +34,7 @@ const props = defineProps<{
     viewCount: number
     likeCount: number
     commentCount: number
+    giftCount?: number
     isPinned?: boolean
     isEssence?: boolean
     createdAt: string
@@ -147,6 +149,13 @@ onUnmounted(() => {
   color: #fff;
   margin: 0 0 8px;
   line-height: 1.4;
+}
+/* COMMUNITY-TIP-01 被打赏的帖子标题变红 */
+.card-title-tipped {
+  color: #f97316;
+}
+.tip-stat {
+  color: rgba(249,115,22,0.85);
 }
 .card-excerpt {
   font-size: 0.82rem;

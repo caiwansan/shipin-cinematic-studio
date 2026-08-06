@@ -50,7 +50,7 @@
               <span v-if="post.isEssence" class="badge badge-essence">⭐ 精华</span>
               <span class="badge badge-category">{{ post.category }}</span>
             </div>
-            <h1 class="post-title" itemprop="headline">{{ post.title }}</h1>
+            <h1 class="post-title" :class="{ 'post-title-tipped': (post.giftCount || 0) > 0 }" itemprop="headline">{{ post.title }}</h1>
             <div class="post-meta">
               <span class="meta-author" itemprop="author">👤 {{ post.user?.username || '匿名' }}</span>
               <span>👁️ {{ post.viewCount }}</span>
@@ -72,6 +72,28 @@
             </div>
           </div>
         </article>
+
+        <!-- COMMUNITY-TIP-01 打赏区：打赏按钮 + 打赏人名单 + 礼物记录 -->
+        <section class="tips-section">
+          <div class="tips-header">
+            <h2 class="section-title tips-title">🎁 打赏 <span v-if="tipsData.total > 0" class="tips-total">共 {{ tipsData.total }} 次 · {{ tipsData.totalDiamonds }} 钻</span></h2>
+            <button class="btn btn-primary btn-tip" :disabled="tipping" @click="openTipModal">
+              {{ tipping ? '赠送中...' : '🎁 打赏楼主' }}
+            </button>
+          </div>
+
+          <!-- 打赏名单 + 礼物记录 -->
+          <div v-if="tipsData.records.length > 0" class="tips-list">
+            <div v-for="(t, i) in tipsData.records" :key="i" class="tip-item">
+              <span class="tip-avatar">{{ t.senderAvatar ? '' : '👤' }}<img v-if="t.senderAvatar" :src="t.senderAvatar" class="tip-avatar-img" /></span>
+              <span class="tip-name">{{ t.senderName }}</span>
+              <span class="tip-gift">送 <span class="tip-gift-icon">{{ t.giftIcon || '🎁' }}</span> {{ t.giftName }} × {{ t.count }}</span>
+              <span class="tip-diamonds">{{ t.totalDiamonds }} 钻</span>
+              <span class="tip-time">{{ formatTime(t.lastAt) }}</span>
+            </div>
+          </div>
+          <p v-else class="tips-empty">还没有人打赏，喜欢这个帖子就送楼主一份礼物吧～</p>
+        </section>
 
         <!-- 评论区 -->
         <section class="comments-section">
@@ -149,6 +171,37 @@
       </template>
     </div>
   </div>
+
+  <!-- COMMUNITY-TIP-01 礼物选择弹窗 -->
+  <div v-if="tipModalOpen" class="tip-modal-overlay" @click.self="tipModalOpen = false">
+    <div class="tip-modal">
+      <div class="tip-modal-header">
+        <h3>🎁 打赏楼主</h3>
+        <button class="tip-modal-close" @click="tipModalOpen = false">✕</button>
+      </div>
+      <p class="tip-modal-sub">礼物将直接结算为金币给发帖人（{{ coinsPercent }}% 到账）</p>
+      <div v-if="giftLoading" class="tip-gift-loading">加载礼物中...</div>
+      <div v-else class="tip-gift-grid">
+        <button
+          v-for="g in giftList"
+          :key="g.id"
+          class="tip-gift-item"
+          :class="{ 'tip-gift-selected': selectedGiftId === g.id }"
+          @click="selectedGiftId = g.id"
+        >
+          <span class="tip-gift-item-icon">{{ g.iconUrl || '🎁' }}</span>
+          <span class="tip-gift-item-name">{{ g.name }}</span>
+          <span class="tip-gift-item-price">💎 {{ g.priceDiamonds }}</span>
+        </button>
+      </div>
+      <div class="tip-modal-footer">
+        <button class="btn btn-outline" @click="tipModalOpen = false">取消</button>
+        <button class="btn btn-primary" :disabled="!selectedGiftId || tipSending" @click="sendTip">
+          {{ tipSending ? '赠送中...' : '确认打赏' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -169,6 +222,16 @@ const commentContent = ref('')
 const replyContent = ref('')
 const replyToId = ref<string | null>(null)
 const submitting = ref(false)
+
+// ─── COMMUNITY-TIP-01 打赏状态 ───
+const tipModalOpen = ref(false)
+const giftList = ref<any[]>([])
+const giftLoading = ref(false)
+const selectedGiftId = ref('')
+const tipSending = ref(false)
+const tipping = ref(false)
+const coinsPercent = ref(65)
+const tipsData = ref<{ total: number; totalDiamonds: number; records: any[] }>({ total: 0, totalDiamonds: 0, records: [] })
 
 // ─── SSR 数据获取 ───
 const { data: post, pending, error, refresh } = await useAsyncData(
@@ -466,6 +529,65 @@ async function submitReply(parentId: string) {
   }
 }
 
+// ─── COMMUNITY-TIP-01 打赏逻辑 ───
+async function loadTips() {
+  try {
+    const res = await fetch(`${apiBase}/api/community/posts/${route.params.id}/tips`)
+    if (!res.ok) return
+    const data = await res.json()
+    if (data.success) tipsData.value = data.data
+  } catch {}
+}
+
+async function openTipModal() {
+  if (!isLoggedIn.value) {
+    showLogin.value = true
+    return
+  }
+  tipModalOpen.value = true
+  selectedGiftId.value = ''
+  if (giftList.value.length > 0) return
+  giftLoading.value = true
+  try {
+    const res = await fetch('/api/gifts/products')
+    if (!res.ok) throw new Error('加载礼物失败')
+    const data = await res.json()
+    const groups = data.data?.gifts || []
+    giftList.value = groups.flatMap((g: any) => g.items || [])
+    coinsPercent.value = data.data?.coinsAwardedPercent || 65
+  } catch (err: any) {
+    alert(err.message)
+  } finally {
+    giftLoading.value = false
+  }
+}
+
+async function sendTip() {
+  if (!selectedGiftId.value) return
+  tipSending.value = true
+  tipping.value = true
+  try {
+    const token = window.localStorage?.getItem('auth_token') || ''
+    const res = await fetch(`/api/community/posts/${route.params.id}/tip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ giftId: selectedGiftId.value }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || data.message || '打赏失败')
+    }
+    tipModalOpen.value = false
+    await loadTips()
+    await refresh()
+  } catch (err: any) {
+    alert(err.message)
+  } finally {
+    tipSending.value = false
+    tipping.value = false
+  }
+}
+
 function formatTime(dateStr: string) {
   const date = new Date(dateStr)
   if (isNaN(date.getTime())) return ''
@@ -481,6 +603,7 @@ onMounted(() => {
     const authUserRaw = window.localStorage?.getItem('auth_user')
     if (authUserRaw) { try { authUser.value = JSON.parse(authUserRaw) } catch {} }
   } catch {}
+  loadTips()
 })
 </script>
 
@@ -673,6 +796,11 @@ onMounted(() => {
   color: #fff;
   margin: 0 0 12px;
   line-height: 1.3;
+  transition: color 0.2s;
+}
+/* COMMUNITY-TIP-01 被打赏的帖子标题变红 */
+.post-title-tipped {
+  color: #f97316;
 }
 .post-meta {
   display: flex;
@@ -925,6 +1053,146 @@ onMounted(() => {
   border: 1px solid rgba(249,115,22,0.2);
 }
 .btn-sm:hover { background: rgba(249,115,22,0.15); }
+
+/* ─── COMMUNITY-TIP-01 打赏区 ─── */
+.tips-section {
+  margin-top: 24px;
+  padding: 20px 24px;
+  background: rgba(249,115,22,0.03);
+  border: 1px solid rgba(249,115,22,0.12);
+  border-radius: 14px;
+}
+.tips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.tips-title { font-size: 1rem; margin: 0; }
+.tips-total {
+  font-size: 0.75rem;
+  color: rgba(249,115,22,0.7);
+  font-weight: 400;
+  margin-left: 6px;
+}
+.btn-tip { padding: 8px 18px; font-size: 0.8rem; }
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tip-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+}
+.tip-avatar {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  border-radius: 50%;
+  background: rgba(249,115,22,0.1);
+  overflow: hidden;
+}
+.tip-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.tip-name { color: rgba(249,115,22,0.85); font-weight: 600; }
+.tip-gift { color: rgba(255,255,255,0.65); }
+.tip-gift-icon { font-size: 1rem; }
+.tip-diamonds { color: #eab308; font-weight: 600; }
+.tip-time {
+  margin-left: auto;
+  color: rgba(255,255,255,0.25);
+  font-size: 0.7rem;
+}
+.tips-empty {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+  padding: 10px 0;
+}
+
+/* 礼物选择弹窗 */
+.tip-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.tip-modal {
+  width: min(560px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #0d0d14;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 22px;
+}
+.tip-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.tip-modal-header h3 { margin: 0; font-size: 1.05rem; color: #fff; }
+.tip-modal-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.tip-modal-sub {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.35);
+  margin: 0 0 14px;
+}
+.tip-gift-loading { text-align: center; color: rgba(255,255,255,0.4); padding: 24px 0; }
+.tip-gift-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+.tip-gift-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tip-gift-item:hover { border-color: rgba(249,115,22,0.3); }
+.tip-gift-selected {
+  border-color: #f97316 !important;
+  background: rgba(249,115,22,0.08) !important;
+  box-shadow: 0 0 0 1px #f97316;
+}
+.tip-gift-item-icon { font-size: 1.6rem; }
+.tip-gift-item-name { font-size: 0.72rem; color: rgba(255,255,255,0.7); }
+.tip-gift-item-price { font-size: 0.68rem; color: #eab308; }
+.tip-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
 
 /* ─── 移动端适配 ─── */
 @media (max-width: 768px) {
