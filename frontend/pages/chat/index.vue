@@ -3489,6 +3489,16 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* 视频（v-html）——微信风格：圆角缩略播放器 */
+.msg-video {
+  max-width: 280px;
+  max-height: 320px;
+  border-radius: 10px;
+  display: block;
+  background: #101418;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
 /* 文件（v-html） */
 .msg-file {
   display: flex; align-items: center; gap: 10px;
