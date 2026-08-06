@@ -271,8 +271,8 @@
             <div v-for="m in members" :key="m.uid" class="member-item clickable" @click="openMemberCard(m, $event)">
               <div class="member-avatar">{{ (m.name || '?').slice(0, 1) }}</div>
               <div class="member-meta">
-                <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.role === 2" class="bot-badge">🤖</span></span>
-                <span class="member-sub">{{ m.status === 1 ? '在线' : '离线' }}</span>
+                <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.uid === 'kunlun_tea_bot'" class="bot-badge">🤖 AI 客服</span><span v-else-if="m.role === 2" class="bot-badge">🤖</span></span>
+                <span class="member-sub">{{ m.uid === 'kunlun_tea_bot' ? '随时在线 · 喊「小管家」' : (m.status === 1 ? '在线' : '离线') }}</span>
               </div>
             </div>
           </template>

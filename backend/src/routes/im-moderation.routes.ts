@@ -14,6 +14,132 @@ const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
 export const BOT_UID = 'kunlun_tea_bot' // 机器人管理员（昆仑镜小管家），wk.yaml systemUIDs 配置
 const BOT_NAME = '昆仑镜小管家'
 
+// ── AI 客服（小管家被 @ 时 LLM 回复）───────────────────────────
+const AI_CUSTOMER_SERVICE = process.env.AI_CUSTOMER_SERVICE !== 'off' // 默认开启
+const BOT_LLM_MODEL = process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash'
+const BOT_LLM_BASE = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1'
+const replyThrottle = new Map<string, number>() // uid -> 上次回复时间戳
+const channelThrottle = new Map<string, number>() // channelId -> 上次回复时间戳
+
+const BOT_SYSTEM_PROMPT = `你是「昆仑镜小管家」，昆仑镜 AI 数字办公空间（aigc.fushtn.com）的 AI 客服机器人。
+产品背景：昆仑镜是新媒体团队的一站式 AI 数字办公空间，提供 AI 视频生成（导演工作台/分镜/文生视频/图生视频）、新媒体工作台（虚拟电脑+真实账号登录）、会员中心（VIP 订阅/积分/礼物）、昆仑茶馆（群聊/私聊/直播）。
+行为规范：
+1. 回答简短友好，一般不超过 80 字，像真人客服
+2. 涉及产品功能/使用问题给出准确指引；不确定的坦诚说「这个我去问问掌柜」
+3. 不讨论政治、不涉及违规敏感内容，遇到敏感话题礼貌回避
+4. 语气亲切自然，可少量使用 emoji
+5. 用户消息开头的 [频道] 前缀是消息来源标注，忽略它`
+
+/** 读取 DeepSeek key：优先 process.env（启动时 DB 加载），否则直查 DB 解密（5min 缓存） */
+let botApiKeyCache: string | null | undefined = undefined
+let botApiKeyAt = 0
+async function getBotApiKey(): Promise<string | null> {
+  if (botApiKeyCache !== undefined && Date.now() - botApiKeyAt < 5 * 60_000) return botApiKeyCache
+  if (process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY.startsWith('sk-')) {
+    botApiKeyCache = process.env.DEEPSEEK_API_KEY
+    botApiKeyAt = Date.now()
+    return botApiKeyCache
+  }
+  try {
+    const { decryptKey } = await import('../services/crypto.service.js')
+    const row = await prisma.apiKey.findFirst({ where: { keyName: 'deepseek_api_key' } })
+    let key: string | null = null
+    if (row) {
+      try { key = decryptKey(row.keyValue) } catch { key = row.keyValue }
+    }
+    if (key && key.startsWith('sk-')) {
+      botApiKeyCache = key
+    } else {
+      botApiKeyCache = null
+      console.warn('[昆仑茶馆] DEEPSEEK key 无效（非 sk- 开头），AI 客服不可用')
+    }
+    botApiKeyAt = Date.now()
+    return botApiKeyCache
+  } catch (e) {
+    console.warn('[昆仑茶馆] 读取 LLM key 失败:', (e as Error).message)
+    botApiKeyCache = null
+    botApiKeyAt = Date.now()
+    return null
+  }
+}
+
+/** 调用 DeepSeek 生成客服回复；失败返回 null（静默不打扰） */
+async function askBot(userText: string): Promise<string | null> {
+  const apiKey = await getBotApiKey()
+  if (!apiKey) return null
+  try {
+    const res = await fetch(`${BOT_LLM_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: BOT_LLM_MODEL,
+        messages: [
+          { role: 'system', content: BOT_SYSTEM_PROMPT },
+          { role: 'user', content: userText },
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+      }),
+    })
+    if (!res.ok) {
+      console.warn('[昆仑茶馆] AI 客服 LLM 失败:', res.status)
+      return null
+    }
+    const j = await res.json()
+    const content: string = j?.choices?.[0]?.message?.content?.trim() ?? ''
+    return content || null
+  } catch (e) {
+    console.warn('[昆仑茶馆] AI 客服异常:', (e as Error).message)
+    return null
+  }
+}
+
+/** 解析消息文本 + @ 信息 */
+function extractTextAndMention(msg: { payload: string }): { text: string; mentionAll: boolean; mentionUids: string[] } {
+  const decoded = decodeMessagePayload(msg.payload)
+  let text = ''
+  if (typeof decoded === 'string') text = decoded
+  else if (decoded && typeof decoded.content === 'string') text = decoded.content
+  else if (decoded && decoded.content && typeof decoded.content === 'object' && 'text' in decoded.content) text = String((decoded.content as any).text || '')
+  const mention = decoded && typeof decoded === 'object' ? (decoded as any).mention : null
+  return {
+    text: text.trim(),
+    mentionAll: !!(mention && mention.all),
+    mentionUids: Array.isArray(mention?.uids) ? mention.uids : [],
+  }
+}
+
+/** 小管家被 @（或提到「小管家」）→ LLM 回复（AI 客服） */
+async function handleBotMention(msg: { channelId: string; channelType: number; fromUid: string; messageId: string; payload: string }) {
+  if (!AI_CUSTOMER_SERVICE) return { handled: false, reason: 'disabled' }
+  if (msg.fromUid === BOT_UID) return { handled: false, reason: 'bot' }
+  const { text, mentionAll, mentionUids } = extractTextAndMention(msg)
+  if (!text) return { handled: false, reason: 'empty' }
+  const mentioned = mentionAll || mentionUids.includes(BOT_UID)
+  const nameHit = /小管家/.test(text)
+  if (!mentioned && !nameHit) return { handled: false, reason: 'no-mention' }
+  console.log(`[昆仑茶馆] AI 客服触发: uid=${msg.fromUid} mention=${mentioned} nameHit=${nameHit} text=${text.slice(0, 40)}`)
+
+  // 敏感词命中：处置优先（由 handleWebhookMessage 负责），不参与 AI 回复
+  if (sensitiveEngine.scan(text).length) return { handled: true, reason: 'sensitive-silent' }
+
+  // 节流：同用户 8s / 同频道 3s
+  const now = Date.now()
+  if (now - (replyThrottle.get(msg.fromUid) || 0) < 8000) return { handled: true, reason: 'throttled-uid' }
+  if (now - (channelThrottle.get(msg.channelId) || 0) < 3000) return { handled: true, reason: 'throttled-channel' }
+
+  const reply = await askBot(`[频道] ${text}`)
+  if (!reply) return { handled: true, reason: 'llm-fail' }
+  // 回复内容也过一遍敏感词，命中则丢弃（防 AI 复读违规内容）
+  if (sensitiveEngine.scan(reply).length) return { handled: true, reason: 'reply-sensitive' }
+
+  replyThrottle.set(msg.fromUid, now)
+  channelThrottle.set(msg.channelId, now)
+  const at = `@${msg.fromUid.slice(0, 8)}`
+  const ok = await botSendMessage(msg.channelId, msg.channelType, `${at} ${reply}`)
+  return { handled: true, reply, sent: ok }
+}
+
 async function wkApi(path: string, body?: unknown) {
   const res = await fetch(`${IM_HTTP_ADDR}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
@@ -147,7 +273,9 @@ export default async function imModerationRoutes(fastify: FastifyInstance) {
       for (const item of body) {
         const msg = parseWebhookMessage(item)
         if (msg) {
+          // 敏感词复核（处置）优先，AI 客服（@小管家）其次，均异步不阻塞 webhook 响应
           handleWebhookMessage(msg).catch((e) => console.warn('[昆仑茶馆] webhook 复核异常:', (e as Error).message))
+          handleBotMention(msg).catch((e) => console.warn('[昆仑茶馆] AI 客服异常:', (e as Error).message))
         }
       }
     }
