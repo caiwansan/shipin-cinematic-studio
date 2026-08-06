@@ -41,6 +41,10 @@
       </div>
 
       <template v-else-if="post">
+        <!-- 待审核提示条（仅作者本人可见） -->
+        <div v-if="post.status && post.status !== 'approved'" class="pending-banner">
+          {{ post.status === 'rejected' ? `⛔ 帖子未通过审核：${post.rejectReason || '不符合社区规范'}` : '⏳ 帖子已提交，等待后台审核通过后公开展示' }}
+        </div>
         <!-- 帖子主体 -->
         <article class="post-main cn-card" itemprop="mainEntity" itemscope itemtype="https://schema.org/Article">
           <div class="post-header">
@@ -251,6 +255,26 @@ const { data: post, pending, error, refresh } = await useAsyncData(
   },
   { lazy: false }
 )
+
+// 客户端补救：SSR 无 token 时待审帖会 404 → 挂载后带 token 重试（作者可见自己的待审/被驳帖）
+onMounted(async () => {
+  if (error.value || !post.value) {
+    const { getAuthToken } = await import('~/utils/auth/token')
+    const token = getAuthToken()
+    if (token) {
+      try {
+        const res = await fetch(`/api/community/posts/${route.params.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (data?.post) {
+          post.value = data.post
+          error.value = null
+        }
+      } catch { /* 保持原错误 */ }
+    }
+  }
+})
 
 // ─── 动态 Meta 标签 ───
 const postDescription = computed(() => {
@@ -692,6 +716,20 @@ onMounted(() => {
   letter-spacing: 1px;
 }
 .back-link:hover { color: var(--cn-cobalt-deep); }
+
+/* 待审核/被驳回提示条 */
+.pending-banner {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  background: rgba(176, 127, 46, 0.1);
+  border: 1px solid rgba(176, 127, 46, 0.35);
+  color: #a87a2c;
+  font-family: var(--cn-serif);
+  letter-spacing: 0.5px;
+}
 
 /* Loading & Error */
 .loading-state, .error-state {

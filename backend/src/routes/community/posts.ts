@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../../utils/index.js'
 import { containsSensitiveWord } from '../../services/community/sensitive-word.service.js'
-import { rewardPostCreation } from '../../services/community/community-reward.service.js'
+// 注意：发帖不再直接发积分；奖励在后台审核通过时发放（admin-posts.ts approve 已有逻辑）
 
 export default async function communityPostRoutes(fastify: FastifyInstance) {
   // GET /api/community/posts — 列表（支持分类筛选、分页）
@@ -140,31 +140,28 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
         category: categoryName,
         tags: tags || '',
         mediaJson: JSON.stringify(media || []),
-        status: 'approved', // Auto-approve for now, pending for review system later
+        status: 'pending', // 发帖先进入后台审核；通过后展示 + 发放积分（/api/admin/posts/:id/approve）
       },
     })
 
-    // 奖励积分
-    try {
-      await rewardPostCreation(userId)
-    } catch (err) {
-      console.warn('[Community] Failed to reward post creation:', err)
-    }
-
-    // 更新分类计数
-    try {
-      await prisma.communityCategory.updateMany({
-        where: { name: categoryName },
-        data: { postCount: { increment: 1 } },
-      })
-    } catch {}
-
+    // 更新分类计数（审核通过时才计入公开计数；此处仅记录待审，不计入 postCount）
     return { post }
   })
 
   // GET /api/community/posts/:id — 帖子详情（含评论）
+  // 公开可见仅限 approved；pending/rejected 仅作者本人（带 JWT）可见，其他人 404
   fastify.get('/api/community/posts/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
+
+    // 可选鉴权：解析 Bearer token 拿 viewerId（无 token 不影响公开帖子访问）
+    let viewerId: string | null = null
+    try {
+      const authHeader = request.headers.authorization
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const decoded: any = fastify.jwt.verify(authHeader.slice(7))
+        viewerId = decoded?.id || decoded?.userId || null
+      }
+    } catch { /* token 无效视为匿名 */ }
 
     const post = await prisma.communityPost.findUnique({
       where: { id },
@@ -213,6 +210,11 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: '帖子不存在' })
     }
 
+    // 非公开状态：仅作者本人可看（待审/已驳回），其他人一律 404
+    if (post.status !== 'approved' && post.userId !== viewerId) {
+      return reply.status(404).send({ error: '帖子不存在' })
+    }
+
     // 增加浏览量
     await prisma.communityPost.update({
       where: { id },
@@ -229,7 +231,7 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
 
     const post = await prisma.communityPost.findUnique({
       where: { id },
-      select: { userId: true, category: true },
+      select: { userId: true, category: true, status: true },
     })
 
     if (!post) {
@@ -241,13 +243,15 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
 
     await prisma.communityPost.delete({ where: { id } })
 
-    // 减少分类计数
-    try {
-      await prisma.communityCategory.updateMany({
-        where: { name: post.category },
-        data: { postCount: { decrement: 1 } },
-      })
-    } catch {}
+    // 减少分类计数（仅公开过的帖子参与计数）
+    if (post.status === 'approved') {
+      try {
+        await prisma.communityCategory.updateMany({
+          where: { name: post.category },
+          data: { postCount: { decrement: 1 } },
+        })
+      } catch {}
+    }
 
     return { success: true }
   })
@@ -297,11 +301,39 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
 
   // 审核帖子
   fastify.patch('/api/community/admin/posts/:id/approve', { preHandler: [adminCheck] }, async (request: any, reply: any) => {
-    await prisma.communityPost.update({ where: { id: request.params.id }, data: { status: 'approved' } })
+    const post = await prisma.communityPost.findUnique({
+      where: { id: request.params.id },
+      select: { id: true, category: true, userId: true, status: true },
+    })
+    if (!post) return reply.status(404).send({ error: '帖子不存在' })
+    await prisma.communityPost.update({
+      where: { id: request.params.id },
+      data: { status: 'approved', reviewedBy: request.adminUser?.username || 'admin', reviewedAt: new Date() },
+    })
+    // 首次通过才计入分类计数 + 发放积分（驳回后重新通过的场景不重复计数/奖励）
+    if (post.status !== 'approved') {
+      try {
+        await prisma.communityCategory.updateMany({
+          where: { name: post.category },
+          data: { postCount: { increment: 1 } },
+        })
+      } catch (e) {
+        console.warn('[community-admin] 更新分类计数失败:', e instanceof Error ? e.message : e)
+      }
+      try {
+        const { rewardPostCreation } = await import('../../services/community/community-reward.service.js')
+        await rewardPostCreation(post.userId)
+      } catch (e) {
+        console.warn('[community-admin] 社区积分奖励失败:', e instanceof Error ? e.message : e)
+      }
+    }
     return { success: true }
   })
   fastify.patch('/api/community/admin/posts/:id/reject', { preHandler: [adminCheck] }, async (request: any, reply: any) => {
-    await prisma.communityPost.update({ where: { id: request.params.id }, data: { status: 'rejected' } })
+    await prisma.communityPost.update({
+      where: { id: request.params.id },
+      data: { status: 'rejected', reviewedBy: request.adminUser?.username || 'admin', reviewedAt: new Date() },
+    })
     return { success: true }
   })
 

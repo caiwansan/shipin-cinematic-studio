@@ -238,7 +238,10 @@ async function onFileChange(event: Event, type: 'image' | 'video') {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '上传失败')
-    const tag = type === 'image' ? `[img:${data.url}]` : `[video:${data.url}]`
+    // 兼容两种返回：{success,data:{url}} 与 {url}
+    const url = data.data?.url || data.url
+    if (!url) throw new Error('上传返回异常，未获取到文件地址')
+    const tag = type === 'image' ? `[img:${url}]` : `[video:${url}]`
     content.value = (content.value || '') + '\n' + tag + '\n'
     await nextTick()
     if (contentTextarea.value) {
@@ -264,6 +267,13 @@ async function submitPost() {
   try {
     const { getToken: _gtok } = require("~/utils/token-cache") as typeof import("~/utils/token-cache"); const token = _gtok()
     if (!token) { error.value = '请先登录'; return }
+    // 从内容提取 [img:url]/[video:url] 标记 → media 数组（详情页图库/OG 图使用）
+    const media: Array<{ type: 'image' | 'video'; url: string; thumbnail?: string }> = []
+    const imgRe = /\[img:([^\]]+)\]/g
+    const vidRe = /\[video:([^\]]+)\]/g
+    let m: RegExpExecArray | null
+    while ((m = imgRe.exec(content.value))) { if (m[1] && m[1] !== 'undefined') media.push({ type: 'image', url: m[1] }) }
+    while ((m = vidRe.exec(content.value))) { if (m[1] && m[1] !== 'undefined') media.push({ type: 'video', url: m[1] }) }
     const res = await fetch('/api/community/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -272,11 +282,14 @@ async function submitPost() {
         content: content.value.trim(),
         category: category.value,
         tags: tags.value.trim(),
+        media,
       }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '发布失败')
-    router.push(`/community/post/${data.post.id}`)
+    // 已提交后台审核：跳详情页（作者本人可见待审帖）
+    error.value = ''
+    router.push(`/community/post/${data.post.id}?pending=1`)
   } catch (err: any) { error.value = err.message || '发布失败，请重试' }
   finally { submitting.value = false }
 }

@@ -115,7 +115,8 @@ async function uploadMedia(type: string) {
       body: fd,
     })
     const data = await res.json()
-    if (data.url) mediaUrls.value.push(data.url)
+    const url = data.data?.url || data.url
+    if (url) mediaUrls.value.push(url)
     input.value = ''
   } catch { error.value = '上传失败' }
   finally { uploading.value = false }

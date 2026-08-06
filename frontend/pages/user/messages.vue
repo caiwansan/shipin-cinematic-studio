@@ -181,7 +181,8 @@ async function uploadReplyImage(event: Event) {
       body: fd,
     })
     const data = await res.json()
-    if (data.url) replyImages.value.push(data.url)
+    const url = data.data?.url || data.url
+    if (url) replyImages.value.push(url)
   } catch {}
   input.value = ''
 }
