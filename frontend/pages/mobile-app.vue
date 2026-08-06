@@ -201,7 +201,7 @@
           <div class="mine-avatar">{{ myName.slice(0, 1) || '👤' }}</div>
           <div class="mine-info">
             <div class="mine-name">{{ myName || '未登录' }}</div>
-            <div class="mine-tier">{{ tierLabel }}</div>
+            <div class="mine-tier">{{ tierLabel }}<span v-if="tierExpiry" class="mine-tier-exp">{{ tierExpiry }}</span></div>
           </div>
           <span class="mine-arrow">›</span>
         </div>
@@ -283,6 +283,7 @@
 // 昆仑茶馆手机版 — 微信式四 Tab 聚合壳（茶馆 / 好友 / 社区 / 我的）
 // 复用 useKunlunTea 全部 IM 能力；社区/会员中心调原生 API；桌面版页面零改动
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { MEMBERSHIP_LABELS } from '~/constants/membership'
 
 // 登录保护：中间件拦截（SSR cookie 检查 + 客户端 token 校验），未登录跳手机版登录页
 // /mobile-login 为公开页，由页面自身处理登录后回跳
@@ -318,7 +319,8 @@ const isLoggedIn = computed(() => {
 const myName = ref('')
 const myAvatar = ref('')
 const myEmail = ref('')
-const tierLabel = ref('普通会员')
+const tierLabel = ref('')
+const tierExpiry = ref('')
 const walletBalance = ref('0')
 const credits = ref('0')
 const diamonds = ref('0')
@@ -648,9 +650,14 @@ async function loadMine() {
     else if (u?.username) myName.value = u.username
     if (u?.avatarUrl) myAvatar.value = u.avatarUrl
     if (u?.email) myEmail.value = u.email
-    if (u?.membership?.tier || j.membership?.tier) {
-      const t = u?.membership?.tier || j.membership?.tier
-      tierLabel.value = t === 'vip' ? 'VIP 会员' : t === 'svip' ? 'SVIP 会员' : '普通会员'
+    if (u?.memberTier || u?.membership?.tier || j?.memberTier || j?.membership?.tier) {
+      // ⭐ 会员等级唯一映射源 = constants/membership.ts（13 档全映射），与桌面版一致
+      const t = u?.memberTier || u?.membership?.tier || j?.memberTier || j?.membership?.tier
+      tierLabel.value = MEMBERSHIP_LABELS[t] || MEMBERSHIP_LABELS.free || t
+      const exp = u?.memberExpiresAt || j?.memberExpiresAt
+      tierExpiry.value = exp ? new Date(exp).getTime() > Date.now() ? ' · ' + new Date(exp).toLocaleDateString('zh-CN') + ' 到期' : ' · 已过期' : ''
+    } else {
+      tierLabel.value = MEMBERSHIP_LABELS.free || '体验版'
     }
   } catch { /* 未登录 */ }
   const p = readMyProfile()
@@ -971,6 +978,7 @@ if (typeof window !== 'undefined') {
 .mine-info { flex: 1; min-width: 0; }
 .mine-name { font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mine-tier { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+.mine-tier-exp { opacity: 0.65; margin-left: 4px; font-size: 11px; }
 .mine-arrow { font-size: 20px; opacity: 0.6; }
 .mine-assets {
   display: flex; background: #fff; border-radius: 12px; margin-top: 10px;
