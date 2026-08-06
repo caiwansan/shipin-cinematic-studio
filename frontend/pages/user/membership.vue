@@ -79,6 +79,11 @@
             <div class="pay-plan-name">{{ payInfo.planName }}</div>
             <div class="pay-amount">¥{{ payInfo.amount }}</div>
 
+            <!-- PAYMENT-BALANCE-FIRST-01：余额不足时显示自动抵扣差额提示 -->
+            <div v-if="payInfo.walletPaid > 0" class="pay-balance-deduct">
+              💰 账户余额自动抵扣 <b>¥{{ payInfo.walletPaid.toFixed(2) }}</b>，还需支付 <b>¥{{ payInfo.externalAmount.toFixed(2) }}</b>
+            </div>
+
             <div class="pay-method-list">
               <div
                 v-for="m in payInfo.methods"
@@ -194,6 +199,9 @@ const payInfo = reactive({
   planName: '',
   methods: [] as any[],
   paymentType: '',
+  walletPaid: 0,
+  externalAmount: 0,
+  balance: 0,
 })
 const selectedPlan = ref<any>(null)
 
@@ -292,6 +300,18 @@ async function upgradePlan(plan: any) {
       return
     }
 
+    if (res.ok && data) {
+      // PAYMENT-BALANCE-FIRST-01：余额直接支付成功，无需扫码
+      if (data.needPay === false && data.paidByBalance) {
+        upgradeMsg.value = `✅ 余额支付成功，已开通「${plan.name}」`
+        upgrading.value = false
+        showPay.value = false
+        fetchData()
+        setTimeout(() => { upgradeMsg.value = '' }, 6000)
+        return
+      }
+    }
+
     if (data.needPay) {
       selectedPlan.value = plan
       payInfo.orderId = data.orderId
@@ -300,6 +320,10 @@ async function upgradePlan(plan: any) {
       payInfo.planName = data.planName
       payInfo.methods = data.methods || []
       payInfo.paymentType = data.paymentType || ''
+      // PAYMENT-BALANCE-FIRST-01：差额支付提示（余额自动抵扣部分）
+      payInfo.walletPaid = data.walletPaid || 0
+      payInfo.externalAmount = data.externalAmount || 0
+      payInfo.balance = data.balance || 0
 
       // 电脑网站支付模式（跳转支付宝页面）
       if (data.paymentType === 'alipay_page' && data.payUrl) {
@@ -727,6 +751,17 @@ onUnmounted(() => {
   gap: 8px;
   margin-top: 12px;
 }
+.pay-balance-deduct {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: #34d399;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pay-balance-deduct b { color: #fff; }
 .pay-method-item {
   display: flex;
   align-items: center;

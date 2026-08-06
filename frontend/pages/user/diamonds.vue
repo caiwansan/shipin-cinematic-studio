@@ -44,19 +44,26 @@
         <div class="pay-methods">
           <p class="pay-methods-label">选择支付方式</p>
           <div class="pay-methods-row">
+            <!-- PAYMENT-BALANCE-FIRST-01 余额优先：余额足够时可直接余额支付 -->
+            <button v-if="walletBalance > 0"
+              @click="selectedMethod = 'wallet'; currentOrder = null; payMsg = ''"
+              :class="['pay-method-btn', selectedMethod === 'wallet' ? 'pay-method-btn--active' : '']">
+              <span class="pay-method-icon">💰</span>
+              余额支付（¥{{ walletBalance.toFixed(2) }}）
+            </button>
             <button v-for="pm in payMethods" :key="pm.method"
               @click="selectedMethod = pm.method; currentOrder = null; payMsg = ''"
               :class="['pay-method-btn', selectedMethod === pm.method ? 'pay-method-btn--active' : '']">
               <span class="pay-method-icon">{{ pm.method === 'wechat' ? '💚' : '💙' }}</span>
               {{ pm.name }}
             </button>
-            <div v-if="!payMethods.length" class="pay-methods-empty">暂无可用的支付方式，请联系管理员配置</div>
+            <div v-if="!payMethods.length && walletBalance <= 0" class="pay-methods-empty">暂无可用的支付方式，请联系管理员配置</div>
           </div>
         </div>
 
         <!-- 充值按钮 -->
         <button class="recharge-btn" :disabled="submitting" @click="createRecharge">
-          {{ submitting ? '创建订单中...' : `扫码支付 · ¥${selectedAmount}` }}
+          {{ submitting ? '创建订单中...' : (selectedMethod === 'wallet' ? `余额支付 · ¥${selectedAmount}` : `扫码支付 · ¥${selectedAmount}`) }}
         </button>
 
         <div v-if="payMsg" class="pay-msg" :class="payMsgOk ? 'pay-msg--ok' : 'pay-msg--err'">{{ payMsg }}</div>
@@ -155,6 +162,8 @@ const submitting = ref(false)
 const currentOrder = ref<any>(null)
 const payMsg = ref('')
 const payMsgOk = ref(false)
+// PAYMENT-BALANCE-FIRST-01 余额优先支付
+const walletBalance = ref(0)
 
 // 支付弹窗
 const showPayModal = ref(false)
@@ -171,7 +180,18 @@ function formatTime(t: string) {
   } catch { return t || '' }
 }
 
-const methodText = (m: string) => m === 'wechat' ? '微信' : '支付宝'
+const methodText = (m: string) => m === 'wechat' ? '微信' : m === 'wallet' ? '余额' : '支付宝'
+
+// PAYMENT-BALANCE-FIRST-01：加载账户余额（余额支付选项数据源）
+async function loadWalletBalance() {
+  try {
+    const res = await fetch('/api/wallet', { headers: { Authorization: `Bearer ${token()}` } })
+    if (res.ok) {
+      const data = await res.json()
+      walletBalance.value = data.data?.balance || 0
+    }
+  } catch { /* ignore */ }
+}
 
 async function loadDiamonds() {
   try {
@@ -220,6 +240,14 @@ async function createRecharge() {
     const data = await res.json()
     if (res.ok && data.data) {
       currentOrder.value = data.data
+      // PAYMENT-BALANCE-FIRST-01：余额直接支付成功（无需扫码）
+      if (data.data.status === 'paid' && data.data.paidByBalance) {
+        payMsg.value = `✅ 余额支付成功，${data.data.coins} 钻石已到账`
+        payMsgOk.value = true
+        loadDiamonds()
+        loadWalletBalance()
+        return
+      }
       // 密钥模式 native 支付 → 弹窗扫码 + 轮询
       const native = data.data.codeUrl || data.data.qrCode || data.data.paymentUrl
       if (native) {
@@ -299,6 +327,7 @@ function closePayModal() {
 onMounted(() => {
   loadDiamonds()
   loadPayMethods()
+  loadWalletBalance()
 })
 
 onBeforeUnmount(() => {

@@ -574,6 +574,46 @@ export default async function memberRoutes(fastify: FastifyInstance) {
       })
     }
 
+    // ── PAYMENT-BALANCE-FIRST-01：余额优先——余额足够直接扣余额激活 VIP，无需跳转外部支付 ──
+    if (finalAmount > 0) {
+      const { evaluateBalanceFirst, completeWalletPayment } = await import('../services/payment/balance-first.service.js')
+      const balanceEval = await evaluateBalanceFirst(userId, finalAmount)
+      if (balanceEval.mode === 'wallet') {
+        const ok = await completeWalletPayment(order.id, userId, finalAmount)
+        if (ok) {
+          // 统一 Provision 激活 VIP
+          const { provisionFromPayment } = await import('../services/commerce/commerce-provision.service.js')
+          await provisionFromPayment(order, 'wallet_balance', new Date())
+          return {
+            needPay: false,
+            paidByBalance: true,
+            orderId: order.id,
+            orderNo,
+            amount: finalAmount,
+            planName: plan.name,
+            vipCouponDiscount,
+            method: 'wallet',
+            walletPaid: finalAmount,
+            externalAmount: 0,
+          }
+        }
+      }
+      // 余额不足：订单记录余额抵扣额，差额走微信/支付宝
+      if (balanceEval.walletPaid > 0) {
+        await prisma.paymentOrder.update({
+          where: { id: order.id },
+          data: {
+            walletPaid: balanceEval.walletPaid,
+            remark: `会员「${plan.name}」余额抵扣 ¥${balanceEval.walletPaid.toFixed(2)}，差额 ¥${balanceEval.externalAmount.toFixed(2)}`,
+          },
+        })
+      }
+      // 保留余额信息给前端展示
+      ;(order as any).walletPaid = balanceEval.walletPaid
+      ;(order as any).externalAmount = balanceEval.externalAmount
+      ;(order as any).balance = balanceEval.balance
+    }
+
     // 只保留支付通道（alipay 和 wechat），过滤掉 oauth/短信等非支付配置
     const payChannels = secretAvailable.filter(s => s.channel === 'wechat' || s.channel === 'alipay')
 
@@ -604,6 +644,9 @@ export default async function memberRoutes(fastify: FastifyInstance) {
       vipCouponDiscount,
       paymentType: 'select',
       methods: uniqueMethods,
+      walletPaid: (order as any).walletPaid || 0,
+      externalAmount: (order as any).externalAmount || 0,
+      balance: (order as any).balance || 0,
     }
   })
 
@@ -643,7 +686,8 @@ export default async function memberRoutes(fastify: FastifyInstance) {
         const result = await provider.createOrder({
           outTradeNo: payOrder.orderNo,
           description: `${payOrder.planType || 'VIP'} ¥${payOrder.amount}`,
-          amount: payOrder.amount,
+          // PAYMENT-BALANCE-FIRST-01：差额支付 → 外部只付余额抵扣后的差额
+          amount: Math.round((payOrder.amount - (payOrder.walletPaid || 0)) * 100) / 100,
           notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
           returnUrl: 'https://aigc.fushtn.com/user/center',
         })
@@ -662,7 +706,8 @@ export default async function memberRoutes(fastify: FastifyInstance) {
         const result = await createWxpayNativeQrCode({
           outTradeNo: payOrder.orderNo,
           description: `${payOrder.planType || 'VIP'} ¥${payOrder.amount}`,
-          totalAmount: payOrder.amount,
+          // PAYMENT-BALANCE-FIRST-01：差额支付 → 外部只付余额抵扣后的差额
+          totalAmount: Math.round((payOrder.amount - (payOrder.walletPaid || 0)) * 100) / 100,
           notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
         })
         await prisma.paymentOrder.update({ where: { id: orderId }, data: { method: 'wechat' } })

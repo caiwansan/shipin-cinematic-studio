@@ -803,6 +803,7 @@ model RechargeOrder {
   planLevel   String?
   coins       Int
   amount      Float
+  walletPaid  Float      @default(0) @map("wallet_paid") // PAYMENT-BALANCE-FIRST-01 余额抵扣金额
   status      String     @default("pending")
   payMethod   String?
   accountName String?
@@ -1594,6 +1595,7 @@ model PaymentOrder {
   currency       String    @default("CNY")
   coins          Int
   method         String
+  walletPaid     Float     @default(0) @map("wallet_paid") // PAYMENT-BALANCE-FIRST-01 余额抵扣金额（差额支付时 >0）
   status         String    @default("pending")
   planType       String?
   prepayId       String?

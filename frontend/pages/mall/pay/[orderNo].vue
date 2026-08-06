@@ -18,6 +18,16 @@
       <!-- 选择支付方式 -->
       <div class="mt-6 space-y-3">
         <h2 class="text-sm font-semibold text-white">选择支付方式</h2>
+        <!-- PAYMENT-BALANCE-FIRST-01：余额足够时可直接余额支付 -->
+        <div v-if="walletBalance > 0" class="mb-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-left">
+          <p class="text-xs text-emerald-400/80">账户余额 <b class="text-emerald-400">¥{{ walletBalance.toFixed(2) }}</b></p>
+          <button @click="doPay('wallet')" :disabled="loading"
+            class="mt-2 w-full p-4 rounded-xl border transition text-center hover:border-emerald-500 hover:bg-emerald-600/10 border-emerald-500/40 bg-emerald-600/10">
+            <span class="text-2xl">💰</span>
+            <div class="text-sm text-white mt-1">余额支付</div>
+          </button>
+          <p class="text-[11px] text-gray-500 mt-1 text-center">余额不足时将自动使用微信/支付宝支付差额</p>
+        </div>
         <div class="grid grid-cols-2 gap-3">
           <button @click="doPay('wechat')"
             :disabled="loading"
@@ -82,6 +92,8 @@ const router = useRouter()
 const order = ref<any>(null)
 const loading = ref(false)
 const error = ref('')
+// PAYMENT-BALANCE-FIRST-01 余额优先
+const walletBalance = ref(0)
 
 // 支付弹窗状态
 const showQr = ref(false)
@@ -105,6 +117,18 @@ async function fetchOrder() {
   } catch (e) { console.error(e) }
 }
 
+// PAYMENT-BALANCE-FIRST-01：加载账户余额（余额支付按钮数据源）
+async function loadWalletBalance() {
+  try {
+    const token = getToken()
+    const res = await fetch('/api/wallet', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    if (res.ok) {
+      const data = await res.json()
+      walletBalance.value = data.data?.balance || 0
+    }
+  } catch { /* ignore */ }
+}
+
 async function doPay(method: string) {
   loading.value = true
   error.value = ''
@@ -120,6 +144,20 @@ async function doPay(method: string) {
       error.value = data.error || '获取支付信息失败'
       loading.value = false
       return
+    }
+
+    // PAYMENT-BALANCE-FIRST-01：余额直接支付成功，无需扫码
+    if (data.data?.status === 'paid' && data.data.paidByBalance) {
+      error.value = ''
+      loading.value = false
+      alert(`✅ 余额支付成功，共支付 ¥${Number(data.data.amount).toFixed(2)}`)
+      router.push('/mall/orders')
+      return
+    }
+
+    // 差额支付：余额自动抵扣提示
+    if (data.data?.walletPaid > 0) {
+      error.value = `💰 余额已自动抵扣 ¥${Number(data.data.walletPaid).toFixed(2)}，还需支付 ¥${Number(data.data.externalAmount || 0).toFixed(2)}`
     }
 
     amount.value = Number(data.data.amount)
@@ -227,7 +265,10 @@ function closeQr() {
   showQr.value = false
 }
 
-onMounted(fetchOrder)
+onMounted(() => {
+  fetchOrder()
+  loadWalletBalance()
+})
 onUnmounted(stopPoll)
 </script>
 

@@ -1,5 +1,12 @@
 import type { ApiResponse } from '../contracts/api/base.js';
 import { CareerAgentService } from '../services/enterprise/workflow/career-agent.service.js';
+// PAYMENT-BALANCE-FIRST-01 余额优先支付
+import {
+  evaluateBalanceFirst,
+  completeWalletPayment,
+  settleWalletDeduction,
+  grantRechargeCoins,
+} from '../services/payment/balance-first.service.js';
 
 /**
  * 遮盖密钥中间部分，仅用于 UI 显示，不用于实际解密/签名。
@@ -50,6 +57,10 @@ function generateOrderNo(): string {
   const rand = Math.random().toString(36).substring(2, 8).toUpperCase()
   return `CZ${date}${rand}`
 }
+
+// ─── PAYMENT-BALANCE-FIRST-01 余额优先支付（掌柜 2026-08-06 指令）───
+// 所有付款（VIP/订阅套餐、充值钻石、商城购物）先扣账户余额；余额不足时差额走微信/支付宝
+// 公共实现见 src/services/payment/balance-first.service.ts（payment.ts 与 mall-public.ts 共用）
 
 export default async function paymentRoutes(fastify: FastifyInstance) {
   // ============================================================
@@ -271,8 +282,89 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     if (!amount || amount <= 0) {
       return reply.status(400).send({ error: '请输入有效的充值金额' })
     }
-    if (!['wechat', 'alipay'].includes(method)) {
+    // PAYMENT-BALANCE-FIRST-01：支持 wallet（余额直接支付）；wechat/alipay 自动余额优先，不足付差额
+    if (!['wechat', 'alipay', 'wallet'].includes(method)) {
       return reply.status(400).send({ error: '不支持的支付方式' })
+    }
+
+    // 钻石兑换比例：1 元 = N 钻（SystemConfig.diamond_exchange_rate，后台可配，默认 10 = 1:10）
+    const rateCfg = await prisma.systemConfig.findUnique({ where: { key: 'diamond_exchange_rate' } })
+    const diamondRate = Math.max(1, Number(rateCfg?.value || 10) || 10)
+    const coins = Math.floor(amount * diamondRate)
+    const total = Math.round(Number(amount) * 100) / 100
+
+    // ─── 余额优先评估 ───
+    const balanceEval = await evaluateBalanceFirst(userId, total)
+    const canWallet = balanceEval.mode === 'wallet'
+
+    // 显式选余额支付：余额不足直接报错（不自动差额，用户可选微信/支付宝）
+    if (method === 'wallet') {
+      if (!canWallet) {
+        return reply.status(400).send({ error: `余额不足，当前余额 ¥${balanceEval.balance.toFixed(2)}，请选择微信或支付宝支付` })
+      }
+      // 余额直接支付：创建订单 + 扣余额 + 到账钻石
+      const order = await prisma.paymentOrder.create({
+        data: {
+          userId,
+          orderNo: generateOrderNo(),
+          type: 'credit',
+          amount: total,
+          coins,
+          method: 'wallet',
+          walletPaid: total,
+          status: 'pending',
+          remark: `余额支付充值 ¥${total}，获得 ${coins} 钻石`,
+        },
+      })
+      const ok = await completeWalletPayment(order.id, userId, total)
+      if (!ok) {
+        return reply.status(400).send({ error: '余额不足，支付失败' })
+      }
+      await grantRechargeCoins(order, 'wallet_balance', new Date(), '余额支付')
+      return toApiResponse({
+        orderId: order.id,
+        orderNo: order.orderNo,
+        amount: order.amount,
+        coins: order.coins,
+        method: 'wallet',
+        status: 'paid',
+        paidByBalance: true,
+        walletPaid: total,
+        externalAmount: 0,
+      }) satisfies ApiResponse<unknown>
+    }
+
+    // 微信/支付宝：余额够 → 自动余额支付；不够 → 差额外部支付（余额部分回调成功后扣）
+    if (canWallet) {
+      const order = await prisma.paymentOrder.create({
+        data: {
+          userId,
+          orderNo: generateOrderNo(),
+          type: 'credit',
+          amount: total,
+          coins,
+          method: 'wallet',
+          walletPaid: total,
+          status: 'pending',
+          remark: `余额支付充值 ¥${total}，获得 ${coins} 钻石（自动余额优先）`,
+        },
+      })
+      const ok = await completeWalletPayment(order.id, userId, total)
+      if (!ok) {
+        return reply.status(400).send({ error: '余额不足，支付失败' })
+      }
+      await grantRechargeCoins(order, 'wallet_balance_auto', new Date(), '余额支付')
+      return toApiResponse({
+        orderId: order.id,
+        orderNo: order.orderNo,
+        amount: order.amount,
+        coins: order.coins,
+        method: 'wallet',
+        status: 'paid',
+        paidByBalance: true,
+        walletPaid: total,
+        externalAmount: 0,
+      }) satisfies ApiResponse<unknown>
     }
 
     // 检查支付方式是否启用（兼容 PaymentSecret 密钥模式和 PaymentConfig 收款码模式）
@@ -290,10 +382,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: '该支付方式未启用' })
     }
 
-    // 钻石兑换比例：1 元 = N 钻（SystemConfig.diamond_exchange_rate，后台可配，默认 10 = 1:10）
-    const rateCfg = await prisma.systemConfig.findUnique({ where: { key: 'diamond_exchange_rate' } })
-    const diamondRate = Math.max(1, Number(rateCfg?.value || 10) || 10)
-    const coins = Math.floor(amount * diamondRate)
+    // 余额不足 → 差额外部支付：订单记录余额抵扣额，外部只付差额，回调成功后再扣余额
+    const externalAmount = balanceEval.externalAmount
+    const walletPaid = balanceEval.walletPaid
 
     // 创建订单
     const order = await prisma.paymentOrder.create({
@@ -301,15 +392,16 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         userId,
         orderNo: generateOrderNo(),
         type: 'credit',
-        amount,
+        amount: total,
         coins,
         method,
+        walletPaid,
         status: 'pending',
-        remark: `用户充值 ¥${amount}，获得 ${coins} 钻石`,
+        remark: `用户充值 ¥${total}，获得 ${coins} 钻石（余额抵扣 ¥${walletPaid.toFixed(2)}，${method === 'wechat' ? '微信' : '支付宝'}支付 ¥${externalAmount.toFixed(2)}）`,
       },
     })
 
-    // ─── 密钥模式：生成 native 支付二维码（与 VIP checkout 同一套引擎）───
+    // ─── 密钥模式：生成 native 支付二维码（金额 = 差额）───
     let paymentUrl: string | null = null
     let qrCode: string | null = null
     let codeUrl: string | null = null
@@ -334,7 +426,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
             const result = await provider.createOrder({
               outTradeNo: order.orderNo,
               description: `充值 ${coins} 钻石 ¥${amount}`,
-              amount,
+              amount: externalAmount,
               notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
               returnUrl: 'https://aigc.fushtn.com/user/diamonds',
             })
@@ -347,7 +439,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
             const result = await createWxpayNativeQrCode({
               outTradeNo: order.orderNo,
               description: `充值 ${coins} 钻石 ¥${amount}`,
-              totalAmount: amount,
+              totalAmount: externalAmount,
               notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
             })
             codeUrl = result.codeUrl || null
@@ -373,6 +465,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       coins: order.coins,
       method: order.method,
       status: order.status,
+      walletPaid,
+      externalAmount,
       paymentUrl,
       qrCode,
       codeUrl,
@@ -423,8 +517,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   })
 
   // 统一下单逻辑：SubscriptionPlan → PaymentOrder（planType=productCode）→ 支付链接/二维码
+  // PAYMENT-BALANCE-FIRST-01：余额优先——够则直接扣余额完成；不足则差额走微信/支付宝（余额部分回调成功后扣）
   async function createCheckoutOrder(userId: string, productCode: string, method: string, reply: any) {
-    const validMethod = method === 'wechat' ? 'wechat' : 'alipay'
+    const validMethod = method === 'wechat' ? 'wechat' : method === 'wallet' ? 'wallet' : 'alipay'
 
     const plan = await prisma.subscriptionPlan.findUnique({ where: { code: productCode } })
     if (!plan) {
@@ -440,9 +535,59 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
     // 创建支付订单（统一 PaymentOrder，planType = productCode）
     // MEMBER-CENTER-03.3 隔离铁律：订阅/套餐订单 coins 必须 = 0（购买 VIP/套餐 ≠ 充值钻石）
-    // 钻石只在 type=credit 充值链路产生；套餐赠送积分走 provision 的 productMeta.coins（type=reward）
-    const amount = plan.price || 9.9
+    const amount = Math.round((plan.price || 9.9) * 100) / 100
     const orderNo = generateOrderNo()
+
+    // ─── 余额优先评估 ───
+    const balanceEval = await evaluateBalanceFirst(userId, amount)
+    const canWallet = balanceEval.mode === 'wallet'
+
+    // 显式选余额支付：余额不足直接报错
+    if (validMethod === 'wallet') {
+      if (!canWallet) {
+        return reply.status(400).send({ error: `余额不足，当前余额 ¥${balanceEval.balance.toFixed(2)}，请选择微信或支付宝支付` })
+      }
+      const order = await prisma.paymentOrder.create({
+        data: {
+          userId, orderNo, type: 'subscription', amount, coins: 0,
+          method: 'wallet', walletPaid: amount, status: 'pending',
+          planType: productCode, remark: `${plan.name} ¥${amount}/月（余额支付）`,
+        },
+      })
+      const ok = await completeWalletPayment(order.id, userId, amount)
+      if (!ok) return reply.status(400).send({ error: '余额不足，支付失败' })
+      const { provisionFromPayment } = await import('../services/commerce/commerce-provision.service.js')
+      await provisionFromPayment(order, 'wallet_balance', new Date())
+      return toApiResponse({
+        orderId: order.id, orderNo: order.orderNo, amount: order.amount,
+        status: 'paid', planType: order.planType, method: 'wallet',
+        paidByBalance: true, walletPaid: amount, externalAmount: 0,
+      }) satisfies ApiResponse<unknown>
+    }
+
+    // 微信/支付宝：余额够 → 自动余额支付（无需扫码）
+    if (canWallet) {
+      const order = await prisma.paymentOrder.create({
+        data: {
+          userId, orderNo, type: 'subscription', amount, coins: 0,
+          method: 'wallet', walletPaid: amount, status: 'pending',
+          planType: productCode, remark: `${plan.name} ¥${amount}/月（自动余额优先）`,
+        },
+      })
+      const ok = await completeWalletPayment(order.id, userId, amount)
+      if (!ok) return reply.status(400).send({ error: '余额不足，支付失败' })
+      const { provisionFromPayment } = await import('../services/commerce/commerce-provision.service.js')
+      await provisionFromPayment(order, 'wallet_balance_auto', new Date())
+      return toApiResponse({
+        orderId: order.id, orderNo: order.orderNo, amount: order.amount,
+        status: 'paid', planType: order.planType, method: 'wallet',
+        paidByBalance: true, walletPaid: amount, externalAmount: 0,
+      }) satisfies ApiResponse<unknown>
+    }
+
+    // 余额不足 → 差额外部支付
+    const walletPaid = balanceEval.walletPaid
+    const externalAmount = balanceEval.externalAmount
     const order = await prisma.paymentOrder.create({
       data: {
         userId,
@@ -451,13 +596,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         amount,
         coins: 0,
         method: validMethod,
+        walletPaid,
         status: 'pending',
         planType: productCode,
-        remark: `${plan.name} ¥${amount}/月`,
+        remark: `${plan.name} ¥${amount}/月（余额抵扣 ¥${walletPaid.toFixed(2)}，${validMethod === 'wechat' ? '微信' : '支付宝'}支付 ¥${externalAmount.toFixed(2)}）`,
       },
     })
 
-    // 调用支付宝/微信支付生成支付链接
+    // 调用支付宝/微信支付生成支付链接（金额 = 差额）
     let paymentUrl: string | null = null
     let qrCode: string | null = null
     let expiresAt: string | null = null
@@ -484,7 +630,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
             const result = await provider.createOrder({
               outTradeNo: orderNo,
               description: `${plan.name} ¥${amount}/月`,
-              amount,
+              amount: externalAmount,
               notifyUrl: 'https://aigc.fushtn.com/api/payment/alipay/notify',
               returnUrl: 'https://aigc.fushtn.com/workspace/job',
             })
@@ -505,7 +651,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
             const result = await createWxpayNativeQrCode({
               outTradeNo: orderNo,
               description: `${plan.name} ¥${amount}/月`,
-              totalAmount: amount,
+              totalAmount: externalAmount,
               notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
             })
             qrCode = result.codeUrl || null
@@ -523,6 +669,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       status: order.status,
       planType: order.planType,
       method: validMethod,
+      walletPaid,
+      externalAmount,
       paymentUrl,
       qrCode,
       expiresAt,
@@ -550,6 +698,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
     // 确认到账
     const now = new Date()
+    // PAYMENT-BALANCE-FIRST-01：差额支付（余额部分+线下转账）→ 确认时扣除余额抵扣部分
+    await settleWalletDeduction(order)
     await prisma.paymentOrder.update({
       where: { id: orderId },
       data: { status: 'paid', payTime: now, confirmAdminId: adminId, confirmTime: now },
@@ -1109,6 +1259,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         if (payOrder.type === 'credit') {
           await handleCreditRecharge(payOrder, parsed.tradeNo, parsed.paidAt || new Date())
         } else {
+          // PAYMENT-BALANCE-FIRST-01：差额支付成功 → 扣余额抵扣部分
+          await settleWalletDeduction(payOrder)
           await prisma.paymentOrder.update({
             where: { id: payOrder.id },
             data: { status: 'paid', payTime: parsed.paidAt || new Date() },
@@ -1190,6 +1342,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           if (payOrder.type === 'credit') {
             await handleCreditRecharge(payOrder, transactionId || '', new Date())
           } else {
+            // PAYMENT-BALANCE-FIRST-01：差额支付成功 → 扣余额抵扣部分
+            await settleWalletDeduction(payOrder)
             await prisma.paymentOrder.update({
               where: { id: payOrder.id },
               data: { status: 'paid', payTime: new Date() },
@@ -1246,35 +1400,20 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 /** MEMBER-CENTER-03: 充值订单回调自动到账钻石（幂等：仅 pending→paid 时发放） */
 async function handleCreditRecharge(payOrder: any, tradeNo: string, payTime: Date) {
   try {
+    // PAYMENT-BALANCE-FIRST-01：差额支付成功 → 先扣余额抵扣部分
+    await settleWalletDeduction(payOrder)
     await prisma.paymentOrder.update({
       where: { id: payOrder.id },
       data: { status: 'paid', payTime, outTradeNo: tradeNo || undefined },
     })
-    const coins = payOrder.coins || 0
-    if (coins > 0) {
-      // 加钻石（membership.credits 是用户积分余额真源）
-      await prisma.membership.upsert({
-        where: { userId: payOrder.userId },
-        create: { userId: payOrder.userId, credits: coins },
-        update: { credits: { increment: coins } },
-      }).catch((e: any) => console.error('[recharge] membership upsert 失败:', e.message))
-      // 记流水
-      await prisma.coinLog.create({
-        data: {
-          userId: payOrder.userId,
-          amount: coins,
-          type: 'recharge',
-          remark: `充值 ${coins} 钻石 (¥${payOrder.amount}，${payOrder.method === 'wechat' ? '微信' : '支付宝'})`,
-          relatedId: payOrder.id,
-        },
-      }).catch((e: any) => console.error('[recharge] coinLog 失败:', e.message))
-    }
-    console.log(`[recharge] 订单 ${payOrder.orderNo} 到账 ${coins} 钻石 (tradeNo=${tradeNo})`)
+    await grantRechargeCoins(payOrder, tradeNo, payTime, payOrder.method === 'wechat' ? '微信' : '支付宝')
+    console.log(`[recharge] 订单 ${payOrder.orderNo} 到账 ${payOrder.coins} 钻石 (tradeNo=${tradeNo})`)
   } catch (err: any) {
     console.error('[recharge] 自动到账失败:', err.message)
   }
 }
 
+/** PAYMENT-BALANCE-FIRST-01：差额支付回调成功后，扣除订单记录的余额抵扣部分（并发安全，扣到 0 为止） */
 /**
  * 处理商城订单支付回调（MALL 前缀）— MEMBER-CENTER-03.3 隔离：商城购物是独立业务
  * 幂等：PaymentOrder + RechargeOrder(支付流水) + MallOrder(业务单) 三表状态推进
@@ -1293,6 +1432,8 @@ async function handleMallPayment(orderNo: string, tradeNo: string, payTime: Date
     // 2. 支付流水（RechargeOrder，MALL 共用支付流水表，coins=0/planLevel=null 无权益）
     const ro = await prisma.rechargeOrder.findFirst({ where: { orderNo } })
     if (ro && ro.status === 'pending') {
+      // PAYMENT-BALANCE-FIRST-01：商城差额支付成功 → 扣余额抵扣部分
+      await settleWalletDeduction(ro)
       await prisma.rechargeOrder.update({
         where: { id: ro.id },
         data: { status: 'paid', payTime, tradeNo },
