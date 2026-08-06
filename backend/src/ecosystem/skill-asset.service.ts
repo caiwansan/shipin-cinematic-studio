@@ -22,6 +22,8 @@ export interface SkillAssetInput {
   title?: string
   profile: any
   quality?: any
+  /** S3.4.2-C: 面试评估结果（存在则额外生成 interview-report.pdf, IE4） */
+  interview?: any
 }
 
 export interface SkillAssetResult {
@@ -88,6 +90,45 @@ async function buildReportPdf(analysis: any): Promise<Buffer> {
   return done
 }
 
+/** 生成 interview-report.pdf（S3.4.2-C, IE4; 仅真实结构化数据） */
+async function buildInterviewReportPdf(analysis: any): Promise<Buffer> {
+  const PDFDocument = (await import('pdfkit')).default
+  const doc = new PDFDocument({ size: 'A4', margin: 40 })
+  const chunks: Buffer[] = []
+  const done = new Promise<Buffer>((resolve, reject) => {
+    doc.on('data', (c: Buffer) => chunks.push(c))
+    doc.on('end', () => resolve(Buffer.concat(chunks)))
+    doc.on('error', reject)
+  })
+  let useAsciiOnly = false
+  try {
+    doc.font(FONT_PATH)
+  } catch {
+    useAsciiOnly = true
+  }
+  const clean = (s: string) => (useAsciiOnly ? s.replace(/[^\x00-\x7F]/g, '_') : s)
+  const iv = analysis.interview || {}
+  const cleanArr = (arr: string[]) => (Array.isArray(arr) ? arr.map(clean) : [])
+
+  doc.fontSize(18).fillColor('#1a1a59').text('Interview Report (S3.4.2-C)')
+  doc.fontSize(9).fillColor('#666666').text(`Task: ${analysis.taskId} | GeneratedAt: ${analysis.generatedAt}`)
+  doc.moveDown()
+  const sections: [string, string[]][] = [
+    ['Overall', [clean(`Overall Score: ${iv.overallScore ?? '-'} / 100`), clean(`Hiring Recommendation: ${iv.hiringRecommendation || '-'}`)]],
+    ['Strengths', cleanArr(Array.isArray(iv.strengths) ? iv.strengths.map((s: string) => `- ${s}`) : ['-'])],
+    ['Concerns', cleanArr(Array.isArray(iv.concerns) ? iv.concerns.map((c: string) => `- ${c}`) : ['-'])],
+  ]
+  for (const [title, lines] of sections) {
+    doc.fontSize(13).fillColor('#1a1a59').text(title)
+    doc.fontSize(11).fillColor('#000000')
+    for (const line of lines) doc.text('  ' + line)
+    doc.moveDown()
+  }
+  doc.fontSize(8).fillColor('#888888').text('-- Kunlun AI Employee Alice Interview Evaluation (S3.4.2-C real pipeline) --')
+  doc.end()
+  return done
+}
+
 /**
  * 交付任务资产（Task 02）:
  * 1. candidate-analysis.json（真实结构化数据）
@@ -107,6 +148,7 @@ export async function deliverSkillAssets(input: SkillAssetInput): Promise<SkillA
     llmInvolved: false,
     profile: input.profile,
     quality: input.quality || null,
+    interview: input.interview || null,
   }
 
   // 1. JSON 资产
@@ -121,6 +163,14 @@ export async function deliverSkillAssets(input: SkillAssetInput): Promise<SkillA
     { fileName: jsonName, url: `/uploads/skill-assets/${taskId}/${jsonName}`, mimeType: 'application/json', size: fs.statSync(path.join(dir, jsonName)).size },
     { fileName: pdfName, url: `/uploads/skill-assets/${taskId}/${pdfName}`, mimeType: 'application/pdf', size: fs.statSync(path.join(dir, pdfName)).size },
   ]
+
+  // S3.4.2-C: 面试报告（IE4）
+  if (input.interview) {
+    const ivName = 'interview-report.pdf'
+    const ivBytes = await buildInterviewReportPdf(analysis)
+    fs.writeFileSync(path.join(dir, ivName), ivBytes)
+    files.push({ fileName: ivName, url: `/uploads/skill-assets/${taskId}/${ivName}`, mimeType: 'application/pdf', size: fs.statSync(path.join(dir, ivName)).size })
+  }
 
   // 3. Asset + UserAsset（复用现有模型, 零新表）
   // 注意: UserAsset.userId 外键指向 membership.userId（userasset_membership_fkey）→ 需先确认会员关系

@@ -89,4 +89,46 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'INTERNAL', message: e.message })
     }
   })
+
+  // S3.4.2-C: 真实面试评估（Skill LLM Tool, 经 Unified AI Gateway）
+  // 输入: { resume, interviewTranscript, jobRequirement } → DeepSeek → Schema 校验（IE2/IE3）
+  app.post('/api/internal/skill-tools/interview-evaluate', async (request: any, reply: any) => {
+    try {
+      if (!checkToken(request)) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' })
+      }
+      const body = request.body || {}
+      if (!body.interviewTranscript) {
+        return reply.code(400).send({ error: 'INTERVIEW_TRANSCRIPT_REQUIRED' })
+      }
+      const { buildInterviewPrompt, parseInterviewResult } = await import('../ecosystem/interview-parser.js')
+      const { unifiedAIGateway } = await import('../services/unified-ai-gateway.js')
+      const prompt = buildInterviewPrompt({
+        resume: body.resume,
+        interviewTranscript: body.interviewTranscript,
+        jobRequirement: body.jobRequirement,
+      })
+      const result = await unifiedAIGateway.invokeAI({
+        userId: '00000000-0000-4000-8000-0000000000ad',
+        projectId: '00000000-0000-4000-8000-000000000001',
+        agentType: 'orchestrator' as any,
+        capability: 'llm',
+        input: { messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ] },
+      }).catch((e: any) => ({ status: 'error' as const, error: e.message, output: null }))
+      if (result.status !== 'success' || !result.output?.text) {
+        return reply.send({ code: 0, data: { error: 'INTERVIEW_LLM_FAILED', message: result.error || 'NO_OUTPUT' } })
+      }
+      const parsed = parseInterviewResult(result.output.text)
+      if (!parsed) {
+        return reply.send({ code: 0, data: { error: 'INVALID_TOOL_RESULT' } })
+      }
+      return reply.send({ code: 0, data: { ...parsed, source: 'real', llmInvolved: true } })
+    } catch (e: any) {
+      request.log.error(e, 'internal interview-evaluate failed')
+      return reply.code(500).send({ error: 'INTERNAL', message: e.message })
+    }
+  })
 }

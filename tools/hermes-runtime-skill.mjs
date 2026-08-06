@@ -65,14 +65,20 @@ const TOOL_REGISTRY = {
     }
     return { ok: true, result: body.data }
   },
-  'interview.evaluate': (input = {}) => ({
-    ok: true,
-    result: {
-      verdict: 'PASS',
-      notes: 'mock interview evaluation',
-      inputHint: input,
-    },
-  }),
+  // S3.4.2-C: 真实面试评估（经后端内部路由 → Unified AI Gateway, CS2 同模式）
+  'interview.evaluate': async (input = {}) => {
+    const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/interview-evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
+      body: JSON.stringify({ resume: input.resume, interviewTranscript: input.interviewTranscript, jobRequirement: input.jobRequirement }),
+    }).catch(() => null)
+    if (!res) return { ok: false, error: 'INTERVIEW_BACKEND_UNREACHABLE' }
+    const body = await res.json().catch(() => ({}))
+    if (body.code !== 0 || body.data?.error) {
+      return { ok: false, error: body.data?.error || body.error || 'INTERVIEW_FAILED' }
+    }
+    return { ok: true, result: body.data }
+  },
   'mock-calc': (input = {}) => {
     const { a, b, op } = input
     if (op === 'add') return { ok: true, result: { value: Number(a) + Number(b) } }
