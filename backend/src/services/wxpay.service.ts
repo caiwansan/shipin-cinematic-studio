@@ -87,6 +87,7 @@ export async function createWxpayH5Order(params: {
   notifyUrl: string
   wapUrl?: string
   wapName?: string
+  clientIp?: string
 }): Promise<{ h5Url: string }> {
   const cfg = await getWxpayConfig()
   const amountFen = Math.round(params.totalAmount * 100)
@@ -98,7 +99,7 @@ export async function createWxpayH5Order(params: {
     notify_url: params.notifyUrl,
     amount: { total: amountFen, currency: 'CNY' },
     scene_info: {
-      payer_client_ip: '127.0.0.1',
+      payer_client_ip: params.clientIp || '127.0.0.1',
       h5_info: {
         type: 'Wap',
         app_url: params.wapUrl || 'https://aigc.fushtn.com',

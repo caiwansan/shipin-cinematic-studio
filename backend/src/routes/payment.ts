@@ -464,6 +464,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
                   notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
                   wapUrl: 'https://aigc.fushtn.com',
                   wapName: '昆仑镜',
+                  clientIp: (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || request.ip || '',
                 })
                 h5Url = result.h5Url || null
               } catch (h5Err: any) {
