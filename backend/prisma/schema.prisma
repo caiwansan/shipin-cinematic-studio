@@ -10822,3 +10822,40 @@ model ImFavorite {
   @@index([userId, createdAt])
   @@map("im_favorite")
 }
+
+// ============================================
+// IM-CHA-R10 群聊生态（2026-08-06 掌柜指令）
+// 群频道 = grp_<groupId>（channel_type=4 显式私有频道，与公共/私聊同模式）
+// 成员复用 imChannelMember（channelId=grp_<id>，role: 2=群主 1=管理员 0=成员）
+// ============================================
+
+model ImGroup {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  name      String   @db.Text // 群名称
+  intro     String   @default("") @map("intro") @db.Text // 群简介
+  avatarUrl String   @default("") @map("avatar_url") @db.Text // 群头像（可空）
+  ownerUid  String   @map("owner_uid") @db.Text // 群主（User UUID）
+  status    String   @default("active") @db.Text // active / dissolved
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUid])
+  @@map("im_group")
+}
+
+// 群管理申请流（R10：申请群管理；未来可扩展 type=join 申请入群）
+model ChatGroupApply {
+  id        String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  groupId   String    @map("group_id") @db.Text
+  uid       String    @db.Text // 申请人
+  type      String    @default("admin") @db.Text // admin=申请群管理
+  status    String    @default("pending") @db.Text // pending / approved / rejected
+  reason    String    @default("") @db.Text // 申请理由
+  handledBy String    @default("") @map("handled_by") @db.Text // 审批人 uid
+  createdAt DateTime  @default(now()) @map("created_at")
+  handledAt DateTime? @map("handled_at")
+
+  @@index([groupId, status])
+  @@index([uid, status])
+  @@map("chat_group_apply")
+}

@@ -16,7 +16,7 @@ const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
 const IM_WS_ADDR = process.env.IM_WS_ADDR || 'ws://127.0.0.1:5200'
 const IM_TOKEN_TTL_DAYS = 7
 // 合法 UUID 校验：机器人/外部平台 uid（kunlun_tea_bot、qq_*、wx_*）不是 UUID，传进 User.id 查询会 P2023
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // ── RTC (R11 语音/视频 1v1) ──
 // TURN/STUN：coturn 部署于本机，安全组放行 UDP 3478 + 49152-65535 后公网可达
@@ -37,7 +37,7 @@ export const PUBLIC_CHANNEL_ID = 'kl_public_tea'
 export const PUBLIC_CHANNEL_TYPE = 4
 
 // WuKongIM HTTP 客户端
-async function wkApi(path: string, body?: unknown) {
+export async function wkApi(path: string, body?: unknown) {
   const res = await fetch(`${IM_HTTP_ADDR}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -113,7 +113,7 @@ export async function restorePublicChannelSubscriptions() {
 }
 
 // ── 成员管理（业务侧维护，WuKongIM v1.2.6 无订阅者查询 API）──────
-async function ensureMember(opts: { channelId: string; channelType: number; uid: string; role?: number; name?: string; avatar?: string }) {
+export async function ensureMember(opts: { channelId: string; channelType: number; uid: string; role?: number; name?: string; avatar?: string }) {
   const exist = await prisma.imChannelMember.findUnique({
     where: { channelId_channelType_uid: { channelId: opts.channelId, channelType: opts.channelType, uid: opts.uid } },
   })
@@ -188,7 +188,7 @@ async function getTranslateKey(): Promise<string | null> {
 }
 
 /** 服务端代发消息（撤回通知等系统消息用） */
-async function serverSend(channelId: string, channelType: number, fromUid: string, contentType: number, content: any) {
+export async function serverSend(channelId: string, channelType: number, fromUid: string, contentType: number, content: any) {
   const payload = Buffer.from(JSON.stringify({ type: contentType, content })).toString('base64')
   return wkApi('/message/send', {
     channel_id: channelId,
@@ -302,7 +302,47 @@ export default async function imRoutes(fastify: FastifyInstance) {
       })
       .filter((d) => d.peerUid)
 
-    return { success: true, data: { public: publicChannels, groups: [], dms } }
+    // 我参与的群聊（grp_ 前缀私有频道 → ImGroup 业务表）
+    const groupMemberships = await prisma.imChannelMember.findMany({
+      where: { uid: userId, channelId: { startsWith: 'grp_' } },
+      orderBy: { joinedAt: 'desc' },
+      take: 50,
+    })
+    const groupIds = groupMemberships.map((m) => m.channelId.slice(4))
+    const groupRows = groupIds.length
+      ? await prisma.imGroup.findMany({ where: { id: { in: groupIds }, status: 'active' } })
+      : []
+    const groupMap = new Map(groupRows.map((g) => [g.id, g]))
+    const groupCounts = new Map<string, number>()
+    if (groupRows.length) {
+      const rows = await prisma.imChannelMember.groupBy({
+        by: ['channelId'],
+        where: { channelId: { in: groupRows.map((g) => `grp_${g.id}`) } },
+        _count: { uid: true },
+      })
+      for (const r of rows) groupCounts.set(r.channelId, r._count.uid)
+    }
+    const groups = groupMemberships
+      .map((m) => {
+        const g = groupMap.get(m.channelId.slice(4))
+        if (!g) return null
+        const role = m.role // 2 群主 / 1 管理员 / 0 成员
+        return {
+          id: m.channelId,
+          groupId: g.id,
+          type: m.channelType,
+          name: g.name,
+          desc: g.intro || `共 ${groupCounts.get(m.channelId) ?? 0} 位群友`,
+          avatar: g.avatarUrl,
+          kind: 'group',
+          groupRole: role,
+          ownerUid: g.ownerUid,
+          memberCount: groupCounts.get(m.channelId) ?? 0,
+        }
+      })
+      .filter((g): g is any => g !== null)
+
+    return { success: true, data: { public: publicChannels, groups, dms } }
   })
 
   // GET /api/im/channels/:id/members — 频道成员列表（SDK syncSubscribersCallback 数据源）

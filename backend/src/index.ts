@@ -42,6 +42,7 @@ import ticketExchangeRoutes from './routes/ticket-exchange.js'
 import pluginTicketRoutes from './routes/plugin-ticket.js'
 import healthRoutes from './routes/health.js'
 import imRoutes from './routes/im.js'
+import imGroupRoutes from './routes/im-groups.js'
 import imModerationRoutes from './routes/im-moderation.routes.js'
 import { prisma } from './utils/index.js'
 import siteConfigRoutes from './routes/site-config.js'
@@ -294,6 +295,7 @@ async function main() {
   registerSSEStream(app)
   await app.register(systemVersionRoutes)
   await app.register(imRoutes)
+  await app.register(imGroupRoutes)
   await app.register(imModerationRoutes)
   await app.register(redPacketRoutes)
   // 启动红包过期退回定时器（24h 未领完自动退回）
@@ -307,6 +309,8 @@ async function main() {
   try {
     const { restorePublicChannelSubscriptions } = await import('./routes/im.js')
     restorePublicChannelSubscriptions()
+    const { restoreGroupSubscriptions } = await import('./routes/im-groups.js')
+    restoreGroupSubscriptions()
   } catch (e) {
     console.warn('[昆仑茶馆] 启动恢复订阅未执行:', (e as Error).message)
   }

@@ -46,10 +46,10 @@
           </div>
         </div>
 
-        <!-- 我的频道（P1 预留） -->
+        <!-- 我的群（R10 群聊生态） -->
         <div class="side-group">
-          <div class="side-group-title">📁 我的频道</div>
-          <div v-if="!filteredGroups.length" class="side-empty">暂无频道 · 敬请期待</div>
+          <div class="side-group-title">👥 我的群 <button class="side-add-btn" title="创建群" @click.stop="openCreateGroup">＋</button></div>
+          <div v-if="!filteredGroups.length" class="side-empty">暂无群 · 点 ＋ 创建一个</div>
           <div
             v-for="ch in filteredGroups"
             :key="ch.id"
@@ -59,9 +59,10 @@
           >
             <span class="channel-icon">👥</span>
             <div class="channel-meta">
-              <span class="channel-name">{{ ch.name }}</span>
-              <span class="channel-desc">{{ ch.desc }}</span>
+              <span class="channel-name">{{ ch.name }}<span v-if="ch.groupRole === 2" class="role-badge">👑</span><span v-else-if="ch.groupRole === 1" class="role-badge">⭐</span></span>
+              <span class="channel-desc">{{ ch.memberCount ? `共 ${ch.memberCount} 位群友` : ch.desc }}</span>
             </div>
+            <span v-if="unreadMap[`${ch.type}:${ch.id}`]" class="unread-badge">{{ unreadMap[`${ch.type}:${ch.id}`] > 99 ? '99+' : unreadMap[`${ch.type}:${ch.id}`] }}</span>
           </div>
         </div>
 
@@ -104,12 +105,13 @@
         <template v-else>
           <div class="chat-head">
             <div class="chat-head-main">
-              <span class="chat-head-icon">{{ currentChannel.kind === 'dm' ? '👤' : '🏮' }}</span>
+              <span class="chat-head-icon">{{ currentChannel.kind === 'dm' ? '👤' : (currentChannel.kind === 'group' ? '👥' : '🏮') }}</span>
               <div>
                 <div class="chat-head-name">{{ currentChannel.name }}</div>
-                <div class="chat-head-sub">{{ members.length ? `共 ${members.length} 位茶客` : (currentChannel.kind === 'dm' ? '私聊' : '公共频道') }}</div>
+                <div class="chat-head-sub">{{ currentChannel.kind === 'group' ? `共 ${members.length} 位群友` : (members.length ? `共 ${members.length} 位茶客` : (currentChannel.kind === 'dm' ? '私聊' : '公共频道')) }}</div>
               </div>
             </div>
+            <button v-if="currentChannel.kind === 'group'" class="chat-head-action" @click="openGroupManager">⚙️ 群管理</button>
           </div>
           <div ref="msgListRef" class="msg-list">
             <div
@@ -264,6 +266,134 @@
           </div>
         </div>
       </Teleport>
+
+      <!-- ══ 创建群弹窗（R10） ══ -->
+      <div v-if="createGroupOpen" class="gift-modal-mask" @click.self="createGroupOpen = false">
+        <div class="gift-modal">
+          <div class="gift-modal-head">
+            <div class="gift-modal-title">👥 创建群</div>
+            <button class="gift-modal-close" @click="createGroupOpen = false">✕</button>
+          </div>
+          <div class="grp-form">
+            <label class="grp-label">群名称 <em>*</em></label>
+            <input v-model="createGroupName" class="grp-input" maxlength="30" placeholder="给群起个名字（30 字内）" />
+            <label class="grp-label">群简介</label>
+            <textarea v-model="createGroupIntro" class="grp-input grp-textarea" maxlength="200" placeholder="一句话介绍这个群（选填）"></textarea>
+            <div class="grp-tip">创建后「昆仑镜小管家」自动入群隐身执勤（敏感词自动处置）</div>
+            <div v-if="createGroupError" class="grp-error">{{ createGroupError }}</div>
+          </div>
+          <div class="gift-modal-foot">
+            <button class="gift-modal-cancel" @click="createGroupOpen = false">取消</button>
+            <button class="gift-modal-send" :disabled="createGroupBusy" @click="createGroup">{{ createGroupBusy ? '创建中…' : '创建' }}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 群管理弹窗（R10：群主/管理员/成员三级权限 + 申请流） ══ -->
+      <div v-if="groupManagerOpen" class="gift-modal-mask" @click.self="closeGroupManager">
+        <div class="gift-modal grp-manager-modal">
+          <div class="gift-modal-head">
+            <div class="gift-modal-title">⚙️ 群管理 · {{ groupDetail?.group?.name || '' }}</div>
+            <button class="gift-modal-close" @click="closeGroupManager">✕</button>
+          </div>
+
+          <div v-if="groupManagerTab === 'info'" class="grp-mgr-body">
+            <!-- 群信息 -->
+            <div class="grp-mgr-info">
+              <div class="grp-info-row"><span class="grp-info-key">群简介</span><span class="grp-info-val">{{ groupDetail?.group?.intro || '—' }}</span></div>
+              <div class="grp-info-row"><span class="grp-info-key">群主</span><span class="grp-info-val">{{ groupOwnerName }}</span></div>
+              <div class="grp-info-row"><span class="grp-info-key">成员</span><span class="grp-info-val">{{ groupDetail?.members?.length || 0 }} 位</span></div>
+            </div>
+
+            <!-- 我的角色操作 -->
+            <div class="grp-mgr-actions">
+              <button v-if="groupMyRole >= 1" class="grp-act" @click="groupManagerTab = 'members'">👥 成员管理</button>
+              <button v-if="groupMyRole >= 1" class="grp-act" @click="openGroupApplies">📋 申请审批<template v-if="pendingApplyCount"> ({{ pendingApplyCount }})</template></button>
+              <button v-if="groupMyRole >= 1" class="grp-act" @click="groupManagerTab = 'edit'">✏️ 修改群信息</button>
+              <button v-if="groupMyRole === 0" class="grp-act" @click="applyGroupAdmin">🙋 申请群管理</button>
+              <button v-if="groupMyRole === 2" class="grp-act grp-act-danger" @click="dissolveGroup">🗑️ 解散群</button>
+            </div>
+            <div v-if="groupMyRole === 2" class="grp-tip">群主可设/撤管理员、移出成员、审批申请、解散群</div>
+            <div v-else-if="groupMyRole === 1" class="grp-tip">管理员可邀请成员、移出普通成员、审批申请</div>
+            <div v-else class="grp-tip">向群主申请成为管理员，协助打理群聊</div>
+          </div>
+
+          <!-- 修改群信息 -->
+          <div v-else-if="groupManagerTab === 'edit'" class="grp-mgr-body">
+            <label class="grp-label">群名称</label>
+            <input v-model="groupEditName" class="grp-input" maxlength="30" />
+            <label class="grp-label">群简介</label>
+            <textarea v-model="groupEditIntro" class="grp-input grp-textarea" maxlength="200"></textarea>
+            <div v-if="groupEditError" class="grp-error">{{ groupEditError }}</div>
+            <div class="gift-modal-foot grp-mgr-foot">
+              <button class="gift-modal-cancel" @click="groupManagerTab = 'info'">返回</button>
+              <button class="gift-modal-send" :disabled="groupEditBusy" @click="updateGroup">{{ groupEditBusy ? '保存中…' : '保存' }}</button>
+            </div>
+          </div>
+
+          <!-- 成员管理 -->
+          <div v-else-if="groupManagerTab === 'members'" class="grp-mgr-body">
+            <div class="grp-mgr-toolbar">
+              <button class="grp-act" @click="groupManagerTab = 'invite'">➕ 邀请成员</button>
+              <span class="grp-mgr-count">共 {{ groupDetail?.members?.length || 0 }} 人</span>
+            </div>
+            <div v-for="m in groupDetail?.members || []" :key="m.uid" class="grp-member-row">
+              <div class="member-avatar"><img v-if="m.avatar" :src="m.avatar" alt="" /><span v-else>{{ (m.name || '?').slice(0, 1) }}</span></div>
+              <div class="member-meta grp-member-meta">
+                <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.uid === 'kunlun_tea_bot'" class="bot-badge">🤖 AI 客服</span><span v-else-if="m.role === 2" class="role-badge">👑 群主</span><span v-else-if="m.role === 1" class="role-badge">⭐ 管理员</span></span>
+                <span class="member-sub">{{ m.isBot ? '隐身执勤 · 敏感词自动处置' : (m.online ? '在线' : '离线') }}</span>
+              </div>
+              <div v-if="groupMyRole === 2 && m.uid !== tea.userId.value && m.uid !== 'kunlun_tea_bot'" class="grp-member-ops">
+                <button v-if="m.role === 1" class="grp-op" title="取消管理员" @click="setMemberRole(m.uid, 0)">📉</button>
+                <button v-else class="grp-op" title="设为管理员" @click="setMemberRole(m.uid, 1)">⭐</button>
+                <button class="grp-op" title="移出群" @click="kickMember(m.uid)">🚪</button>
+              </div>
+              <div v-else-if="groupMyRole === 1 && m.role === 0 && m.uid !== 'kunlun_tea_bot'" class="grp-member-ops">
+                <button class="grp-op" title="移出群" @click="kickMember(m.uid)">🚪</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 邀请成员 -->
+          <div v-else-if="groupManagerTab === 'invite'" class="grp-mgr-body">
+            <div class="grp-mgr-toolbar">
+              <button class="grp-act" @click="groupManagerTab = 'members'">← 返回成员</button>
+              <span class="grp-mgr-count">从茶客名录选择（已入群自动跳过）</span>
+            </div>
+            <div class="grp-invite-search"><input v-model="groupInviteSearch" class="grp-input" placeholder="搜茶客昵称…" /></div>
+            <div v-for="u in filteredInviteUsers" :key="u.id" class="grp-member-row">
+              <div class="member-avatar"><img v-if="u.avatar" :src="u.avatar" alt="" /><span v-else>{{ (u.name || '?').slice(0, 1) }}</span></div>
+              <div class="member-meta grp-member-meta">
+                <span class="member-name">{{ u.name || shortUid(u.id) }}</span>
+                <span class="member-sub">{{ u.online ? '在线' : '离线' }}</span>
+              </div>
+              <button v-if="!groupMemberUidSet.has(u.id)" class="grp-act grp-invite-btn" :disabled="groupInviteBusy" @click="inviteMember(u.id)">邀请</button>
+              <span v-else class="grp-invited">已入群 ✓</span>
+            </div>
+            <div v-if="!filteredInviteUsers.length" class="grp-mgr-empty">茶客名录暂无其他茶客</div>
+          </div>
+
+          <!-- 申请审批 -->
+          <div v-else-if="groupManagerTab === 'applies'" class="grp-mgr-body">
+            <div class="grp-mgr-toolbar">
+              <button class="grp-act" @click="groupManagerTab = 'info'">← 返回</button>
+              <span class="grp-mgr-count">群管理申请</span>
+            </div>
+            <div v-for="a in groupApplies" :key="a.id" class="grp-member-row">
+              <div class="member-avatar"><img v-if="a.avatar" :src="a.avatar" alt="" /><span v-else>{{ (a.name || '?').slice(0, 1) }}</span></div>
+              <div class="member-meta grp-member-meta">
+                <span class="member-name">{{ a.name || shortUid(a.uid) }}</span>
+                <span class="member-sub">{{ a.status === 'pending' ? (a.reason ? `申请理由：${a.reason}` : '等待审批') : (a.status === 'approved' ? '已通过' : '已拒绝') }}</span>
+              </div>
+              <div v-if="a.status === 'pending'" class="grp-member-ops">
+                <button class="grp-op grp-op-ok" title="通过" @click="handleApply(a.id, true)">✓</button>
+                <button class="grp-op grp-op-no" title="拒绝" @click="handleApply(a.id, false)">✕</button>
+              </div>
+            </div>
+            <div v-if="!groupApplies.length" class="grp-mgr-empty">暂无申请</div>
+          </div>
+        </div>
+      </div>
 
       <!-- ══ 礼物弹窗（抖音式礼物墙 + 钻石余额 + 充值） ══ -->
       <div v-if="giftPanelOpen" class="gift-modal-mask" @click.self="giftPanelOpen = false">
@@ -497,7 +627,7 @@
             <div v-for="m in onlineMembers" :key="m.uid" class="member-item clickable" @click="openMemberCard(m, $event)">
               <div class="member-avatar"><img v-if="m.avatar" :src="m.avatar" alt="" /><span v-else>{{ (m.name || '?').slice(0, 1) }}</span></div>
               <div class="member-meta">
-                <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.role === 2" class="bot-badge">🤖</span></span>
+                <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.uid === 'kunlun_tea_bot'" class="bot-badge">🤖</span><span v-else-if="m.role === 2" class="role-badge">👑</span><span v-else-if="m.role === 1" class="role-badge">⭐</span></span>
                 <span class="member-sub">在线</span>
               </div>
             </div>
@@ -506,7 +636,7 @@
             <div v-for="m in members" :key="m.uid" class="member-item clickable" @click="openMemberCard(m, $event)">
               <div class="member-avatar"><img v-if="m.avatar" :src="m.avatar" alt="" /><span v-else>{{ (m.name || '?').slice(0, 1) }}</span></div>
               <div class="member-meta">
-                <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.uid === 'kunlun_tea_bot'" class="bot-badge">🤖 AI 客服</span><span v-else-if="m.role === 2" class="bot-badge">🤖</span></span>
+                <span class="member-name">{{ m.name || shortUid(m.uid) }} <span v-if="m.uid === 'kunlun_tea_bot'" class="bot-badge">🤖 AI 客服</span><span v-else-if="m.role === 2" class="role-badge">👑 群主</span><span v-else-if="m.role === 1" class="role-badge">⭐ 管理员</span></span>
                 <span class="member-sub">{{ m.uid === 'kunlun_tea_bot' ? '随时在线 · 喊「小管家」' : (m.status === 1 ? '在线' : '离线') }}</span>
               </div>
             </div>
@@ -2070,7 +2200,10 @@ function toggleFriendPanel() {
 
 /** 统一页面滚动锁：面板或菜单任一打开 → 锁死 body，聊天页面纹丝不动 */
 function syncBodyLock() {
-  document.body.style.overflow = friendPanel.value || friendMenu.value || memberCard.value || msgMenu.value || forwardPanel.value || favPanel.value ? 'hidden' : ''
+  document.body.style.overflow =
+    friendPanel.value || friendMenu.value || memberCard.value || msgMenu.value || forwardPanel.value || favPanel.value || createGroupOpen.value || groupManagerOpen.value
+      ? 'hidden'
+      : ''
 }
 
 /** 好友下拉菜单：定位（右侧/底部空间不足自动反弹）+ 锁定页面滚动 */
@@ -2126,6 +2259,225 @@ async function menuSend(u: any) {
   closeMemberCard()
   await openPrivate(u)
 }
+
+// ══ R10 群聊生态：创建群 / 群管理（三级权限 + 申请流） ═══════════════
+const createGroupOpen = ref(false)
+const createGroupName = ref('')
+const createGroupIntro = ref('')
+const createGroupBusy = ref(false)
+const createGroupError = ref('')
+function openCreateGroup() {
+  createGroupOpen.value = true
+  createGroupError.value = ''
+  syncBodyLock()
+}
+async function createGroup() {
+  const name = createGroupName.value.trim()
+  if (!name) { createGroupError.value = '群名称必填'; return }
+  createGroupBusy.value = true
+  createGroupError.value = ''
+  try {
+    const r = await fetch('/api/im/groups', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ name, intro: createGroupIntro.value.trim() }),
+    })
+    const j = await r.json()
+    if (!j.success) { createGroupError.value = j.error || '创建失败'; return }
+    createGroupOpen.value = false
+    createGroupName.value = ''
+    createGroupIntro.value = ''
+    // 刷新左栏群列表并直接进入新群
+    await loadChannels()
+    const ch = { id: j.data.group.channelId, groupId: j.data.group.id, type: 4, name: j.data.group.name, desc: `共 ${j.data.group.memberCount} 位群友`, kind: 'group', groupRole: 2, ownerUid: j.data.group.ownerUid, memberCount: j.data.group.memberCount }
+    await switchChannel(ch)
+  } catch (e) {
+    createGroupError.value = (e as Error).message
+  } finally {
+    createGroupBusy.value = false
+    syncBodyLock()
+  }
+}
+
+// ── 群管理弹窗 ──
+const groupManagerOpen = ref(false)
+const groupManagerTab = ref<'info' | 'edit' | 'members' | 'invite' | 'applies'>('info')
+const groupDetail = ref<any>(null)
+const groupMyRole = ref(-1)
+const groupOwnerName = ref('')
+const groupEditName = ref('')
+const groupEditIntro = ref('')
+const groupEditBusy = ref(false)
+const groupEditError = ref('')
+const groupApplies = ref<any[]>([])
+const groupInviteSearch = ref('')
+const groupInviteBusy = ref(false)
+
+async function openGroupManager() {
+  const ch = currentChannel.value
+  if (!ch || ch.kind !== 'group') return
+  groupManagerTab.value = 'info'
+  groupManagerOpen.value = true
+  groupEditError.value = ''
+  syncBodyLock()
+  await refreshGroupDetail()
+}
+function closeGroupManager() {
+  groupManagerOpen.value = false
+  syncBodyLock()
+}
+async function refreshGroupDetail() {
+  const ch = currentChannel.value
+  if (!ch) return
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}`, { headers: { Authorization: 'Bearer ' + authToken() } })
+    const j = await r.json()
+    if (!j.success) return
+    groupDetail.value = j.data
+    groupMyRole.value = j.data.myRole
+    groupEditName.value = j.data.group.name
+    groupEditIntro.value = j.data.group.intro
+    const owner = j.data.members.find((m: any) => m.role === 2)
+    groupOwnerName.value = owner?.name || '群主'
+    // 同步右栏成员列表（角色标识实时）
+    members.value = j.data.members.map((m: any) => ({ ...m, status: m.online ? 1 : 0 }))
+  } catch (e) {
+    console.error('[昆仑茶馆] 群详情加载失败', e)
+  }
+}
+const groupMemberUidSet = computed(() => new Set((groupDetail.value?.members || []).map((m: any) => m.uid)))
+const filteredInviteUsers = computed(() => {
+  const q = groupInviteSearch.value.trim()
+  return users.value.filter((u: any) => !groupMemberUidSet.value.has(u.id) && (!q || (u.name || '').includes(q) || (u.email || '').includes(q)))
+})
+async function updateGroup() {
+  const ch = currentChannel.value
+  if (!ch) return
+  groupEditBusy.value = true
+  groupEditError.value = ''
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ name: groupEditName.value.trim(), intro: groupEditIntro.value.trim() }),
+    })
+    const j = await r.json()
+    if (!j.success) { groupEditError.value = j.error || '保存失败'; return }
+    groupManagerTab.value = 'info'
+    ch.name = j.data.group.name
+    ch.desc = j.data.group.intro || ch.desc
+    await refreshGroupDetail()
+  } catch (e) {
+    groupEditError.value = (e as Error).message
+  } finally {
+    groupEditBusy.value = false
+  }
+}
+async function dissolveGroup() {
+  const ch = currentChannel.value
+  if (!ch) return
+  if (!window.confirm(`确定解散群「${ch.name}」？成员将被清出，不可恢复`)) return
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + authToken() } })
+    const j = await r.json()
+    if (!j.success) { alert(j.error || '解散失败'); return }
+    closeGroupManager()
+    groups.value = groups.value.filter((g) => g.groupId !== ch.groupId)
+    if (isActive(ch)) {
+      if (channels.value.length) await switchChannel(channels.value[0])
+      else { currentChannel.value = null; messages.value = []; members.value = [] }
+    }
+  } catch (e) {
+    alert((e as Error).message)
+  }
+}
+async function setMemberRole(uid: string, role: number) {
+  const ch = currentChannel.value
+  if (!ch) return
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}/members/${uid}/role`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ role }),
+    })
+    const j = await r.json()
+    if (!j.success) { alert(j.error || '操作失败'); return }
+    await refreshGroupDetail()
+  } catch (e) {
+    alert((e as Error).message)
+  }
+}
+async function kickMember(uid: string) {
+  const ch = currentChannel.value
+  if (!ch) return
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}/members/${uid}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + authToken() } })
+    const j = await r.json()
+    if (!j.success) { alert(j.error || '操作失败'); return }
+    await refreshGroupDetail()
+  } catch (e) {
+    alert((e as Error).message)
+  }
+}
+async function inviteMember(uid: string) {
+  const ch = currentChannel.value
+  if (!ch) return
+  groupInviteBusy.value = true
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}/members`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ uids: [uid] }),
+    })
+    const j = await r.json()
+    if (!j.success) { alert(j.error || '邀请失败'); return }
+    await refreshGroupDetail()
+  } catch (e) {
+    alert((e as Error).message)
+  } finally {
+    groupInviteBusy.value = false
+  }
+}
+async function applyGroupAdmin() {
+  const ch = currentChannel.value
+  if (!ch) return
+  const reason = window.prompt('申请理由（群主可见，选填）：') ?? ''
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}/apply`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ reason }),
+    })
+    const j = await r.json()
+    alert(j.success ? '申请已提交，等待群主审批' : (j.error || '申请失败'))
+  } catch (e) {
+    alert((e as Error).message)
+  }
+}
+async function openGroupApplies() {
+  const ch = currentChannel.value
+  if (!ch) return
+  groupManagerTab.value = 'applies'
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}/applies`, { headers: { Authorization: 'Bearer ' + authToken() } })
+    const j = await r.json()
+    groupApplies.value = j.success ? (j.data.applies || []) : []
+  } catch (e) {
+    groupApplies.value = []
+  }
+}
+async function handleApply(applyId: string, approve: boolean) {
+  const ch = currentChannel.value
+  if (!ch) return
+  try {
+    const r = await fetch(`/api/im/groups/${ch.groupId}/applies/${applyId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ approve }),
+    })
+    const j = await r.json()
+    if (!j.success) { alert(j.error || '操作失败'); return }
+    await openGroupApplies()
+    await refreshGroupDetail()
+  } catch (e) {
+    alert((e as Error).message)
+  }
+}
+const pendingApplyCount = computed(() => groupApplies.value.filter((a: any) => a.status === 'pending').length)
 
 function menuProfile(u: any) {
   closeFriendMenu()
@@ -3883,6 +4235,63 @@ onBeforeUnmount(() => {
 
 <!-- ══ v-html 渲染内容样式（非 scoped：scoped 选择器不匹配 v-html 生成的 DOM，IM-CHA-M10.2 修复红包/图片/文件/语音样式从未生效的 bug） ══ -->
 <style>
+/* ══ R10 群聊生态：创建群/群管理 ══ */
+.side-add-btn {
+  margin-left: auto; background: rgba(251, 191, 36, 0.16); color: #F7D488;
+  border: 1px solid rgba(251, 191, 36, 0.35); border-radius: 6px; width: 20px; height: 20px;
+  line-height: 1; font-size: 14px; cursor: pointer; padding: 0;
+}
+.side-add-btn:hover { background: rgba(251, 191, 36, 0.3); }
+.role-badge { font-size: 11px; margin-left: 2px; }
+.chat-head-action {
+  margin-left: auto; background: rgba(251, 191, 36, 0.14); color: #F7D488;
+  border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 5px 10px;
+  font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.chat-head-action:hover { background: rgba(251, 191, 36, 0.26); }
+.grp-form { display: flex; flex-direction: column; gap: 8px; }
+.grp-label { font-size: 12px; color: #CBBF9E; }
+.grp-label em { color: #E05B4D; font-style: normal; }
+.grp-input {
+  width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 8px; color: #FBF8EF;
+  padding: 9px 11px; font-size: 13px; outline: none;
+}
+.grp-input:focus { border-color: rgba(251, 191, 36, 0.6); }
+.grp-textarea { min-height: 64px; resize: vertical; }
+.grp-tip { font-size: 11px; color: #A79B7F; line-height: 1.5; }
+.grp-error { font-size: 12px; color: #E05B4D; }
+.grp-manager-modal { max-width: 400px; width: calc(100vw - 40px); }
+.grp-mgr-body { max-height: 62vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.grp-mgr-info { display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px; }
+.grp-info-row { display: flex; gap: 8px; font-size: 13px; }
+.grp-info-key { color: #A79B7F; min-width: 48px; }
+.grp-info-val { color: #FBF8EF; word-break: break-all; }
+.grp-mgr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.grp-act {
+  background: rgba(251, 191, 36, 0.12); color: #F7D488; border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+}
+.grp-act:hover { background: rgba(251, 191, 36, 0.24); }
+.grp-act-danger { background: rgba(224, 91, 77, 0.14); color: #F0907F; border-color: rgba(224, 91, 77, 0.35); }
+.grp-mgr-foot { padding: 8px 0 0; }
+.grp-mgr-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.grp-mgr-count { font-size: 12px; color: #A79B7F; }
+.grp-member-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px; }
+.grp-member-row:hover { background: rgba(255, 255, 255, 0.04); }
+.grp-member-meta { flex: 1; min-width: 0; }
+.grp-member-ops { display: flex; gap: 4px; }
+.grp-op {
+  background: rgba(255, 255, 255, 0.07); color: #CBBF9E; border: none; border-radius: 6px;
+  width: 26px; height: 26px; font-size: 13px; cursor: pointer; line-height: 1;
+}
+.grp-op:hover { background: rgba(255, 255, 255, 0.16); }
+.grp-op-ok { color: #7BD88F; }
+.grp-op-no { color: #F0907F; }
+.grp-invite-search { margin: 2px 0; }
+.grp-invite-btn { font-size: 12px; padding: 4px 10px; }
+.grp-invited { font-size: 12px; color: #7BD88F; }
+.grp-mgr-empty { font-size: 12px; color: #A79B7F; text-align: center; padding: 14px 0; }
 /* 礼物 inline（v-html） */
 .gift-inline {
   display: inline-flex; align-items: center; gap: 6px;
