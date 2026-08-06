@@ -86,6 +86,12 @@
                 <span class="follow-stat-value">{{ followStats.followerCount }}</span>
                 <span class="follow-stat-label">粉丝</span>
               </button>
+              <span class="follow-divider">·</span>
+              <!-- MY-GIFTS-01 我的礼物入口（掌柜：粉丝后面，进金币兑换页） -->
+              <button class="follow-stat follow-stat--gift" @click="router.push('/user/gold-coins')">
+                <span class="follow-stat-value">🎁</span>
+                <span class="follow-stat-label">我的礼物</span>
+              </button>
             </div>
           </div>
           <div v-if="tierClass !== 'vip_platinum'" class="member-hero-upgrade">

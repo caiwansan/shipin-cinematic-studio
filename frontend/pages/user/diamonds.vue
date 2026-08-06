@@ -15,10 +15,9 @@
           <div class="diamond-hero-value">{{ diamonds.totalDiamonds || 0 }}</div>
       <div class="diamond-hero-legend">
             <span class="legend-item"><i class="legend-dot legend-dot--recharge" />充值钻石 {{ diamonds.rechargeDiamonds || 0 }}</span>
-            <span class="legend-item"><i class="legend-dot legend-dot--earn" />礼物收益 → <router-link to="/user/gold-coins" class="legend-link">金币钱包</router-link></span>
+            <span class="legend-item"><i class="legend-dot legend-dot--earn" />礼物收益 → <router-link to="/user/gold-coins" class="legend-link">我的礼物</router-link></span>
           </div>
         </div>
-        <router-link to="/user/gold-coins" class="exchange-btn">🎁 礼物金币 →</router-link>
       </div>
 
       <div class="diamond-tip">
@@ -343,13 +342,6 @@ onBeforeUnmount(() => {
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .legend-dot--recharge { background: #60a5fa; }
 .legend-dot--earn { background: #34d399; }
-.exchange-btn {
-  flex-shrink: 0;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.7); padding: 8px 16px; border-radius: 10px;
-  font-size: 0.8rem; text-decoration: none; transition: all .2s;
-}
-.exchange-btn:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
 
 .diamond-tip {
   background: rgba(250,204,21,0.06); border: 1px solid rgba(250,204,21,0.15);

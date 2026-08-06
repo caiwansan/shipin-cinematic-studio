@@ -2,7 +2,7 @@
   <div class="gold-page">
     <div class="page-header">
       <button class="back-btn" @click="router.push('/user/center')">← 会员中心</button>
-      <h1>礼物金币</h1>
+      <h1>我的礼物</h1>
       <p class="page-sub">收到礼物自动结算 · 10 金币 = 1 元余额</p>
     </div>
 
@@ -58,16 +58,21 @@
       </div>
     </div>
 
-    <!-- 兑换成功弹窗 -->
-    <div v-if="showSuccess" class="pay-modal-mask" @click.self="showSuccess = false">
-      <div class="pay-modal success-modal">
-        <button class="pay-modal-close" @click="showSuccess = false">✕</button>
-        <div class="success-icon">✅</div>
+    <!-- MY-GIFTS-01 兑换成功 → 直接弹「我的余额」 -->
+    <div v-if="balanceOpen" class="pay-modal-mask" @click.self="balanceOpen = false">
+      <div class="pay-modal balance-modal">
+        <button class="pay-modal-close" @click="balanceOpen = false">✕</button>
+        <div class="success-icon">💰</div>
         <div class="success-title">兑换成功</div>
-        <p class="success-sub">{{ lastExchange.coins }} 金币 → <b>¥{{ lastExchange.yuan }}</b> 已到账余额钱包</p>
+        <p class="success-sub">{{ lastExchange.coins }} 金币 → <b>¥{{ lastExchange.yuan }}</b> 已到账余额</p>
+        <div class="balance-card">
+          <p class="balance-label">我的余额（可提现）</p>
+          <p class="balance-value">¥{{ currentBalance.toFixed(2) }}</p>
+          <p class="balance-sub">满 ¥100 可提现 · 提现手续费 5%</p>
+        </div>
         <div class="success-actions">
-          <button class="btn-ghost" @click="showSuccess = false">继续逛逛</button>
-          <router-link to="/user/wallet" class="btn-primary">去余额钱包 →</router-link>
+          <button class="btn-ghost" @click="balanceOpen = false">继续逛逛</button>
+          <router-link to="/user/wallet" class="btn-primary">去提现 →</router-link>
         </div>
       </div>
     </div>
@@ -82,7 +87,8 @@ const router = useRouter()
 const data = ref<any>({})
 const loading = ref(true)
 const exchanging = ref(false)
-const showSuccess = ref(false)
+const balanceOpen = ref(false)
+const currentBalance = ref(0)
 const lastExchange = ref<any>({})
 const token = () => {
   try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' }
@@ -115,8 +121,9 @@ async function doExchange() {
     const j = await r.json()
     if (j.success) {
       lastExchange.value = j.data
-      showSuccess.value = true
       await load()
+      currentBalance.value = data.value.walletBalance || 0
+      balanceOpen.value = true
     } else {
       alert(j.error || '兑换失败')
     }
@@ -185,4 +192,17 @@ onMounted(load)
 .success-actions { display: flex; gap: 10px; justify-content: center; }
 .btn-ghost { background: #f3f4f6; border: none; border-radius: 10px; padding: 10px 18px; cursor: pointer; color: #374151; font-size: 14px; text-decoration: none; }
 .btn-primary { background: #f59e0b; border: none; border-radius: 10px; padding: 10px 18px; cursor: pointer; color: #fff; font-size: 14px; text-decoration: none; }
+
+/* MY-GIFTS-01 我的余额弹窗 */
+.balance-card {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border: 1px solid #fde68a;
+  border-radius: 14px;
+  padding: 18px 16px;
+  margin: 4px 0 18px;
+}
+.balance-label { margin: 0; font-size: 12px; color: #92400e; }
+.balance-value { margin: 4px 0; font-size: 32px; font-weight: 800; color: #b45309; line-height: 1.1; }
+.balance-sub { margin: 0; font-size: 12px; color: #b45309; opacity: 0.8; }
+.balance-modal { box-shadow: 0 24px 64px rgba(0,0,0,0.18); }
 </style>
