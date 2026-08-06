@@ -95,6 +95,9 @@
         <div class="sub" id="sub-employees">加载中…</div>
         <div class="grid" id="employees-grid"></div>
         <div id="employee-detail" class="hidden" style="margin-top:16px"></div>
+        <h2 style="margin-top:28px">企业概览</h2>
+        <div class="sub" id="sub-billing">加载中…</div>
+        <div class="card" id="billing-overview"></div>
       </div>
       <div id="page-plugins" class="hidden">
         <h1>插件授权</h1>
@@ -305,7 +308,7 @@ async function doLogin() {
     await invoke('save_credentials', { access_token: token, user_name: creds.user_name, user_id: creds.user_id, organization_id: creds.organization_id });
     await ensureDevice();
     showMain();
-    await refreshApps(); await refreshEmployees(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus();
+    await refreshApps(); await refreshEmployees(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus(); await refreshBilling();
   } catch (e) { $('login-err').textContent = e.message; }
 }
 
@@ -391,6 +394,28 @@ async function showEmployeeDetail(code) {
     box.querySelector('[data-employee]')?.addEventListener('click', () => launchEmployee(code));
     box.querySelector('[data-close-detail]')?.addEventListener('click', () => box.classList.add('hidden'));
   } catch (e) { box.innerHTML = `<div class="err-msg">${e.message}</div>`; }
+}
+
+// ── 企业概览（S6.4 BL-01/03: Billing 展示, 管理员可见; Cloud 决策, Desktop 零计算）──
+// 铁律: 套餐/权限/用量全部来自 Cloud API; 非管理员（403）→ 隐藏; 禁 ROI 承诺
+async function refreshBilling() {
+  try {
+    const d = await api('/api/admin/billing/overview');
+    if (!d?.plan) throw new Error('NO_DATA');
+    $('sub-billing').textContent = `当前方案: ${d.plan.tier} · AI Employee ${d.plan.employeeCount}/${d.plan.employeeLimit}`;
+    $('billing-overview').innerHTML = `
+      <div class="row"><span class="muted">已启用员工</span><span>${(d.employees || []).map((e) => e.name || e.code.replace(/^def-/, '')).join('、')}</span></div>
+      <div class="row" style="margin-top:6px"><span class="muted">本周期活动</span><span>执行 ${d.activity?.totalExecutions || 0} 次 · 活跃员工 ${d.activity?.activeEmployees || 0} · 增强包 ${d.activity?.enabledEnhancements || 0}</span></div>
+      <div style="margin-top:8px">${(d.employees || []).map((e) => `
+        <div style="margin:6px 0;padding:8px;border:1px solid #242748;border-radius:8px">
+          <div><b>${e.name || e.code.replace(/^def-/, '')}</b> <span class="muted">· 执行 ${e.usage?.executions || 0} / 成功 ${e.usage?.successful || 0}</span></div>
+          <div class="muted" style="font-size:11px;margin-top:4px">${(e.capabilities || []).map((c) => c).join(' · ')}</div>
+        </div>`).join('')}</div>`;
+  } catch (e) {
+    // 非管理员（403）或未授权 → 隐藏企业概览（普通用户流程保持）
+    $('sub-billing').textContent = '';
+    $('billing-overview').innerHTML = '';
+  }
 }
 
 // ── 设备注册（首次：随机指纹 + 签名 token + 用户确认=已登录）──
