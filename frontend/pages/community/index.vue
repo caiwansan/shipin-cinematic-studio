@@ -1,6 +1,6 @@
 <template>
-  <div class="community-page">
-    <!-- 导航栏（与首页同步） -->
+  <div class="community-page cn-page">
+    <!-- 导航栏（中式浅色，与社区风格统一） -->
     <nav class="nav-bar">
       <div class="nav-inner">
         <div class="nav-logo">
@@ -12,10 +12,10 @@
           <a href="/community" class="nav-link nav-link-active">社区</a>
         </div>
         <div class="nav-actions">
-          <button v-if="!isLoggedIn" class="btn btn-outline" @click="showLogin = true">登录</button>
-          <button v-if="!isLoggedIn" class="btn btn-primary" @click="showLogin = true; isRegisterMode = true">免费注册</button>
+          <button v-if="!isLoggedIn" class="cn-ink-btn" @click="showLogin = true">登录</button>
+          <button v-if="!isLoggedIn" class="cn-seal-btn" @click="showLogin = true; isRegisterMode = true">免费注册</button>
           <template v-else>
-            <button class="btn btn-primary" @click="goToStudio">进入工作台 →</button>
+            <button class="cn-seal-btn" @click="goToStudio">进入工作台 →</button>
             <div class="nav-user-badge" @click="goMemberCenter" title="会员中心">
               <div class="nav-user-avatar" :class="`nav-user-avatar--${tierClass}`">
                 {{ avatarChar }}
@@ -32,24 +32,27 @@
     <CommunityHero />
 
     <div class="page-content" itemscope itemtype="https://schema.org/WebPage">
-      <!-- 分类 Tabs -->
+      <!-- 分类 Tabs（中式书签） -->
       <nav class="category-tabs" aria-label="社区分类">
-        <button
-          :class="['tab-btn', !activeCategory && 'tab-active']"
-          @click="activeCategory = ''"
-        >
-          全部
-        </button>
-        <button
-          v-for="cat in categories"
-          :key="cat.slug"
-          :class="['tab-btn', activeCategory === cat.slug && 'tab-active']"
-          @click="activeCategory = cat.slug"
-        >
-          {{ cat.icon || '#' }} {{ cat.name }}
-        </button>
-        <NuxtLink to="/community/new" class="btn btn-primary btn-sm" style="margin-left:auto;">✏️ 发帖</NuxtLink>
+        <div class="tabs-scroll">
+          <button
+            :class="['tab-btn', !activeCategory && 'tab-active']"
+            @click="activeCategory = ''"
+          >
+            全部
+          </button>
+          <button
+            v-for="cat in categories"
+            :key="cat.slug"
+            :class="['tab-btn', activeCategory === cat.slug && 'tab-active']"
+            @click="activeCategory = cat.slug"
+          >
+            {{ cat.icon || '#' }} {{ cat.name }}
+          </button>
+        </div>
+        <NuxtLink to="/community/new" class="cn-seal-btn btn-post">✒ 发帖</NuxtLink>
       </nav>
+      <div class="cn-huiwen page-huiwen" aria-hidden="true" />
 
       <div class="content-layout">
         <!-- 左侧：帖子列表 -->
@@ -62,18 +65,18 @@
           <div v-else-if="posts.length === 0" class="empty-state">
             <p class="empty-icon">📭</p>
             <p>暂无帖子，来发布第一条吧！</p>
-            <NuxtLink to="/community/new" class="btn btn-primary">发布帖子</NuxtLink>
+            <NuxtLink to="/community/new" class="cn-seal-btn">发布帖子</NuxtLink>
           </div>
 
           <div v-else class="posts-list">
             <CommunityPostCard v-for="post in posts" :key="post.id" :post="post" />
           </div>
 
-          <!-- 分页 -->
+          <!-- 分页（中式） -->
           <div v-if="pagination && pagination.totalPages > 1" class="pagination">
             <button
               :disabled="pagination.page <= 1"
-              class="page-btn"
+              class="cn-ink-btn page-btn"
               @click="changePage(pagination.page - 1)"
             >
               上一页
@@ -81,7 +84,7 @@
             <span class="page-info">{{ pagination.page }} / {{ pagination.totalPages }}</span>
             <button
               :disabled="pagination.page >= pagination.totalPages"
-              class="page-btn"
+              class="cn-ink-btn page-btn"
               @click="changePage(pagination.page + 1)"
             >
               下一页
@@ -89,11 +92,11 @@
           </div>
         </div>
 
-        <!-- 右侧：侧边栏 -->
+        <!-- 右侧：侧边栏（匾额） -->
         <aside class="sidebar">
           <!-- 置顶帖 -->
-          <div v-if="sidebar.pinned.length > 0" class="sidebar-card">
-            <div class="sidebar-card-title">📌 置顶</div>
+          <div v-if="sidebar.pinned.length > 0" class="sidebar-card cn-card">
+            <div class="cn-plaque sidebar-title">置 顶</div>
             <NuxtLink
               v-for="p in sidebar.pinned"
               :key="p.id"
@@ -106,8 +109,8 @@
           </div>
 
           <!-- 精华帖 -->
-          <div v-if="sidebar.essence.length > 0" class="sidebar-card">
-            <div class="sidebar-card-title">⭐ 精华</div>
+          <div v-if="sidebar.essence.length > 0" class="sidebar-card cn-card">
+            <div class="cn-plaque sidebar-title">精 华</div>
             <NuxtLink
               v-for="p in sidebar.essence"
               :key="p.id"
@@ -120,8 +123,8 @@
           </div>
 
           <!-- 热门帖 -->
-          <div v-if="sidebar.hot.length > 0" class="sidebar-card">
-            <div class="sidebar-card-title">🔥 热门</div>
+          <div v-if="sidebar.hot.length > 0" class="sidebar-card cn-card">
+            <div class="cn-plaque sidebar-title">热 门</div>
             <NuxtLink
               v-for="p in sidebar.hot"
               :key="p.id"
@@ -137,11 +140,11 @@
     </div>
   </div>
 
-  <!-- 登录/注册弹窗 -->
+  <!-- 登录/注册弹窗（中式） -->
   <div v-if="showLogin" class="modal-overlay" @click.self="showLogin = false">
     <div class="modal-card">
       <button class="modal-close" @click="showLogin = false">✕</button>
-      
+
       <div class="modal-header">
         <span class="logo-icon"><img src="/logo.png" alt="昆仑镜" class="modal-logo-img" /></span>
         <h2>{{ isRegisterMode ? '创建账号' : '登录昆仑镜' }}</h2>
@@ -171,7 +174,7 @@
         <p v-if="authError" class="form-error">{{ authError }}</p>
         <p v-if="authSuccess" class="form-success">{{ authSuccess }}</p>
 
-        <button type="submit" class="btn btn-primary btn-full" :disabled="authLoading">
+        <button type="submit" class="cn-seal-btn btn-full" :disabled="authLoading">
           {{ authLoading ? '处理中...' : (isRegisterMode ? '注册并进入' : '登录') }}
         </button>
       </form>
@@ -474,19 +477,18 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
 <style scoped>
 .community-page {
   min-height: 100vh;
-  background: #050508;
-  color: #e0e0e0;
-  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: var(--cn-body);
 }
 
-/* === 导航栏（与首页同步） === */
+/* === 导航栏（中式浅色） === */
 .nav-bar {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(5,5,8,0.85);
+  background: rgba(251, 248, 239, 0.88);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(38, 84, 124, 0.14);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
 }
 .nav-inner {
   max-width: 1200px;
@@ -515,9 +517,11 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   border-radius: 6px;
 }
 .logo-text {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--cn-cobalt-deep);
+  font-family: var(--cn-serif);
+  letter-spacing: 2px;
 }
 .nav-links {
   display: flex;
@@ -525,13 +529,16 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   flex: 1;
 }
 .nav-link {
-  color: rgba(255,255,255,0.5);
+  color: var(--cn-ink-soft);
   text-decoration: none;
   font-size: 0.85rem;
   transition: color 0.2s;
+  font-family: var(--cn-serif);
+  letter-spacing: 1px;
 }
 .nav-link:hover, .nav-link-active {
-  color: rgba(255,255,255,0.8);
+  color: var(--cn-cobalt-deep);
+  font-weight: 600;
 }
 .nav-actions {
   display: flex;
@@ -548,7 +555,7 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   transition: background 0.2s;
 }
 .nav-user-badge:hover {
-  background: rgba(255,255,255,0.04);
+  background: rgba(38, 84, 124, 0.06);
 }
 .nav-user-avatar {
   width: 28px;
@@ -561,22 +568,22 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   font-weight: 600;
   color: #fff;
 }
-.nav-user-avatar--basic { background: #6b7280; }
-.nav-user-avatar--standard { background: #3b82f6; }
-.nav-user-avatar--premium { background: #8b5cf6; }
-.nav-user-avatar--flagship { background: #f59e0b; }
-.nav-user-avatar--ultra { background: linear-gradient(135deg, #f97316, #ef4444); }
+.nav-user-avatar--basic { background: #8a8578; }
+.nav-user-avatar--standard { background: #3f7fa3; }
+.nav-user-avatar--premium { background: #6d5ba6; }
+.nav-user-avatar--flagship { background: #b07f2e; }
+.nav-user-avatar--ultra { background: linear-gradient(135deg, #b03a2e, #c9732a); }
 .nav-tier-tag {
   font-size: 0.7rem;
   padding: 1px 6px;
   border-radius: 4px;
   font-weight: 500;
 }
-.nav-tier-tag--basic { background: rgba(107,114,128,0.15); color: #9ca3af; }
-.nav-tier-tag--standard { background: rgba(59,130,246,0.15); color: #60a5fa; }
-.nav-tier-tag--premium { background: rgba(139,92,246,0.15); color: #a78bfa; }
-.nav-tier-tag--flagship { background: rgba(245,158,11,0.15); color: #fbbf24; }
-.nav-tier-tag--ultra { background: rgba(249,115,22,0.15); color: #fb923c; }
+.nav-tier-tag--basic { background: rgba(138,133,120,0.14); color: #8a8578; }
+.nav-tier-tag--standard { background: rgba(63,127,163,0.14); color: #3f7fa3; }
+.nav-tier-tag--premium { background: rgba(109,91,166,0.14); color: #6d5ba6; }
+.nav-tier-tag--flagship { background: rgba(176,127,46,0.14); color: #a87a2c; }
+.nav-tier-tag--ultra { background: rgba(176,58,46,0.14); color: #b03a2e; }
 
 .page-content {
   max-width: 1100px;
@@ -584,48 +591,63 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   padding: 0 24px 60px;
 }
 
-/* Category Tabs */
+/* Category Tabs（中式书签） */
 .category-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 14px;
+}
+.tabs-scroll {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin: 24px 0;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  flex: 1;
 }
 .tab-btn {
   padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 0.8rem;
+  border-radius: 3px;
+  font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(38, 84, 124, 0.22);
   background: transparent;
-  color: rgba(255,255,255,0.4);
+  color: var(--cn-ink-soft);
+  font-family: var(--cn-serif);
+  letter-spacing: 1px;
   transition: all 0.2s;
 }
 .tab-btn:hover {
-  border-color: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.6);
+  border-color: var(--cn-cobalt);
+  color: var(--cn-cobalt-deep);
+  background: rgba(95, 168, 190, 0.08);
 }
 .tab-active {
-  background: rgba(249,115,22,0.1);
-  border-color: rgba(249,115,22,0.3);
-  color: #f97316;
+  background: var(--cn-cobalt-deep);
+  border-color: var(--cn-cobalt-deep);
+  color: #F6F1E3;
+  box-shadow: 0 2px 8px rgba(22, 58, 92, 0.25);
+}
+.btn-post {
+  flex-shrink: 0;
+}
+.page-huiwen {
+  margin-bottom: 22px;
 }
 
 /* Posts */
 .posts-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 /* Loading & Empty */
 .loading-state, .empty-state {
   text-align: center;
   padding: 60px 0;
-  color: rgba(255,255,255,0.3);
+  color: var(--cn-ink-faint);
+  font-family: var(--cn-serif);
 }
 .empty-icon {
   font-size: 3rem;
@@ -634,8 +656,8 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
 .spinner {
   width: 32px;
   height: 32px;
-  border: 2px solid rgba(255,255,255,0.05);
-  border-top-color: #f97316;
+  border: 2px solid rgba(38, 84, 124, 0.12);
+  border-top-color: var(--cn-celadon-deep);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin: 0 auto 12px;
@@ -650,64 +672,20 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-top: 32px;
+  margin-top: 36px;
 }
 .page-btn {
-  padding: 8px 18px;
-  border-radius: 8px;
   font-size: 0.8rem;
-  cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
-  color: rgba(255,255,255,0.5);
-  transition: all 0.2s;
-}
-.page-btn:hover:not(:disabled) {
-  border-color: rgba(249,115,22,0.3);
-  color: #f97316;
 }
 .page-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 .page-info {
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.3);
-}
-
-.btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  text-decoration: none;
-}
-.btn-sm {
-  padding: 6px 14px;
-  font-size: 0.78rem;
-}
-.btn-primary {
-  background: linear-gradient(135deg, #f97316, #ea580c);
-  color: #fff;
-}
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(249,115,22,0.3);
-}
-.btn-outline {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.6);
-}
-.btn-outline:hover {
-  border-color: rgba(255,255,255,0.2);
-  color: #fff;
+  font-size: 0.82rem;
+  color: var(--cn-ink-soft);
+  font-family: var(--cn-serif);
+  letter-spacing: 2px;
 }
 
 /* 左右布局 */
@@ -721,7 +699,7 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   min-width: 0;
 }
 
-/* 侧边栏 */
+/* 侧边栏（匾额） */
 .sidebar {
   flex: 1;
   min-width: 220px;
@@ -733,53 +711,50 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   gap: 16px;
 }
 .sidebar-card {
-  background: rgba(255,255,255,0.012);
-  border: 1px solid rgba(255,255,255,0.04);
-  border-radius: 12px;
-  padding: 14px;
+  padding: 16px 18px 12px;
 }
-.sidebar-card-title {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: rgba(255,255,255,0.6);
-  margin-bottom: 10px;
+.sidebar-title {
+  font-size: 0.92rem;
 }
 .sidebar-link {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 0;
+  padding: 7px 0;
   text-decoration: none;
-  border-bottom: 1px solid rgba(255,255,255,0.02);
+  border-bottom: 1px dashed rgba(38, 84, 124, 0.12);
 }
 .sidebar-link:last-child { border-bottom: none; }
 .sidebar-link-text {
   flex: 1;
   font-size: 0.78rem;
-  color: rgba(255,255,255,0.55);
+  color: var(--cn-ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: color 0.2s;
+  font-family: var(--cn-serif);
 }
-.sidebar-link:hover .sidebar-link-text { color: rgba(249,115,22,0.7); }
+.sidebar-link:hover .sidebar-link-text { color: var(--cn-cobalt); }
 .sidebar-link-meta {
   font-size: 0.65rem;
-  color: rgba(255,255,255,0.2);
+  color: var(--cn-ink-faint);
   flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
-.nav-links { display: none; }
+  .nav-links { display: none; }
   .content-layout { flex-direction: column; }
   .sidebar { width: 100%; position: static; }
+  .category-tabs { flex-wrap: wrap; }
+  .btn-post { width: 100%; justify-content: center; }
 }
 
-/* ─── 登录弹窗 ─── */
+/* ─── 登录弹窗（中式） ─── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.65);
+  background: rgba(22, 38, 46, 0.55);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -787,9 +762,10 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   z-index: 9999;
 }
 .modal-card {
-  background: #0D1328;
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 20px;
+  background: var(--cn-paper-card);
+  border: 1px solid rgba(38, 84, 124, 0.35);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 3px rgba(246, 241, 227, 0.9), inset 0 0 0 4px rgba(38, 84, 124, 0.12), 0 18px 50px rgba(22, 38, 46, 0.3);
   padding: 32px 28px 28px;
   width: 400px;
   max-width: 92vw;
@@ -804,59 +780,61 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   position: absolute;
   top: 14px; right: 16px;
   background: none; border: none;
-  color: rgba(255,255,255,0.3);
+  color: var(--cn-ink-faint);
   font-size: 1.3rem;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 6px;
 }
-.modal-close:hover { color: #fff; }
+.modal-close:hover { color: var(--cn-cinnabar); }
 .modal-header { text-align: center; margin-bottom: 24px; }
 .modal-header .logo-icon { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-.modal-logo-img { width: 48px; height: 48px; }
-.modal-header h2 { font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0 0 6px; }
-.modal-header p { font-size: 0.8rem; color: rgba(255,255,255,0.35); margin: 0; }
+.modal-logo-img { width: 48px; height: 48px; border-radius: 8px; }
+.modal-header h2 { font-size: 1.2rem; font-weight: 700; color: var(--cn-cobalt-deep); font-family: var(--cn-serif); letter-spacing: 2px; margin: 0 0 6px; }
+.modal-header p { font-size: 0.8rem; color: var(--cn-ink-faint); margin: 0; }
 .modal-tabs {
   display: flex;
-  background: rgba(255,255,255,0.04);
-  border-radius: 10px;
+  background: rgba(38, 84, 124, 0.06);
+  border-radius: 6px;
   padding: 3px;
   margin-bottom: 24px;
 }
-.tab-btn {
+.modal-tabs .tab-btn {
   flex: 1;
   padding: 8px;
   background: none;
   border: none;
-  color: rgba(255,255,255,0.4);
+  color: var(--cn-ink-soft);
   font-size: 0.85rem;
-  border-radius: 8px;
+  border-radius: 5px;
   cursor: pointer;
   transition: all 0.2s;
+  font-family: var(--cn-serif);
+  letter-spacing: 2px;
 }
-.tab-btn.tab-active {
-  background: rgba(81,149,255,0.12);
-  color: #5195ff;
-  font-weight: 500;
+.modal-tabs .tab-btn.tab-active {
+  background: var(--cn-cobalt-deep);
+  color: #F6F1E3;
+  font-weight: 600;
 }
 .modal-form .form-group { margin-bottom: 16px; }
-.modal-form label { display: block; font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+.modal-form label { display: block; font-size: 0.75rem; color: var(--cn-ink-soft); margin-bottom: 6px; font-family: var(--cn-serif); letter-spacing: 1px; }
 .modal-form .form-input {
   width: 100%;
   padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.8);
+  border-radius: 5px;
+  background: rgba(246, 241, 227, 0.7);
+  border: 1px solid rgba(38, 84, 124, 0.25);
+  color: var(--cn-ink);
   font-size: 0.85rem;
   outline: none;
   transition: border-color 0.2s;
   box-sizing: border-box;
 }
-.modal-form .form-input:focus { border-color: rgba(81,149,255,0.4); }
-.form-error { color: #f87171; font-size: 0.78rem; margin: 0 0 12px; }
-.form-success { color: #34d399; font-size: 0.78rem; margin: 0 0 12px; }
-.btn-full { width: 100%; padding: 10px; font-size: 0.9rem; border-radius: 10px; margin-top: 8px; }
+.modal-form .form-input:focus { border-color: var(--cn-celadon-deep); box-shadow: 0 0 0 3px rgba(95, 168, 190, 0.15); }
+.form-error { color: var(--cn-cinnabar); font-size: 0.78rem; margin: 0 0 12px; }
+.form-success { color: #3e7f63; font-size: 0.78rem; margin: 0 0 12px; }
+.btn-full { width: 100%; padding: 10px; font-size: 0.9rem; justify-content: center; margin-top: 8px; }
 @media (max-width: 480px) {
   .modal-card { width: 90%; margin: 0 16px; }
 }
@@ -866,15 +844,15 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   gap: 12px;
   margin: 24px 0 14px;
 }
-.divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
-.divider-text { font-size: 0.72rem; color: rgba(255,255,255,0.25); white-space: nowrap; }
+.divider-line { flex: 1; height: 1px; background: rgba(38, 84, 124, 0.14); }
+.divider-text { font-size: 0.72rem; color: var(--cn-ink-faint); white-space: nowrap; font-family: var(--cn-serif); letter-spacing: 1px; }
 .btn-wechat, .btn-qq {
   width: 100%;
   padding: 10px;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px;
-  background: rgba(255,255,255,0.03);
-  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(38, 84, 124, 0.2);
+  border-radius: 5px;
+  background: rgba(246, 241, 227, 0.6);
+  color: var(--cn-ink-soft);
   font-size: 0.85rem;
   cursor: pointer;
   display: flex;
@@ -882,10 +860,11 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   justify-content: center;
   gap: 6px;
   margin-bottom: 8px;
+  transition: all 0.2s;
 }
 .btn-wechat:hover:not(:disabled), .btn-qq:hover:not(:disabled) {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(81,149,255,0.3);
+  background: rgba(95, 168, 190, 0.1);
+  border-color: var(--cn-cobalt);
 }
 .btn-wechat:disabled, .btn-qq:disabled { opacity: 0.4; cursor: not-allowed; }
 .wechat-icon { font-size: 1.1rem; }

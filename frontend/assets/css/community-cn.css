@@ -1,0 +1,172 @@
+/* ═══════════════════════════════════════════════════════════════
+   昆仑镜社区 · 中式主题（雨过天青 × 青花瓷）
+   COMMUNITY-CN-01 — 全局色板 / 印章 / 匾额 / 回纹 / 青花水印
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* 宣纸 */
+  --cn-paper: #F6F1E3;
+  --cn-paper-deep: #EDE5CE;
+  --cn-paper-card: #FBF8EF;
+  /* 雨过天青 */
+  --cn-celadon: #5FA8BE;
+  --cn-celadon-deep: #3E7F99;
+  --cn-celadon-soft: #A8CDD8;
+  --cn-celadon-pale: #DCEBEE;
+  /* 青花钴蓝 */
+  --cn-cobalt: #26547C;
+  --cn-cobalt-deep: #163A5C;
+  --cn-cobalt-soft: #5E86A6;
+  /* 墨 */
+  --cn-ink: #33302A;
+  --cn-ink-soft: #6F6A5C;
+  --cn-ink-faint: #A39D8E;
+  /* 朱砂 / 金 */
+  --cn-cinnabar: #B03A2E;
+  --cn-cinnabar-deep: #8C2E24;
+  --cn-gold: #B98A3E;
+  /* 字体 */
+  --cn-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', 'STSong', serif;
+  --cn-kai: 'KaiTi', 'STKaiti', 'Kaiti SC', 'Kai', serif;
+  --cn-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+/* ─── 页面根（宣纸底 + 天青晕染 + 青花缠枝水印） ─── */
+.cn-page {
+  min-height: 100vh;
+  color: var(--cn-ink);
+  font-family: var(--cn-body);
+  background-color: var(--cn-paper);
+  background-image:
+    /* 青花缠枝莲水印（低透明度，铺满） */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%2326547C' stroke-width='1.1' opacity='0.055'%3E%3Ccircle cx='90' cy='90' r='26'/%3E%3Ccircle cx='90' cy='90' r='14'/%3E%3Cpath d='M90 64c-9-7-18-9-27-9 0 9 4 16 13 21'/%3E%3Cpath d='M90 64c9-7 18-9 27-9 0 9-4 16-13 21'/%3E%3Cpath d='M90 116c-9 7-18 9-27 9 0-9 4-16 13-21'/%3E%3Cpath d='M90 116c9 7 18 9 27 9 0-9-4-16-13-21'/%3E%3Cpath d='M90 64v-18M90 116v18M64 90H46M116 90h18'/%3E%3Cpath d='M30 30c7-9 21-9 28 0-9 5-19 5-28 0z'/%3E%3Cpath d='M150 30c-7-9-21-9-28 0 9 5 19 5 28 0z'/%3E%3Cpath d='M30 150c7 9 21 9 28 0-9-5-19-5-28 0z'/%3E%3Cpath d='M150 150c-7 9-21 9-28 0 9-5 19-5 28 0z'/%3E%3Cpath d='M90 90m-40 0a40 40 0 1 0 80 0a40 40 0 1 0-80 0' stroke-dasharray='3 6'/%3E%3C/g%3E%3C/svg%3E"),
+    /* 天青晕染（左上雨过天青，右下暖宣纸） */
+    radial-gradient(1100px 700px at 12% -6%, rgba(95,168,190,0.20), transparent 62%),
+    radial-gradient(900px 640px at 108% 12%, rgba(185,138,62,0.10), transparent 55%),
+    linear-gradient(178deg, #F8F4E8 0%, var(--cn-paper) 34%, #F3EEDF 100%);
+  background-attachment: fixed;
+}
+
+/* ─── 印章按钮（朱砂） ─── */
+.cn-seal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--cn-cinnabar);
+  color: #FBF6EA;
+  font-family: var(--cn-serif);
+  font-weight: 700;
+  font-size: 0.86rem;
+  letter-spacing: 3px;
+  padding: 8px 20px;
+  border-radius: 5px;
+  border: 2px solid var(--cn-cinnabar-deep);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 2px 6px rgba(140, 46, 36, 0.18);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.22s;
+}
+.cn-seal-btn:hover {
+  background: var(--cn-cinnabar-deep);
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 6px 18px rgba(176, 58, 46, 0.30);
+}
+.cn-seal-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* 墨线按钮（描边） */
+.cn-ink-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--cn-cobalt-deep);
+  font-family: var(--cn-serif);
+  font-weight: 600;
+  font-size: 0.84rem;
+  letter-spacing: 2px;
+  padding: 7px 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--cn-cobalt-soft);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cn-ink-btn:hover {
+  background: rgba(38, 84, 124, 0.06);
+  border-color: var(--cn-cobalt);
+}
+
+/* ─── 匾额标题（侧边栏/分区） ─── */
+.cn-plaque {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--cn-serif);
+  color: var(--cn-cobalt-deep);
+  font-weight: 700;
+  letter-spacing: 4px;
+  font-size: 0.92rem;
+  padding: 2px 0 10px;
+  white-space: nowrap;
+}
+.cn-plaque::before,
+.cn-plaque::after {
+  content: '';
+  height: 2px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, var(--cn-cobalt-soft), transparent);
+}
+.cn-plaque::after { background: linear-gradient(90deg, var(--cn-cobalt-soft), transparent); }
+.cn-plaque::before { background: linear-gradient(90deg, transparent, var(--cn-cobalt-soft)); }
+
+/* ─── 回纹分隔线（青花边饰） ─── */
+.cn-huiwen {
+  height: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='12' viewBox='0 0 72 12'%3E%3Cg fill='none' stroke='%2326547C' stroke-width='1.2' opacity='0.75'%3E%3Crect x='1' y='1' width='10' height='10'/%3E%3Crect x='3.5' y='3.5' width='5' height='5'/%3E%3Crect x='14' y='1' width='10' height='10'/%3E%3Crect x='16.5' y='3.5' width='5' height='5'/%3E%3Crect x='27' y='1' width='10' height='10'/%3E%3Crect x='29.5' y='3.5' width='5' height='5'/%3E%3Crect x='40' y='1' width='10' height='10'/%3E%3Crect x='42.5' y='3.5' width='5' height='5'/%3E%3Crect x='53' y='1' width='10' height='10'/%3E%3Crect x='55.5' y='3.5' width='5' height='5'/%3E%3Crect x='66' y='1' width='5' height='10'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 72px 12px;
+}
+
+/* ─── 云纹（装饰） ─── */
+.cn-cloud {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60' viewBox='0 0 120 60'%3E%3Cpath d='M18 42c0-10 8-17 18-17 7-12 25-14 34-4 5-7 17-7 22 1 9-5 21-3 24 6 7 2 12 7 12 14 0 8-8 15-18 15H34c-10 0-16-6-16-15z' fill='%23FFFFFF' opacity='0.5'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* ─── 青花瓷双线边框卡片 ─── */
+.cn-card {
+  background: var(--cn-paper-card);
+  border: 1px solid rgba(38, 84, 124, 0.30);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 3px rgba(246, 241, 227, 0.9), inset 0 0 0 4px rgba(38, 84, 124, 0.14), 0 2px 10px rgba(60, 48, 20, 0.06);
+  transition: box-shadow 0.25s, transform 0.25s;
+}
+.cn-card:hover {
+  box-shadow: inset 0 0 0 3px rgba(246, 241, 227, 0.9), inset 0 0 0 4px rgba(38, 84, 124, 0.28), 0 8px 26px rgba(38, 84, 124, 0.16);
+  transform: translateY(-2px);
+}
+
+/* ─── 小印章标签 ─── */
+.cn-stamp {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--cn-serif);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 1px 7px;
+  border-radius: 2px;
+  border: 1.2px solid currentColor;
+  line-height: 1.5;
+  background: transparent;
+}
+.cn-stamp--red { color: var(--cn-cinnabar); }
+.cn-stamp--blue { color: var(--cn-cobalt); }
+.cn-stamp--gold { color: var(--cn-gold); }
+
+/* ─── 滚动条（页面级适配宣纸底） ─── */
+.cn-page ::selection { background: rgba(95, 168, 190, 0.30); }

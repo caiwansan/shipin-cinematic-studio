@@ -1,8 +1,8 @@
 <template>
-  <NuxtLink :to="`/community/post/${post.id}`" class="post-card">
+  <NuxtLink :to="`/community/post/${post.id}`" class="post-card cn-card">
     <div class="card-header">
-      <span v-if="post.isPinned" class="pin-badge">📌 置顶</span>
-      <span v-if="post.isEssence" class="essence-badge">⭐ 精华</span>
+      <span v-if="post.isPinned" class="cn-stamp cn-stamp--red">置顶</span>
+      <span v-if="post.isEssence" class="cn-stamp cn-stamp--gold">精华</span>
       <span class="category-tag">{{ post.category }}</span>
     </div>
     <h3 class="card-title" :class="{ 'card-title-tipped': (post.giftCount || 0) > 0 }">{{ post.title }}</h3>
@@ -102,18 +102,9 @@ onUnmounted(() => {
 <style scoped>
 .post-card {
   display: block;
-  background: rgba(255,255,255,0.015);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 14px;
   padding: 20px 24px;
   text-decoration: none;
   color: inherit;
-  transition: all 0.25s;
-}
-.post-card:hover {
-  border-color: rgba(249,115,22,0.25);
-  background: rgba(249,115,22,0.02);
-  transform: translateY(-2px);
 }
 .card-header {
   display: flex;
@@ -122,45 +113,36 @@ onUnmounted(() => {
   margin-bottom: 10px;
   flex-wrap: wrap;
 }
-.pin-badge, .essence-badge {
-  font-size: 0.65rem;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 600;
-}
-.pin-badge {
-  background: rgba(249,115,22,0.1);
-  color: #f97316;
-}
-.essence-badge {
-  background: rgba(250,204,21,0.1);
-  color: #eab308;
-}
 .category-tag {
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   padding: 2px 10px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.4);
+  border-radius: 3px;
+  background: rgba(95, 168, 190, 0.14);
+  color: var(--cn-cobalt-deep);
+  font-family: var(--cn-serif);
+  letter-spacing: 1px;
+  border: 1px solid rgba(38, 84, 124, 0.16);
 }
 .card-title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #fff;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--cn-ink);
   margin: 0 0 8px;
-  line-height: 1.4;
+  line-height: 1.45;
+  font-family: var(--cn-serif);
+  letter-spacing: 0.5px;
 }
-/* COMMUNITY-TIP-01 被打赏的帖子标题变红 */
+/* COMMUNITY-TIP-01 被打赏的帖子标题变朱砂色 */
 .card-title-tipped {
-  color: #f97316;
+  color: var(--cn-cinnabar);
 }
 .tip-stat {
-  color: rgba(249,115,22,0.85);
+  color: var(--cn-cinnabar) !important;
 }
 .card-excerpt {
-  font-size: 0.82rem;
-  color: rgba(255,255,255,0.35);
-  line-height: 1.6;
+  font-size: 0.83rem;
+  color: var(--cn-ink-soft);
+  line-height: 1.75;
   margin-bottom: 12px;
 }
 .card-tags {
@@ -170,21 +152,24 @@ onUnmounted(() => {
   margin-bottom: 12px;
 }
 .tag {
-  font-size: 0.65rem;
+  font-size: 0.66rem;
   padding: 2px 10px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.03);
-  color: rgba(255,255,255,0.3);
+  border-radius: 10px;
+  background: rgba(38, 84, 124, 0.06);
+  color: var(--cn-cobalt-soft);
+  font-family: var(--cn-serif);
+  letter-spacing: 0.5px;
 }
 .card-meta {
   display: flex;
   gap: 16px;
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.25);
+  color: var(--cn-ink-faint);
   flex-wrap: wrap;
 }
 .meta-author {
-  color: rgba(249,115,22,0.6);
+  color: var(--cn-cobalt);
+  font-family: var(--cn-serif);
 }
 .meta-time {
   margin-left: auto;

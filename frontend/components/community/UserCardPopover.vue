@@ -122,17 +122,18 @@ defineExpose({ open, close })
   position: fixed;
   z-index: 301;
   width: 280px;
-  background: #14141c;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
+  background: var(--cn-paper-card);
+  border: 1px solid rgba(38, 84, 124, 0.35);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 3px rgba(246, 241, 227, 0.9), inset 0 0 0 4px rgba(38, 84, 124, 0.12), 0 14px 40px rgba(22, 38, 46, 0.25);
   padding: 16px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 .uc-loading {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--cn-ink-faint);
   text-align: center;
   padding: 18px 0;
+  font-family: var(--cn-serif);
 }
 .uc-head {
   display: flex;
@@ -144,14 +145,15 @@ defineExpose({ open, close })
   height: 46px;
   min-width: 46px;
   border-radius: 50%;
-  background: rgba(249, 115, 22, 0.15);
-  color: #f97316;
+  background: rgba(95, 168, 190, 0.2);
+  color: var(--cn-cobalt-deep);
   font-size: 1.25rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  font-family: var(--cn-serif);
 }
 .uc-avatar-img {
   width: 100%;
@@ -161,19 +163,20 @@ defineExpose({ open, close })
 .uc-info { min-width: 0; }
 .uc-name {
   font-size: 0.95rem;
-  font-weight: 600;
-  color: #fff;
+  font-weight: 700;
+  color: var(--cn-ink);
   display: flex;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: var(--cn-serif);
 }
 .uc-online, .uc-offline {
   font-size: 0.65rem;
   font-weight: 400;
-  color: #34d399;
+  color: #3e7f63;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -183,42 +186,44 @@ defineExpose({ open, close })
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #34d399;
+  background: #3e7f63;
   display: inline-block;
 }
-.uc-offline { color: rgba(255, 255, 255, 0.3); }
+.uc-offline { color: var(--cn-ink-faint); }
 .uc-stats {
   display: flex;
   gap: 14px;
   margin-top: 6px;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--cn-ink-soft);
 }
-.uc-stats b { color: rgba(255, 255, 255, 0.85); font-weight: 600; }
+.uc-stats b { color: var(--cn-cobalt-deep); font-weight: 700; font-family: var(--cn-serif); }
 .uc-foot { margin-top: 14px; }
 .uc-btn {
   width: 100%;
   padding: 8px 0;
-  border-radius: 10px;
+  border-radius: 4px;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  border: 1px solid rgba(249, 115, 22, 0.35);
-  background: rgba(249, 115, 22, 0.12);
-  color: #f97316;
+  border: 1.5px solid var(--cn-cinnabar);
+  background: var(--cn-cinnabar);
+  color: #FBF6EA;
+  letter-spacing: 1px;
+  font-family: var(--cn-serif);
   transition: all 0.15s;
 }
-.uc-btn:hover { background: rgba(249, 115, 22, 0.22); }
+.uc-btn:hover { background: var(--cn-cinnabar-deep); }
 .uc-btn.following {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.6);
-}
-.uc-btn.following:hover { background: rgba(255, 255, 255, 0.1); }
-.uc-btn.self {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--cn-cobalt-soft);
   background: transparent;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--cn-cobalt);
+}
+.uc-btn.following:hover { background: rgba(38, 84, 124, 0.06); }
+.uc-btn.self {
+  border-color: rgba(38, 84, 124, 0.2);
+  background: transparent;
+  color: var(--cn-ink-faint);
   cursor: default;
 }
 </style>
