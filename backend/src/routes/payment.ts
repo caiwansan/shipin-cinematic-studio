@@ -410,15 +410,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     let qrCode: string | null = null
     let codeUrl: string | null = null
     let h5Url: string | null = null
+    let payLinkError: string | null = null
 
     if (isSecretEnabled) {
       try {
         if (method === 'alipay') {
           if (secretCfg.appId && secretCfg.privateKey) {
             let privateKey = secretCfg.privateKey
-            if (privateKey && !privateKey.includes('-----BEGIN')) {
-              privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`
-            }
+            // 私钥规范化交给 AlipayProvider（自动兼容 PKCS#1/PKCS#8/裸 Base64），这里原样传入
             const { AlipayProvider } = await import('../payment/providers/alipay/index.js')
             const provider = new AlipayProvider({
               appId: secretCfg.appId,
@@ -455,16 +454,29 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           if (secretCfg.appId && secretCfg.mchId && secretCfg.apiV3Key && secretCfg.keyPem) {
             if (payMode === 'h5') {
               // 微信 H5 支付：手机浏览器跳转微信收银台（需商户开通 H5 支付）
-              const { createWxpayH5Order } = await import('../services/wxpay.service.js')
-              const result = await createWxpayH5Order({
-                outTradeNo: order.orderNo,
-                description: `充值 ${coins} 钻石 ¥${amount}`,
-                totalAmount: externalAmount,
-                notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
-                wapUrl: 'https://aigc.fushtn.com',
-                wapName: '昆仑镜',
-              })
-              h5Url = result.h5Url || null
+              // H5 产品未开通时 fallback 到 Native 扫码（手机端展示二维码，长按识别/另一台手机扫）
+              const { createWxpayH5Order, createWxpayNativeQrCode } = await import('../services/wxpay.service.js')
+              try {
+                const result = await createWxpayH5Order({
+                  outTradeNo: order.orderNo,
+                  description: `充值 ${coins} 钻石 ¥${amount}`,
+                  totalAmount: externalAmount,
+                  notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
+                  wapUrl: 'https://aigc.fushtn.com',
+                  wapName: '昆仑镜',
+                })
+                h5Url = result.h5Url || null
+              } catch (h5Err: any) {
+                console.warn(`[recharge] wechat H5 下单失败，fallback 扫码:`, h5Err?.message)
+                const result = await createWxpayNativeQrCode({
+                  outTradeNo: order.orderNo,
+                  description: `充值 ${coins} 钻石 ¥${amount}`,
+                  totalAmount: externalAmount,
+                  notifyUrl: 'https://aigc.fushtn.com/api/payment/wxpay/notify',
+                })
+                codeUrl = result.codeUrl || null
+                payLinkError = '微信 H5 支付未开通，已转为扫码支付（可长按识别二维码）'
+              }
             } else {
               const { createWxpayNativeQrCode } = await import('../services/wxpay.service.js')
               const result = await createWxpayNativeQrCode({
@@ -479,6 +491,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         }
       } catch (err: any) {
         console.error(`[recharge] ${method} 支付链接生成失败:`, err.message)
+        payLinkError = err?.message || '支付链接生成失败（请检查支付配置）'
       }
 
       // 保存支付凭据
@@ -507,6 +520,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       qrCodeUrl: qrConfig?.qrCodeUrl || null,
       account: qrConfig?.account || null,
       payeeName: qrConfig?.name || null,
+      error: payLinkError,
     }) satisfies ApiResponse<unknown>
   })
 

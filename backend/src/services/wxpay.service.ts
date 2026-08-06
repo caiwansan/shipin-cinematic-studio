@@ -78,7 +78,7 @@ export async function createWxpayNativeQrCode(params: {
 
 /**
  * 生成微信 H5 支付链接（手机浏览器唤起微信收银台；API v3 /v3/pay/transactions/h5）
- * 注意：H5 支付需商户号已开通 H5 支付权限；wap_url 为发起支付页面的域名
+ * 注意：H5 支付需商户号已开通 H5 支付权限；h5_info 字段为 app_name/app_url（API v3 文档，非旧版 wap_name/wap_url）
  */
 export async function createWxpayH5Order(params: {
   outTradeNo: string
@@ -101,8 +101,8 @@ export async function createWxpayH5Order(params: {
       payer_client_ip: '127.0.0.1',
       h5_info: {
         type: 'Wap',
-        wap_url: params.wapUrl || 'https://aigc.fushtn.com',
-        wap_name: params.wapName || '昆仑镜',
+        app_url: params.wapUrl || 'https://aigc.fushtn.com',
+        app_name: params.wapName || '昆仑镜',
       },
     },
   })

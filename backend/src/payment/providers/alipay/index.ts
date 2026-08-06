@@ -7,7 +7,10 @@ export class AlipayProvider {
   private config: AlipayConfig
 
   constructor(config: AlipayConfig) {
-    this.config = config
+    this.config = {
+      gateway: 'https://openapi.alipay.com/gateway.do',
+      ...config,
+    }
   }
 
   /** 创建支付订单（PC网站支付 + 手机网站支付） */
@@ -187,7 +190,24 @@ export class AlipayProvider {
 
     const sign = crypto.createSign('RSA-SHA256')
     sign.update(signStr, 'utf8')
-    const signature = sign.sign(this.config.privateKey, 'base64')
+    // 支付宝私钥可能是 PKCS#1（BEGIN RSA PRIVATE KEY）或 PKCS#8，且用户可能只贴裸 Base64（无头尾）
+    // Node22/OpenSSL3 对裸 PKCS#1 私钥直接 sign 会 ERR_OSSL_UNSUPPORTED → 先规范化成 PEM 再解析
+    let key: crypto.KeyObject | null = null
+    const bodyMatch = this.config.privateKey.match(/-----BEGIN [A-Z ]*PRIVATE KEY-----([\s\S]*?)-----END [A-Z ]*PRIVATE KEY-----/)
+    const raw = (bodyMatch ? bodyMatch[1] : this.config.privateKey).replace(/\s+/g, '').trim()
+    const candidates: string[] = []
+    if (this.config.privateKey.includes('BEGIN')) candidates.push(this.config.privateKey)
+    if (raw) {
+      candidates.push(`-----BEGIN RSA PRIVATE KEY-----\n${raw}\n-----END RSA PRIVATE KEY-----`)
+      candidates.push(`-----BEGIN PRIVATE KEY-----\n${raw}\n-----END PRIVATE KEY-----`)
+    }
+    for (const pem of candidates) {
+      try { key = crypto.createPrivateKey(pem); break } catch { /* try next */ }
+    }
+    if (!key) {
+      throw new Error('支付宝私钥解析失败：请确认配置的是应用私钥 PEM（含 -----BEGIN ... PRIVATE KEY----- 头尾），当前为裸 ' + (raw.length > 16 ? raw.slice(0, 12) + '…' : raw) + ' …')
+    }
+    const signature = sign.sign(key, 'base64')
 
     return { ...common, sign: signature }
   }
