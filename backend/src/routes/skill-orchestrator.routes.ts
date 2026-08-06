@@ -2,12 +2,15 @@
  * S3.3.1 Skill Orchestrator API（Cloud Control Plane, 只编排不执行）
  * - GET  /api/skills/employees/:code/skills   员工 Skill Set 绑定视图（OC1）
  * - POST /api/skills/plans/execute             多 Skill 编排执行（生成→授权→Hermes→聚合→审计）
+ * - GET  /api/skills/employees/:code/entitlement 员工授权状态（S4.3 DP3, Cloud 来源）
+ * - GET  /api/skills/employees/:code/usage      Usage Meter（S4.2 Task 05）
  * 原则:
  *  - Planner = Cloud 本层（OC-0.1）; SkillPlan = 纯内存运行时 DAG（OC-0.2, 不入库）
+ *  - S4.4 P0: 身份权威 = JWT（tenantUserId 不再接受客户端传参; body/query 的 tenantUserId 忽略）
  *  - 每 Skill 独立授权（OC2/OC-0.3）; Hermes 原子执行（OC3）
  */
 import type { FastifyInstance } from 'fastify'
-import { getEmployeeSkillSet, executeSkillPlan, getEmployeeUsageMeter } from '../ecosystem/skill-orchestrator.js'
+import { getEmployeeSkillSet, executeSkillPlan, getEmployeeUsageMeter, checkEmployeeEntitlement } from '../ecosystem/skill-orchestrator.js'
 
 export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
   // OC1: 多 Skill 绑定视图（只读）
@@ -23,7 +26,7 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
   })
 
   // S3.3.1: 编排执行（SkillPlan 运行时对象, 请求内即弃）
-  app.post('/api/skills/plans/execute', async (request: any, reply: any) => {
+  app.post('/api/skills/plans/execute', { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
     try {
       const body = request.body || {}
       if (!Array.isArray(body.steps) || body.steps.length === 0) {
@@ -37,7 +40,7 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
         deadlineMs: body.deadlineMs,
         retry: body.retry,
         maxParallel: body.maxParallel,
-        tenantUserId: body.tenantUserId ?? null,
+        tenantUserId: request.user?.id ?? null,
       })
       if (result.errors.length) {
         return reply.code(400).send({ error: 'INVALID_PLAN', errors: result.errors })
@@ -49,11 +52,11 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
     }
   })
 
-  // S4.3 DP3: 员工授权状态（Cloud 来源; Desktop 只展示不判断; S4.3 后改 JWT）
-  app.get('/api/skills/employees/:code/entitlement', async (request: any, reply: any) => {
+  // S4.3 DP3: 员工授权状态（Cloud 来源; Desktop 只展示不判断; S4.4 P0 身份权威 = JWT）
+  app.get('/api/skills/employees/:code/entitlement', { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
     try {
-      const tenantUserId = request.query?.tenantUserId
-      if (!tenantUserId) return reply.code(400).send({ error: 'TENANT_USER_ID_REQUIRED' })
+      const tenantUserId = request.user?.id
+      if (!tenantUserId) return reply.code(401).send({ error: 'UNAUTHORIZED' })
       const ent = await checkEmployeeEntitlement(tenantUserId, request.params.code)
       const state = ent.allowed ? 'ACTIVE' : /NO_ORGANIZATION|NO_ENTITLEMENT/.test(ent.reason) ? 'NONE' : 'NOT_ENTITLED'
       return reply.send({ code: 0, data: { employeeCode: request.params.code, entitlementState: state, reason: ent.reason } })
@@ -63,11 +66,11 @@ export async function registerSkillOrchestratorRoutes(app: FastifyInstance) {
     }
   })
 
-  // S4.2 Task 05: Usage Meter（只读; tenantUserId 从 query 传, S4.3 改 JWT）
-  app.get('/api/skills/employees/:code/usage', async (request: any, reply: any) => {
+  // S4.2 Task 05: Usage Meter（只读; S4.4 P0 身份权威 = JWT）
+  app.get('/api/skills/employees/:code/usage', { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
     try {
-      const tenantUserId = request.query?.tenantUserId
-      if (!tenantUserId) return reply.code(400).send({ error: 'TENANT_USER_ID_REQUIRED' })
+      const tenantUserId = request.user?.id
+      if (!tenantUserId) return reply.code(401).send({ error: 'UNAUTHORIZED' })
       const meter = await getEmployeeUsageMeter(tenantUserId, request.params.code)
       return reply.send({ code: 0, data: meter })
     } catch (e: any) {

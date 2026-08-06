@@ -534,6 +534,13 @@ export async function executeSkillPlan(input: ExecutePlanOptions): Promise<{ pla
     if (!ent.allowed) {
       return { plan: null as any, errors: [`ENTITLEMENT_DENIED:${ent.reason}`] }
     }
+    // S4.4 P0: 执行身份统一 = 入口解析身份（JWT）; 防 step input 身份注入
+    // 客户端不可经 step.input.tenantUserId 伪造租户（BYOK 路由/InvocationLog 归属随此身份）
+    for (const s of input.steps) {
+      if (s.input && typeof s.input === 'object') {
+        ;(s.input as any).tenantUserId = input.tenantUserId
+      }
+    }
   }
 
   const plan = createSkillPlan({

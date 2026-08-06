@@ -3,12 +3,13 @@
  * POST /api/skills/plans/from-intent { employeeDefinitionId, intent, fallback?, context? }
  *  → { code, data: { ok, plan?, goal?, errors? } }
  * 执行仍走既有 POST /api/skills/plans/execute（无新增执行路径, PL3）
+ * S4.4 P0: 身份权威 = JWT（tenantUserId 不再接受客户端传参; body.tenantUserId 忽略）
  */
 import type { FastifyInstance } from 'fastify'
 import { planFromIntent } from '../ecosystem/skill-planner.service.js'
 
 export async function registerSkillPlannerRoutes(app: FastifyInstance) {
-  app.post('/api/skills/plans/from-intent', async (request: any, reply: any) => {
+  app.post('/api/skills/plans/from-intent', { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
     try {
       const body = request.body || {}
       if (!body.employeeDefinitionId || !body.intent) {
@@ -19,7 +20,7 @@ export async function registerSkillPlannerRoutes(app: FastifyInstance) {
         intent: String(body.intent),
         fallback: body.fallback,
         context: body.context,
-        tenantUserId: body.tenantUserId ?? undefined,
+        tenantUserId: request.user?.id ?? undefined,
       })
       if (!result.ok) {
         return reply.send({ code: 0, data: { ok: false, goal: result.goal, errors: result.errors } })
