@@ -58,6 +58,8 @@ export interface SkillPlanStep {
   /** per-step 覆盖 */
   timeoutMs?: number
   retry?: Partial<RetryConfig>
+  /** 前序步骤输出映射（S3.4 Final Task 02） */
+  inputMap?: Record<string, { from: string; path?: string }>
 }
 
 export interface SkillPlan {
@@ -85,6 +87,8 @@ export interface PlanStepInput {
   dependsOn?: string[]
   timeoutMs?: number
   retry?: Partial<RetryConfig>
+  /** S3.4 Final Task 02: 前序步骤输出 → 本步骤输入映射（仅限 dependsOn 依赖, 真实数据流） */
+  inputMap?: Record<string, { from: string; path?: string }>
 }
 
 export interface ExecutePlanOptions {
@@ -188,6 +192,15 @@ export function validatePlan(input: {
     if (input.employeeSkillSet && !input.employeeSkillSet.includes(s.skillId)) {
       errors.push(`SKILL_NOT_BOUND:${s.skillId}（不在员工能力集内, F1）`)
     }
+    if (s.inputMap) {
+      const deps = new Set(s.dependsOn || [])
+      for (const field of Object.keys(s.inputMap)) {
+        const from = s.inputMap[field].from
+        if (!deps.has(from)) {
+          errors.push(`INPUT_MAP_NOT_DEPENDENCY:${s.stepId || s.skillId}:${field}→${from}（数据源必须是 dependsOn 依赖）`)
+        }
+      }
+    }
   }
   const norm = input.steps.map((s) => ({ stepId: s.stepId || s.skillId + ':' + s.tool, dependsOn: s.dependsOn || [] }))
   const orderedStepIds = topoSortSteps(norm)
@@ -227,6 +240,7 @@ export function createSkillPlan(input: {
       executionId: null,
       timeoutMs: s.timeoutMs,
       retry: s.retry,
+      inputMap: s.inputMap,
     })),
     failureReason: null,
     timeoutMs: input.timeoutMs,
@@ -344,6 +358,26 @@ async function runStep(
   return { ok: false, error: lastError, errorType: lastType, attempts, executionId: lastExecutionId, durationMs: Date.now() - totalStarted }
 }
 
+/**
+ * S3.4 Final Task 02: 前序步骤输出 → 本步骤输入解析（纯函数, 真实数据流）
+ * results: Map<stepId, step>; path 为点路径（如 'result.profile'）
+ * 只合并 inputMap 声明字段; 未找到源字段则保持原输入
+ */
+export function resolveStepInput(step: SkillPlanStep, results: Map<string, any>): any {
+  const input = { ...(step.input || {}) }
+  if (!step.inputMap) return input
+  for (const [field, spec] of Object.entries(step.inputMap)) {
+    const src = results.get(spec.from)
+    if (!src) continue
+    let value: any = src
+    if (spec.path) {
+      value = spec.path.split('.').reduce((acc: any, k: string) => (acc == null ? acc : acc[k]), src)
+    }
+    if (value !== undefined) input[field] = value
+  }
+  return input
+}
+
 /** Task 03: 并行执行一个 level（同层独立 step 并发, 受 maxParallel 限制） */
 async function runLevel(
   level: string[],
@@ -352,6 +386,11 @@ async function runLevel(
 ): Promise<void> {
   for (let i = 0; i < level.length; i += plan.maxParallel) {
     const chunk = level.slice(i, i + plan.maxParallel)
+    // 构建已完成步骤结果表（供 inputMap 数据流解析）
+    const resultsMap = new Map<string, any>()
+    for (const s of plan.steps) {
+      if (s.status === 'COMPLETED') resultsMap.set(s.stepId, s)
+    }
     await Promise.all(
       chunk.map(async (stepId) => {
         const step = plan.steps.find((s) => s.stepId === stepId)!
@@ -364,7 +403,9 @@ async function runLevel(
           return
         }
         step.status = 'RUNNING'
-        const out = await runStep(step, agentDefinitionId, { timeoutMs: plan.timeoutMs, retry: plan.retry })
+        // 真实数据流: 前序输出合并进本步输入（inputMap）
+        const mergedInput = resolveStepInput(step, resultsMap)
+        const out = await runStep({ ...step, input: mergedInput }, agentDefinitionId, { timeoutMs: plan.timeoutMs, retry: plan.retry })
         step.attempts = out.attempts
         step.executionId = out.executionId
         step.durationMs = out.durationMs
