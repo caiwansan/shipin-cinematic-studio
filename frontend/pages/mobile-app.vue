@@ -97,14 +97,40 @@
               </div>
               <span v-if="currentChannel.kind === 'group'" class="chat-head-opt" @click="openGroupDetail">⋯</span>
             </div>
-            <div ref="msgListEl" class="chat-msgs">
+            <div class="chat-msgs">
               <div v-for="m in messages" :key="msgKey(m)" class="msg-row" :class="{ mine: m.fromUID === tea.userId.value }">
                 <div v-if="!m.isSystem" class="msg-avatar">{{ msgName(m) === '我' ? (myName || '我').slice(0,1) : msgName(m).slice(0,1) }}</div>
                 <div class="msg-main">
                   <div v-if="!m.isSystem" class="msg-author">{{ msgName(m) }}</div>
-                  <div class="msg-bubble" :class="{ system: m.isSystem }">
-                    <img v-if="isImage(m.content)" :src="imgUrl(m.content)" class="msg-img" @click="previewImg(imgUrl(m.content))" />
-                    <template v-else>{{ msgText(m) }}</template>
+                  <!-- 红包卡片 -->
+                  <div v-if="isRedPacket(m)" class="rp-card" @click="openRpDetailMsg(m)">
+                    <div class="rp-card-icon">🧧</div>
+                    <div class="rp-card-info">
+                      <div class="rp-card-title">{{ rpCardTitle(m) }}</div>
+                      <div class="rp-card-sub">{{ rpCardSub(m) }}</div>
+                    </div>
+                    <div class="rp-card-note">{{ rpNote(m) }}</div>
+                  </div>
+                  <!-- 礼物消息 -->
+                  <div v-else-if="isGift(m)" class="gift-card">
+                    <span class="gift-card-icon">{{ giftIcon(m) }}</span>
+                    <span class="gift-card-text">{{ giftText(m) }}</span>
+                  </div>
+                  <!-- 图片 -->
+                  <div v-else-if="isImage(m)" class="msg-bubble">
+                    <img :src="imgUrl(m)" class="msg-img" @click="previewImg(imgUrl(m))" />
+                  </div>
+                  <!-- 视频 -->
+                  <div v-else-if="isVideo(m)" class="msg-bubble">
+                    <video :src="videoUrl(m)" class="msg-video" controls preload="metadata" />
+                  </div>
+                  <!-- 语音 -->
+                  <div v-else-if="isVoice(m)" class="msg-bubble voice-bubble" :class="{ mine: m.fromUID === tea.userId.value }" @click="playVoice(m)">
+                    <span class="voice-icon">🔊</span>
+                    <span class="voice-dur">{{ voiceDur(m) }}"</span>
+                  </div>
+                  <div v-else class="msg-bubble" :class="{ system: m.isSystem }">
+                    <template>{{ msgText(m) }}</template>
                   </div>
                   <div class="msg-time">{{ msgTime(m) }}</div>
                 </div>
@@ -112,6 +138,7 @@
               <div v-if="!messages.length" class="conv-empty"><p>说点什么吧～</p></div>
             </div>
             <div class="chat-input-bar">
+              <button class="chat-plus" @click="plusPanelOpen = !plusPanelOpen">＋</button>
               <input
                 v-model="draft"
                 class="chat-input"
@@ -120,6 +147,15 @@
               />
               <button class="chat-send" :disabled="!draft.trim()" @click="sendDraft">发送</button>
             </div>
+            <!-- ＋ 面板：图片/视频/红包/礼物/语音 -->
+            <div v-if="plusPanelOpen" class="chat-plus-panel">
+              <button class="plus-item" @click="pickMedia('image')">🖼️<span>图片</span></button>
+              <button class="plus-item" @click="pickMedia('video')">🎬<span>视频</span></button>
+              <button class="plus-item" @click="openRedPacket">🧧<span>红包</span></button>
+              <button class="plus-item" @click="openGift">🎁<span>礼物</span></button>
+              <button class="plus-item" :class="{ recording: recording }" @click="toggleRecord">🎤<span>{{ recording ? recordingSeconds + 's' : '语音' }}</span></button>
+            </div>
+            <input ref="fileInputRef" type="file" class="hidden-file" @change="onFilePicked" />
           </div>
         </template>
       </section>
@@ -197,7 +233,7 @@
 
       <!-- ── Tab4 我的：会员卡 + 资产 + 功能入口 ── -->
       <section v-else class="tab-pane mine-pane">
-        <div class="mine-hero" @click="go('/user/center')">
+        <div class="mine-hero" @click="openMobilePage('profile')">
           <div class="mine-avatar">{{ myName.slice(0, 1) || '👤' }}</div>
           <div class="mine-info">
             <div class="mine-name">{{ myName || '未登录' }}</div>
@@ -207,22 +243,22 @@
         </div>
 
         <div class="mine-assets">
-          <div class="asset-cell" @click="go('/user/wallet')">
+          <div class="asset-cell" @click="openMobilePage('wallet')">
             <div class="asset-num">{{ walletBalance }}</div>
             <div class="asset-label">余额</div>
           </div>
-          <div class="asset-cell" @click="go('/user/credits')">
+          <div class="asset-cell" @click="openMobilePage('credits')">
             <div class="asset-num">{{ credits }}</div>
             <div class="asset-label">积分</div>
           </div>
-          <div class="asset-cell" @click="go('/user/diamonds')">
+          <div class="asset-cell" @click="openMobilePage('diamonds')">
             <div class="asset-num">{{ diamonds }}</div>
             <div class="asset-label">钻石</div>
           </div>
         </div>
 
         <div class="mine-grid">
-          <div v-for="it in mineEntries" :key="it.label" class="mine-entry" @click="go(it.to)">
+          <div v-for="it in mineEntries" :key="it.label" class="mine-entry" @click="openMobilePage(it.page)">
             <div class="mine-entry-icon">{{ it.icon }}</div>
             <div class="mine-entry-label">{{ it.label }}</div>
           </div>
@@ -276,13 +312,115 @@
     <div v-if="previewUrl" class="tea-app-mask img-mask" @click="previewUrl = ''">
       <img :src="previewUrl" class="preview-img" />
     </div>
+
+    <!-- ══ 发红包弹窗 ══ -->
+    <div v-if="rpPanelOpen" class="tea-app-mask" @click.self="rpPanelOpen = false">
+      <div class="tea-app-modal">
+        <div class="modal-title">🧧 发红包</div>
+        <div v-if="currentChannel?.kind === 'group'" class="rp-modes">
+          <button class="rp-mode" :class="{ on: rpForm.mode === 'lucky' }" @click="rpForm.mode = 'lucky'">🎲 拼手气</button>
+          <button class="rp-mode" :class="{ on: rpForm.mode === 'normal' }" @click="rpForm.mode = 'normal'">⚖️ 普通</button>
+        </div>
+        <div class="rp-field">
+          <span class="rp-field-lb">单个金额</span>
+          <input v-model.number="rpForm.amount" type="number" min="1" class="modal-input" />
+          <span class="rp-field-unit">💎</span>
+        </div>
+        <div v-if="currentChannel?.kind === 'group'" class="rp-field">
+          <span class="rp-field-lb">个数</span>
+          <input v-model.number="rpForm.count" type="number" min="1" max="100" class="modal-input" />
+          <span class="rp-field-unit">个</span>
+        </div>
+        <div class="rp-quicks">
+          <button v-for="q in [1, 5, 10, 50, 100]" :key="q" class="rp-quick" @click="rpForm.amount = q">{{ q }}</button>
+        </div>
+        <input v-model="rpForm.note" class="modal-input" maxlength="30" placeholder="祝福语" />
+        <p v-if="rpForm.amount * rpCount > diamondBalance" class="modal-error">钻石不足，先去充值</p>
+        <div class="modal-actions">
+          <button class="modal-btn cancel" @click="rpPanelOpen = false">取消</button>
+          <button class="modal-btn ok" :disabled="rpSending || !rpForm.amount || rpForm.amount * rpCount < rpCount || rpForm.amount * rpCount > diamondBalance" @click="sendRedPacket">
+            {{ rpSending ? '塞钱中…' : '塞钱进红包' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ 抢红包弹窗 ══ -->
+    <div v-if="rpDetail" class="tea-app-mask" @click.self="closeRpDetail">
+      <div class="tea-app-modal rp-detail-modal">
+        <div class="rp-detail-envelope" @click="grabRedPacket">
+          <div class="rp-detail-big">{{ rpDetail.mine ? '🧧 ' + rpDetail.note : '🧧 点击拆开' }}</div>
+          <div class="rp-detail-sub">{{ rpDetail.sender?.name || '茶客' }} 的红包</div>
+        </div>
+        <div v-if="rpDetail.grabs && rpDetail.grabs.length" class="rp-grabs">
+          <div v-for="g in rpDetail.grabs" :key="g.userId" class="rp-grab">
+            <span class="rp-grab-name">{{ g.name }}<span v-if="g.userId === tea.userId.value">（我）</span></span>
+            <span class="rp-grab-amt">+{{ g.amount }} 💎</span>
+          </div>
+        </div>
+        <div v-else class="rp-grabs-empty">还没有人领取</div>
+        <div class="modal-actions">
+          <button class="modal-btn ok" @click="closeRpDetail">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ 送礼物弹窗 ══ -->
+    <div v-if="giftPanelOpen" class="tea-app-mask" @click.self="giftPanelOpen = false">
+      <div class="tea-app-modal gift-modal">
+        <div class="modal-title">🎁 送礼物 <span class="gift-balance">💎 {{ diamondBalance }}<a class="gift-recharge" @click="openMobilePage('diamonds')">充值</a></span></div>
+        <div v-if="currentChannel?.kind === 'group'" class="gift-receiver">
+          <span class="gift-receiver-lb">送给</span>
+          <select v-model="giftReceiverUid" class="modal-input">
+            <option value="">请选择群成员</option>
+            <option v-for="gm in groupMembers" :key="gm.uid" :value="gm.uid">{{ gm.name }}</option>
+          </select>
+        </div>
+        <div class="gift-tabs">
+          <button v-for="g in giftGroups" :key="g.category" class="gift-tab" :class="{ on: giftActiveTab === g.category }" @click="giftActiveTab = g.category">{{ g.category }}</button>
+        </div>
+        <div class="gift-wall">
+          <button v-for="item in activeGiftItems" :key="item.id" class="gift-item" :class="{ on: giftSelected?.id === item.id }" @click="giftSelected = item">
+            <span class="gift-item-icon">{{ item.iconUrl || '🎁' }}</span>
+            <span class="gift-item-name">{{ item.giftName || item.name }}</span>
+            <span class="gift-item-price">💎{{ item.priceDiamonds }}</span>
+          </button>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn cancel" @click="giftPanelOpen = false">取消</button>
+          <button class="modal-btn ok" :disabled="giftSending || !giftSelected || !giftReceiverOk" @click="sendGift">
+            {{ giftSending ? '赠送中…' : '送出' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 礼物动画 -->
+    <div v-if="giftAnimation" class="gift-anim">
+      <div class="gift-anim-icon">{{ giftAnimation.icon }}</div>
+      <div class="gift-anim-text">{{ giftAnimation.fromName }} 送出 {{ giftAnimation.name }} 给 {{ giftAnimation.toName }}</div>
+    </div>
+
+    <!-- 全局 toast（子页面 mobileToast 事件） -->
+    <div v-if="toast" class="tea-toast">{{ toast }}</div>
+
+    <!-- ══ 手机版子页面容器 ══ -->
+    <component
+      :is="mobilePageComp"
+      v-if="mobilePage"
+      v-bind="mobilePageProps"
+      class="mp-container"
+      @close="closeMobilePage"
+      @open="openMobilePage"
+      @published="onSubPublished"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 // 昆仑茶馆手机版 — 微信式四 Tab 聚合壳（茶馆 / 好友 / 社区 / 我的）
 // 复用 useKunlunTea 全部 IM 能力；社区/会员中心调原生 API；桌面版页面零改动
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, defineAsyncComponent } from 'vue'
 import { MEMBERSHIP_LABELS } from '~/constants/membership'
 
 // 登录保护：中间件拦截（SSR cookie 检查 + 客户端 token 校验），未登录跳手机版登录页
@@ -308,8 +446,58 @@ function showToast(msg: string) {
   if (toastTimer) clearTimeout(toastTimer)
   toastTimer = setTimeout(() => (toast.value = ''), 2200)
 }
+// 子页面 mobileToast → 壳 toast
+if (typeof window !== 'undefined') {
+  window.addEventListener('tea:mobile-toast', ((e: any) => showToast(e.detail?.msg || '')) as any)
+}
 function go(path: string) {
   window.location.href = path
+}
+
+// ══ 手机版子页面系统（微信式：全屏覆盖，栈式返回） ══
+const mobilePage = ref<string | null>(null)
+const mobilePageProps = ref<any>({})
+const mobilePageStack = ref<string[]>([])
+const mobilePageComp = computed(() => {
+  const map: Record<string, any> = {
+    profile: defineAsyncComponent(() => import('~/components/mobile/MProfile.vue')),
+    wallet: defineAsyncComponent(() => import('~/components/mobile/MWallet.vue')),
+    credits: defineAsyncComponent(() => import('~/components/mobile/MCredits.vue')),
+    diamonds: defineAsyncComponent(() => import('~/components/mobile/MDiamonds.vue')),
+    orders: defineAsyncComponent(() => import('~/components/mobile/MOrders.vue')),
+    team: defineAsyncComponent(() => import('~/components/mobile/MTeam.vue')),
+    settings: defineAsyncComponent(() => import('~/components/mobile/MSettings.vue')),
+    messages: defineAsyncComponent(() => import('~/components/mobile/MMessages.vue')),
+    referral: defineAsyncComponent(() => import('~/components/mobile/MReferral.vue')),
+    gallery: defineAsyncComponent(() => import('~/components/mobile/MGallery.vue')),
+    gifts: defineAsyncComponent(() => import('~/components/mobile/MGifts.vue')),
+    'post': defineAsyncComponent(() => import('~/components/mobile/MPostDetail.vue')),
+    'post-new': defineAsyncComponent(() => import('~/components/mobile/MCommunityNew.vue')),
+  }
+  return mobilePage.value ? map[mobilePage.value] : null
+})
+function openMobilePage(page: string, props?: any) {
+  // 离开聊天窗状态（发红包/礼物面板关闭）
+  rpPanelOpen.value = false
+  giftPanelOpen.value = false
+  plusPanelOpen.value = false
+  if (mobilePage.value && mobilePage.value !== page) mobilePageStack.value.push(mobilePage.value)
+  mobilePageProps.value = props || {}
+  mobilePage.value = page
+}
+function closeMobilePage() {
+  const prev = mobilePageStack.value.pop()
+  if (prev) {
+    mobilePageProps.value = {}
+    mobilePage.value = prev
+  } else {
+    mobilePage.value = null
+    mobilePageProps.value = {}
+  }
+}
+function onSubPublished() {
+  closeMobilePage()
+  loadPosts()
 }
 
 // ── 登录态 ──
@@ -448,6 +636,400 @@ function sendDraft() {
   tea.sendText(text, currentChannel.value.id, currentChannel.value.type)
   draft.value = ''
   // 自己消息由 SDK 回显触发 onMessage 渲染（不乐观追加，避免重复）
+}
+
+// ═══ 图片 / 视频 / 文件发送 ═══
+const fileInputRef = ref<any>(null)
+const pendingPickKind = ref<'image' | 'video' | 'file'>('image')
+const sendingMedia = ref(false)
+function pickMedia(kind: 'image' | 'video' | 'file') {
+  if (sendingMedia.value) return showToast('⏳ 正在上传上一份，稍等')
+  pendingPickKind.value = kind
+  const input = fileInputRef.value
+  if (!input) return
+  input.accept = kind === 'image' ? 'image/*' : kind === 'video' ? 'video/*' : ''
+  input.value = ''
+  input.click()
+  plusPanelOpen.value = false
+}
+async function onFilePicked(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const kind = pendingPickKind.value
+  input.value = ''
+  if (sendingMedia.value) return showToast('⏳ 正在上传上一份，稍等')
+  await sendMedia(file, kind)
+}
+async function sendMedia(file: File, kind: 'image' | 'video' | 'file') {
+  if (!currentChannel.value || !tea.connected.value) return showToast('⚠ 请先连接茶馆')
+  sendingMedia.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const up = await fetch('/api/im/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + authToken() },
+      body: fd,
+    }).then((r) => r.json())
+    if (!up.success) throw new Error(up.error || '上传失败')
+    const { url, name, size, thumbUrl, ttlHours } = up.data
+    let width = 0, height = 0
+    if (kind === 'image') {
+      try {
+        const img = new Image()
+        img.src = absUrl(url)
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej })
+        width = img.naturalWidth; height = img.naturalHeight
+      } catch { /* 非致命 */ }
+    }
+    const contentType = kind === 'image' ? 2 : kind === 'video' ? 4 : 3
+    const res = await fetch('/api/im/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({
+        channelId: currentChannel.value.id,
+        channelType: currentChannel.value.type,
+        contentType,
+        content: { url, name, size, width, height, thumbUrl: thumbUrl || '', ttlHours: ttlHours || 0 },
+      }),
+    }).then((r) => r.json())
+    if (!res.success) throw new Error(res.error || '发送失败')
+    messages.value.push({
+      fromUID: tea.userId.value,
+      timestamp: Math.floor(Date.now() / 1000),
+      content: { type: contentType, content: { url, name, size, width, height, thumbUrl: thumbUrl || '', ttlHours: ttlHours || 0 } },
+      key: 'media-' + Math.random().toString(36).slice(2, 8),
+    })
+    scrollToBottom()
+    showToast(kind === 'image' ? '📷 图片已发送' : kind === 'video' ? '🎬 视频已发送' : '📄 文件已发送')
+  } catch (err) {
+    showToast('⚠ ' + ((err as Error).message || '发送失败'))
+  } finally {
+    sendingMedia.value = false
+  }
+}
+
+// ═══ 语音录制发送 ═══
+const recording = ref(false)
+const recordingSeconds = ref(0)
+let mediaRecorder: MediaRecorder | null = null
+let mediaChunks: Blob[] = []
+let recordTimer: ReturnType<typeof setInterval> | null = null
+let recordStartAt = 0
+function toggleRecord() {
+  if (recording.value) stopRecord()
+  else startRecord()
+}
+async function startRecord() {
+  if (recording.value || sendingMedia.value) return
+  if (!currentChannel.value || !tea.connected.value) return showToast('⚠ 请先连接茶馆')
+  if (!navigator.mediaDevices?.getUserMedia) return showToast('⚠ 当前浏览器不支持录音')
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    mediaChunks = []
+    const mime = (MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm') || ''
+    mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
+    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) mediaChunks.push(e.data) }
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop())
+      const dur = Math.round((Date.now() - recordStartAt) / 1000)
+      recording.value = false
+      if (recordTimer) { clearInterval(recordTimer); recordTimer = null }
+      if (dur < 1) return showToast('⏱ 说话时间太短')
+      if (dur > 120) return showToast('⏱ 最长 120 秒')
+      const blob = new Blob(mediaChunks, { type: mediaRecorder?.mimeType || 'audio/webm' })
+      sendVoiceMsg(blob, dur)
+    }
+    mediaRecorder.start()
+    recordStartAt = Date.now()
+    recording.value = true
+    recordingSeconds.value = 0
+    recordTimer = setInterval(() => { recordingSeconds.value++ }, 1000)
+    showToast('🎤 正在录音，点「语音」结束')
+  } catch {
+    showToast('⚠ 无法访问麦克风（请检查浏览器权限）')
+  }
+}
+function stopRecord() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop()
+}
+async function sendVoiceMsg(blob: Blob, duration: number) {
+  if (!currentChannel.value || !tea.connected.value) return
+  sendingMedia.value = true
+  try {
+    const ext = /mp4|aac|m4a/.test(blob.type) ? '.m4a' : '.webm'
+    const fd = new FormData()
+    fd.append('file', new File([blob], 'voice' + ext, { type: blob.type }))
+    const up = await fetch('/api/im/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + authToken() },
+      body: fd,
+    }).then((r) => r.json())
+    if (!up.success) throw new Error(up.error || '上传失败')
+    const { url, ttlHours } = up.data
+    const sent = await tea.sendVoice({
+      url,
+      duration,
+      name: 'voice',
+      ttlHours: ttlHours || 168,
+      channelId: currentChannel.value.id,
+      channelType: currentChannel.value.type,
+    })
+    messages.value.push({
+      fromUID: tea.userId.value,
+      clientMsgNo: sent?.clientMsgNo || '',
+      timestamp: Math.floor(Date.now() / 1000),
+      content: { type: 5, content: { url, duration, name: '语音', ttlHours: ttlHours || 168 } },
+      key: 'voice-' + Math.random().toString(36).slice(2, 8),
+    })
+    scrollToBottom()
+  } catch (err) {
+    showToast('⚠ ' + ((err as Error).message || '语音发送失败'))
+  } finally {
+    sendingMedia.value = false
+  }
+}
+function voiceUrl(m: any) {
+  const parsed = parseContent(m)
+  return parsed?.content?.url ? absUrl(parsed.content.url) : ''
+}
+function playVoice(m: any) {
+  const url = voiceUrl(m)
+  if (!url) return
+  const audio = new Audio(url)
+  audio.play().catch(() => showToast('⚠ 语音播放失败'))
+}
+
+// ═══ 红包体系 ═══
+const plusPanelOpen = ref(false)
+const diamondBalance = ref(0)
+const rpPanelOpen = ref(false)
+const rpSending = ref(false)
+const rpForm = ref({ mode: 'lucky', amount: 10, count: 5, note: '恭喜发财，大吉大利！' })
+const rpDetail = ref<any>(null)
+const rpGrabbing = ref(false)
+const rpCount = computed(() => currentChannel.value?.kind === 'dm' ? 1 : rpForm.value.count)
+async function loadDiamondBalance() {
+  try {
+    const r = await fetch('/api/user/diamonds', { headers: { Authorization: 'Bearer ' + authToken() } })
+    const j = await r.json()
+    diamondBalance.value = (j.data || j).totalDiamonds || 0
+  } catch { diamondBalance.value = 0 }
+}
+function openRedPacket() {
+  if (!currentChannel.value) return
+  plusPanelOpen.value = false
+  if (currentChannel.value.kind === 'dm') {
+    rpForm.value = { mode: 'normal', amount: 10, count: 1, note: '恭喜发财，大吉大利！' }
+  }
+  loadDiamondBalance()
+  rpPanelOpen.value = true
+}
+async function sendRedPacket() {
+  if (!currentChannel.value || rpSending.value) return
+  const { mode, amount, count, note } = rpForm.value
+  const isDm = currentChannel.value.kind === 'dm'
+  const finalCount = isDm ? 1 : count
+  const finalMode = isDm ? 'normal' : mode
+  if (!amount || !finalCount || amount * finalCount < finalCount) return showToast('⚠ 金额不能少于个数')
+  rpSending.value = true
+  try {
+    const r = await fetch('/api/im/red-packets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({
+        channelId: currentChannel.value.id,
+        channelType: currentChannel.value.type,
+        totalDiamonds: amount * finalCount,
+        count: finalCount,
+        mode: finalMode,
+        note,
+      }),
+    })
+    const j = await r.json()
+    if (j.success) {
+      diamondBalance.value = Math.max(0, diamondBalance.value - amount * finalCount)
+      messages.value.push({
+        fromUID: tea.userId.value,
+        authorName: '我',
+        timestamp: Math.floor(Date.now() / 1000),
+        content: { kind: 'red_packet', id: j.data.id, note, totalDiamonds: amount * finalCount, count: finalCount, mode: finalMode, dm: isDm },
+        key: 'rp-' + Date.now(),
+      })
+      scrollToBottom()
+      rpPanelOpen.value = false
+      showToast(`🧧 红包已发出（${amount * finalCount} 钻石）`)
+    } else {
+      showToast('⚠ ' + (j.error || '发红包失败'))
+      if (j.code === 'DIAMOND_INSUFFICIENT') loadDiamondBalance()
+    }
+  } catch {
+    showToast('⚠ 发红包失败，请重试')
+  } finally {
+    rpSending.value = false
+  }
+}
+function parseRedPacket(m: any): any {
+  const c = m?.content
+  if (!c) return null
+  if (c.kind === 'red_packet') return c
+  if (typeof c === 'string') {
+    try { const o = JSON.parse(c); return o?.kind === 'red_packet' ? o : null } catch { return null }
+  }
+  return null
+}
+function isRedPacket(m: any) { return !!parseRedPacket(m) }
+function rpCardTitle(m: any) {
+  const rp = parseRedPacket(m)
+  return rp?.dm ? '专属红包' : '拼手气红包'
+}
+function rpCardSub(m: any) {
+  const rp = parseRedPacket(m)
+  return `${rp?.totalDiamonds ?? 0} 钻石`
+}
+function rpNote(m: any) {
+  const rp = parseRedPacket(m)
+  return rp?.note || '恭喜发财'
+}
+async function openRpDetailMsg(m: any) {
+  const rp = parseRedPacket(m)
+  if (!rp?.id) return
+  try {
+    const r = await fetch('/api/im/red-packets/' + rp.id, { headers: { Authorization: 'Bearer ' + authToken() } })
+    const j = await r.json()
+    if (!j.success) return showToast('⚠ ' + (j.error || '红包不存在'))
+    rpDetail.value = j.data || j
+  } catch {
+    showToast('⚠ 网络错误')
+  }
+}
+async function grabRedPacket() {
+  if (!rpDetail.value || rpGrabbing.value) return
+  rpGrabbing.value = true
+  try {
+    const r = await fetch('/api/im/red-packets/' + rpDetail.value.id + '/grab', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({ channelId: currentChannel.value?.id || '', channelType: currentChannel.value?.type || 0 }),
+    })
+    const j = await r.json()
+    if (j.success) {
+      showToast(`🧧 抢到 ${j.data.amount} 钻石！`)
+      await openRpDetailMsg({ content: { kind: 'red_packet', id: rpDetail.value.id } })
+    } else {
+      showToast('⚠ ' + (j.error || '抢红包失败'))
+      await openRpDetailMsg({ content: { kind: 'red_packet', id: rpDetail.value.id } })
+    }
+  } catch {
+    showToast('⚠ 抢红包失败，请重试')
+  } finally {
+    rpGrabbing.value = false
+  }
+}
+function closeRpDetail() { rpDetail.value = null }
+
+// ═══ 礼物体系 ═══
+const giftPanelOpen = ref(false)
+const giftGroups = ref<any[]>([])
+const giftActiveTab = ref('')
+const giftSelected = ref<any>(null)
+const giftSending = ref(false)
+const giftReceiverUid = ref('')
+const giftAnimation = ref<any>(null)
+let giftAnimTimer: ReturnType<typeof setTimeout> | null = null
+const isDmChannel = computed(() => currentChannel.value?.kind === 'dm')
+const giftReceiverOk = computed(() => isDmChannel.value ? true : !!giftReceiverUid.value)
+const activeGiftItems = computed(() => giftGroups.value.find((g) => g.category === giftActiveTab.value)?.items || [])
+async function openGift() {
+  if (!currentChannel.value) return
+  plusPanelOpen.value = false
+  giftPanelOpen.value = true
+  giftSelected.value = null
+  giftReceiverUid.value = ''
+  try {
+    const r = await fetch('/api/gifts/products', { headers: { Authorization: 'Bearer ' + authToken() } })
+    const j = await r.json()
+    giftGroups.value = (j.data || {}).gifts || []
+    if (giftGroups.value.length) giftActiveTab.value = giftGroups.value[0].category
+  } catch { giftGroups.value = [] }
+  loadDiamondBalance()
+}
+async function sendGift() {
+  if (!giftSelected.value || !giftReceiverOk.value || giftSending.value || !currentChannel.value) return
+  const receiverUid = isDmChannel.value ? (currentChannel.value.peerUid || groupMembers.value.find((m) => m.uid !== tea.userId.value)?.uid || '') : giftReceiverUid.value
+  giftSending.value = true
+  try {
+    const r = await fetch('/api/gifts/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken() },
+      body: JSON.stringify({
+        giftId: giftSelected.value.id,
+        receiverUid,
+        channelId: currentChannel.value.id,
+        channelType: currentChannel.value.type,
+      }),
+    })
+    const j = await r.json()
+    if (j.success) {
+      diamondBalance.value = Math.max(0, diamondBalance.value - (j.data?.gift?.priceDiamonds || giftSelected.value.priceDiamonds))
+      const toName = isDmChannel.value ? currentChannel.value.name || '茶客' : (groupMembers.value.find((m) => m.uid === receiverUid)?.name || '茶客')
+      giftAnimation.value = { icon: giftSelected.value.iconUrl || '🎁', name: giftSelected.value.giftName || giftSelected.value.name, fromName: '我', toName }
+      if (giftAnimTimer) clearTimeout(giftAnimTimer)
+      giftAnimTimer = setTimeout(() => { giftAnimation.value = null }, 3200)
+      messages.value.push({
+        fromUID: tea.userId.value,
+        authorName: '我',
+        timestamp: Math.floor(Date.now() / 1000),
+        content: { kind: 'gift', giftName: giftSelected.value.giftName || giftSelected.value.name, giftIcon: giftSelected.value.iconUrl || '🎁', priceDiamonds: giftSelected.value.priceDiamonds, receiverUid },
+        key: 'gift-' + Date.now(),
+      })
+      scrollToBottom()
+      giftPanelOpen.value = false
+      showToast(`🎁 已送出「${giftSelected.value.giftName || giftSelected.value.name}」`)
+    } else {
+      showToast('⚠ ' + (j.error || '赠送失败'))
+      if (j.code === 'DIAMOND_INSUFFICIENT') loadDiamondBalance()
+    }
+  } catch {
+    showToast('⚠ 赠送失败，请重试')
+  } finally {
+    giftSending.value = false
+  }
+}
+function parseGift(m: any): any {
+  const c = m?.content
+  if (!c) return null
+  if (c.kind === 'gift') return c
+  if (typeof c === 'string') {
+    try { const o = JSON.parse(c); return o?.kind === 'gift' ? o : null } catch { return null }
+  }
+  return null
+}
+function isGift(m: any) { return !!parseGift(m) }
+function giftIcon(m: any) { return parseGift(m)?.giftIcon || '🎁' }
+function giftText(m: any) {
+  const g = parseGift(m)
+  const receiver = g?.receiverUid === tea.userId.value ? '我' : (groupMembers.value.find((x) => x.uid === g?.receiverUid)?.name || '茶友')
+  return `🎁 ${m.fromUID === tea.userId.value ? '我' : msgName(m)} 送出「${g?.giftName || '礼物'}」给 ${receiver}`
+}
+
+// ═══ 视频 / 语音消息判定 ═══
+function isVideo(m: any) {
+  const parsed = parseContent(m)
+  return parsed?.type === 4
+}
+function videoUrl(m: any) {
+  const parsed = parseContent(m)
+  return parsed?.content?.url ? absUrl(parsed.content.url) : ''
+}
+function isVoice(m: any) {
+  const parsed = parseContent(m)
+  return parsed?.type === 5
+}
+function voiceDur(m: any) {
+  const parsed = parseContent(m)
+  return parsed?.content?.duration ? Math.round(Number(parsed.content.duration)) : ''
 }
 
 // 消息渲染（对齐 chat/index.vue parseContentObj：contentType/type/string/payload 全形态）
@@ -617,8 +1199,8 @@ async function loadPosts() {
   } catch { posts.value = [] } finally { postsLoading.value = false }
 }
 function switchCommunityCat(slug: string) { communityCat.value = slug; loadPosts() }
-function openPost(p: any) { window.location.href = `/community/post/${p.id}` }
-function goCommunityNew() { window.location.href = '/community/new' }
+function openPost(p: any) { openMobilePage('post', { postId: p.id }) }
+function goCommunityNew() { openMobilePage('post-new') }
 function timeAgo(iso: string) {
   if (!iso) return ''
   const t = new Date(iso).getTime()
@@ -634,12 +1216,13 @@ function timeAgo(iso: string) {
 
 // ═══════════════ Tab4 我的 ═══════════════
 const mineEntries = [
-  { icon: '📦', label: '我的订单', to: '/user/orders' },
-  { icon: '👥', label: '我的团队', to: '/user/team' },
-  { icon: '💬', label: '我的消息', to: '/user/messages' },
-  { icon: '🎁', label: '邀请有礼', to: '/user/referral' },
-  { icon: '🖼️', label: '我的作品', to: '/user/gallery' },
-  { icon: '⚙️', label: '设置', to: '/user/settings' },
+  { icon: '📦', label: '我的订单', page: 'orders' },
+  { icon: '👥', label: '我的团队', page: 'team' },
+  { icon: '💬', label: '我的消息', page: 'messages' },
+  { icon: '🎟️', label: '邀请有礼', page: 'referral' },
+  { icon: '🖼️', label: '我的作品', page: 'gallery' },
+  { icon: '🎁', label: '礼物记录', page: 'gifts' },
+  { icon: '⚙️', label: '设置', page: 'settings' },
 ]
 async function loadMine() {
   try {
@@ -752,6 +1335,7 @@ if (typeof window !== 'undefined') {
 <style scoped>
 /* ═══ 手机壳 ═══ */
 .tea-app {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100dvh;
@@ -900,7 +1484,8 @@ if (typeof window !== 'undefined') {
 .msg-img { max-width: 180px; max-height: 220px; border-radius: 8px; display: block; }
 .msg-time { font-size: 10px; color: #bbb; margin: 3px 4px 0; }
 .chat-input-bar {
-  display: flex; align-items: center; gap: 10px;
+  position: relative;
+  display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; background: #f7f7f7; border-top: 1px solid #e5e5e5;
   flex-shrink: 0;
 }
@@ -1049,4 +1634,91 @@ if (typeof window !== 'undefined') {
 .grp-member-tag { font-size: 10px; color: #b8860b; background: #fdf6e3; border-radius: 4px; padding: 2px 6px; }
 .img-mask { background: rgba(0,0,0,0.85); }
 .preview-img { max-width: 90vw; max-height: 80vh; border-radius: 8px; }
+
+/* ═══ 聊天增强：+ 面板 / 红包 / 礼物 / 语音 / 视频 ═══ */
+.chat-plus { width: 34px; height: 34px; border: none; background: #fff; border-radius: 50%; font-size: 20px; color: #576b95; flex-shrink: 0; }
+.chat-plus-panel {
+  position: absolute; bottom: 52px; left: 10px; right: 10px;
+  background: #fff; border-radius: 12px; box-shadow: 0 2px 14px rgba(0,0,0,.12);
+  display: flex; padding: 10px 6px; gap: 4px; z-index: 30;
+}
+.plus-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  border: none; background: transparent; font-size: 22px; padding: 6px 0; color: #333;
+}
+.plus-item span { font-size: 11px; color: #666; }
+.plus-item.recording { background: #fdeaea; border-radius: 10px; color: #e5484d; }
+.plus-item.recording span { color: #e5484d; }
+.hidden-file { display: none; }
+.msg-video { max-width: 200px; max-height: 240px; border-radius: 8px; background: #000; }
+.voice-bubble { display: flex; align-items: center; gap: 6px; min-width: 70px; cursor: pointer; }
+.voice-icon { font-size: 15px; }
+.voice-dur { font-size: 13px; }
+.rp-card {
+  display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(135deg, #fa5151, #e64340); color: #fff;
+  border-radius: 10px; padding: 10px 12px; min-width: 200px; max-width: 240px; cursor: pointer;
+  box-shadow: 0 1px 6px rgba(250,81,81,.35);
+}
+.rp-card-icon { font-size: 30px; }
+.rp-card-info { flex: 1; min-width: 0; }
+.rp-card-title { font-size: 15px; font-weight: 700; }
+.rp-card-sub { font-size: 11px; opacity: .85; margin-top: 2px; }
+.rp-card-note { font-size: 11px; opacity: .8; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gift-card {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, #f6b73c, #f39c12); color: #fff;
+  border-radius: 10px; padding: 8px 12px; font-size: 13px; max-width: 220px;
+}
+.gift-card-icon { font-size: 20px; }
+.rp-modes { display: flex; gap: 8px; margin-bottom: 10px; }
+.rp-mode { flex: 1; padding: 8px 0; border: 1px solid #e5e5e5; border-radius: 8px; background: #fff; font-size: 13px; }
+.rp-mode.on { border-color: #fa5151; color: #fa5151; background: #fff5f5; }
+.rp-field { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.rp-field-lb { font-size: 13px; color: #666; white-space: nowrap; }
+.rp-field-unit { font-size: 13px; color: #999; }
+.rp-quicks { display: flex; gap: 6px; margin-bottom: 10px; }
+.rp-quick { flex: 1; padding: 6px 0; border: 1px solid #e5e5e5; border-radius: 6px; background: #fff; font-size: 13px; }
+.rp-detail-modal { text-align: center; }
+.rp-detail-envelope {
+  background: linear-gradient(135deg, #fa5151, #e64340); color: #fff;
+  border-radius: 12px; padding: 26px 16px; margin-bottom: 10px; cursor: pointer;
+}
+.rp-detail-big { font-size: 18px; font-weight: 700; }
+.rp-detail-sub { font-size: 12px; opacity: .85; margin-top: 6px; }
+.rp-grabs { max-height: 30vh; overflow-y: auto; text-align: left; }
+.rp-grab { display: flex; justify-content: space-between; padding: 7px 2px; border-bottom: 1px solid #f6f6f6; font-size: 13px; }
+.rp-grab-name { color: #333; }
+.rp-grab-amt { color: #fa5151; font-weight: 600; }
+.rp-grabs-empty { color: #999; font-size: 13px; padding: 12px 0; }
+.gift-modal { max-height: 76vh; overflow: hidden; display: flex; flex-direction: column; }
+.gift-balance { font-size: 12px; color: #a855f7; margin-left: 8px; }
+.gift-recharge { color: #4f7df9; margin-left: 6px; text-decoration: underline; }
+.gift-receiver { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.gift-receiver-lb { font-size: 13px; color: #666; white-space: nowrap; }
+.gift-tabs { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; }
+.gift-tab { flex-shrink: 0; padding: 5px 12px; border: 1px solid #e5e5e5; border-radius: 14px; background: #fff; font-size: 12px; }
+.gift-tab.on { border-color: #a855f7; color: #a855f7; background: #faf5ff; }
+.gift-wall { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; overflow-y: auto; max-height: 34vh; padding: 2px; }
+.gift-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: 1px solid #f0f0f0; border-radius: 8px; padding: 8px 2px; background: #fff;
+}
+.gift-item.on { border-color: #a855f7; background: #faf5ff; }
+.gift-item-icon { font-size: 24px; }
+.gift-item-name { font-size: 10px; color: #555; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gift-item-price { font-size: 10px; color: #a855f7; }
+.gift-anim {
+  position: fixed; top: 38%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 200; text-align: center; pointer-events: none;
+}
+.gift-anim-icon { font-size: 64px; animation: giftPop .5s ease; }
+.gift-anim-text { color: #fff; background: rgba(0,0,0,.55); border-radius: 16px; padding: 6px 14px; font-size: 13px; margin-top: 6px; white-space: nowrap; }
+@keyframes giftPop { 0% { transform: scale(.3); opacity: 0 } 60% { transform: scale(1.2) } 100% { transform: scale(1); opacity: 1 } }
+.tea-toast {
+  position: fixed; top: 12%; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.72); color: #fff; padding: 9px 18px; border-radius: 20px;
+  font-size: 13px; z-index: 300; max-width: 80vw; text-align: center;
+}
+.mp-container { position: absolute; inset: 0; z-index: 90; }
 </style>
