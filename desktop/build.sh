@@ -1,67 +1,32 @@
 #!/bin/bash
 # ========================================
-# 昆仑镜桌面版 - 构建脚本
+# 昆仑镜桌面版 - 构建脚本（Tauri v2, S6.2 对齐）
+# Windows 优先: NSIS installer（tauri.conf bundle.targets=nsis）
+# 在 Windows 开发机执行: ./build.sh
 # ========================================
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-FRONTEND_DIR="$SCRIPT_DIR/../frontend"
 DESKTOP_DIR="$SCRIPT_DIR"
 BUILD_TIME=$(date +%Y%m%d_%H%M%S)
 
 echo "========================================"
-echo "  昆仑镜桌面版构建 v1.0.0"
+echo "  昆仑镜桌面版构建 v1.2.0 (Tauri v2)"
 echo "  构建时间: $BUILD_TIME"
 echo "========================================"
 
-# Step 1: 构建前端 SPA
-echo ""
-echo "[1/3] 构建前端 SPA..."
-cd "$FRONTEND_DIR"
-npx nuxi build 2>&1 | tail -5
-echo "  ✅ 前端构建完成"
-
-# Step 2: 复制到桌面 web 目录
-echo ""
-echo "[2/3] 复制前端静态文件..."
-mkdir -p "$DESKTOP_DIR/web"
-rm -rf "$DESKTOP_DIR/web/*"
-cp -r "$FRONTEND_DIR/.output/public/"* "$DESKTOP_DIR/web/"
-echo "  ✅ 文件复制完成 ($(du -sh "$DESKTOP_DIR/web" | cut -f1))"
-
-# Step 3: 打包桌面应用
-echo ""
-echo "[3/3] 打包桌面应用..."
-
-# 解析参数
-PLATFORM="${1:-all}"
-
+# Step 1: 依赖安装（首次）
 cd "$DESKTOP_DIR"
-case "$PLATFORM" in
-  win)
-    npx electron-builder --win --x64
-    echo "  ✅ Windows 版打包完成"
-    ;;
-  mac)
-    npx electron-builder --mac --x64
-    echo "  ✅ macOS 版打包完成"
-    ;;
-  linux)
-    npx electron-builder --linux --x64
-    echo "  ✅ Linux 版打包完成"
-    ;;
-  all)
-    npx electron-builder --win --mac --linux --x64 2>&1 | tail -5
-    echo "  ✅ 三端打包完成"
-    ;;
-  *)
-    echo "  ⚠️ 未知平台: $PLATFORM，可用: win/mac/linux/all"
-    exit 1
-    ;;
-esac
+if [ ! -d node_modules ]; then
+  echo "[0/2] 安装依赖..."
+  npm install
+fi
 
-echo ""
-echo "========================================"
-echo "  构建完成！"
-echo "  输出目录: $DESKTOP_DIR/dist/"
+# Step 2: Tauri 构建（frontendDist=../ui 已指向 Shell UI; NSIS installer）
+echo "[1/2] Tauri 构建..."
+npm run build
+
+echo "[2/2] 构建完成"
+echo "  输出目录: $DESKTOP_DIR/src-tauri/target/release/bundle/"
+echo "  NSIS 安装包: src-tauri/target/release/bundle/nsis/Kunlun Media_1.2.0_x64-setup.exe"
 echo "========================================"
