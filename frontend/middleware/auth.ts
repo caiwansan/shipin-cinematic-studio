@@ -1,10 +1,19 @@
 import { useAuthStore } from '~/stores/auth'
+import { detectMobile, safeRedirect } from '~/utils/mobile-detect'
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const auth = useAuthStore()
 
   // Skip auth check for login page
   if (to.path === '/login') {
+    return
+  }
+
+  // 手机版登录页：未登录放行（页面自身处理），已登录直接回跳
+  if (to.path === '/mobile-login') {
+    if (import.meta.client && auth.isAuthenticated && auth.token) {
+      return navigateTo(safeRedirect(to.query.redirect, '/mobile-app'))
+    }
     return
   }
 
@@ -23,9 +32,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
 
-  // Protected routes: /studio/*, /dashboard/*, /user/*, /workspace/*, /admin/*
-  const isProtected = to.path.startsWith('/studio') || to.path.startsWith('/dashboard/') || to.path.startsWith('/user/') || to.path.startsWith('/workspace/')
+  // Protected routes: /studio/*, /dashboard/*, /user/*, /workspace/*, /mobile-app
+  const isProtected = to.path.startsWith('/studio') || to.path.startsWith('/dashboard/') || to.path.startsWith('/user/') || to.path.startsWith('/workspace/') || to.path === '/mobile-app'
   if (isProtected && !auth.isAuthenticated && !auth.token) {
+    const isMobile = detectMobile()
     if (import.meta.server) {
       // SSR：/workspace/* 为 client-only（SSR 只渲染空壳），SSR 端不做完整鉴权。
       // 仅做 cookie 存在性检查 —— 避免访问 document（SSR 无）导致 500，
@@ -33,6 +43,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
       const cookieHeader = useRequestHeaders(['cookie']).cookie || ''
       const hasAuthCookie = /(^| )(auth_token|auth_user)=/.test(cookieHeader)
       if (!hasAuthCookie) {
+        // 移动端：跳手机版登录页；桌面端：首页登录弹窗
+        if (isMobile) {
+          return navigateTo('/mobile-login?redirect=' + encodeURIComponent(to.fullPath))
+        }
         return navigateTo('/?showLogin=1&redirect=' + encodeURIComponent(to.fullPath))
       }
       return
@@ -41,7 +55,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await auth.restoreSession()
     if (!auth.isAuthenticated) {
       // SPRINT-MEDIA-IDENTITY-ALIGN-01 401-FIX: /login 路由已废弃（routeRules 301→/）
-      // 登录入口 = 首页弹窗（?showLogin=1），redirect 参数登录成功后回跳
+      // 登录入口 = 首页弹窗（?showLogin=1），redirect 参数登录成功后回跳；移动端 = /mobile-login
+      if (isMobile) {
+        return navigateTo('/mobile-login?redirect=' + encodeURIComponent(to.fullPath))
+      }
       return navigateTo('/?showLogin=1&redirect=' + encodeURIComponent(to.fullPath))
     }
   } else if (isProtected && auth.isAuthenticated) {

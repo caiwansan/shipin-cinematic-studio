@@ -182,6 +182,7 @@ export default defineNuxtConfig({
     head: {
       title: '昆仑镜 - AI 短剧制作平台',
       meta: [
+        { name: 'viewport', content: 'width=device-width, initial-scale=1.0, viewport-fit=cover' },
         { name: 'description', content: '从剧本到成片，AI 全自动完成短剧制作。角色设计、场景生成、分镜创作、视频合成，你只需要讲一个故事。' },
         { property: 'og:title', content: '昆仑镜 - AI 短剧制作平台' },
         { property: 'og:description', content: '输入一个故事，AI 自动生成一部好剧。昆仑镜，你的 AI 影视导演。' },

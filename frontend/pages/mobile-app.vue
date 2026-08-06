@@ -284,8 +284,13 @@
 // 复用 useKunlunTea 全部 IM 能力；社区/会员中心调原生 API；桌面版页面零改动
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 
+// 登录保护：中间件拦截（SSR cookie 检查 + 客户端 token 校验），未登录跳手机版登录页
+// /mobile-login 为公开页，由页面自身处理登录后回跳
+definePageMeta({ middleware: 'auth' })
+
 const tea = useKunlunTea()
 const router = useRouter()
+const route = useRoute()
 
 // ── 基础状态 ──
 const tabs = [
@@ -696,9 +701,9 @@ onMounted(() => {
   if (p) { myName.value = p.nickname || p.username || '' }
   loadMine()
   if (!isLoggedIn.value) {
-    // 未登录：仍可浏览社区/我的，茶馆提示登录
+    // 中间件已拦截；此处兜底：跳手机版登录页
     tea.disconnect?.()
-    showToast('登录后使用茶馆')
+    router.replace('/mobile-login?redirect=' + encodeURIComponent(route.fullPath))
     return
   }
   tea.connect()
