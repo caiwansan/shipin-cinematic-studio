@@ -1,0 +1,36 @@
+# 昆仑茶馆 WuKongIM 配置（SPRINT-IM-CHA-03 M3 + 2026-08-06 10:07 修复）
+# ⚠️⚠️ rootDir 语义（v1.2.6 实测）：DataDir = rootDir + "/data"
+#    - 配 rootDir: "/root/wukongim" → DataDir=/root/wukongim/data ✅（正确，历史在此）
+#    - 配 rootDir: "/root/wukongim/data" → DataDir=/root/wukongim/data/data ❌（09:32 事故：重启后历史"消失"）
+# 事故复盘：09:32 容器重启后 DataDir 漂移到 data/data，旧历史（/root/wukongim/data）被"隔离"，
+#   用户离开频道再进入看不到聊天记录。修复=rootDir 去掉 /data 尾缀，重启后 64 条历史全恢复。
+# 教训：改配置后必须 docker logs 核对 DataDir 行 + messagesync 抽查消息数。
+mode: "release"
+logger:
+  level: 1
+  dir: "/root/wukongim/logs"
+  lineNum: false
+rootDir: "/root/wukongim"
+demo:
+  on: true
+  addr: "0.0.0.0:5172"
+# 内容治理 webhook：消息事件推送到昆仑镜后端（M3 敏感词复核）
+webhook:
+  httpAddr: "http://172.17.0.1:4002/api/im/webhook"
+  msgNotifyEventPushInterval: 500ms
+  msgNotifyEventRetryMaxCount: 5
+  msgNotifyEventCountPerPush: 100
+# 机器人管理员（昆仑镜小管家）——系统 UID 可加入任意频道、给任何人发消息
+systemUIDs:
+  - kunlun_tea_bot
+conversation:
+  on: true
+
+# ===== 运维手册（2026-08-06 事故复盘）=====
+# 1. rootDir 语义：DataDir = rootDir + "/data"（v1.2.6 实测）
+#    rootDir 必须配 /root/wukongim，禁止写 /root/wukongim/data（会漂移到 data/data）
+# 2. 重启后必须核对：docker logs wukongim-wukongim-1 | grep DataDir → 应为 /root/wukongim/data
+# 3. 重启后订阅表清空 → pm2 restart api-server（restorePublicChannelSubscriptions 重建）
+# 4. 消息数抽查：POST :5001/channel/messagesync {channel_id:kl_public_tea,channel_type:4,limit:5,pull_mode:2}
+# 5. 历史数据位置：/root/wukongim/data/78/topics/4-kl_public_tea/logs（leveldb，勿手动改）
+# 6. 09:32 事故遗留：/root/wukongim/data/data/ 是漂移窗口(09:32-10:07)的数据，含 6 条测试消息，保留不合并
