@@ -618,7 +618,7 @@ const tierClass = computed(() => {
 const tierInfo = computed(() => tierConfig[tierClass.value] || tierConfig.free)
 
 const avatarChar = computed(() => {
-  return (userDisplayName || 'U').charAt(0).toUpperCase()
+  return (userDisplayName.value || 'U').charAt(0).toUpperCase()
 })
 
 const coins = computed(() => userInfo.value?.coins ?? 0)
