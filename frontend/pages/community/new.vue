@@ -15,7 +15,6 @@
           <button v-if="!isLoggedIn" class="cn-ink-btn" @click="showLogin = true">登录</button>
           <button v-if="!isLoggedIn" class="cn-seal-btn" @click="showLogin = true; isRegisterMode = true">免费注册</button>
           <template v-else>
-            <button class="cn-seal-btn" @click="goToStudio">进入工作台 →</button>
             <div class="nav-user-badge" @click="goMemberCenter" title="会员中心">
               <div class="nav-user-avatar" :class="`nav-user-avatar--${tierClass}`">{{ avatarChar }}</div>
               <span class="nav-tier-tag" :class="`nav-tier-tag--${tierClass}`">{{ tierLabel }}</span>
@@ -194,7 +193,6 @@ const avatarChar = computed(() => {
 const contentTextarea = ref<HTMLTextAreaElement | null>(null)
 const uploadingText = ref('')
 
-function goToStudio() { router.push('/studio/v2') }
 function goMemberCenter() { router.push('/user/center') }
 
 async function doAuth() {
