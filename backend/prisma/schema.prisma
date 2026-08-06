@@ -10636,3 +10636,19 @@ model UserFollow {
   @@index([followingId])
   @@map("user_follow")
 }
+
+// S4.1 BYOK — 企业自持 LLM Provider 凭证（tenant 级, 加密存储, 零明文）
+model TenantProviderCredential {
+  id             String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  organizationId String   @map("organization_id") @db.Text // governance_organization.id（租户隔离, G8）
+  provider       String   @db.VarChar(30) // deepseek | openai | volcengine | ...
+  modelName      String   @map("model_name") @db.VarChar(100)
+  credentialRef  String   @map("credential_ref") @db.Text // encryptKey(iv:tag:cipher), 禁止明文
+  baseUrl        String?  @map("base_url") @db.Text
+  status         String   @default("ACTIVE") @db.VarChar(20) // ACTIVE | DISABLED | INVALID
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId]) // 每租户一个 LLM 凭证
+  @@map("tenant_provider_credentials")
+}

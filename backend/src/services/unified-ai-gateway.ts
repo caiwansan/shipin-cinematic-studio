@@ -136,7 +136,9 @@ export class UnifiedAIGateway {
           assetVersionId,
           parentTraceId,
         })
-        return failEnvelope(env, `用户 ${userId} 未配置 ${capability} 模型，请在「大模型设置」中配置`)
+        const failedNoConfig = failEnvelope(env, `用户 ${userId} 未配置 ${capability} 模型，请在「大模型设置」中配置`)
+        await invocationLogService.writeLog(failedNoConfig).catch(() => {})
+        return failedNoConfig
       }
       const providerName = resolved.provider
       const modelName = resolved.modelName
@@ -157,7 +159,9 @@ export class UnifiedAIGateway {
       // 5. 选择 adapter
       const adapter = this.adapters[providerName]
       if (!adapter) {
-        return failEnvelope(envelope, `不支持的服务商: ${providerName}`)
+        const failedAdapter = failEnvelope(envelope, `不支持的服务商: ${providerName}`)
+        await invocationLogService.writeLog(failedAdapter).catch(() => {})
+        return failedAdapter
       }
 
       // 6. 执行（带超时 + 重试）

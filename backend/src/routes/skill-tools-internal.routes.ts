@@ -66,7 +66,8 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
       const prompt = buildScorePrompt({ resumeProfile: body.resumeProfile, jobRequirement: body.jobRequirement })
       // dev 模式工具调用身份（合成 UUID, 无用户配置 → dev provider）; S4 起解析调用方 BYOK
       const result = await unifiedAIGateway.invokeAI({
-        userId: '00000000-0000-4000-8000-0000000000ad',
+        // S4.1: 租户身份透传（body.tenantUserId）→ 组织 BYOK 凭证; 缺省 dev 身份
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
         projectId: '00000000-0000-4000-8000-000000000001',
         agentType: 'orchestrator' as any,
         capability: 'llm',
@@ -109,7 +110,8 @@ export async function registerSkillToolsInternalRoutes(app: FastifyInstance) {
         jobRequirement: body.jobRequirement,
       })
       const result = await unifiedAIGateway.invokeAI({
-        userId: '00000000-0000-4000-8000-0000000000ad',
+        // S4.1: 租户身份透传（body.tenantUserId）→ 组织 BYOK 凭证; 缺省 dev 身份
+        userId: body.tenantUserId || '00000000-0000-4000-8000-0000000000ad',
         projectId: '00000000-0000-4000-8000-000000000001',
         agentType: 'orchestrator' as any,
         capability: 'llm',

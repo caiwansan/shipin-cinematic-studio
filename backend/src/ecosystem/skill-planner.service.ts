@@ -165,6 +165,8 @@ export async function planFromIntent(params: {
   intent: string
   fallback?: FailurePolicy
   context?: any
+  /** S4.1: 租户用户身份（LLM 调用经其组织 BYOK 凭证解析; 缺省用 dev 身份） */
+  tenantUserId?: string
 }): Promise<PlanFromIntentResult> {
   const { getEmployeeSkillSet } = await import('./skill-orchestrator.js')
   const { listSkills } = await import('./skill-manifest-adapter.js')
@@ -191,9 +193,9 @@ export async function planFromIntent(params: {
     context: params.context,
   })
 
-  // LLM 调用唯一入口 = Unified AI Gateway（S3.4.1.5 已验证）
+  // LLM 调用唯一入口 = Unified AI Gateway（S3.4.1.5 已验证; S4.1: 租户身份 → 企业 BYOK 凭证）
   const result = await unifiedAIGateway.invokeAI({
-    userId: DEV_PLANNER_USER_ID,
+    userId: params.tenantUserId || DEV_PLANNER_USER_ID,
     projectId: DEMO_PROJECT_ID,
     agentType: PLANNER_AGENT_TYPE,
     capability: 'llm',

@@ -5,20 +5,25 @@
  * 移除所有 V1 UserModelConfig 表调用。
  *
  * S3.4.1.5: Development Provider 兜底（仅 dev/test）
- *   - 顺序: BYOK 用户配置优先 → dev provider 兜底（解析失败时）
- *   - 仅当 KUNLUN_DEV_PROVIDER=1 且 DEEPSEEK_DEV_API_KEY 存在
- *   - 不进入用户模型配置 / 不参与计费 / 不进入 Marketplace
- *   - 调用路径不变（仍经 Unified AI Gateway + provider adapter）
+ * S4.1 BYOK: Tenant Provider Credential 优先（企业自持凭证, 组织隔离）
+ * 解析优先级（冻结）:
+ *   1. TenantProviderCredential（organizationId 隔离, ACTIVE）
+ *   2. UserModelConfigV2（用户 BYOK）
+ *   3. Dev Provider（KUNLUN_DEV_PROVIDER=1 + DEEPSEEK_DEV_API_KEY）
+ * 原则: 不新增 Provider 路由体系（调用仍唯一经 Unified AI Gateway）
  */
 
 import { prisma } from '../utils/index.js'
 import { decryptKey } from './crypto.service.js'
+import { getOrganizationIdForUser } from './enterprise/organization/identity-bootstrap.service.js'
 
 export interface ResolvedProvider {
   provider: string
   modelName: string
   apiKey: string
   baseUrl?: string
+  /** S4.1: 解析来源（审计可追踪: tenant-credential | user-config | dev） */
+  source?: 'tenant-credential' | 'user-config' | 'dev'
 }
 
 export class UserModelResolver {
@@ -35,6 +40,33 @@ export class UserModelResolver {
       modelName: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
       apiKey: key,
       baseUrl: process.env.DEEPSEEK_BASE_URL || undefined,
+      source: 'dev',
+    }
+  }
+
+  /**
+   * S4.1 BYOK: 企业自持凭证（租户隔离, 加密存储）
+   * 输入 userId → governance org → TenantProviderCredential
+   */
+  async resolveTenantCredential(capability: string, userId: string): Promise<ResolvedProvider | null> {
+    if (capability !== 'llm') return null
+    const orgId = await getOrganizationIdForUser(userId).catch(() => null)
+    if (!orgId) return null
+    const cred = await prisma.tenantProviderCredential
+      .findUnique({ where: { organizationId: orgId } })
+      .catch(() => null)
+    if (!cred || cred.status !== 'ACTIVE') return null
+    try {
+      const decrypted = decryptKey(cred.credentialRef)
+      return {
+        provider: cred.provider,
+        modelName: cred.modelName,
+        apiKey: decrypted,
+        baseUrl: cred.baseUrl || undefined,
+        source: 'tenant-credential',
+      }
+    } catch {
+      return null
     }
   }
 
@@ -44,11 +76,15 @@ export class UserModelResolver {
       return null
     }
 
+    // S4.1: Tenant BYOK 优先（企业级凭证; 调用方无组织则跳过）
+    const tenantCred = await this.resolveTenantCredential(capability, userId)
+    if (tenantCred) return tenantCred
+
     let v2: any
     try {
       v2 = await prisma.userModelConfigV2.findUnique({ where: { userId } })
     } catch {
-      return null
+      return this.resolveDevProvider(capability)
     }
     if (!v2) return this.resolveDevProvider(capability)
 
@@ -75,6 +111,7 @@ export class UserModelResolver {
       modelName: cfg.mdl,
       apiKey: decrypted,
       baseUrl: v2.baseUrl || undefined,
+      source: 'user-config',
     }
   }
 }

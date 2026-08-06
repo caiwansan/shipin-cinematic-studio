@@ -56,7 +56,7 @@ const TOOL_REGISTRY = {
     const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/candidate-score`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
-      body: JSON.stringify({ resumeProfile: input.resumeProfile, jobRequirement: input.jobRequirement }),
+      body: JSON.stringify({ resumeProfile: input.resumeProfile, jobRequirement: input.jobRequirement, tenantUserId: input.tenantUserId }),
     }).catch(() => null)
     if (!res) return { ok: false, error: 'SCORE_BACKEND_UNREACHABLE' }
     const body = await res.json().catch(() => ({}))
@@ -70,7 +70,7 @@ const TOOL_REGISTRY = {
     const res = await fetch(`${BACKEND_URL}/api/internal/skill-tools/interview-evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-internal-token': INTERNAL_TOKEN },
-      body: JSON.stringify({ resume: input.resume, interviewTranscript: input.interviewTranscript, jobRequirement: input.jobRequirement }),
+      body: JSON.stringify({ resume: input.resume, interviewTranscript: input.interviewTranscript, jobRequirement: input.jobRequirement, tenantUserId: input.tenantUserId }),
     }).catch(() => null)
     if (!res) return { ok: false, error: 'INTERVIEW_BACKEND_UNREACHABLE' }
     const body = await res.json().catch(() => ({}))

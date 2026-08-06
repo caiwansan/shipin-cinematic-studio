@@ -19,6 +19,7 @@ export async function registerSkillPlannerRoutes(app: FastifyInstance) {
         intent: String(body.intent),
         fallback: body.fallback,
         context: body.context,
+        tenantUserId: body.tenantUserId ?? undefined,
       })
       if (!result.ok) {
         return reply.send({ code: 0, data: { ok: false, goal: result.goal, errors: result.errors } })
