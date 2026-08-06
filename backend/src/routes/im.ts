@@ -12,6 +12,8 @@ import { prisma } from '../utils/index.js'
 const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
 const IM_WS_ADDR = process.env.IM_WS_ADDR || 'ws://127.0.0.1:5200'
 const IM_TOKEN_TTL_DAYS = 7
+// 合法 UUID 校验：机器人/外部平台 uid（kunlun_tea_bot、qq_*、wx_*）不是 UUID，传进 User.id 查询会 P2023
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // 公共频道 ID（昆仑茶馆大堂）——channel_type 4 = 社区/公共频道
 export const PUBLIC_CHANNEL_ID = 'kl_public_tea'
@@ -207,7 +209,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
       else dmUids.add(peer)
     }
     const users = await prisma.user.findMany({
-      where: { id: { in: [...dmUids] } },
+      where: { id: { in: [...dmUids].filter((u) => UUID_RE.test(u)) } },
       select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true },
     })
     const userMap = new Map(users.map((u) => [u.id, u]))
@@ -248,7 +250,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
       : []
     const presenceMap = new Map(presences.map((p) => [p.uid, p.online]))
     // 频道成员头像同步：imChannelMember.avatar 为空时回填 User.avatarUrl（会员中心上传的头像实时同步）
-    const uidsAll = members.map((m) => m.uid)
+    const uidsAll = members.map((m) => m.uid).filter((u) => UUID_RE.test(u))
     if (uidsAll.length) {
       const userRows = await prisma.user.findMany({ where: { id: { in: uidsAll } }, select: { id: true, avatarUrl: true } })
       const avatarMap = new Map(userRows.map((u) => [u.id, u.avatarUrl || '']))
@@ -380,8 +382,9 @@ export default async function imRoutes(fastify: FastifyInstance) {
       const authorNames = new Map<string, string>()
       const authorAvatars = new Map<string, string>()
       if (fromUids.length) {
+        // 只查合法 UUID（机器人 kunlun_tea_bot / 外部平台 qq_*、wx_* 不是 UUID，直接查 User 会 P2023）
         const senders = await prisma.user.findMany({
-          where: { id: { in: fromUids } },
+          where: { id: { in: fromUids.filter((u: string) => UUID_RE.test(u)) } },
           select: { id: true, username: true, email: true, avatarUrl: true },
         })
         for (const u of senders) {
@@ -419,7 +422,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
     }
     if (list.length) {
       const users = await prisma.user.findMany({
-        where: { id: { in: list } },
+        where: { id: { in: list.filter((u: string) => UUID_RE.test(u)) } },
         select: { id: true, username: true, email: true, avatarUrl: true },
       })
       for (const u of users) {

@@ -244,8 +244,10 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
       orderBy: { createdAt: 'asc' },
     })
     const grabUserIds = [...new Set(grabs.map((g) => g.userId))]
+    // 只查合法 UUID：外部平台用户（qq_*、wx_*）抢的红包也要展示，非 UUID 直接查 User 会 P2023
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     const users = grabUserIds.length
-      ? await prisma.user.findMany({ where: { id: { in: grabUserIds } }, select: { id: true, username: true, email: true, avatarUrl: true } })
+      ? await prisma.user.findMany({ where: { id: { in: grabUserIds.filter((u) => UUID_RE.test(u)) } }, select: { id: true, username: true, email: true, avatarUrl: true } })
       : []
     const userMap = new Map(users.map((u) => [u.id, u]))
     const mine = grabs.find((g) => g.userId === userId)
