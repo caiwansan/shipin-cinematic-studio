@@ -68,13 +68,15 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/auth/qq/authorize — 用户端：获取QQ授权URL
-  fastify.get('/api/auth/qq/authorize', async (_request, reply) => {
+  fastify.get('/api/auth/qq/authorize', async (request, reply) => {
     const config = await getQQConfig()
     if (!config || !config.appId) {
       return reply.status(400).send({ error: 'QQ登录未配置' })
     }
 
-    const state = Math.random().toString(36).substring(2, 10)
+    // desktop=1：state 加 d_ 前缀，callback 据此走 Desktop 分支（QQ 平台校验 redirect_uri，不能改，只能用 state 编码）
+    const isDesktop = (request.query as any)?.desktop === '1'
+    const state = (isDesktop ? 'd_' : '') + Math.random().toString(36).substring(2, 10)
     oauthStateMap.set(state, { createdAt: Date.now() })
     const redirectUri = encodeURIComponent(config.redirectUri || 'https://aigc.fushtn.com/api/auth/qq/callback')
     // display=pc 强制PC扫码模式
@@ -106,8 +108,10 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
       oauthStateMap.delete(state)
       return redirectWithEncodedError(reply, 'state 已过期')
     }
+    // Desktop 模式判定：state 以 d_ 前缀（authorize?desktop=1 生成）或显式 desktop=1 query
+    const isDesktop = desktop === '1' || (typeof state === 'string' && state.startsWith('d_'))
     // Desktop 模式：state 保留（供 /api/auth/qq/desktop-result 轮询），由壳内轮询后清理
-    if (desktop !== '1') {
+    if (!isDesktop) {
       oauthStateMap.delete(state)
     }
 
@@ -188,7 +192,7 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
         )
 
         // Desktop 模式：结果暂存 + 重定向 done 页（壳内轮询 desktop-result 取回）
-        if (desktop === '1' && state) {
+        if (isDesktop && state) {
           oauthDesktopResults.set(state, { token, user: { id: user.id, email: user.email, username: user.username, nickname }, at: Date.now() })
           return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
             "document.title='Kunlun QQ Login OK';\n" +
@@ -243,7 +247,7 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
         )
 
         // Desktop 模式：结果暂存 + 重定向 done 页
-        if (desktop === '1' && state) {
+        if (isDesktop && state) {
           oauthDesktopResults.set(state, { token, user: { id: user.id, email: user.email, username: user.username, nickname }, at: Date.now() })
           return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
             "document.title='Kunlun QQ Login OK';\n" +

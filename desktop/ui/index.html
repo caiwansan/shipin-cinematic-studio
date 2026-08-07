@@ -1360,7 +1360,7 @@ async function boot() {
     // ── QQ 登录（Desktop OAuth）──
     $('login-err').textContent = '正在打开 QQ 授权…';
     try {
-      const r = await fetch(`${API_BASE}/api/auth/qq/authorize`);
+      const r = await fetch(`${API_BASE}/api/auth/qq/authorize?desktop=1`);
       const data = await r.json();
       const authUrl = data?.data?.authUrl || data?.authUrl;
       const state = data?.data?.state || data?.state;
