@@ -95,7 +95,12 @@
                 <div class="chat-head-name">{{ currentChannel.name }}</div>
                 <div class="chat-head-sub">{{ chatHeadSub }}</div>
               </div>
-              <span v-if="currentChannel.kind === 'group'" class="chat-head-opt" @click="openGroupDetail">⋯</span>
+              <template v-if="currentChannel.kind === 'dm'">
+                <span class="chat-head-act" title="同传语言设置（通话前设好，通话自动生效）" @click="openInterpPanel">🌐{{ interpPairLabel }}</span>
+                <span class="chat-head-act" title="语音通话" @click="callPeer('audio')">📞</span>
+                <span class="chat-head-act" title="视频通话" @click="callPeer('video')">🎥</span>
+              </template>
+              <span v-else-if="currentChannel.kind === 'group'" class="chat-head-opt" @click="openGroupDetail">⋯</span>
             </div>
             <div class="chat-msgs">
               <div v-for="m in messages" :key="msgKey(m)" class="msg-row" :class="{ mine: m.fromUID === tea.userId.value }" @touchstart="msgTouchStart(m, $event)" @touchmove="msgTouchMove" @touchend="msgTouchEnd" @contextmenu.prevent="openMsgMenuAt(m, $event)">
@@ -434,14 +439,104 @@
       @open="openMobilePage"
       @published="onSubPublished"
     />
+
+    <!-- ══ R11 语音/视频 1v1 通话（手机版）══ -->
+    <!-- 来电弹窗（被叫） -->
+    <div v-if="rtc.state.value === 'incoming'" class="rtc-mask">
+      <div class="rtc-incoming">
+        <div class="rtc-incoming-avatar">
+          <img v-if="rtc.peer.value?.avatar" :src="rtc.peer.value.avatar" alt="" />
+          <span v-else>{{ (rtc.peer.value?.name || '?').slice(0, 1) }}</span>
+        </div>
+        <div class="rtc-incoming-name">{{ rtc.peer.value?.name || '茶客' }}</div>
+        <div class="rtc-incoming-sub">{{ rtc.mode.value === 'video' ? '🎥 邀请你视频通话' : '📞 邀请你语音通话' }}</div>
+        <div class="rtc-incoming-actions">
+          <button class="rtc-round rtc-round-reject" @click="rtc.rejectCall('declined')">✕<span>拒绝</span></button>
+          <button class="rtc-round rtc-round-accept" @click="rtc.acceptCall()">✓<span>接听</span></button>
+        </div>
+      </div>
+    </div>
+    <!-- 通话浮层（主叫等待/建立中/通话中） -->
+    <div v-if="['calling','connecting','active'].includes(rtc.state.value)" class="rtc-mask rtc-call">
+      <!-- 对方画面（视频模式通话中，全屏） -->
+      <video v-if="rtc.mode.value === 'video' && rtc.remoteStream.value && rtc.state.value === 'active'" ref="rtcRemoteVideoRef" class="rtc-remote-video" autoplay playsinline></video>
+      <!-- 语音模式：隐藏 video 承载远端音频（autoplay 播放，头像展示） -->
+      <video v-else-if="rtc.mode.value === 'audio' && rtc.remoteStream.value && rtc.state.value === 'active'" class="rtc-remote-audio" autoplay playsinline></video>
+      <!-- 音频/等待：对方头像 + 状态 -->
+      <div v-else class="rtc-remote-avatar">
+        <img v-if="rtc.peer.value?.avatar" :src="rtc.peer.value.avatar" alt="" />
+        <span v-else>{{ (rtc.peer.value?.name || '?').slice(0, 1) }}</span>
+        <div class="rtc-status-text">
+          <template v-if="rtc.state.value === 'calling'">正在呼叫…</template>
+          <template v-else-if="rtc.state.value === 'connecting'">正在接通…</template>
+          <template v-else-if="rtc.state.value === 'active'">{{ rtc.mode.value === 'video' ? '视频通话中' : '语音通话中' }}</template>
+        </div>
+      </div>
+      <!-- 本地预览 PiP（视频模式小窗） -->
+      <video v-if="rtc.mode.value === 'video' && rtc.localStream.value" ref="rtcLocalVideoRef" class="rtc-local-video" autoplay playsinline muted></video>
+      <!-- 顶部：对方名 + 时长 -->
+      <div class="rtc-head">
+        <div class="rtc-peer">{{ rtc.peer.value?.name || '茶客' }}</div>
+        <div v-if="rtc.state.value === 'active'" class="rtc-dur">{{ rtcDurText }}</div>
+      </div>
+      <div v-if="rtcToast" class="rtc-toast">{{ rtcToast }}</div>
+      <!-- 同声传译字幕条 -->
+      <div v-if="interp.subtitle.value" class="rtc-interp-bar" :class="{ 'is-partial': interp.subtitle.value.partial, 'is-error': interp.subtitle.value.error }">
+        <span class="rtc-interp-lang">{{ langLabel(interp.subtitle.value.tgtLang) }}</span>
+        <span class="rtc-interp-text">
+          <template v-if="interp.subtitle.value.error">⚠️ {{ interp.subtitle.value.error }}</template>
+          <template v-else>{{ interp.subtitle.value.text || (interp.subtitle.value.partial ? '翻译中…' : '') }}</template>
+        </span>
+        <span v-if="interp.subtitle.value.preview" class="rtc-interp-preview">对方未开启同传 · 预览</span>
+      </div>
+      <!-- 控制条 -->
+      <div class="rtc-controls">
+        <button class="rtc-ctl" :class="{ off: rtc.micMuted.value }" :title="rtc.micMuted.value ? '取消静音' : '静音'" @click="rtc.toggleMic()">{{ rtc.micMuted.value ? '🔇' : '🎙️' }}</button>
+        <button v-if="rtc.mode.value === 'video'" class="rtc-ctl" :class="{ off: rtc.camOff.value }" :title="rtc.camOff.value ? '打开摄像头' : '关闭摄像头'" @click="rtc.toggleCam()">{{ rtc.camOff.value ? '🚫' : '📷' }}</button>
+        <button v-if="interp.state.value === 'on'" class="rtc-ctl" :class="{ off: !interp.audioEnabled.value, speaking: interp.speaking.value }" :title="interp.audioEnabled.value ? '关闭语音（仅字幕）' : '开启语音同传'" @click="interp.toggleAudio()">{{ interp.audioEnabled.value ? (interp.speaking.value ? '🔊' : '🔉') : '🔇' }}</button>
+        <button class="rtc-ctl" :class="{ off: interp.state.value === 'off' }" :title="interp.state.value === 'off' ? '开启同声传译' : '关闭同声传译'" @click="toggleInterp()">{{ interp.state.value === 'off' ? '🌐' : '🎧' }}</button>
+        <button class="rtc-ctl" title="同传语言设置" @click="openInterpPanel">⚙️</button>
+        <button class="rtc-ctl rtc-ctl-hangup" title="挂断" @click="rtc.hangup()">📵</button>
+      </div>
+    </div>
+    <!-- 同传语言设置（底部弹层） -->
+    <div v-if="interpPanel" class="rtc-panel-mask" @click.self="interpPanel = false">
+      <div class="rtc-panel-sheet">
+        <div class="rtc-panel-title">🌐 实时语音同传</div>
+        <div class="rtc-panel-cur">当前：我说 <b>{{ langLabel(interpMyLang) }}</b> → 对方听 <b>{{ langLabel(interpPeerLang) }}</b></div>
+        <div class="rtc-panel-row">
+          <label>我说</label>
+          <select v-model="interpMyLang">
+            <optgroup v-for="g in interp.langGroups" :key="g.label" :label="g.label">
+              <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="rtc-panel-row">
+          <label>对方听</label>
+          <select v-model="interpPeerLang">
+            <optgroup v-for="g in interp.langGroups" :key="g.label" :label="g.label">
+              <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="rtc-panel-tip">{{ interpPanelHint }}</div>
+        <div class="rtc-panel-actions">
+          <button class="rtc-panel-btn cancel" @click="interpPanel = false">取消</button>
+          <button class="rtc-panel-btn ok" @click="confirmInterp()">{{ interpConfirmLabel }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 // 昆仑茶馆手机版 — 微信式四 Tab 聚合壳（茶馆 / 好友 / 社区 / 我的）
 // 复用 useKunlunTea 全部 IM 能力；社区/会员中心调原生 API；桌面版页面零改动
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, watchEffect, defineAsyncComponent } from 'vue'
 import { MEMBERSHIP_LABELS } from '~/constants/membership'
+import { useRtcCall } from '~/composables/useRtcCall'
+import { useRtcInterpreter } from '~/composables/useRtcInterpreter'
 
 // 登录保护：中间件拦截（SSR cookie 检查 + 客户端 token 校验），未登录跳手机版登录页
 // /mobile-login 为公开页，由页面自身处理登录后回跳
@@ -450,6 +545,131 @@ definePageMeta({ middleware: 'auth' })
 const tea = useKunlunTea()
 const router = useRouter()
 const route = useRoute()
+
+// ══ R11 语音/视频 1v1 + 实时同声传译（手机版，复用桌面版 composable，信令互通）══
+const rtc = useRtcCall(tea)
+const interp = useRtcInterpreter()
+let rtcSetIdentity: (uid: string, name: string, avatar: string) => void = () => {}
+const rtcRemoteVideoRef = ref<HTMLVideoElement | null>(null)
+const rtcLocalVideoRef = ref<HTMLVideoElement | null>(null)
+const rtcDurText = ref('00:00')
+let rtcDurTimer: ReturnType<typeof setInterval> | null = null
+const rtcToast = ref('')
+// 同传语言偏好（通话前设置，持久化 localStorage；与桌面版同 key，同浏览器互认）
+const interpPanel = ref(false)
+const interpMyLang = ref('zh')
+const interpPeerLang = ref('en')
+const interpConfigured = ref(false)
+
+function langLabel(v: string): string {
+  return interp.langOptions.find((o) => o.value === v)?.label || v
+}
+function langShort(v: string): string {
+  const label = interp.langOptions.find((o) => o.value === v)?.label || v
+  return label.replace(/[（(].*?[）)]/g, '').slice(0, 6)
+}
+function loadInterpPrefs() {
+  try {
+    const m = localStorage.getItem('kl_interp_my_lang')
+    const p = localStorage.getItem('kl_interp_peer_lang')
+    const known = interp.langOptions.map((o) => o.value)
+    if (m && known.includes(m)) interpMyLang.value = m
+    if (p && known.includes(p)) interpPeerLang.value = p
+    interpConfigured.value = localStorage.getItem('kl_interp_configured') === '1'
+  } catch { /* noop */ }
+}
+function saveInterpPrefs() {
+  try {
+    localStorage.setItem('kl_interp_my_lang', interpMyLang.value)
+    localStorage.setItem('kl_interp_peer_lang', interpPeerLang.value)
+    localStorage.setItem('kl_interp_configured', '1')
+  } catch { /* noop */ }
+}
+const interpPairLabel = computed(() => ` · ${langShort(interpMyLang.value)}→${langShort(interpPeerLang.value)}`)
+const interpPanelHint = computed(() => {
+  const inCall = rtc.state.value === 'active'
+  const head = inCall ? '💡 调整后立即生效' : '💡 保存后通话自动开启同传'
+  return `${head}：你的语音实时翻译成对方听的「${langLabel(interpPeerLang.value)}」并语音播放；对方说的任何语言（世界语言池 100+ 语种，含粤语/闽南语）都会翻译成「${langLabel(interpMyLang.value)}」让你听见。语音仅用于本次通话，用完即弃。对方也需开启同传才能互听互看。`
+})
+const interpConfirmLabel = computed(() => {
+  if (rtc.state.value === 'active') return interp.state.value === 'on' ? '✓ 应用语言' : '✓ 开启同传'
+  return '✓ 保存设置'
+})
+
+// 视频流绑定（watchEffect：ref 挂载/流/状态变化都重试绑定，主叫/被叫时序都覆盖）
+watchEffect(() => {
+  if (rtcRemoteVideoRef.value && rtc.remoteStream.value) rtcRemoteVideoRef.value.srcObject = rtc.remoteStream.value
+  if (rtcLocalVideoRef.value && rtc.localStream.value) rtcLocalVideoRef.value.srcObject = rtc.localStream.value
+})
+// 通话计时
+watch(
+  () => rtc.state.value,
+  (s) => {
+    if (s === 'active') {
+      const t0 = Date.now()
+      rtcDurTimer = setInterval(() => {
+        const sec = Math.floor((Date.now() - t0) / 1000)
+        rtcDurText.value = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
+      }, 1000)
+    } else {
+      if (rtcDurTimer) { clearInterval(rtcDurTimer); rtcDurTimer = null }
+      rtcDurText.value = '00:00'
+    }
+  }
+)
+// 错误提示：挂断/结束后 3s 隐藏
+watch(
+  () => rtc.state.value,
+  (s) => {
+    if (s === 'idle' && rtcToast.value) setTimeout(() => (rtcToast.value = ''), 3000)
+  }
+)
+// 通话建立（active）→ 已保存过语言偏好则自动开启同传；结束/挂断 → 自动关闭
+watch(
+  () => rtc.state.value,
+  (s) => {
+    if (s === 'active' && interpConfigured.value && interp.state.value === 'off') {
+      setTimeout(() => applyInterp(), 600) // 等本地流就绪
+    }
+    if (s === 'idle') { interp.stop() }
+  }
+)
+
+/** 通话入口（仅私聊） */
+function callPeer(mode: 'audio' | 'video') {
+  if (!currentChannel.value || currentChannel.value.kind !== 'dm') return
+  const uid = currentChannel.value.peerUid
+  const name = currentChannel.value.name || '茶客'
+  const avatar = currentChannel.value.avatar || ''
+  rtc.startCall(uid, mode, name, avatar)
+}
+// ══ 同声传译控制 ══
+function openInterpPanel() { interpPanel.value = true }
+function toggleInterp() {
+  if (interp.state.value === 'off') applyInterp() // 直接用已保存语言开启
+  else interp.stop()
+}
+function confirmInterp() {
+  saveInterpPrefs()
+  interpConfigured.value = true
+  interpPanel.value = false
+  if (rtc.state.value === 'active') {
+    // 通话中：立即应用（开启中则重启换语言）
+    if (interp.state.value === 'on') interp.stop()
+    applyInterp()
+  } else {
+    showToast(`✅ 已保存：我说${langLabel(interpMyLang.value)} · 对方听${langLabel(interpPeerLang.value)}，通话时自动生效`)
+  }
+}
+function applyInterp() {
+  if (rtc.state.value !== 'active' || !rtc.callId.value || !rtc.localStream.value) {
+    rtcToast.value = '通话建立后才能开启同传'
+    return
+  }
+  interp.start({ stream: rtc.localStream.value, callId: rtc.callId.value, srcLang: interpMyLang.value, tgtLang: interpPeerLang.value }).catch((e: any) => {
+    rtcToast.value = e?.message || '同传开启失败'
+  })
+}
 
 // ── 基础状态 ──
 const tabs = [
@@ -1494,7 +1714,8 @@ function pollPendingRecharge() {
 
 // 实时消息：当前频道追加，其他频道累计未读
 watch(() => tea.connected.value, (v) => { if (v) { loadChannels(); loadFriends() } })
-onMounted(() => {
+onMounted(async () => {
+  loadInterpPrefs() // ══ R11：恢复同传语言偏好（通话前设置持久化）══
   const p = readMyProfile()
   if (p) { myName.value = p.nickname || p.username || '' }
   loadMine()
@@ -1504,7 +1725,18 @@ onMounted(() => {
     router.replace('/mobile-login?redirect=' + encodeURIComponent(route.fullPath))
     return
   }
+  // ══ R11：初始化 RTC（拉取 ICE 配置 + 注册 CMD 信令监听，须在 connect 前）══
+  try {
+    rtcSetIdentity = (await rtc.init({})).setIdentity
+  } catch (e) {
+    console.warn('[RTC] 初始化失败（非致命）', e)
+  }
   tea.connect()
+  // ══ R11：连接后注入本人身份（来电显示用）══
+  try {
+    const me = readMyProfile()
+    rtcSetIdentity(tea.userId.value, me?.username || me?.email?.split('@')[0] || me?.nickname || '茶客', me?.avatarUrl || '')
+  } catch { /* 非致命 */ }
   tea.onMessage((msg: any) => {
     const msgChannel = msg.channel
     const chId = msgChannel?.channelID
@@ -1942,4 +2174,127 @@ if (typeof window !== 'undefined') {
   font-size: 13px; z-index: 300; max-width: 80vw; text-align: center;
 }
 .mp-container { position: absolute; inset: 0; z-index: 90; }
+
+/* ═══ R11 通话 + 同声传译（手机版）═══ */
+.chat-head-act {
+  min-width: 34px; height: 34px; margin-left: 6px; padding: 0 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f2f2f2; border-radius: 17px;
+  font-size: 15px; color: #576b95; cursor: pointer; flex-shrink: 0;
+  white-space: nowrap;
+}
+.chat-head-act:active { background: #e5e5e5; }
+.rtc-mask {
+  position: fixed; inset: 0; z-index: 500;
+  background: linear-gradient(160deg, #14181d, #1f2730 55%, #2a3440);
+  display: flex; align-items: center; justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+}
+/* 来电 */
+.rtc-incoming { text-align: center; color: #fff; width: 78%; }
+.rtc-incoming-avatar {
+  width: 96px; height: 96px; margin: 0 auto 18px; border-radius: 50%;
+  background: linear-gradient(135deg, #576b95, #4a5b85); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.rtc-incoming-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rtc-incoming-name { font-size: 22px; font-weight: 700; }
+.rtc-incoming-sub { font-size: 14px; color: rgba(255,255,255,.65); margin: 10px 0 44px; }
+.rtc-incoming-actions { display: flex; justify-content: space-around; padding: 0 10px; }
+.rtc-round {
+  width: 68px; height: 68px; border-radius: 50%; border: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; font-size: 26px; color: #fff; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.3);
+}
+.rtc-round span { font-size: 12px; }
+.rtc-round-reject { background: linear-gradient(135deg, #fa5151, #e64340); }
+.rtc-round-accept { background: linear-gradient(135deg, #07c160, #06ad56); }
+/* 通话中 */
+.rtc-call { flex-direction: column; }
+.rtc-remote-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+.rtc-remote-audio { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.rtc-remote-avatar { text-align: center; color: #fff; }
+.rtc-remote-avatar img,
+.rtc-remote-avatar > span:first-child {
+  width: 110px; height: 110px; border-radius: 50%;
+  background: linear-gradient(135deg, #576b95, #4a5b85);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 46px; overflow: hidden; object-fit: cover;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+.rtc-status-text { margin-top: 16px; font-size: 14px; color: rgba(255,255,255,.7); }
+.rtc-local-video {
+  position: absolute; top: 14px; right: 14px; width: 92px; height: 128px;
+  border-radius: 12px; object-fit: cover; background: #000;
+  border: 2px solid rgba(255,255,255,.25); z-index: 3;
+}
+.rtc-head {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 16px 12px 40px;
+  background: linear-gradient(rgba(0,0,0,.55), transparent);
+  z-index: 2;
+}
+.rtc-peer { color: #fff; font-size: 17px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.rtc-dur { color: rgba(255,255,255,.85); font-size: 13px; }
+.rtc-toast {
+  position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.75); color: #ffd7d7; font-size: 13px;
+  padding: 8px 16px; border-radius: 18px; z-index: 4; max-width: 82%; text-align: center;
+}
+/* 同传字幕条 */
+.rtc-interp-bar {
+  position: absolute; bottom: 108px; left: 14px; right: 14px; z-index: 4;
+  background: rgba(0,0,0,.62); backdrop-filter: blur(4px);
+  border: 1px solid rgba(95,168,190,.4); border-radius: 12px;
+  padding: 10px 12px; color: #fff; font-size: 14px; line-height: 1.5;
+  display: flex; flex-direction: column; gap: 4px; text-align: center;
+}
+.rtc-interp-bar.is-partial { opacity: .85; }
+.rtc-interp-bar.is-error { border-color: rgba(250,81,81,.55); }
+.rtc-interp-lang { font-size: 11px; color: #7ec8e3; }
+.rtc-interp-text { word-break: break-word; }
+.rtc-interp-preview { font-size: 11px; color: #f5a623; }
+/* 控制条 */
+.rtc-controls {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 4;
+  display: flex; justify-content: center; gap: 14px;
+  padding: 34px 12px calc(20px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgba(0,0,0,.6));
+}
+.rtc-ctl {
+  width: 52px; height: 52px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,.18); color: #fff; font-size: 22px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.rtc-ctl.off { background: rgba(255,255,255,.1); color: rgba(255,255,255,.5); }
+.rtc-ctl.speaking { background: #07c160; }
+.rtc-ctl-hangup { background: #fa5151; width: 58px; height: 58px; }
+.rtc-ctl-hangup:active { background: #e64340; }
+/* 同传语言设置底部弹层 */
+.rtc-panel-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 520; display: flex; align-items: flex-end; justify-content: center; }
+.rtc-panel-sheet {
+  width: 100%; max-width: 640px; background: #fff;
+  border-radius: 14px 14px 0 0;
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+}
+.rtc-panel-title { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 12px; }
+.rtc-panel-cur { font-size: 12px; color: #576b95; background: #f2f6ff; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; text-align: center; }
+.rtc-panel-cur b { color: #4a5b85; }
+.rtc-panel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.rtc-panel-row label { width: 60px; font-size: 13px; color: #666; flex-shrink: 0; }
+.rtc-panel-row select {
+  flex: 1; padding: 9px 10px; border: 1px solid #e5e5e5; border-radius: 8px;
+  font-size: 14px; background: #fafafa; outline: none; color: #1a1a1a;
+}
+.rtc-panel-tip { font-size: 12px; color: #999; line-height: 1.6; margin: 8px 0 14px; }
+.rtc-panel-actions { display: flex; gap: 10px; }
+.rtc-panel-btn {
+  flex: 1; padding: 11px 0; border: none; border-radius: 8px; font-size: 15px; cursor: pointer;
+}
+.rtc-panel-btn.cancel { background: #f2f2f2; color: #666; }
+.rtc-panel-btn.ok { background: #07c160; color: #fff; }
 </style>
