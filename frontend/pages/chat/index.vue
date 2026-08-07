@@ -820,11 +820,51 @@
             </div>
             <!-- 错误/状态提示 -->
             <div v-if="rtcToast" class="rtc-toast">{{ rtcToast }}</div>
+            <!-- 同声传译字幕条 -->
+            <div v-if="interp.subtitle.value" class="rtc-interp-bar" :class="{ 'is-partial': interp.subtitle.value.partial, 'is-error': interp.subtitle.value.error }">
+              <span class="rtc-interp-lang">{{ langLabel(interp.subtitle.value.tgtLang) }}</span>
+              <span class="rtc-interp-text">
+                <template v-if="interp.subtitle.value.error">⚠️ {{ interp.subtitle.value.error }}</template>
+                <template v-else>{{ interp.subtitle.value.text || (interp.subtitle.value.partial ? '翻译中…' : '') }}</template>
+              </span>
+              <span v-if="interp.subtitle.value.preview" class="rtc-interp-preview">对方未开启同传 · 预览</span>
+            </div>
             <!-- 控制条 -->
             <div class="rtc-controls">
               <button class="rtc-ctl" :class="{ off: rtc.micMuted.value }" :title="rtc.micMuted.value ? '取消静音' : '静音'" @click="rtc.toggleMic()">{{ rtc.micMuted.value ? '🔇' : '🎙️' }}</button>
               <button v-if="rtc.mode.value === 'video'" class="rtc-ctl" :class="{ off: rtc.camOff.value }" :title="rtc.camOff.value ? '打开摄像头' : '关闭摄像头'" @click="rtc.toggleCam()">{{ rtc.camOff.value ? '🚫' : '📷' }}</button>
+              <button v-if="interp.state.value === 'on'" class="rtc-ctl" :class="{ off: !interp.audioEnabled.value, speaking: interp.speaking.value }" :title="interp.audioEnabled.value ? '关闭语音（仅字幕）' : '开启语音同传'" @click="interp.toggleAudio()">{{ interp.audioEnabled.value ? (interp.speaking.value ? '🔊' : '🔉') : '🔇' }}</button>
+              <button class="rtc-ctl" :class="{ off: interp.state.value === 'off' }" :title="interp.state.value === 'off' ? '开启同声传译' : '关闭同声传译'" @click="toggleInterp()">{{ interp.state.value === 'off' ? '🌐' : '🎧' }}</button>
               <button class="rtc-ctl rtc-ctl-hangup" title="挂断" @click="rtc.hangup()">📵</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+      <!-- 同传语言设置弹窗 -->
+      <Teleport to="body">
+        <div v-if="interpPanel" class="rtc-interp-panel-mask" @click.self="interpPanel = false">
+          <div class="rtc-interp-panel">
+            <div class="rtc-interp-panel-title">🌐 实时语音同传</div>
+            <div class="rtc-interp-panel-row">
+              <label>我说</label>
+              <select v-model="interpMyLang">
+                <optgroup v-for="g in interp.langGroups" :key="g.label" :label="g.label">
+                  <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="rtc-interp-panel-row">
+              <label>对方听</label>
+              <select v-model="interpPeerLang">
+                <optgroup v-for="g in interp.langGroups" :key="g.label" :label="g.label">
+                  <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="rtc-interp-panel-tip">💡 开启后，你的语音实时翻译成对方听的{{ langLabel(interpPeerLang) }}并**语音播放**；对方说的任何语言（世界语言池 100+ 语种，含粤语/闽南语）都会翻译成{{ langLabel(interpMyLang) }}让你听见。语音仅用于本次通话，用完即弃。对方也需开启同传才能互听互看。</div>
+            <div class="rtc-interp-panel-actions">
+              <button class="rtc-btn rtc-btn-ghost" @click="interpPanel = false">取消</button>
+              <button class="rtc-btn rtc-btn-accept" @click="confirmInterp()">✓ 开启同传</button>
             </div>
           </div>
         </div>
@@ -841,10 +881,16 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch, w
 import { useRoute } from 'vue-router'
 import { useKunlunTea } from '~/composables/useKunlunTea'
 import { useRtcCall } from '~/composables/useRtcCall'
+import { useRtcInterpreter } from '~/composables/useRtcInterpreter'
 
 const tea = useKunlunTea()
 // ══ R11 语音/视频 1v1 ════════════════════════════════
 const rtc = useRtcCall(tea)
+// ══ 实时同声传译（字幕同传 MVP）══
+const interp = useRtcInterpreter()
+const interpPanel = ref(false)
+const interpMyLang = ref('zh')
+const interpPeerLang = ref('en')
 let rtcSetIdentity: (uid: string, name: string, avatar: string) => void = () => {}
 const rtcToast = ref('') // 通话浮层内提示（错误/状态）
 const route = useRoute()
@@ -954,6 +1000,37 @@ function callPeer(mode: 'audio' | 'video') {
   const avatar = peerInfo.value?.avatar || currentChannel.value.avatar || ''
   rtc.startCall(uid, mode, name, avatar)
 }
+// ══ 同声传译控制 ══
+function langLabel(v: string): string {
+  return interp.langOptions.find((o) => o.value === v)?.label || v
+}
+function toggleInterp() {
+  if (interp.state.value === 'off') {
+    interpPanel.value = true // 未开启 → 弹语言选择
+  } else {
+    interp.stop()
+  }
+}
+function confirmInterp() {
+  interpPanel.value = false
+  applyInterp()
+}
+function applyInterp() {
+  if (rtc.state.value !== 'active' || !rtc.callId.value || !rtc.localStream.value) {
+    rtcToast.value = '通话建立后才能开启同传'
+    return
+  }
+  interp.start({ stream: rtc.localStream.value, callId: rtc.callId.value, srcLang: interpMyLang.value, tgtLang: interpPeerLang.value }).catch((e: any) => {
+    rtcToast.value = e?.message || '同传开启失败'
+  })
+}
+// 通话结束/挂断 → 自动关闭同传
+watch(
+  () => rtc.state.value,
+  (s) => {
+    if (s === 'idle') { interp.stop() }
+  }
+)
 // 通话浮层错误提示（防抖：连接状态变化时置空）
 watch(() => rtc.errorMsg.value, (v) => { if (v) rtcToast.value = v })
 
@@ -4246,8 +4323,46 @@ onBeforeUnmount(() => {
 }
 .rtc-ctl:hover { transform: scale(1.08); background: rgba(251, 248, 239, 0.26); }
 .rtc-ctl.off { background: #B03A2E; }
+.rtc-ctl.speaking { background: #2E86AB; animation: rtc-pulse 1s ease-in-out infinite; }
+@keyframes rtc-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(46,134,171,0.6); } 50% { box-shadow: 0 0 0 6px rgba(46,134,171,0); } }
 .rtc-ctl-hangup { background: #B03A2E; }
 .rtc-ctl-hangup:hover { background: #d14a3c; }
+
+/* ══ 同声传译：字幕条 + 语言设置弹窗（阶段一）══ */
+.rtc-interp-bar {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 96px; z-index: 3;
+  max-width: 86%; display: flex; align-items: center; gap: 8px;
+  background: rgba(10, 16, 20, 0.78); backdrop-filter: blur(8px); border: 1px solid rgba(95, 168, 190, 0.45);
+  padding: 9px 16px; border-radius: 12px; color: #FBF8EF; font-size: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45); transition: opacity 0.25s;
+}
+.rtc-interp-bar.is-partial .rtc-interp-text { color: rgba(251, 248, 239, 0.72); }
+.rtc-interp-bar.is-error { border-color: rgba(176, 58, 46, 0.8); }
+.rtc-interp-lang {
+  flex-shrink: 0; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: rgba(95, 168, 190, 0.25); color: #9BD4E8; letter-spacing: 0.5px;
+}
+.rtc-interp-text { line-height: 1.45; word-break: break-word; }
+.rtc-interp-preview { flex-shrink: 0; font-size: 11px; color: #F7D488; opacity: 0.9; }
+.rtc-interp-panel-mask {
+  position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 16, 20, 0.6); backdrop-filter: blur(3px);
+}
+.rtc-interp-panel {
+  width: 340px; max-width: 92vw; background: #1B242B; border: 1px solid rgba(95, 168, 190, 0.35);
+  border-radius: 16px; padding: 20px; color: #FBF8EF; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+.rtc-interp-panel-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.rtc-interp-panel-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.rtc-interp-panel-row label { width: 64px; font-size: 13px; color: rgba(251, 248, 239, 0.75); }
+.rtc-interp-panel-row select {
+  flex: 1; padding: 8px 10px; border-radius: 8px; font-size: 14px; color: #FBF8EF;
+  background: #121A20; border: 1px solid rgba(95, 168, 190, 0.4); outline: none;
+}
+.rtc-interp-panel-tip { font-size: 12px; color: rgba(251, 248, 239, 0.6); line-height: 1.6; margin: 14px 0 16px; }
+.rtc-interp-panel-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.rtc-btn-ghost { background: rgba(251, 248, 239, 0.12); color: #FBF8EF; border: 1px solid rgba(251, 248, 239, 0.25); }
+.rtc-btn-ghost:hover { background: rgba(251, 248, 239, 0.2); }
 
 </style>
 
