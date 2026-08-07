@@ -293,7 +293,7 @@ const { data: postsData, refresh: refreshPosts } = await useAsyncData(
   async () => {
     const params = new URLSearchParams()
     params.set('page', String(currentPage.value))
-    params.set('pageSize', '20')
+    params.set('pageSize', '30')
     if (activeCategory.value) params.set('categorySlug', activeCategory.value)
     const res = await $fetch(`${apiBase}/api/community/posts?${params.toString()}`)
     return { posts: res.posts || [], pagination: res.pagination || null }
