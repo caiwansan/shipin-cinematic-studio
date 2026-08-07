@@ -111,7 +111,10 @@
                 <div class="chat-head-sub">{{ currentChannel.kind === 'group' ? `共 ${members.length} 位群友` : (members.length ? `共 ${members.length} 位茶客` : (currentChannel.kind === 'dm' ? '私聊' : '公共频道')) }}</div>
               </div>
             </div>
-            <button v-if="currentChannel.kind === 'group'" class="chat-head-action" @click="openGroupManager">⚙️ 群管理</button>
+            <div class="chat-head-actions">
+              <button v-if="currentChannel.kind === 'dm'" class="chat-head-action" title="同声传译语言设置（通话前设好，通话自动生效）" @click="openInterpPanel">🌐 同传{{ interpPairLabel }}</button>
+              <button v-if="currentChannel.kind === 'group'" class="chat-head-action" @click="openGroupManager">⚙️ 群管理</button>
+            </div>
           </div>
           <div ref="msgListRef" class="msg-list">
             <div
@@ -835,6 +838,7 @@
               <button v-if="rtc.mode.value === 'video'" class="rtc-ctl" :class="{ off: rtc.camOff.value }" :title="rtc.camOff.value ? '打开摄像头' : '关闭摄像头'" @click="rtc.toggleCam()">{{ rtc.camOff.value ? '🚫' : '📷' }}</button>
               <button v-if="interp.state.value === 'on'" class="rtc-ctl" :class="{ off: !interp.audioEnabled.value, speaking: interp.speaking.value }" :title="interp.audioEnabled.value ? '关闭语音（仅字幕）' : '开启语音同传'" @click="interp.toggleAudio()">{{ interp.audioEnabled.value ? (interp.speaking.value ? '🔊' : '🔉') : '🔇' }}</button>
               <button class="rtc-ctl" :class="{ off: interp.state.value === 'off' }" :title="interp.state.value === 'off' ? '开启同声传译' : '关闭同声传译'" @click="toggleInterp()">{{ interp.state.value === 'off' ? '🌐' : '🎧' }}</button>
+              <button class="rtc-ctl" title="同传语言设置" @click="openInterpPanel">⚙️</button>
               <button class="rtc-ctl rtc-ctl-hangup" title="挂断" @click="rtc.hangup()">📵</button>
             </div>
           </div>
@@ -845,6 +849,7 @@
         <div v-if="interpPanel" class="rtc-interp-panel-mask" @click.self="interpPanel = false">
           <div class="rtc-interp-panel">
             <div class="rtc-interp-panel-title">🌐 实时语音同传</div>
+            <div class="rtc-interp-panel-cur">当前：我说 <b>{{ langLabel(interpMyLang) }}</b> → 对方听 <b>{{ langLabel(interpPeerLang) }}</b></div>
             <div class="rtc-interp-panel-row">
               <label>我说</label>
               <select v-model="interpMyLang">
@@ -861,10 +866,10 @@
                 </optgroup>
               </select>
             </div>
-            <div class="rtc-interp-panel-tip">💡 开启后，你的语音实时翻译成对方听的{{ langLabel(interpPeerLang) }}并**语音播放**；对方说的任何语言（世界语言池 100+ 语种，含粤语/闽南语）都会翻译成{{ langLabel(interpMyLang) }}让你听见。语音仅用于本次通话，用完即弃。对方也需开启同传才能互听互看。</div>
+            <div class="rtc-interp-panel-tip">{{ interpPanelHint }}</div>
             <div class="rtc-interp-panel-actions">
               <button class="rtc-btn rtc-btn-ghost" @click="interpPanel = false">取消</button>
-              <button class="rtc-btn rtc-btn-accept" @click="confirmInterp()">✓ 开启同传</button>
+              <button class="rtc-btn rtc-btn-accept" @click="confirmInterp()">{{ interpConfirmLabel }}</button>
             </div>
           </div>
         </div>
@@ -889,8 +894,42 @@ const rtc = useRtcCall(tea)
 // ══ 实时同声传译（字幕同传 MVP）══
 const interp = useRtcInterpreter()
 const interpPanel = ref(false)
+// ══ RTC-INTERPRETER-04.1：同传语言通话前设置（持久化 localStorage，通话自动生效）══
 const interpMyLang = ref('zh')
 const interpPeerLang = ref('en')
+const interpConfigured = ref(false) // 用户是否显式保存过同传语言（保存后通话自动开启）
+// 语言偏好持久化（SSR 安全：只在浏览器读写）
+function loadInterpPrefs() {
+  try {
+    const m = localStorage.getItem('kl_interp_my_lang')
+    const p = localStorage.getItem('kl_interp_peer_lang')
+    const known = interp.langOptions.map((o) => o.value)
+    if (m && known.includes(m)) interpMyLang.value = m
+    if (p && known.includes(p)) interpPeerLang.value = p
+    interpConfigured.value = localStorage.getItem('kl_interp_configured') === '1'
+  } catch { /* 隐私模式等 */ }
+}
+function saveInterpPrefs() {
+  try {
+    localStorage.setItem('kl_interp_my_lang', interpMyLang.value)
+    localStorage.setItem('kl_interp_peer_lang', interpPeerLang.value)
+    localStorage.setItem('kl_interp_configured', '1')
+  } catch { /* noop */ }
+}
+function langShort(v: string): string {
+  const label = interp.langOptions.find((o) => o.value === v)?.label || v
+  return label.replace(/[（(].*?[）)]/g, '').slice(0, 6)
+}
+const interpPairLabel = computed(() => ` · ${langShort(interpMyLang.value)}→${langShort(interpPeerLang.value)}`)
+const interpPanelHint = computed(() => {
+  const inCall = rtc.state.value === 'active'
+  const head = inCall ? '💡 调整后立即生效' : '💡 保存后通话自动开启同传'
+  return `${head}：你的语音实时翻译成对方听的「${langLabel(interpPeerLang.value)}」并语音播放；对方说的任何语言（世界语言池 100+ 语种，含粤语/闽南语）都会翻译成「${langLabel(interpMyLang.value)}」让你听见。语音仅用于本次通话，用完即弃。对方也需开启同传才能互听互看。`
+})
+const interpConfirmLabel = computed(() => {
+  if (rtc.state.value === 'active') return interp.state.value === 'on' ? '✓ 应用语言' : '✓ 开启同传'
+  return '✓ 保存设置'
+})
 let rtcSetIdentity: (uid: string, name: string, avatar: string) => void = () => {}
 const rtcToast = ref('') // 通话浮层内提示（错误/状态）
 const route = useRoute()
@@ -1004,16 +1043,24 @@ function callPeer(mode: 'audio' | 'video') {
 function langLabel(v: string): string {
   return interp.langOptions.find((o) => o.value === v)?.label || v
 }
+function openInterpPanel() {
+  interpPanel.value = true // 通话前（顶栏 🌐）/ 通话中（⚙️）都可打开
+}
 function toggleInterp() {
-  if (interp.state.value === 'off') {
-    interpPanel.value = true // 未开启 → 弹语言选择
-  } else {
-    interp.stop()
-  }
+  if (interp.state.value === 'off') applyInterp() // 直接用已保存语言开启
+  else interp.stop()
 }
 function confirmInterp() {
+  saveInterpPrefs()
+  interpConfigured.value = true
   interpPanel.value = false
-  applyInterp()
+  if (rtc.state.value === 'active') {
+    // 通话中：立即应用（开启中则重启换语言）
+    if (interp.state.value === 'on') interp.stop()
+    applyInterp()
+  } else {
+    showToast(`✅ 已保存：我说${langLabel(interpMyLang.value)} · 对方听${langLabel(interpPeerLang.value)}，通话时自动生效`)
+  }
 }
 function applyInterp() {
   if (rtc.state.value !== 'active' || !rtc.callId.value || !rtc.localStream.value) {
@@ -1024,10 +1071,13 @@ function applyInterp() {
     rtcToast.value = e?.message || '同传开启失败'
   })
 }
-// 通话结束/挂断 → 自动关闭同传
+// 通话建立（active）→ 已保存过语言偏好则自动开启同传；结束/挂断 → 自动关闭
 watch(
   () => rtc.state.value,
   (s) => {
+    if (s === 'active' && interpConfigured.value && interp.state.value === 'off') {
+      setTimeout(() => applyInterp(), 600) // 等本地流就绪
+    }
     if (s === 'idle') { interp.stop() }
   }
 )
@@ -2920,6 +2970,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 onMounted(async () => {
+  loadInterpPrefs() // ══ RTC-INTERPRETER-04.1：恢复同传语言偏好（通话前设置持久化）══
   ;(window as any).__klImgView = (src: string) => viewImage(src)
   ;(window as any).__klOpenRedPacket = (id: string) => openRpDetail(id)
   installVoiceGlobals()
@@ -4352,7 +4403,9 @@ onBeforeUnmount(() => {
   width: 340px; max-width: 92vw; background: #1B242B; border: 1px solid rgba(95, 168, 190, 0.35);
   border-radius: 16px; padding: 20px; color: #FBF8EF; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
-.rtc-interp-panel-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.rtc-interp-panel-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+.rtc-interp-panel-cur { font-size: 12px; color: rgba(251, 248, 239, 0.75); background: rgba(95, 168, 190, 0.12); border: 1px solid rgba(95, 168, 190, 0.25); border-radius: 8px; padding: 6px 10px; margin-bottom: 14px; }
+.rtc-interp-panel-cur b { color: #F7D488; font-weight: 600; }
 .rtc-interp-panel-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .rtc-interp-panel-row label { width: 64px; font-size: 13px; color: rgba(251, 248, 239, 0.75); }
 .rtc-interp-panel-row select {
@@ -4376,8 +4429,9 @@ onBeforeUnmount(() => {
 }
 .side-add-btn:hover { background: rgba(251, 191, 36, 0.3); }
 .role-badge { font-size: 11px; margin-left: 2px; }
+.chat-head-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .chat-head-action {
-  margin-left: auto; background: rgba(251, 191, 36, 0.14); color: #F7D488;
+  background: rgba(251, 191, 36, 0.14); color: #F7D488;
   border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 5px 10px;
   font-size: 12px; cursor: pointer; white-space: nowrap;
 }
