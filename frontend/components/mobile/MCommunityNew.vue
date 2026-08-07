@@ -8,6 +8,7 @@
         <span class="mn-img-del" @click="images.splice(i, 1)">✕</span>
       </div>
     </div>
+    <p class="mn-tip">💎 每日限发 <b>{{ dailyLimit }}</b> 篇 · 审核通过奖励 <b>{{ rewardDiamonds }}</b> 钻石</p>
     <div class="mn-actions">
       <button class="mn-btn ghost" @click="pickImage">📷 添加图片</button>
       <button class="mn-btn primary" :disabled="publishing || !title.trim()" @click="publish">{{ publishing ? '发布中…' : '发布' }}</button>
@@ -29,6 +30,19 @@ const images = ref<string[]>([])
 const publishing = ref(false)
 const errMsg = ref('')
 const fileRef = ref<any>(null)
+
+// 社区发帖规则（SystemConfig 后台可调：每日上限/每篇奖励钻石）
+const dailyLimit = ref(20)
+const rewardDiamonds = ref(2)
+void (async () => {
+  try {
+    const r = await fetch('/api/system/config')
+    if (!r.ok) return
+    const cfg = await r.json()
+    dailyLimit.value = Math.max(1, Number(cfg?.community_daily_post_limit || 20) || 20)
+    rewardDiamonds.value = Math.max(1, Number(cfg?.community_post_reward_diamonds || 2) || 2)
+  } catch { /* 配置加载失败用默认值 */ }
+})()
 
 function pickImage() { fileRef.value?.click() }
 
@@ -60,8 +74,8 @@ async function publish() {
       body: JSON.stringify({ title: title.value.trim(), content: content.value.trim(), mediaJson }),
     })
     const j = await r.json()
-    if (j.success) {
-      mobileToast('✅ 发布成功')
+    if (r.ok && (j.success || j.post)) {
+      mobileToast('✅ 发布成功，等待审核')
       emit('published')
     } else {
       errMsg.value = j.error || '发布失败'
@@ -84,4 +98,6 @@ async function publish() {
 .mn-btn:disabled { opacity: .5; }
 .mn-hidden { display: none; }
 .mn-err { color: #e5484d; font-size: 13px; margin-top: 10px; }
+.mn-tip { font-size: 12px; color: #26547C; background: rgba(95,168,190,.1); border: 1px dashed rgba(38,84,124,.35); border-radius: 8px; padding: 5px 10px; margin-top: 10px; }
+.mn-tip b { color: #B03A2E; }
 </style>

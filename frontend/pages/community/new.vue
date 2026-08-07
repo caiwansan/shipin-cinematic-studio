@@ -30,6 +30,7 @@
       <div class="form-card cn-card">
         <h1 class="form-title">发布新帖子</h1>
         <p class="form-desc">分享你的 AI 创作、技巧或疑问</p>
+        <p class="form-tip">💎 每日限发 <b>{{ dailyLimit }}</b> 篇 · 审核通过奖励 <b>{{ rewardDiamonds }}</b> 钻石</p>
 
         <form @submit.prevent="submitPost" class="post-form">
           <div class="form-group">
@@ -132,6 +133,19 @@ const category = ref('')
 const tags = ref('')
 const error = ref('')
 const submitting = ref(false)
+
+// 社区发帖规则（SystemConfig 后台可调：每日上限/每篇奖励钻石）
+const dailyLimit = ref(20)
+const rewardDiamonds = ref(2)
+async function loadPostRules() {
+  try {
+    const res = await fetch('/api/system/config')
+    if (!res.ok) return
+    const cfg = await res.json()
+    dailyLimit.value = Math.max(1, Number(cfg?.community_daily_post_limit || 20) || 20)
+    rewardDiamonds.value = Math.max(1, Number(cfg?.community_post_reward_diamonds || 2) || 2)
+  } catch { /* 配置加载失败用默认值 */ }
+}
 
 // ─── SSR 数据获取 ───
 const { data: categoriesData } = await useAsyncData('community-categories-new', async () => {
@@ -255,6 +269,7 @@ async function onFileChange(event: Event, type: 'image' | 'video') {
 }
 
 onMounted(() => {
+  loadPostRules()
   const { getToken: _gtok } = require("~/utils/token-cache") as typeof import("~/utils/token-cache"); const token = _gtok()
   isLoggedIn.value = !!token
   const authUserRaw = localStorage.getItem('auth_user')
@@ -383,6 +398,18 @@ async function submitPost() {
   margin: 0 0 6px; font-family: var(--cn-serif); letter-spacing: 2px;
 }
 .form-desc { font-size: 0.85rem; color: var(--cn-ink-soft); margin: 0 0 28px; }
+
+.form-tip {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: var(--cn-cobalt, #26547C);
+  background: rgba(95, 168, 190, 0.12);
+  border: 1px dashed rgba(38, 84, 124, 0.35);
+  border-radius: 8px;
+  padding: 6px 14px;
+  margin: -14px 0 24px;
+}
+.form-tip b { color: var(--cn-cinnabar, #B03A2E); }
 
 .form-group { margin-bottom: 20px; }
 .form-group label {

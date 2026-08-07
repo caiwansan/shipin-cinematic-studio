@@ -103,7 +103,7 @@ export default async function adminPostRoutes(fastify: FastifyInstance) {
     // 奖励积分
     try {
       const { rewardPostCreation } = await import('../services/community/community-reward.service.js')
-      await rewardPostCreation(post.userId)
+      await rewardPostCreation(post.userId, post.id)
     } catch (e) {
       console.warn('[admin-posts] 社区积分奖励失败:', e instanceof Error ? e.message : e)
     }

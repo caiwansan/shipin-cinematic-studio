@@ -99,12 +99,13 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
   // POST /api/community/posts — 发帖（需认证）
   fastify.post('/api/community/posts', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id: userId } = (request as any).user
-    const { title, content, category, tags, media } = request.body as {
+    const { title, content, category, tags, media, mediaJson } = request.body as {
       title: string
       content: string
       category?: string
       tags?: string
       media?: Array<{ type: 'image' | 'video'; url: string; thumbnail?: string }>
+      mediaJson?: string
     }
 
     if (!title || !title.trim()) {
@@ -123,6 +124,18 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: `内容包含敏感词: ${sensitiveWord}` })
     }
 
+    // 每日发帖上限（SystemConfig 可调，默认 20 篇/人/天）——社区发帖有钻石奖励，防刷量
+    const limitCfg = await prisma.systemConfig.findUnique({ where: { key: 'community_daily_post_limit' } })
+    const dailyLimit = Math.min(1000, Math.max(1, Math.floor(Number(limitCfg?.value || 20)) || 20))
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
+    const todayCount = await prisma.communityPost.count({
+      where: { userId, createdAt: { gte: startOfDay } },
+    })
+    if (todayCount >= dailyLimit) {
+      return reply.status(429).send({ error: `今日发帖已达上限（${dailyLimit} 篇），请明天再来` })
+    }
+
     // 确定分类
     let categoryName = category || 'general'
     if (category) {
@@ -139,13 +152,14 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
         content: content.trim(),
         category: categoryName,
         tags: tags || '',
-        mediaJson: JSON.stringify(media || []),
-        status: 'pending', // 发帖先进入后台审核；通过后展示 + 发放积分（/api/admin/posts/:id/approve）
+        // 兼容两种入参：桌面端 media 数组 / 手机端 mediaJson 字符串（手机端此前图片被静默丢弃）
+        mediaJson: typeof mediaJson === 'string' && mediaJson ? mediaJson : JSON.stringify(media || []),
+        status: 'pending', // 发帖先进入后台审核；通过后展示 + 发放钻石（/api/admin/posts/:id/approve）
       },
     })
 
     // 更新分类计数（审核通过时才计入公开计数；此处仅记录待审，不计入 postCount）
-    return { post }
+    return { post, daily: { limit: dailyLimit, used: todayCount + 1, remaining: dailyLimit - todayCount - 1 } }
   })
 
   // GET /api/community/posts/:id — 帖子详情（含评论）
@@ -335,7 +349,7 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       }
       try {
         const { rewardPostCreation } = await import('../../services/community/community-reward.service.js')
-        await rewardPostCreation(post.userId)
+        await rewardPostCreation(post.userId, post.id)
       } catch (e) {
         console.warn('[community-admin] 社区积分奖励失败:', e instanceof Error ? e.message : e)
       }
