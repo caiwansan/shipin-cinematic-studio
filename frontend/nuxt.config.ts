@@ -80,6 +80,8 @@ export default defineNuxtConfig({
         },
       },
       '/community/post/**': {
+        // GEO-TOP5-05: 详情页 SSR 服务端缓存（TTFB 大幅下降；帖子内容 5 分钟内更新可见）
+        swr: 300,
         headers: {
           'Cache-Control': 'public, max-age=300, s-maxage=3600',
         },
@@ -202,11 +204,14 @@ export default defineNuxtConfig({
             '@context': 'https://schema.org',
             '@type': 'Organization',
             name: '昆仑镜',
-            description: 'AI 短剧制作平台',
+            description: 'AI 短剧制作平台：AI 短剧创作、文曲星创作引擎、AI 音乐、AI 广告视频、新媒体工作台。',
             url: 'https://aigc.fushtn.com',
             logo: 'https://aigc.fushtn.com/logo.png',
             sameAs: [
-              'https://aigc.fushtn.com',
+              'https://aigc.fushtn.com/',
+              'https://aigc.fushtn.com/about',
+              'https://aigc.fushtn.com/pricing',
+              'https://aigc.fushtn.com/community',
             ],
           }),
         },

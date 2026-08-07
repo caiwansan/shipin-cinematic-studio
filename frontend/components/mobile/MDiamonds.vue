@@ -34,6 +34,18 @@
 
       <button class="md-btn primary" :disabled="submitting" @click="createRecharge">{{ submitting ? '创建订单…' : payMethod === 'wallet' ? '立即充值' : payMethod === 'wechat' ? '💚 微信支付' : '🔵 支付宝支付' }}</button>
       <div v-if="payMsg" class="md-pay-msg" :class="{ ok: payMsgOk }">{{ payMsg }}</div>
+
+      <!-- 微信扫码兜底弹窗（H5 未开通时展示二维码，长按识别/另一台手机扫码） -->
+      <div v-if="showQr" class="md-qr-mask" @click.self="closeQr">
+        <div class="md-qr-panel">
+          <div class="md-qr-title">💚 微信扫码支付 ¥{{ selectedAmount }}</div>
+          <img v-if="qrBase64" :src="qrBase64" class="md-qr-img" />
+          <div v-else class="md-qr-empty">二维码生成中…</div>
+          <div class="md-qr-tip">长按识别二维码，或使用另一台手机微信扫码支付</div>
+          <div v-if="qrMsg" class="md-pay-msg" :class="{ ok: qrMsgOk }">{{ qrMsg }}</div>
+          <button class="md-btn primary" @click="closeQr">关闭</button>
+        </div>
+      </div>
     </div>
 
     <div class="md-card">
@@ -73,6 +85,41 @@ const payMethod = ref<'wallet' | 'wechat' | 'alipay'>('wallet')
 const submitting = ref(false)
 const payMsg = ref('')
 const payMsgOk = ref(false)
+const showQr = ref(false)
+const qrBase64 = ref('')
+const qrMsg = ref('')
+const qrMsgOk = ref(false)
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let pollOrderId = ''
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+function startPolling(orderId: string) {
+  stopPolling()
+  pollOrderId = orderId
+  let n = 0
+  pollTimer = setInterval(async () => {
+    n++
+    if (n > 120) { stopPolling(); qrMsg.value = '⏰ 二维码已过期，请重新下单'; qrMsgOk.value = false; return }
+    try {
+      const res = await mobileAuthFetch(`/api/payment/wxpay/status/${orderId}`)
+      const data = await res.json()
+      if (data.status === 'paid') {
+        stopPolling()
+        qrMsg.value = '✅ 支付成功，钻石已到账'
+        qrMsgOk.value = true
+        load()
+        setTimeout(() => { showQr.value = false }, 1800)
+      }
+    } catch { /* 下一轮重试 */ }
+  }, 4000)
+}
+function closeQr() {
+  stopPolling()
+  showQr.value = false
+}
+
 
 async function load() {
   try {
@@ -115,8 +162,16 @@ async function createRecharge() {
         return
       }
       if (d.codeUrl || d.qrCode) {
-        payMsg.value = '⚠ 请在桌面版完成扫码支付'
-        payMsgOk.value = false
+        // 微信 Native 扫码兜底：手机内嵌二维码（长按识别/另一台手机扫码），4s 轮询到账
+        const nativeUrl = d.codeUrl || d.qrCode
+        try {
+          const QRCode = (await import('qrcode')).default
+          qrBase64.value = await QRCode.toDataURL(nativeUrl, { width: 260, margin: 2 })
+        } catch { qrBase64.value = '' }
+        qrMsg.value = ''
+        showQr.value = true
+        if (d.error) { qrMsg.value = d.error; qrMsgOk.value = false }
+        startPolling(d.orderId)
       } else {
         payMsg.value = '⚠ ' + (d.error || '支付链接生成失败（请确认支付已配置）')
         payMsgOk.value = false
@@ -158,6 +213,12 @@ async function createRecharge() {
 .md-payway-ic.alipay { color: #1677ff; }
 .md-pay-msg { margin-top: 10px; font-size: 13px; color: #e5484d; }
 .md-pay-msg.ok { color: #22c55e; }
+.md-qr-mask { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 110; display: flex; align-items: center; justify-content: center; }
+.md-qr-panel { width: 86%; max-width: 320px; background: #fff; border-radius: 14px; padding: 20px 16px; text-align: center; }
+.md-qr-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+.md-qr-img { width: 240px; height: 240px; border-radius: 8px; border: 1px solid #eee; }
+.md-qr-empty { width: 240px; height: 240px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 13px; }
+.md-qr-tip { margin-top: 10px; font-size: 12px; color: #888; }
 .md-empty { text-align: center; color: #999; font-size: 13px; padding: 16px 0; }
 .md-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f4f4f4; }
 .md-item:last-child { border-bottom: none; }

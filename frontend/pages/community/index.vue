@@ -36,7 +36,7 @@
         <div class="tabs-scroll">
           <button
             :class="['tab-btn', !activeCategory && 'tab-active']"
-            @click="activeCategory = ''"
+            @click="activeCategory = ''; syncCategoryUrl('')"
           >
             全部
           </button>
@@ -44,7 +44,7 @@
             v-for="cat in categories"
             :key="cat.slug"
             :class="['tab-btn', activeCategory === cat.slug && 'tab-active']"
-            @click="activeCategory = cat.slug"
+            @click="activeCategory = cat.slug; syncCategoryUrl(cat.slug)"
           >
             {{ cat.icon || '#' }} {{ cat.name }}
           </button>
@@ -239,12 +239,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAsyncData } from '#app'
+// GEO-TOP5-04: useRoute 必须从 #app 导入（vue-router 版在 SSR 下 query 为空）
+import { useRoute, useAsyncData } from '#app'
 
 // SSR 端直连后端（/api/* 是外部 4002 服务，非 Nitro 内部路由）；客户端用相对路径走 nginx
 const apiBase = import.meta.server ? (process.env.BACKEND_URL || 'http://127.0.0.1:4002') : ''
 
 const router = useRouter()
+const route = useRoute()
 const isBrowser = typeof window !== 'undefined'
 
 interface Category {
@@ -279,8 +281,36 @@ interface Pagination {
   totalPages: number
 }
 
-const activeCategory = ref('')
-const currentPage = ref(1)
+// GEO-TOP5-04: 分类/分页 URL 化 — 爬虫可索引分类页，刷新/分享/前进后退保持状态
+const activeCategory = ref((route.query.categorySlug as string) || '')
+const currentPage = ref(Number(route.query.page) > 1 ? Number(route.query.page) : 1)
+
+// 分类/翻页 → 同步 URL（无刷新导航）
+function syncCategoryUrl(slug: string) {
+  if (!isBrowser) return
+  const q: Record<string, string> = { ...(route.query as Record<string, string>) }
+  if (slug) q.categorySlug = slug
+  else delete q.categorySlug
+  delete q.page
+  router.replace({ query: q })
+}
+function syncPageUrl(page: number) {
+  if (!isBrowser) return
+  const q: Record<string, string> = { ...(route.query as Record<string, string>) }
+  if (page > 1) q.page = String(page)
+  else delete q.page
+  router.replace({ query: q })
+}
+// 浏览器前进/后退同步状态
+watch(
+  () => route.query,
+  (q) => {
+    const cs = (q.categorySlug as string) || ''
+    const pg = Number(q.page) > 1 ? Number(q.page) : 1
+    if (cs !== activeCategory.value) activeCategory.value = cs
+    if (pg !== currentPage.value) currentPage.value = pg
+  }
+)
 
 // ─── SSR 数据获取 ───
 const { data: categoriesData } = await useAsyncData('community-categories', async () => {
@@ -313,19 +343,42 @@ const sidebar = computed(() => sidebarData.value || { pinned: [], essence: [], h
 const loading = computed(() => postsData.value === null)
 
 // ─── 动态 Meta ───
+// ─── GEO-TOP5-03 分类页动态 SEO：分类名驱动 title/description（长尾关键词入口）───
+const activeCategoryName = computed(() => {
+  if (!activeCategory.value) return ''
+  return categories.value.find((c: any) => c.slug === activeCategory.value)?.name || ''
+})
+const categoryTitle = computed(() =>
+  activeCategoryName.value ? `${activeCategoryName.value} - 昆仑镜社区` : '昆仑镜社区 - AI 短剧制作交流平台'
+)
+const categoryDescription = computed(() =>
+  activeCategoryName.value
+    ? `昆仑镜社区「${activeCategoryName.value}」精选内容：${activeCategoryName.value}相关的教程、经验分享与技术问答。`
+    : '昆仑镜社区是 AI 短剧制作者的交流聚集地，分享创作经验、讨论技术问题、发现行业趋势。'
+)
+const isPaginated = computed(() => currentPage.value > 1)
+const canonicalUrl = computed(() =>
+  activeCategory.value
+    ? `https://aigc.fushtn.com/community?categorySlug=${activeCategory.value}`
+    : 'https://aigc.fushtn.com/community'
+)
+
 useHead({
-  title: '昆仑镜社区 - AI 短剧制作交流平台',
+  title: categoryTitle,
   meta: [
-    { name: 'description', content: '昆仑镜社区是 AI 短剧制作者的交流聚集地，分享创作经验、讨论技术问题、发现行业趋势。' },
-    { property: 'og:title', content: '昆仑镜社区 - AI 短剧制作交流平台' },
-    { property: 'og:description', content: '昆仑镜社区是 AI 短剧制作者的交流聚集地，分享创作经验、讨论技术问题、发现行业趋势。' },
+    { name: 'description', content: categoryDescription },
+    // GEO-TOP5-03: 分页页 noindex（权重集中在第一页，避免分页稀释）
+    ...(isPaginated.value ? [{ name: 'robots', content: 'noindex, follow' }] : []),
+    { property: 'og:title', content: categoryTitle },
+    { property: 'og:description', content: categoryDescription },
     { property: 'og:type', content: 'website' },
-    { property: 'og:url', content: 'https://aigc.fushtn.com/community' },
+    { property: 'og:url', content: canonicalUrl },
     { property: 'og:image', content: 'https://aigc.fushtn.com/logo.png' },
     { property: 'og:site_name', content: '昆仑镜' },
   ],
   link: [
-    { rel: 'canonical', href: 'https://aigc.fushtn.com/community' },
+    // GEO-TOP5-03: 分页/分类参数页 canonical 收敛（分类页→分类第一页；分页→主列表）
+    { rel: 'canonical', href: canonicalUrl },
   ],
   script: [
     {
@@ -352,8 +405,32 @@ useHead({
           },
           'query-input': 'required name=search_term_string',
         },
+        sameAs: [
+          'https://aigc.fushtn.com/',
+          'https://aigc.fushtn.com/about',
+          'https://aigc.fushtn.com/pricing',
+          'https://aigc.fushtn.com/community',
+        ],
       }),
     },
+    // GEO-TOP5-03: CollectionPage — 分类浏览页语义标注（AI 理解内容组织）
+    ...(activeCategory.value
+      ? [{
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'CollectionPage',
+            name: categoryTitle.value,
+            description: categoryDescription.value,
+            url: `https://aigc.fushtn.com/community?categorySlug=${activeCategory.value}`,
+            isPartOf: {
+              '@type': 'WebSite',
+              name: '昆仑镜社区',
+              url: 'https://aigc.fushtn.com/community',
+            },
+          }),
+        }]
+      : []),
     // GEO-REVIEW-01: ItemList — 让 AI 能直接枚举社区已发布内容（检索/推荐的数据源）
     ...(postsData.value?.posts?.length
       ? [{
@@ -363,7 +440,7 @@ useHead({
             '@type': 'ItemList',
             name: '昆仑镜社区最新帖子',
             numberOfItems: postsData.value.posts.length,
-            itemListElement: postsData.value.posts.slice(0, 20).map((p, i) => ({
+            itemListElement: postsData.value.posts.slice(0, 30).map((p, i) => ({
               '@type': 'ListItem',
               position: i + 1,
               name: p.title || '',
@@ -403,6 +480,7 @@ function goMemberCenter() {
 
 function changePage(page: number) {
   currentPage.value = page
+  syncPageUrl(page)
   if (isBrowser) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 

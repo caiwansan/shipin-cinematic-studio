@@ -13,9 +13,9 @@ type HydrationStrategies = {
 type LazyComponent<T> = (T & DefineComponent<HydrationStrategies, {}, {}, {}, {}, {}, {}, { hydrated: () => void }>)
 interface _GlobalComponents {
       'AppFooter': typeof import("../components/AppFooter.vue")['default']
-    'CommunityPostCard': typeof import("../components/CommunityPostCard.vue")['default']
     'EnterpriseWorkspaceShell': typeof import("../components/EnterpriseWorkspaceShell.vue")['default']
     'LibraryReaderPanel': typeof import("../components/LibraryReaderPanel.vue")['default']
+    'MPageShell': typeof import("../components/MPageShell.vue")['default']
     'RegionPicker': typeof import("../components/RegionPicker.vue")['default']
     'WorkspaceSwitcher': typeof import("../components/WorkspaceSwitcher.vue")['default']
     'AdminDashboardActivityStrip': typeof import("../components/admin/dashboard/ActivityStrip.vue")['default']
@@ -53,14 +53,15 @@ interface _GlobalComponents {
     'AiCenterMiniAIBrowser': typeof import("../components/ai-center/MiniAIBrowser.vue")['default']
     'AiModelSettingsLauncher': typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']
     'BusinessLoginModal': typeof import("../components/business/LoginModal.vue")['default']
+    'CommonUserAvatar': typeof import("../components/common/UserAvatar.vue")['default']
     'CommunityHero': typeof import("../components/community/CommunityHero.vue")['default']
+    'CommunityPostCard': typeof import("../components/community/CommunityPostCard.vue")['default']
+    'CommunityUserCardPopover': typeof import("../components/community/UserCardPopover.vue")['default']
     'CustomerService': typeof import("../components/customer/CustomerService.vue")['default']
     'DirectorLocalEngineInstaller': typeof import("../components/director/LocalEngineInstaller.vue")['default']
     'DirectorModelSettingsModal': typeof import("../components/director/ModelSettingsModal.vue")['default']
     'DirectorOllamaSetupModal': typeof import("../components/director/OllamaSetupModal.vue")['default']
-    'EcomAnalysisPanel': typeof import("../components/ecom/AnalysisPanel.vue")['default']
-    'EcomGalleryPanel': typeof import("../components/ecom/GalleryPanel.vue")['default']
-    'EcomPromptsPanel': typeof import("../components/ecom/PromptsPanel.vue")['default']
+    'EcosystemEcoBackHome': typeof import("../components/ecosystem/EcoBackHome.vue")['default']
     'EnterpriseUiEnterpriseShell': typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']
     'EnterpriseUiCardsActionCard': typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']
     'EnterpriseUiCardsDecisionCard': typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']
@@ -178,6 +179,7 @@ interface _GlobalComponents {
     'KnowledgeRegistry': typeof import("../components/knowledge/registry")['default']
     'KunlunBaseGlassPanel': typeof import("../components/kunlun/base/GlassPanel.vue")['default']
     'KunlunBaseMirrorPanel': typeof import("../components/kunlun/base/MirrorPanel.vue")['default']
+    'KunlunBusinessAuthModal': typeof import("../components/kunlun/business/AuthModal.vue")['default']
     'KunlunBusinessKunlunFooter': typeof import("../components/kunlun/business/KunlunFooter.vue")['default']
     'KunlunBusinessKunlunNav': typeof import("../components/kunlun/business/KunlunNav.vue")['default']
     'KunlunCardsMirrorCard': typeof import("../components/kunlun/cards/MirrorCard.vue")['default']
@@ -206,6 +208,19 @@ interface _GlobalComponents {
     'MediaPanel': typeof import("../components/media/MediaPanel.vue")['default']
     'MediaPlannedPage': typeof import("../components/media/MediaPlannedPage.vue")['default']
     'MediaWorkspaceShell': typeof import("../components/media/MediaWorkspaceShell.vue")['default']
+    'MobileMCommunityNew': typeof import("../components/mobile/MCommunityNew.vue")['default']
+    'MobileMCredits': typeof import("../components/mobile/MCredits.vue")['default']
+    'MobileMDiamonds': typeof import("../components/mobile/MDiamonds.vue")['default']
+    'MobileMGallery': typeof import("../components/mobile/MGallery.vue")['default']
+    'MobileMGifts': typeof import("../components/mobile/MGifts.vue")['default']
+    'MobileMMessages': typeof import("../components/mobile/MMessages.vue")['default']
+    'MobileMOrders': typeof import("../components/mobile/MOrders.vue")['default']
+    'MobileMPostDetail': typeof import("../components/mobile/MPostDetail.vue")['default']
+    'MobileMProfile': typeof import("../components/mobile/MProfile.vue")['default']
+    'MobileMReferral': typeof import("../components/mobile/MReferral.vue")['default']
+    'MobileMSettings': typeof import("../components/mobile/MSettings.vue")['default']
+    'MobileMTeam': typeof import("../components/mobile/MTeam.vue")['default']
+    'MobileMWallet': typeof import("../components/mobile/MWallet.vue")['default']
     'R11CausePanel': typeof import("../components/r11/CausePanel.vue")['default']
     'R11DiffTimeline': typeof import("../components/r11/DiffTimeline.vue")['default']
     'R11DriftMonitor': typeof import("../components/r11/DriftMonitor.vue")['default']
@@ -257,9 +272,9 @@ interface _GlobalComponents {
     'NuxtIsland': typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-island")['default']
     'NuxtRouteAnnouncer': IslandComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/server-placeholder")['default']>
       'LazyAppFooter': LazyComponent<typeof import("../components/AppFooter.vue")['default']>
-    'LazyCommunityPostCard': LazyComponent<typeof import("../components/CommunityPostCard.vue")['default']>
     'LazyEnterpriseWorkspaceShell': LazyComponent<typeof import("../components/EnterpriseWorkspaceShell.vue")['default']>
     'LazyLibraryReaderPanel': LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
+    'LazyMPageShell': LazyComponent<typeof import("../components/MPageShell.vue")['default']>
     'LazyRegionPicker': LazyComponent<typeof import("../components/RegionPicker.vue")['default']>
     'LazyWorkspaceSwitcher': LazyComponent<typeof import("../components/WorkspaceSwitcher.vue")['default']>
     'LazyAdminDashboardActivityStrip': LazyComponent<typeof import("../components/admin/dashboard/ActivityStrip.vue")['default']>
@@ -297,14 +312,15 @@ interface _GlobalComponents {
     'LazyAiCenterMiniAIBrowser': LazyComponent<typeof import("../components/ai-center/MiniAIBrowser.vue")['default']>
     'LazyAiModelSettingsLauncher': LazyComponent<typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']>
     'LazyBusinessLoginModal': LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
+    'LazyCommonUserAvatar': LazyComponent<typeof import("../components/common/UserAvatar.vue")['default']>
     'LazyCommunityHero': LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
+    'LazyCommunityPostCard': LazyComponent<typeof import("../components/community/CommunityPostCard.vue")['default']>
+    'LazyCommunityUserCardPopover': LazyComponent<typeof import("../components/community/UserCardPopover.vue")['default']>
     'LazyCustomerService': LazyComponent<typeof import("../components/customer/CustomerService.vue")['default']>
     'LazyDirectorLocalEngineInstaller': LazyComponent<typeof import("../components/director/LocalEngineInstaller.vue")['default']>
     'LazyDirectorModelSettingsModal': LazyComponent<typeof import("../components/director/ModelSettingsModal.vue")['default']>
     'LazyDirectorOllamaSetupModal': LazyComponent<typeof import("../components/director/OllamaSetupModal.vue")['default']>
-    'LazyEcomAnalysisPanel': LazyComponent<typeof import("../components/ecom/AnalysisPanel.vue")['default']>
-    'LazyEcomGalleryPanel': LazyComponent<typeof import("../components/ecom/GalleryPanel.vue")['default']>
-    'LazyEcomPromptsPanel': LazyComponent<typeof import("../components/ecom/PromptsPanel.vue")['default']>
+    'LazyEcosystemEcoBackHome': LazyComponent<typeof import("../components/ecosystem/EcoBackHome.vue")['default']>
     'LazyEnterpriseUiEnterpriseShell': LazyComponent<typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']>
     'LazyEnterpriseUiCardsActionCard': LazyComponent<typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']>
     'LazyEnterpriseUiCardsDecisionCard': LazyComponent<typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']>
@@ -422,6 +438,7 @@ interface _GlobalComponents {
     'LazyKnowledgeRegistry': LazyComponent<typeof import("../components/knowledge/registry")['default']>
     'LazyKunlunBaseGlassPanel': LazyComponent<typeof import("../components/kunlun/base/GlassPanel.vue")['default']>
     'LazyKunlunBaseMirrorPanel': LazyComponent<typeof import("../components/kunlun/base/MirrorPanel.vue")['default']>
+    'LazyKunlunBusinessAuthModal': LazyComponent<typeof import("../components/kunlun/business/AuthModal.vue")['default']>
     'LazyKunlunBusinessKunlunFooter': LazyComponent<typeof import("../components/kunlun/business/KunlunFooter.vue")['default']>
     'LazyKunlunBusinessKunlunNav': LazyComponent<typeof import("../components/kunlun/business/KunlunNav.vue")['default']>
     'LazyKunlunCardsMirrorCard': LazyComponent<typeof import("../components/kunlun/cards/MirrorCard.vue")['default']>
@@ -450,6 +467,19 @@ interface _GlobalComponents {
     'LazyMediaPanel': LazyComponent<typeof import("../components/media/MediaPanel.vue")['default']>
     'LazyMediaPlannedPage': LazyComponent<typeof import("../components/media/MediaPlannedPage.vue")['default']>
     'LazyMediaWorkspaceShell': LazyComponent<typeof import("../components/media/MediaWorkspaceShell.vue")['default']>
+    'LazyMobileMCommunityNew': LazyComponent<typeof import("../components/mobile/MCommunityNew.vue")['default']>
+    'LazyMobileMCredits': LazyComponent<typeof import("../components/mobile/MCredits.vue")['default']>
+    'LazyMobileMDiamonds': LazyComponent<typeof import("../components/mobile/MDiamonds.vue")['default']>
+    'LazyMobileMGallery': LazyComponent<typeof import("../components/mobile/MGallery.vue")['default']>
+    'LazyMobileMGifts': LazyComponent<typeof import("../components/mobile/MGifts.vue")['default']>
+    'LazyMobileMMessages': LazyComponent<typeof import("../components/mobile/MMessages.vue")['default']>
+    'LazyMobileMOrders': LazyComponent<typeof import("../components/mobile/MOrders.vue")['default']>
+    'LazyMobileMPostDetail': LazyComponent<typeof import("../components/mobile/MPostDetail.vue")['default']>
+    'LazyMobileMProfile': LazyComponent<typeof import("../components/mobile/MProfile.vue")['default']>
+    'LazyMobileMReferral': LazyComponent<typeof import("../components/mobile/MReferral.vue")['default']>
+    'LazyMobileMSettings': LazyComponent<typeof import("../components/mobile/MSettings.vue")['default']>
+    'LazyMobileMTeam': LazyComponent<typeof import("../components/mobile/MTeam.vue")['default']>
+    'LazyMobileMWallet': LazyComponent<typeof import("../components/mobile/MWallet.vue")['default']>
     'LazyR11CausePanel': LazyComponent<typeof import("../components/r11/CausePanel.vue")['default']>
     'LazyR11DiffTimeline': LazyComponent<typeof import("../components/r11/DiffTimeline.vue")['default']>
     'LazyR11DriftMonitor': LazyComponent<typeof import("../components/r11/DriftMonitor.vue")['default']>
@@ -507,9 +537,9 @@ declare module 'vue' {
 }
 
 export const AppFooter: typeof import("../components/AppFooter.vue")['default']
-export const CommunityPostCard: typeof import("../components/CommunityPostCard.vue")['default']
 export const EnterpriseWorkspaceShell: typeof import("../components/EnterpriseWorkspaceShell.vue")['default']
 export const LibraryReaderPanel: typeof import("../components/LibraryReaderPanel.vue")['default']
+export const MPageShell: typeof import("../components/MPageShell.vue")['default']
 export const RegionPicker: typeof import("../components/RegionPicker.vue")['default']
 export const WorkspaceSwitcher: typeof import("../components/WorkspaceSwitcher.vue")['default']
 export const AdminDashboardActivityStrip: typeof import("../components/admin/dashboard/ActivityStrip.vue")['default']
@@ -547,14 +577,15 @@ export const AdminMallRecommendTab: typeof import("../components/admin/mall/Reco
 export const AiCenterMiniAIBrowser: typeof import("../components/ai-center/MiniAIBrowser.vue")['default']
 export const AiModelSettingsLauncher: typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']
 export const BusinessLoginModal: typeof import("../components/business/LoginModal.vue")['default']
+export const CommonUserAvatar: typeof import("../components/common/UserAvatar.vue")['default']
 export const CommunityHero: typeof import("../components/community/CommunityHero.vue")['default']
+export const CommunityPostCard: typeof import("../components/community/CommunityPostCard.vue")['default']
+export const CommunityUserCardPopover: typeof import("../components/community/UserCardPopover.vue")['default']
 export const CustomerService: typeof import("../components/customer/CustomerService.vue")['default']
 export const DirectorLocalEngineInstaller: typeof import("../components/director/LocalEngineInstaller.vue")['default']
 export const DirectorModelSettingsModal: typeof import("../components/director/ModelSettingsModal.vue")['default']
 export const DirectorOllamaSetupModal: typeof import("../components/director/OllamaSetupModal.vue")['default']
-export const EcomAnalysisPanel: typeof import("../components/ecom/AnalysisPanel.vue")['default']
-export const EcomGalleryPanel: typeof import("../components/ecom/GalleryPanel.vue")['default']
-export const EcomPromptsPanel: typeof import("../components/ecom/PromptsPanel.vue")['default']
+export const EcosystemEcoBackHome: typeof import("../components/ecosystem/EcoBackHome.vue")['default']
 export const EnterpriseUiEnterpriseShell: typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']
 export const EnterpriseUiCardsActionCard: typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']
 export const EnterpriseUiCardsDecisionCard: typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']
@@ -672,6 +703,7 @@ export const KnowledgeRegistrySetup: typeof import("../components/knowledge/regi
 export const KnowledgeRegistry: typeof import("../components/knowledge/registry")['default']
 export const KunlunBaseGlassPanel: typeof import("../components/kunlun/base/GlassPanel.vue")['default']
 export const KunlunBaseMirrorPanel: typeof import("../components/kunlun/base/MirrorPanel.vue")['default']
+export const KunlunBusinessAuthModal: typeof import("../components/kunlun/business/AuthModal.vue")['default']
 export const KunlunBusinessKunlunFooter: typeof import("../components/kunlun/business/KunlunFooter.vue")['default']
 export const KunlunBusinessKunlunNav: typeof import("../components/kunlun/business/KunlunNav.vue")['default']
 export const KunlunCardsMirrorCard: typeof import("../components/kunlun/cards/MirrorCard.vue")['default']
@@ -700,6 +732,19 @@ export const MediaPageHeader: typeof import("../components/media/MediaPageHeader
 export const MediaPanel: typeof import("../components/media/MediaPanel.vue")['default']
 export const MediaPlannedPage: typeof import("../components/media/MediaPlannedPage.vue")['default']
 export const MediaWorkspaceShell: typeof import("../components/media/MediaWorkspaceShell.vue")['default']
+export const MobileMCommunityNew: typeof import("../components/mobile/MCommunityNew.vue")['default']
+export const MobileMCredits: typeof import("../components/mobile/MCredits.vue")['default']
+export const MobileMDiamonds: typeof import("../components/mobile/MDiamonds.vue")['default']
+export const MobileMGallery: typeof import("../components/mobile/MGallery.vue")['default']
+export const MobileMGifts: typeof import("../components/mobile/MGifts.vue")['default']
+export const MobileMMessages: typeof import("../components/mobile/MMessages.vue")['default']
+export const MobileMOrders: typeof import("../components/mobile/MOrders.vue")['default']
+export const MobileMPostDetail: typeof import("../components/mobile/MPostDetail.vue")['default']
+export const MobileMProfile: typeof import("../components/mobile/MProfile.vue")['default']
+export const MobileMReferral: typeof import("../components/mobile/MReferral.vue")['default']
+export const MobileMSettings: typeof import("../components/mobile/MSettings.vue")['default']
+export const MobileMTeam: typeof import("../components/mobile/MTeam.vue")['default']
+export const MobileMWallet: typeof import("../components/mobile/MWallet.vue")['default']
 export const R11CausePanel: typeof import("../components/r11/CausePanel.vue")['default']
 export const R11DiffTimeline: typeof import("../components/r11/DiffTimeline.vue")['default']
 export const R11DriftMonitor: typeof import("../components/r11/DriftMonitor.vue")['default']
@@ -751,9 +796,9 @@ export const Body: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watc
 export const NuxtIsland: typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/nuxt-island")['default']
 export const NuxtRouteAnnouncer: IslandComponent<typeof import("../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/components/server-placeholder")['default']>
 export const LazyAppFooter: LazyComponent<typeof import("../components/AppFooter.vue")['default']>
-export const LazyCommunityPostCard: LazyComponent<typeof import("../components/CommunityPostCard.vue")['default']>
 export const LazyEnterpriseWorkspaceShell: LazyComponent<typeof import("../components/EnterpriseWorkspaceShell.vue")['default']>
 export const LazyLibraryReaderPanel: LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
+export const LazyMPageShell: LazyComponent<typeof import("../components/MPageShell.vue")['default']>
 export const LazyRegionPicker: LazyComponent<typeof import("../components/RegionPicker.vue")['default']>
 export const LazyWorkspaceSwitcher: LazyComponent<typeof import("../components/WorkspaceSwitcher.vue")['default']>
 export const LazyAdminDashboardActivityStrip: LazyComponent<typeof import("../components/admin/dashboard/ActivityStrip.vue")['default']>
@@ -791,14 +836,15 @@ export const LazyAdminMallRecommendTab: LazyComponent<typeof import("../componen
 export const LazyAiCenterMiniAIBrowser: LazyComponent<typeof import("../components/ai-center/MiniAIBrowser.vue")['default']>
 export const LazyAiModelSettingsLauncher: LazyComponent<typeof import("../components/ai-model/ModelSettingsLauncher.vue")['default']>
 export const LazyBusinessLoginModal: LazyComponent<typeof import("../components/business/LoginModal.vue")['default']>
+export const LazyCommonUserAvatar: LazyComponent<typeof import("../components/common/UserAvatar.vue")['default']>
 export const LazyCommunityHero: LazyComponent<typeof import("../components/community/CommunityHero.vue")['default']>
+export const LazyCommunityPostCard: LazyComponent<typeof import("../components/community/CommunityPostCard.vue")['default']>
+export const LazyCommunityUserCardPopover: LazyComponent<typeof import("../components/community/UserCardPopover.vue")['default']>
 export const LazyCustomerService: LazyComponent<typeof import("../components/customer/CustomerService.vue")['default']>
 export const LazyDirectorLocalEngineInstaller: LazyComponent<typeof import("../components/director/LocalEngineInstaller.vue")['default']>
 export const LazyDirectorModelSettingsModal: LazyComponent<typeof import("../components/director/ModelSettingsModal.vue")['default']>
 export const LazyDirectorOllamaSetupModal: LazyComponent<typeof import("../components/director/OllamaSetupModal.vue")['default']>
-export const LazyEcomAnalysisPanel: LazyComponent<typeof import("../components/ecom/AnalysisPanel.vue")['default']>
-export const LazyEcomGalleryPanel: LazyComponent<typeof import("../components/ecom/GalleryPanel.vue")['default']>
-export const LazyEcomPromptsPanel: LazyComponent<typeof import("../components/ecom/PromptsPanel.vue")['default']>
+export const LazyEcosystemEcoBackHome: LazyComponent<typeof import("../components/ecosystem/EcoBackHome.vue")['default']>
 export const LazyEnterpriseUiEnterpriseShell: LazyComponent<typeof import("../components/enterprise-ui/EnterpriseShell.vue")['default']>
 export const LazyEnterpriseUiCardsActionCard: LazyComponent<typeof import("../components/enterprise-ui/cards/ActionCard.vue")['default']>
 export const LazyEnterpriseUiCardsDecisionCard: LazyComponent<typeof import("../components/enterprise-ui/cards/DecisionCard.vue")['default']>
@@ -916,6 +962,7 @@ export const LazyKnowledgeRegistrySetup: LazyComponent<typeof import("../compone
 export const LazyKnowledgeRegistry: LazyComponent<typeof import("../components/knowledge/registry")['default']>
 export const LazyKunlunBaseGlassPanel: LazyComponent<typeof import("../components/kunlun/base/GlassPanel.vue")['default']>
 export const LazyKunlunBaseMirrorPanel: LazyComponent<typeof import("../components/kunlun/base/MirrorPanel.vue")['default']>
+export const LazyKunlunBusinessAuthModal: LazyComponent<typeof import("../components/kunlun/business/AuthModal.vue")['default']>
 export const LazyKunlunBusinessKunlunFooter: LazyComponent<typeof import("../components/kunlun/business/KunlunFooter.vue")['default']>
 export const LazyKunlunBusinessKunlunNav: LazyComponent<typeof import("../components/kunlun/business/KunlunNav.vue")['default']>
 export const LazyKunlunCardsMirrorCard: LazyComponent<typeof import("../components/kunlun/cards/MirrorCard.vue")['default']>
@@ -944,6 +991,19 @@ export const LazyMediaPageHeader: LazyComponent<typeof import("../components/med
 export const LazyMediaPanel: LazyComponent<typeof import("../components/media/MediaPanel.vue")['default']>
 export const LazyMediaPlannedPage: LazyComponent<typeof import("../components/media/MediaPlannedPage.vue")['default']>
 export const LazyMediaWorkspaceShell: LazyComponent<typeof import("../components/media/MediaWorkspaceShell.vue")['default']>
+export const LazyMobileMCommunityNew: LazyComponent<typeof import("../components/mobile/MCommunityNew.vue")['default']>
+export const LazyMobileMCredits: LazyComponent<typeof import("../components/mobile/MCredits.vue")['default']>
+export const LazyMobileMDiamonds: LazyComponent<typeof import("../components/mobile/MDiamonds.vue")['default']>
+export const LazyMobileMGallery: LazyComponent<typeof import("../components/mobile/MGallery.vue")['default']>
+export const LazyMobileMGifts: LazyComponent<typeof import("../components/mobile/MGifts.vue")['default']>
+export const LazyMobileMMessages: LazyComponent<typeof import("../components/mobile/MMessages.vue")['default']>
+export const LazyMobileMOrders: LazyComponent<typeof import("../components/mobile/MOrders.vue")['default']>
+export const LazyMobileMPostDetail: LazyComponent<typeof import("../components/mobile/MPostDetail.vue")['default']>
+export const LazyMobileMProfile: LazyComponent<typeof import("../components/mobile/MProfile.vue")['default']>
+export const LazyMobileMReferral: LazyComponent<typeof import("../components/mobile/MReferral.vue")['default']>
+export const LazyMobileMSettings: LazyComponent<typeof import("../components/mobile/MSettings.vue")['default']>
+export const LazyMobileMTeam: LazyComponent<typeof import("../components/mobile/MTeam.vue")['default']>
+export const LazyMobileMWallet: LazyComponent<typeof import("../components/mobile/MWallet.vue")['default']>
 export const LazyR11CausePanel: LazyComponent<typeof import("../components/r11/CausePanel.vue")['default']>
 export const LazyR11DiffTimeline: LazyComponent<typeof import("../components/r11/DiffTimeline.vue")['default']>
 export const LazyR11DriftMonitor: LazyComponent<typeof import("../components/r11/DriftMonitor.vue")['default']>

@@ -19,7 +19,7 @@ interface CallPeer {
   uid: string
   name: string
   avatar: string
-  channelId: string // dm_<lo>_<hi>
+  channelId: string // 私聊频道 ID（uid@uid）
   channelType: number // 1
 }
 

@@ -6,6 +6,9 @@ declare module "nitropack/types" {
     '/api/knowledge/:type/:slug': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/knowledge/[type]/[slug]').default>>>>
     }
+    '/llms.txt': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/routes/llms.txt').default>>>>
+    }
     '/robots.txt': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/routes/robots.txt').default>>>>
     }

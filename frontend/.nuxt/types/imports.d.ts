@@ -34,8 +34,10 @@ declare global {
   const definePayloadReducer: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['definePayloadReducer']
   const definePayloadReviver: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['definePayloadReviver']
   const defineStore: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['defineStore']
+  const detectMobile: typeof import('../../utils/mobile-detect')['detectMobile']
   const effect: typeof import('vue')['effect']
   const effectScope: typeof import('vue')['effectScope']
+  const fmtMoney: typeof import('../../composables/useMobileApi')['fmtMoney']
   const get: typeof import('../../utils/storage-gateway')['get']
   const getAccessibleRecipes: typeof import('../../utils/executionRecipe')['getAccessibleRecipes']
   const getAdminToken: typeof import('../../utils/token-cache')['getAdminToken']
@@ -63,6 +65,7 @@ declare global {
   const injectHead: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/head')['injectHead']
   const isAuthenticated: typeof import('../../utils/token-cache')['isAuthenticated']
   const isFeatureEnabled: typeof import('../../utils/featureFlags')['isFeatureEnabled']
+  const isMobileUA: typeof import('../../utils/mobile-detect')['isMobileUA']
   const isNuxtError: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/error')['isNuxtError']
   const isPrerendered: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['isPrerendered']
   const isProxy: typeof import('vue')['isProxy']
@@ -77,6 +80,9 @@ declare global {
   const loadPayload: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['loadPayload']
   const markRaw: typeof import('vue')['markRaw']
   const mergeModels: typeof import('vue')['mergeModels']
+  const mobileAuthFetch: typeof import('../../composables/useMobileApi')['mobileAuthFetch']
+  const mobileToast: typeof import('../../composables/useMobileApi')['mobileToast']
+  const mobileToken: typeof import('../../composables/useMobileApi')['mobileToken']
   const navigateTo: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['navigateTo']
   const nextTick: typeof import('vue')['nextTick']
   const onActivated: typeof import('vue')['onActivated']
@@ -110,8 +116,11 @@ declare global {
   const refreshNuxtData: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/asyncData')['refreshNuxtData']
   const reloadNuxtApp: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/chunk')['reloadNuxtApp']
   const remove: typeof import('../../utils/storage-gateway')['remove']
+  const renderMarkdown: typeof import('../../utils/markdown')['renderMarkdown']
   const requestIdleCallback: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/compat/idle-callback')['requestIdleCallback']
   const resolveComponent: typeof import('vue')['resolveComponent']
+  const safeRedirect: typeof import('../../utils/mobile-detect')['safeRedirect']
+  const sanitizeHtml: typeof import('../../utils/markdown')['sanitizeHtml']
   const sendFreEvent: typeof import('../../utils/provider-api')['sendFreEvent']
   const serializeRecipeConfig: typeof import('../../utils/executionRecipe')['serializeRecipeConfig']
   const set: typeof import('../../utils/storage-gateway')['set']
@@ -130,6 +139,7 @@ declare global {
   const storageDiagnostics: typeof import('../../utils/storage-gateway')['storageDiagnostics']
   const storageGateway: typeof import('../../utils/storage-gateway')['default']
   const storeToRefs: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['storeToRefs']
+  const stripMarkdown: typeof import('../../utils/markdown')['stripMarkdown']
   const toRaw: typeof import('vue')['toRaw']
   const toRef: typeof import('vue')['toRef']
   const toRefs: typeof import('vue')['toRefs']
@@ -169,6 +179,7 @@ declare global {
   const useHydration: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/hydrate')['useHydration']
   const useId: typeof import('vue')['useId']
   const useIdentityStore: typeof import('../../stores/identity')['useIdentityStore']
+  const useKunlunTea: typeof import('../../composables/useKunlunTea')['useKunlunTea']
   const useLazyAsyncData: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/asyncData')['useLazyAsyncData']
   const useLazyFetch: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/fetch')['useLazyFetch']
   const useLibraryReader: typeof import('../../composables/useLibraryReader')['useLibraryReader']
@@ -193,6 +204,7 @@ declare global {
   const useRoute: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['useRoute']
   const useRouteAnnouncer: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/route-announcer')['useRouteAnnouncer']
   const useRouter: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['useRouter']
+  const useRtcCall: typeof import('../../composables/useRtcCall')['useRtcCall']
   const useRuntimeConfig: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/nuxt')['useRuntimeConfig']
   const useRuntimeHook: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/runtime-hook')['useRuntimeHook']
   const useSSEStream: typeof import('../../composables/useSSEStream')['useSSEStream']
@@ -265,6 +277,9 @@ declare global {
   // @ts-ignore
   export type { Region, RegionWithChildren } from '../../composables/useRegions'
   import('../../composables/useRegions')
+  // @ts-ignore
+  export type { RtcMode, RtcState } from '../../composables/useRtcCall'
+  import('../../composables/useRtcCall')
   // @ts-ignore
   export type { ToastMessage } from '../../composables/useToast'
   import('../../composables/useToast')
@@ -339,8 +354,10 @@ declare module 'vue' {
     readonly definePayloadReducer: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['definePayloadReducer']>
     readonly definePayloadReviver: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['definePayloadReviver']>
     readonly defineStore: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['defineStore']>
+    readonly detectMobile: UnwrapRef<typeof import('../../utils/mobile-detect')['detectMobile']>
     readonly effect: UnwrapRef<typeof import('vue')['effect']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly fmtMoney: UnwrapRef<typeof import('../../composables/useMobileApi')['fmtMoney']>
     readonly get: UnwrapRef<typeof import('../../utils/storage-gateway')['get']>
     readonly getAccessibleRecipes: UnwrapRef<typeof import('../../utils/executionRecipe')['getAccessibleRecipes']>
     readonly getAdminToken: UnwrapRef<typeof import('../../utils/token-cache')['getAdminToken']>
@@ -368,6 +385,7 @@ declare module 'vue' {
     readonly injectHead: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/head')['injectHead']>
     readonly isAuthenticated: UnwrapRef<typeof import('../../utils/token-cache')['isAuthenticated']>
     readonly isFeatureEnabled: UnwrapRef<typeof import('../../utils/featureFlags')['isFeatureEnabled']>
+    readonly isMobileUA: UnwrapRef<typeof import('../../utils/mobile-detect')['isMobileUA']>
     readonly isNuxtError: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/error')['isNuxtError']>
     readonly isPrerendered: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['isPrerendered']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
@@ -382,6 +400,9 @@ declare module 'vue' {
     readonly loadPayload: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['loadPayload']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly mergeModels: UnwrapRef<typeof import('vue')['mergeModels']>
+    readonly mobileAuthFetch: UnwrapRef<typeof import('../../composables/useMobileApi')['mobileAuthFetch']>
+    readonly mobileToast: UnwrapRef<typeof import('../../composables/useMobileApi')['mobileToast']>
+    readonly mobileToken: UnwrapRef<typeof import('../../composables/useMobileApi')['mobileToken']>
     readonly navigateTo: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
@@ -415,8 +436,11 @@ declare module 'vue' {
     readonly refreshNuxtData: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/asyncData')['refreshNuxtData']>
     readonly reloadNuxtApp: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/chunk')['reloadNuxtApp']>
     readonly remove: UnwrapRef<typeof import('../../utils/storage-gateway')['remove']>
+    readonly renderMarkdown: UnwrapRef<typeof import('../../utils/markdown')['renderMarkdown']>
     readonly requestIdleCallback: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/compat/idle-callback')['requestIdleCallback']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
+    readonly safeRedirect: UnwrapRef<typeof import('../../utils/mobile-detect')['safeRedirect']>
+    readonly sanitizeHtml: UnwrapRef<typeof import('../../utils/markdown')['sanitizeHtml']>
     readonly sendFreEvent: UnwrapRef<typeof import('../../utils/provider-api')['sendFreEvent']>
     readonly serializeRecipeConfig: UnwrapRef<typeof import('../../utils/executionRecipe')['serializeRecipeConfig']>
     readonly set: UnwrapRef<typeof import('../../utils/storage-gateway')['set']>
@@ -435,6 +459,7 @@ declare module 'vue' {
     readonly storageDiagnostics: UnwrapRef<typeof import('../../utils/storage-gateway')['storageDiagnostics']>
     readonly storageGateway: UnwrapRef<typeof import('../../utils/storage-gateway')['default']>
     readonly storeToRefs: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['storeToRefs']>
+    readonly stripMarkdown: UnwrapRef<typeof import('../../utils/markdown')['stripMarkdown']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
@@ -474,6 +499,7 @@ declare module 'vue' {
     readonly useHydration: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/hydrate')['useHydration']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useIdentityStore: UnwrapRef<typeof import('../../stores/identity')['useIdentityStore']>
+    readonly useKunlunTea: UnwrapRef<typeof import('../../composables/useKunlunTea')['useKunlunTea']>
     readonly useLazyAsyncData: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/asyncData')['useLazyAsyncData']>
     readonly useLazyFetch: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/fetch')['useLazyFetch']>
     readonly useLibraryReader: UnwrapRef<typeof import('../../composables/useLibraryReader')['useLibraryReader']>
@@ -498,6 +524,7 @@ declare module 'vue' {
     readonly useRoute: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['useRoute']>
     readonly useRouteAnnouncer: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/route-announcer')['useRouteAnnouncer']>
     readonly useRouter: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['useRouter']>
+    readonly useRtcCall: UnwrapRef<typeof import('../../composables/useRtcCall')['useRtcCall']>
     readonly useRuntimeConfig: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/nuxt')['useRuntimeConfig']>
     readonly useRuntimeHook: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/runtime-hook')['useRuntimeHook']>
     readonly useSSEStream: UnwrapRef<typeof import('../../composables/useSSEStream')['useSSEStream']>

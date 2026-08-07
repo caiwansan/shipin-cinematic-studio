@@ -87,6 +87,20 @@
           </div>
         </article>
 
+        <!-- GEO-TOP5-01 相关阅读：同分类文章内链（主题聚类，提升爬取深度） -->
+        <section v-if="relatedPosts.length > 0" class="related-section cn-card" aria-label="相关阅读">
+          <h2 class="section-title related-title">📖 相关阅读</h2>
+          <ul class="related-list">
+            <li v-for="rp in relatedPosts" :key="rp.id" class="related-item">
+              <NuxtLink :to="`/community/post/${rp.id}`" class="related-link">
+                <span class="related-cat">{{ rp.category }}</span>
+                <span class="related-name">{{ rp.title }}</span>
+                <span class="related-meta">👁️ {{ rp.viewCount ?? 0 }} · 💬 {{ rp.commentCount ?? 0 }}</span>
+              </NuxtLink>
+            </li>
+          </ul>
+        </section>
+
         <!-- COMMUNITY-TIP-01 打赏区：打赏按钮 + 打赏人名单 + 礼物记录 -->
         <section class="tips-section cn-card">
           <div class="tips-header">
@@ -225,7 +239,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAsyncData } from '#app'
-import { renderMarkdown } from '~/utils/markdown'
+import { renderMarkdown, stripMarkdown } from '~/utils/markdown'
 
 // SSR 端直连后端（/api/* 是外部 4002 服务）；客户端用相对路径走 nginx
 const apiBase = import.meta.server ? (process.env.BACKEND_URL || 'http://127.0.0.1:4002') : ''
@@ -288,6 +302,61 @@ onMounted(async () => {
       } catch { /* 保持原错误 */ }
     }
   }
+})
+
+// ─── GEO-TOP5-01 相关阅读：同分类文章（内链聚类，主题信号集中）───
+const { data: categoriesMapData } = await useAsyncData('post-categories-map', async () => {
+  const res = await $fetch(`${apiBase}/api/community/categories`)
+  return (res.categories || []) as Array<{ slug: string; name: string }>
+}, { lazy: true })
+
+const categorySlug = computed(() => {
+  const name = post.value?.category
+  if (!name) return ''
+  return categoriesMapData.value?.find((c: any) => c.name === name)?.slug || ''
+})
+
+const { data: relatedPosts } = await useAsyncData(
+  `related-${route.params.id}`,
+  async () => {
+    if (!post.value?.category) return []
+    const params = new URLSearchParams()
+    params.set('pageSize', '6')
+    if (categorySlug.value) params.set('categorySlug', categorySlug.value)
+    const res = await $fetch(`${apiBase}/api/community/posts?${params}`)
+    return (res.posts || []).filter((p: any) => p.id !== route.params.id).slice(0, 4)
+  },
+  { watch: [() => post.value?.category, categorySlug] }
+)
+
+// ─── GEO-TOP5-02 FAQPage：从正文问句小节提取问答对（AI 摘要引用高概率区块）───
+const faqItems = computed(() => {
+  const content = post.value?.content
+  if (!content) return []
+  const lines = content.split('\n')
+  const items: Array<{ q: string; a: string }> = []
+  let currentQ: string | null = null
+  let buf: string[] = []
+  const questionRe = /[？?]$|如何|怎么|怎样|什么|为什么|是否|能不能|可否|可以吗|哪些|几种|"\d+\."?/
+  const flush = () => {
+    if (currentQ && buf.length) {
+      const a = stripMarkdown(buf.join('\n')).replace(/\s+/g, ' ').trim().slice(0, 200)
+      if (a.length >= 15) items.push({ q: currentQ, a })
+    }
+    buf = []
+  }
+  for (const line of lines) {
+    const m = line.match(/^#{2,4}\s+(.+)$/)
+    if (m) {
+      flush()
+      const title = m[1].trim().replace(/\*\*/g, '').replace(/^\d+[.、]?\s*/, '')
+      currentQ = questionRe.test(title) ? title : null
+    } else if (currentQ) {
+      buf.push(line)
+    }
+  }
+  flush()
+  return items.slice(0, 5)
 })
 
 // ─── 动态 Meta 标签 ───
@@ -392,10 +461,17 @@ useHead({
         publisher: {
           '@type': 'Organization',
           name: '昆仑镜',
+          url: 'https://aigc.fushtn.com/',
           logo: {
             '@type': 'ImageObject',
             url: 'https://aigc.fushtn.com/logo.png',
           },
+          sameAs: [
+            'https://aigc.fushtn.com/',
+            'https://aigc.fushtn.com/about',
+            'https://aigc.fushtn.com/pricing',
+            'https://aigc.fushtn.com/community',
+          ],
         },
         mainEntityOfPage: {
           '@type': 'WebPage',
@@ -421,6 +497,24 @@ useHead({
         ],
       }),
     },
+    // GEO-TOP5-02: FAQPage — 从正文问句小节自动提取（AI 摘要/语音助手高引用区块）
+    ...(faqItems.value.length
+      ? [{
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faqItems.value.map((f) => ({
+              '@type': 'Question',
+              name: f.q,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: f.a,
+              },
+            })),
+          }),
+        }]
+      : []),
     // GEO-REVIEW-01: BreadcrumbList — 帮助 AI 理解站内层级与内容归属
     {
       type: 'application/ld+json',
@@ -927,6 +1021,32 @@ onMounted(() => {
   height: 2px;
   background: linear-gradient(90deg, rgba(38, 84, 124, 0.25), transparent);
 }
+
+/* GEO-TOP5-01 相关阅读 */
+.related-section { margin-top: 24px; padding: 20px; }
+.related-title { margin-bottom: 14px; }
+.related-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.related-item {
+  border: 1px solid rgba(38, 84, 124, 0.14);
+  border-radius: 5px;
+  background: rgba(246, 241, 227, 0.45);
+  transition: border-color 0.2s, background 0.2s;
+}
+.related-item:hover { border-color: rgba(176, 127, 46, 0.5); background: rgba(246, 241, 227, 0.9); }
+.related-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; text-decoration: none; color: inherit; }
+.related-cat {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: rgba(176, 127, 46, 0.12);
+  border: 1px solid rgba(176, 127, 46, 0.35);
+  color: #a87a2c;
+  font-family: var(--cn-serif);
+}
+.related-name { flex: 1; font-size: 0.9rem; color: var(--cn-cobalt-deep); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.related-meta { flex-shrink: 0; font-size: 0.75rem; color: #8a8a8a; }
+.related-item:hover .related-name { color: var(--cn-cinnabar); }
 
 .comment-form {
   background: var(--cn-paper-card);

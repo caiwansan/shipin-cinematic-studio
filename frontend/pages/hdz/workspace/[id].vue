@@ -213,17 +213,21 @@
           <div class="hdz-panel-header">
             <span>📋 章节大纲</span>
             <div class="hdz-panel-header-actions">
-              <button v-if="chapters.length > 0" class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="continueWriting">✏️ 续写</button>
+              <template v-if="chapters.length > 0">
+                <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" :class="{ 'hdz-btn-active': selectedChapterIds.size > 0 }" @click="toggleSelectAllOutline">{{ isAllOutlineSelected ? '☑️ 取消全选' : '☑️ 全选' }}</button>
+                <button v-if="selectedChapterIds.size > 0" class="hdz-btn hdz-btn-danger hdz-btn-xs" @click="batchDeleteOutline">🗑️ 一键删除（{{ selectedChapterIds.size }}）</button>
+                <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="continueWriting">✏️ 续写</button>
+              </template>
               <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click="generateOutline">🔄 生成全文大纲</button>
-              <button v-if="outlineGaps.length > 0 && !fillingGaps" class="hdz-btn hdz-btn-warning hdz-btn-xs" @click="fillOutlineGaps">🧩 补全缺失大纲（{{ outlineGaps.length }} 章）</button>
+              <button v-if="outlineGaps.length > 0 && !fillingGaps" class="hdz-btn hdz-btn-warning hdz-btn-xs" @click="fillOutlineGaps">🧩 自动补全缺失大纲（{{ outlineGaps.length }} 章）</button>
             </div>
           </div>
           <div v-if="outlineGaps.length > 0" class="hdz-outline-gap-bar">
-            ⚠️ 章节编号不连续：缺失第 {{ outlineGaps[0] }} - {{ outlineGaps[outlineGaps.length - 1] }} 章，点击右上角「🧩 补全缺失大纲」将从第 {{ outlineGaps[0] }} 章开始生成
+            ⚠️ 章节编号不连续：缺失第 {{ outlineGaps[0] }} - {{ outlineGaps[outlineGaps.length - 1] }} 章，点击「🧩 自动补全」将自动连续补写全部空缺（参考已有章节脉络，保持剧情连贯）
           </div>
           <div v-if="fillingGaps" class="hdz-panel-empty">
-            <p>⏳ 正在补全缺失章节大纲（每批最多 15 章，约 1-2 分钟）...</p>
-            <p class="hdz-chat-empty-hint">生成完成后自动刷新，若缺失较多请再次点击补全</p>
+            <p>⏳ 正在自动补全缺失章节大纲（每批 15 章，全部补完自动结束，可能需 5-20 分钟）...</p>
+            <p class="hdz-chat-empty-hint">生成完成后自动刷新；任务可在右下角任务中心查看进度</p>
           </div>
           <div v-if="chapters.length === 0" class="hdz-panel-empty">
             还没有章节，点击上方按钮或通过对话创建
@@ -233,14 +237,31 @@
               共 {{ chapters.length }} 章，第 {{ outlinePage }}/{{ outlineTotalPages }} 页（每页 {{ outlinePageSize }} 章）
             </div>
             <div v-for="(ch, idx) in paginatedChapters" :key="ch?.id || idx" class="hdz-outline-item" @click="ch?.id && toggleOutline(ch.id)">
+              <input
+                v-if="ch?.id"
+                type="checkbox"
+                class="hdz-outline-checkbox"
+                :checked="selectedChapterIds.has(ch.id)"
+                title="选择该章（可批量删除）"
+                @click.stop="toggleOutlineSelect(ch.id)"
+              />
               <div class="hdz-outline-no">第 {{ ch.chapterNo }} 章</div>
               <div class="hdz-outline-info">
-                <div class="hdz-outline-title">{{ cleanText(ch.title) || '未命名' }}</div>
+                <div v-if="editingTitleId === ch?.id" class="hdz-outline-edit">
+                  <input v-model="editingTitle" class="hdz-input hdz-input-sm" maxlength="200" placeholder="输入大纲名称" @keyup.enter="saveOutlineTitle(ch)" @keyup.esc="cancelOutlineEdit" @click.stop />
+                  <button class="hdz-btn hdz-btn-primary hdz-btn-xs" @click.stop="saveOutlineTitle(ch)">✓</button>
+                  <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" @click.stop="cancelOutlineEdit">✕</button>
+                </div>
+                <div v-else class="hdz-outline-title">{{ cleanText(ch.title) || '未命名' }}</div>
                 <div class="hdz-outline-status" :class="`hdz-ch-status--${ch.status}`">{{ chStatus(ch.status) }}</div>
               </div>
               <div class="hdz-outline-meta">
                 <span v-if="ch.summary" class="hdz-outline-summary-icon">📖</span>
                 {{ ch.wordCount || 0 }} 字
+              </div>
+              <div class="hdz-outline-actions" @click.stop>
+                <button class="hdz-btn hdz-btn-ghost hdz-btn-xs" title="修改大纲名称" @click="startEditOutlineTitle(ch)">✏️ 编辑</button>
+                <button class="hdz-btn hdz-btn-danger hdz-btn-xs" title="删除大纲（清除已生成的大纲缓存与数据，可重新创建）" @click="deleteOutline(ch)">🗑️ 删除</button>
               </div>
             </div>
             <!-- 章节介绍（展开时显示） -->
@@ -2052,6 +2073,82 @@ function toggleOutline(id: string) {
   // 触发响应式更新
   expandedChapters.value = new Set(s)
 }
+
+// ✏️ 大纲编辑（修改大纲名称）
+const editingTitleId = ref<string | null>(null)
+const editingTitle = ref('')
+function startEditOutlineTitle(ch: any) {
+  editingTitleId.value = ch?.id || null
+  editingTitle.value = ch?.title || ''
+}
+function cancelOutlineEdit() {
+  editingTitleId.value = null
+  editingTitle.value = ''
+}
+async function saveOutlineTitle(ch: any) {
+  const title = editingTitle.value.trim()
+  if (!title || !ch?.id) { cancelOutlineEdit(); return }
+  try {
+    await $api.put(`/api/hdz/manuscript/${projectId.value}/${ch.id}`, { title })
+    ch.title = title
+  } catch {}
+  cancelOutlineEdit()
+}
+
+// 🗑️ 大纲删除（清除该章大纲缓存与数据，重新开始创建）
+async function deleteOutline(ch: any) {
+  if (!ch?.id) return
+  if (!confirm(`确认删除「第 ${ch.chapterNo} 章${ch.title ? ' · ' + cleanText(ch.title) : ''}」的大纲？\n\n将同时清除该章已生成的大纲缓存与数据（生成任务、章节摘要），删除后可以重新创建大纲。此操作不可恢复。`)) return
+  try {
+    await $api.delete(`/api/hdz/manuscript/${projectId.value}/${ch.id}`)
+    // 清除前端已展开/选中的该章缓存
+    expandedChapters.value = new Set([...expandedChapters.value].filter((id: any) => id !== ch.id))
+    if (selectedChapter.value === ch.id) { selectedChapter.value = null; editContent.value = '' }
+    if (readerChapterIndex.value >= 0) {
+      const idx = chapters.value.findIndex((c: any) => c.id === ch.id)
+      if (idx >= 0 && idx <= readerChapterIndex.value) readerChapterIndex.value--
+    }
+    selectedChapterIds.value.delete(ch.id)
+    selectedChapterIds.value = new Set(selectedChapterIds.value)
+    await loadChapters()
+  } catch {}
+}
+
+// ☑️ 批量删除：全选 / 单选 / 一键删除
+const selectedChapterIds = ref<Set<string>>(new Set())
+const isAllOutlineSelected = computed(() => chapters.value.length > 0 && chapters.value.every((c: any) => c?.id && selectedChapterIds.value.has(c.id)))
+function toggleOutlineSelect(id: string) {
+  const s = new Set(selectedChapterIds.value)
+  if (s.has(id)) s.delete(id); else s.add(id)
+  selectedChapterIds.value = s
+}
+function toggleSelectAllOutline() {
+  if (isAllOutlineSelected.value) {
+    selectedChapterIds.value = new Set()
+  } else {
+    const s = new Set<string>()
+    for (const c of chapters.value) if (c?.id) s.add(c.id)
+    selectedChapterIds.value = s
+  }
+}
+async function batchDeleteOutline() {
+  const ids = [...selectedChapterIds.value]
+  if (ids.length === 0) return
+  const names = chapters.value.filter((c: any) => ids.includes(c.id)).map((c: any) => `第 ${c.chapterNo} 章`)
+  const preview = names.length > 6 ? names.slice(0, 6).join('、') + ` 等 ${names.length} 章` : names.join('、')
+  if (!confirm(`确认删除选中的 ${ids.length} 章（${preview}）的大纲？\n\n将同时清除这些章节已生成的大纲缓存与数据（生成任务、章节摘要），删除后可以重新创建大纲。此操作不可恢复。`)) return
+  try {
+    await $api.post(`/api/hdz/manuscript/${projectId.value}/batch-delete`, { chapterIds: ids })
+    // 清除前端选中/展开/编辑器/阅读器缓存
+    selectedChapterIds.value = new Set()
+    expandedChapters.value = new Set()
+    if (selectedChapter.value) { selectedChapter.value = null; editContent.value = '' }
+    readerChapterIndex.value = -1
+    await loadChapters()
+    // 页码越界回退
+    if (outlinePage.value > outlineTotalPages.value) outlinePage.value = outlineTotalPages.value
+  } catch {}
+}
 const showLocalModel = ref(false)
 // 角色卡片展开状态
 const expandedChars = ref(new Set())
@@ -3677,7 +3774,6 @@ async function fillOutlineGaps() {
   if (outlineGaps.value.length === 0) return
   if (fillingGaps.value) return
   fillingGaps.value = true
-  const beforeCount = outlineGaps.value.length
   try {
     const res = await $api.post('/api/hdz/agent/generate', {
       projectId: projectId.value,
@@ -3686,13 +3782,13 @@ async function fillOutlineGaps() {
     })
     const body = res?.data
     if (!body?.success) throw new Error(body?.error || '补全失败')
-    // 轮询等待生成完成（最多 3 分钟）：每 10s 刷新，直到缺失数减少
+    // 轮询等待自动补写完成（最多 25 分钟，每 10s 刷新）：后端会循环补完所有空洞
     let waited = 0
-    while (waited < 180) {
+    while (waited < 1500) {
       await new Promise(r => setTimeout(r, 10000))
       waited += 10
       await refreshChapters()
-      if (outlineGaps.value.length < beforeCount) break
+      if (outlineGaps.value.length === 0) break
     }
   } catch (e: any) {
     console.error('补全大纲失败:', e)
@@ -4184,14 +4280,11 @@ async function showLibraryReader() {
 
 /* Outline */
 .hdz-outline-list { display: flex; flex-direction: column; gap: 8px; }
-.hdz-outline-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; border-radius: 8px;
-  background: rgba(255,255,255,0.5);
-  border: 1px solid rgba(0,0,0,0.06);
-  cursor: pointer;
-}
+.hdz-outline-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid rgba(0,0,0,0.06); cursor: pointer; }
 .hdz-outline-item:hover { background: rgba(255,255,255,0.8); }
+.hdz-outline-checkbox { width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; accent-color: #b3475e; }
+.hdz-outline-item:has(.hdz-outline-checkbox:checked) { background: rgba(179,71,94,0.08); border-color: rgba(179,71,94,0.25); }
+.hdz-btn-active { background: rgba(179,71,94,0.12) !important; color: #b3475e !important; border-color: rgba(179,71,94,0.35) !important; }
 .hdz-outline-no { font-size: 0.7rem; color: #999; width: 60px; flex-shrink: 0; }
 .hdz-outline-info { flex: 1; display: flex; align-items: center; gap: 10px; }
 .hdz-outline-title { font-size: 0.85rem; color: #333; }
@@ -4202,6 +4295,10 @@ async function showLibraryReader() {
 .hdz-ch-status--waiting_approval { background: rgba(255,152,0,0.12); color: #e65100; }
 .hdz-ch-status--final { background: rgba(76,175,80,0.12); color: #2e7d32; }
 .hdz-outline-meta { font-size: 0.7rem; color: #999; display: flex; align-items: center; gap: 4px; }
+.hdz-outline-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.hdz-outline-actions .hdz-btn { opacity: 0.75; }
+.hdz-outline-item:hover .hdz-outline-actions .hdz-btn { opacity: 1; }
+.hdz-outline-edit { display: flex; align-items: center; gap: 6px; flex: 1; }
 .hdz-outline-summary-icon { font-size: 0.8rem; }
 .hdz-outline-detail {
   padding: 8px 16px 12px 72px;
