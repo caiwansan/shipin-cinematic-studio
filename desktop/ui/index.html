@@ -132,6 +132,30 @@
   .hidden { display: none !important; }
   .login-wrap { display: flex; align-items: center; justify-content: center; height: 100%; }
   .login-box { width: 360px; background: var(--panel); border: 1px solid #242748; border-radius: 16px; padding: 32px; }
+
+  /* -- KUNLUN Login Brand (Phase 1.2) -- */
+  .kl-login { text-align: center; padding-top: 36px; }
+  .kl-login-logo { width: 88px; height: 88px; margin: 0 auto 14px; display: block; border-radius: 20px;
+    box-shadow: 0 6px 20px rgba(36,82,122,.18); }
+  .kl-login-title { font-size: 22px; font-weight: 700; color: var(--kl-ink); letter-spacing: .5px; }
+  .kl-login-title span { color: var(--kl-deep); }
+  .kl-login-sub { font-size: 13px; color: var(--kl-ink-sub); margin: 6px 0 24px; letter-spacing: 1px; }
+  .kl-login input { width: 100%; box-sizing: border-box; padding: 11px 14px; margin-bottom: 10px;
+    border: 1px solid var(--kl-line); border-radius: 10px; font-size: 14px; background: var(--kl-paper); }
+  .kl-login input:focus { outline: none; border-color: var(--kl-primary); box-shadow: 0 0 0 3px rgba(123,167,163,.18); }
+  .kl-login-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+    background: var(--kl-deep); color: #fff; cursor: pointer; transition: opacity .15s; }
+  .kl-login-btn:hover { opacity: .9; }
+  .kl-login-divider { display: flex; align-items: center; margin: 18px 0 12px; color: var(--kl-ink-sub); font-size: 12px; gap: 10px; }
+  .kl-login-divider::before, .kl-login-divider::after { content: ""; flex: 1; height: 1px; background: var(--kl-line); }
+  .kl-login-social { display: flex; gap: 8px; }
+  .kl-social-btn { flex: 1; padding: 9px 4px; font-size: 13px; border: 1px solid var(--kl-line); border-radius: 10px;
+    background: var(--kl-panel); color: var(--kl-ink); cursor: pointer; transition: all .15s; }
+  .kl-social-btn:hover { border-color: var(--kl-primary); color: var(--kl-deep); background: #F0F6F4; }
+  .kl-login-foot { font-size: 11px; color: var(--kl-ink-sub); margin-top: 16px; line-height: 1.6; }
+  .kl-login-terms { font-size: 11px; color: var(--kl-ink-sub); margin-top: 8px; }
+  .kl-login-terms a { color: var(--kl-deep); text-decoration: none; }
+
   .login-box h2 { margin-bottom: 20px; font-size: 18px; }
   .err-msg { color: var(--err); font-size: 13px; margin-top: 8px; }
   .muted { color: var(--dim); font-size: 12px; }
@@ -153,16 +177,24 @@
 </head>
 <body>
 <div id="app">
-  <!-- 登录视图 -->
+  <!-- 登录视图（品牌版: Logo + 定位语 + 账号/手机 + 微信/QQ） -->
   <div id="view-login" class="login-wrap hidden">
-    <div class="login-box">
-      <div class="logo">昆仑镜 <span>KUNLUN</span></div>
-      <h2>登录昆仑镜账号</h2>
-      <input id="login-account" placeholder="邮箱 / 手机号 / 账号" autocomplete="username" />
+    <div class="login-box kl-login">
+      <img class="kl-login-logo" src="data:image/png;base64,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" alt="昆仑镜" />
+      <div class="kl-login-title">昆仑镜 <span>AI OS</span></div>
+      <div class="kl-login-sub">企业 AI 员工操作系统</div>
+      <input id="login-account" placeholder="手机号 / 邮箱 / 账号" autocomplete="username" />
       <input id="login-password" type="password" placeholder="密码" autocomplete="current-password" />
-      <button id="btn-login" style="width:100%">登 录</button>
+      <button id="btn-login" class="kl-login-btn">登 录</button>
       <div id="login-err" class="err-msg"></div>
-      <div class="muted" style="margin-top:16px">登录即完成设备激活（Steam/Adobe 激活模式，随机设备标识，不采集硬件序列号）</div>
+      <div class="kl-login-divider"><span>或使用以下方式登录</span></div>
+      <div class="kl-login-social">
+        <button class="kl-social-btn" id="btn-sms-login">手机登录</button>
+        <button class="kl-social-btn" id="btn-wechat-login">微信登录</button>
+        <button class="kl-social-btn" id="btn-qq-login">QQ登录</button>
+      </div>
+      <div class="kl-login-foot">登录即完成设备激活（Steam/Adobe 激活模式，随机设备标识，不采集硬件序列号）</div>
+      <div class="kl-login-terms"><a href="#">用户协议</a> · <a href="#">隐私政策</a></div>
     </div>
   </div>
 
@@ -1321,6 +1353,9 @@ async function boot() {
 
   document.querySelectorAll('.nav-item[data-view]').forEach(n => n.addEventListener('click', () => switchPage(n.dataset.view)));
   $('btn-login').addEventListener('click', doLogin);
+  $('btn-sms-login').addEventListener('click', () => { $('login-err').textContent = '手机验证码登录即将开放'; });
+  $('btn-wechat-login').addEventListener('click', () => { $('login-err').textContent = '微信登录即将开放'; });
+  $('btn-qq-login').addEventListener('click', () => { $('login-err').textContent = 'QQ登录即将开放'; });
   $('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   $('btn-logout').addEventListener('click', logout);
 
