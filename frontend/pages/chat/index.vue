@@ -956,7 +956,7 @@ const profileUser = ref<any>(null)
 const memberCard = ref<{ m: any; x: number; y: number } | null>(null)
 
 // ══ USER-FOLLOW-01 关注体系（好友=关注） ══════════════════════
-const friendTab = ref<'following' | 'follower' | 'directory'>('following')
+const friendTab = ref<'following' | 'follower' | 'directory'>('directory')
 const followStats = ref({ followingCount: 0, followerCount: 0 })
 const followUsers = ref<any[]>([])
 const followerUsers = ref<any[]>([])
@@ -1682,13 +1682,22 @@ let msgHoldTimer: ReturnType<typeof setTimeout> | null = null
 let msgHoldFired = false
 let msgTouchStartPos: { x: number; y: number } | null = null
 
-// 转发目标：频道 + 群聊 + 好友（关注）
+// 转发目标：频道 + 群聊 + 全部茶客（已关注优先，未关注的也能转发）
 const forwardTargets = computed(() => {
   const list: any[] = []
   const cur = currentChannel.value
   for (const c of channels.value) if (!cur || c.id !== cur.id) list.push({ key: 'ch-' + c.id, kind: 'channel', id: c.id, type: c.type, name: c.name })
   for (const g of groups.value) if (!cur || g.id !== cur.id) list.push({ key: 'g-' + g.id, kind: 'group', id: g.id, type: g.type, name: g.name })
-  for (const u of followUsers.value) if (!cur || u.id !== (cur as any).peerUid) list.push({ key: 'u-' + u.id, kind: 'user', id: u.id, type: 1, name: u.name || '茶客' })
+  // 已关注在前，名录其余茶客补齐（按 id 去重，未关注也能转发）
+  const seen = new Set<string>()
+  const pushUser = (u: any) => {
+    if (!u || !u.id || seen.has(u.id)) return
+    if (cur && (cur as any).peerUid === u.id) return
+    seen.add(u.id)
+    list.push({ key: 'u-' + u.id, kind: 'user', id: u.id, type: 1, name: u.name || '茶客' })
+  }
+  for (const u of followUsers.value) pushUser(u)
+  for (const u of users.value) pushUser(u)
   return list
 })
 
