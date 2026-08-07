@@ -102,6 +102,22 @@ fn clear_credentials(app: tauri::AppHandle, state: tauri::State<AppState>) -> Re
 }
 
 /// 启动线上工作台（新 WebView 窗口；加载完成后注入 token 到 localStorage）
+/// 打开 OAuth 授权页（QQ 登录）——用系统默认浏览器，白名单仅 QQ 授权域
+#[tauri::command]
+fn open_oauth(app: tauri::AppHandle, diag: tauri::State<diag::Diag>, url: String) -> Result<(), String> {
+    // 白名单：仅 QQ 开放平台授权页（graph.qq.com）
+    let allowed = ["https://graph.qq.com/oauth2.0/authorize"];
+    if !allowed.iter().any(|a| url.starts_with(a)) {
+        diag.log("webview", &format!("open_oauth REJECTED (not whitelisted): {}", url));
+        return Err(format!("拒绝打开非 OAuth 白名单域: {}", url));
+    }
+    diag.log("webview", &format!("open_oauth -> {}", url));
+    use tauri_plugin_shell::ShellExt;
+    let shell = app.shell();
+    shell.open(url, None).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// 安全：仅允许 aigc.fushtn.com 域；token 注入后 UI 自持，Rust 不参与业务
 /// RCA-02（2026-08-04 掌柜指令）：补全 open_workspace 全链路可观测性（诊断埋点，零业务行为变更）
 #[tauri::command]
@@ -263,6 +279,7 @@ pub fn run() {
             get_credentials,
             clear_credentials,
             open_workspace,
+            open_oauth,
             diag_status,
             diag_write,
             diag_read,

@@ -1356,7 +1356,50 @@ async function boot() {
   $('btn-login').addEventListener('click', doLogin);
   $('btn-sms-login').addEventListener('click', () => { $('login-err').textContent = '手机验证码登录即将开放'; });
   $('btn-wechat-login').addEventListener('click', () => { $('login-err').textContent = '微信登录即将开放'; });
-  $('btn-qq-login').addEventListener('click', () => { $('login-err').textContent = 'QQ登录即将开放'; });
+  $('btn-qq-login').addEventListener('click', async () => {
+    // ── QQ 登录（Desktop OAuth）──
+    $('login-err').textContent = '正在打开 QQ 授权…';
+    try {
+      const r = await fetch(`${API_BASE}/api/auth/qq/authorize`);
+      const data = await r.json();
+      const authUrl = data?.data?.authUrl || data?.authUrl;
+      const state = data?.data?.state || data?.state;
+      if (!authUrl || !state) { $('login-err').textContent = 'QQ 登录启动失败'; return; }
+      $('login-err').textContent = '请在打开的 QQ 页面扫码授权…';
+      if (isKunlunTauri) {
+        try { await invoke('open_oauth', { url: authUrl }); }
+        catch (e) { window.open(authUrl, '_blank'); }
+      } else {
+        window.open(authUrl, '_blank');
+      }
+      // 轮询 desktop-result 取回 token（最多 120s）
+      const t0 = Date.now();
+      let got = false;
+      while (Date.now() - t0 < 120000) {
+        await new Promise(res => setTimeout(res, 2000));
+        try {
+          const pr = await fetch(`${API_BASE}/api/auth/qq/desktop-result?state=${encodeURIComponent(state)}`);
+          const pd = await pr.json();
+          if (pd?.data?.success && pd.data.data?.token) {
+            const token = pd.data.data.token;
+            const u = pd.data.data.user || {};
+            creds.access_token = token;
+            creds.user_name = u.email || u.username || 'QQ用户';
+            creds.user_id = u.id || null;
+            creds.organization_id = null;
+            await invoke('save_credentials', { access_token: token, user_name: creds.user_name, user_id: creds.user_id, organization_id: null });
+            await ensureDevice();
+            showMain();
+            await refreshApps(); await refreshEmployees(); await refreshPlugins(); await refreshDevice(); await refreshHermesStatus(); await refreshBilling(); await refreshEnterprise(); await renderHome(); await maybeWelcome();
+            got = true;
+            $('login-err').textContent = '';
+            break;
+          }
+        } catch (e) { /* 轮询失败继续 */ }
+      }
+      if (!got) $('login-err').textContent = 'QQ 授权超时或未完成，请重试';
+    } catch (e) { $('login-err').textContent = 'QQ 登录失败: ' + (e.message || e); }
+  });
   $('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   $('btn-logout').addEventListener('click', logout);
 

@@ -11,6 +11,8 @@ import bcrypt from 'bcryptjs'
 
 // OAuth state 内存存储（防 CSRF）
 const oauthStateMap = new Map<string, { createdAt: number }>()
+// Desktop OAuth 结果缓存：GET callback(desktop=1) 成功后暂存 token，供壳内轮询取回
+const oauthDesktopResults = new Map<string, { token: string; user: any; at: number }>()
 
 // 每 5 分钟清理过期 state（>10分钟）
 setInterval(() => {
@@ -94,7 +96,7 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
 
   // GET /api/auth/qq/callback — QQ扫码后的回调重定向
   fastify.get('/api/auth/qq/callback', async (request, reply) => {
-    const { code, state } = request.query as any
+    const { code, state, desktop } = request.query as any
     // state 校验：防 CSRF
     const stateEntry = state ? oauthStateMap.get(state) : undefined
     if (!state || !stateEntry) {
@@ -104,7 +106,10 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
       oauthStateMap.delete(state)
       return redirectWithEncodedError(reply, 'state 已过期')
     }
-    oauthStateMap.delete(state)
+    // Desktop 模式：state 保留（供 /api/auth/qq/desktop-result 轮询），由壳内轮询后清理
+    if (desktop !== '1') {
+      oauthStateMap.delete(state)
+    }
 
     if (!code) {
       return redirectWithEncodedError(reply, '缺少授权code')
@@ -182,6 +187,15 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
           { expiresIn: '30d' }
         )
 
+        // Desktop 模式：结果暂存 + 重定向 done 页（壳内轮询 desktop-result 取回）
+        if (desktop === '1' && state) {
+          oauthDesktopResults.set(state, { token, user: { id: user.id, email: user.email, username: user.username, nickname }, at: Date.now() })
+          return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
+            "document.title='Kunlun QQ Login OK';\n" +
+            "try { window.close(); } catch(e){}\n" +
+            "setTimeout(function(){ window.location.href='https://aigc.fushtn.com/oauth-desktop-done?state=" + state + "'; }, 300);\n" +
+            '</script></body></html>')
+        }
         // localStorage 方式返回（弹窗内将 token 写入 localStorage，自动关闭）
         // 通过 localStorage 即可跨 tab/弹窗通信，无需依赖 window.opener.postMessage
         const safeUser = JSON.stringify({ id: user.id, nickname }).replace(/</g, '\\u003C')
@@ -228,6 +242,15 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
           { expiresIn: '30d' }
         )
 
+        // Desktop 模式：结果暂存 + 重定向 done 页
+        if (desktop === '1' && state) {
+          oauthDesktopResults.set(state, { token, user: { id: user.id, email: user.email, username: user.username, nickname }, at: Date.now() })
+          return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
+            "document.title='Kunlun QQ Login OK';\n" +
+            "try { window.close(); } catch(e){}\n" +
+            "setTimeout(function(){ window.location.href='https://aigc.fushtn.com/oauth-desktop-done?state=" + state + "'; }, 300);\n" +
+            '</script></body></html>')
+        }
         const safeUser = JSON.stringify({ id: user.id, nickname }).replace(/</g, '\\u003C')
         return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
           "var keys = ['auth_token','accessToken','token'];\n" +
@@ -373,6 +396,20 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
     } catch (err: any) {
       return reply.status(500).send({ error: `QQ登录失败: ${err.message}` })
     }
+  })
+
+  // GET /api/auth/qq/desktop-result — Desktop 壳内轮询取回 QQ 登录结果（60s 有效, 一次性）
+  fastify.get('/api/auth/qq/desktop-result', async (request, reply) => {
+    const { state } = request.query as any
+    if (!state) return reply.status(400).send({ error: '缺少 state' })
+    const entry = oauthDesktopResults.get(state)
+    if (!entry) return toApiResponse({ success: false, data: null }) satisfies ApiResponse<unknown>
+    oauthDesktopResults.delete(state)
+    oauthStateMap.delete(state)
+    if (Date.now() - entry.at > 60 * 1000) {
+      return toApiResponse({ success: false, data: null, error: '已过期' }) satisfies ApiResponse<unknown>
+    }
+    return toApiResponse({ success: true, data: { token: entry.token, user: entry.user } }) satisfies ApiResponse<unknown>
   })
 
   // POST /api/auth/qq/bind — QQ首次登录绑定手机号
