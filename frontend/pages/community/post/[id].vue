@@ -81,7 +81,7 @@
           <!-- 附件媒体 -->
           <div v-if="postMedia.length > 0" class="post-media">
             <div v-for="(m, i) in postMedia" :key="i" class="post-media-item">
-              <img v-if="m.type === 'image'" :src="m.url" class="post-media-img" @click="previewImage(m.url)" />
+              <img v-if="m.type === 'image'" :src="m.url" class="post-media-img" :alt="post.title || '帖子图片'" @click="previewImage(m.url)" />
               <video v-else :src="m.url" class="post-media-video" controls />
             </div>
           </div>
@@ -296,8 +296,13 @@ const postDescription = computed(() => {
     .replace(/```[\s\S]*?```/g, '')
     .replace(/`[^`]+`/g, '')
     .replace(/!?\[[^\]]*\]\([^)]+\)/g, '')
+    // SEO-REVIEW-01: 去掉编辑器媒体前缀（video:/image:/audio:/file:）与裸链接，防止 description 被 URL 污染
+    .replace(/(?:video|image|audio|file):\s*https?:\/\/\S+/gi, '')
+    .replace(/https?:\/\/\S+/g, '')
     .replace(/[#*>`~\[\]()]/g, '')
+    .replace(/\s+/g, ' ')
     .trim()
+  if (!text) return '昆仑镜社区 - AI 短剧制作交流平台'
   return text.length > 160 ? text.substring(0, 160) + '...' : text
 })
 

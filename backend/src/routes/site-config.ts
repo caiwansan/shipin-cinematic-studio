@@ -130,16 +130,31 @@ export default async function siteConfigRoutes(fastify: FastifyInstance) {
     return reply.type('text/plain; charset=utf-8').send(body)
   })
 
-  // GET /sitemap.xml — 动态生成
+  // GET /sitemap.xml — 动态生成（静态页 + 社区已通过帖子）
   fastify.get('/sitemap.xml', async (_request, reply) => {
     const site = await getSystemConfig('site')
     const seo = await getSystemConfig('seo')
     const domain = site.site_domain || 'aigc.fushtn.com'
     const urls = (seo.seo_sitemap_urls || '/').split('\n').map(s => s.trim()).filter(Boolean)
     const lastmod = new Date().toISOString().slice(0, 10)
+
+    // SEO-REVIEW-01: 注入社区已通过帖子（未审核/被驳回/已删除一律不进 sitemap）
+    const posts = await prisma.communityPost.findMany({
+      where: { status: 'approved' },
+      select: { id: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 500,
+    })
+
+    const staticUrls = urls.map(u => `  <url><loc>https://${domain}${u.startsWith('/') ? u : '/' + u}</loc><lastmod>${lastmod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`).join('\n')
+    const postUrls = posts.map(p => {
+      const d = p.updatedAt instanceof Date ? p.updatedAt.toISOString().slice(0, 10) : lastmod
+      return `  <url><loc>https://${domain}/community/post/${p.id}</loc><lastmod>${d}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`
+    }).join('\n')
+
     const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(u => `  <url><loc>https://${domain}${u.startsWith('/') ? u : '/' + u}</loc><lastmod>${lastmod}</lastmod></url>`).join('\n')}
+${staticUrls}${postUrls ? '\n' + postUrls : ''}
 </urlset>`
     return reply.type('application/xml; charset=utf-8').send(body)
   })
