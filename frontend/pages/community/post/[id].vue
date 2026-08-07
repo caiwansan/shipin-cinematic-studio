@@ -63,6 +63,17 @@
                 <time itemprop="datePublished" :datetime="post.createdAt">{{ formatTime(post.createdAt) }}</time>
               </span>
             </div>
+            <!-- MODERATOR-UX-01.1 版主操作条：仅版主可见（置顶/加精/删帖） -->
+            <div v-if="isModerator" class="mod-actions">
+              <span class="mod-actions-label">🛡️ 版主操作</span>
+              <button class="mod-act-btn" :class="{ 'mod-act-on': post.isPinned }" :disabled="modActionBusy" @click="modAction('pin')">
+                {{ post.isPinned ? '取消置顶' : '📌 置顶' }}
+              </button>
+              <button class="mod-act-btn" :class="{ 'mod-act-on': post.isEssence }" :disabled="modActionBusy" @click="modAction('essence')">
+                {{ post.isEssence ? '取消精华' : '⭐ 加精' }}
+              </button>
+              <button class="mod-act-btn mod-act-del" :disabled="modActionBusy" @click="modAction('delete')">🗑️ 删帖</button>
+            </div>
           </div>
 
           <div class="post-content" itemprop="articleBody" v-html="renderContent(post.content)" />
@@ -221,6 +232,8 @@ const apiBase = import.meta.server ? (process.env.BACKEND_URL || 'http://127.0.0
 const route = useRoute()
 const router = useRouter()
 const isLoggedIn = ref(false)
+const isModerator = ref(false)
+const modActionBusy = ref(false)
 const isRegisterMode = ref(false)
 const showLogin = ref(false)
 const authUser = ref<any>(null)
@@ -637,6 +650,42 @@ async function sendTip() {
   }
 }
 
+async function loadModMe() {
+  const token = window.localStorage?.getItem('auth_token') || ''
+  if (!token) return
+  try {
+    const res = await fetch(`/api/community/moderator/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const data = await res.json()
+    if (res.ok) isModerator.value = !!data.isModerator
+  } catch {}
+}
+
+// MODERATOR-UX-01.1 版主操作：置顶/加精/删帖（moderatorCheck 鉴权接口）
+async function modAction(type: string) {
+  if (modActionBusy.value) return
+  const token = window.localStorage?.getItem('auth_token') || ''
+  if (!token) { showLogin.value = true; return }
+  if (type === 'delete' && !confirm('确定删除这篇帖子吗？删除后不可恢复。')) return
+  modActionBusy.value = true
+  try {
+    const url = type === 'delete'
+      ? `/api/community/moderator/posts/${route.params.id}`
+      : `/api/community/moderator/posts/${route.params.id}/${type}`
+    const res = await fetch(url, {
+      method: type === 'delete' ? 'DELETE' : 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) { alert(data.error || '操作失败'); return }
+    if (type === 'delete') { router.push('/community'); return }
+    await refresh()
+  } finally {
+    modActionBusy.value = false
+  }
+}
+
 function formatTime(dateStr: string) {
   const date = new Date(dateStr)
   if (isNaN(date.getTime())) return ''
@@ -653,6 +702,7 @@ onMounted(() => {
     if (authUserRaw) { try { authUser.value = JSON.parse(authUserRaw) } catch {} }
   } catch {}
   loadTips()
+  loadModMe()
 })
 </script>
 
@@ -796,6 +846,22 @@ onMounted(() => {
 }
 .meta-author { color: var(--cn-cobalt); font-family: var(--cn-serif); }
 .meta-time { margin-left: auto; }
+.mod-actions {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px;
+  padding: 8px 12px; border: 1px dashed var(--cn-red, #c0392b); border-radius: 8px;
+  background: rgba(192, 57, 43, 0.04); flex-wrap: wrap;
+}
+.mod-actions-label { font-size: 0.75rem; color: #c0392b; font-weight: 600; margin-right: 4px; }
+.mod-act-btn {
+  font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--cn-ink-line, #d8d0c0); background: #fff; color: var(--cn-ink);
+  transition: all 0.2s;
+}
+.mod-act-btn:hover:not(:disabled) { border-color: var(--cn-cobalt, #3b5b92); color: var(--cn-cobalt, #3b5b92); }
+.mod-act-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.mod-act-on { border-color: #c0392b; color: #c0392b; background: rgba(192, 57, 43, 0.06); }
+.mod-act-del { border-color: #c0392b; color: #c0392b; }
+.mod-act-del:hover:not(:disabled) { background: #c0392b; color: #fff; border-color: #c0392b; }
 .post-content {
   font-size: 0.95rem;
   line-height: 1.9;
