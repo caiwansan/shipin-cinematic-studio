@@ -210,10 +210,16 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
           },
         })
 
-        // 赠送体验积分
+        // 注册赠送钻石（COMMUNITY-REGISTER-REWARD-01：默认 10；原“赠送体验积分 100”统一并入注册奖励）
         await prisma.membership.create({
-          data: { userId: user.id, tier: 'free', credits: 100, totalCredits: 100 },
+          data: { userId: user.id, tier: 'free', credits: 0 },
         }).catch(() => {})
+        try {
+          const { grantRegisterReward } = await import('../services/community/community-reward.service.js')
+          await grantRegisterReward(user.id)
+        } catch (e) {
+          console.error('[QqOAuth] Register reward failed:', e)
+        }
 
         const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
         const token = jwt.sign(
@@ -448,10 +454,16 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
       },
     })
 
-    // 赠送体验积分
+    // 注册赠送钻石（COMMUNITY-REGISTER-REWARD-01：默认 10；原“赠送体验积分 100”统一并入注册奖励）
     await prisma.membership.create({
-      data: { userId: user.id, tier: 'free', credits: 100, totalCredits: 100 },
+      data: { userId: user.id, tier: 'free', credits: 0 },
     }).catch(() => {})
+    try {
+      const { grantRegisterReward } = await import('../services/community/community-reward.service.js')
+      await grantRegisterReward(user.id)
+    } catch (e) {
+      console.error('[QqOAuth/bind] Register reward failed:', e)
+    }
 
     // 生成 JWT
     const JWT_SECRET = process.env.JWT_SECRET || ''

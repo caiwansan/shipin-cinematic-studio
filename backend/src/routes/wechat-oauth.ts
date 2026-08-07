@@ -124,6 +124,13 @@ export default async function wechatOAuthRoutes(fastify: FastifyInstance) {
         if (!existingMembership) {
           await prisma.membership.create({ data: { userId: user.id, tier: 'free', credits: 0, startDate: new Date() } })
         }
+        // 注册赠送钻石（COMMUNITY-REGISTER-REWARD-01：默认 10）
+        try {
+          const { grantRegisterReward } = await import('../services/community/community-reward.service.js')
+          await grantRegisterReward(user.id)
+        } catch (e) {
+          console.error('[WechatOAuth] Register reward failed:', e)
+        }
       } else {
         await prisma.user.update({ where: { id: user.id }, data: { wechatOpenId, username: nickname || user.username } })
       }

@@ -13,10 +13,39 @@ import { prisma } from '../../utils/index.js'
  */
 
 const REWARD_REMARK = '社区发帖奖励'
+const REGISTER_REWARD_REMARK = '注册奖励'
 
 function clampPositive(v: unknown, fallback: number): number {
   const n = Math.floor(Number(v))
   return Number.isFinite(n) && n >= 1 ? Math.min(n, 1000) : fallback
+}
+
+/**
+ * 注册赠送钻石（COMMUNITY-REGISTER-REWARD-01，掌柜 2026-08-07：注册送 10 钻石）
+ * - 金额 = SystemConfig `community_register_reward_diamonds`（默认 10，后台可改；0 = 关闭）
+ * - 写入 Membership.credits（钻石余额真源）+ CoinLog 流水（amount=实际赠送数，remark=注册奖励）
+ * - 只在注册/自动建号流程内调用一次（天然幂等）
+ */
+export async function grantRegisterReward(userId: string): Promise<{ rewarded: boolean; diamonds: number }> {
+  const row = await prisma.systemConfig.findUnique({ where: { key: 'community_register_reward_diamonds' } })
+  const configured = Number(row?.value)
+  const diamonds = Number.isFinite(configured) && configured >= 0 ? Math.floor(Math.min(configured, 1000)) : 10
+  if (diamonds <= 0) {
+    return { rewarded: false, diamonds: 0 }
+  }
+  await prisma.membership.upsert({
+    where: { userId },
+    update: {},
+    create: { userId, tier: 'free' },
+  })
+  await prisma.membership.update({
+    where: { userId },
+    data: { credits: { increment: diamonds } },
+  })
+  await prisma.coinLog.create({
+    data: { userId, amount: diamonds, type: 'reward', remark: REGISTER_REWARD_REMARK },
+  }).catch(() => {})
+  return { rewarded: true, diamonds }
 }
 
 async function getCommunityRewardConfig(): Promise<{ rewardDiamonds: number; dailyLimit: number }> {

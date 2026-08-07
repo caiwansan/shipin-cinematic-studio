@@ -9,7 +9,7 @@
 
     <!-- 注册卡片 -->
     <div class="mr-card">
-      <div class="mr-title">创建账号</div>
+      <div class="mr-title">创建账号 <span class="mr-gift">🎁 注册即送 10 钻石</span></div>
 
       <div class="mr-form">
         <div class="mr-field">
@@ -273,6 +273,7 @@ onMounted(() => {
   box-sizing: border-box;
 }
 .mr-title { font-size: 20px; font-weight: 700; color: #0f172a; text-align: center; margin-bottom: 22px; }
+.mr-gift { font-size: 12px; font-weight: 500; color: #b45309; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #fcd34d; border-radius: 999px; padding: 2px 10px; margin-left: 8px; vertical-align: middle; }
 
 .mr-field { margin-bottom: 16px; }
 .mr-field label { display: block; font-size: 13px; color: #475569; margin-bottom: 8px; font-weight: 500; }

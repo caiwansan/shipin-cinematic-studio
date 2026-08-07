@@ -237,6 +237,14 @@ export default async function smsAuthRoutes(fastify: FastifyInstance) {
           data: { userId: user.id, tier: 'free', credits: 0 },
         })
       }
+
+      // 注册赠送钻石（COMMUNITY-REGISTER-REWARD-01：默认 10）
+      try {
+        const { grantRegisterReward } = await import('../services/community/community-reward.service.js')
+        await grantRegisterReward(user.id)
+      } catch (e) {
+        console.error('[SmsAuth] Register reward failed:', e)
+      }
     }
 
     // 生成 JWT token

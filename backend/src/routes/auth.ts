@@ -137,17 +137,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // 不阻塞注册流程
     }
 
-    // 赠送注册积分
+    // 赠送注册奖励（COMMUNITY-REGISTER-REWARD-01：注册送钻石，默认 10，后台可配）
     try {
-      await prisma.membership.update({
-        where: { userId: user.id },
-        data: { credits: { increment: 58 } },
-      })
-      await prisma.coinLog.create({
-        data: { userId: user.id, amount: 0, type: 'reward', remark: '注册赠送(已禁用)' },
-      })
+      const { grantRegisterReward } = await import('../services/community/community-reward.service.js')
+      await grantRegisterReward(user.id)
     } catch (e) {
-      console.error('Registration reward note failed:', e)
+      console.error('Registration reward failed:', e)
     }
 
     const u = user as any
@@ -159,9 +154,16 @@ export default async function authRoutes(fastify: FastifyInstance) {
     } catch { /* non-fatal */ }
     const accessToken = fastify.jwt.sign({ id: user.id, email: user.email, tokenVersion: 1, organizationId: registerOrgId })
 
+    // 注册奖励后重新读取钻石余额（user 创建时的 select 为旧值）
+    let freshCredits: number = u.membership?.credits ?? 0
+    try {
+      const fresh = await prisma.membership.findUnique({ where: { userId: user.id }, select: { credits: true } })
+      if (fresh) freshCredits = fresh.credits
+    } catch { /* non-fatal */ }
+
     return {
       accessToken,
-      user: { id: u.id, email: u.email, username: u.username, nickname: u.nickname || null, displayName: u.nickname || u.username, phone: maskPhone(u.phone), memberTier: u.memberTier, credits: u.membership?.credits ?? 0, agentStatus: u.agentStatus, agentLevel: u.agentLevel, organizationId: registerOrgId || null, avatarUrl: u.avatarUrl || null },
+      user: { id: u.id, email: u.email, username: u.username, nickname: u.nickname || null, displayName: u.nickname || u.username, phone: maskPhone(u.phone), memberTier: u.memberTier, credits: freshCredits, agentStatus: u.agentStatus, agentLevel: u.agentLevel, organizationId: registerOrgId || null, avatarUrl: u.avatarUrl || null },
     }
   })
 
