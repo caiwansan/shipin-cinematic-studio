@@ -390,7 +390,7 @@
         </div>
         <div class="gift-wall">
           <button v-for="item in activeGiftItems" :key="item.id" class="gift-item" :class="{ on: giftSelected?.id === item.id }" @click="giftSelected = item">
-            <span class="gift-item-icon">{{ item.iconUrl || '🎁' }}</span>
+            <span class="gift-item-icon" :style="{ background: item.iconGradient || 'linear-gradient(135deg,#1e293b,#334155)' }">{{ item.iconUrl || '🎁' }}</span>
             <span class="gift-item-name">{{ item.giftName || item.name }}</span>
             <span class="gift-item-price">💎{{ item.priceDiamonds }}</span>
           </button>
@@ -1916,7 +1916,7 @@ if (typeof window !== 'undefined') {
   border: 1px solid #f0f0f0; border-radius: 8px; padding: 8px 2px; background: #fff;
 }
 .gift-item.on { border-color: #a855f7; background: #faf5ff; }
-.gift-item-icon { font-size: 24px; }
+.gift-item-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: inset 0 -4px 8px rgba(255,255,255,0.2), 0 2px 6px rgba(0,0,0,0.12); }
 .gift-item-name { font-size: 10px; color: #555; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gift-item-price { font-size: 10px; color: #a855f7; }
 .gift-anim {

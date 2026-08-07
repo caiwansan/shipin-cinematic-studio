@@ -35,6 +35,7 @@ export default async function giftRoutes(fastify: FastifyInstance) {
           name: g.name,
           priceDiamonds: g.priceDiamonds,
           iconUrl: g.iconUrl,
+          iconGradient: g.iconGradient,
         })),
       }))
       .filter((g) => g.items.length > 0)
@@ -211,23 +212,24 @@ export default async function giftRoutes(fastify: FastifyInstance) {
   })
 
   fastify.post('/api/admin/gifts/products', { preHandler: [requireAdmin] }, async (request: any, reply: FastifyReply) => {
-    const { name, priceDiamonds, iconUrl = '', category = '热门', sortOrder = 0 } = request.body as any
+    const { name, priceDiamonds, iconUrl = '', iconGradient = '', category = '热门', sortOrder = 0 } = request.body as any
     if (!name || !Number(priceDiamonds) || Number(priceDiamonds) < 1) {
       return reply.status(400).send({ success: false, error: 'name 必填且 priceDiamonds 必须 ≥ 1' })
     }
     const gift = await prisma.giftProduct.create({
-      data: { name, priceDiamonds: Number(priceDiamonds), iconUrl, category, sortOrder: Number(sortOrder) || 0 },
+      data: { name, priceDiamonds: Number(priceDiamonds), iconUrl, iconGradient, category, sortOrder: Number(sortOrder) || 0 },
     })
     return { success: true, data: gift }
   })
 
   fastify.patch('/api/admin/gifts/products/:id', { preHandler: [requireAdmin] }, async (request: any, reply: FastifyReply) => {
     const id = request.params.id as string
-    const { name, priceDiamonds, iconUrl, category, sortOrder, isActive } = request.body as any
+    const { name, priceDiamonds, iconUrl, iconGradient, category, sortOrder, isActive } = request.body as any
     const data: Record<string, unknown> = {}
     if (name !== undefined) data.name = name
     if (priceDiamonds !== undefined) data.priceDiamonds = Number(priceDiamonds)
     if (iconUrl !== undefined) data.iconUrl = iconUrl
+    if (iconGradient !== undefined) data.iconGradient = iconGradient
     if (category !== undefined) data.category = category
     if (sortOrder !== undefined) data.sortOrder = Number(sortOrder)
     if (isActive !== undefined) data.isActive = !!isActive

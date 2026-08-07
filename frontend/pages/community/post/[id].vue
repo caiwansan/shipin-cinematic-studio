@@ -195,7 +195,7 @@
           :class="{ 'tip-gift-selected': selectedGiftId === g.id }"
           @click="selectedGiftId = g.id"
         >
-          <span class="tip-gift-item-icon">{{ g.iconUrl || '🎁' }}</span>
+          <span class="tip-gift-item-icon" :style="{ background: g.iconGradient || 'linear-gradient(135deg,#fdf3e7,#f5e6d3)' }">{{ g.iconUrl || '🎁' }}</span>
           <span class="tip-gift-item-name">{{ g.name }}</span>
           <span class="tip-gift-item-price">💎 {{ g.priceDiamonds }}</span>
         </button>
@@ -1074,7 +1074,7 @@ onMounted(() => {
   background: rgba(176, 58, 46, 0.06) !important;
   box-shadow: 0 0 0 1px var(--cn-cinnabar);
 }
-.tip-gift-item-icon { font-size: 1.6rem; }
+.tip-gift-item-icon { width: 2.4rem; height: 2.4rem; border-radius: 0.6rem; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: inset 0 -4px 8px rgba(255,255,255,0.3), 0 2px 6px rgba(0,0,0,0.12); }
 .tip-gift-item-name { font-size: 0.72rem; color: var(--cn-ink); font-family: var(--cn-serif); }
 .tip-gift-item-price { font-size: 0.68rem; color: var(--cn-gold); }
 .tip-modal-footer {

@@ -439,7 +439,10 @@
                 :class="['gift-item', giftSelected?.id === g.id ? 'gift-item--active' : '']"
                 @click="giftSelected = g"
               >
-                <span class="gift-item-icon">{{ g.iconUrl || '🎁' }}</span>
+                <span
+                  class="gift-item-icon"
+                  :style="{ background: g.iconGradient || 'linear-gradient(135deg,#1e293b,#334155)' }"
+                >{{ g.iconUrl || '🎁' }}</span>
                 <span class="gift-item-name">{{ g.name }}</span>
                 <span class="gift-item-price">💎{{ g.priceDiamonds }}</span>
               </button>
@@ -468,7 +471,10 @@
 
       <!-- ══ 礼物全屏动画（收到/送出时播放） ══ -->
       <div v-if="giftAnimation" class="gift-anim">
-        <div class="gift-anim-icon">{{ giftAnimation.icon || '🎁' }}</div>
+        <div
+          class="gift-anim-icon"
+          :style="giftAnimation.iconGradient ? { background: giftAnimation.iconGradient } : {}"
+        >{{ giftAnimation.icon || '🎁' }}</div>
         <div class="gift-anim-name">{{ giftAnimation.name }}</div>
         <div class="gift-anim-from">{{ giftAnimation.fromName }} 送给 {{ giftAnimation.toName }}</div>
       </div>
@@ -2624,6 +2630,7 @@ async function openGiftPanel() {
 function playGiftAnimation(gift: any, toName: string) {
   const g = {
     icon: gift.iconUrl || '🎁',
+    iconGradient: gift.iconGradient || '',
     name: gift.giftName || gift.name || '礼物',
     fromName: '我',
     toName: toName || '茶客',
@@ -3286,7 +3293,13 @@ onBeforeUnmount(() => {
 }
 .gift-item:hover { transform: translateY(-2px); border-color: rgba(251, 191, 36, 0.4); }
 .gift-item--active { border-color: #B98A3E; background: rgba(185, 138, 62, 0.14); box-shadow: 0 0 0 1px #B98A3E; }
-.gift-item-icon { font-size: 30px; line-height: 1; }
+.gift-item-icon {
+  width: 46px; height: 46px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; line-height: 1;
+  box-shadow: inset 0 -6px 12px rgba(255,255,255,0.18), inset 0 2px 4px rgba(255,255,255,0.35), 0 4px 10px rgba(0,0,0,0.3);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
 .gift-item-name { font-size: 12px; color: rgba(255, 255, 255, 0.85); }
 .gift-item-price { font-size: 11px; color: #B98A3E; font-weight: 700; }
 .gift-grid-empty { grid-column: 1 / -1; text-align: center; color: rgba(255, 255, 255, 0.35); padding: 24px 0; font-size: 13px; }
@@ -3319,6 +3332,11 @@ onBeforeUnmount(() => {
 }
 .gift-anim-icon {
   font-size: 96px;
+  width: 160px; height: 160px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 36px;
+  box-shadow: inset 0 -12px 24px rgba(255,255,255,0.22), inset 0 4px 8px rgba(255,255,255,0.4), 0 16px 48px rgba(251, 191, 36, 0.45);
+  text-shadow: 0 4px 12px rgba(0,0,0,0.3);
   animation: gift-anim-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   filter: drop-shadow(0 12px 32px rgba(251, 191, 36, 0.5));
 }

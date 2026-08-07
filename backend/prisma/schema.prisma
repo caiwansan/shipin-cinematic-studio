@@ -10637,6 +10637,7 @@ model GiftProduct {
   name          String // 礼物名称
   priceDiamonds Int          @default(1) // 钻石价格
   iconUrl       String       @default("") // 礼物图标（emoji 或图片 URL）
+  iconGradient  String       @default("") @map("icon_gradient") // 图标渐变背景
   category      String       @default("热门") // 热门 / 豪华 / 专属（抖音式分类）
   sortOrder     Int          @default(0)
   isActive      Boolean      @default(true)

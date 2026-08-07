@@ -26,7 +26,7 @@
           <div v-else-if="!tipGifts.length" class="mpd-empty">暂无可用礼物</div>
           <div v-else class="mpd-tip-grid">
             <button v-for="g in tipGifts" :key="g.id" class="mpd-tip-gift" :class="{ on: tipSelectedId === g.id }" @click="tipSelectedId = g.id">
-              <span class="mpd-tip-gift-icon">{{ g.iconUrl || '🎁' }}</span>
+              <span class="mpd-tip-gift-icon" :style="{ background: g.iconGradient || 'linear-gradient(135deg,#eef2f7,#e2e8f0)' }">{{ g.iconUrl || '🎁' }}</span>
               <span class="mpd-tip-gift-name">{{ g.giftName || g.name }}</span>
               <span class="mpd-tip-gift-price">💎{{ g.priceDiamonds }}</span>
             </button>
@@ -230,7 +230,7 @@ async function sendTip() {
 .mpd-tip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 260px; overflow-y: auto; }
 .mpd-tip-gift { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 0; border: 1px solid #e5e5e5; border-radius: 10px; background: #fff; }
 .mpd-tip-gift.on { border-color: #4f7df9; background: #eef3ff; }
-.mpd-tip-gift-icon { font-size: 22px; }
+.mpd-tip-gift-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: inset 0 -4px 8px rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.12); }
 .mpd-tip-gift-name { font-size: 12px; }
 .mpd-tip-gift-price { font-size: 11px; color: #f5a623; }
 .mpd-tip-actions { display: flex; gap: 10px; margin-top: 14px; }
