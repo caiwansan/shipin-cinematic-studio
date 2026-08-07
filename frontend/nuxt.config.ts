@@ -180,6 +180,7 @@ export default defineNuxtConfig({
   app: {
     buildAssetsDir: '/_nuxt/',
     head: {
+      htmlAttrs: { lang: 'zh-CN' }, // GEO-REVIEW-01.1 语言声明，AI/搜索引擎语言识别
       title: '昆仑镜 - AI 短剧制作平台',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1.0, viewport-fit=cover' },
