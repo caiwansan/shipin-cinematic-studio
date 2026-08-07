@@ -37,6 +37,7 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
           id: true,
           title: true,
           content: true,
+          summary: true, // GEO-REVIEW-01.1 卡片摘要优先用作者摘要
           tags: true,
           category: true,
           viewCount: true,

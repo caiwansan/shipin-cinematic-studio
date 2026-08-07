@@ -62,6 +62,7 @@
 import MPageShell from '~/components/MPageShell.vue'
 import { ref, computed, onMounted } from 'vue'
 import { mobileAuthFetch, mobileToast } from '~/composables/useMobileApi'
+import { renderMarkdown } from '~/utils/markdown'
 
 const props = defineProps<{ postId: string }>()
 defineEmits<{ (e: 'close'): void }>()
@@ -101,11 +102,7 @@ const mediaList = computed(() => {
 
 const renderedContent = computed(() => {
   if (!post.value?.content) return ''
-  return post.value.content
-    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br/>')
+  return renderMarkdown(post.value.content)
 })
 
 onMounted(async () => {
@@ -208,6 +205,12 @@ async function sendTip() {
 .mpd-time { font-size: 12px; color: #aaa; }
 .mpd-title { font-size: 17px; font-weight: 700; margin: 8px 0; }
 .mpd-content { font-size: 14px; line-height: 1.7; color: #333; word-break: break-word; }
+.mpd-content :deep(table.md-table) { border-collapse: collapse; width: 100%; margin: 0.6rem 0; font-size: 13px; }
+.mpd-content :deep(table.md-table th), .mpd-content :deep(table.md-table td) { border: 1px solid #e2e8f0; padding: 0.35rem 0.55rem; text-align: left; }
+.mpd-content :deep(table.md-table th) { background: #f7fafc; font-weight: 600; }
+.mpd-content :deep(ul.task-list) { list-style: none; padding-left: 0.25rem; }
+.mpd-content :deep(li.task-item.done) { color: #999; text-decoration: line-through; }
+.mpd-content :deep(pre) { background: #f6f8fa; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
 .mpd-media { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .mpd-img { width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; }
 .mpd-actions { display: flex; gap: 10px; margin-top: 12px; }

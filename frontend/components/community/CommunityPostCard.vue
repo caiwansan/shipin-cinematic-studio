@@ -23,6 +23,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { stripMarkdown } from '~/utils/markdown'
 
 const props = defineProps<{
   post: {
@@ -46,7 +47,9 @@ const props = defineProps<{
 }>()
 
 const excerpt = computed(() => {
-  const text = props.post.content?.replace(/<[^>]*>/g, '') || ''
+  // 优先用作者摘要（无符号）；否则清洗 markdown 符号后截取
+  const raw = (props.post as any).summary?.trim() || props.post.content || ''
+  const text = stripMarkdown(raw)
   return text.length > 150 ? text.substring(0, 150) + '...' : text
 })
 

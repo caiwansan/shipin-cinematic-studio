@@ -76,7 +76,7 @@
             </div>
           </div>
 
-          <div class="post-content" itemprop="articleBody" v-html="renderContent(post.content)" />
+          <div class="post-content" itemprop="articleBody" v-html="renderMarkdown(post.content)" />
 
           <!-- 附件媒体 -->
           <div v-if="postMedia.length > 0" class="post-media">
@@ -225,6 +225,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAsyncData } from '#app'
+import { renderMarkdown } from '~/utils/markdown'
 
 // SSR 端直连后端（/api/* 是外部 4002 服务）；客户端用相对路径走 nginx
 const apiBase = import.meta.server ? (process.env.BACKEND_URL || 'http://127.0.0.1:4002') : ''
@@ -479,125 +480,10 @@ function previewImage(url: string) {
   window.open(url, '_blank')
 }
 
-// ─── HTML 净化 ───
-const SAFE_TAGS = new Set(['a','img','video','source','br','p','b','i','strong','em','ul','ol','li','div','span','h1','h2','h3','h4','h5','h6','pre','code','blockquote'])
-const SAFE_ATTR = new Set(['href','src','target','rel','class','controls','alt','title','width','height','loading','preload'])
-const DANGEROUS_ATTR_PREFIX = /^on/i
+// ─── Markdown 渲染（共享工具 utils/markdown.ts：标题/列表/任务清单/表格/引用/链接全部转排版）───
 
-function sanitizeHtml(html: string): string {
-  if (!html) return ''
-  if (typeof document === 'undefined') return html
-  const div = document.createElement('div')
-  div.innerHTML = html
-  function clean(node: Element): void {
-    if (node.nodeType === 1) {
-      const tag = node.tagName.toLowerCase()
-      if (!SAFE_TAGS.has(tag)) {
-        const fragment = document.createDocumentFragment()
-        while (node.firstChild) fragment.appendChild(node.firstChild)
-        node.parentNode?.replaceChild(fragment, node)
-        return
-      }
-      for (let i = node.attributes.length - 1; i >= 0; i--) {
-        const attrName = node.attributes[i].name.toLowerCase()
-        const attrVal = node.attributes[i].value
-        if (!SAFE_ATTR.has(attrName) || DANGEROUS_ATTR_PREFIX.test(attrName) || attrVal.trim().startsWith('javascript:')) {
-          node.removeAttribute(attrName)
-        }
-      }
-    }
-    for (let i = node.childNodes.length - 1; i >= 0; i--) {
-      const child = node.childNodes[i]
-      if (child.nodeType === 1) clean(child as Element)
-    }
-  }
-  for (let i = div.childNodes.length - 1; i >= 0; i--) {
-    const child = div.childNodes[i]
-    if (child.nodeType === 1) clean(child as Element)
-  }
-  return div.innerHTML
-}
 
-// ─── Markdown 渲染 ───
-function renderContent(text: string): string {
-  if (!text) return ''
-  const codeBlocks: string[] = []
-  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_match: string, lang: string, code: string) => {
-    const idx = codeBlocks.length
-    const langClass = lang ? ` language-${lang}` : ''
-    codeBlocks.push(`<pre><code class="${langClass}">${escapeHtml(code.trim())}</code></pre>`)
-    return `\x00CODEBLOCK${idx}\x00`
-  })
-  const inlineCodes: string[] = []
-  text = text.replace(/`([^`]+)`/g, (_match: string, code: string) => {
-    const idx = inlineCodes.length
-    inlineCodes.push(`<code>${escapeHtml(code)}</code>`)
-    return `\x00INLINECODE${idx}\x00`
-  })
-  const lines = text.split('\n')
-  const blocks: string[] = []
-  let inList = false
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const trimmed = line.trim()
-    if (!trimmed) { if (inList) { blocks.push('</ul>'); inList = false } continue }
-    const headerMatch = trimmed.match(/^(#{1,6})\s+(.*)$/)
-    if (headerMatch) {
-      if (inList) { blocks.push('</ul>'); inList = false }
-      const level = headerMatch[1].length
-      blocks.push(`<h${level}>${headerMatch[2]}</h${level}>`)
-      continue
-    }
-    const ulMatch = trimmed.match(/^[-*]\s+(.*)$/)
-    if (ulMatch) {
-      if (!inList) { blocks.push('<ul>'); inList = true }
-      blocks.push(`<li>${ulMatch[1]}</li>`)
-      continue
-    }
-    const quoteMatch = trimmed.match(/^>\s*(.*)$/)
-    if (quoteMatch) {
-      if (inList) { blocks.push('</ul>'); inList = false }
-      blocks.push(`<blockquote>${quoteMatch[1]}</blockquote>`)
-      continue
-    }
-    if (inList) { blocks.push('</ul>'); inList = false }
-    blocks.push(`<p>${line}</p>`)
-  }
-  if (inList) blocks.push('</ul>')
-  let html = blocks.join('\n')
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  html = html.replace(/\x00INLINECODE(\d+)\x00/g, (_match: string, idx: string) => inlineCodes[parseInt(idx)])
-  html = html.replace(/\x00CODEBLOCK(\d+)\x00/g, (_match: string, idx: string) => codeBlocks[parseInt(idx)])
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match: string, alt: string, url: string) => {
-    return `<div class="inline-media"><img src="${url}" alt="${alt}" class="inline-img" loading="lazy" /></div>`
-  })
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match: string, linkText: string, url: string) => {
-    return `<a href="${url}" target="_blank" rel="noopener" class="post-link">${linkText}</a>`
-  })
-  html = html.replace(/\[img:([^\]]+)\]/g, (_match: string, url: string) => {
-    return `<div class="inline-media"><a href="${url}" target="_blank" rel="noopener" class="post-link"><img src="${url}" class="inline-img" loading="lazy" /></a></div>`
-  })
-  html = html.replace(/\[video:([^\]]+)\]/g, (_match: string, url: string) => {
-    return `<div class="inline-media"><video src="${url}" class="inline-video" controls preload="none"></video></div>`
-  })
-  // URL 链接化：先保护已生成标签内的 URL（href/src 属性值），防止二次匹配把 <a href="URL"><img src="URL"/></a> 嵌套损坏
-  const tagUrls: string[] = []
-  html = html.replace(/((?:href|src)=")(https?:\/\/[^"\s]+)"/g, (_match: string, prefix: string, url: string) => {
-    const idx = tagUrls.length
-    tagUrls.push(url)
-    return `${prefix}\x00TAGURL${idx}\x00"`
-  })
-  html = html.replace(/(https?:\/\/[^\s<"']+)/g, (_match: string, url: string) => {
-    return `<a href="${url}" target="_blank" rel="noopener" class="post-link">${url}</a>`
-  })
-  html = html.replace(/\x00TAGURL(\d+)\x00/g, (_match: string, idx: string) => tagUrls[parseInt(idx)])
-  return sanitizeHtml(html)
-}
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
 
 // ─── 评论交互 ───
 function toggleReply(commentId: string) {
@@ -922,6 +808,23 @@ onMounted(() => {
   line-height: 1.9;
   color: var(--cn-ink);
 }
+
+/* 表格与任务清单样式（AI 生成内容常见语法） */
+:deep(.post-content table.md-table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+:deep(.post-content table.md-table th),
+:deep(.post-content table.md-table td) {
+  border: 1px solid #e2e8f0;
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+}
+:deep(.post-content table.md-table th) { background: #f7fafc; font-weight: 600; }
+:deep(.post-content ul.task-list) { list-style: none; padding-left: 0.25rem; }
+:deep(.post-content li.task-item.done) { color: #718096; text-decoration: line-through; }
 
 /* v-html 内部元素使用 :deep() 选择器 */
 :deep(.post-link) {
