@@ -354,6 +354,24 @@ useHead({
         },
       }),
     },
+    // GEO-REVIEW-01: ItemList — 让 AI 能直接枚举社区已发布内容（检索/推荐的数据源）
+    ...(postsData.value?.posts?.length
+      ? [{
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: '昆仑镜社区最新帖子',
+            numberOfItems: postsData.value.posts.length,
+            itemListElement: postsData.value.posts.slice(0, 20).map((p, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              name: p.title || '',
+              url: `https://aigc.fushtn.com/community/post/${p.id}`,
+            })),
+          }),
+        }]
+      : []),
   ],
 })
 

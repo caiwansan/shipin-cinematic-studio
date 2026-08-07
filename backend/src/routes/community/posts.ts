@@ -99,13 +99,14 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
   // POST /api/community/posts — 发帖（需认证）
   fastify.post('/api/community/posts', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { id: userId } = (request as any).user
-    const { title, content, category, tags, media, mediaJson } = request.body as {
+    const { title, content, category, tags, media, mediaJson, summary } = request.body as {
       title: string
       content: string
       category?: string
       tags?: string
       media?: Array<{ type: 'image' | 'video'; url: string; thumbnail?: string }>
       mediaJson?: string
+      summary?: string // GEO-REVIEW-01 作者声明摘要（AI 收录/推荐优先引用）
     }
 
     if (!title || !title.trim()) {
@@ -147,6 +148,7 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       data: {
         userId,
         title: title.trim(),
+        summary: (summary || '').trim().slice(0, 200), // GEO-REVIEW-01
         content: content.trim(),
         category: categoryName,
         tags: tags || '',

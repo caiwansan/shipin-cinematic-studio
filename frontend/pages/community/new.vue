@@ -71,6 +71,18 @@
           </div>
 
           <div class="form-group">
+            <label>AI 摘要（选填，建议 50-120 字）</label>
+            <textarea
+              v-model="summary"
+              placeholder="用 1-2 句话概括帖子的核心观点/结论/干货。AI 收录推荐时会优先引用这段作为摘要，写得好更容易被 ChatGPT/豆包/Kimi 等引用推荐"
+              rows="3"
+              maxlength="200"
+              class="form-textarea"
+            />
+            <div class="summary-hint">💡 GEO 技巧：结论先行 + 具体数据/步骤，AI 检索时更容易命中并推荐你的帖子</div>
+          </div>
+
+          <div class="form-group">
             <label>标签（可选，逗号分隔）</label>
             <input v-model="tags" type="text" placeholder="如: AI, 短剧, 角色设计" class="form-input" />
           </div>
@@ -128,6 +140,7 @@ const authError = ref('')
 const authLoading = ref(false)
 
 const title = ref('')
+const summary = ref('') // GEO-REVIEW-01 作者声明摘要
 const content = ref('')
 const category = ref('')
 const tags = ref('')
@@ -294,6 +307,7 @@ async function submitPost() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         title: title.value.trim(),
+        summary: summary.value.trim(), // GEO-REVIEW-01
         content: content.value.trim(),
         category: category.value,
         tags: tags.value.trim(),
@@ -435,6 +449,7 @@ async function submitPost() {
 }
 .form-select { cursor: pointer; appearance: auto; }
 .form-textarea { resize: vertical; min-height: 200px; line-height: 1.7; }
+.summary-hint { font-size: 12px; color: #8a7a5a; margin-top: 6px; line-height: 1.6; }
 
 /* 内容编辑区 */
 .content-editor-area { display: flex; flex-direction: column; gap: 8px; }

@@ -3100,6 +3100,7 @@ model CommunityPost {
   id           String             @id @default(uuid()) @db.Uuid
   userId       String             @db.Uuid
   title        String
+  summary      String             @default("") // GEO-REVIEW-01 作者声明摘要 — AI 收录/推荐时优先引用
   content      String
   mediaJson    String             @default("[]")
   tags         String             @default("")

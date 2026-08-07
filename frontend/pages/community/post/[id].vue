@@ -291,6 +291,11 @@ onMounted(async () => {
 
 // ─── 动态 Meta 标签 ───
 const postDescription = computed(() => {
+  // GEO-REVIEW-01: 作者声明的 AI 摘要优先（AI 收录/推荐直接引用这段）
+  if (post.value?.summary?.trim()) {
+    const s = post.value.summary.trim()
+    return s.length > 160 ? s.substring(0, 160) + '...' : s
+  }
   if (!post.value?.content) return '昆仑镜社区 - AI 短剧制作交流平台'
   const text = post.value.content
     .replace(/```[\s\S]*?```/g, '')
@@ -319,10 +324,26 @@ const postImageUrl = computed(() => {
 
 const postUrl = computed(() => `https://aigc.fushtn.com/community/post/${route.params.id}`)
 
+// ─── GEO-REVIEW-01: 生成式引擎优化（GEO）辅助字段 — 让主流 AI 检索/摘要/推荐更容易提取实体信息 ───
+const postTags = computed(() => {
+  const raw = post.value?.tags || ''
+  return raw.split(/[,，、\s]+/).map(t => t.trim()).filter(Boolean).slice(0, 10)
+})
+const postKeywords = computed(() => {
+  const base = [postTags.value.join('、'), post.value?.category || '', '昆仑镜', 'AI短剧', '短剧制作', 'AI创作'].filter(Boolean).join(',')
+  return base
+})
+const postWordCount = computed(() => {
+  const text = (post.value?.content || '').replace(/```[\s\S]*?```/g, ' ').replace(/[#*>`~\[\]()]/g, ' ')
+  return text.trim().length || 0
+})
+
 useHead({
   title: post.value ? `${post.value.title} - 昆仑镜社区` : '帖子详情 - 昆仑镜社区',
   meta: [
     { name: 'description', content: postDescription },
+    // GEO-REVIEW-01: 关键词（百度/搜狗/部分 AI 爬虫仍读取；标签+分类+品牌词）
+    { name: 'keywords', content: postKeywords },
     // Open Graph
     { property: 'og:title', content: post.value?.title || '昆仑镜社区' },
     { property: 'og:description', content: postDescription },
@@ -330,9 +351,12 @@ useHead({
     { property: 'og:url', content: postUrl },
     { property: 'og:image', content: postImageUrl },
     { property: 'og:site_name', content: '昆仑镜' },
+    { property: 'og:locale', content: 'zh_CN' },
     { property: 'article:published_time', content: post.value?.createdAt || '' },
     { property: 'article:modified_time', content: post.value?.updatedAt || post.value?.createdAt || '' },
     { property: 'article:section', content: post.value?.category || '社区' },
+    // GEO-REVIEW-01: article:tag 逐标签输出，帮助 AI/新闻爬虫理解主题
+    ...(postTags.value.length ? postTags.value.map(t => ({ property: 'article:tag', content: t })) : [{ property: 'article:tag', content: post.value?.category || '社区' }]),
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: post.value?.title || '昆仑镜社区' },
@@ -343,6 +367,7 @@ useHead({
     { rel: 'canonical', href: postUrl },
   ],
   script: [
+    // GEO-REVIEW-01: Article 结构化数据全面升级 — AI 抽取实体/摘要/事实的核心信号
     {
       type: 'application/ld+json',
       innerHTML: JSON.stringify({
@@ -351,6 +376,12 @@ useHead({
         headline: post.value?.title || '',
         description: postDescription.value,
         image: postImageUrl.value,
+        thumbnailUrl: postImageUrl.value,
+        keywords: postKeywords.value,
+        inLanguage: 'zh-CN',
+        isAccessibleForFree: true,
+        wordCount: postWordCount.value,
+        articleSection: post.value?.category || '社区',
         datePublished: post.value?.createdAt || '',
         dateModified: post.value?.updatedAt || post.value?.createdAt || '',
         author: {
@@ -369,6 +400,12 @@ useHead({
           '@type': 'WebPage',
           '@id': postUrl.value,
         },
+        // GEO-REVIEW-01: Speakable — 指示 AI/语音助手抽取可朗读摘要的区块
+        speakable: {
+          '@type': 'SpeakableSpecification',
+          cssSelector: ['.post-title', '.post-content'],
+        },
+        commentCount: post.value?.commentCount || 0,
         interactionStatistic: [
           {
             '@type': 'InteractionCounter',
@@ -380,6 +417,19 @@ useHead({
             interactionType: 'https://schema.org/LikeAction',
             userInteractionCount: post.value?.likeCount || 0,
           },
+        ],
+      }),
+    },
+    // GEO-REVIEW-01: BreadcrumbList — 帮助 AI 理解站内层级与内容归属
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: '首页', item: 'https://aigc.fushtn.com/' },
+          { '@type': 'ListItem', position: 2, name: '昆仑镜社区', item: 'https://aigc.fushtn.com/community' },
+          { '@type': 'ListItem', position: 3, name: post.value?.title || '帖子', item: postUrl.value },
         ],
       }),
     },
