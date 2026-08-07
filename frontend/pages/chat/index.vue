@@ -3212,17 +3212,17 @@ onBeforeUnmount(() => {
 /* 礼物弹窗 */
 .gift-modal-mask {
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(251, 248, 239, 0.94);
+  background: rgba(2, 6, 23, 0.62);
   backdrop-filter: blur(3px);
   display: flex; align-items: center; justify-content: center;
 }
 .gift-modal {
   width: 520px; max-width: 94vw;
-  background: linear-gradient(180deg, #FBF8EF, #EDE5CE);
-  border: 1px solid #1e2b4f;
+  background: linear-gradient(180deg, #1E2A3A, #111A28);
+  border: 1px solid rgba(251, 191, 36, 0.25);
   border-radius: 18px;
   padding: 18px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
 }
 .gift-modal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .gift-modal-title { font-size: 17px; font-weight: 700; color: #FBF8EF; flex: 1; }
@@ -3242,7 +3242,7 @@ onBeforeUnmount(() => {
   cursor: pointer; text-decoration: none;
 }
 .gift-modal-close {
-  background: none; border: none; color: rgba(51, 48, 42, 0.45);
+  background: none; border: none; color: rgba(255, 255, 255, 0.45);
   font-size: 18px; cursor: pointer; padding: 4px;
 }
 .gift-modal-close:hover { color: #FBF8EF; }
@@ -3273,7 +3273,7 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  color: rgba(51, 48, 42, 0.6);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 13px; padding: 5px 16px;
   cursor: pointer;
 }
