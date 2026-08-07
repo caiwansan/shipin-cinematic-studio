@@ -97,7 +97,11 @@
         <div class="sidebar-card cn-card mod-card">
           <div class="cn-plaque sidebar-title">社 区 管 理</div>
           <template v-if="isLoggedIn">
-            <div v-if="modMe.isModerator" class="mod-card-body">
+            <div v-if="modMe.authInvalid" class="mod-card-body">
+              <p class="mod-card-tip mod-card-tip--warn">⚠️ 登录状态已失效（账号在其他设备登录或已过期），请重新登录后查看版主权限</p>
+              <button class="cn-seal-btn btn-block" @click="goRelogin">重新登录</button>
+            </div>
+            <div v-else-if="modMe.isModerator" class="mod-card-body">
               <p class="mod-card-role">👑 {{ modMe.role === 'co_moderator' ? '副版主' : '版主' }}</p>
               <NuxtLink to="/community/manage" class="cn-seal-btn btn-block">进入管理面板</NuxtLink>
             </div>
@@ -397,6 +401,11 @@ onMounted(() => {
   }
   loadModerators()
   if (token) loadModMe()
+  startModPolling()
+})
+
+onBeforeUnmount(() => {
+  stopModPolling()
 })
 
 // ─── 版主体系（COMMUNITY-MODERATOR-01）───
@@ -420,8 +429,33 @@ async function loadModMe() {
       headers: { Authorization: `Bearer ${token}` },
     })
     const data = await res.json()
-    if (res.ok) modMe.value = data
+    if (res.ok) {
+      modMe.value = data
+      return
+    }
+    // 401 = token 失效/被其他设备顶掉（单设备机制）——不再静默降级成「申请成为版主」
+    if (res.status === 401) {
+      modMe.value = { ...modMe.value, authInvalid: true }
+    }
   } catch {}
+}
+
+// 版主状态轮询：站长批准后无需手动刷新，入口自动出现（MODERATOR-UX-01）
+let modPollTimer: ReturnType<typeof setInterval> | null = null
+function startModPolling() {
+  if (modPollTimer) return
+  modPollTimer = setInterval(() => {
+    const token = getAuthTokenLocal()
+    if (!token) { stopModPolling(); return }
+    loadModMe()
+  }, 30000)
+}
+function stopModPolling() {
+  if (modPollTimer) { clearInterval(modPollTimer); modPollTimer = null }
+}
+
+function goRelogin() {
+  showLogin.value = true
 }
 
 function getAuthTokenLocal(): string {
@@ -958,6 +992,7 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
 .wechat-icon { font-size: 1.1rem; }
 .mod-card-body { padding: 10px 4px 4px; }
 .mod-card-tip { font-size: 12px; color: var(--cn-ink-soft); margin: 0 0 10px; line-height: 1.6; }
+.mod-card-tip--warn { color: #c0392b; }
 .mod-card-role { font-size: 14px; color: var(--cn-cobalt); font-weight: 600; margin: 0 0 10px; }
 .btn-block { width: 100%; text-align: center; }
 .moderator-item { display: flex; align-items: center; gap: 8px; padding: 7px 2px; }

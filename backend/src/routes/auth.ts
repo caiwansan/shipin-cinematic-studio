@@ -258,15 +258,18 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // 生成新的 accessToken（注入 organizationId，兼容老 token 由后端读取处 fallback 查库）
       const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
       const refreshOrgId = (await getOrganizationIdForUser(decoded.id)) || undefined
+      const newTokenVersion = (decoded.tokenVersion || 0) + 1
+      // 单设备一致性：新 tokenVersion 必须写回 DB，否则后续请求全 401「账号已在其他设备登录」（MODERATOR-UX-01 实锤）
+      await prisma.user.update({ where: { id: decoded.id }, data: { tokenVersion: newTokenVersion } }).catch(() => {})
       const newAccessToken = fastify.jwt.sign({
         id: decoded.id,
         email: decoded.email,
-        tokenVersion: (decoded.tokenVersion || 0) + 1,
+        tokenVersion: newTokenVersion,
         organizationId: refreshOrgId,
       })
       // 生成新的 refreshToken（用 refreshSecret，更长过期时间）
       const newRefreshToken = jwt.default.sign(
-        { id: decoded.id, email: decoded.email, tokenVersion: (decoded.tokenVersion || 0) + 1 },
+        { id: decoded.id, email: decoded.email, tokenVersion: newTokenVersion },
         refreshSecret,
         { expiresIn: '7d' }
       )
