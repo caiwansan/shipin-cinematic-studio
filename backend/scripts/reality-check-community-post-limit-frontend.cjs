@@ -18,8 +18,8 @@ const check = (n, c, e = '') => { if (c) { pass++; console.log('  ✅ ' + n + ' 
 
   const bodyText = await page.evaluate(() => document.body.innerText)
   check('发帖页加载', bodyText.includes('发布新帖子'))
-  check('每日限发提示渲染', /每日限发\s*20\s*篇/.test(bodyText), '(含 20)')
-  check('奖励提示渲染', /审核通过奖励\s*2\s*钻石/.test(bodyText), '(含 2 钻石)')
+  check('每天前 20 篇有奖提示渲染', /每天前\s*20\s*篇发帖有奖励/.test(bodyText), '(含 20)')
+  check('发帖不限量提示渲染', /发帖不限量/.test(bodyText), '(含不限量)')
   const title = await page.title()
   // 注：app.vue 客户端会全局覆盖标题为 seo_title（Sprint-ADMIN-IA-REALITY-03 既有行为，非本次改动）；
   // SSR HTML 标题正确（curl 验证过“发布帖子 - 昆仑镜社区”），此处仅确认页面无异常

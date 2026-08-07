@@ -1,16 +1,18 @@
 /**
- * COMMUNITY-POST-LIMIT-REWARD-01 — 社区每日发帖上限 + 发帖钻石奖励 Reality Gate
+ * COMMUNITY-POST-LIMIT-REWARD-01 — 社区发帖钻石奖励（前 N 篇有奖、发帖不限量）Reality Gate
  *
- * 掌柜 2026-08-07 指令：社区发帖有钻石奖励 → 每日限发 20 篇，每篇奖励 2 钻石
- *   - 上限/奖励后台 SystemConfig 可调（community_daily_post_limit / community_post_reward_diamonds）
- *   - 发帖入口硬限制：当日创建数 >= 上限 → 429
- *   - 审核通过发奖：+2 钻石（Membership.credits 真源）+ CoinLog 流水 + Post.rewardCoins/CommunityReward 明细
- *   - 奖励兜底：当日已奖励次数 >= 上限 → 跳过（防「昨天发的帖今天批量审核」突破每日上限）
+ * 掌柜 2026-08-07 12:48 定调（规则变更）：当天前 20 篇发帖有奖励，后面没奖励，但不限制发帖数量
+ *   - 不再 429 限发：发帖永远成功
+ *   - 奖励按「发帖名次」判定（N = community_daily_post_limit，默认 20），与审核顺序无关
+ *   - 第 N+1 篇起审核通过也正常展示，只是无奖励
+ *   - 非当日发帖（昨天的帖子今天审核）不参与当天奖励
+ *   - 奖励 = community_post_reward_diamonds（默认 2 钻石/篇，后台可调）
  *
- * G1 配置默认值：SYSTEM_CONFIG_DEFAULTS 20/2 + 白名单 + 校验（1~1000 正整数）
- * G2 每日发帖上限（HTTP）：临时设上限=2 → 发 3 篇 → 前 2 篇 200（remaining 递减），第 3 篇 429
- * G3 发帖奖励（HTTP 审核通过）：+2 钻石 / CoinLog / rewardCoins / CommunityReward
- * G4 奖励每日兜底：昨天发的帖今天审核 → 已达上限跳过奖励
+ * G1 配置默认值：SYSTEM_CONFIG_DEFAULTS 20/2
+ * G2 发帖不限量（HTTP）：临时设上限=2 → 连发 3 篇全 200（第 3 篇也成功，remaining 到 0 封底）
+ * G3 奖励按发帖名次（乱序审核验证）：先审第 3 篇（名次3>2）→ 不奖励但帖子 approved；
+ *    再审第 2/1 篇 → 各 +2，CoinLog/rewardCoins/CommunityReward 全链路
+ * G4 非当日发帖：昨天发的帖今天审核 → 不奖励
  * G5 配置恢复：清理测试配置后默认回退 20/2
  *
  * 运行：npx tsx scripts/reality-check-community-post-limit-01.ts
@@ -42,7 +44,7 @@ async function api(path: string, method = 'GET', body?: any, token?: string, adm
 }
 
 async function main() {
-  console.log('═══ COMMUNITY-POST-LIMIT-REWARD-01 Reality Gate ═══\n')
+  console.log('═══ COMMUNITY-POST-LIMIT-REWARD-01 Reality Gate（前 N 篇有奖·发帖不限量）═══\n')
   const suffix = Date.now().toString().slice(-8)
   const email = `community_limit_${suffix}@test.local`
   const username = `limit_${suffix}`
@@ -56,7 +58,7 @@ async function main() {
     `(${SYSTEM_CONFIG_DEFAULTS.community_post_reward_diamonds?.value})`)
   console.log()
 
-  // ── 准备：临时配置（上限 2 / 奖励 2）+ 测试用户 + 管理员 ──
+  // ── 准备：临时配置（奖励名额 2 / 奖励 2）+ 测试用户 + 管理员 ──
   await prisma.systemConfig.upsert({ where: { key: 'community_daily_post_limit' }, update: { value: '2' }, create: { key: 'community_daily_post_limit', value: '2', group: 'site' } })
   await prisma.systemConfig.upsert({ where: { key: 'community_post_reward_diamonds' }, update: { value: '2' }, create: { key: 'community_post_reward_diamonds', value: '2', group: 'site' } })
 
@@ -68,73 +70,79 @@ async function main() {
   const login = await api('/api/auth/login', 'POST', { email, password })
   check('准备 用户登录成功', login.status === 200 && !!login.json?.accessToken)
   const userToken = login.json?.accessToken
-  const adminLogin = await api('/api/admin/login', 'POST', { username: 'admin', password: 'admin123' })
-  let adminToken = adminLogin.json?.token
   // 生产 admin 密码已轮换：不碰真实管理员，临时创建一个测试管理员用于审核，测完即删
   const adminUsername = `limit_admin_${suffix}`
   const adminPassword = 'AdminTest@123'
-  const tempAdmin = await prisma.adminUser.create({
+  await prisma.adminUser.create({
     data: { username: adminUsername, passwordHash: await bcrypt.hash(adminPassword, 10), role: 'superadmin', displayName: 'limit-test' },
   })
-  const adminLogin2 = await api('/api/admin/login', 'POST', { username: adminUsername, password: adminPassword })
-  adminToken = adminToken || adminLogin2.json?.token
+  const adminLogin = await api('/api/admin/login', 'POST', { username: adminUsername, password: adminPassword })
+  const adminToken = adminLogin.json?.token
   check('准备 管理员登录成功', !!adminToken)
 
-  // ── G2 每日发帖上限 ──
-  console.log('\n── G2 每日发帖上限（上限=2）──')
-  const p1 = await api('/api/community/posts', 'POST', { title: '限流测试帖1', content: '内容1' }, userToken)
+  // ── G2 发帖不限量（奖励名额=2，仍可发第 3 篇）──
+  console.log('\n── G2 发帖不限量（奖励名额=2，发 3 篇全成功）──')
+  const p1 = await api('/api/community/posts', 'POST', { title: '测试帖1', content: '内容1' }, userToken)
   check('G2 第 1 篇发布成功', p1.status === 200 && !!p1.json?.post, `(status=${p1.status})`)
-  check('G2 返回 remaining=1', p1.json?.daily?.remaining === 1, `(remaining=${p1.json?.daily?.remaining})`)
+  check('G2 第 1 篇 remaining=1（还能得 1 篇奖励）', p1.json?.daily?.remaining === 1, `(remaining=${p1.json?.daily?.remaining})`)
   const post1Id = p1.json?.post?.id
 
-  const p2 = await api('/api/community/posts', 'POST', { title: '限流测试帖2', content: '内容2' }, userToken)
+  const p2 = await api('/api/community/posts', 'POST', { title: '测试帖2', content: '内容2' }, userToken)
   check('G2 第 2 篇发布成功', p2.status === 200 && !!p2.json?.post, `(status=${p2.status})`)
-  check('G2 返回 remaining=0', p2.json?.daily?.remaining === 0, `(remaining=${p2.json?.daily?.remaining})`)
+  check('G2 第 2 篇 remaining=0', p2.json?.daily?.remaining === 0, `(remaining=${p2.json?.daily?.remaining})`)
   const post2Id = p2.json?.post?.id
 
-  const p3 = await api('/api/community/posts', 'POST', { title: '限流测试帖3', content: '内容3' }, userToken)
-  check('G2 第 3 篇被拒绝 429', p3.status === 429, `(status=${p3.status})`)
-  check('G2 错误文案含上限提示', typeof p3.json?.error === 'string' && p3.json.error.includes('今日发帖已达上限（2 篇）'), `(${p3.json?.error})`)
+  const p3 = await api('/api/community/posts', 'POST', { title: '测试帖3', content: '内容3' }, userToken)
+  check('G2 第 3 篇仍发布成功（不限制数量）', p3.status === 200 && !!p3.json?.post, `(status=${p3.status})`)
+  check('G2 第 3 篇 remaining 封底 0', p3.json?.daily?.remaining === 0, `(remaining=${p3.json?.daily?.remaining})`)
+  const post3Id = p3.json?.post?.id
 
-  // ── G3 发帖奖励（审核通过 +2 钻石）──
+  // ── G3 奖励按发帖名次（乱序审核：先审第 3 篇，验证与审核顺序无关）──
   // 注意：admin-posts.ts 从未注册（死代码）；线上真实审核入口 = /api/community/admin/posts/:id/approve（x-admin-token）
-  console.log('\n── G3 发帖奖励（审核通过 +2 钻石）──')
+  console.log('\n── G3 奖励按发帖名次（乱序审核：先审第 3 篇）──')
   const approve = (postId: string) =>
     fetch(`${BASE}/api/community/admin/posts/${postId}/approve`, {
       method: 'PATCH',
       headers: { 'x-admin-token': adminToken, 'Content-Type': 'application/json' },
     })
-  const a1b = await approve(post1Id)
-  check('G3 审核通过接口成功', a1b.status === 200, `(status=${a1b.status})`)
 
-  const m1 = await prisma.membership.findUnique({ where: { userId: user.id } })
-  check('G3 钻石余额 +2', m1?.credits === 2, `(credits=${m1?.credits})`)
-  const log1 = await prisma.coinLog.findMany({ where: { userId: user.id, type: 'reward', remark: '社区发帖奖励' } })
-  check('G3 CoinLog 流水 1 条 +2', log1.length === 1 && log1[0].amount === 2, `(count=${log1.length}, amount=${log1[0]?.amount})`)
-  const rw1 = await prisma.communityReward.findFirst({ where: { postId: post1Id } })
-  check('G3 CommunityReward 明细 +2', rw1?.coins === 2, `(coins=${rw1?.coins})`)
-  const post1Db = await prisma.communityPost.findUnique({ where: { id: post1Id } })
-  check('G3 Post.rewardCoins=2', post1Db?.rewardCoins === 2, `(rewardCoins=${post1Db?.rewardCoins})`)
+  // 先审第 3 篇：当天第 3 篇，名次 3 > 名额 2 → 通过但无奖励
+  const a3 = await approve(post3Id)
+  check('G3 第 3 篇审核通过（帖子正常）', a3.status === 200, `(status=${a3.status})`)
+  const post3Db = await prisma.communityPost.findUnique({ where: { id: post3Id } })
+  check('G3 第 3 篇状态 approved（无奖也正常展示）', post3Db?.status === 'approved', `(status=${post3Db?.status})`)
+  const m0 = await prisma.membership.findUnique({ where: { userId: user.id } })
+  check('G3 第 3 篇无奖励（余额 0）', (m0?.credits ?? 0) === 0, `(credits=${m0?.credits})`)
+  check('G3 第 3 篇 rewardCoins=0', post3Db?.rewardCoins === 0, `(rewardCoins=${post3Db?.rewardCoins})`)
 
-  // 第 2 篇审核 → 第 2 次奖励
-  const a2b = await approve(post2Id)
-  check('G3 第 2 篇审核通过', a2b.status === 200, `(status=${a2b.status})`)
+  // 再审第 2 篇：名次 2 ≤ 名额 → +2
+  const a2 = await approve(post2Id)
+  check('G3 第 2 篇审核通过', a2.status === 200, `(status=${a2.status})`)
   const m2 = await prisma.membership.findUnique({ where: { userId: user.id } })
-  check('G3 钻石余额累计 +4', m2?.credits === 4, `(credits=${m2?.credits})`)
+  check('G3 第 2 篇奖励 +2（余额 2）', m2?.credits === 2, `(credits=${m2?.credits})`)
 
-  // ── G4 奖励每日兜底：昨天发的帖今天批量审核 → 跳过奖励 ──
-  console.log('\n── G4 奖励每日兜底（当日已奖励 2 次=上限）──')
+  // 最后审第 1 篇：名次 1 → +2
+  const a1 = await approve(post1Id)
+  check('G3 第 1 篇审核通过', a1.status === 200, `(status=${a1.status})`)
+  const m1 = await prisma.membership.findUnique({ where: { userId: user.id } })
+  check('G3 第 1 篇奖励 +2（余额 4）', m1?.credits === 4, `(credits=${m1?.credits})`)
+
+  const logs = await prisma.coinLog.findMany({ where: { userId: user.id, type: 'reward', remark: '社区发帖奖励' }, orderBy: { createdAt: 'asc' } })
+  check('G3 CoinLog 流水 2 条 +2', logs.length === 2 && logs.every(l => l.amount === 2), `(count=${logs.length})`)
+  const rw = await prisma.communityReward.count({ where: { userId: user.id } })
+  check('G3 CommunityReward 明细 2 条', rw === 2, `(count=${rw})`)
+
+  // ── G4 非当日发帖：昨天发的帖今天审核 → 不奖励 ──
+  console.log('\n── G4 非当日发帖（昨日帖今天审核 → 无奖励）──')
   const yesterday = new Date(Date.now() - 86400000)
   const extra1 = await prisma.communityPost.create({ data: { userId: user.id, title: '昨日帖A', content: '昨日内容A', status: 'pending', createdAt: yesterday } })
-  const extra2 = await prisma.communityPost.create({ data: { userId: user.id, title: '昨日帖B', content: '昨日内容B', status: 'pending', createdAt: yesterday } })
   await approve(extra1.id)
-  await approve(extra2.id)
   const m3 = await prisma.membership.findUnique({ where: { userId: user.id } })
-  check('G4 余额仍为 4（跳过奖励）', m3?.credits === 4, `(credits=${m3?.credits})`)
+  check('G4 昨日帖审核后余额仍为 4', m3?.credits === 4, `(credits=${m3?.credits})`)
   const logAfter = await prisma.coinLog.count({ where: { userId: user.id, type: 'reward', remark: '社区发帖奖励' } })
   check('G4 流水仍为 2 条', logAfter === 2, `(count=${logAfter})`)
   const extra1Db = await prisma.communityPost.findUnique({ where: { id: extra1.id } })
-  check('G4 昨日帖 A rewardCoins=0', extra1Db?.rewardCoins === 0, `(rewardCoins=${extra1Db?.rewardCoins})`)
+  check('G4 昨日帖状态 approved 但 rewardCoins=0', extra1Db?.status === 'approved' && extra1Db?.rewardCoins === 0, `(status=${extra1Db?.status}, rewardCoins=${extra1Db?.rewardCoins})`)
 
   // ── G5 配置恢复：清理测试配置 → 默认回退 20/2 ──
   console.log('\n── G5 配置恢复 ──')

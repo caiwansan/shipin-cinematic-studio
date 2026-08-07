@@ -8,7 +8,7 @@
         <span class="mn-img-del" @click="images.splice(i, 1)">✕</span>
       </div>
     </div>
-    <p class="mn-tip">💎 每日限发 <b>{{ dailyLimit }}</b> 篇 · 审核通过奖励 <b>{{ rewardDiamonds }}</b> 钻石</p>
+    <p class="mn-tip">💎 每天前 <b>{{ dailyLimit }}</b> 篇发帖有奖励（每篇 <b>{{ rewardDiamonds }}</b> 钻石），之后无奖励 · 发帖不限量</p>
     <div class="mn-actions">
       <button class="mn-btn ghost" @click="pickImage">📷 添加图片</button>
       <button class="mn-btn primary" :disabled="publishing || !title.trim()" @click="publish">{{ publishing ? '发布中…' : '发布' }}</button>
@@ -31,7 +31,7 @@ const publishing = ref(false)
 const errMsg = ref('')
 const fileRef = ref<any>(null)
 
-// 社区发帖规则（SystemConfig 后台可调：每日上限/每篇奖励钻石）
+// 社区发帖规则（SystemConfig 后台可调：每日有奖篇数/每篇奖励钻石）
 const dailyLimit = ref(20)
 const rewardDiamonds = ref(2)
 void (async () => {

@@ -1,12 +1,13 @@
 import { prisma } from '../../utils/index.js'
 
 /**
- * 社区发帖奖励（钻石）— 掌柜 2026-08-07 定调：每日限发 20 篇，每篇奖励 2 钻石
+ * 社区发帖奖励（钻石）— 掌柜 2026-08-07 12:48 定调：
+ * 每天前 N 篇发帖有奖励（N = community_daily_post_limit，默认 20），之后发帖无奖励；发帖数量不限制。
  *
  * - 奖励 = SystemConfig `community_post_reward_diamonds`（默认 2 钻石/篇，后台可改）
- * - 每日上限 = SystemConfig `community_daily_post_limit`（默认 20 篇/人/天，后台可改）
- *   发帖入口（POST /api/community/posts）硬限制当日创建数；此处再兜底：当日已奖励次数
- *   达到上限则跳过 —— 防止「昨天发的帖今天批量审核通过」突破每日奖励上限
+ * - 判定按「发帖名次」而非审核顺序：统计该用户当天创建且不晚于本贴的帖子数 = 本贴当日名次，
+ *   名次 <= 上限 → 奖励；否则跳过（帖子正常审核通过，只是无奖励）
+ * - 非当日发帖（如昨天的帖子今天审核）不参与当天奖励
  * - 奖励写入 Membership.credits（= 用户钻石余额真源）+ CoinLog 流水 + CommunityPost.rewardCoins / CommunityReward 明细
  * 注意：User 模型无 coins 字段，旧实现写 user.coins 会抛错被 catch 吞掉（从未生效）
  */
@@ -32,24 +33,41 @@ async function getCommunityRewardConfig(): Promise<{ rewardDiamonds: number; dai
 
 /**
  * 发帖奖励：审核通过时发放（默认 +2 钻石，写入 Membership.credits）
+ * 判定规则：仅当天发帖序列中前 dailyLimit 篇有奖励（按发帖名次，与审核顺序无关）
  * @param userId 发帖人
- * @param postId 帖子 id（可选；传入则同步记录 rewardCoins 与 CommunityReward 明细）
+ * @param postId 帖子 id（必传；用于名次判定与明细落库）
  */
 export async function rewardPostCreation(
   userId: string,
-  postId?: string
-): Promise<{ rewarded: boolean; diamonds?: number; remaining?: number }> {
+  postId: string
+): Promise<{ rewarded: boolean; diamonds?: number; remaining?: number; reason?: string }> {
   const { rewardDiamonds, dailyLimit } = await getCommunityRewardConfig()
 
-  // 每日奖励兜底：当天已发放的「发帖奖励」次数 >= 上限 → 跳过（防批量审核突破每日上限）
+  const post = await prisma.communityPost.findUnique({ where: { id: postId } })
+  if (!post) {
+    return { rewarded: false, reason: '帖子不存在' }
+  }
+
+  // 当天窗口（服务器本地时区 = Asia/Shanghai 零点）
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
-  const todayRewards = await prisma.coinLog.count({
-    where: { userId, type: 'reward', remark: REWARD_REMARK, createdAt: { gte: startOfDay } },
+  const endOfDay = new Date(startOfDay)
+  endOfDay.setDate(endOfDay.getDate() + 1)
+
+  // 非当日发帖（昨天的帖子今天审核）不参与当天奖励
+  if (post.createdAt < startOfDay || post.createdAt >= endOfDay) {
+    return { rewarded: false, reason: '非当日发帖' }
+  }
+
+  // 名次判定：当天创建且不晚于本贴的帖子数（含本贴）= 本贴当天发帖名次
+  const rank = await prisma.communityPost.count({
+    where: {
+      userId: post.userId,
+      createdAt: { gte: startOfDay, lt: endOfDay, lte: post.createdAt },
+    },
   })
-  if (todayRewards >= dailyLimit) {
-    console.warn(`[community-reward] 用户 ${userId} 今日发帖奖励已达上限（${dailyLimit} 篇），跳过本次奖励`)
-    return { rewarded: false }
+  if (rank > dailyLimit) {
+    return { rewarded: false, reason: `超出当日奖励名额（前 ${dailyLimit} 篇有奖）` }
   }
 
   // 确保 Membership 存在（与 upload 逻辑一致）
@@ -77,7 +95,7 @@ export async function rewardPostCreation(
     }).catch(() => {})
   }
 
-  return { rewarded: true, diamonds: rewardDiamonds, remaining: dailyLimit - todayRewards - 1 }
+  return { rewarded: true, diamonds: rewardDiamonds, remaining: Math.max(0, dailyLimit - rank) }
 }
 
 /**

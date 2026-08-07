@@ -124,7 +124,8 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: `内容包含敏感词: ${sensitiveWord}` })
     }
 
-    // 每日发帖上限（SystemConfig 可调，默认 20 篇/人/天）——社区发帖有钻石奖励，防刷量
+    // 社区发帖有钻石奖励：每天前 N 篇（community_daily_post_limit，默认 20）审核通过时有奖励，
+    // 之后无奖励；发帖数量不限制（掌柜 2026-08-07 12:48 定调，取消硬限发）
     const limitCfg = await prisma.systemConfig.findUnique({ where: { key: 'community_daily_post_limit' } })
     const dailyLimit = Math.min(1000, Math.max(1, Math.floor(Number(limitCfg?.value || 20)) || 20))
     const startOfDay = new Date()
@@ -132,9 +133,6 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
     const todayCount = await prisma.communityPost.count({
       where: { userId, createdAt: { gte: startOfDay } },
     })
-    if (todayCount >= dailyLimit) {
-      return reply.status(429).send({ error: `今日发帖已达上限（${dailyLimit} 篇），请明天再来` })
-    }
 
     // 确定分类
     let categoryName = category || 'general'
@@ -159,7 +157,7 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
     })
 
     // 更新分类计数（审核通过时才计入公开计数；此处仅记录待审，不计入 postCount）
-    return { post, daily: { limit: dailyLimit, used: todayCount + 1, remaining: dailyLimit - todayCount - 1 } }
+    return { post, daily: { limit: dailyLimit, used: todayCount + 1, remaining: Math.max(0, dailyLimit - todayCount - 1) } }
   })
 
   // GET /api/community/posts/:id — 帖子详情（含评论）

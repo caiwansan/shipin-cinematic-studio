@@ -30,7 +30,7 @@
       <div class="form-card cn-card">
         <h1 class="form-title">发布新帖子</h1>
         <p class="form-desc">分享你的 AI 创作、技巧或疑问</p>
-        <p class="form-tip">💎 每日限发 <b>{{ dailyLimit }}</b> 篇 · 审核通过奖励 <b>{{ rewardDiamonds }}</b> 钻石</p>
+        <p class="form-tip">💎 每天前 <b>{{ dailyLimit }}</b> 篇发帖有奖励（每篇 <b>{{ rewardDiamonds }}</b> 钻石），之后无奖励 · 发帖不限量</p>
 
         <form @submit.prevent="submitPost" class="post-form">
           <div class="form-group">
@@ -134,7 +134,7 @@ const tags = ref('')
 const error = ref('')
 const submitting = ref(false)
 
-// 社区发帖规则（SystemConfig 后台可调：每日上限/每篇奖励钻石）
+// 社区发帖规则（SystemConfig 后台可调：每日有奖篇数/每篇奖励钻石）
 const dailyLimit = ref(20)
 const rewardDiamonds = ref(2)
 async function loadPostRules() {
