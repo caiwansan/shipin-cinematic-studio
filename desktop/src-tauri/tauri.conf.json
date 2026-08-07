@@ -33,10 +33,6 @@
     "targets": [
       "nsis"
     ],
-    "exclude": [
-      "**/*.bak",
-      "**/*.bak-*"
-    ],
     "category": "Business",
     "shortDescription": "昆仑镜 AI 应用操作系统桌面端",
     "longDescription": "昆仑镜桌面壳：登录昆仑镜账号，管理设备与本地应用，启动线上工作台。AI 应用操作系统入口。",
