@@ -14,6 +14,46 @@
       </div>
     </div>
 
+    <!-- ═══ 版主申请审批（COMMUNITY-MODERATOR-01）═══ -->
+    <div class="bg-[#0D1328]/60 border border-[#1A2240] rounded-xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs text-white/70 font-medium">👑 版主/副版主管理 <span class="text-gray-500 font-normal">（会员申请 → 站长审批 → 版主管理帖子）</span></h3>
+        <button @click="fetchModerators" class="text-[10px] text-gray-500 hover:text-cyan-300 cursor-pointer bg-transparent border-none">刷新</button>
+      </div>
+      <div v-if="modLoading" class="text-gray-500 text-xs py-4">加载中...</div>
+      <div v-else-if="moderators.length === 0" class="text-gray-600 text-xs py-4">暂无版主申请/版主</div>
+      <div v-else class="space-y-2">
+        <div v-for="m in moderators" :key="m.id" class="flex items-center gap-3 bg-[#0B1020]/60 border border-[#1A2240]/60 rounded-lg px-3 py-2">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/40 to-purple-500/40 flex items-center justify-center text-[10px] text-white/80 flex-shrink-0">
+            {{ (m.nickname || 'U').charAt(0) }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs text-white/80 truncate">
+              {{ m.nickname }}
+              <span class="text-gray-500">@{{ m.username }}</span>
+              <span class="ml-2 px-1.5 py-0.5 rounded-full text-[10px]" :class="modRoleClass(m.role, m.status)">
+                {{ modRoleLabel(m.role, m.status) }}
+              </span>
+            </div>
+            <div v-if="m.applyNote" class="text-[10px] text-gray-500 truncate">自荐：{{ m.applyNote }}</div>
+            <div class="text-[10px] text-gray-600">申请于 {{ formatDate(m.createdAt) }}<template v-if="m.approvedBy"> · 由 {{ m.approvedBy }} 处理</template></div>
+          </div>
+          <div class="flex gap-1.5 flex-shrink-0">
+            <template v-if="m.status === 'pending'">
+              <select v-model="approveRole[m.id]" class="bg-[#0B1020] border border-[#1A2240] rounded-lg px-2 py-1 text-[10px] text-white/60 outline-none">
+                <option value="moderator">版主</option>
+                <option value="co_moderator">副版主</option>
+              </select>
+              <button @click="approveModerator(m)" class="text-[10px] px-2 py-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 cursor-pointer border-none">批准</button>
+              <button @click="rejectModerator(m)" class="text-[10px] px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 cursor-pointer border-none">驳回</button>
+            </template>
+            <button v-else-if="m.status === 'active'" @click="removeModerator(m)" class="text-[10px] px-2 py-1 rounded bg-orange-500/10 text-orange-400/80 hover:text-orange-400 cursor-pointer border-none">卸任</button>
+            <span v-else class="text-[10px] text-gray-600">{{ modStatusLabel(m.status) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="loading" class="flex items-center justify-center py-16 text-gray-500 text-sm">加载中...</div>
 
     <div v-else-if="error" class="bg-red-900/20 border border-red-800/30 rounded-xl p-4 text-red-400 text-xs">
@@ -129,6 +169,68 @@ const searchQuery = ref('')
 const currentPage = ref(1)
 const stats = ref({ total: 0, pending: 0, pinned: 0, essence: 0 })
 
+// ─── 版主申请审批（COMMUNITY-MODERATOR-01）───
+const moderators = ref<any[]>([])
+const modLoading = ref(false)
+const approveRole = ref<Record<string, string>>({})
+
+async function fetchModerators() {
+  modLoading.value = true
+  try {
+    const res = await fetch('/api/community/admin/moderator/applications', {
+      headers: { 'x-admin-token': getToken() },
+    })
+    const data = await res.json()
+    if (res.ok) {
+      moderators.value = data.applications || []
+      for (const m of moderators.value) approveRole.value[m.id] = approveRole.value[m.id] || 'moderator'
+    }
+  } catch {}
+  finally { modLoading.value = false }
+}
+
+async function approveModerator(m: any) {
+  const role = approveRole.value[m.id] || 'moderator'
+  const res = await fetch(`/api/community/admin/moderator/applications/${m.id}/approve`, {
+    method: 'PATCH',
+    headers: { 'x-admin-token': getToken(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role }),
+  })
+  const data = await res.json()
+  if (data.success) { m.status = 'active'; m.role = role; fetchModerators() }
+  else alert(data.error || '操作失败')
+}
+
+async function rejectModerator(m: any) {
+  if (!confirm(`确定驳回 ${m.nickname} 的版主申请？`)) return
+  const res = await fetch(`/api/community/admin/moderator/applications/${m.id}/reject`, {
+    method: 'PATCH', headers: { 'x-admin-token': getToken() },
+  })
+  const data = await res.json()
+  if (data.success) { m.status = 'rejected'; fetchModerators() }
+}
+
+async function removeModerator(m: any) {
+  if (!confirm(`确定卸任版主 ${m.nickname}？卸任后失去管理权限。`)) return
+  const res = await fetch(`/api/community/admin/moderators/${m.id}/remove`, {
+    method: 'PATCH', headers: { 'x-admin-token': getToken() },
+  })
+  const data = await res.json()
+  if (data.success) { m.status = 'removed'; fetchModerators() }
+}
+
+function modRoleClass(role: string, status: string) {
+  if (status !== 'active') return 'bg-gray-700/30 text-gray-400'
+  return role === 'co_moderator' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'
+}
+function modRoleLabel(role: string, status: string) {
+  if (status === 'active') return role === 'co_moderator' ? '副版主' : '版主'
+  return '申请中'
+}
+function modStatusLabel(status: string) {
+  return { rejected: '已驳回', removed: '已卸任' }[status] || status
+}
+
 async function fetchPosts() {
   loading.value = true; error.value = ''
   try {
@@ -223,5 +325,5 @@ function changePage(p: number) { currentPage.value = p; fetchPosts() }
 watch(statusFilter, () => { currentPage.value = 1; fetchPosts() })
 watch(searchQuery, () => { currentPage.value = 1; fetchPosts() })
 
-onMounted(() => { fetchPosts() })
+onMounted(() => { fetchPosts(); fetchModerators() })
 </script>

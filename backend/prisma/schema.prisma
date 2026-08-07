@@ -3186,6 +3186,25 @@ model CommunityReward {
   @@map("community_rewards")
 }
 
+// COMMUNITY-MODERATOR-01 社区版主体系（掌柜 2026-08-07）：会员申请成为版主/副版主，
+// 管理帖子审核/加精/置顶/删帖。状态机：pending(申请中) → active(在职) / rejected(已驳回) / removed(已卸任)；
+// rejected 可重申（重新置 pending）。role: moderator=版主 / co_moderator=副版主（权限相同，称号区分）。
+// 注意：不声明 Prisma relation（纯 userId 列），避免改动 User 模型；查询时手动关联 User 表。
+model CommunityModerator {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @unique @db.Uuid
+  role       String   @default("moderator") // moderator / co_moderator
+  status     String   @default("pending") // pending / active / rejected / removed
+  applyNote  String?  @default("")
+  approvedBy String? // 审批人（AdminUser 用户名或系统）
+  approvedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([status])
+  @@map("community_moderators")
+}
+
 model StorageConfig {
   id        String   @id @default(uuid()) @db.Uuid
   name      String

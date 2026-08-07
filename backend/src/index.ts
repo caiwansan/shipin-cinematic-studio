@@ -20,6 +20,7 @@ import communityPostRoutes from './routes/community/posts.js'
 import communityCommentRoutes from './routes/community/comments.js'
 import communityLikeRoutes from './routes/community/likes.js'
 import communityTipRoutes from './routes/community/tips.js'
+import communityModeratorRoutes from './routes/community/moderators.js'
 import authRoutes from './routes/auth.js'
 import walletRoutes from './routes/wallet.js'
 import captchaRoutes from './routes/captcha.js'
@@ -392,6 +393,7 @@ await app.register(providerRoutes)
   await app.register(communityCommentRoutes)
   await app.register(communityLikeRoutes)
   await app.register(communityTipRoutes)
+  await app.register(communityModeratorRoutes)
 await app.register(projectV2Routes)
 
   // Narrative LLM routes (LLM 叙事分析)

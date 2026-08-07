@@ -324,41 +324,18 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
     return { posts, pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } }
   })
 
-  // 审核帖子
+  // 审核帖子（站长，AdminUser）——核心逻辑与版主共用 moderation.service
   fastify.patch('/api/community/admin/posts/:id/approve', { preHandler: [adminCheck] }, async (request: any, reply: any) => {
-    const post = await prisma.communityPost.findUnique({
-      where: { id: request.params.id },
-      select: { id: true, category: true, userId: true, status: true },
-    })
-    if (!post) return reply.status(404).send({ error: '帖子不存在' })
-    await prisma.communityPost.update({
-      where: { id: request.params.id },
-      data: { status: 'approved', reviewedBy: request.adminUser?.username || 'admin', reviewedAt: new Date() },
-    })
-    // 首次通过才计入分类计数 + 发放积分（驳回后重新通过的场景不重复计数/奖励）
-    if (post.status !== 'approved') {
-      try {
-        await prisma.communityCategory.updateMany({
-          where: { name: post.category },
-          data: { postCount: { increment: 1 } },
-        })
-      } catch (e) {
-        console.warn('[community-admin] 更新分类计数失败:', e instanceof Error ? e.message : e)
-      }
-      try {
-        const { rewardPostCreation } = await import('../../services/community/community-reward.service.js')
-        await rewardPostCreation(post.userId, post.id)
-      } catch (e) {
-        console.warn('[community-admin] 社区积分奖励失败:', e instanceof Error ? e.message : e)
-      }
-    }
+    const { approvePost } = await import('../../services/community/moderation.service.js')
+    const r = await approvePost(request.params.id, request.adminUser?.username || 'admin')
+    if (!r.ok) return reply.status(404).send({ error: r.error })
     return { success: true }
   })
   fastify.patch('/api/community/admin/posts/:id/reject', { preHandler: [adminCheck] }, async (request: any, reply: any) => {
-    await prisma.communityPost.update({
-      where: { id: request.params.id },
-      data: { status: 'rejected', reviewedBy: request.adminUser?.username || 'admin', reviewedAt: new Date() },
-    })
+    const body = (request.body || {}) as { reason?: string }
+    const { rejectPost } = await import('../../services/community/moderation.service.js')
+    const r = await rejectPost(request.params.id, request.adminUser?.username || 'admin', body.reason?.toString().trim().slice(0, 200) || undefined)
+    if (!r.ok) return reply.status(404).send({ error: r.error })
     return { success: true }
   })
 

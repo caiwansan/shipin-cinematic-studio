@@ -93,7 +93,43 @@
 
         <!-- 右侧：侧边栏（匾额） -->
         <aside class="sidebar">
-          <!-- 置顶帖 -->
+          <!-- 侧边栏：版主入口/申请（COMMUNITY-MODERATOR-01） -->
+        <div class="sidebar-card cn-card mod-card">
+          <div class="cn-plaque sidebar-title">社 区 管 理</div>
+          <template v-if="isLoggedIn">
+            <div v-if="modMe.isModerator" class="mod-card-body">
+              <p class="mod-card-role">👑 {{ modMe.role === 'co_moderator' ? '副版主' : '版主' }}</p>
+              <NuxtLink to="/community/manage" class="cn-seal-btn btn-block">进入管理面板</NuxtLink>
+            </div>
+            <div v-else class="mod-card-body">
+              <p v-if="modMe.status === 'pending'" class="mod-card-tip">⏳ 版主申请审核中，请耐心等待</p>
+              <p v-else-if="modMe.status === 'rejected'" class="mod-card-tip">😔 申请未通过，可重新申请</p>
+              <p v-else-if="modMe.status === 'removed'" class="mod-card-tip">已卸任，暂不能申请</p>
+              <p v-else class="mod-card-tip">会员可申请成为版主，管理帖子审核、加精、置顶、删帖</p>
+              <button v-if="modMe.status !== 'pending' && modMe.status !== 'removed'" class="cn-ink-btn btn-block" @click="applyModerator">
+                {{ modMe.status === 'rejected' ? '重新申请版主' : '申请成为版主' }}
+              </button>
+            </div>
+          </template>
+          <div v-else class="mod-card-body">
+            <p class="mod-card-tip">登录后可申请成为版主，管理帖子审核、加精、置顶、删帖</p>
+            <button class="cn-ink-btn btn-block" @click="showLogin = true">登录后申请</button>
+          </div>
+        </div>
+
+        <!-- 版主列表 -->
+        <div v-if="moderators.length > 0" class="sidebar-card cn-card">
+          <div class="cn-plaque sidebar-title">版 主 团 队</div>
+          <div v-for="m in moderators" :key="m.userId" class="moderator-item">
+            <span class="moderator-avatar">{{ (m.nickname || 'U').charAt(0) }}</span>
+            <span class="moderator-name">{{ m.nickname }}</span>
+            <span class="moderator-role" :class="m.role === 'co_moderator' ? 'moderator-role--co' : ''">
+              {{ m.role === 'co_moderator' ? '副版主' : '版主' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 置顶帖 -->
           <div v-if="sidebar.pinned.length > 0" class="sidebar-card cn-card">
             <div class="cn-plaque sidebar-title">置 顶</div>
             <NuxtLink
@@ -359,7 +395,63 @@ onMounted(() => {
   if (authUserRaw) {
     try { authUser.value = JSON.parse(authUserRaw) } catch {}
   }
+  loadModerators()
+  if (token) loadModMe()
 })
+
+// ─── 版主体系（COMMUNITY-MODERATOR-01）───
+const modMe = ref<any>({ isModerator: false, status: null })
+const moderators = ref<any[]>([])
+const applyMsg = ref('')
+
+async function loadModerators() {
+  try {
+    const res = await fetch(`${apiBase}/api/community/moderators`)
+    const data = await res.json()
+    moderators.value = data.moderators || []
+  } catch {}
+}
+
+async function loadModMe() {
+  const token = getAuthTokenLocal()
+  if (!token) return
+  try {
+    const res = await fetch(`${apiBase}/api/community/moderator/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const data = await res.json()
+    if (res.ok) modMe.value = data
+  } catch {}
+}
+
+function getAuthTokenLocal(): string {
+  try {
+    const { getToken } = require("~/utils/token-cache") as typeof import("~/utils/token-cache")
+    return getToken()
+  } catch { return '' }
+}
+
+async function applyModerator() {
+  const token = getAuthTokenLocal()
+  if (!token) { showLogin.value = true; return }
+  const note = prompt('自荐说明（选填，200字内）：')
+  if (note === null) return
+  try {
+    const res = await fetch(`${apiBase}/api/community/moderator/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ note }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      modMe.value = { ...modMe.value, status: 'pending' }
+      applyMsg.value = '申请已提交，请等待站长审批'
+      alert(applyMsg.value)
+    } else {
+      alert(data.error || '申请失败')
+    }
+  } catch { alert('网络异常，请稍后重试') }
+}
 
 // ─── 登录相关 ───
 const authName = ref('')
@@ -864,4 +956,13 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
 }
 .btn-wechat:disabled, .btn-qq:disabled { opacity: 0.4; cursor: not-allowed; }
 .wechat-icon { font-size: 1.1rem; }
+.mod-card-body { padding: 10px 4px 4px; }
+.mod-card-tip { font-size: 12px; color: var(--cn-ink-soft); margin: 0 0 10px; line-height: 1.6; }
+.mod-card-role { font-size: 14px; color: var(--cn-cobalt); font-weight: 600; margin: 0 0 10px; }
+.btn-block { width: 100%; text-align: center; }
+.moderator-item { display: flex; align-items: center; gap: 8px; padding: 7px 2px; }
+.moderator-avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--cn-cobalt-soft), rgba(95, 168, 190, 0.35)); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.moderator-name { font-size: 13px; color: var(--cn-ink); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.moderator-role { font-size: 10px; padding: 1px 8px; border-radius: 999px; background: rgba(200, 160, 40, 0.15); color: #9a7b1a; }
+.moderator-role--co { background: rgba(95, 168, 190, 0.15); color: var(--cn-cobalt); }
 </style>
