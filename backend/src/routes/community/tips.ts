@@ -118,10 +118,16 @@ export default async function communityTipRoutes(fastify: FastifyInstance) {
     const records = await prisma.giftRecord.findMany({
       where: { postId },
       orderBy: { createdAt: 'desc' },
-      include: {
-        giftProduct: { select: { name: true, iconUrl: true, priceDiamonds: true } },
+      select: {
+        id: true, senderId: true, giftProductId: true, priceDiamonds: true, createdAt: true,
       },
     })
+    // 礼物批量查（不依赖 relation join：历史打赏的礼物可能已物理删除 → 孤儿展示「礼物已下架」）
+    const giftIds = [...new Set(records.map((r) => r.giftProductId))]
+    const gifts = giftIds.length
+      ? await prisma.giftProduct.findMany({ where: { id: { in: giftIds } }, select: { id: true, name: true, iconUrl: true, priceDiamonds: true } })
+      : []
+    const giftMap = new Map(gifts.map((g) => [g.id, g]))
     const senderIds = [...new Set(records.map((r) => r.senderId))]
     const senders = senderIds.length
       ? await prisma.user.findMany({ where: { id: { in: senderIds } }, select: { id: true, username: true, avatarUrl: true } })
@@ -133,14 +139,14 @@ export default async function communityTipRoutes(fastify: FastifyInstance) {
     for (const r of records) {
       const sender = senderMap.get(r.senderId)
       const key = `${r.senderId}:${r.giftProductId}`
-      const g = r.giftProduct
+      const g = giftMap.get(r.giftProductId)
       if (!agg.has(key)) {
         agg.set(key, {
           senderId: r.senderId,
           senderName: sender?.username || '茶客',
           senderAvatar: sender?.avatarUrl || '',
           giftId: r.giftProductId,
-          giftName: g?.name || '礼物',
+          giftName: g?.name || '礼物已下架',
           giftIcon: g?.iconUrl || '',
           priceDiamonds: r.priceDiamonds,
           count: 0,

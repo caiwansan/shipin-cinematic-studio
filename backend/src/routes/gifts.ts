@@ -179,7 +179,10 @@ export default async function giftRoutes(fastify: FastifyInstance) {
         orderBy: { createdAt: 'desc' },
         take: Math.min(Number(limit) || 50, 200),
         skip: Number(offset) || 0,
-        include: { giftProduct: { select: { name: true, iconUrl: true } } },
+        select: {
+          id: true, senderId: true, receiverId: true, giftProductId: true,
+          priceDiamonds: true, coinsAwarded: true, channelId: true, channelType: true, createdAt: true,
+        },
       }),
       prisma.giftRecord.count({ where: { receiverId: userId } }),
     ])
@@ -188,19 +191,28 @@ export default async function giftRoutes(fastify: FastifyInstance) {
       ? await prisma.user.findMany({ where: { id: { in: senderIds } }, select: { id: true, username: true } })
       : []
     const senderMap = new Map(senders.map((s) => [s.id, s.username]))
+    // 礼物批量查（不依赖 relation join：已删礼物 → 展示「礼物已下架」）
+    const giftIds = [...new Set(records.map((r) => r.giftProductId))]
+    const gifts = giftIds.length
+      ? await prisma.giftProduct.findMany({ where: { id: { in: giftIds } }, select: { id: true, name: true, iconUrl: true } })
+      : []
+    const giftMap = new Map(gifts.map((g) => [g.id, g]))
     return {
       success: true,
       data: {
         total,
-        records: records.map((r) => ({
-          id: r.id,
-          giftName: r.giftProduct?.name || '礼物',
-          giftIcon: r.giftProduct?.iconUrl || '',
-          priceDiamonds: r.priceDiamonds,
-          coinsAwarded: r.coinsAwarded,
-          senderName: senderMap.get(r.senderId) || '茶客',
-          createdAt: r.createdAt,
-        })),
+        records: records.map((r) => {
+          const g = giftMap.get(r.giftProductId)
+          return {
+            id: r.id,
+            giftName: g?.name || '礼物已下架',
+            giftIcon: g?.iconUrl || '',
+            priceDiamonds: r.priceDiamonds,
+            coinsAwarded: r.coinsAwarded,
+            senderName: senderMap.get(r.senderId) || '茶客',
+            createdAt: r.createdAt,
+          }
+        }),
       },
     }
   })
@@ -243,6 +255,15 @@ export default async function giftRoutes(fastify: FastifyInstance) {
 
   fastify.delete('/api/admin/gifts/products/:id', { preHandler: [requireAdmin] }, async (request: any, reply: FastifyReply) => {
     const id = request.params.id as string
+    // 防孤儿：已有打赏记录（茶馆/帖子）的礼物禁止物理删除，只能下架（GIFT-ORPHAN-FIX-01）
+    const refCount = await prisma.giftRecord.count({ where: { giftProductId: id } })
+    if (refCount > 0) {
+      return reply.status(409).send({
+        success: false,
+        error: `该礼物已有 ${refCount} 条打赏记录，禁止物理删除；请改为「下架」（isActive=false）保留历史`,
+        code: 'GIFT_HAS_RECORDS',
+      })
+    }
     try {
       await prisma.giftProduct.delete({ where: { id } })
       return { success: true }
