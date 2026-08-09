@@ -726,10 +726,26 @@ export class EnterpriseAgentRuntimeService {
         recordUsage(organizationId, taskType, 'success').catch(() => {});
       }
 
-      // 8. 更新任务状态
-      await prisma.enterpriseAgentTask.update({
+      // 8. 更新任务状态 (upsert — task 记录可能由外部创建，也可能从未创建)
+      await prisma.enterpriseAgentTask.upsert({
         where: { id: taskId },
-        data: {
+        create: {
+          id: taskId,
+          tenantId,
+          organizationId: organizationId || null,
+          agentInstanceId: instance.id,
+          taskType,
+          inputSummary: instruction.slice(0, 200),
+          outputSummary: output.slice(0, 1000),
+          status: 'completed',
+          tokenInput,
+          tokenOutput,
+          cost,
+          durationMs,
+          startedAt: new Date(startTime),
+          completedAt: new Date(),
+        },
+        update: {
           status: 'completed',
           outputSummary: output.slice(0, 1000),
           tokenInput,
@@ -737,7 +753,7 @@ export class EnterpriseAgentRuntimeService {
           cost,
           durationMs,
           completedAt: new Date(),
-        }
+        },
       });
 
       // Timeline: Execution Completed

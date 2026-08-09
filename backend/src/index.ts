@@ -21,6 +21,9 @@ import communityCommentRoutes from './routes/community/comments.js'
 import communityLikeRoutes from './routes/community/likes.js'
 import communityTipRoutes from './routes/community/tips.js'
 import communityModeratorRoutes from './routes/community/moderators.js'
+import communityFavoriteRoutes from './routes/community/favorites.js'
+import communityShareRoutes from './routes/community/shares.js'
+import communityReadTrackingRoutes from './routes/community/read-tracking.js'
 import authRoutes from './routes/auth.js'
 import walletRoutes from './routes/wallet.js'
 import captchaRoutes from './routes/captcha.js'
@@ -44,6 +47,7 @@ import pluginTicketRoutes from './routes/plugin-ticket.js'
 import healthRoutes from './routes/health.js'
 import imRoutes from './routes/im.js'
 import imGroupRoutes from './routes/im-groups.js'
+import imRtcInterpreterRoutes from './routes/im-rtc-interpreter.js'
 import imModerationRoutes from './routes/im-moderation.routes.js'
 import { prisma } from './utils/index.js'
 import siteConfigRoutes from './routes/site-config.js'
@@ -165,6 +169,14 @@ async function main() {
   bootstrapSystemConfig()
   console.log('[startup] ✅ Config Sovereignty Layer initialized')
 
+  // 世界语言池预取：后台下载常用 Vosk 模型（不阻塞启动；zh/en/es/ru 已就位）
+  try {
+    const { prefetchVoskModels } = await import('./services/vosk-model.service.js')
+    prefetchVoskModels(['fr', 'de', 'ja', 'ko', 'pt', 'it', 'ar', 'vi', 'tr', 'nl'])
+  } catch (e: any) {
+    console.warn('[startup] ⚠️ Vosk 语言池预取失败（不影响启动）:', e?.message)
+  }
+
   // 初始化 AI Router 配置（从 RouteConfig 表读取魔数并缓存）
   try {
     console.log('[startup] ✅ AI Router configs loaded from RouteConfig')
@@ -274,6 +286,8 @@ async function main() {
   await app.register(runtimeContextPlugin)
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } })
   await app.register((await import('@fastify/formbody')).default)
+  // 实时同声传译 WebSocket 网关（阶段一 字幕同传）
+  await app.register((await import('@fastify/websocket')).default)
 
   // ⭐ 静态文件服务（托管 public/uploads 下的本地下载图片）
   // 用 __dirname 确定路径（兼容 CJS 和 ESM）
@@ -297,6 +311,7 @@ async function main() {
   await app.register(systemVersionRoutes)
   await app.register(imRoutes)
   await app.register(imGroupRoutes)
+  await app.register(imRtcInterpreterRoutes)
   await app.register(imModerationRoutes)
   await app.register(redPacketRoutes)
   // 启动红包过期退回定时器（24h 未领完自动退回）
@@ -394,6 +409,9 @@ await app.register(providerRoutes)
   await app.register(communityLikeRoutes)
   await app.register(communityTipRoutes)
   await app.register(communityModeratorRoutes)
+  await app.register(communityFavoriteRoutes)
+  await app.register(communityShareRoutes)
+  await app.register(communityReadTrackingRoutes)
 await app.register(projectV2Routes)
 
   // Narrative LLM routes (LLM 叙事分析)
@@ -479,6 +497,8 @@ await app.register(projectV2Routes)
   await app.register((await import('./routes/enterprise-outcome.js')).enterpriseOutcomeRoutes, { prefix: '/api/enterprise/outcomes' })
   // Phase 5-B1 — Resume Center (skeleton: read-only + maintenance gates)
   await app.register((await import('./routes/resume.routes.js')).resumeRoutes, { prefix: '/api' })
+  // Sprint-Resume-Form — 在线简历表单（创建简历 + 提交人才市场）
+  await app.register((await import('./routes/resume-form.routes.js')).resumeFormRoutes)
   // Phase 5-B2 — Pipeline Center (skeleton: read-only + maintenance gates)
   await app.register((await import('./routes/pipeline.routes.js')).pipelineRoutes, { prefix: '/api' })
   // Phase 5-B3 — Interview Center (skeleton: read-only + maintenance gates)
@@ -1148,12 +1168,19 @@ await app.register(projectV2Routes)
   } catch (err) {
     console.warn('[startup] ⚠️ GEO Explain Engine route skipped:', (err as Error).message)
   }
-  // P0-T004 — Optimization Center MVP
+  // P0-T004 — Optimization Center MVP (v1 — brand-specific, kept for backward compat)
   try {
     await app.register(await import('./services/geo/routes/geo-optimization.route.js').then(m => m.default))
-    console.log('[startup] ✅ GEO Optimization route registered at /api/geo/brands/:id/optimizations')
+    console.log('[startup] ✅ GEO Optimization v1 route registered at /api/geo/brands/:id/optimizations')
   } catch (err) {
-    console.warn('[startup] ⚠️ GEO Optimization route skipped:', (err as Error).message)
+    console.warn('[startup] ⚠️ GEO Optimization v1 route skipped:', (err as Error).message)
+  }
+  // P0-T004 — Optimization Center v2 (task queue + batch operations — frontend active)
+  try {
+    await app.register(await import('./services/geo/routes/geo-optimization-v2.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Optimization v2 route registered at /api/geo/optimization/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Optimization v2 route skipped:', (err as Error).message)
   }
   // P0-T005 — AI Presence Engine Route
   try {
@@ -1169,6 +1196,49 @@ await app.register(projectV2Routes)
   } catch (err) {
     console.warn('[startup] ⚠️ GEO Action Plan route skipped:', (err as Error).message)
   }
+  // Frontend path aliases — map frontend paths to backend handlers
+  try {
+    await app.register(await import('./services/geo/routes/geo-frontend-aliases.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Frontend Aliases route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Frontend Aliases route skipped:', (err as Error).message)
+  }
+  // GEO Execution routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-execution.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Execution route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Execution route skipped:', (err as Error).message)
+  }
+  // GEO Showcase routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-showcase.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Showcase route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Showcase route skipped:', (err as Error).message)
+  }
+  // GEO Customer Success routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-customer-success.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Customer Success route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Customer Success route skipped:', (err as Error).message)
+  }
+  // GEO Truth Trace routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-truth-trace.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Truth Trace route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Truth Trace route skipped:', (err as Error).message)
+  }
+  // GEO ROI routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-roi.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO ROI route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO ROI route skipped:', (err as Error).message)
+  }
+
   // Unified Asset Runtime routes — wrapped to avoid tsx @platform alias issue
   try { await app.register(await import('./routes/asset/asset.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset route skipped:', (err as Error).message) }
   try { await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset version route skipped:', (err as Error).message) }
@@ -1341,7 +1411,7 @@ await app.register(projectV2Routes)
   // 初始化 Asset Runtime（Phase 2.5 平台级基础设施）
   try {
     const { assetRuntime } = await import('./services/asset/runtime/asset.runtime.js')
-    await assetRuntime.initialize()
+    await assetRuntime.init()
     console.log('[AssetRuntime] ✅ Unified Asset Runtime initialized')
   } catch (err) {
     console.warn('[AssetRuntime] Failed to initialize:', (err as Error).message)
@@ -1358,7 +1428,7 @@ await app.register(projectV2Routes)
   // 初始化 Semantic Runtime（Phase 3 平台级语义层）
   try {
     const { semanticRuntime } = await import('./services/semantic/runtime/semantic.runtime.js')
-    await semanticRuntime.initialize()
+    await semanticRuntime.init()
     console.log('[SemanticRuntime] ✅ Unified Semantic Runtime initialized')
   } catch (err) {
     console.warn('[SemanticRuntime] Failed to initialize:', (err as Error).message)
@@ -1386,7 +1456,7 @@ await app.register(projectV2Routes)
   // 初始化 Capability Runtime（Phase 6 平台级能力契约层）
   try {
     const { capabilityRuntime } = await import('./services/platform/capability/runtime/capability.runtime.js')
-    await capabilityRuntime.initialize()
+    await capabilityRuntime.init()
 
     // Register routing strategies
     const { capabilityResolver } = await import('./services/platform/capability/resolver/capability-resolver.js')
@@ -1445,7 +1515,7 @@ await app.register(projectV2Routes)
   // 初始化 Goal Runtime（Phase 4 平台级增长执行层）
   try {
     const { goalRuntime } = await import('./services/goal/runtime/goal.runtime.js')
-    await goalRuntime.initialize()
+    await goalRuntime.init()
     console.log('[GoalRuntime] ✅ Goal Runtime initialized')
 
     // Register placeholder action handlers

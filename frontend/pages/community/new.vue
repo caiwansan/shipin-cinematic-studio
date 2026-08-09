@@ -177,7 +177,10 @@ useHead({
     { property: 'og:description', content: '在昆仑镜社区发布新帖子，分享你的 AI 短剧创作经验、技巧或疑问。' },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://aigc.fushtn.com/community/new' },
-    { property: 'og:image', content: 'https://aigc.fushtn.com/logo.png' },
+    { property: 'og:image', content: 'https://aigc.fushtn.com/og-cover.png' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { property: 'og:image:type', content: 'image/png' },
   ],
   link: [
     { rel: 'canonical', href: 'https://aigc.fushtn.com/community/new' },

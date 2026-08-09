@@ -102,31 +102,49 @@ class WriterService {
           }
         }
 
-        // ── 最近5章逐章摘要（近距离上下文） ──
+        // ── 章节笔记（图书馆管理员）— 分层注入策略 ──
         if (project.libraryReaderCache) {
           const readerChapterSummaries = JSON.parse(project.libraryReaderCache) as Array<{ chapterNo: number; title: string; summary: string }>
           if (Array.isArray(readerChapterSummaries) && readerChapterSummaries.length > 0) {
-            const recent = readerChapterSummaries.filter(rc => rc.chapterNo < chapterNo && rc.chapterNo >= chapterNo - 5 && rc.summary)
-            if (recent.length > 0) {
-              parts.push(`【近期章节详细总结（最近5章）】`)
-              for (const rc of recent) {
+            const allNotes = readerChapterSummaries.filter(rc => rc.chapterNo < chapterNo && rc.summary)
+
+            // ① 近距离：最近5章 — 完整章节笔记（~300字）
+            const nearNotes = allNotes.filter(rc => rc.chapterNo >= chapterNo - 5)
+            if (nearNotes.length > 0) {
+              parts.push(`【📄 图书馆管理员 · 近期章节笔记（完整，最近${nearNotes.length}章）】`)
+              for (const rc of nearNotes) {
                 parts.push(`第${rc.chapterNo}章「${rc.title || ''}」：\n${rc.summary}`)
               }
+            }
+
+            // ② 中距离：第6-20章 — 精简版（每条前100字）
+            const midNotes = allNotes.filter(rc => rc.chapterNo < chapterNo - 5 && rc.chapterNo >= chapterNo - 20)
+            if (midNotes.length > 0) {
+              parts.push(`【📄 图书馆管理员 · 前文章节笔记（精简，第${midNotes[0].chapterNo}-${midNotes[midNotes.length - 1].chapterNo}章）】`)
+              for (const rc of midNotes) {
+                const truncated = rc.summary.length > 100 ? rc.summary.slice(0, 100) + '...' : rc.summary
+                parts.push(`第${rc.chapterNo}章「${rc.title || ''}」：${truncated}`)
+              }
+            }
+
+            // ③ 远距离：20章之前 — 只保留章节标题+一句话提示有批次小结覆盖
+            const farNotes = allNotes.filter(rc => rc.chapterNo < chapterNo - 20)
+            if (farNotes.length > 0) {
+              parts.push(`【📄 图书馆管理员 · 远文章节笔记（共${farNotes.length}章，仅标题索引）】`)
+              parts.push(farNotes.map(rc => `第${rc.chapterNo}章「${rc.title || ''}」`).join(' → '))
+              parts.push(`（以上章节的详细笔记已压缩到批次小结中，请参考上方阶段总结）`)
             }
           }
         }
 
         if (parts.length > 0) {
           chapterSummariesStr = parts.join('\n\n')
-          // 日志验证：输出注入的小结层级和最近章节范围
+          // 日志验证：输出注入的章节笔记覆盖范围
           const batchCount = (project.libraryReaderSummaries ? parts.filter(p => p.includes('【阶段总结')).length : 0)
-          const recentChapterNos = parts.length > 0 && parts.some(p => p.includes('近期章节'))
-            ? parts.filter(p => p.includes('第') && p.includes('章「')).map(p => {
-                const m = p.match(/第(\d+)章/)
-                return m ? parseInt(m[1]) : null
-              }).filter(Boolean)
-            : []
-          console.log(`[Writer/Summary] ch${chapterNo}: ${batchCount} batch summaries, recent chapters: [${recentChapterNos.join(',')}], totalChars=${chapterSummariesStr.length}`)
+          const nearLen = parts.filter(p => p.includes('近期章节笔记'))
+          const midLen = parts.filter(p => p.includes('前文章节笔记'))
+          const farLen = parts.filter(p => p.includes('远文章节笔记'))
+          console.log(`[Writer/Summary] ch${chapterNo}: ${batchCount} batch + 章节笔记 near=${nearLen.length > 0 ? '✅' : '❌'} mid=${midLen.length > 0 ? '✅' : '❌'} far=${farLen.length > 0 ? '✅' : '❌'}, totalChars=${chapterSummariesStr.length}`)
         }
       }
     } catch (e: any) {

@@ -20,12 +20,13 @@ const BASE_URL_MAP: Record<string, string> = {
   volcengine: 'https://ark.cn-beijing.volces.com/api/v3',
   openai: 'https://api.openai.com/v1',
   aliyun: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  longcat: 'https://api.longcat.chat/openai/v1',
 }
 
 async function chat(params: ChatParams): Promise<{ text: string }> {
   const { messages, apiKey, model: modelInput } = params
   const provider = params.provider || 'deepseek'
-  const model = modelInput || (provider === 'volcengine' ? 'doubao-seed-2-1-pro-260628' : 'deepseek-v4-flash')
+  const model = modelInput || (provider === 'volcengine' ? 'doubao-seed-2-1-pro-260628' : provider === 'longcat' ? 'LongCat-2.0' : 'deepseek-v4-flash')
   const baseUrl = params.baseUrl || BASE_URL_MAP[provider] || 'https://api.deepseek.com'
   const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`
 

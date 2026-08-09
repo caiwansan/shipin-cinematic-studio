@@ -36,6 +36,7 @@ export function useRtcCall(tea: Tea) {
 
   let pc: RTCPeerConnection | null = null
   let iceServers: RTCIceServer[] = [{ urls: ['stun:stun.l.google.com:19302'] }]
+  const callIdRef = ref('') // 当前通话 callId（同传网关会话维度）
   let callId = ''
   let pendingTimer: ReturnType<typeof setTimeout> | null = null
   let iceWaitTimer: ReturnType<typeof setTimeout> | null = null
@@ -141,6 +142,7 @@ export function useRtcCall(tea: Tea) {
       // 创建临时信令频道并订阅双方（type=4 私有频道，绕开单聊 subscriber 限制）
       const sig = await ensureSignalChannel(targetUid)
       isCaller = true
+      callIdRef.value = callId
       peer.value = { uid: targetUid, name: targetName, avatar: targetAvatar, channelId: sig.channelId, channelType: sig.channelType }
       state.value = 'calling'
       await sendSignal('rtc:call', { mode: m, callerName: ownName, callerAvatar: ownAvatar })
@@ -199,6 +201,7 @@ export function useRtcCall(tea: Tea) {
     setTimeout(closeSignalChannel, 1500)
     incomingOffer = null
     isCaller = false
+    callIdRef.value = ''
     state.value = 'idle'
     peer.value = null
     micMuted.value = false
@@ -236,6 +239,7 @@ export function useRtcCall(tea: Tea) {
         }
         selfUid = tea.userId.value
         callId = param.callId || ''
+        callIdRef.value = callId
         isCaller = false
         mode.value = param.mode === 'video' ? 'video' : 'audio'
         peer.value = { uid: fromUid, name: param.callerName || fromUid, avatar: param.callerAvatar || '', channelId: msg.channel.channelID, channelType: msg.channel.channelType }
@@ -320,6 +324,7 @@ export function useRtcCall(tea: Tea) {
     micMuted: readonly(micMuted),
     camOff: readonly(camOff),
     errorMsg: readonly(errorMsg),
+    callId: readonly(callIdRef),
     init,
     startCall,
     cancelCall,

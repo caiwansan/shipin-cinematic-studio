@@ -213,11 +213,18 @@
           </div>
         </Transition>
 
-        <!-- 推荐标题 -->
-        <div class="job-recommend-header">
-          <h4>🎯 推荐岗位 <span v-if="recommendations.length > 0" class="badge">{{ recommendations.length }}</span></h4>
+        <!-- 右栏 Tab 切换 -->
+        <div class="job-recommend-tabs">
+          <button class="job-tab-btn" :class="{ active: rightPanelTab === 'recommend' }" @click="rightPanelTab = 'recommend'">
+            🎯 推荐岗位 <span v-if="recommendations.length > 0" class="tab-badge">{{ recommendations.length }}</span>
+          </button>
+          <button class="job-tab-btn" :class="{ active: rightPanelTab === 'resume' }" @click="switchToResumeTab()">
+            📝 我的简历
+          </button>
         </div>
-        <!-- 推荐内容：画像 + 建议 + 岗位 -->
+
+        <!-- 推荐岗位内容 -->
+        <div v-if="rightPanelTab === 'recommend'">
         <div class="job-recommend-scroll">
           <!-- 空状态 -->
           <div v-if="recommendations.length === 0 && !isComplete" class="job-empty-state">
@@ -385,6 +392,205 @@
             </div>
           </div>
         </div> <!-- end job-recommend-scroll -->
+        </div> <!-- end v-if recommend -->
+
+        <!-- 我的简历 Tab -->
+        <div v-if="rightPanelTab === 'resume'" class="resume-form-panel">
+          <div class="resume-form-scroll">
+            <!-- 加载中 -->
+            <div v-if="resumeLoading" class="resume-loading">加载中...</div>
+
+            <!-- 成功提示 -->
+            <div v-else-if="resumeSubmitSuccess" class="resume-success">
+              <div class="resume-success-icon">✅</div>
+              <h3>简历已提交</h3>
+              <p>{{ resumeSubmitMessage }}</p>
+              <p class="resume-success-hint">完成度评分：<strong>{{ resumeCompletionScore }}分</strong></p>
+              <button class="resume-success-btn" @click="resetResumeForm">继续完善</button>
+            </div>
+
+            <!-- 表单 -->
+            <div v-else class="resume-form-content">
+              <div class="resume-form-intro">
+                <p>填写简历，一键提交到人才市场</p>
+              </div>
+
+              <!-- 基本信息 -->
+              <div class="resume-section">
+                <div class="resume-section-title">👤 基本信息</div>
+                <div class="resume-form-row">
+                  <label class="resume-label">姓名 <span class="required">*</span></label>
+                  <input v-model="resumeForm.fullName" type="text" placeholder="请输入姓名" class="resume-input" />
+                </div>
+                <div class="resume-form-row resume-form-row-2">
+                  <div>
+                    <label class="resume-label">邮箱</label>
+                    <input v-model="resumeForm.email" type="email" placeholder="example@mail.com" class="resume-input" />
+                  </div>
+                  <div>
+                    <label class="resume-label">电话</label>
+                    <input v-model="resumeForm.phone" type="tel" placeholder="13800138000" class="resume-input" />
+                  </div>
+                </div>
+                <div class="resume-form-row resume-form-row-2">
+                  <div>
+                    <label class="resume-label">所在城市</label>
+                    <input v-model="resumeForm.city" type="text" placeholder="如：北京" class="resume-input" />
+                  </div>
+                  <div>
+                    <label class="resume-label">工作年限</label>
+                    <input v-model.number="resumeForm.yearsExperience" type="number" min="0" max="50" placeholder="3" class="resume-input" />
+                  </div>
+                </div>
+                <div class="resume-form-row">
+                  <label class="resume-label">一句话介绍</label>
+                  <input v-model="resumeForm.headline" type="text" placeholder="如：3年Python开发经验，专注AI应用" class="resume-input" />
+                </div>
+              </div>
+
+              <!-- 期望 -->
+              <div class="resume-section">
+                <div class="resume-section-title">🎯 求职期望</div>
+                <div class="resume-form-row">
+                  <label class="resume-label">期望职位</label>
+                  <input v-model="resumeForm.careerGoal" type="text" placeholder="如：AI应用工程师" class="resume-input" />
+                </div>
+                <div class="resume-form-row resume-form-row-2">
+                  <div>
+                    <label class="resume-label">期望薪资（最低K）</label>
+                    <input v-model.number="resumeForm.expectedSalaryMin" type="number" min="0" placeholder="15" class="resume-input" />
+                  </div>
+                  <div>
+                    <label class="resume-label">期望薪资（最高K）</label>
+                    <input v-model.number="resumeForm.expectedSalaryMax" type="number" min="0" placeholder="25" class="resume-input" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- 教育经历 -->
+              <div class="resume-section">
+                <div class="resume-section-title">
+                  🎓 教育经历
+                  <button class="resume-add-btn" @click="addEducation">+ 添加</button>
+                </div>
+                <div v-for="(edu, idx) in resumeForm.educations" :key="idx" class="resume-card-item">
+                  <div class="resume-card-header">
+                    <span>教育经历 {{ idx + 1 }}</span>
+                    <button class="resume-remove-btn" @click="removeEducation(idx)">✕</button>
+                  </div>
+                  <div class="resume-form-row">
+                    <label class="resume-label">学校 <span class="required">*</span></label>
+                    <input v-model="edu.school" type="text" placeholder="如：北京大学" class="resume-input" />
+                  </div>
+                  <div class="resume-form-row resume-form-row-2">
+                    <div>
+                      <label class="resume-label">学历</label>
+                      <select v-model="edu.degree" class="resume-input">
+                        <option value="">请选择</option>
+                        <option value="高中">高中</option>
+                        <option value="大专">大专</option>
+                        <option value="本科">本科</option>
+                        <option value="硕士">硕士</option>
+                        <option value="博士">博士</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="resume-label">专业</label>
+                      <input v-model="edu.major" type="text" placeholder="如：计算机科学" class="resume-input" />
+                    </div>
+                  </div>
+                  <div class="resume-form-row resume-form-row-2">
+                    <div>
+                      <label class="resume-label">开始年份</label>
+                      <input v-model="edu.startDate" type="text" placeholder="如：2018-09" class="resume-input" />
+                    </div>
+                    <div>
+                      <label class="resume-label">结束年份</label>
+                      <input v-model="edu.endDate" type="text" placeholder="如：2022-06" class="resume-input" />
+                    </div>
+                  </div>
+                </div>
+                <div v-if="resumeForm.educations.length === 0" class="resume-empty-tip">请至少添加一条教育经历</div>
+              </div>
+
+              <!-- 工作经历 -->
+              <div class="resume-section">
+                <div class="resume-section-title">
+                  💼 工作经历
+                  <button class="resume-add-btn" @click="addExperience">+ 添加</button>
+                </div>
+                <div v-for="(exp, idx) in resumeForm.experiences" :key="idx" class="resume-card-item">
+                  <div class="resume-card-header">
+                    <span>工作经历 {{ idx + 1 }}</span>
+                    <button class="resume-remove-btn" @click="removeExperience(idx)">✕</button>
+                  </div>
+                  <div class="resume-form-row resume-form-row-2">
+                    <div>
+                      <label class="resume-label">公司 <span class="required">*</span></label>
+                      <input v-model="exp.company" type="text" placeholder="如：字节跳动" class="resume-input" />
+                    </div>
+                    <div>
+                      <label class="resume-label">职位 <span class="required">*</span></label>
+                      <input v-model="exp.title" type="text" placeholder="如：Python工程师" class="resume-input" />
+                    </div>
+                  </div>
+                  <div class="resume-form-row resume-form-row-2">
+                    <div>
+                      <label class="resume-label">开始日期</label>
+                      <input v-model="exp.startDate" type="text" placeholder="如：2022-07" class="resume-input" />
+                    </div>
+                    <div>
+                      <label class="resume-label">结束日期</label>
+                      <input v-model="exp.endDate" type="text" placeholder="至今" class="resume-input" />
+                    </div>
+                  </div>
+                  <div class="resume-form-row">
+                    <label class="resume-label">在职状态</label>
+                    <label class="resume-checkbox-label">
+                      <input v-model="exp.isCurrent" type="checkbox" class="resume-checkbox" />
+                      至今仍在职
+                    </label>
+                  </div>
+                  <div class="resume-form-row">
+                    <label class="resume-label">工作描述</label>
+                    <textarea v-model="exp.description" placeholder="描述你的主要工作内容、项目成果..." class="resume-textarea" rows="3"></textarea>
+                  </div>
+                </div>
+                <div v-if="resumeForm.experiences.length === 0" class="resume-empty-tip">暂无工作经历（应届生可跳过）</div>
+              </div>
+
+              <!-- 技能 -->
+              <div class="resume-section">
+                <div class="resume-section-title">💡 技能标签</div>
+                <div class="resume-form-row">
+                  <label class="resume-label">技能（用逗号分隔）</label>
+                  <input
+                    v-model="skillInputStr"
+                    type="text"
+                    placeholder="如：Python, 数据分析, 机器学习, Docker"
+                    class="resume-input"
+                    @blur="updateSkillsFromInput"
+                  />
+                </div>
+                <div class="resume-skills-preview" v-if="resumeForm.skills.length > 0">
+                  <span v-for="(skill, idx) in resumeForm.skills" :key="idx" class="resume-skill-tag">
+                    {{ skill }}
+                    <button class="skill-remove" @click="removeSkill(idx)">✕</button>
+                  </span>
+                </div>
+              </div>
+
+              <!-- 提交 -->
+              <div class="resume-submit-area">
+                <div v-if="resumeSubmitError" class="resume-error-msg">{{ resumeSubmitError }}</div>
+                <button class="resume-submit-btn" @click="submitResumeForm" :disabled="resumeSubmitting">
+                  {{ resumeSubmitting ? '提交中...' : '📤 提交简历到人才市场' }}
+                </button>
+                <p class="resume-submit-hint">提交后你的简历将对企业招聘方可见</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -600,6 +806,124 @@ function clearChat() {
 const showProfileCenter = ref(false)
 
 const profileCenter = ref<any>(null)
+
+// 右栏 Tab
+const rightPanelTab = ref<'recommend' | 'resume'>('recommend')
+
+// ─── 在线简历表单 ──-
+const resumeLoading = ref(false)
+const resumeSubmitting = ref(false)
+const resumeSubmitSuccess = ref(false)
+const resumeSubmitMessage = ref('')
+const resumeCompletionScore = ref(0)
+const resumeSubmitError = ref('')
+const skillInputStr = ref('')
+
+const resumeForm = ref({
+  fullName: '',
+  email: '',
+  phone: '',
+  city: '',
+  headline: '',
+  bio: '',
+  careerDirection: '',
+  industry: '',
+  yearsExperience: 0,
+  currentLevel: '',
+  careerGoal: '',
+  expectedSalaryMin: 0,
+  expectedSalaryMax: 0,
+  educations: [{ school: '', degree: '', major: '', startDate: '', endDate: '' }],
+  experiences: [{ company: '', title: '', startDate: '', endDate: '', isCurrent: false, description: '' }],
+  skills: [] as string[],
+})
+
+function addEducation() {
+  resumeForm.value.educations.push({ school: '', degree: '', major: '', startDate: '', endDate: '' })
+}
+function removeEducation(idx: number) {
+  resumeForm.value.educations.splice(idx, 1)
+}
+function addExperience() {
+  resumeForm.value.experiences.push({ company: '', title: '', startDate: '', endDate: '', isCurrent: false, description: '' })
+}
+function removeExperience(idx: number) {
+  resumeForm.value.experiences.splice(idx, 1)
+}
+function removeSkill(idx: number) {
+  resumeForm.value.skills.splice(idx, 1)
+}
+function updateSkillsFromInput() {
+  const raw = skillInputStr.value.trim()
+  if (!raw) return
+  const skills = raw.split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean)
+  resumeForm.value.skills = [...new Set([...resumeForm.value.skills, ...skills])]
+  skillInputStr.value = ''
+}
+
+async function switchToResumeTab() {
+  rightPanelTab.value = 'resume'
+  resumeLoading.value = true
+  try {
+    const { getResumeFormData } = await import('~/studio-v2/api/job/candidate-api')
+    const result = await getResumeFormData()
+    if (result.hasProfile && result.data) {
+      const d = result.data
+      resumeForm.value = {
+        fullName: d.fullName || '',
+        email: d.email || '',
+        phone: d.phone || '',
+        city: d.city || '',
+        headline: d.headline || '',
+        bio: d.bio || '',
+        careerDirection: d.careerDirection || '',
+        industry: d.industry || '',
+        yearsExperience: d.yearsExperience || 0,
+        currentLevel: d.currentLevel || '',
+        careerGoal: d.careerGoal || '',
+        expectedSalaryMin: d.expectedSalaryMin || 0,
+        expectedSalaryMax: d.expectedSalaryMax || 0,
+        educations: d.educations?.length ? d.educations : [{ school: '', degree: '', major: '', startDate: '', endDate: '' }],
+        experiences: d.experiences?.length ? d.experiences : [{ company: '', title: '', startDate: '', endDate: '', isCurrent: false, description: '' }],
+        skills: d.skills || [],
+      }
+    }
+  } catch (e) {
+    // 无历史数据时保持空表单
+  } finally {
+    resumeLoading.value = false
+  }
+}
+
+async function submitResumeForm() {
+  resumeSubmitError.value = ''
+  if (!resumeForm.value.fullName.trim()) {
+    resumeSubmitError.value = '请填写姓名'
+    return
+  }
+  resumeSubmitting.value = true
+  try {
+    const { createResumeFromForm } = await import('~/studio-v2/api/job/candidate-api')
+    const result = await createResumeFromForm(resumeForm.value)
+    if (result.success) {
+      resumeSubmitSuccess.value = true
+      resumeSubmitMessage.value = result.message || '简历已创建并提交到人才市场'
+      resumeCompletionScore.value = result.completionScore || 0
+    } else {
+      resumeSubmitError.value = result.message || '提交失败，请重试'
+    }
+  } catch (e: any) {
+    resumeSubmitError.value = e.message || '提交失败，请重试'
+  } finally {
+    resumeSubmitting.value = false
+  }
+}
+
+function resetResumeForm() {
+  resumeSubmitSuccess.value = false
+  resumeSubmitMessage.value = ''
+  resumeCompletionScore.value = 0
+}
 
 // 职业画像
 const profile = ref<any>({})
@@ -1959,6 +2283,293 @@ onUnmounted(() => {
 
 /* 推荐岗位 */
 /* 推荐标题 */
+.job-recommend-tabs {
+  display: flex;
+  padding: 8px 12px 0;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.job-tab-btn {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.job-tab-btn:hover {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.7);
+}
+.job-tab-btn.active {
+  background: rgba(201, 168, 108, 0.12);
+  border-color: rgba(201, 168, 108, 0.3);
+  color: #c9a86c;
+  font-weight: 600;
+}
+.tab-badge {
+  display: inline-block;
+  background: rgba(201, 168, 108, 0.25);
+  color: #c9a86c;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+
+/* ─── 简历表单 ─── */
+.resume-form-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.resume-form-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.resume-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.9rem;
+}
+.resume-form-intro {
+  text-align: center;
+  padding: 8px 0 16px;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.82rem;
+}
+.resume-section {
+  margin-bottom: 20px;
+  padding: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+.resume-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 12px;
+}
+.resume-form-row {
+  margin-bottom: 10px;
+}
+.resume-form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.resume-label {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 4px;
+}
+.required {
+  color: #e57373;
+}
+.resume-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.9);
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.resume-input:focus {
+  border-color: rgba(201, 168, 108, 0.5);
+}
+.resume-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.9);
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+.resume-textarea:focus {
+  border-color: rgba(201, 168, 108, 0.5);
+}
+.resume-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+}
+.resume-checkbox {
+  accent-color: #c9a86c;
+}
+.resume-card-item {
+  padding: 12px;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+}
+.resume-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 8px;
+}
+.resume-add-btn {
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  background: rgba(201, 168, 108, 0.15);
+  border: 1px solid rgba(201, 168, 108, 0.3);
+  border-radius: 5px;
+  color: #c9a86c;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.resume-add-btn:hover {
+  background: rgba(201, 168, 108, 0.25);
+}
+.resume-remove-btn {
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  background: rgba(229, 115, 115, 0.1);
+  border: 1px solid rgba(229, 115, 115, 0.2);
+  border-radius: 4px;
+  color: #e57373;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.resume-remove-btn:hover {
+  background: rgba(229, 115, 115, 0.2);
+}
+.resume-empty-tip {
+  text-align: center;
+  padding: 12px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.3);
+}
+.resume-skills-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.resume-skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  background: rgba(201, 168, 108, 0.12);
+  border: 1px solid rgba(201, 168, 108, 0.25);
+  border-radius: 12px;
+  color: #c9a86c;
+}
+.skill-remove {
+  background: none;
+  border: none;
+  color: rgba(201, 168, 108, 0.5);
+  cursor: pointer;
+  font-size: 0.65rem;
+  padding: 0;
+}
+.skill-remove:hover {
+  color: #e57373;
+}
+.resume-submit-area {
+  padding: 16px 0 20px;
+  text-align: center;
+}
+.resume-submit-btn {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #c9a86c 0%, #a08050 100%);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.resume-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(201, 168, 108, 0.3);
+}
+.resume-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.resume-submit-hint {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.3);
+}
+.resume-error-msg {
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+  background: rgba(229, 115, 115, 0.1);
+  border: 1px solid rgba(229, 115, 115, 0.25);
+  border-radius: 6px;
+  color: #e57373;
+}
+.resume-success {
+  text-align: center;
+  padding: 40px 20px;
+}
+.resume-success-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+.resume-success h3 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  color: rgba(255,255,255,0.9);
+}
+.resume-success p {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.6);
+}
+.resume-success-hint {
+  margin: 12px 0 20px !important;
+}
+.resume-success-btn {
+  padding: 8px 20px;
+  font-size: 0.82rem;
+  background: rgba(201, 168, 108, 0.15);
+  border: 1px solid rgba(201, 168, 108, 0.3);
+  border-radius: 6px;
+  color: #c9a86c;
+  cursor: pointer;
+}
+.resume-success-btn:hover {
+  background: rgba(201, 168, 108, 0.25);
+}
+
 .job-recommend-header {
   padding: 12px 16px;
   border-bottom: 1px solid rgba(255,255,255,0.06);

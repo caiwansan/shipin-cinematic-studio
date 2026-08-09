@@ -57,8 +57,10 @@
             <div class="post-meta">
               <span class="meta-author" itemprop="author">👤 {{ post.user?.username || '匿名' }}</span>
               <span>👁️ {{ post.viewCount }}</span>
-              <span>👍 {{ post.likeCount }}</span>
+              <span class="meta-action" :class="{ 'meta-action-on': viewerState.liked }" @click="toggleLike">👍 {{ post.likeCount }}</span>
               <span>💬 {{ post.commentCount }}</span>
+              <span class="meta-action" :class="{ 'meta-action-on': viewerState.favorited }" @click="toggleFavorite">🔖 {{ post.favoriteCount }}</span>
+              <span class="meta-action" :class="{ 'meta-action-on': viewerState.shared }" @click="sharePost">↗️ {{ post.shareCount }}</span>
               <span class="meta-time">
                 <time itemprop="datePublished" :datetime="post.createdAt">{{ formatTime(post.createdAt) }}</time>
               </span>
@@ -75,6 +77,9 @@
               <button class="mod-act-btn mod-act-del" :disabled="modActionBusy" @click="modAction('delete')">🗑️ 删帖</button>
             </div>
           </div>
+
+          <!-- COMMUNITY-ENGAGEMENT-01 转发提示 -->
+          <div v-if="shareTip" class="share-tip">✅ {{ shareTip }}</div>
 
           <div class="post-content" itemprop="articleBody" v-html="renderMarkdown(post.content)" />
 
@@ -240,12 +245,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAsyncData } from '#app'
 import { renderMarkdown, stripMarkdown } from '~/utils/markdown'
+import { useReadTracking } from '~/composables/useReadTracking'
 
 // SSR 端直连后端（/api/* 是外部 4002 服务）；客户端用相对路径走 nginx
 const apiBase = import.meta.server ? (process.env.BACKEND_URL || 'http://127.0.0.1:4002') : ''
 
 const route = useRoute()
 const router = useRouter()
+// 完读率埋点：离开/切走/滚到底时上报阅读会话（阶段一仅采集，不影响排序）
+useReadTracking(route.params.id as string | undefined)
 const isLoggedIn = ref(false)
 const isModerator = ref(false)
 const modActionBusy = ref(false)
@@ -256,6 +264,91 @@ const commentContent = ref('')
 const replyContent = ref('')
 const replyToId = ref<string | null>(null)
 const submitting = ref(false)
+
+// ─── COMMUNITY-ENGAGEMENT-01 点赞/收藏/转发状态 ───
+const viewerState = ref<{ liked: boolean; favorited: boolean; shared: boolean }>({ liked: false, favorited: false, shared: false })
+const interactionBusy = ref(false)
+const shareTip = ref('')
+
+function requireLogin(): boolean {
+  if (isLoggedIn.value) return true
+  showLogin.value = true
+  return false
+}
+
+async function toggleLike() {
+  if (!requireLogin()) return
+  if (interactionBusy.value) return
+  interactionBusy.value = true
+  try {
+    const token = window.localStorage?.getItem('auth_token') || ''
+    const res = await fetch('/api/community/likes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ postId: route.params.id }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || '操作失败')
+    viewerState.value.liked = data.liked
+    post.value!.likeCount = Math.max(0, (post.value!.likeCount || 0) + (data.liked ? 1 : -1))
+  } catch (e: any) {
+    alert(e.message || '点赞失败')
+  } finally {
+    interactionBusy.value = false
+  }
+}
+
+async function toggleFavorite() {
+  if (!requireLogin()) return
+  if (interactionBusy.value) return
+  interactionBusy.value = true
+  try {
+    const token = window.localStorage?.getItem('auth_token') || ''
+    const res = await fetch('/api/community/favorites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ postId: route.params.id }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || '操作失败')
+    viewerState.value.favorited = data.favorited
+    post.value!.favoriteCount = Math.max(0, (post.value!.favoriteCount || 0) + (data.favorited ? 1 : -1))
+  } catch (e: any) {
+    alert(e.message || '收藏失败')
+  } finally {
+    interactionBusy.value = false
+  }
+}
+
+async function sharePost() {
+  if (!requireLogin()) return
+  if (interactionBusy.value) return
+  interactionBusy.value = true
+  try {
+    const token = window.localStorage?.getItem('auth_token') || ''
+    const res = await fetch('/api/community/shares', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ postId: route.params.id }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || '操作失败')
+    if (!viewerState.value.shared) {
+      viewerState.value.shared = true
+      post.value!.shareCount = (post.value!.shareCount || 0) + 1
+    }
+    shareTip.value = '已记录转发，复制链接分享给朋友吧！'
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      shareTip.value = '链接已复制，快去分享给朋友吧！'
+    } catch { /* 剪贴板不可用则仅提示 */ }
+    setTimeout(() => { shareTip.value = '' }, 3000)
+  } catch (e: any) {
+    alert(e.message || '转发失败')
+  } finally {
+    interactionBusy.value = false
+  }
+}
 
 // ─── COMMUNITY-TIP-01 打赏状态 ───
 const tipModalOpen = ref(false)
@@ -381,15 +474,31 @@ const postDescription = computed(() => {
   return text.length > 160 ? text.substring(0, 160) + '...' : text
 })
 
+const DEFAULT_OG_IMAGE = 'https://aigc.fushtn.com/og-cover.png'
+
+// 判断是否为绝对 URL（社交爬虫要求完整地址）
+const isAbsoluteUrl = (u: string) => /^https?:\/\//.test(u)
+
+// 图片尺寸足够大才能用于分享卡片（微信/QQ 要求 ≥300x300）
+const isLargeEnough = (url: string) => {
+  const m = url.match(/\.(jpe?g|png|webp)(\?.*)?$/i)
+  return !!m // 静态图片资源视为可分享；无法预知尺寸时交给平台抓取
+}
+
 const postImageUrl = computed(() => {
-  if (!post.value?.mediaJson) return 'https://aigc.fushtn.com/logo.png'
-  try {
-    const media = JSON.parse(post.value.mediaJson)
-    if (Array.isArray(media) && media.length > 0 && media[0].type === 'image') {
-      return media[0].url
-    }
-  } catch {}
-  return 'https://aigc.fushtn.com/logo.png'
+  if (post.value?.mediaJson) {
+    try {
+      const media = JSON.parse(post.value.mediaJson)
+      if (Array.isArray(media) && media.length > 0 && media[0]?.type === 'image' && typeof media[0].url === 'string') {
+        const u = media[0].url.trim()
+        if (u) {
+          if (isAbsoluteUrl(u) && isLargeEnough(u)) return u
+          if (u.startsWith('/')) return `https://aigc.fushtn.com${u}`
+        }
+      }
+    } catch {}
+  }
+  return DEFAULT_OG_IMAGE
 })
 
 const postUrl = computed(() => `https://aigc.fushtn.com/community/post/${route.params.id}`)
@@ -420,6 +529,9 @@ useHead({
     { property: 'og:type', content: 'article' },
     { property: 'og:url', content: postUrl },
     { property: 'og:image', content: postImageUrl },
+    { property: 'og:image:width', content: postImageUrl.value === DEFAULT_OG_IMAGE ? '1200' : undefined },
+    { property: 'og:image:height', content: postImageUrl.value === DEFAULT_OG_IMAGE ? '630' : undefined },
+    { property: 'og:image:type', content: postImageUrl.value === DEFAULT_OG_IMAGE ? 'image/png' : undefined },
     { property: 'og:site_name', content: '昆仑镜' },
     { property: 'og:locale', content: 'zh_CN' },
     { property: 'article:published_time', content: post.value?.createdAt || '' },
@@ -447,6 +559,7 @@ useHead({
         description: postDescription.value,
         image: postImageUrl.value,
         thumbnailUrl: postImageUrl.value,
+        image: postImageUrl.value,
         keywords: postKeywords.value,
         inLanguage: 'zh-CN',
         isAccessibleForFree: true,
@@ -464,7 +577,7 @@ useHead({
           url: 'https://aigc.fushtn.com/',
           logo: {
             '@type': 'ImageObject',
-            url: 'https://aigc.fushtn.com/logo.png',
+            url: postImageUrl.value,
           },
           sameAs: [
             'https://aigc.fushtn.com/',
@@ -736,6 +849,10 @@ onMounted(() => {
     const authUserRaw = window.localStorage?.getItem('auth_user')
     if (authUserRaw) { try { authUser.value = JSON.parse(authUserRaw) } catch {} }
   } catch {}
+  // COMMUNITY-ENGAGEMENT-01 初始化交互状态（SSR 带 token 时后端已返回 viewerState）
+  if (post.value?.viewerState) {
+    viewerState.value = { ...viewerState.value, ...post.value.viewerState }
+  }
   loadTips()
   loadModMe()
 })
@@ -881,6 +998,31 @@ onMounted(() => {
 }
 .meta-author { color: var(--cn-cobalt); font-family: var(--cn-serif); }
 .meta-time { margin-left: auto; }
+/* COMMUNITY-ENGAGEMENT-01 点赞/收藏/转发可交互 */
+.meta-action {
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  user-select: none;
+}
+.meta-action:hover { border-color: var(--cn-ink-line, #d8d0c0); background: rgba(255, 255, 255, 0.6); }
+.meta-action-on {
+  color: var(--cn-cobalt, #3b5b92);
+  font-weight: 600;
+  border-color: rgba(59, 91, 146, 0.35);
+  background: rgba(59, 91, 146, 0.08);
+}
+.share-tip {
+  margin: 10px 0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  background: rgba(46, 125, 50, 0.1);
+  color: #2e7d32;
+  border: 1px solid rgba(46, 125, 50, 0.25);
+}
 .mod-actions {
   display: flex; align-items: center; gap: 8px; margin-top: 10px;
   padding: 8px 12px; border: 1px dashed var(--cn-red, #c0392b); border-radius: 8px;

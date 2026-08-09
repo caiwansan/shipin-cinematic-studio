@@ -39,9 +39,11 @@ export { useLibraryReader, LrPhase, SummaryLevel, ChapterSummaryItem, BatchSumma
 export { mobileToken, mobileAuthFetch, mobileToast, fmtMoney } from '../composables/useMobileApi';
 export { useNodeControl, RetryNodeResult, PatchNodeResult } from '../composables/useNodeControl';
 export { usePipeline, GraphNode } from '../composables/usePipeline';
+export { useReadTracking } from '../composables/useReadTracking';
 export { useRegions, Region, RegionWithChildren } from '../composables/useRegions';
 export { useReplayFrame } from '../composables/useReplayFrame';
 export { useRtcCall, RtcMode, RtcState } from '../composables/useRtcCall';
+export { LANG_GROUPS, LANG_OPTIONS, useRtcInterpreter, InterpSubtitle, InterpState, InterpAudioMsg, InterpLangOption, InterpDiagnostic } from '../composables/useRtcInterpreter';
 export { useSSEStream } from '../composables/useSSEStream';
 export { useToastState, toastSuccess, toastWarning, toastError, toastInfo, toastEngineCompleted, toastEngineQueued, toastEngineFailed, ToastMessage } from '../composables/useToast';
 export { authFetch } from '../utils/auth-fetch';

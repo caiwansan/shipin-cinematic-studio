@@ -158,13 +158,28 @@ export const LANG_GROUPS: { label: string; options: InterpLangOption[] }[] = [
 export const LANG_OPTIONS: InterpLangOption[] = LANG_GROUPS.flatMap((g) => g.options)
 
 // VAD 参数
-const VAD_THRESHOLD = 0.010 // RMS 活跃阈值
+const VAD_THRESHOLD = 0.003 // RMS 活跃阈值（移动端低增益环境，原 0.010 过高）
+const VAD_MIN_THRESHOLD = 0.001 // 阈值下限（防噪音误触发）
+const VAD_GAIN = 4.0 // 移动端麦克风增益补偿（RMS<0.005 时自动×4）
 const SILENCE_MS = 1200 // 静音超时 → 切句提交
 const MAX_SENTENCE_MS = 10000 // 最长句 → 强制提交
 const MIN_SENTENCE_MS = 400 // 最短句（过短丢弃）
-const PARTIAL_INTERVAL_MS = 200 // partial 增量帧间隔（流式 ASR 需要持续喂帧，毫秒级跟读）
+const PARTIAL_INTERVAL_MS = 200 // partial 增量帧间隔
 const TARGET_RATE = 16000
-const SOURCE_RATE = 48000
+// SOURCE_RATE 不再硬编码：AudioContext.sampleRate 随设备变化（48k/44.1k/…），
+// 降采样必须动态计算（旧实现硬编码 48k→/3，44.1k 设备下数据变 14.7k 冒充 16k → vosk 转写噪音/空 → 无字幕）
+
+export interface InterpDiagnostic {
+  ctxState: string
+  audioFrames: number
+  samplesCaptured: number
+  samplesSent: number
+  wsState: string
+  rmsLevel: number
+  vadThreshold: number
+  lastError: string
+  uptime: number
+}
 
 export function useRtcInterpreter() {
   const state = ref<InterpState>('off')
@@ -172,14 +187,23 @@ export function useRtcInterpreter() {
   const errorMsg = ref('')
   const audioEnabled = ref(true) // 语音同传开关（关 = 仅字幕）
   const speaking = ref(false) // 是否正在播放对端语音
+  const diagnostic = ref<InterpDiagnostic>({ ctxState: '-', audioFrames: 0, samplesCaptured: 0, samplesSent: 0, wsState: '-', rmsLevel: 0, vadThreshold: VAD_THRESHOLD, lastError: '', uptime: 0 })
+  let _diagTimer: ReturnType<typeof setInterval> | null = null
+  let _startTs = 0
+  // VAD 自适应：前 2s 测环境底噪，阈值 = max(默认, 底噪×3)
+  let _rmsHistory: number[] = []
+  let _vadCalibrated = false
+  let _autoGain = 1.0 // 自动增益（移动端麦克风增益补偿）
 
   let ws: WebSocket | null = null
   let audioCtx: AudioContext | null = null
+  let downsampleRatio = 3 // 动态：audioCtx.sampleRate / TARGET_RATE（start 时计算）
   let processor: ScriptProcessorNode | null = null
   let sourceNode: MediaStreamAudioSourceNode | null = null
   let clonedTrack: MediaStreamTrack | null = null
   let stream: MediaStream | null = null
   let alive = false // 会话级开关（stop 后拒绝一切回调）
+  let _frameQueue: Uint8Array[] = [] // WS 未就绪时缓存的音频帧
 
   // 语音播放：打断式（新句到达 → 停旧句、清队列）；同句分段按序播
   let currentAudio: HTMLAudioElement | null = null
@@ -264,8 +288,11 @@ export function useRtcInterpreter() {
   function submit(kind: 1 | 2) {
     if (!alive || !ws || ws.readyState !== 1) return
     if (sentenceSamples === 0) return
-    const ms = Math.round((sentenceSamples / TARGET_RATE) * 1000)
-    if (ms < MIN_SENTENCE_MS) { resetSentence(); return }
+    // 最短句检查只对 final 生效；partial 增量无最低时长限制
+    if (kind === 2) {
+      const msTotal = Math.round((sentenceSamples / TARGET_RATE) * 1000)
+      if (msTotal < MIN_SENTENCE_MS) { resetSentence(); return }
+    }
     // 未发送部分（final 全量；partial 增量）
     const startIdx = kind === 2 ? 0 : Math.min(sentSamples, sentenceSamples)
     const chunks = sentence
@@ -283,7 +310,15 @@ export function useRtcInterpreter() {
     const frame = new Uint8Array(1 + pcmBytes.length)
     frame[0] = kind
     frame.set(pcmBytes, 1)
-    ws.send(frame)
+    if (ws && ws.readyState === 1) {
+      ws.send(frame)
+      diagnostic.value.samplesSent += pcm.length
+    } else {
+      // WS 未就绪：缓存帧（最多 50 帧），等 WS 打开后补发
+      if (_frameQueue.length < 50) _frameQueue.push(frame)
+    }
+    if (kind === 1 && sentSamples === 0) console.log(`[interp] first partial: ${pcm.length} samples (${ms}ms)`)
+    if (kind === 2) console.log(`[interp] final: ${pcm.length} samples (${ms}ms), total onAudio=${_audioFrames}`)
     if (kind === 2) {
       resetSentence()
     } else {
@@ -292,24 +327,70 @@ export function useRtcInterpreter() {
     }
   }
 
-  /** 每 85ms 音频回调：降采样 → VAD → 切句 */
+  /** 每 85ms 音频回调：动态降采样 → VAD → 切句 */
+  let _audioFrames = 0
+  let _lastDiagAt = 0
+  let _rmsForDiag = 0
   function onAudio(e: AudioProcessingEvent) {
     if (!alive) return
+    _audioFrames++
+    const now = Date.now()
+    if (now - _lastDiagAt >= 5000) {
+      console.log(`[interp] onAudio ${_audioFrames}x, ctx=${audioCtx?.state}, sent=${sentSamples}, rmsBuf=${sentenceSamples}, rms=${_rmsForDiag.toFixed(4)}, vadThresh=${diagnostic.value.vadThreshold.toFixed(4)}`)
+      _lastDiagAt = now
+    }
     const input = e.inputBuffer.getChannelData(0)
-    // 48k → 16k 降采样（3 点平均防混叠）
-    const outLen = Math.floor(input.length / 3)
+    // 输出静音（防麦克风回声到扬声器）
+    const output = e.outputBuffer.getChannelData(0)
+    for (let i = 0; i < output.length; i++) output[i] = 0
+    // 动态降采样（窗口平均防混叠）
+    const outLen = Math.floor(input.length / downsampleRatio)
     const down = new Float32Array(outLen)
     for (let i = 0; i < outLen; i++) {
-      down[i] = (input[i * 3] + input[i * 3 + 1] + input[i * 3 + 2]) / 3
+      const start = Math.floor(i * downsampleRatio)
+      const end = Math.min(input.length, Math.floor((i + 1) * downsampleRatio))
+      let sum = 0
+      for (let j = start; j < end; j++) sum += input[j]
+      down[i] = sum / (end - start)
     }
     // RMS 能量
     let sum = 0
     for (let i = 0; i < down.length; i++) sum += down[i] * down[i]
     const rms = Math.sqrt(sum / down.length)
-    const now = Date.now()
+    _rmsForDiag = rms
+    diagnostic.value.rmsLevel = rms
+    diagnostic.value.audioFrames = _audioFrames
+    // VAD 自适应校准（前 2s 环境底噪 → 阈值 = clamp(底噪×3, MIN, MAX)）
+    // 移动端低增益环境：底噪低时阈值向下调整
+    if (!_vadCalibrated && _rmsHistory.length < 100) {
+      _rmsHistory.push(rms)
+      if (_rmsHistory.length >= 100) {
+        const sorted = [..._rmsHistory].sort((a, b) => a - b)
+        const noiseFloor = sorted[Math.floor(sorted.length * 0.7)] || 0
+        // 阈值 = 底噪×3，但不超过默认、不低于下限
+        const adaptive = Math.min(VAD_THRESHOLD, Math.max(VAD_MIN_THRESHOLD, noiseFloor * 3))
+        diagnostic.value.vadThreshold = adaptive
+        _vadCalibrated = true
+        // 自动增益：底噪低说明麦克风增益不足，提升信号
+        if (noiseFloor < 0.003) {
+          _autoGain = VAD_GAIN
+        }
+        console.log(`[interp] VAD calibrated: noiseFloor=${noiseFloor.toFixed(5)}, threshold=${adaptive.toFixed(5)}, gain=${_autoGain}`)
+      }
+    }
+    const vadThresh = _vadCalibrated ? diagnostic.value.vadThreshold : VAD_THRESHOLD
+    // 自动增益（移动端低增益补偿）
+    if (_autoGain > 1.0) {
+      for (let i = 0; i < down.length; i++) down[i] *= _autoGain
+      let gsum = 0
+      for (let i = 0; i < down.length; i++) gsum += down[i] * down[i]
+      rms = Math.sqrt(gsum / down.length)
+      _rmsForDiag = rms
+      diagnostic.value.rmsLevel = rms
+    }
     totalMs = now
 
-    if (rms >= VAD_THRESHOLD) {
+    if (rms >= vadThresh) {
       if (!active) {
         active = true
         activeSince = now
@@ -325,6 +406,7 @@ export function useRtcInterpreter() {
       }
       sentence.push(int16)
       sentenceSamples += int16.length
+      diagnostic.value.samplesCaptured += int16.length
     } else if (active) {
       // 静音中：也累积（保留尾音），计时切句
       const int16 = new Int16Array(down.length)
@@ -351,26 +433,94 @@ export function useRtcInterpreter() {
   /** 开启同传：stream=本端 mic 流（含 video 也无妨，只取 audio track） */
   async function start(opts: { stream: MediaStream; callId: string; srcLang: string; tgtLang: string }) {
     stop()
+    console.log('[interp] start() called:', { callId: opts.callId, srcLang: opts.srcLang, tgtLang: opts.tgtLang })
     subtitle.value = null
     errorMsg.value = ''
     const track = opts.stream.getAudioTracks()[0]
-    if (!track) { errorMsg.value = '没有可用的麦克风音轨'; return }
+    if (!track) { errorMsg.value = '没有可用的麦克风音轨'; console.error('[interp] no audio track'); return }
+    if (track.readyState === 'ended') { errorMsg.value = '麦克风音轨已结束'; console.error('[interp] audio track ended'); return }
+    if (!track.enabled) { errorMsg.value = '麦克风已被禁用'; console.error('[interp] audio track disabled'); return }
+    console.log(`[interp] track: label=${track.label}, readyState=${track.readyState}, enabled=${track.enabled}, muted=${track.muted}`)
+
+    // ── 音频采集（必须在 await 之前！保持用户手势上下文）──
+    // iOS/移动端要求 AudioContext.resume() 在用户手势同步调用链内
+    alive = true
+    _frameQueue = []
+    _rmsHistory = []
+    _vadCalibrated = false
+    _autoGain = 1.0
+    _startTs = Date.now()
+    clonedTrack = track.clone()
+    stream = new MediaStream([clonedTrack])
+    // AudioContext 创建（强制 48k，不支持则回退默认）
+    try {
+      audioCtx = new AudioContext({ sampleRate: 48000 })
+    } catch (e: any) {
+      console.warn('[interp] AudioContext 48k failed, falling back:', e?.message)
+      audioCtx = new AudioContext()
+    }
+    downsampleRatio = (audioCtx.sampleRate || 48000) / TARGET_RATE
+    console.log('[interp] audioCtx sampleRate =', audioCtx.sampleRate, '→ downsampleRatio =', downsampleRatio)
+    try {
+      sourceNode = audioCtx.createMediaStreamSource(stream)
+      processor = audioCtx.createScriptProcessor(4096, 1, 1)
+      processor.onaudioprocess = onAudio
+      sourceNode.connect(processor)
+      processor.connect(audioCtx.destination) // 必须连接（静音输出）否则不触发
+      console.log('[interp] audio pipeline connected ✓')
+    } catch (e: any) {
+      console.error('[interp] audio pipeline failed:', e?.message)
+      errorMsg.value = '音频采集失败：' + e?.message
+      diagnostic.value.lastError = String(e?.message || 'audio pipeline failed')
+      return
+    }
+    // 立即 resume（在用户手势上下文内）
+    audioCtx.resume().then(() => {
+      console.log('[interp] audioCtx resumed ✓, state =', audioCtx.state)
+      diagnostic.value.ctxState = audioCtx.state
+    }).catch((e: any) => {
+      console.warn('[interp] audioCtx resume failed:', e?.message)
+      errorMsg.value = '音频上下文启动失败：' + e?.message
+      diagnostic.value.lastError = String(e?.message || 'resume failed')
+    })
+
+    // 诊断定时器：每 1s 更新 WS 状态和 uptime
+    _diagTimer = setInterval(() => {
+      if (!alive) { if (_diagTimer) { clearInterval(_diagTimer); _diagTimer = null }; return }
+      diagnostic.value.wsState = ws ? ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'][ws.readyState] || '?' : '-'
+      diagnostic.value.uptime = Math.round((Date.now() - _startTs) / 1000)
+      diagnostic.value.ctxState = audioCtx?.state || '-'
+    }, 1000)
+
+    // ── WebSocket 连接（await 在音频设置之后）──
     const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
     const url = `${proto}://${location.host}/api/im/rtc/translate?token=${encodeURIComponent(token)}&callId=${encodeURIComponent(opts.callId)}&srcLang=${opts.srcLang}&tgtLang=${opts.tgtLang}`
+    console.log('[interp] WS connecting:', url.replace(token, '***TOKEN***'))
     state.value = 'connecting'
     ws = new WebSocket(url)
     await new Promise<void>((resolve, reject) => {
       if (!ws) return reject(new Error('ws null'))
       const to = setTimeout(() => reject(new Error('同传服务连接超时')), 8000)
-      ws.onopen = () => { clearTimeout(to); resolve() }
-      ws.onerror = () => { clearTimeout(to); reject(new Error('同传服务连接失败')) }
+      ws.onopen = () => {
+        clearTimeout(to); resolve()
+        console.log('[interp] WS connected ✓')
+        // WS 打开后补发缓存的音频帧
+        if (_frameQueue.length > 0) {
+          console.log(`[interp] flushing ${_frameQueue.length} queued frames`)
+          for (const f of _frameQueue) { if (ws && ws.readyState === 1) ws.send(f) }
+          diagnostic.value.samplesSent += _frameQueue.reduce((s, f) => s + f.length - 1, 0)
+          _frameQueue = []
+        }
+      }
+      ws.onerror = () => { clearTimeout(to); console.error('[interp] WS error'); reject(new Error('同传服务连接失败')) }
     })
     ws.onmessage = (ev) => {
       if (!alive) return
       try {
         const msg = JSON.parse(ev.data as string)
         if (msg.type === 'subtitle') {
+          console.log('[interp] subtitle:', msg.text?.slice(0, 50), 'partial:', msg.partial)
           subtitle.value = {
             text: msg.text || '',
             partial: !!msg.partial,
@@ -385,24 +535,23 @@ export function useRtcInterpreter() {
         }
       } catch { /* 忽略非 JSON */ }
     }
-    ws.onclose = () => { if (alive && state.value !== 'off') { state.value = 'off'; errorMsg.value = '同传连接已断开' } }
+    ws.onclose = () => { console.log('[interp] WS closed'); if (alive && state.value !== 'off') { state.value = 'off'; errorMsg.value = '同传连接已断开' } }
 
-    // 采集
-    alive = true
-    clonedTrack = track.clone()
-    stream = new MediaStream([clonedTrack])
-    audioCtx = new AudioContext()
-    sourceNode = audioCtx.createMediaStreamSource(stream)
-    processor = audioCtx.createScriptProcessor(4096, 1, 1)
-    processor.onaudioprocess = onAudio
-    sourceNode.connect(processor)
-    processor.connect(audioCtx.destination) // 必须连接（静音输出）否则不触发
     state.value = 'on'
+    // 诊断：5 秒后检查 onAudio 是否触发过
+    setTimeout(() => {
+      if (alive && _audioFrames === 0) {
+        console.warn('[interp] ⚠️ 5s 内 onAudio 未触发！audioCtx.state =', audioCtx?.state)
+        errorMsg.value = '麦克风采集未启动，请检查麦克风权限后重试'
+        diagnostic.value.lastError = 'no audio frames in 5s'
+      }
+    }, 5000)
   }
 
   /** 停止同传（挂断/关闭开关/切换语言） */
   function stop() {
     alive = false
+    if (_diagTimer) { clearInterval(_diagTimer); _diagTimer = null }
     stopAudio()
     try { processor?.disconnect() } catch { /* noop */ }
     try { sourceNode?.disconnect() } catch { /* noop */ }
@@ -413,8 +562,10 @@ export function useRtcInterpreter() {
     audioCtx = null
     clonedTrack = null
     stream = null
+    _frameQueue = []
     if (ws) { try { ws.close(1000, 'stop') } catch { /* noop */ } ws = null }
     resetSentence()
+    diagnostic.value = { ctxState: '-', audioFrames: 0, samplesCaptured: 0, samplesSent: 0, wsState: '-', rmsLevel: 0, vadThreshold: VAD_THRESHOLD, lastError: '', uptime: 0 }
     state.value = 'off'
   }
 
@@ -429,5 +580,6 @@ export function useRtcInterpreter() {
     toggleAudio: () => { audioEnabled.value = !audioEnabled.value; if (!audioEnabled.value) stopAudio() },
     start,
     stop,
+    diagnostic,
   }
 }

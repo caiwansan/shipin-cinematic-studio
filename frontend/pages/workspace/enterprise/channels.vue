@@ -7,13 +7,16 @@
   <div class="rec-page">
     <!-- ═══ 头部 ═══ -->
     <header class="rec-header">
-      <div>
+      <div class="rec-header-left">
         <h1 class="rec-header-title">招聘渠道中心</h1>
         <p class="rec-header-desc">
           AI 招聘员工的外部人才入口层 — 渠道是招聘漏斗的入口，候选人经渠道进入昆仑镜，
           由 Alice 筛选 · Bob 面试 · Carol 评估
         </p>
       </div>
+      <button class="rec-btn-workspace" @click="goToWorkspace">
+        ← 返回工作台
+      </button>
     </header>
 
     <!-- ═══ 阶段说明 ═══ -->
@@ -190,7 +193,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getToken } from '~/utils/token-cache'
+
+const router = useRouter()
+function goToWorkspace() {
+  router.push('/workspace/enterprise')
+}
 
 interface ChannelItem {
   channelId: string
@@ -348,6 +357,32 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--space-lg, 20px);
   padding: var(--space-xl, 24px);
+}
+.rec-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.rec-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rec-btn-workspace {
+  background: transparent;
+  color: var(--color-text-secondary, #93a0b8);
+  border: 1px solid var(--color-border-primary, #232f4a);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.rec-btn-workspace:hover {
+  color: var(--color-text-primary, #e8edf7);
+  border-color: #3a4a6b;
 }
 .rec-header-title {
   font-size: 26px;

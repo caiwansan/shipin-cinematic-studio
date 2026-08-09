@@ -17,7 +17,12 @@ async function resolveOrgId(request: any): Promise<string> {
   const userId = user?.id
   if (!userId) return ''
   
-  // Prefer user.tenantId if it looks like a proper org UUID (not the user's own ID)
+  // Prefer user.organizationId from JWT (correct org identifier)
+  if (user?.organizationId && user.organizationId !== userId) {
+    return user.organizationId
+  }
+  
+  // Legacy fallback: user.tenantId if it looks like a proper org UUID (not the user's own ID)
   if (user?.tenantId && user.tenantId !== userId) {
     return user.tenantId
   }
@@ -124,7 +129,7 @@ export async function registerEnterpriseAgentProfileRoutes(app: FastifyInstance)
       const body = request.body as any;
 
       const existing = await prisma.enterpriseAgentProfile.findFirst({
-        where: { id, tenantId },
+        where: { id, organizationId: tenantId },
       });
       if (!existing) {
         return reply.status(404).send({ code: 404, message: 'AI员工不存在' });
@@ -232,8 +237,8 @@ export async function registerEnterpriseAgentProfileRoutes(app: FastifyInstance)
 
       // 验证 Agent 属于该企业
       const agent = await prisma.enterpriseAgentProfile.findFirst({
-        where: { id, tenantId },
-        select: { id: true, name: true, tenantId: true },
+        where: { id, organizationId: tenantId },
+        select: { id: true, name: true, organizationId: true },
       });
       if (!agent) {
         return reply.status(404).send({ code: 404, message: 'AI员工不存在' });
@@ -310,7 +315,7 @@ export async function registerEnterpriseAgentProfileRoutes(app: FastifyInstance)
 
       // 验证 Agent
       const agent = await prisma.enterpriseAgentProfile.findFirst({
-        where: { id, tenantId },
+        where: { id, organizationId: tenantId },
         select: { id: true },
       });
       if (!agent) {

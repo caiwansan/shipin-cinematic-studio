@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import { prisma } from '../../utils/index.js'
 import { containsSensitiveWord } from '../../services/community/sensitive-word.service.js'
 import { rewardComment } from '../../services/community/community-reward.service.js'
+import { isNewUserCommentAllowed } from '../../services/community/hotness.service.js'
 
 export default async function communityCommentRoutes(fastify: FastifyInstance) {
   // POST /api/community/comments — 发表评论（需认证）
@@ -30,6 +31,19 @@ export default async function communityCommentRoutes(fastify: FastifyInstance) {
     })
     if (!post) {
       return reply.status(404).send({ error: '帖子不存在' })
+    }
+
+    // 新用户评论限制：注册 <24h 最多 5 条（掌柜 2026-08-07 指令，防小号刷评论）
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { createdAt: true },
+    })
+    const gate = isNewUserCommentAllowed(
+      user,
+      await prisma.communityComment.count({ where: { userId } })
+    )
+    if (!gate.allowed) {
+      return reply.status(403).send({ error: gate.reason })
     }
 
     // 敏感词检查

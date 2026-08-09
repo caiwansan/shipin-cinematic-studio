@@ -31,9 +31,10 @@ def main():
             if not wav_path or not os.path.exists(wav_path):
                 emit({"id": task_id, "error": "wav not found"})
                 continue
+            language = task.get("language") or "zh"
             segments, _info = model.transcribe(
                 wav_path,
-                language="zh",
+                language=language,
                 vad_filter=True,
                 beam_size=5,
                 condition_on_previous_text=False,

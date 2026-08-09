@@ -1,20 +1,27 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../../utils/index.js'
 import { containsSensitiveWord } from '../../services/community/sensitive-word.service.js'
+import { calcHotness } from '../../services/community/hotness.service.js'
 // 注意：发帖不再直接发积分；奖励在后台审核通过时发放（admin-posts.ts approve 已有逻辑）
 
+// COMMUNITY-HOTNESS-V2 多样性控制：热榜/精选榜同一作者最多占 N 条，防马太效应
+const MAX_PER_AUTHOR = 3
+
 export default async function communityPostRoutes(fastify: FastifyInstance) {
-  // GET /api/community/posts — 列表（支持分类筛选、分页）
+  // GET /api/community/posts — 列表（支持分类筛选、搜索、分页）
   fastify.get('/api/community/posts', async (request, reply) => {
     const query = request.query as {
       categorySlug?: string
+      search?: string
       page?: string
       pageSize?: string
+      sort?: string // latest | hot（COMMUNITY-ENGAGEMENT-01）
     }
 
     const page = Math.max(1, parseInt(query.page || '1', 10) || 1)
     const pageSize = Math.min(50, Math.max(1, parseInt(query.pageSize || '20', 10) || 20))
     const skip = (page - 1) * pageSize
+    const sort = query.sort === 'hot' || query.sort === 'best' ? query.sort : 'latest'
 
     const where: any = { status: 'approved' }
 
@@ -27,36 +34,148 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       }
     }
 
-    const [posts, total] = await Promise.all([
-      prisma.communityPost.findMany({
+    // 搜索：标题/正文/标签 模糊匹配（COMMUNITY-SEARCH-01）
+    const search = String(query.search || '').trim().slice(0, 50)
+    if (search) {
+      where.OR = [
+        { title: { contains: search } },
+        { content: { contains: search } },
+        { tags: { contains: search } },
+      ]
+    }
+
+    // COMMUNITY-HOTNESS-V2 热度/精选排序（行业顶尖算法，见 services/community/hotness.service.ts）
+    // hot：对数缩放 + 时间衰减 + 打赏强信号；best：质量分（收藏/转发/打赏率）
+    // 置顶帖始终优先；热度相同按最新；同作者最多 MAX_PER_AUTHOR 条
+    let posts: any[]
+    let total: number
+
+    if (sort === 'hot' || sort === 'best') {
+      // 拉取候选集（全量，内存计算排序；社区量级小，性能无忧）
+      const candidates = await prisma.communityPost.findMany({
         where,
-        orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
-        skip,
-        take: pageSize,
         select: {
           id: true,
-          title: true,
-          content: true,
-          summary: true, // GEO-REVIEW-01.1 卡片摘要优先用作者摘要
-          tags: true,
-          category: true,
-          viewCount: true,
+          userId: true,
+          isPinned: true,
+          giftCount: true,
           likeCount: true,
           commentCount: true,
-          isPinned: true,
-          isEssence: true,
-          giftCount: true,
+          shareCount: true,
+          favoriteCount: true,
+          viewCount: true,
           createdAt: true,
-          user: {
+        },
+      })
+      const scored = candidates.map(c => ({
+        ...c,
+        hotness: calcHotness({
+          likeCount: c.likeCount,
+          commentCount: c.commentCount,
+          favoriteCount: c.favoriteCount,
+          shareCount: c.shareCount,
+          giftCount: c.giftCount,
+          viewCount: c.viewCount,
+          createdAt: c.createdAt,
+        }),
+      }))
+      const rankKey = sort === 'hot' ? 'hotScore' : 'qualityScore'
+      const ranked = scored
+        .sort((a, b) => {
+          if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
+          const diff = (b.hotness as any)[rankKey] - (a.hotness as any)[rankKey]
+          if (diff !== 0) return diff
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        })
+        // 多样性：同作者最多 MAX_PER_AUTHOR 条（置顶帖不占名额）
+        .filter((() => {
+          const authorCount = new Map<string, number>()
+          return (c: any) => {
+            if (c.isPinned) return true
+            const n = (authorCount.get(c.userId) || 0) + 1
+            if (n > MAX_PER_AUTHOR) return false
+            authorCount.set(c.userId, n)
+            return true
+          }
+        })())
+      total = ranked.length
+      const rankedIds = ranked.slice(skip, skip + pageSize).map(c => c.id)
+      const rankMap = new Map(ranked.map(c => [c.id, c.hotness]))
+      const rankedPosts = rankedIds.length
+        ? await prisma.communityPost.findMany({
+            where: { id: { in: rankedIds }, status: 'approved' },
             select: {
               id: true,
-              username: true,
+              title: true,
+              content: true,
+              summary: true,
+              tags: true,
+              category: true,
+              viewCount: true,
+              likeCount: true,
+              commentCount: true,
+              shareCount: true,
+              favoriteCount: true,
+              giftCount: true,
+              isPinned: true,
+              isEssence: true,
+              createdAt: true,
+              user: { select: { id: true, username: true } },
             },
+          })
+        : []
+      // 按 rankedIds 顺序还原（findMany in 不保证顺序）
+      const byId = new Map(rankedPosts.map(p => [p.id, p]))
+      posts = rankedIds
+        .map(id => byId.get(id))
+        .filter((p): p is NonNullable<typeof p> => !!p)
+        .map(p => {
+          const h = rankMap.get(p.id)!
+          return {
+            ...p,
+            hotScore: h.hotScore,
+            qualityScore: h.qualityScore,
+            hotBreakdown: {
+              giftScore: h.giftScore,
+              likeScore: h.likeScore,
+              commentScore: h.commentScore,
+              shareScore: h.shareScore,
+              favoriteScore: h.favoriteScore,
+              decayFactor: h.decayFactor,
+              newPostBoost: h.newPostBoost,
+              raw: h.raw,
+            },
+          }
+        })
+    } else {
+      ;[posts, total] = await Promise.all([
+        prisma.communityPost.findMany({
+          where,
+          orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+          skip,
+          take: pageSize,
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            summary: true,
+            tags: true,
+            category: true,
+            viewCount: true,
+            likeCount: true,
+            commentCount: true,
+            shareCount: true,
+            favoriteCount: true,
+            giftCount: true,
+            isPinned: true,
+            isEssence: true,
+            createdAt: true,
+            user: { select: { id: true, username: true } },
           },
-        },
-      }),
-      prisma.communityPost.count({ where }),
-    ])
+        }),
+        prisma.communityPost.count({ where }),
+      ])
+    }
 
     return {
       posts: posts.map(p => ({
@@ -225,11 +344,26 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: '帖子不存在' })
     }
 
+    // COMMUNITY-ENGAGEMENT-01 当前用户交互状态（点赞/收藏/转发）
+    let liked = false
+    let favorited = false
+    let shared = false
+    if (viewerId) {
+      const [likeRec, favRec, shareRec] = await Promise.all([
+        prisma.communityLike.findUnique({ where: { postId_userId: { postId: id, userId: viewerId } } }).catch(() => null),
+        prisma.communityFavorite.findUnique({ where: { postId_userId: { postId: id, userId: viewerId } } }).catch(() => null),
+        prisma.communityShare.findUnique({ where: { postId_userId: { postId: id, userId: viewerId } } }).catch(() => null),
+      ])
+      liked = !!likeRec
+      favorited = !!favRec
+      shared = !!shareRec
+    }
+
     // 非公开状态：仅作者本人可看（待审/已驳回），管理员（x-admin-token）可看，其他人一律 404
     if (post.status !== 'approved' && post.userId !== viewerId) {
       let isAdmin = false
       try {
-        const adminToken = request.headers['x-admin-token']
+        const adminToken = String(request.headers['x-admin-token'] || '')
         if (adminToken) {
           const decoded: any = fastify.jwt.verify(adminToken)
           const adminUser = await prisma.adminUser.findUnique({ where: { username: decoded.username } })
@@ -249,7 +383,12 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
       }).catch(() => {})
     }
 
-    return { post }
+    return {
+      post: {
+        ...post,
+        viewerState: { liked, favorited, shared },
+      },
+    }
   })
 
   // DELETE /api/community/posts/:id — 删帖（需认证+作者本人）
@@ -282,6 +421,48 @@ export default async function communityPostRoutes(fastify: FastifyInstance) {
     }
 
     return { success: true }
+  })
+
+  // COMMUNITY-ENGAGEMENT-01 我的文章列表（会员中心）— 需认证，含全部状态（含待审/驳回）
+  fastify.get('/api/community/my/posts', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { id: userId } = (request as any).user
+    const query = request.query as { page?: string; pageSize?: string }
+    const page = Math.max(1, parseInt(query.page || '1', 10) || 1)
+    const pageSize = Math.min(50, Math.max(1, parseInt(query.pageSize || '20', 10) || 20))
+    const skip = (page - 1) * pageSize
+
+    const [posts, total] = await Promise.all([
+      prisma.communityPost.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        select: {
+          id: true,
+          title: true,
+          summary: true,
+          tags: true,
+          category: true,
+          status: true,
+          rejectReason: true,
+          viewCount: true,
+          likeCount: true,
+          commentCount: true,
+          shareCount: true,
+          favoriteCount: true,
+          giftCount: true,
+          isPinned: true,
+          isEssence: true,
+          createdAt: true,
+        },
+      }),
+      prisma.communityPost.count({ where: { userId } }),
+    ])
+
+    return {
+      posts,
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    }
   })
 
   // --- 社区管理 API（需 admin JWT token）---

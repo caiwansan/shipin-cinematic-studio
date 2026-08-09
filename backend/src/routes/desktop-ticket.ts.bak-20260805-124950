@@ -1,0 +1,52 @@
+/**
+ * S1.1 Identity Ticket Bridge — POST /api/auth/desktop/ticket
+ * Desktop 壳内登录态 → 签发一次性 ticket（5min, 绑定 userId, 单次使用）
+ * 依据: KUNLUN-AI-OS-IDENTITY-BRIDGE-v1.md / ADR-021（壳只持 auth_token，不注入）
+ * 技术栈: Fastify 5 + ioredis（复用现有 redis 连接）+ 现有 JWT 校验
+ * 注意: 本文件为部署草案，路径/导入按服务器实际结构调整
+ */
+import { FastifyInstance, FastifyRequest } from 'fastify';
+import { randomBytes } from 'crypto';
+
+const TICKET_TTL = 300; // 5 分钟
+const PREFIX = 'auth:ticket:';
+
+interface TicketPayload {
+  userId: string;
+  deviceId?: string;
+  iat: number;
+}
+
+export default async function desktopTicketRoute(app: FastifyInstance) {
+  app.post('/api/auth/desktop/ticket', async (req: FastifyRequest, reply) => {
+    try {
+      // 1) 校验壳内 auth_token（与现有 API 相同鉴权中间件，依赖 app.authenticate 或等价）
+      const auth = await app.authenticate?.(req, reply);
+      if (!auth?.user?.id) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' });
+      }
+      const userId = auth.user.id;
+      const deviceId = (req.body as any)?.deviceId || null;
+
+      // 2) 签发一次性 ticket（随机 32 字节 → base64url）
+      const ticketId = randomBytes(24).toString('base64url');
+      const payload: TicketPayload = { userId, deviceId: deviceId || undefined, iat: Date.now() };
+
+      await app.redis.set(`${PREFIX}${ticketId}`, JSON.stringify(payload), 'EX', TICKET_TTL);
+
+      // 3) 返回 ticket（不返回任何凭据副本）
+      return reply.send({
+        data: {
+          ticket: ticketId,
+          expiresIn: TICKET_TTL,
+        },
+      });
+    } catch (e: any) {
+      if (e?.statusCode === 401 || e?.code === 'UNAUTHORIZED') {
+        return reply.code(401).send({ error: 'UNAUTHORIZED' });
+      }
+      app.log.error(e, 'desktop/ticket failed');
+      return reply.code(500).send({ error: 'INTERNAL' });
+    }
+  });
+}

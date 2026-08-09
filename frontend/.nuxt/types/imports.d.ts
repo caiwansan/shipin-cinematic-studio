@@ -3,6 +3,8 @@ export {}
 declare global {
   const ExecutionStateDisplay: typeof import('../../utils/executionStateManager')['ExecutionStateDisplay']
   const ExecutionStateManager: typeof import('../../utils/executionStateManager')['ExecutionStateManager']
+  const LANG_GROUPS: typeof import('../../composables/useRtcInterpreter')['LANG_GROUPS']
+  const LANG_OPTIONS: typeof import('../../composables/useRtcInterpreter')['LANG_OPTIONS']
   const PROJECT_TYPE_ICONS: typeof import('../../stores/projectStore')['PROJECT_TYPE_ICONS']
   const PROJECT_TYPE_LABELS: typeof import('../../stores/projectStore')['PROJECT_TYPE_LABELS']
   const PermissionService: typeof import('../../utils/geoCapability')['PermissionService']
@@ -193,6 +195,7 @@ declare global {
   const usePipeline: typeof import('../../composables/usePipeline')['usePipeline']
   const usePreviewMode: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']
   const useProjectStore: typeof import('../../stores/projectStore')['useProjectStore']
+  const useReadTracking: typeof import('../../composables/useReadTracking')['useReadTracking']
   const useRegions: typeof import('../../composables/useRegions')['useRegions']
   const useReplayFrame: typeof import('../../composables/useReplayFrame')['useReplayFrame']
   const useRequestEvent: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/ssr')['useRequestEvent']
@@ -205,6 +208,7 @@ declare global {
   const useRouteAnnouncer: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/route-announcer')['useRouteAnnouncer']
   const useRouter: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['useRouter']
   const useRtcCall: typeof import('../../composables/useRtcCall')['useRtcCall']
+  const useRtcInterpreter: typeof import('../../composables/useRtcInterpreter')['useRtcInterpreter']
   const useRuntimeConfig: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/nuxt')['useRuntimeConfig']
   const useRuntimeHook: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/runtime-hook')['useRuntimeHook']
   const useSSEStream: typeof import('../../composables/useSSEStream')['useSSEStream']
@@ -281,6 +285,9 @@ declare global {
   export type { RtcMode, RtcState } from '../../composables/useRtcCall'
   import('../../composables/useRtcCall')
   // @ts-ignore
+  export type { InterpSubtitle, InterpState, InterpAudioMsg, InterpLangOption, InterpDiagnostic } from '../../composables/useRtcInterpreter'
+  import('../../composables/useRtcInterpreter')
+  // @ts-ignore
   export type { ToastMessage } from '../../composables/useToast'
   import('../../composables/useToast')
   // @ts-ignore
@@ -323,6 +330,8 @@ declare module 'vue' {
   interface ComponentCustomProperties {
     readonly ExecutionStateDisplay: UnwrapRef<typeof import('../../utils/executionStateManager')['ExecutionStateDisplay']>
     readonly ExecutionStateManager: UnwrapRef<typeof import('../../utils/executionStateManager')['ExecutionStateManager']>
+    readonly LANG_GROUPS: UnwrapRef<typeof import('../../composables/useRtcInterpreter')['LANG_GROUPS']>
+    readonly LANG_OPTIONS: UnwrapRef<typeof import('../../composables/useRtcInterpreter')['LANG_OPTIONS']>
     readonly PROJECT_TYPE_ICONS: UnwrapRef<typeof import('../../stores/projectStore')['PROJECT_TYPE_ICONS']>
     readonly PROJECT_TYPE_LABELS: UnwrapRef<typeof import('../../stores/projectStore')['PROJECT_TYPE_LABELS']>
     readonly PermissionService: UnwrapRef<typeof import('../../utils/geoCapability')['PermissionService']>
@@ -513,6 +522,7 @@ declare module 'vue' {
     readonly usePipeline: UnwrapRef<typeof import('../../composables/usePipeline')['usePipeline']>
     readonly usePreviewMode: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']>
     readonly useProjectStore: UnwrapRef<typeof import('../../stores/projectStore')['useProjectStore']>
+    readonly useReadTracking: UnwrapRef<typeof import('../../composables/useReadTracking')['useReadTracking']>
     readonly useRegions: UnwrapRef<typeof import('../../composables/useRegions')['useRegions']>
     readonly useReplayFrame: UnwrapRef<typeof import('../../composables/useReplayFrame')['useReplayFrame']>
     readonly useRequestEvent: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/ssr')['useRequestEvent']>
@@ -525,6 +535,7 @@ declare module 'vue' {
     readonly useRouteAnnouncer: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/route-announcer')['useRouteAnnouncer']>
     readonly useRouter: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['useRouter']>
     readonly useRtcCall: UnwrapRef<typeof import('../../composables/useRtcCall')['useRtcCall']>
+    readonly useRtcInterpreter: UnwrapRef<typeof import('../../composables/useRtcInterpreter')['useRtcInterpreter']>
     readonly useRuntimeConfig: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/nuxt')['useRuntimeConfig']>
     readonly useRuntimeHook: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/runtime-hook')['useRuntimeHook']>
     readonly useSSEStream: UnwrapRef<typeof import('../../composables/useSSEStream')['useSSEStream']>

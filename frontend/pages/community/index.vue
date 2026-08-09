@@ -49,6 +49,39 @@
             {{ cat.icon || '#' }} {{ cat.name }}
           </button>
         </div>
+        <!-- COMMUNITY-ENGAGEMENT-01 排序切换：最新 / 热门 -->
+        <div class="sort-switch" role="tablist" aria-label="排序方式">
+          <button
+            :class="['sort-btn', sortMode === 'latest' && 'sort-btn-on']"
+            @click="syncSortUrl('latest')"
+          >
+            🕐 最新
+          </button>
+          <button
+            :class="['sort-btn', sortMode === 'hot' && 'sort-btn-on']"
+            @click="syncSortUrl('hot')"
+          >
+            🔥 热门
+          </button>
+          <button
+            :class="['sort-btn', sortMode === 'best' && 'sort-btn-on']"
+            @click="syncSortUrl('best')"
+          >
+            🏆 精选
+          </button>
+        </div>
+        <!-- 搜索框（COMMUNITY-SEARCH-01） -->
+        <div class="search-box">
+          <input
+            v-model.trim="searchInput"
+            type="search"
+            placeholder="搜索文章标题 / 内容"
+            class="search-input"
+            aria-label="搜索社区文章"
+            @keyup.enter="doSearch"
+          />
+          <button class="search-btn" @click="doSearch" aria-label="搜索">🔍</button>
+        </div>
         <NuxtLink to="/community/new" class="cn-seal-btn btn-post">✒ 发帖</NuxtLink>
       </nav>
       <div class="cn-huiwen page-huiwen" aria-hidden="true" />
@@ -63,8 +96,10 @@
 
           <div v-else-if="posts.length === 0" class="empty-state">
             <p class="empty-icon">📭</p>
-            <p>暂无帖子，来发布第一条吧！</p>
-            <NuxtLink to="/community/new" class="cn-seal-btn">发布帖子</NuxtLink>
+            <p v-if="searchKeyword">未找到与「{{ searchKeyword }}」相关的文章</p>
+            <p v-else>暂无帖子，来发布第一条吧！</p>
+            <button v-if="searchKeyword" class="cn-ink-btn" @click="clearSearch">清除搜索</button>
+            <NuxtLink v-else to="/community/new" class="cn-seal-btn">发布帖子</NuxtLink>
           </div>
 
           <div v-else class="posts-list">
@@ -284,6 +319,25 @@ interface Pagination {
 // GEO-TOP5-04: 分类/分页 URL 化 — 爬虫可索引分类页，刷新/分享/前进后退保持状态
 const activeCategory = ref((route.query.categorySlug as string) || '')
 const currentPage = ref(Number(route.query.page) > 1 ? Number(route.query.page) : 1)
+// COMMUNITY-HOTNESS-V2: 排序 URL 化（?sort=latest|hot|best）
+const sortMode = ref((route.query.sort as string) === 'hot' || (route.query.sort as string) === 'best' ? (route.query.sort as string) : 'latest')
+// COMMUNITY-SEARCH-01: 搜索词 URL 化（?q=xxx，与 SEO SearchAction urlTemplate 对齐）
+const searchKeyword = ref((route.query.q as string) || '')
+const searchInput = ref((route.query.q as string) || '')
+
+// COMMUNITY-ENGAGEMENT-01: 切换排序 → 重置页码 + 同步 URL
+function syncSortUrl(sort: string) {
+  if (sort === sortMode.value) return
+  sortMode.value = sort
+  currentPage.value = 1
+  if (!isBrowser) return
+  const q: Record<string, string> = { ...(route.query as Record<string, string>) }
+  if (sort === 'hot') q.sort = 'hot'
+  else if (sort === 'best') q.sort = 'best'
+  else delete q.sort
+  delete q.page
+  router.replace({ query: q })
+}
 
 // 分类/翻页 → 同步 URL（无刷新导航）
 function syncCategoryUrl(slug: string) {
@@ -301,14 +355,34 @@ function syncPageUrl(page: number) {
   else delete q.page
   router.replace({ query: q })
 }
+// COMMUNITY-SEARCH-01: 搜索 → 同步 URL + 重置页码
+function doSearch() {
+  const kw = searchInput.value.trim()
+  if (kw === searchKeyword.value) return
+  searchKeyword.value = kw
+  currentPage.value = 1
+  if (!isBrowser) return
+  const q: Record<string, string> = { ...(route.query as Record<string, string>) }
+  if (kw) q.q = kw
+  else delete q.q
+  delete q.page
+  router.replace({ query: q })
+}
 // 浏览器前进/后退同步状态
 watch(
   () => route.query,
   (q) => {
     const cs = (q.categorySlug as string) || ''
     const pg = Number(q.page) > 1 ? Number(q.page) : 1
+    const kw = (q.q as string) || ''
+    const st = (q.sort as string) === 'hot' || (q.sort as string) === 'best' ? (q.sort as string) : 'latest'
     if (cs !== activeCategory.value) activeCategory.value = cs
     if (pg !== currentPage.value) currentPage.value = pg
+    if (st !== sortMode.value) sortMode.value = st
+    if (kw !== searchKeyword.value) {
+      searchKeyword.value = kw
+      searchInput.value = kw
+    }
   }
 )
 
@@ -324,11 +398,14 @@ const { data: postsData, refresh: refreshPosts } = await useAsyncData(
     const params = new URLSearchParams()
     params.set('page', String(currentPage.value))
     params.set('pageSize', '30')
+    if (sortMode.value === 'hot') params.set('sort', 'hot')
+    if (sortMode.value === 'best') params.set('sort', 'best')
     if (activeCategory.value) params.set('categorySlug', activeCategory.value)
+    if (searchKeyword.value) params.set('search', searchKeyword.value)
     const res = await $fetch(`${apiBase}/api/community/posts?${params.toString()}`)
     return { posts: res.posts || [], pagination: res.pagination || null }
   },
-  { lazy: false, watch: [currentPage, activeCategory] }
+  { lazy: false, watch: [currentPage, activeCategory, searchKeyword, sortMode] }
 )
 
 const { data: sidebarData } = await useAsyncData('community-sidebar', async () => {
@@ -373,7 +450,10 @@ useHead({
     { property: 'og:description', content: categoryDescription },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: canonicalUrl },
-    { property: 'og:image', content: 'https://aigc.fushtn.com/logo.png' },
+    { property: 'og:image', content: 'https://aigc.fushtn.com/og-cover.png' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { property: 'og:image:type', content: 'image/png' },
     { property: 'og:site_name', content: '昆仑镜' },
   ],
   link: [
@@ -394,7 +474,7 @@ useHead({
           name: '昆仑镜',
           logo: {
             '@type': 'ImageObject',
-            url: 'https://aigc.fushtn.com/logo.png',
+            url: 'https://aigc.fushtn.com/og-cover.png',
           },
         },
         potentialAction: {
@@ -487,6 +567,12 @@ function changePage(page: number) {
 watch(activeCategory, () => {
   currentPage.value = 1
 })
+
+// COMMUNITY-SEARCH-01: 清除搜索（保留分类）
+function clearSearch() {
+  searchInput.value = ''
+  doSearch()
+}
 
 onMounted(() => {
   const { getToken: _gtok } = require("~/utils/token-cache") as typeof import("~/utils/token-cache"); const token = _gtok()
@@ -849,6 +935,78 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
 .btn-post {
   flex-shrink: 0;
 }
+
+/* COMMUNITY-ENGAGEMENT-01 排序切换（最新/热门） */
+.sort-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid rgba(38, 84, 124, 0.18);
+  background: rgba(246, 241, 227, 0.6);
+}
+.sort-btn {
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--cn-ink-soft);
+  font-family: var(--cn-serif);
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.sort-btn:hover {
+  color: var(--cn-cobalt-deep);
+}
+.sort-btn-on {
+  background: var(--cn-cobalt-deep);
+  color: #F6F1E3;
+  box-shadow: 0 2px 6px rgba(22, 58, 92, 0.22);
+}
+
+/* COMMUNITY-SEARCH-01: 搜索框（中式书签行内） */
+.search-box {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(38, 84, 124, 0.22);
+  border-radius: 4px;
+  background: rgba(246, 241, 227, 0.75);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-box:focus-within {
+  border-color: var(--cn-celadon-deep);
+  box-shadow: 0 0 0 3px rgba(95, 168, 190, 0.15);
+}
+.search-input {
+  width: 190px;
+  padding: 6px 10px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.8rem;
+  color: var(--cn-ink);
+  font-family: var(--cn-body);
+}
+.search-input::placeholder {
+  color: var(--cn-ink-faint);
+}
+.search-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  transition: transform 0.15s;
+}
+.search-btn:hover {
+  transform: scale(1.12);
+}
 .page-huiwen {
   margin-bottom: 22px;
 }
@@ -965,6 +1123,8 @@ fetch('/api/auth/wechat/status').then(r => r.json()).then(d => { if (d.data) wec
   .content-layout { flex-direction: column; }
   .sidebar { width: 100%; position: static; }
   .category-tabs { flex-wrap: wrap; }
+  .search-box { width: 100%; order: 3; }
+  .search-input { width: 100%; flex: 1; }
   .btn-post { width: 100%; justify-content: center; }
 }
 

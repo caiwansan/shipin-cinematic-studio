@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../../utils/index.js'
+import { isInteractionAllowed } from '../../services/community/hotness.service.js'
 
 export default async function communityLikeRoutes(fastify: FastifyInstance) {
   // POST /api/community/likes — 点赞/取消点赞（toggle）
@@ -8,6 +9,13 @@ export default async function communityLikeRoutes(fastify: FastifyInstance) {
     const { postId, commentId } = request.body as {
       postId?: string
       commentId?: string
+    }
+
+    // COMMUNITY-HOTNESS-V2 防刷：新账号冷却期禁止互动
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } })
+    const gate = isInteractionAllowed(user)
+    if (!gate.allowed) {
+      return reply.status(403).send({ error: gate.reason })
     }
 
     if (!postId && !commentId) {

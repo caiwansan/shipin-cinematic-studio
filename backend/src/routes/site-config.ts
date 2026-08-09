@@ -44,7 +44,7 @@ export const SYSTEM_CONFIG_DEFAULTS: Record<string, { group: string; value: stri
   seo_keywords: { group: 'seo', value: '昆仑镜, AI, 短剧, 创作平台' },
   seo_description: { group: 'seo', value: '用 AI 从剧本到成片，一站式短剧创作平台' },
   seo_robots: { group: 'seo', value: 'User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /workspace/\nDisallow: /profile/\nDisallow: /enterprise/' },
-  seo_sitemap_urls: { group: 'seo', value: '/\n/about\n/pricing' },
+  seo_sitemap_urls: { group: 'seo', value: '/' },
   seo_verify_baidu: { group: 'seo', value: '' },
   seo_verify_google: { group: 'seo', value: '' },
 }

@@ -18,7 +18,7 @@ export interface ExecutionResult {
 // ── Helpers ──
 
 function isLLMAvailable(): boolean {
-  return !!(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || process.env.SILICONFLOW_API_KEY)
+  return !!(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || process.env.SILICONFLOW_API_KEY || process.env.LONGCAT_API_KEY)
 }
 
 async function getBrandData(projectId: string) {
@@ -48,6 +48,8 @@ async function executeKnowledgeGeneration(projectId: string): Promise<ExecutionR
   if (isLLMAvailable()) {
     try {
       const resp = await genericLLM.chat({
+        provider: 'longcat',
+        apiKey: process.env.LONGCAT_API_KEY,
         messages: [
           {
             role: 'system',
@@ -139,6 +141,8 @@ async function executeEntityExpansion(projectId: string): Promise<ExecutionResul
   if (isLLMAvailable()) {
     try {
       const resp = await genericLLM.chat({
+        provider: 'longcat',
+        apiKey: process.env.LONGCAT_API_KEY,
         messages: [
           {
             role: 'system',

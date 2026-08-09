@@ -247,6 +247,40 @@
       <!-- 创作工作区 -->
       <div class="member-modules member-modules--work">
         <div class="work-module-title">创作工作区</div>
+        <!-- COMMUNITY-ENGAGEMENT-01 社区模块：我的文章/收藏/转发 -->
+        <router-link to="/user/community-posts" class="member-module">
+          <div class="module-icon-area" style="background: rgba(220,38,38,0.1);">
+            <span class="module-icon">📝</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的文章</h3>
+            <p class="module-desc">社区发布文章 · 审核状态</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/user/community-favorites" class="member-module">
+          <div class="module-icon-area" style="background: rgba(245,158,11,0.1);">
+            <span class="module-icon">🔖</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">文章收藏</h3>
+            <p class="module-desc">收藏的社区文章</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
+        <router-link to="/user/community-shares" class="member-module">
+          <div class="module-icon-area" style="background: rgba(16,185,129,0.1);">
+            <span class="module-icon">↗️</span>
+          </div>
+          <div class="module-text">
+            <h3 class="module-title">我的转发</h3>
+            <p class="module-desc">转发过的社区文章</p>
+          </div>
+          <span class="module-arrow">→</span>
+        </router-link>
+
         <router-link to="/studio/v2" class="member-module">
           <div class="module-icon-area" style="background: rgba(59,130,246,0.1);">
             <span class="module-icon">🎬</span>

@@ -63,8 +63,8 @@ function ensureWorker(): ChildProcess {
   return worker
 }
 
-/** 转写一个 wav 文件（带 120s 超时） */
-function transcribeWav(wavPath: string): Promise<{ text?: string; error?: string }> {
+/** 转写一个 wav 文件（带 120s 超时；language: zh/en/es/ru 等，默认 zh） */
+function transcribeWav(wavPath: string, language = 'zh'): Promise<{ text?: string; error?: string }> {
   const w = ensureWorker()
   const id = `t${++taskSeq}`
   return new Promise((resolvePromise) => {
@@ -76,8 +76,15 @@ function transcribeWav(wavPath: string): Promise<{ text?: string; error?: string
       clearTimeout(timer)
       resolvePromise(r)
     })
-    w.stdin?.write(JSON.stringify({ id, wav_path: wavPath }) + '\n')
+    w.stdin?.write(JSON.stringify({ id, wav_path: wavPath, language }) + '\n')
   })
+}
+
+/** 同传网关复用：wav 文件转写（指定语言） */
+export async function transcribeWavFile(wavPath: string, language = 'zh'): Promise<string> {
+  const r = await transcribeWav(wavPath, language)
+  if (r.error) throw new Error(`ASR 失败: ${r.error}`)
+  return (r.text || '').trim()
 }
 
 /** 音频 URL → 16k 单声道 wav 临时文件（ffmpeg） */

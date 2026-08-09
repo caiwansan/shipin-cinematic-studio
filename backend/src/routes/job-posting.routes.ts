@@ -280,39 +280,40 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
       })
       const jobIds = jobPostings.map(j => j.id)
 
-      if (jobIds.length === 0) {
-        return reply.send({ success: true, candidates: [], total: 0 })
-      }
-
       // 2. 获取所有匹配记录（按 matchScore 降序）
-      // ⚠️ candidate 关系已在 schema 中注释（待 Identity Consolidation），不能 include
-      const matches = await prisma.candidateMatch.findMany({
-        where: { jobId: { in: jobIds } },
-        orderBy: { matchScore: 'desc' },
-        include: {
-          job: {
-            select: { id: true, title: true },
-          },
-        },
-      })
-
-      // 3. 从 CareerProfile 独立查询候选人信息
-      const candidateIds = [...new Set(matches.map(m => m.candidateId).filter(Boolean))]
-      const profiles = candidateIds.length > 0
-        ? await prisma.careerProfile.findMany({
-            where: { id: { in: candidateIds } },
-            select: {
-              id: true,
-              fullName: true,
-              headline: true,
-              city: true,
-              bio: true,
-              skills: { select: { name: true } },
-              workExperiences: { take: 1, select: { title: true } },
-              educations: { take: 1, select: { degree: true, field: true } },
+      const matches = jobIds.length > 0
+        ? await prisma.candidateMatch.findMany({
+            where: { jobId: { in: jobIds } },
+            orderBy: { matchScore: 'desc' },
+            include: {
+              job: {
+                select: { id: true, title: true },
+              },
             },
           })
         : []
+
+      // 3. 从 CareerProfile 独立查询候选人信息（匹配的 + 公开的）
+      const matchedCandidateIds = [...new Set(matches.map(m => m.candidateId).filter(Boolean))]
+      const profiles = await prisma.careerProfile.findMany({
+        where: {
+          OR: [
+            { id: { in: matchedCandidateIds } },
+            { visibility: 'public' },
+          ],
+        },
+        select: {
+          id: true,
+          fullName: true,
+          headline: true,
+          city: true,
+          bio: true,
+          visibility: true,
+          skills: { select: { skill: { select: { name: true } } } },
+          workExperiences: { take: 1, select: { title: true } },
+          educations: { take: 1, select: { degree: true, school: true, major: true } },
+        },
+      })
       const profileMap = new Map(profiles.map(p => [p.id, p]))
 
       // 4. 聚合同一候选人的最高匹配分
@@ -325,8 +326,8 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
           candidateMap.set(cid, {
             id: cid,
             fullName: profile?.fullName || '候选人',
-            education: profile?.educations?.[0]?.degree || profile?.educations?.[0]?.field || null,
-            skills: profile?.skills?.map(s => s.name) || [],
+            education: profile?.educations?.[0]?.degree || profile?.educations?.[0]?.major || profile?.educations?.[0]?.school || null,
+            skills: profile?.skills?.map(s => s.skill?.name).filter(Boolean) || [],
             experience: profile?.headline || profile?.workExperiences?.[0]?.title || '',
             city: profile?.city || '',
             bio: profile?.bio || '',
@@ -340,6 +341,29 @@ export const jobPostingRoutes = async (fastify: FastifyInstance) => {
             matchedAt: m.createdAt,
           })
         }
+      }
+
+      // 5. 补充候选人：公开的 careerProfile 中没有匹配记录的（如简历表单提交的求职者）
+      const matchedIds = new Set(Array.from(candidateMap.keys()))
+      const publicProfiles = profiles.filter(p => p.visibility === 'public' && !matchedIds.has(p.id))
+      for (const p of publicProfiles) {
+        candidateMap.set(p.id, {
+          id: p.id,
+          fullName: p.fullName || '候选人',
+          education: p.educations?.[0]?.degree || p.educations?.[0]?.major || p.educations?.[0]?.school || null,
+          skills: p.skills?.map(s => s.skill?.name).filter(Boolean) || [],
+          experience: p.headline || p.workExperiences?.[0]?.title || '',
+          city: p.city || '',
+          bio: p.bio || '',
+          matchScore: 0,
+          matchBreakdown: null,
+          aiAnalysis: null,
+          matchId: null,
+          jobId: null,
+          jobTitle: null,
+          matchStatus: 'new',
+          matchedAt: null,
+        })
       }
 
       const allCandidates = Array.from(candidateMap.values())

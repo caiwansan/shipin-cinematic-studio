@@ -1,0 +1,63 @@
+/**
+ * S1.1 Identity Ticket Bridge — POST /api/auth/ticket/exchange
+ * 云端 Workspace 页面: ticket → accessToken + user（单次消费，防重放）
+ * 依据: KUNLUN-AI-OS-IDENTITY-BRIDGE-v1.md / ADR-021
+ * 模式对齐: auth.ts（fastify.jwt.sign payload { id, email, tokenVersion, organizationId }）
+ */
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import Redis from 'ioredis'
+import { env } from '../config/env.js'
+import { prisma } from '../utils/index.js'
+
+const PREFIX = 'auth:ticket:'
+
+const redis = new Redis(env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  retryStrategy: (times: number) => Math.min(times * 50, 2000),
+})
+
+export default async function ticketExchangeRoute(app: FastifyInstance) {
+  app.post('/api/auth/ticket/exchange', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { ticket } = (request.body || {}) as { ticket?: string }
+    if (!ticket || typeof ticket !== 'string') {
+      return reply.code(400).send({ error: 'TICKET_REQUIRED' })
+    }
+
+    // 单次消费: GETDEL 原子取走（防重放）；低版本 Redis 需改用 multi GET+DEL
+    const raw = await redis.getdel(`${PREFIX}${ticket}`)
+    if (!raw) {
+      return reply.code(410).send({ error: 'TICKET_USED_OR_EXPIRED' })
+    }
+
+    let payload: { userId: string; deviceId?: string }
+    try {
+      payload = JSON.parse(raw)
+    } catch {
+      return reply.code(410).send({ error: 'TICKET_INVALID' })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, name: true, email: true, avatar: true, tokenVersion: true },
+    })
+    if (!user) {
+      return reply.code(410).send({ error: 'TICKET_INVALID' })
+    }
+
+    // 与 auth.ts 同构签发（payload 用 id + tokenVersion，保证 authenticate 校验兼容）
+    const accessToken = (app as any).jwt.sign({
+      id: user.id,
+      email: user.email,
+      tokenVersion: user.tokenVersion,
+    } as any)
+
+    return reply.send({
+      code: 0,
+      data: {
+        accessToken,
+        user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar },
+      },
+    })
+  })
+}

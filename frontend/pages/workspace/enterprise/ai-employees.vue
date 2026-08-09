@@ -1,8 +1,8 @@
 <template>
   <div class="ae-page">
     <RecruitmentPageShell>
-      <template #title>AI 招聘专员</template>
-      <template #subtitle>Carol — 企业级 AI 招聘员工，全天候工作，从需求分析到候选人推荐全流程覆盖</template>
+      <template #title>AI 员工中心</template>
+      <template #subtitle>您的企业 AI 员工团队，全天候自动执行招聘、运营、分析等任务</template>
 
       <!-- Loading State -->
       <div v-if="loading" class="ae-loading">
@@ -20,25 +20,25 @@
       <!-- Not Logged In -->
       <div v-else-if="!isLoggedIn" class="ae-guest">
         <div class="ae-guest-card">
-          <div class="ae-guest-icon">C</div>
-          <h2>Carol AI 招聘专员</h2>
-          <p>企业级 AI 招聘员工，自动完成招聘全流程</p>
+          <div class="ae-guest-icon">🤖</div>
+          <h2>AI 员工中心</h2>
+          <p>企业级 AI 员工团队，自动完成招聘、运营、分析等全流程工作</p>
           <button class="ae-btn-primary" @click="goToLogin">登录体验</button>
         </div>
       </div>
 
-      <!-- Main Carol Product Page -->
+      <!-- Dynamic AI Employee List -->
       <template v-else>
-        <!-- ═══ Carol Identity Hero ═══ -->
+        <!-- ═══ Team Overview ═══ -->
         <div class="ae-hero">
           <div class="ae-hero-identity">
-            <div class="ae-hero-avatar">C</div>
+            <div class="ae-hero-avatar">🤖</div>
             <div class="ae-hero-info">
-              <h1 class="ae-hero-name">Carol</h1>
-              <div class="ae-hero-role">AI 招聘专员</div>
-              <div class="ae-hero-status" :class="{ 'ae-hero-status--active': agentActive }">
+              <h1 class="ae-hero-name">AI 员工团队</h1>
+              <div class="ae-hero-role">{{ agents.length }} 个 AI 员工 · 一键管理招聘全流程</div>
+              <div class="ae-hero-status ae-hero-status--active">
                 <span class="ae-status-dot"></span>
-                {{ agentActive ? '工作中' : '等待任务' }}
+                {{ activeAgentCount }} 个工作中
               </div>
             </div>
           </div>
@@ -49,115 +49,85 @@
           </div>
         </div>
 
-        <!-- ═══ Responsibilities ═══ -->
+        <!-- ═══ AI Employee Cards ═══ -->
         <div class="ae-section">
-          <h2 class="ae-section-title">工作职责</h2>
+          <h2 class="ae-section-title">AI 员工列表</h2>
+          <div class="ae-agent-grid">
+            <div v-for="agent in agents" :key="agent.id" class="ae-agent-card">
+              <div class="ae-agent-header">
+                <div class="ae-agent-avatar" :style="{ background: getAgentColor(agent.agentType) }">
+                  {{ agent.name.charAt(0) }}
+                </div>
+                <div class="ae-agent-info">
+                  <h3 class="ae-agent-name">{{ agent.name }}</h3>
+                  <div class="ae-agent-role">{{ agent.role }}</div>
+                  <div class="ae-agent-status" :class="{ 'ae-agent-status--active': agent.status === 'active' }">
+                    <span class="ae-status-dot"></span>
+                    {{ agent.status === 'active' ? '工作中' : '已暂停' }}
+                  </div>
+                </div>
+              </div>
+              <p v-if="agent.goal" class="ae-agent-goal">{{ agent.goal }}</p>
+              <div class="ae-agent-tags">
+                <span v-for="cap in (agent.capabilities || []).slice(0, 4)" :key="cap" class="ae-agent-tag">
+                  {{ cap }}
+                </span>
+              </div>
+              <div class="ae-agent-stats">
+                <div class="ae-agent-stat">
+                  <span class="ae-agent-stat-value">{{ agent.todayCompleted || 0 }}</span>
+                  <span class="ae-agent-stat-label">今日完成</span>
+                </div>
+                <div class="ae-agent-stat">
+                  <span class="ae-agent-stat-value">{{ agent.totalTasks || 0 }}</span>
+                  <span class="ae-agent-stat-label">总任务</span>
+                </div>
+                <div class="ae-agent-stat">
+                  <span class="ae-agent-stat-value">{{ agent.todayProgress || 0 }}%</span>
+                  <span class="ae-agent-stat-label">今日进度</span>
+                </div>
+              </div>
+              <div class="ae-agent-actions">
+                <button
+                  class="ae-btn-primary ae-btn--sm"
+                  @click="toggleAgent(agent)"
+                  :disabled="toggling[agent.id]"
+                >
+                  {{ agent.status === 'active' ? '暂停' : '激活' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ Responsibilities (show if any agent has capabilities) ═══ -->
+        <div class="ae-section" v-if="allCapabilities.length > 0">
+          <h2 class="ae-section-title">团队能力</h2>
           <div class="ae-responsibilities">
-            <div class="ae-responsibility">
+            <div v-for="cap in allCapabilities.slice(0, 8)" :key="cap" class="ae-responsibility">
               <div class="ae-r-icon">✓</div>
               <div class="ae-r-body">
-                <strong>分析招聘需求</strong>
-                <span>理解岗位描述，提取核心技能要求和筛选标准</span>
-              </div>
-            </div>
-            <div class="ae-responsibility">
-              <div class="ae-r-icon">✓</div>
-              <div class="ae-r-body">
-                <strong>生成岗位策略</strong>
-                <span>基于招聘需求制定人才搜索策略和推荐渠道</span>
-              </div>
-            </div>
-            <div class="ae-responsibility">
-              <div class="ae-r-icon">✓</div>
-              <div class="ae-r-body">
-                <strong>筛选候选人</strong>
-                <span>自动解析简历，基于匹配模型进行智能筛选排序</span>
-              </div>
-            </div>
-            <div class="ae-responsibility">
-              <div class="ae-r-icon">✓</div>
-              <div class="ae-r-body">
-                <strong>分析匹配度</strong>
-                <span>多维度匹配分析，输出候选人匹配评估报告</span>
-              </div>
-            </div>
-            <div class="ae-responsibility">
-              <div class="ae-r-icon">✓</div>
-              <div class="ae-r-body">
-                <strong>辅助面试</strong>
-                <span>生成定制化面试题，辅助面试评估与决策</span>
-              </div>
-            </div>
-            <div class="ae-responsibility">
-              <div class="ae-r-icon">✓</div>
-              <div class="ae-r-body">
-                <strong>输出招聘报告</strong>
-                <span>汇总招聘数据，输出洞察与优化建议</span>
+                <strong>{{ cap }}</strong>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- ═══ Carol Today Stats ═══ -->
-        <div class="ae-section">
-          <h2 class="ae-section-title">Carol 今日完成</h2>
-          <div class="ae-stats-grid">
-            <div class="ae-stat-card">
-              <span class="ae-stat-value">{{ stats.analyzedCandidates }}</span>
-              <span class="ae-stat-label">分析候选人</span>
-            </div>
-            <div class="ae-stat-card">
-              <span class="ae-stat-value">{{ stats.highMatchFound }}</span>
-              <span class="ae-stat-label">发现高匹配人才</span>
-            </div>
-            <div class="ae-stat-card">
-              <span class="ae-stat-value">{{ stats.suggestedInterviews }}</span>
-              <span class="ae-stat-label">建议面试</span>
-            </div>
-            <div class="ae-stat-card">
-              <span class="ae-stat-value">{{ stats.reportsGenerated }}</span>
-              <span class="ae-stat-label">生成报告</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- ═══ Carol Work Log (Phase 8C) ═══ -->
-        <div class="ae-section" v-if="activities.length > 0">
-          <h2 class="ae-section-title">工作动态</h2>
-          <div class="ae-timeline">
-            <div v-for="(act, idx) in activities" :key="idx" class="ae-timeline-item">
-              <div class="ae-timeline-dot"></div>
-              <div class="ae-timeline-content">
-                <div class="ae-timeline-time">{{ act.time }}</div>
-                <div class="ae-timeline-action">{{ act.action }}</div>
-                <div class="ae-timeline-detail">{{ act.detail }}</div>
-                <div v-if="act.result" class="ae-timeline-result">{{ act.result }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="ae-section" v-else>
-          <h2 class="ae-section-title">工作动态</h2>
-          <div class="ae-empty-timeline">
-            <p>完成第一次招聘任务后，此处将展示 Carol 的工作记录</p>
-          </div>
-        </div>
-
-        <!-- ═══ CTA: Hire / Enter ═══ -->
+        <!-- ═══ CTA ═══ -->
         <div class="ae-cta-section">
           <div class="ae-cta-card">
             <div class="ae-cta-info">
-              <h3 v-if="!hasSubscription">雇佣 Carol，开启智能招聘</h3>
-              <h3 v-else-if="!agentActive">Carol 已就绪，立即激活</h3>
-              <h3 v-else>Carol 正在为您工作</h3>
+              <h3 v-if="!hasSubscription">开通套餐，激活 AI 员工</h3>
+              <h3 v-else-if="agents.length === 0">创建您的第一个 AI 员工</h3>
+              <h3 v-else>AI 员工正在为您工作</h3>
               <p v-if="!hasSubscription">
-                开通套餐即可激活 Carol，让 AI 招聘专员自动完成从需求分析到候选人筛选的全流程工作。
+                开通套餐即可激活 AI 员工团队，让 AI 自动完成从招聘到运营的全流程工作。
               </p>
-              <p v-else-if="!agentActive">
-                您的套餐已包含 Carol，激活后即可开始招聘任务。
+              <p v-else-if="agents.length === 0">
+                您的套餐已包含 AI 员工，创建后即可开始自动执行任务。
               </p>
               <p v-else>
-                前往招聘驾驶舱，分配岗位让 Carol 自动执行招聘任务。
+                前往招聘驾驶舱，分配岗位让您的 AI 员工团队自动执行任务。
               </p>
             </div>
             <button
@@ -165,15 +135,7 @@
               class="ae-btn-primary ae-btn--lg"
               @click="goToBilling"
             >
-              雇佣 Carol
-            </button>
-            <button
-              v-else-if="!agentActive"
-              class="ae-btn-primary ae-btn--lg"
-              @click="activateCarol"
-              :disabled="activating"
-            >
-              {{ activating ? '激活中...' : '激活 Carol' }}
+              开通套餐
             </button>
             <button
               v-else
@@ -202,29 +164,72 @@ const authStore = useAuthStore()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const hasSubscription = ref(false)
-const agentActive = ref(false)
 const activating = ref(false)
 
-const stats = ref({
-  analyzedCandidates: 0,
-  highMatchFound: 0,
-  suggestedInterviews: 0,
-  reportsGenerated: 0,
-})
+interface Agent {
+  id: string
+  name: string
+  role: string
+  agentType: string
+  goal?: string
+  capabilities: string[]
+  status: string
+  todayProgress?: number
+  todayCompleted?: number
+  totalTasks?: number
+}
 
-const activities = ref<Array<{
-  time: string
-  action: string
-  detail: string
-  result: string
-}>>([])
+const agents = ref<Agent[]>([])
+const toggling = ref<Record<string, boolean>>({})
 
 const isLoggedIn = computed(() => {
   return !!authStore.token
 })
 
+const activeAgentCount = computed(() => {
+  return agents.value.filter(a => a.status === 'active').length
+})
+
+const allCapabilities = computed(() => {
+  const caps = new Set<string>()
+  for (const a of agents.value) {
+    for (const c of (a.capabilities || [])) {
+      caps.add(c)
+    }
+  }
+  return Array.from(caps)
+})
+
 function getAuthToken(): string {
   return authStore.token || localStorage.getItem('auth_token') || ''
+}
+
+function parseJsonField(field: any): string[] {
+  if (!field) return []
+  if (Array.isArray(field)) return field
+  try {
+    const parsed = JSON.parse(field)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function getAgentColor(agentType: string): string {
+  const colors: Record<string, string> = {
+    'recruiter': 'linear-gradient(135deg, #F59E0B, #F97316)',
+    'interview': 'linear-gradient(135deg, #8B5CF6, #A855F7)',
+    'talent_analyst': 'linear-gradient(135deg, #EC4899, #F43F5E)',
+    'talent_agent': 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+    'career_advisor': 'linear-gradient(135deg, #10B981, #059669)',
+    'hotspot_analyst': 'linear-gradient(135deg, #F59E0B, #EAB308)',
+    'content_creator': 'linear-gradient(135deg, #3B82F6, #2563EB)',
+    'media_operator': 'linear-gradient(135deg, #EF4444, #DC2626)',
+    'finance_analyst': 'linear-gradient(135deg, #14B8A6, #0D9488)',
+    'legal_advisor': 'linear-gradient(135deg, #6B7280, #4B5563)',
+    'shortdrama_director': 'linear-gradient(135deg, #F97316, #EA580C)',
+  }
+  return colors[agentType] || 'linear-gradient(135deg, #6366F1, #4F46E5)'
 }
 
 /* ─── Data Loading ─── */
@@ -250,59 +255,30 @@ async function loadData() {
       }
     } catch { /* non-fatal */ }
 
-    // 2. Agent profiles (find Carol)
+    // 2. Agent profiles (all agents for this org)
     try {
       const profileRes = await fetch('/api/enterprise/agent-profiles', { headers })
       if (profileRes.ok) {
         const profileData = await profileRes.json()
-        const agents = profileData?.data || []
-        const carol = agents.find((a: any) => {
-          const name = (a.shortName || a.name || '').toLowerCase()
-          return name.includes('carol') || name.includes('c')
-        })
-        if (carol) {
-          agentActive.value = carol.status === 'active'
-          stats.value = {
-            analyzedCandidates: carol.analyzedCandidates || stats.value.analyzedCandidates,
-            highMatchFound: carol.highMatchFound || carol.highMatchCandidates || stats.value.highMatchFound,
-            suggestedInterviews: carol.interviewsEvaluated || carol.suggestedInterviews || stats.value.suggestedInterviews,
-            reportsGenerated: carol.reportsGenerated || stats.value.reportsGenerated,
-          }
-        }
-      }
-    } catch { /* non-fatal */ }
-
-    // 3. Report summary for Carol stats
-    try {
-      const reportRes = await fetch('/api/enterprise/reports/summary', { headers })
-      if (reportRes.ok) {
-        const reportData = await reportRes.json()
-        if (reportData.success && reportData.report?.summary) {
-          const summary = reportData.report.summary
-          stats.value = {
-            analyzedCandidates: summary.totalCandidates || 0,
-            highMatchFound: summary.highMatch || 0,
-            suggestedInterviews: summary.invitedCount || 0,
-            reportsGenerated: 1,
-          }
-        }
-      }
-    } catch { /* non-fatal */ }
-
-    // 4. Agent activity (Phase 8C — work log)
-    try {
-      const activityRes = await fetch('/api/enterprise/agent-activity?agentId=carol&days=7', { headers })
-      if (activityRes.ok) {
-        const activityData = await activityRes.json()
-        if (activityData?.activities) {
-          activities.value = activityData.activities
-        }
+        const rawAgents = profileData?.data || []
+        agents.value = rawAgents.map((a: any) => ({
+          id: a.id,
+          name: a.name,
+          role: a.role,
+          agentType: a.agentType || a.agent_type,
+          goal: a.goal,
+          capabilities: parseJsonField(a.capabilities),
+          status: a.status || 'active',
+          todayProgress: a.todayProgress || 0,
+          todayCompleted: a.todayCompleted || 0,
+          totalTasks: a.totalTasks || 0,
+        }))
       }
     } catch { /* non-fatal */ }
 
     error.value = null
   } catch (e: any) {
-    console.error('Failed to load Carol profile:', e)
+    console.error('Failed to load agent profiles:', e)
     error.value = '加载失败，请稍后重试'
   } finally {
     loading.value = false
@@ -322,8 +298,8 @@ function goToLogin() {
   router.push('/login?redirect=' + encodeURIComponent('/workspace/enterprise/ai-employees'))
 }
 
-async function activateCarol() {
-  activating.value = true
+async function toggleAgent(agent: Agent) {
+  toggling.value[agent.id] = true
   try {
     const token = getAuthToken()
     if (!token) return
@@ -332,44 +308,18 @@ async function activateCarol() {
       'Content-Type': 'application/json',
     }
 
-    // Find Carol's agent profile ID first
-    const profileRes = await fetch('/api/enterprise/agent-profiles', { headers })
-    if (profileRes.ok) {
-      const profileData = await profileRes.json()
-      const agents = profileData?.data || []
-      const carol = agents.find((a: any) => {
-        const name = (a.shortName || a.name || '').toLowerCase()
-        return name.includes('carol') || name.includes('c')
-      })
-
-      if (carol) {
-        const toggleRes = await fetch(`/api/enterprise/agent-profiles/${carol.id}/toggle`, {
-          method: 'POST',
-          headers,
-        })
-        if (toggleRes.ok) {
-          agentActive.value = true
-        }
-      } else {
-        // Carol doesn't exist yet — try to activate via runtime
-        const activateRes = await fetch('/api/enterprise/agent-runtime/provision', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            agentType: 'talent_analyst',
-            shortName: 'Carol',
-            name: 'Carol AI 招聘专员',
-          }),
-        })
-        if (activateRes.ok) {
-          agentActive.value = true
-        }
-      }
+    const toggleRes = await fetch(`/api/enterprise/agent-profiles/${agent.id}/toggle`, {
+      method: 'POST',
+      headers,
+    })
+    if (toggleRes.ok) {
+      const data = await toggleRes.json()
+      agent.status = data?.data?.status || agent.status
     }
   } catch (e) {
-    console.error('Failed to activate Carol:', e)
+    console.error('Failed to toggle agent:', e)
   } finally {
-    activating.value = false
+    toggling.value[agent.id] = false
   }
 }
 
@@ -811,6 +761,154 @@ onMounted(async () => {
   font-size: 15px;
 }
 
+/* ─── Agent Grid ─── */
+.ae-agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.ae-agent-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ae-agent-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
+}
+
+.ae-agent-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ae-agent-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ae-agent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ae-agent-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ae-agent-role {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.ae-agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.ae-agent-status--active {
+  color: #4ADE80;
+}
+
+.ae-agent-status .ae-status-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.ae-agent-goal {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ae-agent-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ae-agent-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #818CF8;
+  white-space: nowrap;
+}
+
+.ae-agent-stats {
+  display: flex;
+  gap: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border-primary);
+}
+
+.ae-agent-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.ae-agent-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #818CF8;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ae-agent-stat-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.ae-agent-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ae-btn--sm {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
   .ae-responsibilities {
@@ -834,6 +932,10 @@ onMounted(async () => {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+  }
+
+  .ae-agent-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

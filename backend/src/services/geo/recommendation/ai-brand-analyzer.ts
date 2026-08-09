@@ -57,7 +57,7 @@ interface BrandData {
 // ── Helpers ──
 
 function isLLMAvailable(): boolean {
-  return !!(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || process.env.SILICONFLOW_API_KEY)
+  return !!(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || process.env.SILICONFLOW_API_KEY || process.env.LONGCAT_API_KEY)
 }
 
 // ── Fallback: Heuristic Analysis (no LLM) ──
@@ -205,7 +205,8 @@ adjustedScores 仅在您认为计数评分有明显偏差时提供，否则省�
 - 网站健康：${data.currentScores.website}
 - 知识覆盖：${data.currentScores.knowledge}`
 
-  const provider = process.env.SILICONFLOW_API_KEY ? 'siliconflow' : 'deepseek'
+  const provider = 'longcat'
+  const apiKey = process.env.LONGCAT_API_KEY
 
   try {
     const resp = await genericLLM.chat({
@@ -214,6 +215,7 @@ adjustedScores 仅在您认为计数评分有明显偏差时提供，否则省�
         { role: 'user', content: userPrompt },
       ],
       provider,
+      apiKey,
       model: process.env.LLM_MODEL || undefined,
     })
 

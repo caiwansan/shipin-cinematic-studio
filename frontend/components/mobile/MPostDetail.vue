@@ -63,9 +63,13 @@ import MPageShell from '~/components/MPageShell.vue'
 import { ref, computed, onMounted } from 'vue'
 import { mobileAuthFetch, mobileToast } from '~/composables/useMobileApi'
 import { renderMarkdown } from '~/utils/markdown'
+import { useReadTracking } from '~/composables/useReadTracking'
 
 const props = defineProps<{ postId: string }>()
 defineEmits<{ (e: 'close'): void }>()
+
+// 完读率埋点：移动端阅读会话上报（阶段一仅采集）
+useReadTracking(props.postId)
 
 const post = ref<any>(null)
 const comments = ref<any[]>([])

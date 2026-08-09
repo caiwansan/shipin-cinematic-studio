@@ -1,12 +1,12 @@
 {
-  "entropyScore": 791,
+  "entropyScore": 870,
   "metrics": {
-    "executionEntryPoints": 645,
+    "executionEntryPoints": 724,
     "providerLeaks": 4,
     "frontendRuntimeLeaks": 42,
     "queueMutationSources": 0,
     "runtimeCoreViolations": 0,
     "capabilityBoundaryHits": 0
   },
-  "timestamp": "2026-08-02T14:20:24.437Z"
+  "timestamp": "2026-08-08T13:14:16.985Z"
 }

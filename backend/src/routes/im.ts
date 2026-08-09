@@ -10,6 +10,7 @@ import { prisma } from '../utils/index.js'
 import { classifyMedia, generateThumb, registerMediaObject, startMediaTtlCleaner, MEDIA_UPLOAD_DIR } from '../im/media-ttl.service.js'
 import { indexMessage, recallMessage, recalledMessageIds, RECALL_WINDOW_MS } from '../im/im-recall.service.js'
 import { transcribeVoice, ASR_AVAILABLE } from '../im/voice-asr.service.js'
+import { LANG_NAMES } from '../services/interp-langs.js'
 
 // ── 配置（env 可覆盖）──────────────────────────────────────────
 const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
@@ -760,14 +761,21 @@ export default async function imRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // POST /api/im/translate — 英译中（IM-CHA-M10；DeepSeek 平台 key，只输出译文）
+  // POST /api/im/translate — 任意语种互译（DeepSeek；默认英→中，可指定 srcLang/tgtLang）
   fastify.post('/api/im/translate', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
-    const { text } = request.body as any
+    const { text, srcLang, tgtLang } = request.body as any
     if (!text || typeof text !== 'string' || text.length > 2000) {
       return reply.status(400).send({ success: false, error: '文本必填且不超过 2000 字符' })
     }
     const key = await getTranslateKey()
     if (!key) return reply.status(501).send({ success: false, error: '翻译服务未配置（DeepSeek key 缺失）' })
+    // 语言名称（fallback 到语言码）
+    const srcName = LANG_NAMES[srcLang] || srcLang || '英文'
+    const tgtName = LANG_NAMES[tgtLang] || tgtLang || '简体中文'
+    // 原文即目标语言 → 原样返回
+    if (srcLang && tgtLang && srcLang === tgtLang) {
+      return { success: true, data: { translated: text, source: text, srcLang, tgtLang } }
+    }
     try {
       const res = await fetch(`${process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1'}/chat/completions`, {
         method: 'POST',
@@ -775,7 +783,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
         body: JSON.stringify({
           model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
           messages: [
-            { role: 'system', content: '你是专业翻译。将用户消息翻译成简体中文，只输出译文本身，不加解释、不加引号、不改写原文语气。若原文已是中文则原样返回。' },
+            { role: 'system', content: `你是专业翻译。把下面这段${srcName}翻译成${tgtName}。只输出译文本身，不加解释、不加引号、不改写原文语气。若原文已是${tgtName}则原样返回。` },
             { role: 'user', content: text },
           ],
           max_tokens: 1000,
@@ -786,7 +794,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
       const j = await res.json()
       const translated = (j?.choices?.[0]?.message?.content || '').trim()
       if (!translated) return reply.status(502).send({ success: false, error: '翻译无结果' })
-      return { success: true, data: { translated, source: text } }
+      return { success: true, data: { translated, source: text, srcLang: srcLang || 'auto', tgtLang: tgtLang || 'zh' } }
     } catch (e) {
       return reply.status(502).send({ success: false, error: (e as Error).message })
     }

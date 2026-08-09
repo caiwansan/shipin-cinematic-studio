@@ -236,6 +236,7 @@ function onVoskFinal(callId: string, session: InterpSession, voskText: string) {
 }
 
 // ── WS 处理 ──
+let _frameCount = 0
 function handleBinary(socket: any, session: InterpSession, callId: string, data: Buffer) {
   if (!data.length) return
   const kind = data[0]
@@ -243,6 +244,9 @@ function handleBinary(socket: any, session: InterpSession, callId: string, data:
   if (!pcm.length) return
   if (kind !== KIND_PARTIAL && kind !== KIND_FINAL) return
   session.lastFrameAt = Date.now()
+  _frameCount++
+  if (_frameCount <= 5 || _frameCount % 50 === 0) console.log(`[interp] binary #${_frameCount} kind=${kind} pcm=${pcm.length}B from=${session.uid.slice(0,8)}`)
+  if (_frameCount === 1) console.log(`[interp] ✅ first audio frame received from ${session.uid.slice(0,8)}`)
   const sid = sessionKey(callId, session.uid)
   // 引擎路由：常用语种 → Vosk 流式（毫秒级）；长尾/方言 → Whisper 多语言 worker
   if (asrEngineFor(session.srcLang) === 'vosk') {
@@ -358,10 +362,11 @@ export default async function imRtcInterpreterRoutes(fastify: FastifyInstance): 
       if (isBinary && Buffer.isBuffer(data)) {
         handleBinary(socket, session, callId, data)
       } else {
-        // 文本：心跳 ping
         const raw = Buffer.isBuffer(data) ? data.toString() : String(data || '')
         if (raw.includes('ping')) {
           try { socket.send(JSON.stringify({ type: 'pong', ts: Date.now() })) } catch { /* noop */ }
+        } else {
+          console.log(`[interp] text from ${session.uid.slice(0,8)}: ${raw.slice(0,120)}`)
         }
       }
     })

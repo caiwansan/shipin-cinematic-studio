@@ -48,8 +48,8 @@ export class EnterpriseAgentProfileService {
    * 获取租户所有 AI Employee（从 enterprise_agent_profile 表查询）
    * 不再返回内存中硬编码的 DEFAULT_AGENTS
    */
-  async listAgents(tenantId: string, filter?: { types?: string[]; exclude?: string[] }): Promise<AgentProfileDetail[]> {
-    const where: any = { tenantId };
+  async listAgents(organizationId: string, filter?: { types?: string[]; exclude?: string[] }): Promise<AgentProfileDetail[]> {
+    const where: any = { organizationId };
 
     if (filter?.types?.length) {
       where.agentType = { in: filter.types };
@@ -71,9 +71,9 @@ export class EnterpriseAgentProfileService {
   /**
    * 获取单个 AI Employee 详情
    */
-  async getAgent(tenantId: string, agentId: string): Promise<AgentProfileDetail | null> {
+  async getAgent(organizationId: string, agentId: string): Promise<AgentProfileDetail | null> {
     const record = await prisma.enterpriseAgentProfile.findFirst({
-      where: { id: agentId, tenantId },
+      where: { id: agentId, organizationId },
     });
     if (!record) return null;
     const taskStatsMap = await this.getTaskStatsForProfiles([record.id]);
@@ -83,9 +83,9 @@ export class EnterpriseAgentProfileService {
   /**
    * 更新 AI Employee 配置（目标/时间/备注/状态/权限）
    */
-  async updateAgent(tenantId: string, agentId: string, input: UpdateAgentProfileInput): Promise<AgentProfileDetail | null> {
+  async updateAgent(organizationId: string, agentId: string, input: UpdateAgentProfileInput): Promise<AgentProfileDetail | null> {
     const record = await prisma.enterpriseAgentProfile.findFirst({
-      where: { id: agentId, tenantId },
+      where: { id: agentId, organizationId },
     });
     if (!record) return null;
 
@@ -107,28 +107,28 @@ export class EnterpriseAgentProfileService {
   /**
    * 暂停/启用 AI Employee
    */
-  async toggleAgentStatus(tenantId: string, agentId: string): Promise<AgentProfileDetail | null> {
+  async toggleAgentStatus(organizationId: string, agentId: string): Promise<AgentProfileDetail | null> {
     const record = await prisma.enterpriseAgentProfile.findFirst({
-      where: { id: agentId, tenantId },
+      where: { id: agentId, organizationId },
     });
     if (!record) return null;
 
     const newStatus = record.status === 'active' ? 'paused' : 'active';
-    return this.updateAgent(tenantId, agentId, { status: newStatus as 'active' | 'paused' });
+    return this.updateAgent(organizationId, agentId, { status: newStatus as 'active' | 'paused' });
   }
 
   /**
    * 获取今日部门概览（招聘工作台首页用）
    * 数据来源：enterprise_agent_profile（与 listAgents 一致）
    */
-  async getDepartmentOverview(tenantId: string): Promise<{
+  async getDepartmentOverview(organizationId: string): Promise<{
     agents: AgentProfileDetail[];
     totalAgents: number;
     activeAgents: number;
     totalTargetToday: number;
     totalCompletedToday: number;
   }> {
-    const agents = await this.listAgents(tenantId);
+    const agents = await this.listAgents(organizationId);
 
     return {
       agents,

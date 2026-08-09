@@ -489,6 +489,12 @@
         </span>
         <span v-if="interp.subtitle.value.preview" class="rtc-interp-preview">对方未开启同传 · 预览</span>
       </div>
+      <!-- 同传诊断面板（仅同传开启时显示）-->
+      <div v-if="interp.state.value === 'on'" class="rtc-interp-diag">
+        <span :class="['diag-dot', interp.diagnostic.value.ctxState === 'running' ? 'ok' : 'warn']"></span>
+        <span class="diag-text">音频:{{ interp.diagnostic.value.audioFrames }}帧 {{ interp.diagnostic.value.samplesSent }}采 WS:{{ interp.diagnostic.value.wsState }} {{ interp.diagnostic.value.uptime }}s RMS:{{ (interp.diagnostic.value.rmsLevel*1000).toFixed(1) }} th:{{ (interp.diagnostic.value.vadThreshold*1000).toFixed(1) }}</span>
+        <span v-if="interp.diagnostic.value.lastError" class="diag-err">⚠ {{ interp.diagnostic.value.lastError }}</span>
+      </div>
       <!-- 控制条 -->
       <div class="rtc-controls">
         <button class="rtc-ctl" :class="{ off: rtc.micMuted.value }" :title="rtc.micMuted.value ? '取消静音' : '静音'" @click="rtc.toggleMic()">{{ rtc.micMuted.value ? '🔇' : '🎙️' }}</button>
@@ -559,7 +565,7 @@ const rtcToast = ref('')
 const interpPanel = ref(false)
 const interpMyLang = ref('zh')
 const interpPeerLang = ref('en')
-const interpConfigured = ref(false)
+const interpConfigured = ref(true) // 同传默认开启（用户可关闭）
 
 function langLabel(v: string): string {
   return interp.langOptions.find((o) => o.value === v)?.label || v
@@ -575,7 +581,8 @@ function loadInterpPrefs() {
     const known = interp.langOptions.map((o) => o.value)
     if (m && known.includes(m)) interpMyLang.value = m
     if (p && known.includes(p)) interpPeerLang.value = p
-    interpConfigured.value = localStorage.getItem('kl_interp_configured') === '1'
+    const savedConfigured = localStorage.getItem('kl_interp_configured')
+    if (savedConfigured !== null) interpConfigured.value = savedConfigured === '1'
   } catch { /* noop */ }
 }
 function saveInterpPrefs() {
@@ -631,7 +638,7 @@ watch(
     if (s === 'active' && interpConfigured.value && interp.state.value === 'off') {
       setTimeout(() => applyInterp(), 600) // 等本地流就绪
     }
-    if (s === 'idle') { interp.stop() }
+    if (s === 'idle') { interp.stop(); _interpRetryCount = 0 }
   }
 )
 
@@ -661,11 +668,23 @@ function confirmInterp() {
     showToast(`✅ 已保存：我说${langLabel(interpMyLang.value)} · 对方听${langLabel(interpPeerLang.value)}，通话时自动生效`)
   }
 }
+let _interpRetryCount = 0
 function applyInterp() {
-  if (rtc.state.value !== 'active' || !rtc.callId.value || !rtc.localStream.value) {
+  if (rtc.state.value !== 'active' || !rtc.callId.value) {
     rtcToast.value = '通话建立后才能开启同传'
     return
   }
+  if (!rtc.localStream.value) {
+    if (_interpRetryCount < 5) {
+      _interpRetryCount++
+      setTimeout(() => applyInterp(), 500)
+    } else {
+      rtcToast.value = '本地媒体未就绪，请手动点击🌐开启'
+      _interpRetryCount = 0
+    }
+    return
+  }
+  _interpRetryCount = 0
   interp.start({ stream: rtc.localStream.value, callId: rtc.callId.value, srcLang: interpMyLang.value, tgtLang: interpPeerLang.value }).catch((e: any) => {
     rtcToast.value = e?.message || '同传开启失败'
   })
@@ -2257,6 +2276,16 @@ if (typeof window !== 'undefined') {
 .rtc-interp-lang { font-size: 11px; color: #7ec8e3; }
 .rtc-interp-text { word-break: break-word; }
 .rtc-interp-preview { font-size: 11px; color: #f5a623; }
+.rtc-interp-diag {
+  display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+  font-size: 11px; color: rgba(255,255,255,.7); font-family: monospace;
+  pointer-events: none; max-width: 90%; white-space: nowrap;
+}
+.rtc-interp-diag .diag-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.rtc-interp-diag .diag-dot.ok { background: #4caf50; box-shadow: 0 0 4px #4caf50; }
+.rtc-interp-diag .diag-dot.warn { background: #ff9800; box-shadow: 0 0 4px #ff9800; }
+.rtc-interp-diag .diag-err { color: #ff6b6b; margin-left: 4px; }
 /* 控制条 */
 .rtc-controls {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 4;

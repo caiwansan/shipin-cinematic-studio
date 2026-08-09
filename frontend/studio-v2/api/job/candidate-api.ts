@@ -106,6 +106,58 @@ export async function updateCandidateProfile(profile: {
   })
 }
 
+// ─── 在线简历表单 ───
+
+export interface ResumeFormData {
+  fullName: string
+  email: string
+  phone: string
+  city: string
+  headline: string
+  bio: string
+  careerDirection: string
+  industry: string
+  yearsExperience: number
+  currentLevel: string
+  careerGoal: string
+  expectedSalaryMin: number
+  expectedSalaryMax: number
+  educations: Array<{
+    school: string
+    degree: string
+    major: string
+    startDate: string
+    endDate: string
+  }>
+  experiences: Array<{
+    company: string
+    title: string
+    startDate: string
+    endDate: string
+    isCurrent: boolean
+    description: string
+  }>
+  skills: string[]
+  resumeName?: string
+}
+
+/**
+ * 从表单创建简历
+ */
+export async function createResumeFromForm(data: ResumeFormData) {
+  return request('/resumes/from-form', {
+    method: 'POST',
+    body: data,
+  })
+}
+
+/**
+ * 获取当前用户简历表单数据（用于编辑）
+ */
+export async function getResumeFormData() {
+  return request('/resumes/from-form')
+}
+
 // ─── 推荐岗位 ───
 
 /**

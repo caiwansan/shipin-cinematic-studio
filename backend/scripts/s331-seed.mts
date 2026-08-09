@@ -44,6 +44,18 @@ const seeds = [
     status: 'active',
     executionMode: 'sync',
   },
+  {
+    code: 'def-test-harness',
+    name: 'S3.3.2 TestHarness',
+    version: '1.0.0',
+    description: 'S3.3.2 测试工具 Skill（mock.flaky/mock.slow，仅测试用途，F1 能力声明）',
+    capabilities: JSON.stringify(['mock.flaky', 'mock.slow']),
+    supportedResources: JSON.stringify([]),
+    permissions: JSON.stringify([]),
+    category: 'official',
+    status: 'active',
+    executionMode: 'sync',
+  },
 ]
 
 let created = 0

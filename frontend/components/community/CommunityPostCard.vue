@@ -15,7 +15,10 @@
       <span class="meta-stat">👁️ {{ post.viewCount }}</span>
       <span class="meta-stat">👍 {{ post.likeCount }}</span>
       <span class="meta-stat">💬 {{ post.commentCount }}</span>
+      <span v-if="(post.favoriteCount || 0) > 0" class="meta-stat">🔖 {{ post.favoriteCount }}</span>
+      <span v-if="(post.shareCount || 0) > 0" class="meta-stat">↗️ {{ post.shareCount }}</span>
       <span v-if="(post.giftCount || 0) > 0" class="meta-stat tip-stat" title="被打赏">🎁 {{ post.giftCount }}</span>
+      <span v-if="(post as any).hotScore" class="meta-stat hot-stat" :title="hotTip">🔥 {{ Number((post as any).hotScore).toFixed(2) }}</span>
       <span class="meta-time">{{ timeAgo }}</span>
     </div>
   </NuxtLink>
@@ -35,6 +38,8 @@ const props = defineProps<{
     viewCount: number
     likeCount: number
     commentCount: number
+    favoriteCount?: number
+    shareCount?: number
     giftCount?: number
     isPinned?: boolean
     isEssence?: boolean
@@ -56,6 +61,20 @@ const excerpt = computed(() => {
 const tagList = computed(() => {
   const tags = props.post.tags || ''
   return tags.split(',').map(t => t.trim()).filter(Boolean)
+})
+
+// COMMUNITY-HOTNESS-V2 热力构成 tooltip（可解释性）：展示对数缩放各项贡献 + 时间衰减
+const hotTip = computed(() => {
+  const h = (props.post as any).hotBreakdown
+  if (!h) return ''
+  const f = (n: number) => (Number(n) || 0).toFixed(2)
+  return [
+    `🔥 热力值 ${Number((props.post as any).hotScore).toFixed(2)}`,
+    `打赏 ${f(h.giftScore)} · 点赞 ${f(h.likeScore)} · 评论 ${f(h.commentScore)}`,
+    `转发 ${f(h.shareScore)} · 收藏 ${f(h.favoriteScore)}`,
+    `时间衰减 ×1/${f(h.decayFactor)}${h.newPostBoost > 1 ? ' · 新帖红利 ×' + f(h.newPostBoost) : ''}`,
+    `（对数缩放防霸榜 · 打赏信号最强）`,
+  ].join('\n')
 })
 
 // ─── 时间显示（hydration-safe）───
@@ -141,6 +160,11 @@ onUnmounted(() => {
 }
 .tip-stat {
   color: var(--cn-cinnabar) !important;
+}
+/* COMMUNITY-ENGAGEMENT-01 热力值标记 */
+.hot-stat {
+  color: var(--cn-cinnabar) !important;
+  font-weight: 600;
 }
 .card-excerpt {
   font-size: 0.83rem;

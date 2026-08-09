@@ -7,6 +7,7 @@
 import { prisma } from '../../utils/index.js'
 import { agentScheduleService } from './agent-schedule.service.js'
 import { agentAuditService } from './agent-audit.service.js'
+import { mediaAgentRuntimeAdapter } from '../media/agent/media-agent-runtime-adapter.js'
 
 export class AgentScheduler {
   private timer: NodeJS.Timeout | null = null
@@ -66,6 +67,9 @@ export class AgentScheduler {
 
   /**
    * 执行单个定时任务
+   * 
+   * Phase 3 (掌柜 2026-08-08 批准): 替换 mock 为真实 Hermes Runtime 执行
+   * 链路: Scheduler → MediaAgentRuntimeAdapter → EnterpriseAgentRuntimeService → Hermes
    */
   private async executeSchedule(schedule: any) {
     const { id, tenantId, agentId, taskTemplate, taskType, agent } = schedule
@@ -75,7 +79,28 @@ export class AgentScheduler {
     const startTime = Date.now()
 
     try {
-      // 记录审计日志（任务开始）
+      // 0. 查找 Agent Instance
+      const instance = await prisma.enterpriseAgentInstance.findFirst({
+        where: { employeeId: agentId },
+      })
+
+      if (!instance) {
+        console.warn(`[AgentScheduler] Agent 无 Instance，跳过: ${agentId}`)
+        await agentAuditService.log({
+          tenantId,
+          agentId,
+          action: `auto_${taskType}_no_instance`,
+          resource: 'schedule',
+          resourceId: id,
+          inputSummary: 'No EnterpriseAgentInstance found',
+          tokenUsage: 0,
+          cost: 0,
+        })
+        await agentScheduleService.markRun(id)
+        return
+      }
+
+      // 1. 记录审计日志（任务开始）
       await agentAuditService.log({
         tenantId,
         agentId,
@@ -87,38 +112,62 @@ export class AgentScheduler {
         cost: 0,
       })
 
-      // TODO: 未来接入实际LLM调用
-      // 当前阶段：记录模拟执行
-      const duration = Date.now() - startTime
-      const mockOutput = `[自动执行] ${taskTemplate.slice(0, 100)}...`
-
-      // 记录审计日志（任务完成）
-      await agentAuditService.log({
-        tenantId,
-        agentId,
-        action: `auto_${taskType}_completed`,
-        resource: 'schedule',
-        resourceId: id,
-        outputSummary: mockOutput,
-        tokenUsage: 0,
-        cost: 0,
-        durationMs: duration,
+      // 2. 真实 Hermes Runtime 执行 (Phase 3 替换 mock)
+      // 链路: Scheduler → MediaAgentRuntimeAdapter → EnterpriseAgentRuntimeService → Hermes
+      const result = await mediaAgentRuntimeAdapter.executeMediaAgentTask({
+        instanceId: instance.id,
+        taskType: taskType || 'general',
+        instruction: taskTemplate,
+        taskId: `schedule_${id}`,
+        userId: 'system:scheduler',
       })
 
-      // 更新目标进度
-      const today = new Date().toISOString().slice(0, 10)
-      await agentScheduleService.trackGoal(agentId, today, taskType, 1)
+      const duration = Date.now() - startTime
 
-      // 更新任务执行时间
+      // 3. 记录审计日志（任务完成/失败）
+      if (result.success) {
+        await agentAuditService.log({
+          tenantId,
+          agentId,
+          action: `auto_${taskType}_completed`,
+          resource: 'schedule',
+          resourceId: id,
+          outputSummary: result.output.slice(0, 500),
+          tokenUsage: 0,
+          cost: 0,
+          durationMs: duration,
+        })
+
+        // 更新目标进度
+        const today = new Date().toISOString().slice(0, 10)
+        await agentScheduleService.trackGoal(agentId, today, taskType, 1)
+
+        console.log(`[AgentScheduler] ✅ 任务完成: ${agent?.name} - ${taskType} (${duration}ms)`)
+      } else {
+        await agentAuditService.log({
+          tenantId,
+          agentId,
+          action: `auto_${taskType}_failed`,
+          resource: 'schedule',
+          resourceId: id,
+          outputSummary: result.error || 'Unknown error',
+          tokenUsage: 0,
+          cost: 0,
+          durationMs: duration,
+        })
+
+        console.error(`[AgentScheduler] ❌ 任务失败: ${agent?.name} - ${result.error}`)
+      }
+
+      // 4. 更新任务执行时间
       await agentScheduleService.markRun(id)
 
-      console.log(`[AgentScheduler] ✅ 任务完成: ${agent?.name} - ${taskType}`)
     } catch (e: any) {
-      // 记录失败
+      // 记录异常
       await agentAuditService.log({
         tenantId,
         agentId,
-        action: `auto_${taskType}_failed`,
+        action: `auto_${taskType}_error`,
         resource: 'schedule',
         resourceId: id,
         outputSummary: e.message,
@@ -126,7 +175,9 @@ export class AgentScheduler {
         cost: 0,
         durationMs: Date.now() - startTime,
       })
-      console.error(`[AgentScheduler] ❌ 任务失败: ${agent?.name} - ${e.message}`)
+      console.error(`[AgentScheduler] ❌ 任务异常: ${agent?.name} - ${e.message}`)
+      // 即使异常也更新执行时间，避免无限重试
+      await agentScheduleService.markRun(id).catch(() => {})
     }
   }
 }

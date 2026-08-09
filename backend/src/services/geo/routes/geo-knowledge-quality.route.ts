@@ -47,7 +47,7 @@ function buildEntityMap(inputs: Record<string, any>): Record<string, string> {
 // ─── Stub LLM (matches prompt template output format) ───
 
 function createStubLLM(entityIds: string[], entityNames: string[] = []) {
-  const hasLLM = !!(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || process.env.SILICONFLOW_API_KEY)
+  const hasLLM = !!(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || process.env.SILICONFLOW_API_KEY || process.env.LONGCAT_API_KEY)
 
   return {
     generate: async (prompt: string, _opts?: any) => {
@@ -56,7 +56,8 @@ function createStubLLM(entityIds: string[], entityNames: string[] = []) {
         try {
           const resp = await genericLLM.chat({
             messages: [{ role: 'user', content: prompt }],
-            provider: process.env.SILICONFLOW_API_KEY ? 'siliconflow' : 'deepseek',
+            provider: 'longcat',
+            apiKey: process.env.LONGCAT_API_KEY,
           })
           return { content: resp.text, tokens: resp.text.length / 4, latency: 0, cost: 0 }
         } catch {

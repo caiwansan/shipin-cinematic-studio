@@ -22,10 +22,9 @@ export default defineEventHandler(async (event) => {
 
   // Fallback：后端不可用时输出静态页最小 sitemap
   const baseUrl = 'https://aigc.fushtn.com'
+  // 2026-08-07: 移除 /about /pricing（页面从未存在，幽灵 URL 404）
   const staticUrls = [
     { loc: '/', priority: '1.0', changefreq: 'daily' },
-    { loc: '/about', priority: '0.8', changefreq: 'monthly' },
-    { loc: '/pricing', priority: '0.8', changefreq: 'monthly' },
     { loc: '/community', priority: '0.9', changefreq: 'daily' },
   ]
   const entries = staticUrls

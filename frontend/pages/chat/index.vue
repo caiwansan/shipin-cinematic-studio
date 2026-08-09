@@ -197,6 +197,7 @@
                   <button class="plus-item" title="上传图片" @click="plusPanelOpen = false; pickFile('image')">📷<span>图片</span></button>
                   <button class="plus-item" title="上传文档" @click="plusPanelOpen = false; pickFile('file')">📄<span>文件</span></button>
                   <button class="plus-item" :class="{ 'plus-item--active': voiceMode }" title="语音消息（按住说话）" @click="toggleVoiceMode">🎤<span>语音</span></button>
+                  <button class="plus-item" title="文字翻译" @click="plusPanelOpen = false; textTranslateOpen = true">🌐<span>文字翻译</span></button>
                   <template v-if="currentChannel && currentChannel.kind === 'dm'">
                     <button class="plus-item" title="语音通话" @click="plusPanelOpen = false; callPeer('audio')">📞<span>语音通话</span></button>
                     <button class="plus-item" title="视频通话" @click="plusPanelOpen = false; callPeer('video')">🎥<span>视频通话</span></button>
@@ -832,6 +833,12 @@
               </span>
               <span v-if="interp.subtitle.value.preview" class="rtc-interp-preview">对方未开启同传 · 预览</span>
             </div>
+            <!-- 同传诊断面板（仅同传开启时显示）-->
+            <div v-if="interp.state.value === 'on'" class="rtc-interp-diag">
+              <span :class="['diag-dot', interp.diagnostic.value.ctxState === 'running' ? 'ok' : 'warn']"></span>
+              <span class="diag-text">音频:{{ interp.diagnostic.value.audioFrames }}帧 {{ interp.diagnostic.value.samplesSent }}采 WS:{{ interp.diagnostic.value.wsState }} {{ interp.diagnostic.value.uptime }}s RMS:{{ (interp.diagnostic.value.rmsLevel*1000).toFixed(1) }} th:{{ (interp.diagnostic.value.vadThreshold*1000).toFixed(1) }}</span>
+              <span v-if="interp.diagnostic.value.lastError" class="diag-err">⚠ {{ interp.diagnostic.value.lastError }}</span>
+            </div>
             <!-- 控制条 -->
             <div class="rtc-controls">
               <button class="rtc-ctl" :class="{ off: rtc.micMuted.value }" :title="rtc.micMuted.value ? '取消静音' : '静音'" @click="rtc.toggleMic()">{{ rtc.micMuted.value ? '🔇' : '🎙️' }}</button>
@@ -874,6 +881,44 @@
           </div>
         </div>
       </Teleport>
+      <!-- 文字翻译弹窗 -->
+      <Teleport to="body">
+        <div v-if="textTranslateOpen" class="rtc-interp-panel-mask" @click.self="textTranslateOpen = false">
+          <div class="rtc-interp-panel text-translate-panel">
+            <div class="rtc-interp-panel-title">🌐 文字翻译</div>
+            <div class="rtc-interp-panel-row">
+              <label>源语言</label>
+              <select v-model="ttSrcLang">
+                <option value="auto">自动检测</option>
+                <optgroup v-for="g in interp.langGroups" :key="g.label" :label="g.label">
+                  <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="rtc-interp-panel-row">
+              <label>目标语言</label>
+              <select v-model="ttTgtLang">
+                <optgroup v-for="g in interp.langGroups" :key="g.label" :label="g.label">
+                  <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="tt-input-area">
+              <textarea v-model="ttInput" placeholder="输入要翻译的文字…" rows="4"></textarea>
+            </div>
+            <div class="tt-output-area">
+              <div v-if="ttLoading" class="tt-loading">翻译中…</div>
+              <div v-else-if="ttOutput" class="tt-output">{{ ttOutput }}</div>
+              <div v-else class="tt-placeholder">译文显示在这里</div>
+            </div>
+            <div class="tt-actions">
+              <button class="tt-btn tt-btn-copy" :disabled="!ttOutput" @click="copyText(ttOutput, '✅ 已复制译文')">📋 复制</button>
+              <button class="tt-btn tt-btn-swap" @click="swapTtLangs()">⇅ 交换语言</button>
+              <button class="tt-btn primary" :disabled="!ttInput.trim() || ttLoading" @click="doTranslateText()">{{ ttLoading ? '翻译中…' : '翻译' }}</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -897,7 +942,7 @@ const interpPanel = ref(false)
 // ══ RTC-INTERPRETER-04.1：同传语言通话前设置（持久化 localStorage，通话自动生效）══
 const interpMyLang = ref('zh')
 const interpPeerLang = ref('en')
-const interpConfigured = ref(false) // 用户是否显式保存过同传语言（保存后通话自动开启）
+const interpConfigured = ref(true) // 同传默认开启（用户可关闭）
 // 语言偏好持久化（SSR 安全：只在浏览器读写）
 function loadInterpPrefs() {
   try {
@@ -906,7 +951,8 @@ function loadInterpPrefs() {
     const known = interp.langOptions.map((o) => o.value)
     if (m && known.includes(m)) interpMyLang.value = m
     if (p && known.includes(p)) interpPeerLang.value = p
-    interpConfigured.value = localStorage.getItem('kl_interp_configured') === '1'
+    const savedConfigured = localStorage.getItem('kl_interp_configured')
+    if (savedConfigured !== null) interpConfigured.value = savedConfigured === '1'
   } catch { /* 隐私模式等 */ }
 }
 function saveInterpPrefs() {
@@ -930,6 +976,38 @@ const interpConfirmLabel = computed(() => {
   if (rtc.state.value === 'active') return interp.state.value === 'on' ? '✓ 应用语言' : '✓ 开启同传'
   return '✓ 保存设置'
 })
+// ══ 文字翻译 ══
+const textTranslateOpen = ref(false)
+const ttSrcLang = ref('auto')
+const ttTgtLang = ref('zh')
+const ttInput = ref('')
+const ttOutput = ref('')
+const ttLoading = ref(false)
+function swapTtLangs() {
+  if (ttSrcLang.value === 'auto') return
+  const s = ttSrcLang.value
+  ttSrcLang.value = ttTgtLang.value
+  ttTgtLang.value = s
+}
+async function doTranslateText() {
+  if (!ttInput.value.trim() || ttLoading.value) return
+  ttLoading.value = true
+  ttOutput.value = ''
+  try {
+    const res = await fetch('/api/im/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + giftToken() },
+      body: JSON.stringify({ text: ttInput.value.trim(), srcLang: ttSrcLang.value === 'auto' ? '' : ttSrcLang.value, tgtLang: ttTgtLang.value }),
+    })
+    const j = await res.json()
+    if (j.success) ttOutput.value = j.data.translated
+    else showToast('⚠ ' + (j.error || '翻译失败'))
+  } catch (e) {
+    showToast('⚠ 翻译失败，请重试')
+  } finally {
+    ttLoading.value = false
+  }
+}
 let rtcSetIdentity: (uid: string, name: string, avatar: string) => void = () => {}
 const rtcToast = ref('') // 通话浮层内提示（错误/状态）
 const route = useRoute()
@@ -1063,11 +1141,26 @@ function confirmInterp() {
   }
 }
 function applyInterp() {
-  if (rtc.state.value !== 'active' || !rtc.callId.value || !rtc.localStream.value) {
+  console.log('[interp] applyInterp called:', { state: rtc.state.value, callId: rtc.callId.value, hasStream: !!rtc.localStream.value, interpState: interp.state.value })
+  if (rtc.state.value !== 'active' || !rtc.callId.value) {
     rtcToast.value = '通话建立后才能开启同传'
     return
   }
+  if (!rtc.localStream.value) {
+    if (_interpRetryCount < 5) {
+      _interpRetryCount++
+      console.log(`[interp] stream not ready, retry ${_interpRetryCount}/5`)
+      setTimeout(() => applyInterp(), 500)
+    } else {
+      rtcToast.value = '本地媒体未就绪，请手动点击🌐开启'
+      _interpRetryCount = 0
+    }
+    return
+  }
+  _interpRetryCount = 0
+  console.log('[interp] starting interp:', { callId: rtc.callId.value, srcLang: interpMyLang.value, tgtLang: interpPeerLang.value })
   interp.start({ stream: rtc.localStream.value, callId: rtc.callId.value, srcLang: interpMyLang.value, tgtLang: interpPeerLang.value }).catch((e: any) => {
+    console.error('[interp] start failed:', e)
     rtcToast.value = e?.message || '同传开启失败'
   })
 }
@@ -1078,11 +1171,19 @@ watch(
     if (s === 'active' && interpConfigured.value && interp.state.value === 'off') {
       setTimeout(() => applyInterp(), 600) // 等本地流就绪
     }
-    if (s === 'idle') { interp.stop() }
+    if (s === 'idle') { interp.stop(); _interpRetryCount = 0 }
   }
 )
 // 通话浮层错误提示（防抖：连接状态变化时置空）
 watch(() => rtc.errorMsg.value, (v) => { if (v) rtcToast.value = v })
+// 文字翻译弹窗：打开时重置表单
+watch(textTranslateOpen, (v) => {
+  if (v) {
+    ttInput.value = ''
+    ttOutput.value = ''
+    ttLoading.value = false
+  }
+})
 
 function followToken() {
   try { return window.localStorage?.getItem('auth_token') || '' } catch { return '' }
@@ -4398,6 +4499,17 @@ onBeforeUnmount(() => {
 }
 .rtc-interp-bar.is-partial .rtc-interp-text { color: rgba(251, 248, 239, 0.72); }
 .rtc-interp-bar.is-error { border-color: rgba(176, 58, 46, 0.8); }
+.rtc-interp-diag {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 130px; z-index: 3;
+  display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px;
+  background: rgba(10, 16, 20, 0.65); backdrop-filter: blur(6px);
+  font-size: 11px; color: rgba(251, 248, 239, 0.7); font-family: monospace;
+  pointer-events: none; max-width: 90%; white-space: nowrap; overflow: hidden;
+}
+.rtc-interp-diag .diag-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.rtc-interp-diag .diag-dot.ok { background: #4caf50; box-shadow: 0 0 4px #4caf50; }
+.rtc-interp-diag .diag-dot.warn { background: #ff9800; box-shadow: 0 0 4px #ff9800; }
+.rtc-interp-diag .diag-err { color: #ff6b6b; margin-left: 4px; }
 .rtc-interp-lang {
   flex-shrink: 0; font-size: 11px; padding: 2px 8px; border-radius: 999px;
   background: rgba(95, 168, 190, 0.25); color: #9BD4E8; letter-spacing: 0.5px;
@@ -4425,6 +4537,32 @@ onBeforeUnmount(() => {
 .rtc-interp-panel-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .rtc-btn-ghost { background: rgba(251, 248, 239, 0.12); color: #FBF8EF; border: 1px solid rgba(251, 248, 239, 0.25); }
 .rtc-btn-ghost:hover { background: rgba(251, 248, 239, 0.2); }
+
+/* ══ 文字翻译 ══ */
+.text-translate-panel { max-width: 520px; }
+.tt-input-area textarea {
+  width: 100%; padding: 10px 12px; border-radius: 8px; font-size: 14px; line-height: 1.6;
+  color: #FBF8EF; background: #121A20; border: 1px solid rgba(95, 168, 190, 0.4); outline: none;
+  resize: vertical; min-height: 80px; font-family: inherit;
+}
+.tt-input-area textarea:focus { border-color: #5FA8BE; }
+.tt-output-area {
+  margin-top: 12px; min-height: 80px; padding: 10px 12px; border-radius: 8px;
+  background: rgba(95, 168, 190, 0.1); border: 1px dashed rgba(95, 168, 190, 0.3);
+}
+.tt-output { font-size: 14px; line-height: 1.6; color: #FBF8EF; white-space: pre-wrap; }
+.tt-loading { font-size: 13px; color: rgba(251, 248, 239, 0.6); text-align: center; padding: 20px 0; }
+.tt-placeholder { font-size: 13px; color: rgba(251, 248, 239, 0.4); text-align: center; padding: 20px 0; }
+.tt-actions { display: flex; gap: 10px; margin-top: 14px; }
+.tt-btn {
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  background: rgba(251, 248, 239, 0.12); color: #FBF8EF; border: 1px solid rgba(251, 248, 239, 0.25);
+}
+.tt-btn:hover { background: rgba(251, 248, 239, 0.2); }
+.tt-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.tt-btn.primary { background: linear-gradient(135deg, #5FA8BE, #3D7A8C); border: none; }
+.tt-btn.primary:hover { background: linear-gradient(135deg, #6FB8CE, #4D8A9C); }
+.tt-btn-copy { margin-right: auto; }
 
 </style>
 
