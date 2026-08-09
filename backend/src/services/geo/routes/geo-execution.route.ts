@@ -8,6 +8,7 @@
 
 import { FastifyInstance } from 'fastify'
 import { optimizationExecutionRepository } from '../repositories/optimization-execution.repository.js'
+import { executeOptimization } from '../services/optimization-executor.js'
 
 export default async function geoExecutionRoutes(fastify: FastifyInstance) {
   // GET /api/geo/executions?projectId=xxx&status=pending&limit=20&offset=0
@@ -69,7 +70,7 @@ export default async function geoExecutionRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // POST /api/geo/executions — 创建新执行任务
+  // POST /api/geo/executions — 创建并执行优化任务
   fastify.post('/api/geo/executions', { preHandler: [] }, async (request, reply) => {
     try {
       const { projectId, optimizationType, triggerSource, industry, brandType } = request.body as any
@@ -78,16 +79,35 @@ export default async function geoExecutionRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ success: false, error: 'projectId and optimizationType are required' })
       }
 
+      // Mark as running
       const execution = await optimizationExecutionRepository.create({
         projectId,
         optimizationType,
-        executionStatus: 'pending',
+        executionStatus: 'running',
         triggerSource: triggerSource || 'manual',
         industry: industry || null,
         brandType: brandType || null,
+        startedAt: new Date(),
       })
 
-      return { success: true, data: execution }
+      // Execute synchronously (fast operations: knowledge generation, entity expansion)
+      const result = await executeOptimization(projectId, optimizationType)
+
+      // Update with result
+      await optimizationExecutionRepository.update(
+        { id: execution.id },
+        {
+          executionStatus: result.success ? 'completed' : 'failed',
+          completedAt: new Date(),
+          itemsCreated: result.itemsCreated,
+          details: result.details,
+          errorMessage: result.error || null,
+        },
+      )
+
+      const updated = await optimizationExecutionRepository.findUnique({ id: execution.id })
+
+      return { success: true, data: { ...updated, result } }
     } catch (err: any) {
       return reply.status(500).send({ success: false, error: err.message })
     }

@@ -60,23 +60,15 @@
         </div>
       </div>
 
-      <!-- Execution Step (Placeholder) -->
+      <!-- Execution Step -->
       <div v-else-if="workflow.currentStep === 'execution'" class="flow-page__step-panel">
         <h2 class="flow-page__step-title">⚡ 执行</h2>
-        <p class="flow-page__step-desc">执行已规划的操作。此步骤预留用于后续实现。</p>
+        <p class="flow-page__step-desc">执行自动优化操作，生成品牌知识库和实体。</p>
         <div class="flow-page__embedded">
-          <div class="flow-page__placeholder">
-            <div class="flow-page__placeholder-icon">🚧</div>
-            <h3>执行引擎 — 即将上线</h3>
-            <p>后续将支持直接从平台执行优化操作。</p>
-            <p class="flow-page__placeholder-hint">目前可以标记此步骤为完成以继续。</p>
-            <button
-              class="flow-page__placeholder-btn"
-              @click="workflow.completeStep('execution')"
-            >
-              标记为完成
-            </button>
-          </div>
+          <ExecutionPanelEmbedded
+            :project-id="projectId"
+            @data-loaded="onExecutionComplete"
+          />
         </div>
       </div>
 
@@ -135,6 +127,7 @@ import HealthPageEmbedded from '../components/HealthPageEmbedded.vue'
 import DiscoveryLabPageEmbedded from '../components/DiscoveryLabPageEmbedded.vue'
 import OpportunityPanelEmbedded from '../components/OpportunityPanelEmbedded.vue'
 import ActionPlanPanelEmbedded from '../components/ActionPlanPanelEmbedded.vue'
+import ExecutionPanelEmbedded from '../components/ExecutionPanelEmbedded.vue'
 import VerificationPageEmbedded from '../components/VerificationPageEmbedded.vue'
 import ReportPanelEmbedded from '../components/ReportPanelEmbedded.vue'
 
@@ -251,6 +244,12 @@ function onActionPlanComplete(data?: any) {
   if (data && projectId.value) {
     projectStore.saveActionPlan(projectId.value, data).catch(() => {})
   }
+  saveWorkflowState()
+}
+
+function onExecutionComplete(data?: any) {
+  workflow.completeStep('execution')
+  workflow.setInProgress('verification')
   saveWorkflowState()
 }
 

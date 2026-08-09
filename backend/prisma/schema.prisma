@@ -66,8 +66,11 @@ model User {
   communityCommentLikes CommunityCommentLike[]
   communityComments     CommunityComment[]
   communityLikes        CommunityLike[]
+  communityFavorites    CommunityFavorite[]
+  communityShares       CommunityShare[]
   communityPosts        CommunityPost[]
   communityRewards      CommunityReward[]
+  communityReadSessions CommunityReadSession[]
   messagesSent          UserMessage[]          @relation("messages_sent")
   messagesReceived      UserMessage[]          @relation("messages_received")
   ownedProjects         Project[]              @relation("ProjectOwner")
@@ -3110,6 +3113,8 @@ model CommunityPost {
   viewCount    Int                @default(0)
   likeCount    Int                @default(0)
   commentCount Int                @default(0)
+  shareCount   Int                @default(0) // COMMUNITY-ENGAGEMENT-01 转发次数
+  favoriteCount Int               @default(0) // COMMUNITY-ENGAGEMENT-01 收藏次数
   rewardCoins  Int                @default(0)
   giftCount    Int                @default(0) // COMMUNITY-TIP-01 被打赏次数（>0 标题变红）
   isPinned     Boolean            @default(false)
@@ -3120,6 +3125,9 @@ model CommunityPost {
   updatedAt    DateTime           @updatedAt
   comments     CommunityComment[]
   likes        CommunityLike[]
+  favorites    CommunityFavorite[]
+  shares       CommunityShare[]
+  readSessions CommunityReadSession[]
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   rewards      CommunityReward[]
 
@@ -3173,6 +3181,32 @@ model CommunityCommentLike {
   @@map("community_comment_likes")
 }
 
+model CommunityFavorite {
+  id        String        @id @default(uuid()) @db.Uuid
+  postId    String        @db.Uuid
+  userId    String        @db.Uuid
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+  @@map("community_favorites")
+}
+
+model CommunityShare {
+  id        String        @id @default(uuid()) @db.Uuid
+  postId    String        @db.Uuid
+  userId    String        @db.Uuid
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId, createdAt])
+  @@map("community_shares")
+}
+
 model CommunityReward {
   id        String        @id @default(uuid()) @db.Uuid
   postId    String        @db.Uuid
@@ -3185,6 +3219,26 @@ model CommunityReward {
 
   @@index([postId])
   @@map("community_rewards")
+}
+
+// COMMUNITY-READ-TRACKING-01 完读率埋点（掌柜 2026-08-07 拍板）：
+// 每次阅读会话一条记录（前端离开页面/滚动到底/切走后上报一次）。
+// seconds=有效阅读秒数（页面可见 + 用户活跃，挂机不计），单次封顶 600；depth=滚动深度 0-1。
+// 有效阅读判定（聚合时）：seconds>=15 && depth>=0.4。
+// 采集两周数据后接入 hotness 公式（阶段二），现阶段只落库不做排序影响。
+model CommunityReadSession {
+  id        String        @id @default(uuid()) @db.Uuid
+  postId    String        @db.Uuid
+  userId    String        @db.Uuid
+  seconds   Int           @default(0) // 有效阅读秒数（活跃+可见），封顶 600
+  depth     Float         @default(0) // 滚动深度 0-1，封顶 1
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, userId])
+  @@index([postId, createdAt])
+  @@map("community_read_session")
 }
 
 // COMMUNITY-MODERATOR-01 社区版主体系（掌柜 2026-08-07）：会员申请成为版主/副版主，
@@ -5960,6 +6014,11 @@ model OptimizationExecution {
 
   industry  String?
   brandType String? @map("brand_type")
+
+  // Execution result fields
+  itemsCreated Int?    @map("items_created")
+  details      String? @map("details")
+  errorMessage String? @map("error_message")
 
   startedAt   DateTime  @default(now()) @map("started_at")
   completedAt DateTime? @map("completed_at")

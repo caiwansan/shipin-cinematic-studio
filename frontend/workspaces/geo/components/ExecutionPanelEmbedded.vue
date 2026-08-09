@@ -1,4 +1,3 @@
-<!-- @deprecated 未被任何页面引用，保留作参考 -->
 <template>
   <div class="execution-panel">
     <!-- ===== Summary Stats ===== -->
@@ -92,11 +91,12 @@
             <span>开始时间：{{ formatTime(exec.startedAt) }}</span>
             <span v-if="exec.completedAt">完成时间：{{ formatTime(exec.completedAt) }}</span>
           </div>
-          <div v-if="exec.beforeScore != null" class="execution-panel__card-scores">
-            <span>分数变化：{{ exec.beforeScore?.toFixed(1) }} → {{ exec.afterScore?.toFixed(1) || '—' }}</span>
-            <span v-if="exec.scoreDelta != null" :class="exec.scoreDelta >= 0 ? 'score-up' : 'score-down'">
-              {{ exec.scoreDelta >= 0 ? '+' : '' }}{{ exec.scoreDelta.toFixed(1) }}
-            </span>
+          <div v-if="exec.details" class="execution-panel__card-result">
+            <span class="execution-panel__card-result-icon">✨</span>
+            <span>{{ exec.details }}</span>
+          </div>
+          <div v-if="exec.itemsCreated != null" class="execution-panel__card-items">
+            创建 {{ exec.itemsCreated}} 个条目
           </div>
         </div>
         <div class="execution-panel__card-actions">
@@ -137,12 +137,8 @@
         <div class="execution-panel__modal-field">
           <label>优化类型</label>
           <select v-model="newExecution.optimizationType">
-            <option value="content_optimization">内容优化</option>
-            <option value="structured_data">结构化数据</option>
-            <option value="entity_enrichment">实体丰富</option>
-            <option value="faq_generation">FAQ 生成</option>
-            <option value="citation_building">引用构建</option>
-            <option value="full_optimization">完整优化</option>
+            <option value="knowledge_generation">知识库生成</option>
+            <option value="entity_expansion">实体扩展</option>
           </select>
         </div>
         <div class="execution-panel__modal-field">
@@ -200,7 +196,7 @@ const summaryData = reactive({
 })
 
 const newExecution = reactive({
-  optimizationType: 'full_optimization',
+  optimizationType: 'knowledge_generation',
   industry: '',
   brandType: '',
 })
@@ -274,7 +270,7 @@ async function createExecution() {
     if (res.success) {
       showCreateModal.value = false
       // Reset form
-      newExecution.optimizationType = 'full_optimization'
+      newExecution.optimizationType = 'knowledge_generation'
       newExecution.industry = ''
       newExecution.brandType = ''
       // Refresh
@@ -324,6 +320,8 @@ function toggleDetail(id: string) {
 
 function getOptimizationLabel(type: string): string {
   const labels: Record<string, string> = {
+    knowledge_generation: '知识库生成',
+    entity_expansion: '实体扩展',
     content_optimization: '内容优化',
     structured_data: '结构化数据',
     entity_enrichment: '实体丰富',
@@ -634,6 +632,26 @@ function formatTime(dateStr: string): string {
 .score-down {
   color: #ef4444;
   font-weight: 600;
+}
+
+.execution-panel__card-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.execution-panel__card-result-icon {
+  font-size: 14px;
+}
+
+.execution-panel__card-items {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
 }
 
 .execution-panel__card-actions {
