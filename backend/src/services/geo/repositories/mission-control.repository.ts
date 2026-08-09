@@ -8,7 +8,7 @@
 import { geoScoreSnapshotRepository } from './geo-score-snapshot.repository.js'
 import { geoProjectRepository } from './geo-project.repository.js'
 import { timelineEngine } from '../workspace/timeline.js'
-import { calculateScoreSimple } from '../recommendation/recommendation-score.service.js'
+import { calculateScore } from '../recommendation/recommendation-score.service.js'
 
 export type RuntimeHealthStatus = 'healthy' | 'initializing' | 'uninitialized'
 
@@ -20,6 +20,7 @@ export interface DashboardData {
   latestSnapshot: any | null
   snapshotCount: number
   recentActivity: any[]
+  aiAnalysis: any | null
   /** Runtime Health Gate signals */
   runtimeHealth: {
     status: RuntimeHealthStatus
@@ -80,12 +81,14 @@ export const missionControlRepository = {
       }
     }
 
-    // AI Visibility — SSOT: 使用推荐分数服务（与 Health/Recommendation 页面同源）
+    // AI Visibility — SSOT: 使用推荐分数服务（含 AI 分析）
     let aiVisibility = 0
+    let aiAnalysis: any = null
     if (pid) {
       try {
-        const score = await calculateScoreSimple(pid)
+        const score = await calculateScore(pid)
         aiVisibility = score.overall
+        aiAnalysis = score.aiAnalysis ?? null
       } catch {
         // fallback to snapshot if score calculation fails
         if (latestSnapshot) {
@@ -128,6 +131,7 @@ export const missionControlRepository = {
       latestSnapshot,
       snapshotCount,
       recentActivity,
+      aiAnalysis,
       runtimeHealth: {
         status,
         scoreSnapshot: hasSnapshot,

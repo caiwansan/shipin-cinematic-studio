@@ -11,7 +11,7 @@ import { geoProjectRepository } from '../repositories/geo-project.repository.js'
 import { geoScoreSnapshotRepository } from '../repositories/geo-score-snapshot.repository.js'
 import { presenceRepository } from '../presence/presence.repository.js'
 import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js';
-import { calculateScoreSimple } from '../recommendation/recommendation-score.service.js';
+import { calculateScore } from '../recommendation/recommendation-score.service.js';
 
 export default async function geoHealthRoutes(fastify: FastifyInstance) {
   try {
@@ -70,8 +70,8 @@ export default async function geoHealthRoutes(fastify: FastifyInstance) {
         if (!project) {
           return reply.status(404).send({ success: false, error: 'Project not found' })
         }
-        // SSOT: 使用推荐分数服务计算（与 Recommendation 页面同源）
-        const score = await calculateScoreSimple(projectId)
+        // SSOT: 使用推荐分数服务计算（含 AI 分析）
+        const score = await calculateScore(projectId)
         const presenceData = await presenceRepository.findByProjectId(projectId)
         return {
           success: true,
@@ -92,15 +92,16 @@ export default async function geoHealthRoutes(fastify: FastifyInstance) {
               overall: score.overall,
               change: 0,
               trend: 'stable',
-              details: {},
+              details: score.breakdown,
               dimensions: [
-                { id: 'visibility', label: 'AI Visibility', score: score.visibility },
-                { id: 'authority', label: 'Authority', score: score.authority },
-                { id: 'content', label: 'Content Quality', score: score.content },
-                { id: 'website', label: 'Website Health', score: score.website },
-                { id: 'knowledge', label: 'Knowledge Coverage', score: score.knowledge },
+                { id: 'visibility', label: 'AI Visibility', score: score.breakdown.visibility.score },
+                { id: 'authority', label: 'Authority', score: score.breakdown.authority.score },
+                { id: 'content', label: 'Content Quality', score: score.breakdown.content.score },
+                { id: 'website', label: 'Website Health', score: score.breakdown.website.score },
+                { id: 'knowledge', label: 'Knowledge Coverage', score: score.breakdown.knowledge.score },
               ],
             },
+            aiAnalysis: score.aiAnalysis ?? null,
             scannedAt: new Date().toISOString(),
           },
         }

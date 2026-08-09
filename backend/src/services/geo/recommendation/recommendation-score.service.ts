@@ -12,6 +12,7 @@ import { geoClaimRepository } from '../repositories/geo-claim.repository.js'
 import { geoEvidenceRepository } from '../repositories/geo-evidence.repository.js'
 import { geoEntityRelationRepository } from '../repositories/geo-entity-relation.repository.js'
 import { geoScoreSnapshotRepository } from '../repositories/geo-score-snapshot.repository.js'
+import { analyzeBrand, isAIAnalysisAvailable, type AIBrandAnalysis } from './ai-brand-analyzer.js'
 
 // ── Types ──
 
@@ -37,6 +38,7 @@ export interface ScoreExplainability {
     website: ScoreDimension
     knowledge: ScoreDimension
   }
+  aiAnalysis?: AIBrandAnalysis
 }
 
 // For backward compatibility with existing callers
@@ -364,6 +366,54 @@ export async function calculateScore(
   // ── Auto-save snapshot ──
   await saveSnapshot(projectId, { overall, visibility: visibilityScore, authority: authorityScore, content: contentScore, website: websiteScore, knowledge: knowledgeScore })
 
+  // ── AI Analysis (non-blocking) ──
+  let aiAnalysis: AIBrandAnalysis | undefined
+  try {
+    const scanArray: any[] = Array.isArray(scans) ? scans : []
+    const lastScan = scanArray.length > 0 ? scanArray[0] : null
+    const entityIds = entities > 0
+      ? (await geoEntityRepository.findMany({ projectId }, { id: true })).map((e: any) => e.id)
+      : []
+    const claims = entityIds.length > 0
+      ? await geoClaimRepository.count({ where: { entityId: { in: entityIds } } })
+      : 0
+    let evidenceCount = 0
+    if (claims > 0) {
+      const claimIds = (await geoClaimRepository.findMany({ entityId: { in: entityIds } }, { select: { id: true } })).map((c: any) => c.id)
+      evidenceCount = claimIds.length > 0
+        ? await geoEvidenceRepository.count(claimIds)
+        : 0
+    }
+    const relationCount = entityIds.length > 0
+      ? await geoEntityRelationRepository.count({ where: { projectId } })
+      : 0
+
+    aiAnalysis = await analyzeBrand({
+      brandName: settings?.brandName || '',
+      website: settings?.website || '',
+      industry: settings?.industry || '',
+      description: settings?.description || '',
+      brandProfiles,
+      knowledgeCount,
+      entityCount: entities,
+      claimCount: claims,
+      evidenceCount,
+      relationCount,
+      lastScanStatus: lastScan?.status || '',
+      hasWebsite: !!settings?.website,
+      currentScores: {
+        overall,
+        visibility: visibilityScore,
+        authority: authorityScore,
+        content: contentScore,
+        website: websiteScore,
+        knowledge: knowledgeScore,
+      },
+    })
+  } catch {
+    // AI analysis is optional — don't break scoring if it fails
+  }
+
   return {
     overall,
     breakdown: {
@@ -373,6 +423,7 @@ export async function calculateScore(
       website: { score: websiteScore, details: websiteDetails },
       knowledge: { score: knowledgeScore, details: knowledgeDetails },
     },
+    aiAnalysis,
   }
 }
 

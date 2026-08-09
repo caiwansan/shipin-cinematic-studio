@@ -26,6 +26,7 @@ export const useAdiStore = defineStore('geo-adi', () => {
     improvements: [],
   })
   const lastUpdated = ref<string | null>(null)
+  const aiAnalysis = ref<AdiData['aiAnalysis']>(null)
 
   const isLoading = ref<boolean>(false)
   const error = ref<string | null>(null)
@@ -33,6 +34,7 @@ export const useAdiStore = defineStore('geo-adi', () => {
 
   const hasData = computed(() => adiScore.value > 0)
   const hasDimensions = computed(() => dimensions.value.length > 0)
+  const hasAIAnalysis = computed(() => aiAnalysis.value !== null && aiAnalysis.value.summary !== '')
 
   const adiLabel = computed(() => {
     if (adiScore.value >= 80) return 'Excellent'
@@ -68,6 +70,7 @@ export const useAdiStore = defineStore('geo-adi', () => {
       dimensions.value = data.dimensions
       explanation.value = data.explanation
       lastUpdated.value = data.lastUpdated
+      aiAnalysis.value = data.aiAnalysis
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load ADI data'
     } finally {
@@ -85,9 +88,9 @@ export const useAdiStore = defineStore('geo-adi', () => {
 
   return {
     adiScore, scoreChange, trend, brand,
-    dimensions, explanation, lastUpdated,
+    dimensions, explanation, lastUpdated, aiAnalysis,
     isLoading, error, projectId,
-    hasData, hasDimensions, adiLabel,
+    hasData, hasDimensions, hasAIAnalysis, adiLabel,
     coverageScore, shareScore, positionScore,
     fetchAdi: fetchAdiData, refresh, setProject,
   }

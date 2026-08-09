@@ -25,6 +25,19 @@ export interface BrandHealthData {
   coverage: { evidenceCount: number; entityCount: number; claimCount: number }
   recentChanges: Array<{ date: string; score: number; change: number }>
   quickActions: Array<{ id: string; label: string; impact: string }>
+  aiAnalysis: {
+    available: boolean
+    summary: string
+    suggestions: string[]
+    dimensionInsights: {
+      visibility: string
+      authority: string
+      content: string
+      website: string
+      knowledge: string
+    }
+    provider?: string
+  } | null
 }
 
 export const DEFAULT_HEALTH_DATA: BrandHealthData = {
@@ -43,6 +56,7 @@ export const DEFAULT_HEALTH_DATA: BrandHealthData = {
   coverage: { evidenceCount: 0, entityCount: 0, claimCount: 0 },
   recentChanges: [],
   quickActions: [],
+  aiAnalysis: null,
 }
 
 export async function fetchHealth(projectId: string): Promise<BrandHealthData> {
@@ -62,6 +76,7 @@ export async function fetchHealth(projectId: string): Promise<BrandHealthData> {
       coverage: d.coverage ?? DEFAULT_HEALTH_DATA.coverage,
       recentChanges: d.recentChanges ?? [],
       quickActions: d.quickActions ?? [],
+      aiAnalysis: d.aiAnalysis ?? null,
     }
   } catch {
     // API unavailable — use defaults

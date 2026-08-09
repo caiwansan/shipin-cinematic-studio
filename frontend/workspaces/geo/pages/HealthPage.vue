@@ -196,6 +196,49 @@
           </div>
         </div>
 
+        <!-- ===== Section 2.5: AI Brand Analysis ===== -->
+        <div v-if="store.hasAIAnalysis" class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-6 mb-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-lg">🤖</span>
+            <h2 class="text-lg font-semibold text-gray-900">AI 品牌分析</h2>
+            <span
+              v-if="store.aiAnalysis?.available"
+              class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"
+            >
+              LLM 实时分析
+            </span>
+            <span
+              v-else
+              class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium"
+            >
+              智能分析
+            </span>
+          </div>
+          <p class="text-sm text-gray-700 mb-4">{{ store.aiAnalysis?.summary }}</p>
+          <div v-if="store.aiAnalysis?.suggestions?.length > 0" class="mb-4">
+            <h3 class="text-sm font-medium text-gray-800 mb-2">🎯 改进建议</h3>
+            <ul class="space-y-2">
+              <li
+                v-for="(s, idx) in store.aiAnalysis.suggestions"
+                :key="idx"
+                class="flex items-start gap-2 text-sm text-gray-700"
+              >
+                <span class="text-purple-500 mt-0.5 flex-shrink-0">{{ idx + 1 }}.</span>
+                <span>{{ s }}</span>
+              </li>
+            </ul>
+          </div>
+          <div v-if="store.aiAnalysis?.dimensionInsights" class="grid gap-3 md:grid-cols-5">
+            <div
+              v-for="(insight, key) in store.aiAnalysis.dimensionInsights"
+              :key="key"
+              class="text-xs text-gray-600 bg-white/60 rounded p-2"
+            >
+              <span class="font-medium capitalize">{{ dimensionLabel(key) }}：</span>{{ insight }}
+            </div>
+          </div>
+        </div>
+
         <!-- ===== Section 3: Strengths & Improvements ===== -->
         <div v-if="store.explanation.strengths.length > 0 || store.explanation.improvements.length > 0" class="grid gap-6 md:grid-cols-2 mb-6">
           <!-- Strengths -->
@@ -464,6 +507,17 @@ function dimScoreTextColor(score: number): string {
   if (score >= 80) return 'text-green-600'
   if (score >= 60) return 'text-yellow-600'
   return 'text-red-600'
+}
+
+function dimensionLabel(key: string): string {
+  const labels: Record<string, string> = {
+    visibility: '可见性',
+    authority: '权威性',
+    content: '内容质量',
+    website: '网站健康',
+    knowledge: '知识覆盖',
+  }
+  return labels[key] || key
 }
 
 function shouldShowXLabel(idx: number): boolean {

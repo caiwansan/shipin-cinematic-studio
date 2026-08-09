@@ -34,6 +34,20 @@ export interface AdiData {
   explanation: AdiExplanation
   /** Last updated timestamp */
   lastUpdated: string
+  /** AI Analysis enhancement */
+  aiAnalysis: {
+    available: boolean
+    summary: string
+    suggestions: string[]
+    dimensionInsights: {
+      visibility: string
+      authority: string
+      content: string
+      website: string
+      knowledge: string
+    }
+    provider?: string
+  } | null
 }
 
 export interface AdiDimension {
@@ -169,6 +183,7 @@ function computeAdiFromHealthData(healthData: any, projectId: string): AdiData {
       improvements,
     },
     lastUpdated: new Date().toISOString(),
+    aiAnalysis: healthData.aiAnalysis ?? null,
   }
 }
 
@@ -241,5 +256,6 @@ function generateSimulatedAdi(projectId: string): AdiData {
       improvements,
     },
     lastUpdated: new Date().toISOString(),
+    aiAnalysis: null,
   }
 }

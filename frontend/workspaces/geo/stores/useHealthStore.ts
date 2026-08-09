@@ -18,6 +18,7 @@ export const useHealthStore = defineStore('geo-health', () => {
   const coverage = ref<BrandHealthData['coverage']>({ evidenceCount: 0, entityCount: 0, claimCount: 0 })
   const recentChanges = ref<BrandHealthData['recentChanges']>([])
   const quickActions = ref<BrandHealthData['quickActions']>([])
+  const aiAnalysis = ref<BrandHealthData['aiAnalysis']>(null)
 
   const isLoading = ref<boolean>(false)
   const error = ref<string | null>(null)
@@ -25,6 +26,7 @@ export const useHealthStore = defineStore('geo-health', () => {
   const projectId = ref<string>('default')
 
   const hasData = computed(() => brand.value.name !== '')
+  const hasAIAnalysis = computed(() => aiAnalysis.value !== null && aiAnalysis.value.summary !== '')
   const healthLabel = computed(() => {
     if (brandHealth.value >= 80) return 'Excellent'
     if (brandHealth.value >= 60) return 'Good'
@@ -46,6 +48,7 @@ export const useHealthStore = defineStore('geo-health', () => {
       coverage.value = data.coverage
       recentChanges.value = data.recentChanges
       quickActions.value = data.quickActions
+      aiAnalysis.value = data.aiAnalysis
       lastUpdated.value = Date.now()
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load Brand Health'
@@ -65,9 +68,9 @@ export const useHealthStore = defineStore('geo-health', () => {
   return {
     brandHealth, scoreChange, trend, brand,
     dimensions, explanation, coverage,
-    recentChanges, quickActions,
+    recentChanges, quickActions, aiAnalysis,
     isLoading, error, lastUpdated, projectId,
-    hasData, healthLabel,
+    hasData, hasAIAnalysis, healthLabel,
     fetchHealth: fetchHealthData, refresh, setProject,
   }
 })

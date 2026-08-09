@@ -18,7 +18,7 @@ import { geoReviewRepository } from '../repositories/geo-review.repository.js'
 import { geoFAQRepository } from '../repositories/geo-faq.repository.js'
 import { geoSchemaRepository } from '../repositories/geo-schema.repository.js'
 import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
-import { calculateScore, calculateScoreSimple } from '../recommendation/recommendation-score.service.js'
+import { calculateScore } from '../recommendation/recommendation-score.service.js'
 import { MonitorService } from '../monitor/monitor.service.js'
 
 const monitorService = new MonitorService()
@@ -43,17 +43,17 @@ export default async function geoV1ProductRoutes(fastify: FastifyInstance) {
       where: { projectId, userId },
     })
 
-    // Calculate real scores
-    const scoreResult = await calculateScoreSimple(projectId)
+    // Calculate real scores (with AI analysis)
+    const scoreResult = await calculateScore(projectId)
     const overallScore = scoreResult?.overall ?? 0
 
     // Get dimension breakdown
     const dimensions = [
-      { id: 'visibility', label: 'AI Visibility', score: scoreResult?.visibility ?? 0, maxScore: 100 },
-      { id: 'authority', label: 'Authority', score: scoreResult?.authority ?? 0, maxScore: 100 },
-      { id: 'content', label: 'Content Quality', score: scoreResult?.content ?? 0, maxScore: 100 },
-      { id: 'website', label: 'Website Health', score: scoreResult?.website ?? 0, maxScore: 100 },
-      { id: 'knowledge', label: 'Knowledge Coverage', score: scoreResult?.knowledge ?? 0, maxScore: 100 },
+      { id: 'visibility', label: 'AI Visibility', score: scoreResult?.breakdown?.visibility?.score ?? 0, maxScore: 100 },
+      { id: 'authority', label: 'Authority', score: scoreResult?.breakdown?.authority?.score ?? 0, maxScore: 100 },
+      { id: 'content', label: 'Content Quality', score: scoreResult?.breakdown?.content?.score ?? 0, maxScore: 100 },
+      { id: 'website', label: 'Website Health', score: scoreResult?.breakdown?.website?.score ?? 0, maxScore: 100 },
+      { id: 'knowledge', label: 'Knowledge Coverage', score: scoreResult?.breakdown?.knowledge?.score ?? 0, maxScore: 100 },
     ]
 
     // Get latest score snapshot for trend
@@ -110,6 +110,7 @@ export default async function geoV1ProductRoutes(fastify: FastifyInstance) {
           { id: 'add-claims', label: 'Verify Brand Claims', impact: 'Medium' },
           { id: 'check-freshness', label: 'Update Content', impact: 'Low' },
         ],
+        aiAnalysis: scoreResult.aiAnalysis ?? null,
       },
     }
   })
@@ -128,8 +129,8 @@ export default async function geoV1ProductRoutes(fastify: FastifyInstance) {
     const schemaCount = await geoSchemaRepository.count({ projectId })
     const faqCount = await geoFaqRepository.count({ projectId })
 
-    // Get overall score
-    const scoreResult = await calculateScoreSimple(projectId)
+    // Get overall score (with AI analysis)
+    const scoreResult = await calculateScore(projectId)
     const overallScore = scoreResult?.overall ?? 0
 
     // Build contextual recommendations
@@ -224,6 +225,8 @@ export default async function geoV1ProductRoutes(fastify: FastifyInstance) {
           totalExpectedGain: recommendations.reduce((s, r) => s + r.impact.value, 0),
         },
         recommendations,
+        aiSuggestions: scoreResult.aiAnalysis?.suggestions ?? [],
+        aiSummary: scoreResult.aiAnalysis?.summary ?? '',
         history: [],
       },
     }
