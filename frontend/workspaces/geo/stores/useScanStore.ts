@@ -67,6 +67,8 @@ export const useScanStore = defineStore('geo-scan', () => {
       overallScore: detail.overallScore || 0,
       dimensions,
       summary: detail.summary || detail.error || `综合评分 ${detail.overallScore || 0}/100`,
+      aiSummary: (detail as any).aiSummary || null,
+      aiSuggestions: (detail as any).aiSuggestions || [],
       startedAt: detail.createdAt,
       completedAt: detail.updatedAt,
     }

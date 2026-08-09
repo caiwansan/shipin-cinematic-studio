@@ -160,6 +160,24 @@
               </div>
             </div>
 
+            <!-- AI 品牌分析 -->
+            <div v-if="store.currentScanResult!.aiSummary" class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-4 mb-6">
+              <div class="flex items-center gap-2 mb-2">
+                <span>🤖</span>
+                <h3 class="text-sm font-semibold text-gray-800">AI 品牌分析</h3>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">{{ store.currentScanResult!.aiSummary }}</p>
+              <div v-if="store.currentScanResult!.aiSuggestions?.length > 0">
+                <h4 class="text-xs font-medium text-gray-600 mb-1">改进建议：</h4>
+                <ul class="space-y-1">
+                  <li v-for="(s, idx) in store.currentScanResult!.aiSuggestions" :key="idx" class="text-xs text-gray-600 flex items-start gap-1">
+                    <span class="text-purple-500">•</span>
+                    <span>{{ s }}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
             <!-- 扫描状态 + 时间信息 -->
             <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
               <h3 class="text-sm font-medium text-gray-700 mb-3">扫描信息</h3>

@@ -39,6 +39,8 @@ export interface ScanResult {
     description: string
   }>
   summary: string
+  aiSummary?: string | null
+  aiSuggestions?: string[]
   startedAt?: string
   completedAt?: string
 }

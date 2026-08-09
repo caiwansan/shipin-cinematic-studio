@@ -6,7 +6,7 @@ import { FastifyInstance } from 'fastify'
 import { geoProjectRepository } from '../repositories/geo-project.repository.js'
 import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
 import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
-import { calculateScoreSimple } from '../recommendation/recommendation-score.service.js'
+import { calculateScore } from '../recommendation/recommendation-score.service.js'
 
 interface ScanCreateBody {
   projectId: string
@@ -91,9 +91,9 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
         topic,
       })
 
-      // 立即执行 AI 分析（同步模式，无后台 worker）
+      // 立即执行 AI 分析（同步模式）
       try {
-        const score = await calculateScoreSimple(id)
+        const score = await calculateScore(id)
         await geoScanHistoryRepository.update(
           { id: scan.id },
           {
@@ -101,11 +101,13 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
             completedAt: new Date(),
             result: {
               overallScore: score.overall,
-              visibility: score.visibility,
-              authority: score.authority,
-              content: score.content,
-              website: score.website,
-              knowledge: score.knowledge,
+              visibility: score.breakdown.visibility.score,
+              authority: score.breakdown.authority.score,
+              content: score.breakdown.content.score,
+              website: score.breakdown.website.score,
+              knowledge: score.breakdown.knowledge.score,
+              aiSummary: score.aiAnalysis?.summary ?? null,
+              aiSuggestions: score.aiAnalysis?.suggestions ?? [],
             },
           }
         )
@@ -129,6 +131,8 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
           scanId: scan.id,
           status: updatedScan?.status || 'completed',
           overallScore: result.overallScore || 0,
+          aiSummary: result.aiSummary || null,
+          aiSuggestions: result.aiSuggestions || [],
           estimatedSeconds: 0,
         },
       })
@@ -202,15 +206,18 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
         data: {
           scanId: scan.id,
           status: scan.status,
-          overallScore: (scan as any).overallScore || 0,
+          overallScore: (scan.result as any)?.overallScore || 0,
           dimensions: {
-            visibility: { score: 0, explanation: '' },
-            accuracy: { score: 0, explanation: '' },
-            consistency: { score: 0, explanation: '' },
-            recommendation: { score: 0, explanation: '' },
+            visibility: { score: (scan.result as any)?.visibility || 0, explanation: '' },
+            authority: { score: (scan.result as any)?.authority || 0, explanation: '' },
+            content: { score: (scan.result as any)?.content || 0, explanation: '' },
+            website: { score: (scan.result as any)?.website || 0, explanation: '' },
+            knowledge: { score: (scan.result as any)?.knowledge || 0, explanation: '' },
           },
+          aiSummary: (scan.result as any)?.aiSummary || null,
+          aiSuggestions: (scan.result as any)?.aiSuggestions || [],
           scanStartedAt: scan.createdAt,
-          scanFinishedAt: null,
+          scanFinishedAt: scan.completedAt,
         },
       }
     } catch (err: any) {
