@@ -239,3 +239,32 @@ export async function fetchVerification(projectId: string): Promise<Verification
     trust: { message: trustMessage },
   }
 }
+
+// ── Brand-Specific Verification (for BrandOverview.vue) ──
+
+export interface BrandVerificationResult {
+  success: boolean
+  data?: any
+  error?: string
+}
+
+export async function runBrandVerification(projectId: string): Promise<BrandVerificationResult> {
+  return geoApi<{ success: boolean; data: any; error?: string }>(
+    `brands/${projectId}/verify`,
+    { method: 'POST', body: {} }
+  )
+}
+
+export async function fetchBrandVerificationHistory(projectId: string): Promise<any> {
+  const raw = await geoApi<{ success: boolean; data: any }>(
+    `brands/${projectId}/verifications`
+  )
+  return raw.data
+}
+
+export async function fetchBrandVerificationDetail(projectId: string, verificationId: string): Promise<any> {
+  const raw = await geoApi<{ success: boolean; data: any }>(
+    `brands/${projectId}/verifications/${verificationId}`
+  )
+  return raw.data
+}

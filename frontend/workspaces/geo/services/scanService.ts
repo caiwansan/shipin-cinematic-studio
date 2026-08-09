@@ -133,82 +133,14 @@ export async function createProject(input: CreateProjectInput): Promise<ProjectI
 }
 
 // ==============================
-// Scans (old)
+// Scans
 // ==============================
 
-/** 触发扫描 */
-export async function triggerScan(projectId: string): Promise<{ scanId: string; status: string; estimatedSeconds: number }> {
-  const raw = await geoApi<{ success: boolean; data: { scanId: string; status: string; estimatedSeconds: number } }>(
-    `/projects/${projectId}/scan`,
-    { method: 'POST', body: {} }
-  )
-  return raw.data
-}
-
-/** 获取扫描结果 */
-export async function fetchScanResult(projectId: string, scanId: string): Promise<ScanResult> {
-  const raw = await geoApi<{ success: boolean; data: any }>(`/projects/${projectId}/scans/${scanId}`)
-  const data = raw.data
-
-  const dimMap: Record<string, { label: string; maxScore: number }> = {
-    visibility: { label: '可见度', maxScore: 100 },
-    accuracy: { label: '准确性', maxScore: 100 },
-    consistency: { label: '一致性', maxScore: 100 },
-    recommendation: { label: '推荐意愿', maxScore: 100 },
-  }
-
-  const dimensions: ScanResult['dimensions'] = Object.entries(data.dimensions || {}).map(([key, val]: [string, any]) => ({
-    id: key,
-    label: dimMap[key]?.label || key,
-    score: val.score || 0,
-    maxScore: dimMap[key]?.maxScore || 100,
-    description: val.explanation || '',
-  }))
-
-  return {
-    scanId: data.scanId || scanId,
-    status: data.status || 'completed',
-    overallScore: data.overallScore || 0,
-    dimensions,
-    summary: data.errorMessage || `综合评分 ${data.overallScore || 0}/100`,
-    startedAt: data.scanStartedAt,
-    completedAt: data.scanFinishedAt,
-  }
-}
-
-/** 获取优化建议 */
-export async function fetchOptimizeSuggestions(projectId: string, scanId: string): Promise<OptimizeSuggestion[]> {
-  const raw = await geoApi<{ success: boolean; data: OptimizeSuggestion[] }>(
-    `/projects/${projectId}/scans/${scanId}/optimize`,
-    { method: 'POST' }
-  )
-  return raw.data
-}
-
-/** 标记优化建议已应用 */
-export async function applyOptimization(projectId: string, scanId: string): Promise<boolean> {
-  const raw = await geoApi<{ success: boolean; data: any }>(
-    `/projects/${projectId}/scans/${scanId}/apply`,
-    { method: 'POST' }
-  )
-  return raw.success
-}
-
-/** 解析扫描历史列表 */
-export async function fetchScanHistory(projectId: string): Promise<ScanHistoryItem[]> {
-  const project = await fetchProject(projectId)
-  return []
-}
-
-// ═══════════════════════════════════════
-// Phase 2 — New Runtime scan functions
-// ═══════════════════════════════════════
-
-/** 启动品牌扫描（Phase 2 — 返回 scanJobId） */
+/** 启动品牌扫描（返回 scanJobId） */
 export async function startScan(projectId: string): Promise<ScanJobResult> {
-  const res = await geoApi<{ success: boolean; data: ScanJobResult }>(
+  const res = await geoApi.post<{ success: boolean; data: ScanJobResult }>(
     `/projects/${projectId}/scan`,
-    { method: 'POST' }
+    {}
   )
   return res.data
 }
@@ -216,9 +148,8 @@ export async function startScan(projectId: string): Promise<ScanJobResult> {
 /** 获取项目最新扫描结果 */
 export async function getLatestScan(projectId: string): Promise<ScanDetail | null> {
   try {
-    const res = await geoApi<{ success: boolean; data: ScanDetail[] }>(
-      `/projects/${projectId}/scans`,
-      { method: 'GET' }
+    const res = await geoApi.get<{ success: boolean; data: ScanDetail[] }>(
+      `/projects/${projectId}/scans`
     )
     const scans = res.data || []
     if (scans.length === 0) return null
@@ -242,9 +173,24 @@ export async function getLatestScan(projectId: string): Promise<ScanDetail | nul
 
 /** 获取指定扫描任务状态 */
 export async function getScanStatus(projectId: string, scanId: string): Promise<ScanDetail> {
-  const res = await geoApi<{ success: boolean; data: ScanDetail }>(
-    `/projects/${projectId}/scans/${scanId}`,
-    { method: 'GET' }
+  const res = await geoApi.get<{ success: boolean; data: ScanDetail }>(
+    `/projects/${projectId}/scans/${scanId}`
   )
   return res.data
+}
+
+/** 获取优化建议 */
+export async function fetchOptimizeSuggestions(projectId: string, scanId: string): Promise<OptimizeSuggestion[]> {
+  const res = await geoApi.post<{ success: boolean; data: OptimizeSuggestion[] }>(
+    `/projects/${projectId}/scans/${scanId}/optimize`
+  )
+  return res.data
+}
+
+/** 标记优化建议已应用 */
+export async function applyOptimization(projectId: string, scanId: string): Promise<boolean> {
+  const res = await geoApi.post<{ success: boolean; data: any }>(
+    `/projects/${projectId}/scans/${scanId}/apply`
+  )
+  return res.success
 }

@@ -8,6 +8,7 @@ import { geoPersistenceService } from '../services/geo-persistence.service'
 import { discoveryService } from '../../../benchmark/discovery/discovery-service'
 import { opportunityService } from '../../../benchmark/opportunity'
 import { mockScanner } from '../../../benchmark/discovery/mock-scanner'
+import { calculateScoreSimple } from '../recommendation/recommendation-score.service.js'
 import { scenarioMatcher } from '../../../benchmark/sie/scenario-matcher'
 import { defaultPipeline } from '../../../benchmark/sie/matcher'
 import { buildDiscoveryContext } from '../../../benchmark/sie/discovery-context-builder'
@@ -318,6 +319,8 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
       // Build health response expected by frontend
       const project = dashboard.project
       console.log("[Health] project:", project.name, "config:", JSON.stringify(project.config));
+      // SSOT: 使用推荐分数服务（与 Health/Recommendation 页面同源）
+      const score = await calculateScoreSimple(id)
       return {
         success: true,
         data: {
@@ -329,11 +332,17 @@ export default async function geoProjectRoutes(fastify: FastifyInstance) {
             status: project.status,
           },
           healthScore: {
-            overall: project.config?.adi || 0,
+            overall: score.overall,
             change: 0,
             trend: 'stable',
           },
-          dimensions: [],
+          dimensions: [
+            { id: 'visibility', label: 'AI Visibility', score: score.visibility },
+            { id: 'authority', label: 'Authority', score: score.authority },
+            { id: 'content', label: 'Content Quality', score: score.content },
+            { id: 'website', label: 'Website Health', score: score.website },
+            { id: 'knowledge', label: 'Knowledge Coverage', score: score.knowledge },
+          ],
           explanation: {
             summary: `项目「${project.name}」健康状态概览`,
             nextFocus: '执行发现步骤以获取详细数据',

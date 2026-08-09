@@ -12,8 +12,8 @@ export const provider: SignalProvider = {
   async collect(projectId: string): Promise<RawSignal[]> {
     const signals: RawSignal[] = []
 
-    // Get the project to find industry info
-    const project = await prisma.geoProject.findUnique({ where: { id: projectId } })
+    // Get the project to find industry info (using new GEOProject model)
+    const project = await prisma.gEOProject.findUnique({ where: { id: projectId } })
     const industry = project?.industry || undefined
 
     // Find matching growth memories

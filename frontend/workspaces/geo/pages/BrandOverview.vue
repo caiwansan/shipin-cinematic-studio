@@ -1280,6 +1280,21 @@ import { explainService } from '../services/explainService'
 import type { ExplainResult } from '../types/explain'
 import { geoApi } from '../services/api'
 import { walkthroughService, type GuideInfo } from '../services/walkthroughService'
+import { fetchOptimizationQueue, type OptimizationQueue } from '../services/optimizationService'
+import {
+  runBrandVerification,
+  fetchBrandVerificationHistory,
+  fetchBrandVerificationDetail,
+} from '../services/verificationService'
+import { fetchPresence, type PresenceData } from '../services/presenceService'
+import {
+  fetchActionPlans,
+  refreshActionPlans,
+  startActionPlan,
+  pauseActionPlan,
+  completeActionPlan,
+  type ActionPlansData,
+} from '../services/actionPlanService'
 
 definePageMeta({
   title: 'Brand Overview',
@@ -1568,18 +1583,8 @@ async function loadOptimizations() {
     optStepIndex.value = 2
     await new Promise(r => setTimeout(r, 400))
 
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/optimizations`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
-      optimizationData.value = json.data
-    } else {
-      optimizationError.value = json.error || '获取优化建议失败'
-    }
+    const data = await fetchOptimizationQueue(project.value.id)
+    optimizationData.value = data as any
   } catch (err: any) {
     optimizationError.value = err?.message || '请求失败'
   } finally {
@@ -1612,17 +1617,8 @@ async function loadExplain() {
     explainStepIndex.value = 2
     await new Promise(r => setTimeout(r, 400))
 
-    const res = await fetch(`/api/geo/brands/${project.value.id}/explain`, {
-      headers: {
-        Authorization: `Bearer ${typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''}`,
-      },
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
-      explainData.value = json.data
-    } else {
-      explainError.value = json.error || '获取 Explain 失败'
-    }
+    const data = await explainService.getExplain('brand', project.value.id)
+    explainData.value = data
   } catch (err: any) {
     explainError.value = err?.message || '请求失败'
   } finally {
@@ -1703,18 +1699,8 @@ async function loadPresence() {
       await new Promise(r => setTimeout(r, 300 + Math.random() * 200))
     }
 
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/presence`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
-      presenceData.value = json.data
-    } else {
-      presenceError.value = json.error || '获取 AI 可见度数据失败'
-    }
+    const data = await fetchPresence(project.value.id)
+    presenceData.value = data as any
   } catch (err: any) {
     presenceError.value = err?.message || '请求失败'
   } finally {
@@ -1764,31 +1750,17 @@ async function runVerification() {
     veriStepIndex.value = 2
     await new Promise(r => setTimeout(r, 400))
 
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
-      verificationData.value = json.data
+    const result = await runBrandVerification(project.value.id)
+    if (result.success && result.data) {
+      verificationData.value = result.data
 
       // Also fetch history
       try {
-        const histRes = await fetch(`/api/geo/brands/${project.value.id}/verifications`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const histJson = await histRes.json()
-        if (histJson.success && histJson.data) {
-          verificationHistory.value = histJson.data
-        }
+        const histData = await fetchBrandVerificationHistory(project.value.id)
+        verificationHistory.value = histData
       } catch { /* non-critical */ }
     } else {
-      verificationError.value = json.error || 'Verification failed'
+      verificationError.value = result.error || 'Verification failed'
     }
   } catch (err: any) {
     verificationError.value = err?.message || '请求失败'
@@ -1801,13 +1773,9 @@ async function runVerification() {
 async function viewVerificationDetail(id: string) {
   if (!project.value) return
   try {
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/verifications/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
-      verificationData.value = json.data
+    const data = await fetchBrandVerificationDetail(project.value.id, id)
+    if (data) {
+      verificationData.value = data
     }
   } catch { /* non-critical */ }
 }
@@ -1840,21 +1808,12 @@ async function loadActionPlans() {
     apStepIndex.value = 1
     await new Promise(r => setTimeout(r, 500))
 
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
-      // Verify we got real data
-      if (json.data.plans && json.data.plans.length > 0) {
-        actionPlanData.value = json.data
-      } else {
-        // No stored plans — try refreshing from recommendations
-        await refreshActionPlans()
-      }
+    const data = await fetchActionPlans(project.value.id)
+    if (data && data.plans && data.plans.length > 0) {
+      actionPlanData.value = data as any
     } else {
-      actionPlanError.value = json.error || '获取执行计划失败'
+      // No stored plans — try refreshing from recommendations
+      await refreshActionPlans()
     }
   } catch (err: any) {
     actionPlanError.value = err?.message || '请求失败'
@@ -1870,21 +1829,8 @@ async function refreshActionPlans() {
   actionPlanError.value = null
 
   try {
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
-      actionPlanData.value = json.data
-    } else {
-      actionPlanError.value = json.error || '刷新执行计划失败'
-    }
+    const data = await refreshActionPlans(project.value.id)
+    actionPlanData.value = data as any
   } catch (err: any) {
     actionPlanError.value = err?.message || '请求失败'
   } finally {
@@ -1895,22 +1841,12 @@ async function refreshActionPlans() {
 async function handleStartPlan(planId: string) {
   if (!project.value) return
   try {
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans/${planId}/start`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
-      // Update local state
+    const updated = await startActionPlan(project.value.id, planId)
+    if (updated) {
       const plans = actionPlanData.value?.plans || []
       const idx = plans.findIndex((p: any) => p.id === planId)
       if (idx >= 0) {
-        plans[idx] = json.data
+        plans[idx] = updated
       }
       actionPlanData.value = { ...actionPlanData.value }
     }
@@ -1920,21 +1856,12 @@ async function handleStartPlan(planId: string) {
 async function handlePausePlan(planId: string) {
   if (!project.value) return
   try {
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans/${planId}/pause`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
+    const updated = await pauseActionPlan(project.value.id, planId)
+    if (updated) {
       const plans = actionPlanData.value?.plans || []
       const idx = plans.findIndex((p: any) => p.id === planId)
       if (idx >= 0) {
-        plans[idx] = json.data
+        plans[idx] = updated
       }
       actionPlanData.value = { ...actionPlanData.value }
     }
@@ -1944,21 +1871,12 @@ async function handlePausePlan(planId: string) {
 async function handleCompletePlan(planId: string) {
   if (!project.value) return
   try {
-    const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-    const res = await fetch(`/api/geo/brands/${project.value.id}/action-plans/${planId}/complete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-    })
-    const json = await res.json()
-    if (json.success && json.data) {
+    const updated = await completeActionPlan(project.value.id, planId)
+    if (updated) {
       const plans = actionPlanData.value?.plans || []
       const idx = plans.findIndex((p: any) => p.id === planId)
       if (idx >= 0) {
-        plans[idx] = json.data
+        plans[idx] = updated
       }
       actionPlanData.value = { ...actionPlanData.value }
     }

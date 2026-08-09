@@ -71,6 +71,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { fetchRecommendations } from '../services/recommendationsService'
+import { useGeoProjectContext } from '../composables/useGeoProjectContext'
+import { useGeoProjectStore } from '../stores/useGeoProjectStore'
 
 interface RecItem {
   id: string
@@ -88,6 +90,8 @@ interface HistoryItem {
   executedAt: string
 }
 
+const { projectId } = useGeoProjectContext()
+const projectStore = useGeoProjectStore()
 const currentScore = ref(72)
 const pendingRecs = ref<RecItem[]>([])
 const history = ref<HistoryItem[]>([])
@@ -96,7 +100,8 @@ const loading = ref(true)
 async function load() {
   loading.value = true
   try {
-    const data = await fetchRecommendations('default')
+    const id = projectId.value && projectId.value !== 'default' ? projectId.value : 'default'
+    const data = await fetchRecommendations(id)
     pendingRecs.value = data.recommendations.map(r => ({
       id: r.id,
       title: r.title,
@@ -132,7 +137,17 @@ function executeRec(id: string) {
   pendingRecs.value = pendingRecs.value.filter(r => r.id !== id)
 }
 
-onMounted(() => load())
+onMounted(async () => {
+  // 1. Load projects so useGeoProjectContext can resolve the correct ID
+  if (!projectStore.projects.length) {
+    await projectStore.listProjects()
+  }
+  if (!projectStore.currentProject && projectStore.projects.length > 0) {
+    projectStore.currentProject = projectStore.projects[0]
+  }
+  // 2. Then load recommendations with the correct projectId
+  await load()
+})
 </script>
 
 <style scoped>

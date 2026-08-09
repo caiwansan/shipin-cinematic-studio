@@ -17,7 +17,7 @@ export async function geoExplainEngineRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { type, id } = request.params as { type: string; id: string };
 
-      const validTypes = ['discovery', 'recommendation', 'verification', 'presence'];
+      const validTypes = ['discovery', 'recommendation', 'verification', 'presence', 'brand'];
       if (!validTypes.includes(type)) {
         return reply.status(400).send({ success: false, error: `Invalid explain type: ${type}. Valid types: ${validTypes.join(', ')}` });
       }
@@ -33,10 +33,13 @@ export async function geoExplainEngineRoutes(fastify: FastifyInstance) {
         const { RecommendationExplainProvider } = await import('../explain/providers/recommendation.provider.js');
         const { VerificationExplainProvider } = await import('../explain/providers/verification.provider.js');
         const { PresenceExplainProvider } = await import('../explain/providers/presence.provider.js');
+        const { BrandExplainProvider } = await import('../explain/providers/brand.provider.js');
 
         registry.register(new DiscoveryExplainProvider());
         registry.register(new RecommendationExplainProvider());
         registry.register(new VerificationExplainProvider());
+        registry.register(new PresenceExplainProvider());
+        registry.register(new BrandExplainProvider());
         registry.register(new PresenceExplainProvider());
 
         const engine = new ExplainEngine(registry, geoProjectRepository as any);

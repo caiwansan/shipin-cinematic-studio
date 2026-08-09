@@ -6,6 +6,7 @@ import { FastifyInstance } from 'fastify'
 import { geoProjectRepository } from '../repositories/geo-project.repository.js'
 import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
 import { knowledgeObjectRepository } from '../../repositories/knowledge-object.repository.js'
+import { calculateScoreSimple } from '../recommendation/recommendation-score.service.js'
 
 interface ScanCreateBody {
   projectId: string
@@ -90,9 +91,46 @@ export default async function geoScanRoutes(fastify: FastifyInstance) {
         topic,
       })
 
+      // 立即执行 AI 分析（同步模式，无后台 worker）
+      try {
+        const score = await calculateScoreSimple(id)
+        await geoScanHistoryRepository.update(
+          { id: scan.id },
+          {
+            status: 'completed',
+            completedAt: new Date(),
+            result: {
+              overallScore: score.overall,
+              visibility: score.visibility,
+              authority: score.authority,
+              content: score.content,
+              website: score.website,
+              knowledge: score.knowledge,
+            },
+          }
+        )
+        request.log.info({ scanId: scan.id, score: score.overall }, 'Scan analysis completed')
+      } catch (analyzeErr: any) {
+        // 分析失败，标记为 failed
+        request.log.error({ scanId: scan.id, err: analyzeErr.message }, 'Scan analysis failed')
+        await geoScanHistoryRepository.update(
+          { id: scan.id },
+          { status: 'failed', error: analyzeErr.message }
+        )
+      }
+
+      // 返回最新状态
+      const updatedScan = await geoScanHistoryRepository.findUnique({ where: { id: scan.id } })
+      const result = (updatedScan?.result as any) || {}
+
       return reply.status(201).send({
         success: true,
-        data: { scanId: scan.id, status: scan.status, estimatedSeconds: 60 },
+        data: {
+          scanId: scan.id,
+          status: updatedScan?.status || 'completed',
+          overallScore: result.overallScore || 0,
+          estimatedSeconds: 0,
+        },
       })
     } catch (err: any) {
       return reply.status(500).send({ success: false, error: err.message })

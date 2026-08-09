@@ -125,9 +125,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGrowthStore } from '../stores/useGrowthStore'
+import { useGeoProjectContext } from '../composables/useGeoProjectContext'
+import { useGeoProjectStore } from '../stores/useGeoProjectStore'
 import type { ProofItem } from '~/design-system/product-blocks/ProofPanel/index.vue'
 import Hero from '~/design-system/product-blocks/Hero/index.vue'
 import GrowthOverview from '~/design-system/product-blocks/GrowthOverview/index.vue'
@@ -143,7 +145,33 @@ import DSButton from '~/design-system/primitives/Button/index.vue'
 
 const router = useRouter()
 const store = useGrowthStore()
+const projectStore = useGeoProjectStore()
+const { projectId } = useGeoProjectContext()
 const selectedPeriod = ref('30d')
+
+// Sync projectId from context to store
+watch(projectId, (id) => {
+  if (id && id !== 'default') {
+    store.setProject(id)
+  }
+}, { immediate: true })
+
+// Ensure projects are loaded so useGeoProjectContext can resolve the correct ID
+onMounted(async () => {
+  // 1. Load projects so useGeoProjectContext can resolve the correct ID
+  if (!projectStore.projects.length) {
+    await projectStore.listProjects()
+  }
+  if (!projectStore.currentProject && projectStore.projects.length > 0) {
+    projectStore.currentProject = projectStore.projects[0]
+  }
+  // 2. Wait for projectId context to resolve, then fetch growth data
+  const id = projectId.value
+  if (id && id !== 'default') {
+    store.setProject(id)
+  }
+  await store.fetchGrowth()
+})
 
 const periods = [
   { label: '7 days', value: '7d' },
@@ -160,10 +188,6 @@ const sourceItems = computed<ProofItem[]>(() => {
     suffix: s.suffix,
     learnContent: s.learnContent,
   }))
-})
-
-onMounted(async () => {
-  await store.fetchGrowth()
 })
 
 function handleTakeAction() {

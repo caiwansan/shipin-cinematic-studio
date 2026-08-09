@@ -35,7 +35,7 @@ export default async function geoHealthRoutes(fastify: FastifyInstance) {
             industry: p.industry || '',
             status: p.status || 'inactive',
             healthScore: {
-              overall: snap?.score ?? 1,
+              overall: snap?.score ?? 0,
               change: snap?.change ?? 0,
               trend: (snap?.change ?? 0) > 0 ? 'up' : (snap?.change ?? 0) < 0 ? 'down' : 'stable',
             },
@@ -62,7 +62,7 @@ export default async function geoHealthRoutes(fastify: FastifyInstance) {
       }
     })
 
-    // GET /api/geo/health/:projectId — 单个项目的健康详情（从 Snapshot 读取）
+    // GET /api/geo/health/:projectId — 单个项目的健康详情（使用推荐分数 SSOT）
     fastify.get('/api/geo/health/:projectId', { preHandler: [] }, async (request, reply) => {
       const { projectId } = request.params as any
       try {
@@ -70,7 +70,8 @@ export default async function geoHealthRoutes(fastify: FastifyInstance) {
         if (!project) {
           return reply.status(404).send({ success: false, error: 'Project not found' })
         }
-        const snapshot = await geoScoreSnapshotRepository.findLatestByProjectId(projectId)
+        // SSOT: 使用推荐分数服务计算（与 Recommendation 页面同源）
+        const score = await calculateScoreSimple(projectId)
         const presenceData = await presenceRepository.findByProjectId(projectId)
         return {
           success: true,
@@ -88,13 +89,19 @@ export default async function geoHealthRoutes(fastify: FastifyInstance) {
               description: presenceData?.description || '',
             },
             healthScore: {
-              overall: snapshot?.score ?? 0,
-              change: snapshot?.change ?? 0,
-              trend: (snapshot?.change ?? 0) > 0 ? 'up' : (snapshot?.change ?? 0) < 0 ? 'down' : 'stable',
-              details: snapshot?.details ?? {},
-              dimensions: snapshot?.dimensions ?? [],
+              overall: score.overall,
+              change: 0,
+              trend: 'stable',
+              details: {},
+              dimensions: [
+                { id: 'visibility', label: 'AI Visibility', score: score.visibility },
+                { id: 'authority', label: 'Authority', score: score.authority },
+                { id: 'content', label: 'Content Quality', score: score.content },
+                { id: 'website', label: 'Website Health', score: score.website },
+                { id: 'knowledge', label: 'Knowledge Coverage', score: score.knowledge },
+              ],
             },
-            scannedAt: snapshot?.createdAt ?? null,
+            scannedAt: new Date().toISOString(),
           },
         }
       } catch (err: any) {

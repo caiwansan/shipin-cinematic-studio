@@ -22,8 +22,8 @@ function mapPrismaClaim(c: any): Claim {
 }
 
 export const geoClaimRepository = {
-  async findMany(where: any, options?: { orderBy?: any; include?: any; select?: any }): Promise<any[]> {
-    const claims = await prisma.gEOClaim.findMany({ where, ...options })
+  async findMany(args: any): Promise<any[]> {
+    const claims = await prisma.gEOClaim.findMany(args)
     return claims
   },
 

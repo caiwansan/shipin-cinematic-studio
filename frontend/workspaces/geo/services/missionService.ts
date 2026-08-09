@@ -4,7 +4,7 @@
  *
  * This service provides both:
  * 1. Legacy mission engine API (fetchMissionCenter, completeMission, etc.)
- * 2. New Mission Workspace API (fetchMissions)
+ * 2. New Mission Workspace API (fetchMissionWorkspace)
  *
  * No Mock / Fake / Placeholder data.
  * All data comes from real API endpoints.
@@ -57,69 +57,42 @@ export interface MissionCenterState {
   score: number
 }
 
-const API_BASE = '/api/geo'
-
-async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const token = typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') || '' : ''
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options?.headers as Record<string, string> || {}),
-  }
-
-  const res = await fetch(url, { ...options, headers })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`API error ${res.status}: ${text.slice(0, 200)}`)
-  }
-  const json = await res.json()
-  if (!json.success) {
-    throw new Error(json.error || 'Unknown API error')
-  }
-  return json.data
-}
-
 /**
  * Get missions for a brand (Legacy)
  */
 export async function fetchMissions(brandId: string): Promise<Mission[]> {
-  return apiFetch<Mission[]>(`${API_BASE}/missions?brandId=${encodeURIComponent(brandId)}`)
+  const res = await geoApi.get<{ success: boolean; data: Mission[] }>(`/missions?brandId=${encodeURIComponent(brandId)}`)
+  return res.data
 }
 
 /**
  * Get mission center state (Legacy)
  */
 export async function fetchMissionCenter(brandId: string): Promise<MissionCenterState> {
-  return apiFetch<MissionCenterState>(`${API_BASE}/missions/center?brandId=${encodeURIComponent(brandId)}`)
+  const res = await geoApi.get<{ success: boolean; data: MissionCenterState }>(`/missions/center?brandId=${encodeURIComponent(brandId)}`)
+  return res.data
 }
 
 /**
  * Mark a mission as completed
  */
 export async function completeMission(id: string, brandId: string): Promise<void> {
-  await apiFetch(`${API_BASE}/missions/${encodeURIComponent(id)}/complete`, {
-    method: 'POST',
-    body: JSON.stringify({ brandId }),
-  })
+  await geoApi.post(`/missions/${encodeURIComponent(id)}/complete`, { brandId })
 }
 
 /**
  * Skip a mission
  */
 export async function skipMission(id: string, brandId: string): Promise<void> {
-  await apiFetch(`${API_BASE}/missions/${encodeURIComponent(id)}/skip`, {
-    method: 'POST',
-    body: JSON.stringify({ brandId }),
-  })
+  await geoApi.post(`/missions/${encodeURIComponent(id)}/skip`, { brandId })
 }
 
 /**
  * Regenerate missions for a brand
  */
 export async function regenerateMissions(brandId: string): Promise<Mission[]> {
-  return apiFetch<Mission[]>(`${API_BASE}/missions/regenerate?brandId=${encodeURIComponent(brandId)}`, {
-    method: 'POST',
-  })
+  const res = await geoApi.post<{ success: boolean; data: Mission[] }>(`/missions/regenerate?brandId=${encodeURIComponent(brandId)}`)
+  return res.data
 }
 
 // ── New Mission Workspace API ────────────────────────
@@ -127,13 +100,14 @@ export async function regenerateMissions(brandId: string): Promise<Mission[]> {
 import type { MissionResponse as MissionWorkspaceResponse } from '../types/mission'
 
 /**
- * Fetch missions and summary from the real API.
- * GET /api/geo/missions
+ * Fetch missions and summary from the Mission Workspace API.
+ * GET /api/geo/workspace/missions
  *
  * Returns { missions: Mission[], summary: MissionSummary }
  * Used by the new Mission Workspace Page (Sprint W-02.2).
+ * NOTE: Uses /workspace/missions path to avoid collision with legacy /missions endpoint.
  */
 export async function fetchMissionWorkspace(): Promise<MissionWorkspaceResponse> {
-  const data = await geoApi<MissionWorkspaceResponse>('/missions')
-  return data
+  const res = await geoApi.get<{ success: boolean; data: MissionWorkspaceResponse }>('/workspace/missions')
+  return res.data
 }

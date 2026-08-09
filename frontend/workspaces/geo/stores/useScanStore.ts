@@ -9,8 +9,8 @@ import {
   fetchProjects,
   fetchProject,
   createProject,
-  triggerScan,
-  fetchScanResult,
+  startScan as startScanService,
+  getScanStatus,
   fetchOptimizeSuggestions,
   applyOptimization,
   type ProjectItem,
@@ -18,6 +18,7 @@ import {
   type OptimizeSuggestion,
   type CreateProjectInput,
   type ScanHistoryItem,
+  type ScanDetail,
 } from '../services/scanService'
 
 export const useScanStore = defineStore('geo-scan', () => {
@@ -45,6 +46,30 @@ export const useScanStore = defineStore('geo-scan', () => {
     accuracy: '准确性',
     consistency: '一致性',
     recommendability: '推荐意愿',
+  }
+
+  /** 将 ScanDetail API 响应映射为 ScanResult 视图模型 */
+  function mapScanDetailToResult(detail: ScanDetail): ScanResult {
+    const report = detail.report as any
+    const dimensions: ScanResult['dimensions'] = report?.dimensions
+      ? Object.entries(report.dimensions).map(([key, val]: [string, any]) => ({
+          id: key,
+          label: dimensionLabels[key] || key,
+          score: val?.score || 0,
+          maxScore: 100,
+          description: val?.explanation || '',
+        }))
+      : []
+
+    return {
+      scanId: detail.scanId,
+      status: (detail.status as any) || 'completed',
+      overallScore: detail.overallScore || 0,
+      dimensions,
+      summary: detail.summary || detail.error || `综合评分 ${detail.overallScore || 0}/100`,
+      startedAt: detail.createdAt,
+      completedAt: detail.updatedAt,
+    }
   }
 
   // ---- Actions ----
@@ -96,7 +121,7 @@ export const useScanStore = defineStore('geo-scan', () => {
     isScanning.value = true
     error.value = null
     try {
-      const result = await triggerScan(projectId)
+      const result = await startScanService(projectId)
       return { scanId: result.scanId }
     } catch (err) {
       error.value = err instanceof Error ? err.message : '触发扫描失败'
@@ -111,7 +136,8 @@ export const useScanStore = defineStore('geo-scan', () => {
     isLoading.value = true
     error.value = null
     try {
-      currentScanResult.value = await fetchScanResult(projectId, scanId)
+      const detail = await getScanStatus(projectId, scanId)
+      currentScanResult.value = mapScanDetailToResult(detail)
     } catch (err) {
       error.value = err instanceof Error ? err.message : '获取扫描结果失败'
     } finally {

@@ -32,25 +32,25 @@ export async function deleteProject(projectId: string): Promise<boolean> {
     // ── Step 1: 显式清理 Layer B 独立表（按 Owner 分类） ──
 
     // User Source — 不可恢复
-    await tx.$executeRawUnsafe(`DELETE FROM geo_brand_settings WHERE "projectId" = $1`, projectId)
-    await tx.$executeRawUnsafe(`DELETE FROM geo_keywords WHERE "projectId" = $1`, projectId)
-    await tx.$executeRawUnsafe(`DELETE FROM geo_brand_profiles WHERE "projectId" = $1`, projectId)
+    await tx.geoBrandSetting.deleteMany({ where: { projectId } })
+    await tx.geoKeyword.deleteMany({ where: { projectId } })
+    await tx.geoBrandProfile.deleteMany({ where: { projectId } })
 
     // Runtime Derived — 可恢复
-    await tx.$executeRawUnsafe(`DELETE FROM kmki_geo_score_snapshots WHERE "projectId" = $1`, projectId)
-    await tx.$executeRawUnsafe(`DELETE FROM kmki_geo_quality_scores WHERE "projectId" = $1`, projectId)
-    await tx.$executeRawUnsafe(`DELETE FROM kmki_geo_freshness_records WHERE "projectId" = $1`, projectId)
-    await tx.$executeRawUnsafe(`DELETE FROM kmki_geo_benchmark_records WHERE "projectId" = $1`, projectId)
-    await tx.$executeRawUnsafe(`DELETE FROM kmki_geo_optimization_histories WHERE "projectId" = $1`, projectId)
+    await tx.gEOScoreSnapshot.deleteMany({ where: { projectId } })
+    await tx.gEOQualityScore.deleteMany({ where: { projectId } })
+    await tx.gEOFreshnessRecord.deleteMany({ where: { projectId } })
+    await tx.gEOBenchmarkRecord.deleteMany({ where: { projectId } })
+    await tx.gEOOptimizationHistory.deleteMany({ where: { projectId } })
 
     // Runtime Queue
-    await tx.$executeRawUnsafe(`DELETE FROM kmki_geo_review_queue WHERE "projectId" = $1`, projectId)
+    await tx.gEOReviewQueue.deleteMany({ where: { projectId } })
 
     // Event Log
-    await tx.$executeRawUnsafe(`DELETE FROM geo_scan_history WHERE "projectId" = $1`, projectId)
+    await tx.geoScanHistory.deleteMany({ where: { projectId } })
 
     // Runtime Cache
-    await tx.$executeRawUnsafe(`DELETE FROM geo_graph_nodes WHERE "projectId" = $1`, projectId)
+    await tx.geoGraphNode.deleteMany({ where: { projectId } })
     // geo_graph_edges 通过 Node 的 onDelete: Cascade 自动清理
 
     // ⏳ Timeline: 等待产品确认后决定

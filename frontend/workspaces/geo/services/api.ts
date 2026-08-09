@@ -29,19 +29,19 @@ function callApi<T = any>(url: string, opts?: any): Promise<T> {
   return fetcher(url, opts)
 }
 
-// .get() / .post() convenience (new services use geoApi.get<T>(url))
+// .get() / .post() convenience — returns raw backend response (same as direct call)
 const apiMethods = {
-  get<T = any>(url: string): Promise<{ data: T }> {
-    return fetcher(url).then((data: T) => ({ data }))
+  get<T = any>(url: string, opts?: any): Promise<T> {
+    return fetcher(url, opts)
   },
-  post<T = any>(url: string, body?: any): Promise<{ data: T }> {
-    return fetcher(url, { method: 'POST', body }).then((data: T) => ({ data }))
+  post<T = any>(url: string, body?: any): Promise<T> {
+    return fetcher(url, { method: 'POST', body })
   },
-  put<T = any>(url: string, body?: any): Promise<{ data: T }> {
-    return fetcher(url, { method: 'PUT', body }).then((data: T) => ({ data }))
+  put<T = any>(url: string, body?: any): Promise<T> {
+    return fetcher(url, { method: 'PUT', body })
   },
-  delete<T = any>(url: string): Promise<{ data: T }> {
-    return fetcher(url, { method: 'DELETE' }).then((data: T) => ({ data }))
+  delete<T = any>(url: string): Promise<T> {
+    return fetcher(url, { method: 'DELETE' })
   },
 }
 

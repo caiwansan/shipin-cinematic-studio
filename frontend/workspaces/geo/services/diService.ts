@@ -23,8 +23,8 @@ export type { Issue, IssueEdge, IssueGraph }
  */
 export async function fetchIssueGraph(brandId: string): Promise<IssueGraph> {
   const res = await geoApi.post<{ success: boolean; data: IssueGraph }>('/recommendation/issues', { brandId })
-  if (!res.data.success) throw new Error((res.data as any).error || 'Unknown error')
-  return res.data.data
+  if (!res.success) throw new Error((res as any).error || 'Unknown error')
+  return res.data
 }
 
 /**
@@ -33,8 +33,8 @@ export async function fetchIssueGraph(brandId: string): Promise<IssueGraph> {
 export async function getCachedIssueGraph(brandId: string): Promise<IssueGraph | null> {
   try {
     const res = await geoApi.get<{ success: boolean; data: IssueGraph }>(`/recommendation/issues/${encodeURIComponent(brandId)}`)
-    if (!res.data.success) return null
-    return res.data.data
+    if (!res.success) return null
+    return res.data
   } catch {
     return null
   }
@@ -50,6 +50,6 @@ export async function getIssueDependencies(
   const res = await geoApi.get<{ success: boolean; data: IssueEdge[] }>(
     `/recommendation/issues/${encodeURIComponent(brandId)}/${encodeURIComponent(issueId)}/dependencies`
   )
-  if (!res.data.success) throw new Error((res.data as any).error || 'Unknown error')
-  return res.data.data
+  if (!res.success) throw new Error((res as any).error || 'Unknown error')
+  return res.data
 }

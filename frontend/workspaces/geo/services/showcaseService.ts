@@ -2,27 +2,9 @@
  * GEO Showcase Service — AI Visibility Showcase Data
  *
  * Endpoints:
- *   GET /api/v1/geo/showcase — Showcase aggregated data
+ *   GET /api/geo/showcase — Showcase aggregated data
  */
-import { ofetch } from 'ofetch'
-
-const API_BASE = '/api/v1/geo'
-
-function getAuthHeaders(): Record<string, string> {
-  if (typeof window === 'undefined') return {}
-  const token = window.localStorage?.getItem('auth_token') || ''
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-const showcaseApi = ofetch.create({
-  baseURL: API_BASE,
-  onRequest({ options }) {
-    const headers = getAuthHeaders()
-    if (headers.Authorization) {
-      options.headers = { ...options.headers, ...headers }
-    }
-  },
-})
+import { geoApi } from './api'
 
 // ── Types ──
 
@@ -70,6 +52,6 @@ export interface ShowcaseResponse {
 }
 
 export async function getShowcaseData(): Promise<ShowcaseResponse> {
-  const res = await showcaseApi<{ success: boolean; data: ShowcaseResponse }>('/showcase')
+  const res = await geoApi.get<{ success: boolean; data: ShowcaseResponse }>('/showcase')
   return res.data
 }

@@ -8,6 +8,7 @@
 import { geoScoreSnapshotRepository } from './geo-score-snapshot.repository.js'
 import { geoProjectRepository } from './geo-project.repository.js'
 import { timelineEngine } from '../workspace/timeline.js'
+import { calculateScoreSimple } from '../recommendation/recommendation-score.service.js'
 
 export type RuntimeHealthStatus = 'healthy' | 'initializing' | 'uninitialized'
 
@@ -79,11 +80,19 @@ export const missionControlRepository = {
       }
     }
 
-    // AI Visibility
+    // AI Visibility — SSOT: 使用推荐分数服务（与 Health/Recommendation 页面同源）
     let aiVisibility = 0
-    if (latestSnapshot) {
-      const scores = latestSnapshot.scores || latestSnapshot.snapshot || {}
-      aiVisibility = Math.round(scores.overall ?? scores.visibility ?? 0)
+    if (pid) {
+      try {
+        const score = await calculateScoreSimple(pid)
+        aiVisibility = score.overall
+      } catch {
+        // fallback to snapshot if score calculation fails
+        if (latestSnapshot) {
+          const scores = latestSnapshot.scores || latestSnapshot.snapshot || {}
+          aiVisibility = Math.round(scores.overall ?? scores.visibility ?? 0)
+        }
+      }
     }
     const todayGoal = Math.min(100 - aiVisibility, 15)
 
