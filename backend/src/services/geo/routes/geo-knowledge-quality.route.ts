@@ -12,7 +12,7 @@
 // P0: Route NEVER accesses DB/Prisma directly
 // ============================================================
 
-import { FastifyInstance } from 'fastify'
+import { genericLLM } from '../../../deepseek-llm.provider.js'
 import { workflowDispatcher, type WorkflowContext } from '../registry/geo-workflow'
 import { resolvePrompt } from '../registry/geo-prompt-registry'
 import type { AgentOutput } from '../types'
@@ -47,16 +47,31 @@ function buildEntityMap(inputs: Record<string, any>): Record<string, string> {
 // ─── Stub LLM (matches prompt template output format) ───
 
 function createStubLLM(entityIds: string[], entityNames: string[] = []) {
+  const hasLLM = !!(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || process.env.SILICONFLOW_API_KEY)
+
   return {
-    generate: async (_prompt: string, _opts?: any) => {
-      const promptStr = String(_prompt)
+    generate: async (prompt: string, _opts?: any) => {
+      // Use real LLM when available
+      if (hasLLM) {
+        try {
+          const resp = await genericLLM.chat({
+            messages: [{ role: 'user', content: prompt }],
+            provider: process.env.SILICONFLOW_API_KEY ? 'siliconflow' : 'deepseek',
+          })
+          return { content: resp.text, tokens: resp.text.length / 4, latency: 0, cost: 0 }
+        } catch {
+          // fall through to stub
+        }
+      }
+
+      // Fallback: deterministic stub
+      const promptStr = String(prompt)
       const name = entityNames[0] || 'Unknown'
       let data: any[]
 
       const lowerPrompt = promptStr.toLowerCase()
 
       if (lowerPrompt.includes('schema.generate') || lowerPrompt.includes('schema agent')) {
-        // Schema agent format: { entityName, schemaType, markup, validationStatus, validationErrors }
         data = entityIds.map((_id: string, i: number) => ({
           entityName: entityNames[i] || name,
           schemaType: 'Article',
@@ -65,7 +80,6 @@ function createStubLLM(entityIds: string[], entityNames: string[] = []) {
           validationErrors: [],
         }))
       } else if (lowerPrompt.includes('faq')) {
-        // FAQ agent format: { entityName, question, answer, schemaType, confidence }
         data = entityIds.map((_id: string, i: number) => ({
           entityName: entityNames[i] || name,
           question: 'What is dark matter?',
@@ -74,8 +88,6 @@ function createStubLLM(entityIds: string[], entityNames: string[] = []) {
           confidence: 0.8,
         }))
       } else if (lowerPrompt.includes('claim.extract') || lowerPrompt.includes('claim agent')) {
-        // Claim agent format (matches prompt template): { text, claimType, confidence, entityName }
-        // entityName must match the entity.name from input so the agent can resolve it
         data = entityIds.map((id: string, i: number) => ({
           text: 'Dark matter is a key concept in modern physics',
           claimType: 'fact',
