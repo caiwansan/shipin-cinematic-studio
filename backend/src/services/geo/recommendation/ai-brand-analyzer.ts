@@ -216,11 +216,11 @@ adjustedScores 仅在您认为计数评分有明显偏差时提供，否则省�
       ],
       provider,
       apiKey,
-      model: process.env.LLM_MODEL || undefined,
+      model: 'LongCat-2.0',
     })
 
     const text = resp.text || ''
-    // Extract JSON from response
+    // Extract JSON from response (handle ```json fence)
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       throw new Error('LLM 返回格式无法解析')
@@ -228,16 +228,29 @@ adjustedScores 仅在您认为计数评分有明显偏差时提供，否则省�
 
     const parsed = JSON.parse(jsonMatch[0])
 
+    // Normalize different LLM response formats
+    // Format A: { summary, suggestions: string[], dimensionInsights, adjustedScores }
+    // Format B: { analysis: { summary, recommendations: string[] }, ... }
+    // Format C: { summary, recommendations: string[], ... }
+    const summary = parsed.summary || parsed.analysis?.summary || 'AI 分析完成'
+    const suggestions = Array.isArray(parsed.suggestions)
+      ? parsed.suggestions.slice(0, 5)
+      : Array.isArray(parsed.recommendations)
+        ? parsed.recommendations.slice(0, 5)
+        : Array.isArray(parsed.analysis?.recommendations)
+          ? parsed.analysis.recommendations.slice(0, 5)
+          : []
+
     return {
       available: true,
-      summary: parsed.summary || 'AI 分析完成',
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 5) : [],
-      dimensionInsights: {
-        visibility: parsed.dimensionInsights?.visibility || '',
-        authority: parsed.dimensionInsights?.authority || '',
-        content: parsed.dimensionInsights?.content || '',
-        website: parsed.dimensionInsights?.website || '',
-        knowledge: parsed.dimensionInsights?.knowledge || '',
+      summary,
+      suggestions,
+      dimensionInsights: parsed.dimensionInsights || parsed.analysis?.dimensionInsights || {
+        visibility: parsed.analysis?.visibility || '',
+        authority: parsed.analysis?.authority || '',
+        content: parsed.analysis?.content || '',
+        website: parsed.analysis?.website || '',
+        knowledge: parsed.analysis?.knowledge || '',
       },
       adjustedScores: parsed.adjustedScores,
       provider,
