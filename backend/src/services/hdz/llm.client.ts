@@ -307,6 +307,8 @@ export function getBaseUrl(provider: string, customUrl?: string): string {
     deepseek: 'https://api.deepseek.com',
     aliyun: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     longcat: 'https://api.longcat.chat/openai',
+    // 智谱 GLM 官方: https://open.bigmodel.cn/api/paas/v4（OpenAI 兼容）
+    zhipu: 'https://open.bigmodel.cn/api/paas/v4',
   }
   return defaults[provider] || 'https://api.openai.com/v1'
 }

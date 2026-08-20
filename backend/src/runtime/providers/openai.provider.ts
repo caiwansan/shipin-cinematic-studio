@@ -44,6 +44,7 @@ export class OpenAIProvider implements LLMProvider {
       kimi: 'https://api.moonshot.cn/v1',
       siliconflow: 'https://api.siliconflow.cn/v1',
       bailian: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      zhipu: 'https://open.bigmodel.cn/api/paas/v4',
     }
     if (defaultUrls[this.name]) return defaultUrls[this.name]
     return 'https://api.openai.com/v1'

@@ -43,6 +43,13 @@ function init() {
     baseUrl: 'https://api.longcat.chat/openai/v1',
     models: [],
   }))
+  // 智谱（ZhipuGLM）— OpenAI 兼容接口
+  registerProvider(new OpenAIProvider({
+    name: 'zhipu',
+    apiKey: '',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    models: [],
+  }))
 }
 
 /**
@@ -56,6 +63,7 @@ export function refreshProviderApiKeys(): void {
     longcat: { keyEnv: 'LONGCAT_API_KEY', modelEnv: 'LONGCAT_LLM_MODEL' },
     siliconflow: { keyEnv: 'DEEPSEEK_API_KEY', modelEnv: 'DEEPSEEK_LLM_MODEL' },
     deepseek: { keyEnv: 'DEEPSEEK_API_KEY', modelEnv: 'DEEPSEEK_LLM_MODEL' },
+    zhipu: { keyEnv: 'ZHIPU_API_KEY', modelEnv: 'ZHIPU_LLM_MODEL' },
   }
   for (const [name, env] of Object.entries(envMap)) {
     const p = providers.get(name)

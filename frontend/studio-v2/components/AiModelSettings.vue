@@ -161,7 +161,7 @@ function modelPlaceholder(capKey: string): string {
     aliyun: 'qwen-plus',
     qwen: 'qwen-plus',
     moonshot: 'moonshot-v1-auto',
-    zhipu: 'glm-4-flash',
+    zhipu: 'GLM-4.7-Flash',
   }
   return map[provider] || '输入模型名称'
 }

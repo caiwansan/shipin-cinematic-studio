@@ -186,6 +186,7 @@ export class CredentialService {
       openai: 'https://api.openai.com/v1',
       siliconflow: 'https://api.siliconflow.cn/v1',
       moonshot: 'https://api.moonshot.cn/v1',
+      zhipu: 'https://open.bigmodel.cn/api/paas/v4',
     }
     return urls[provider || ''] || ''
   }

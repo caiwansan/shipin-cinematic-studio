@@ -14,12 +14,15 @@
  */
 
 import { ModelAdapter, ModelAdapterInput, ModelAdapterResult } from '../types.js'
+import type { RuntimePayload } from '../../runtime/runtime-payload.js'
 
 const BASE_URLS: Record<string, string> = {
   // DeepSeek 官方: /chat/completions（无 /v1 前缀）
   deepseek: 'https://api.deepseek.com/chat/completions',
   openai: 'https://api.openai.com/v1/chat/completions',
   siliconflow: 'https://api.siliconflow.cn/v1/chat/completions',
+  // 智谱 GLM 官方: /api/paas/v4/chat/completions
+  zhipu: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
 }
 
 export const openaiCompatLlmAdapter: ModelAdapter = {
@@ -31,6 +34,8 @@ export const openaiCompatLlmAdapter: ModelAdapter = {
     'Qwen*', 'deepseek-ai*', 'THUDM*', 'Yi*', 'Pro/*',
     // OpenAI
     'gpt-4*', 'gpt-3.5*', 'o1*', 'o3*', 'dall-e*',
+    // 智谱 GLM（大小写均支持）
+    'GLM*', 'glm*',
     // 自定义
     'custom*',
   ],
@@ -54,6 +59,8 @@ export const openaiCompatLlmAdapter: ModelAdapter = {
         baseUrl = BASE_URLS.openai
       } else if (model.startsWith('Qwen') || model.startsWith('deepseek-ai') || model.startsWith('THUDM') || model.startsWith('Yi') || model.startsWith('Pro/')) {
         baseUrl = BASE_URLS.siliconflow
+      } else if (model.startsWith('GLM') || model.startsWith('glm')) {
+        baseUrl = BASE_URLS.zhipu
       } else {
         baseUrl = BASE_URLS.siliconflow  // default to siliconflow
       }
@@ -64,6 +71,11 @@ export const openaiCompatLlmAdapter: ModelAdapter = {
       baseUrl = input.perCapabilityBaseUrl.llm
     } else if (input.baseUrl) {
       baseUrl = input.baseUrl
+    }
+
+    // 确保 baseUrl 以 /chat/completions 结尾（兼容用户只传 base URL 的情况）
+    if (!baseUrl.includes('/chat/completions')) {
+      baseUrl = baseUrl.replace(/\/$/, '') + '/chat/completions'
     }
     const messages: any[] = []
     if (input.systemPrompt) messages.push({ role: 'system', content: input.systemPrompt })
@@ -104,6 +116,7 @@ function getProviderLabel(model: string): string {
   if (model.startsWith('deepseek-ai')) return '硅基流动'
   if (model.startsWith('THUDM')) return '硅基流动'
   if (model.startsWith('Yi')) return '硅基流动'
+  if (model.startsWith('GLM') || model.startsWith('glm')) return '智谱GLM'
   if (model.startsWith('custom')) return '自定义'
   return 'OpenAI 兼容'
 }

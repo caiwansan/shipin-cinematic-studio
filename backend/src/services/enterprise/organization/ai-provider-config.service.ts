@@ -142,7 +142,7 @@ export class AIProviderConfigService {
       { id: 'openai', name: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o1-preview'], defaultBaseUrl: 'https://api.openai.com/v1' },
       { id: 'claude', name: 'Anthropic Claude', models: ['claude-3-5-sonnet', 'claude-3-opus', 'claude-3-haiku'], defaultBaseUrl: 'https://api.anthropic.com/v1' },
       { id: 'qwen', name: '通义千问', models: ['qwen-max', 'qwen-plus', 'qwen-turbo'], defaultBaseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
-      { id: 'zhipu', name: '智谱 GLM', models: ['glm-4-plus', 'glm-4', 'glm-4-flash'], defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4' },
+      { id: 'zhipu', name: '智谱 GLM', models: ['GLM-4.7-Flash', 'GLM-4-Flash-250414', 'GLM-4.7-FlashX', 'GLM-4.6', 'GLM-4-Long', 'GLM-5', 'GLM-5-Turbo', 'GLM-5.1', 'GLM-5.2', 'GLM-5.3'], defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4' },
       { id: 'kimi', name: '月之暗面 Kimi', models: ['moonshot-v1-8k', 'moonshot-v1-32k'], defaultBaseUrl: 'https://api.moonshot.cn/v1' },
     ];
   }
