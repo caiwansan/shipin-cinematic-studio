@@ -2,40 +2,50 @@
   <div class="tea-app">
     <!-- 全局 Toast -->
     <div v-if="toast" class="tea-app-toast">{{ toast }}</div>
-
     <!-- ══════════ 顶部标题栏（随 Tab 变化） ══════════ -->
     <header class="app-header">
       <template v-if="activeTab === 'chat'">
         <div class="header-left">
           <span class="header-logo">🍵</span>
           <div class="header-titles">
-            <div class="header-title">昆仑茶馆</div>
-            <div class="header-sub" :class="connClass">{{ connLabel }}</div>
+            <div class="header-title">{{ currentChannel ? currentChannel.name : '消息' }}</div>
+            <div class="header-sub" :class="connClass">
+              {{ connLabel }}
+              <button v-if="!connected" class="reconnect-btn" @click="tea.reconnect()">重连</button>
+            </div>
           </div>
         </div>
         <div class="header-actions">
           <span class="header-icon" @click="chatPanel = 'friends'">✚</span>
         </div>
       </template>
-      <template v-else-if="activeTab === 'contacts'">
+      <template v-else-if="activeTab === 'discover'">
         <div class="header-left">
-          <span class="header-title">通讯录</span>
+          <span class="header-title">发现</span>
         </div>
         <div class="header-actions">
           <span class="header-icon" @click="openCreateGroup">✚</span>
         </div>
       </template>
-      <template v-else-if="activeTab === 'community'">
-        <div class="header-left"><span class="header-title">社区</span></div>
+      <template v-else-if="activeTab === 'city'">
+        <div class="header-left"><span class="header-title">城市</span></div>
         <div class="header-actions">
           <span class="header-icon" @click="goCommunityNew">✎</span>
         </div>
       </template>
+      <template v-else-if="activeTab === 'family'">
+        <div class="header-left"><span class="header-title">宗亲</span></div>
+        <div class="header-actions">
+          <span class="header-icon" @click="loadFamily()">⟳</span>
+        </div>
+      </template>
       <template v-else>
         <div class="header-left"><span class="header-title">我的</span></div>
+        <div class="header-actions">
+          <span class="header-icon" aria-label="设置" @click="openMobilePage('settings')">⚙️</span>
+        </div>
       </template>
     </header>
-
     <!-- ══════════ 主体视图 ══════════ -->
     <main class="app-body">
       <!-- ── Tab1 茶馆：会话列表 / 好友选择 / 聊天窗 ── -->
@@ -46,25 +56,68 @@
             <span class="search-ic">🔍</span>
             <input v-model="chatSearch" class="chat-search-input" placeholder="搜索频道 / 群 / 好友" />
           </div>
-          <div class="conv-list">
-            <!-- 公共大堂 -->
-            <div v-for="ch in filteredConvs" :key="'conv-' + ch.id + '-' + ch.type" class="conv-item" @click="openChannel(ch)">
-              <div class="conv-avatar" :class="ch.kind === 'group' ? 'is-group' : ch.kind === 'public' ? 'is-public' : 'is-dm'">
-                {{ ch.kind === 'public' ? '🏮' : ch.kind === 'group' ? '👥' : (ch.name || '?').slice(0, 1) }}
-              </div>
+
+          <!-- 搜索模式：平铺显示所有匹配频道 -->
+          <template v-if="searchMode">
+            <div v-for="ch in msgSearchAll" :key="'s-'+ch.id" class="conv-item" @click="openChannel(ch)">
+              <div class="conv-avatar" :class="ch.kind === 'group' ? 'is-group' : ch.kind === 'public' ? 'is-public' : 'is-dm'">{{ ch.kind === 'public' ? '🏮' : ch.kind === 'group' ? '👥' : (ch.name || '?').slice(0, 1) }}</div>
+              <div class="conv-info"><div class="conv-name">{{ ch.name }}</div><div class="conv-preview">{{ convPreview(ch) }}</div></div>
+              <div v-if="ch.unread" class="conv-unread">{{ ch.unread > 99 ? '99+' : ch.unread }}</div>
+            </div>
+            <div v-if="!msgSearchAll.length" class="conv-empty"><p>无匹配会话</p></div>
+          </template>
+
+          <!-- ① 群聊：平时收起只显示 3 个群名，点展开看全部 -->
+          <div v-else-if="msgGroups.length" class="msg-sec">
+            <div class="msg-sec-head" @click="groupsExpanded = !groupsExpanded">
+              <span class="msg-sec-title">👥 群聊</span>
+              <span class="msg-sec-meta">{{ msgGroups.length }}<span class="msg-sec-arrow">{{ groupsExpanded ? '▲' : '▼' }}</span></span>
+            </div>
+            <div v-for="(ch,i) in (groupsExpanded ? msgGroups : msgGroups.slice(0,3))" :key="'g-'+ch.id" class="conv-item" @click="openChannel(ch)">
+              <div class="conv-avatar is-group">👥</div>
               <div class="conv-info">
                 <div class="conv-name">{{ ch.name }}</div>
                 <div class="conv-preview">{{ convPreview(ch) }}</div>
               </div>
               <div v-if="ch.unread" class="conv-unread">{{ ch.unread > 99 ? '99+' : ch.unread }}</div>
             </div>
-            <div v-if="!filteredConvs.length" class="conv-empty">
-              <p>暂无会话</p>
-              <p class="conv-empty-sub">点右上角 ✚ 添加好友 / 创建群聊</p>
+            <div v-if="msgGroups.length>3" class="msg-more" @click="groupsExpanded = !groupsExpanded">{{ groupsExpanded ? '收起' : '展开全部 ' + msgGroups.length + ' 个群' }}</div>
+          </div>
+
+          <!-- ② 会议：接入昆仑会议（腾讯会议式） -->
+          <div class="msg-sec mtg-sec" v-show="!searchMode">
+            <div class="msg-sec-head" @click="openMeeting">
+              <span class="msg-sec-title">🎥 昆仑会议</span>
+              <span class="msg-sec-arrow">›</span>
+            </div>
+            <div v-if="!activeMeetings.length" class="mtg-empty">暂无进行中的会议 · 点击进入会议中心 发起 / 加入</div>
+            <div v-else class="mtg-quick">
+              <div v-for="m in activeMeetings.slice(0,2)" :key="'mtg'+m.id" class="mtg-chip" @click="openMeetingRoom(m)">
+                <span class="mtg-dot"></span>{{ m.title || ('会议 ' + (m.meeting_no || m.id)) }} · {{ m.participant_count || 0 }}人
+              </div>
             </div>
           </div>
-        </template>
 
+          <!-- ③ 私聊（含置顶） -->
+          <div class="msg-sec" v-show="!searchMode">
+            <div class="msg-sec-head"><span class="msg-sec-title">💬 私聊</span><span class="msg-sec-meta">{{ msgDms.length }}</span></div>
+            <div v-for="ch in msgPublic" :key="'p-'+ch.id" class="conv-item" @click="openChannel(ch)">
+              <div class="conv-avatar is-public">🏮</div>
+              <div class="conv-info"><div class="conv-name">{{ ch.name }}</div><div class="conv-preview">{{ convPreview(ch) }}</div></div>
+              <div v-if="ch.unread" class="conv-unread">{{ ch.unread > 99 ? '99+' : ch.unread }}</div>
+            </div>
+            <div v-for="ch in (searchMode ? msgDmsAll : msgDms)" :key="'d-'+ch.id" class="conv-item" :class="{ pinned: ch.pinned }" @click="openChannel(ch)" @longpress.prevent="convMenu(ch)" @contextmenu.prevent="convMenu(ch)">
+              <div class="conv-avatar is-dm">{{ (ch.name || '?').slice(0, 1) }}</div>
+              <div class="conv-info">
+                <div class="conv-name">{{ ch.pinned ? '📌 ' : '' }}{{ ch.name }}</div>
+                <div class="conv-preview">{{ convPreview(ch) }}</div>
+              </div>
+              <div v-if="ch.unread" class="conv-unread">{{ ch.unread > 99 ? '99+' : ch.unread }}</div>
+              <button v-if="ch.pinned" class="conv-unpin" title="取消置顶" @click.stop="togglePin(ch)">✕</button>
+            </div>
+            <div v-if="!msgDms.length && !msgPublic.length" class="conv-empty"><p>暂无私聊</p><p class="conv-empty-sub">点右上角 ✚ 添加好友 / 发起聊天</p></div>
+          </div>
+        </template>
         <!-- 好友选择浮层（✚ 发起私聊） -->
         <div v-else-if="chatPanel === 'friends'" class="picker-pane">
           <div class="picker-head">
@@ -85,7 +138,6 @@
             <div v-if="!filteredFriends.length" class="conv-empty"><p>暂无好友</p></div>
           </div>
         </div>
-
         <!-- 聊天窗（全屏） -->
         <template v-else>
           <div class="chat-window">
@@ -93,14 +145,16 @@
               <span class="chat-back" @click="closeChannel">‹</span>
               <div class="chat-head-info">
                 <div class="chat-head-name">{{ currentChannel.name }}</div>
-                <div class="chat-head-sub">{{ chatHeadSub }}</div>
+                <div class="chat-head-sub">
+                <template v-if="currentTypingUsers.length">{{ currentTypingUsers.map(uid => memberName(uid)).join('、') }} 正在输入...</template>
+                <template v-else>{{ chatHeadSub }}</template>
               </div>
+              </div>
+              <span class="chat-head-act" title="搜索聊天内容" @click="chatSearchOpen = true">🔍</span>
               <template v-if="currentChannel.kind === 'dm'">
                 <span class="chat-head-act" title="同传语言设置（通话前设好，通话自动生效）" @click="openInterpPanel">🌐{{ interpPairLabel }}</span>
-                <span class="chat-head-act" title="语音通话" @click="callPeer('audio')">📞</span>
-                <span class="chat-head-act" title="视频通话" @click="callPeer('video')">🎥</span>
               </template>
-              <span v-else-if="currentChannel.kind === 'group'" class="chat-head-opt" @click="openGroupDetail">⋯</span>
+              <span v-if="currentChannel.kind === 'group'" class="chat-head-opt" @click="openGroupManagement">⋯</span>
             </div>
             <div class="chat-msgs">
               <div v-for="m in messages" :key="msgKey(m)" class="msg-row" :class="{ mine: m.fromUID === tea.userId.value }" @touchstart="msgTouchStart(m, $event)" @touchmove="msgTouchMove" @touchend="msgTouchEnd" @contextmenu.prevent="openMsgMenuAt(m, $event)">
@@ -127,7 +181,7 @@
                   </div>
                   <!-- 图片 -->
                   <div v-else-if="isImage(m)" class="msg-bubble">
-                    <img :src="imgUrl(m)" class="msg-img" @click="previewImg(imgUrl(m))" />
+                    <img :src="imgUrl(m)" class="msg-img" @click="previewImg(imgUrl(m))" @error="onImgError($event, m)" />
                   </div>
                   <!-- 视频 -->
                   <div v-else-if="isVideo(m)" class="msg-bubble">
@@ -138,6 +192,25 @@
                     <span class="voice-icon">🔊</span>
                     <span class="voice-dur">{{ voiceDur(m) }}"</span>
                   </div>
+                  <!-- 文件（在线预览） -->
+                  <div v-else-if="isFile(m)" class="msg-bubble file-bubble" :class="{ mine: m.fromUID === tea.userId.value }" @click="openFilePreview(m)">
+                    <span class="file-icon">{{ fileIcon(m) }}</span>
+                    <div class="file-info">
+                      <div class="file-name">{{ fileName(m) }}</div>
+                      <div class="file-meta">{{ fileMeta(m) }}</div>
+                    </div>
+                    <span class="file-open">预览 ›</span>
+                  </div>
+                  <!-- 会议邀请卡片 -->
+                  <div v-else-if="isMeetingInvite(m)" class="mtg-card" @click="openFromInvite(m)">
+                    <div class="mtg-card-icon">🎥</div>
+                    <div class="mtg-card-info">
+                      <div class="mtg-card-title">昆仑会议</div>
+                      <div class="mtg-card-sub">{{ meetingInviteTitle(m) }}</div>
+                      <div class="mtg-card-meta">🔑 会议号 {{ meetingInviteId(m).slice(-6) }} · 邀请你参会</div>
+                    </div>
+                    <span class="mtg-card-btn">🔑 加入会议 ›</span>
+                  </div>
                   <div v-else class="msg-bubble" :class="{ system: m.isSystem }">
                     <template v-if="m.isSystem">{{ msgText(m) }}</template>
                     <template v-else>
@@ -145,10 +218,20 @@
                       <span v-if="m.translation" class="msg-translation">{{ m.translation }}</span>
                     </template>
                   </div>
-                  <div class="msg-time">{{ msgTime(m) }}</div>
+                  <!-- 语音转文字工具条（仅语音消息） -->
+                  <div v-if="isVoice(m)" class="voice-tools">
+                    <button v-if="!voiceText[m.message_idstr || m.messageID || m.message_id]" class="voice-asr-btn" @click.stop="transcribeVoice(m)">{{ voiceBusy ? '⏳ 识别中…' : '✍️ 转文字' }}</button>
+                    <span v-if="voiceText[m.message_idstr || m.messageID || m.message_id]" class="voice-asr-text">🗣 {{ voiceText[m.message_idstr || m.messageID || m.message_id] }}</span>
+                  </div>
+                  <div class="msg-time">{{ msgTime(m) }}<span v-if="m.fromUID === tea.userId.value" class="msg-status-ind" :class="'s-' + (messageStatusMap[m.message_idstr || m.messageID || m.message_id] || 0)">{{ ['✓', '✓✓', '✓✓'][messageStatusMap[m.message_idstr || m.messageID || m.message_id] || 0] || '' }}</span></div>
                 </div>
               </div>
               <div v-if="!messages.length" class="conv-empty"><p>说点什么吧～</p></div>
+            </div>
+            <!-- 引用回复条 -->
+            <div v-if="replyingTo" class="reply-bar">
+              <div class="reply-bar-text">回复 {{ replyingTo.fromName || '对方' }}: {{ (replyingTo.content || '').slice(0, 30) }}</div>
+              <button class="reply-bar-close" @click="replyingTo = null">✕</button>
             </div>
             <div class="chat-input-bar">
               <button class="chat-plus" @click="plusPanelOpen = !plusPanelOpen">＋</button>
@@ -158,7 +241,8 @@
                 placeholder="输入消息…"
                 @keyup.enter="sendDraft"
               />
-              <button class="chat-send" :disabled="!draft.trim()" @click="sendDraft">发送</button>
+              <button class="chat-emoji-btn" @click="toggleEmoji">😊</button>
+              <button class="chat-send" :disabled="!draft.trim() && !replyingTo" @click="sendDraft">发送</button>
             </div>
             <!-- ＋ 面板：图片/视频/红包/礼物/语音 -->
             <div v-if="plusPanelOpen" class="chat-plus-panel">
@@ -167,121 +251,538 @@
               <button class="plus-item" @click="openRedPacket">🧧<span>红包</span></button>
               <button class="plus-item" @click="openGift">🎁<span>礼物</span></button>
               <button class="plus-item" :class="{ recording: recording }" @click="toggleRecord">🎤<span>{{ recording ? recordingSeconds + 's' : '语音' }}</span></button>
+              <template v-if="currentChannel.kind === 'dm'">
+                <button class="plus-item" @click="callPeer('audio')">📞<span>语音通话</span></button>
+                <button class="plus-item" @click="callPeer('video')">🎥<span>视频通话</span></button>
+                <button class="plus-item" :class="{ danger: blockList.has(peerUidOf(currentChannel)) }" @click="toggleBlockUser(peerUidOf(currentChannel))">🚫<span>{{ blockList.has(peerUidOf(currentChannel)) ? '取消拉黑' : '拉黑' }}</span></button>
+              </template>
+            </div>
+            <!-- Emoji 面板 -->
+            <div v-if="emojiOpen" class="emoji-panel">
+              <div class="emoji-tabs">
+                <button v-for="(g, i) in emojiList" :key="g.category" class="emoji-tab" :class="{ on: emojiActiveTab === i }" @click="emojiActiveTab = i">{{ g.category }}</button>
+              </div>
+              <div class="emoji-grid">
+                <button v-for="e in emojiList[emojiActiveTab]?.items || []" :key="e" class="emoji-item" @click="insertEmoji(e)">{{ e }}</button>
+              </div>
             </div>
             <input ref="fileInputRef" type="file" class="hidden-file" @change="onFilePicked" />
           </div>
         </template>
       </section>
-
-      <!-- ── Tab2 好友：通讯录（群聊分组 + 好友列表） ── -->
-      <section v-else-if="activeTab === 'contacts'" class="tab-pane contacts-pane">
-        <div class="chat-search">
-          <span class="search-ic">🔍</span>
-          <input v-model="friendSearch" class="chat-search-input" placeholder="搜索好友 / 群" />
-        </div>
-
-        <!-- 群聊分组 -->
-        <div class="contact-group">
-          <div class="contact-group-title">
-            👥 群聊
-            <span class="contact-group-count">{{ groups.length }}</span>
-          </div>
-          <div v-for="g in filteredGroups" :key="'g-' + g.id" class="contact-item" @click="openChannel(g)">
-            <div class="conv-avatar is-group">👥</div>
-            <div class="contact-info">
-              <div class="contact-name">{{ g.name }}</div>
-              <div class="contact-sub">{{ g.memberCount ? `共 ${g.memberCount} 位群友` : '群聊' }}</div>
-            </div>
-            <span class="contact-arrow">›</span>
-          </div>
-          <div v-if="!filteredGroups.length" class="contact-empty">暂无群聊 · 右上角 ✚ 创建</div>
-        </div>
-
-        <!-- 好友列表 -->
-        <div class="contact-group">
-          <div class="contact-group-title">
-            👤 好友
-            <span class="contact-group-count">{{ friends.length }}</span>
-          </div>
-          <div v-for="u in filteredFriends" :key="'u-' + u.id" class="contact-item" @click="startDm(u)">
-            <div class="picker-avatar">{{ (u.name || '?').slice(0, 1) }}</div>
-            <div class="contact-info">
-              <div class="contact-name">
-                {{ u.name }}
-                <span class="picker-online" :class="{ on: u.online }">{{ u.online ? '在线' : '离线' }}</span>
-              </div>
-              <div class="contact-sub">发消息</div>
-            </div>
-            <span class="contact-arrow">›</span>
-          </div>
-          <div v-if="!filteredFriends.length" class="contact-empty">暂无好友</div>
-        </div>
+      <!-- ── Tab2 好友：发现（群聊分组 + 好友列表） ── -->
+      <section v-if="activeTab === 'discover'" class="tab-pane discover-pane">
+        <MCommunity />
       </section>
-
       <!-- ── Tab3 社区：分类 + 帖子流 ── -->
-      <section v-else-if="activeTab === 'community'" class="tab-pane community-pane">
-        <div class="community-tabs">
-          <span
-            v-for="c in categories"
-            :key="c.slug || c.id || c.name"
-            class="community-tab"
-            :class="{ active: communityCat === (c.slug || c.id || '') }"
-            @click="switchCommunityCat(c.slug || c.id || '')"
-          >{{ c.name }}</span>
-        </div>
-        <div class="post-list">
-          <div v-for="p in posts" :key="p.id" class="post-item" @click="openPost(p)">
-            <div class="post-title">{{ p.title }}</div>
-            <div v-if="p.summary || p.content" class="post-summary">{{ (p.summary || p.content || '').slice(0, 60) }}</div>
-            <div class="post-meta">
-              <span class="post-author">{{ p.authorName || p.author?.name || '茶友' }}</span>
-              <span class="post-stats">👍 {{ p.likeCount ?? p.likes ?? 0 }} · 💬 {{ p.replyCount ?? p.comments ?? 0 }}</span>
-              <span v-if="p.createdAt" class="post-time">{{ timeAgo(p.createdAt) }}</span>
-            </div>
-          </div>
-          <div v-if="!posts.length" class="conv-empty"><p>{{ postsLoading ? '加载中…' : '暂无帖子' }}</p></div>
-        </div>
-        <button class="community-fab" @click="goCommunityNew">✎ 发布</button>
+      <MCity v-if="activeTab === 'city'" @open-group="openChannelFromCity" @open-room="openChannelFromRoom" @open-tickets="openMobilePage('tickets')" />
+      <!-- ── Tab4 宗亲：姓氏家族 ── -->
+      <section v-if="activeTab === 'family'" class="tab-pane">
+        <MClan @open-group="openChannelFromClan" />
       </section>
-
-      <!-- ── Tab4 我的：会员卡 + 资产 + 功能入口 ── -->
-      <section v-else class="tab-pane mine-pane">
-        <div class="mine-hero" @click="openMobilePage('profile')">
+      <!-- ── Tab5 我的：会员卡 + 资产 + 功能入口 ── -->
+      <section v-if="activeTab === 'mine'" class="tab-pane mine-pane">
+        <div class="mine-hero">
           <img v-if="myAvatar" class="mine-avatar mine-avatar-img" :src="myAvatar" alt="" />
           <div v-else class="mine-avatar">{{ myName.slice(0, 1) || '👤' }}</div>
           <div class="mine-info">
-            <div class="mine-name">{{ myName || '未登录' }}</div>
-            <div class="mine-tier">{{ tierLabel }}<span v-if="tierExpiry" class="mine-tier-exp">{{ tierExpiry }}</span></div>
+            <div class="mine-name">{{ myName || '未登录' }}<span v-if="myHasIdentity" class="mine-badge" title="已创建身份密钥">🔐</span></div>
+            <div class="mine-tier">{{ tierLabel }}<span v-if="myHasIdentity" class="mine-idhash" title="身份密钥已托管">· 已创建身份密钥</span><span v-if="tierExpiry" class="mine-tier-exp">{{ tierExpiry }}</span></div>
           </div>
           <span class="mine-arrow">›</span>
         </div>
-
+        <!-- 关注/粉丝/数字分身 统计行 -->
+        <div class="mine-stats">
+          <div class="ms-cell" @click="openFollowTarget('following')"><div class="ms-num">{{ myStats.followingCount }}</div><div class="ms-label">关注</div></div>
+          <div class="ms-div"></div>
+          <div class="ms-cell" @click="openFollowTarget('follower')"><div class="ms-num">{{ myStats.followerCount }}</div><div class="ms-label">粉丝</div></div>
+          <div class="ms-div"></div>
+          <div class="ms-cell" @click="openAvatarSettings"><div class="ms-num">🤖</div><div class="ms-label">数字分身</div></div>
+        </div>
+        <div class="tea-wallet-card" @click="openTeaWallet">
+          <div class="tw-glow"></div>
+          <div class="tw-grid"></div>
+          <div class="tw-head">
+            <span class="tw-title">星厅通证钱包</span>
+            <span class="tw-tag">链上 <i class="tw-dot"></i></span>
+          </div>
+          <div class="tw-balances">
+            <div class="tw-item">
+              <div class="tw-icon">🍵</div>
+              <div class="tw-c">
+                <div class="tw-num">{{ teaWallet?.chapiao ?? 0 }}</div>
+                <div class="tw-label">茶票 Chapiao</div>
+              </div>
+            </div>
+            <div class="tw-divider"></div>
+            <div class="tw-item">
+              <div class="tw-icon">⚙️</div>
+              <div class="tw-c">
+                <div class="tw-num">{{ teaWallet?.gongfen ?? 0 }}</div>
+                <div class="tw-label">工分 Gongfen</div>
+              </div>
+            </div>
+          </div>
+          <div class="tw-foot">
+            <span class="tw-last">{{ teaWallet?.txs?.[0] ? '上次 ' + txSummary(teaWallet.txs[0]) : '暂无交易记录' }}</span>
+            <button class="tw-refresh" aria-label="刷新" @click.stop="loadTeaWallet()">↻</button>
+          </div>
+        </div>
+        <!-- ── 通证钱包底部面板（转账/收款/流水） ── -->
+        <transition name="tw-sheet">
+        <div v-if="walletOpen" class="tw-sheet-mask" @click.self="walletOpen=false">
+          <div class="tw-sheet">
+            <div class="tw-sheet-head">
+              <span class="tw-sheet-title">星厅通证钱包</span>
+              <span class="tw-tag">链上 <i class="tw-dot"></i></span>
+              <button class="tw-sheet-close" aria-label="关闭" @click="walletOpen=false">✕</button>
+            </div>
+            <!-- 视图: main 余额 | transfer 转账 | receive 收款 | tx 流水 -->
+            <template v-if="twMode==='main'">
+              <div class="tw-sheet-bal">
+                <div class="tw-sb-item">
+                  <div class="tw-sb-num">{{ teaWallet?.chapiao ?? 0 }}</div>
+                  <div class="tw-sb-label">🍵 茶票</div>
+                </div>
+                <div class="tw-sb-item">
+                  <div class="tw-sb-num">{{ teaWallet?.gongfen ?? 0 }}</div>
+                  <div class="tw-sb-label">⚙️ 工分</div>
+                </div>
+              </div>
+              <div class="tw-actions">
+                <button class="tw-act" @click="twMode='transfer'">💸 转账</button>
+                <button class="tw-act" @click="openReceive">💰 收款</button>
+                <button class="tw-act" @click="twMode='tx'">🧾 流水</button>
+              </div>
+              <div class="tw-sheet-tx" v-if="teaWallet?.txs?.length">
+                <div class="tw-stx-row" v-for="t in teaWallet.txs.slice(0,4)" :key="t.id">
+                  <span class="tw-stx-typ">{{ txSummary(t) }}</span>
+                  <span class="tw-stx-amt" :class="t.amount>=0?'in':'out'">{{ t.amount>=0?'+':'' }}{{ t.amount }} 工分</span>
+                </div>
+              </div>
+              <div class="tw-sheet-empty" v-else>暂无交易记录</div>
+            </template>
+            <!-- 转账视图 -->
+            <template v-else-if="twMode==='transfer'">
+              <div class="tw-view-title">💸 工分转账 <span class="tw-view-back" @click="twMode='main'">← 返回</span></div>
+              <div class="tw-field">
+                <span class="tw-field-lb">收款人</span>
+                <input v-model="twUid" class="tw-input" placeholder="收款 UID" />
+                <button class="tw-mini-btn" @click="openScan">📷 扫码</button>
+              </div>
+              <div class="tw-field">
+                <span class="tw-field-lb">数量</span>
+                <input v-model="twAmt" class="tw-input" type="number" placeholder="工分数量" />
+                <span class="tw-unit">工分</span>
+              </div>
+              <div class="tw-field">
+                <span class="tw-field-lb">备注</span>
+                <input v-model="twRemark" class="tw-input" placeholder="选填" />
+              </div>
+              <button class="tw-cta" :disabled="twDoing" @click="doTransfer">{{ twDoing ? '转账中…' : '确认转账' }}</button>
+              <p class="tw-tip">茶票为股权凭证不可转账；工分可自由流转。</p>
+            </template>
+            <!-- 收款视图 -->
+            <template v-else-if="twMode==='receive'">
+              <div class="tw-view-title">💰 我的收款码 <span class="tw-view-back" @click="twMode='main'">← 返回</span></div>
+              <div class="tw-receive-box">
+                <img v-if="myQrCode" class="tw-qr" :src="myQrCode" alt="收款码" />
+                <div v-else class="tw-qr-loading">生成中…</div>
+                <div class="tw-receive-name">{{ myName || '加载中…' }}</div>
+                <div class="tw-receive-uid">UID {{ myUid || '' }}</div>
+                <div class="tw-receive-tip">对方扫此码可向您转工分</div>
+              </div>
+            </template>
+            <!-- 流水视图 -->
+            <template v-else-if="twMode==='tx'">
+              <div class="tw-view-title">🧾 最近流水 <span class="tw-view-back" @click="twMode='main'">← 返回</span></div>
+              <div class="tw-tx-list">
+                <div class="tw-tx-row" v-for="t in (teaWallet?.txs || []).slice(0,12)" :key="t.id">
+                  <div class="tw-tx-l">
+                    <div class="tw-tx-typ">{{ txSummary(t) }} <span class="tw-tx-rem">{{ t.remark||'' }}</span></div>
+                    <div class="tw-tx-time">{{ fmtTime(t.created_at) }}</div>
+                  </div>
+                  <div class="tw-tx-r" :class="t.amount>=0?'in':'out'">{{ t.amount>=0?'+':'' }}{{ t.amount }}</div>
+                </div>
+                <div class="tw-sheet-empty" v-if="!teaWallet?.txs?.length">暂无交易记录</div>
+              </div>
+            </template>
+          </div>
+        </div>
+        </transition>
+        <!-- 扫码层（全屏摄像头） -->
+        <div v-if="scanOpen" class="tw-scan-mask">
+          <video ref="scanVideoEl" class="tw-scan-video" autoplay playsinline muted></video>
+          <div class="tw-scan-frame"><div class="tw-scan-tip">对准收款码</div></div>
+          <div class="tw-scan-ops">
+            <button class="tw-scan-close" @click="closeScan">取消</button>
+            <div class="tw-scan-or">或</div>
+            <label class="tw-scan-upload">📁 选择图片<input type="file" accept="image/*" capture="environment" @change="onScanFile" hidden /></label>
+          </div>
+        </div>
+        <!-- 链上节点查询（第3期）：茶票分布节点 + 链区块 -->
+        <div v-if="nodesOpen" class="set-mask" @click.self="closeNodes">
+          <div class="set-sheet">
+            <div class="set-sheet-title">⛓️ 链上节点 · 茶票分布</div>
+            <div class="dist-tip">创始节点 <span class="mono">{{ distData?.founderUid ? distData.founderUid.slice(0, 10) + '…' : '…' }}</span> 为锚，全部茶票持有节点分布如下</div>
+            <div class="dist-sum" v-if="distData">
+              <span>持有节点 {{ distData.holderCount }} 个</span>
+              <span>已销毁 {{ distData.burnedTotal?.toLocaleString?.() ?? distData.burnedTotal }} 茶票</span>
+              <span>流通 {{ (distData.totalHeld || 0).toLocaleString?.() ?? distData.totalHeld }} / {{ (distData.totalSupply || 0).toLocaleString?.() ?? distData.totalSupply }}</span>
+            </div>
+            <div class="dist-list">
+              <div class="dist-row" v-for="it in distList" :key="it.uid">
+                <span class="dist-rank" :class="{ founder: it.isFounder }">{{ it.isFounder ? '👑' : it.rank }}</span>
+                <span class="dist-name mono">{{ (it.uid || '').slice(0, 10) }}…{{ it.isFounder ? '(创始)' : '' }}</span>
+                <span class="dist-val">{{ it.chapiao.toLocaleString?.() ?? it.chapiao }} 茶票 <em>{{ it.pct }}%</em></span>
+              </div>
+              <div class="set-sheet-empty" v-if="!distList.length">加载中…</div>
+            </div>
+            <div class="no-title" style="margin-top:12px">链区块（最近）</div>
+            <div class="no-list" v-if="chainBlocks.length">
+              <div class="no-block" v-for="b in chainBlocks" :key="b.id" @click="openChainBlock(b.hash)">
+                <div class="no-b-l">
+                  <div class="no-b-h">#{{ b.height }} · {{ b.token_type === 'gongfen' ? '工分' : '茶票' }} <span class="no-b-amt" :class="b.amount>=0?'in':'out'">{{ b.amount>=0?'+':'' }}{{ b.amount }}</span></div>
+                  <div class="no-b-rem">{{ b.remark || (b.tx_type || '') }} · {{ fmtTime(b.created_at) }}</div>
+                </div>
+                <span class="no-b-hash mono">{{ (b.hash || '').slice(0, 8) }}…</span>
+              </div>
+            </div>
+            <div v-else-if="!chainBlocks.length && chainLoaded" class="set-sheet-empty">无区块记录</div>
+            <div class="set-sheet-btns"><button class="set-btn cancel" @click="closeNodes">关闭</button><button class="set-btn ok" @click="loadChain">刷新</button></div>
+          </div>
+        </div>
+        <!-- 区块详情弹层 -->
+        <div v-if="chainBlockOpen" class="set-mask" @click.self="chainBlockOpen = false">
+          <div class="set-sheet">
+            <div class="set-sheet-title">区块 #{{ chainBlock?.height }} <span v-if="chainBlock?.isValid" class="bl-valid">✅ 有效</span></div>
+            <div v-if="chainBlock" class="bl-detail">
+              <div class="bl-row"><span>类型</span><b>{{ chainBlock.tx?.token_type === 'gongfen' ? '工分' : '茶票' }}</b></div>
+              <div class="bl-row"><span>金额</span><b>{{ chainBlock.tx?.amount }}</b></div>
+              <div class="bl-row"><span>发送</span><b class="mono">{{ (chainBlock.tx?.from_uid || '-').slice(0, 12) }}…</b></div>
+              <div class="bl-row"><span>接收</span><b class="mono">{{ (chainBlock.tx?.to_uid || '-').slice(0, 12) }}…</b></div>
+              <div class="bl-row"><span>备注</span><b>{{ chainBlock.tx?.remark || '-' }}</b></div>
+              <div class="bl-row"><span>时间</span><b>{{ fmtTime(chainBlock.tx?.created_at) }}</b></div>
+              <div class="bl-row"><span>Hash</span><b class="mono small">{{ chainBlock.hash }}</b></div>
+              <div class="bl-row"><span>Prev</span><b class="mono small">{{ chainBlock.prevHash }}</b></div>
+            </div>
+            <div class="set-sheet-btns"><button class="set-btn cancel" @click="chainBlockOpen = false">关闭</button></div>
+          </div>
+        </div>
+        <!-- 数字分身设置（完全移植桌面版：启用/托管/社区互动/话术/时段/学习/测试/保存） -->
+        <div v-if="avatarOpen" class="set-mask" @click.self="closeAvatar">
+          <div class="set-sheet av-sheet">
+            <div class="set-sheet-title">🤖 数字分身</div>
+            <p class="set-tip">分身持续学习你的对话风格与思维方法，在授权时段/对象内替你社交（记忆存云端）。</p>
+            <!-- 启用接管开关 -->
+            <div class="av-row"><span class="av-label">🟢 启用分身接管</span>
+              <button class="av-sw" :class="{ on: avSettings.enabled }" @click="avSettings.enabled = !avSettings.enabled">{{ avSettings.enabled ? '✅ 已启用' : '○ 未启用' }}</button>
+            </div>
+            <!-- 托管社区多选 -->
+            <div class="av-sec">👥 托管互动 · 选择社区（可多选）</div>
+            <div class="av-chips">
+              <span v-for="c in avCommunities" :key="c.v" class="av-chip" :class="{ on: avSettings.communities?.includes(c.v) }" @click="toggleCommunity(c.v)">{{ c.n }}</span>
+            </div>
+            <!-- 社区互动子开关 -->
+            <div class="av-sec">🏘 社区互动</div>
+            <div class="av-swgrid">
+              <button class="av-mini" :class="{ on: avSettings.autoCommentReply }" @click="avSettings.autoCommentReply = !avSettings.autoCommentReply">💬 评论自动回复</button>
+              <button class="av-mini" :class="{ on: avSettings.autoWelcome }" @click="avSettings.autoWelcome = !avSettings.autoWelcome">👋 新粉丝欢迎</button>
+              <button class="av-mini" :class="{ on: avSettings.autoFollowBack }" @click="avSettings.autoFollowBack = !avSettings.autoFollowBack">↩️ 自动回关</button>
+            </div>
+            <!-- 分身设定 -->
+            <div class="av-sec">🧬 分身设定</div>
+            <input v-model="avName" class="set-input" placeholder="分身昵称（如：我的AI分身）" />
+            <textarea v-model="avPersona" class="set-input set-textarea" rows="2" placeholder="人格设定（如：活泼健谈的茶博士）"></textarea>
+            <input v-model="avKnowledge" class="set-input" placeholder="知识背景（选填）" />
+            <!-- 话术上传 -->
+            <div class="av-sec">📄 话术文档</div>
+            <div class="av-row">
+              <button class="av-mini" @click="uploadTalkbook">上传话术（.txt）</button>
+              <span v-if="avatarInfo?.hasTalkbook" class="av-stat ok">✅ 已上传话术</span>
+            </div>
+            <!-- 接管时段 -->
+            <div class="av-sec">🕐 接管时段</div>
+            <div class="av-row">
+              <input v-model="avSettings.timeStart" type="time" class="av-time" />
+              <span class="av-dash">—</span>
+              <input v-model="avSettings.timeEnd" type="time" class="av-time" />
+            </div>
+            <!-- 安全沙箱 + 学习状态 -->
+            <div class="av-sec">🔒 安全沙箱 · 🧠 学习状态</div>
+            <div class="av-row"><span class="av-label">安全沙箱</span><span class="av-stat">宪法约束 · 敏感拦截 · 审计 · 熔断</span></div>
+            <div class="av-row"><span class="av-label">学习状态</span><span class="av-stat">{{ avSamples }} 样本 · {{ avatarInfo?.memory?.profileLen ?? 0 }} 字画像</span></div>
+            <button class="av-mini full" :disabled="avLearning" @click="doLearnNow">{{ avLearning ? '学习中…' : '📥 立即学习（帖子/评论）' }}</button>
+            <!-- 测试分身回复 -->
+            <div class="av-sec">💬 测试分身回复</div>
+            <div class="av-test">
+              <input v-model="avTestIn" class="set-input" placeholder="模拟对方说：在吗？上次的事…" />
+              <button class="set-btn ok" :disabled="avTesting" @click="doTestReply">{{ avTesting ? '思考中…' : '回复' }}</button>
+            </div>
+            <div v-if="avTestOut" class="av-reply" :class="{ err: avTestErr }">{{ avTestOut }}</div>
+            <p v-if="avMsg" class="set-msg" :class="{ ok: avMsgOk }">{{ avMsg }}</p>
+            <div class="set-sheet-btns">
+              <button class="set-btn cancel" @click="closeAvatar">关闭</button>
+              <button v-if="avatarInfo?.exists" class="set-btn cancel" @click="sweepAvatar">清除分身</button>
+              <button class="set-btn ok" :disabled="avSaving" @click="saveAvatar">{{ avSaving ? '保存中…' : '💾 保存设置' }}</button>
+            </div>
+          </div>
+        </div>
+        <!-- 公链玩法面板：签到/竞猜/封神榜/飞升台/支付密码（第3期后端） -->
+        <div v-if="playOpen" class="set-mask" @click.self="playOpen = false">
+          <div class="set-sheet">
+            <!-- 签到 -->
+            <template v-if="playMode === 'checkin'">
+              <div class="set-sheet-title">🌱 悟道茶树签到</div>
+              <div class="play-checkin" v-if="checkinData">
+                <div class="checkin-tree">{{ checkinTree }}</div>
+                <div class="checkin-streak">连续签到 <b>{{ checkinData.streak }}</b> 天</div>
+                <div class="checkin-meta">本月已签 {{ checkinData.monthSigned }} 天 · 里程碑 7/15/30 天有大奖</div>
+              </div>
+              <button class="set-btn ok play-btn" :disabled="checkinDoing" @click="doCheckin">{{ checkinDoing ? '签到中…' : (checkinData?.signedToday ? '✅ 今日已签到' : '☕ 立即签到') }}</button>
+              <button class="set-btn cancel play-btn" v-if="checkinData?.canMakeup" @click="doMakeup">🔁 补签（10 工分）</button>
+              <p v-if="playMsg" class="set-msg" :class="{ ok: playMsgOk }">{{ playMsg }}</p>
+            </template>
+            <!-- 竞猜 -->
+            <template v-else-if="playMode === 'quiz'">
+              <div class="set-sheet-title">📊 每日竞猜</div>
+              <div v-if="quizData" class="quiz-box">
+                <div class="quiz-q">{{ quizData.quiz.question }}</div>
+                <div class="quiz-opts">
+                  <div v-for="(opt, i) in quizData.quiz.options" :key="i" class="quiz-opt" :class="{ sel: quizSel === i }" @click="quizSel = i">
+                    <span class="quiz-opt-idx">{{ ['A','B','C','D'][i] }}</span>{{ opt }}
+                  </div>
+                </div>
+                <div class="quiz-betrow">
+                  <span class="quiz-betlb">下注工分</span>
+                  <input v-model.number="quizAmt" class="set-input quiz-amt" type="number" min="1" max="10" placeholder="1-10" />
+                </div>
+                <div class="quiz-tip">每次最多下注 <b>10</b> 工分 · 猜对翻 {{ quizData.quiz.reward_rate }} 倍</div>
+                <button class="set-btn ok play-btn" :disabled="quizDoing || quizData.myBet" @click="doQuizBet">
+                  {{ quizData.myBet ? '✅ 已下注（选 ' + ['A','B','C','D'][quizData.myBet.option] + ' · ' + quizData.myBet.amount + ' 工分）' : '🚀 下注（猜对翻 ' + quizData.quiz.reward_rate + ' 倍）' }}
+                </button>
+              </div>
+              <p v-if="playMsg" class="set-msg" :class="{ ok: playMsgOk }">{{ playMsg }}</p>
+            </template>
+            <!-- 封神榜 -->
+            <template v-else-if="playMode === 'leaderboard'">
+              <div class="set-sheet-title">🏆 封神榜（工分榜）</div>
+              <div class="lb-list">
+                <div class="lb-row" v-for="(it, i) in lbList" :key="it.rank">
+                  <span class="lb-rank" :class="{ top: i < 3 }">{{ it.rank }}</span>
+                  <span class="lb-uid mono">{{ (it.uid || '').slice(0, 8) }}…</span>
+                  <span class="lb-gf">{{ it.gongfen }} 工分</span>
+                </div>
+                <div class="set-sheet-empty" v-if="!lbList.length">加载中…</div>
+              </div>
+            </template>
+            <!-- 飞升台 -->
+            <template v-else-if="playMode === 'exchange'">
+              <div class="set-sheet-title">⚡ 飞升台</div>
+              <div class="exch-rate">当前动态价：<b>1 茶票 = {{ exchRateNum }} 工分</b><span v-if="exchBurned" class="exch-rate-sub">已销毁 {{ exchBurned.toLocaleString?.() ?? exchBurned }} 茶票</span></div>
+              <div class="exch-bal">我的茶票 {{ teaWallet?.chapiao ?? 0 }} · 工分 {{ teaWallet?.gongfen ?? 0 }}</div>
+              <div class="exch-tip">售价随茶票销毁<b>单边上扬</b> · 兑换按当前动态价 · <b>10% 销毁通缩</b>（全网茶票总数减少）</div>
+              <div class="quiz-betrow"><span class="quiz-betlb">数量(工分)</span><input v-model.number="exchAmt" class="set-input quiz-amt" type="number" min="1" placeholder="输入工分数" /></div>
+              <button class="set-btn ok play-btn" :disabled="exchDoing" @click="doExchange('gongfen_to_chapiao')">{{ exchDoing ? '兑换中…' : '⬆️ 兑换茶票' }}</button>
+              <p v-if="playMsg" class="set-msg" :class="{ ok: playMsgOk }">{{ playMsg }}</p>
+            </template>
+            <!-- 支付密码 -->
+            <template v-else-if="playMode === 'paypass'">
+              <div class="set-sheet-title">🔐 支付密码</div>
+              <p class="set-tip">支付密码用于飞升台/补签等敏感操作保护。</p>
+              <input v-model="ppOld" type="password" class="set-input" placeholder="旧密码（首次设置可留空）" />
+              <input v-model="ppNew" type="password" class="set-input" placeholder="新密码（至少 6 位）" />
+              <button class="set-btn ok play-btn" :disabled="ppDoing || ppNew.length < 6" @click="doSetPaypass">{{ ppDoing ? '保存中…' : '保存支付密码' }}</button>
+              <p v-if="playMsg" class="set-msg" :class="{ ok: playMsgOk }">{{ playMsg }}</p>
+            </template>
+            <div class="set-sheet-btns" style="margin-top:10px"><button class="set-btn cancel" @click="playOpen = false">关闭</button></div>
+          </div>
+        </div>
+        <!-- 大模型设置（用户自配 API Key，驱动数字分身/AI秘书/热点/社区AI） -->
+        <div v-if="llmOpen" class="set-mask" @click.self="llmOpen = false">
+          <div class="set-sheet">
+            <div class="set-sheet-title">🤖 大模型设置</div>
+            <p class="set-tip">平台不提供大模型 API，请配置你自己的 API Key —— 驱动 <b>数字分身 / AI秘书 / 好汉热点采集 / 社区AI编写</b></p>
+            <div class="quiz-betrow"><span class="quiz-betlb">服务商</span>
+              <select v-model="llmProvider" class="set-input llm-sel">
+                <option v-for="(v, k) in llmProviders" :key="k" :value="k">{{ providerLabel(k) }}</option>
+              </select>
+            </div>
+            <div class="quiz-betrow"><span class="quiz-betlb">模型</span>
+              <select v-model="llmModel" class="set-input llm-sel">
+                <option v-for="m in llmModels" :key="m" :value="m">{{ m }}</option>
+              </select>
+            </div>
+            <input v-model="llmKey" type="password" class="set-input" :placeholder="llmKeyPlaceholder" />
+            <input v-model="llmBase" class="set-input" placeholder="Base URL（可选，默认服务商地址）" />
+            <p v-if="llmMsg" class="set-msg" :class="{ ok: llmMsgOk }">{{ llmMsg }}</p>
+            <div class="set-sheet-btns">
+              <button class="set-btn cancel" :disabled="llmBusy" @click="testLlm">🧪 测试</button>
+              <button class="set-btn ok" :disabled="llmBusy" @click="saveLlm">{{ llmBusy ? '处理中…' : '💾 保存' }}</button>
+            </div>
+            <div class="set-sheet-btns"><button class="set-btn cancel" @click="llmOpen = false">关闭</button></div>
+          </div>
+        </div>
+        <!-- 数据备份 / 备份与找回 -->
+        <div v-if="backupOpen" class="set-mask" @click.self="backupOpen = false">
+          <div class="set-sheet">
+            <template v-if="backupMode === 'backup'">
+              <div class="set-sheet-title">📦 数据备份</div>
+              <p class="set-tip">资料/通证/设置加密快照存云端；助记词是找回数据的唯一钥匙，务必妥善保管。</p>
+              <div class="av-row"><span class="av-label">助记词</span><span class="av-stat" :class="{ ok: storageInfo?.mnemonicSet }">{{ storageInfo?.mnemonicSet ? '✅ 已生成' : '❌ 未生成' }}</span></div>
+              <div class="av-row"><span class="av-label">上次备份</span><span class="av-stat">{{ storageInfo?.lastBackup ? new Date(storageInfo.lastBackup).toLocaleString('zh-CN', { hour12: false }) : '无' }}</span></div>
+              <!-- 未生成助记词：生成 -->
+              <template v-if="!storageInfo?.mnemonicSet">
+                <button class="set-btn ok play-btn" :disabled="genDoing" @click="genMnemonic">{{ genDoing ? '生成中…' : '🔑 生成助记词' }}</button>
+                <div v-if="myMnemonic" class="mnemonic-box">{{ myMnemonic }}</div>
+                <p v-if="myMnemonic" class="set-tip" style="color:#e5484d">⚠️ 仅显示一次，请抄在纸上或密码管理器！丢失后无法恢复备份。</p>
+              </template>
+              <!-- 已生成：备份 / 恢复 / 重置 -->
+              <template v-else>
+                <button class="set-btn ok play-btn" :disabled="backupDoing" @click="doBackup">{{ backupDoing ? '备份中…' : '💾 立即备份' }}</button>
+                <div v-if="backupsList.length" class="bk-list">
+                  <div class="bk-item" v-for="b in backupsList" :key="b.file"><span class="bk-name">{{ b.file }}</span><span class="bk-size">{{ b.encrypted ? '🔒 已加密' : '' }}</span></div>
+                </div>
+                <div class="av-sec">♻️ 找回数据（输入助记词）</div>
+                <input v-model="restoreMnemonic" class="set-input" placeholder="12 个单词，空格分隔" />
+                <button class="set-btn ok play-btn" :disabled="backupDoing || !restoreMnemonic.trim()" @click="doRestore">{{ backupDoing ? '处理中…' : '♻️ 恢复数据' }}</button>
+                <div v-if="restoredContent" class="av-reply ok">✅ 备份已恢复：通证 茶票{{ restoredContent.wallet?.chapiao ?? 0 }} · 工分{{ restoredContent.wallet?.gongfen ?? 0 }}</div>
+                <div class="av-row" style="margin-top:10px"><button class="av-mini" @click="resetMnemonic">🔄 重置助记词</button></div>
+              </template>
+              <p v-if="backupMsg" class="set-msg" :class="{ ok: backupMsgOk }">{{ backupMsg }}</p>
+            </template>
+            <template v-else-if="backupMode === 'storage'">
+              <div class="set-sheet-title">🗂 备份与找回</div>
+              <p class="set-tip">换机/卸载后，在此用助记词找回你的数据（通证链上/资料备份云端）。</p>
+              <div class="av-row"><span class="av-label">助记词</span><span class="av-stat" :class="{ ok: storageInfo?.mnemonicSet }">{{ storageInfo?.mnemonicSet ? '✅ 已生成' : '❌ 未生成' }}</span></div>
+              <div class="av-row"><span class="av-label">备份</span><span class="av-stat">{{ storageInfo?.hasBackup ? '✅ 有备份 · ' + new Date(storageInfo.lastBackup).toLocaleDateString('zh-CN') : '暂无备份' }}</span></div>
+              <div class="av-sec">找回数据（输入助记词）：</div>
+              <input v-model="restoreMnemonic" class="set-input" placeholder="12 个单词，空格分隔" />
+              <button class="set-btn ok play-btn" :disabled="backupDoing || !restoreMnemonic.trim()" @click="doRestore">{{ backupDoing ? '处理中…' : '♻️ 找回并恢复' }}</button>
+              <p v-if="backupMsg" class="set-msg" :class="{ ok: backupMsgOk }">{{ backupMsg }}</p>
+            </template>
+            <div class="set-sheet-btns"><button class="set-btn cancel" @click="backupOpen = false">关闭</button></div>
+          </div>
+        </div>
+        <!-- 联邦银行（质押茶票借工分） -->
+        <div v-if="bankOpen" class="set-mask" @click.self="bankOpen = false">
+          <div class="set-sheet">
+            <div class="set-sheet-title">🏦 联邦银行</div>
+            <p class="set-tip">质押茶票借工分（按期限倍数）+ 存款工分吃利息。利率对齐电脑版。茶票为股权凭证不走转账。</p>
+            <div class="exch-bal">我的茶票 {{ teaWallet?.chapiao ?? 0 }} · 工分 {{ teaWallet?.gongfen ?? 0 }}</div>
+            <div class="bank-preview">当日汇率：<b>1 茶票 = {{ bankMktRate }} 工分</b></div>
+            <!-- 贷款：质押茶票借工分 -->
+            <div class="av-sec">🏦 质押茶票借工分</div>
+            <div class="bank-plans">
+              <span v-for="p in bankPlans" :key="p.days" class="bank-chip" :class="{ on: bankDays === p.days }" @click="bankDays = p.days">{{ p.days }}天 ×{{ p.mult }}（{{ Math.round(p.rate * 100) }}%）</span>
+            </div>
+            <div class="quiz-betrow"><span class="quiz-betlb">质押茶票</span><input v-model.number="bankPledge" class="set-input quiz-amt" type="number" min="10" placeholder="茶票数" /></div>
+            <div class="bank-preview">预计可借：<b>{{ bankLoanPreview }}</b> 工分（{{ bankDays }}天）</div>
+            <button class="set-btn ok play-btn" :disabled="bankDoing" @click="doLoan">{{ bankDoing ? '处理中…' : '🏦 质押借' + bankDays + '天' }}</button>
+            <!-- 存款：工分吃利息 -->
+            <div class="av-sec">💰 存款工分吃利息</div>
+            <div class="bank-plans">
+              <span v-for="p in depPlans" :key="p.days" class="bank-chip" :class="{ on: bankDepositDays === p.days }" @click="bankDepositDays = p.days">{{ p.days }}天 {{ Math.round(p.rate * 100) }}%</span>
+            </div>
+            <div class="quiz-betrow"><span class="quiz-betlb">存款工分</span><input v-model.number="bankDepositAmt" class="set-input quiz-amt" type="number" min="10" placeholder="工分数" /></div>
+            <div class="bank-preview">预计利息：<b>{{ (bankDepPlan ? Math.floor((Number(bankDepositAmt) || 0) * (bankDepPlan.rate || 0) * (bankDepPlan.days || 0) / 365) : 0) }}</b> 工分</div>
+            <button class="set-btn ok play-btn" :disabled="bankDoing" @click="doDeposit">{{ bankDoing ? '处理中…' : '💰 存款' + bankDepositDays + '天' }}</button>
+            <!-- 我的持仓 -->
+            <div class="av-sec">活跃贷款</div>
+            <div class="bk-list" v-if="bankLoans.length">
+              <div class="bk-item" v-for="loan in bankLoans" :key="loan.id">
+                <span class="bk-name">质押 {{ loan.pledgeChapiao }} 茶票 → 借 {{ loan.loanGongfen }} 工分（{{ loan.days }}天 ×{{ loan.mult }}）</span>
+                <button class="av-mini" :disabled="bankDoing" @click="doRepay(loan)">还款</button>
+              </div>
+            </div>
+            <div class="set-sheet-empty" v-else>暂无活跃贷款</div>
+            <div class="av-sec">我的存款</div>
+            <div class="bk-list" v-if="bankDeposits.length">
+              <div class="bk-item" v-for="dep in bankDeposits" :key="dep.id">
+                <span class="bk-name">存 {{ dep.amount }} 工分（{{ dep.days }}天，年化 {{ Math.round(dep.annualRate * 100) }}%，利息约 {{ dep.interest }}）</span>
+                <button class="av-mini" :disabled="bankDoing" @click="doWithdraw(dep)">取款</button>
+              </div>
+            </div>
+            <div class="set-sheet-empty" v-else>暂无存款</div>
+            <p v-if="bankMsg" class="set-msg" :class="{ ok: bankMsgOk }">{{ bankMsg }}</p>
+            <div class="set-sheet-btns"><button class="set-btn cancel" @click="bankOpen = false">关闭</button></div>
+          </div>
+        </div>
+        <!-- 关注/粉丝列表 -->
+        <div v-if="followOpen" class="set-mask" @click.self="closeFollow">
+          <div class="set-sheet">
+            <div class="set-sheet-title">{{ followType === 'following' ? '👥 我的关注' : '👥 我的粉丝' }}</div>
+            <div class="lb-list">
+              <div class="fl-row" v-for="u in followList" :key="u.id">
+                <div class="fl-avatar">{{ (u.nickname || u.username || '?').slice(0, 1) }}</div>
+                <div class="fl-info">
+                  <div class="fl-name">{{ u.nickname || u.username || '茶客' }}</div>
+                  <div class="fl-sub">{{ u.online ? '🟢 在线' : '⚪ 离线' }} · UID {{ (u.id || '').slice(0, 10) }}…</div>
+                </div>
+              </div>
+              <div class="set-sheet-empty" v-if="!followLoading && !followList.length">暂无{{ followType === 'following' ? '关注' : '粉丝' }}</div>
+              <div class="set-sheet-empty" v-if="followLoading">加载中…</div>
+            </div>
+            <div class="set-sheet-btns"><button class="set-btn cancel" @click="closeFollow">关闭</button></div>
+          </div>
+        </div>
+        <!-- 邀请好友（参照桌面：二维码 + 链接 + 复制） -->
+        <div v-if="inviteOpen" class="set-mask" @click.self="inviteOpen = false">
+          <div class="set-sheet">
+            <div class="set-sheet-title">👥 邀请好友</div>
+            <p class="set-tip">好友扫码注册（手机号或QQ登录），推荐人永久绑定为你，不可更改。</p>
+            <div class="inv-box">
+              <img v-if="inviteQr" class="inv-qr" :src="inviteQr" alt="邀请二维码" />
+              <div v-else class="inv-qr-loading">{{ inviteLoading ? '生成中…' : '请先绑定昆仑镜账号' }}</div>
+              <div class="inv-url" v-if="inviteUrl">{{ inviteUrl }}</div>
+            </div>
+            <div class="set-sheet-btns">
+              <button class="set-btn ok" :disabled="!inviteUrl" @click="copyInvite">📋 复制邀请链接</button>
+              <button class="set-btn cancel" @click="inviteOpen = false">关闭</button>
+            </div>
+          </div>
+        </div>
+        <!-- ══ 身份密钥（助记词派生私钥 · 私钥验证身份）══ -->
+        <div v-if="identityOpen" class="set-mask" @click.self="closeIdentity">
+          <div class="set-sheet">
+            <div class="set-sheet-title">🔐 身份验证</div>
+            <template v-if="identityStep === 'create'">
+              <p class="set-tip">首次创建身份：系统将自动生成 ECDSA 私钥 + 12 词助记词。私钥用助记词加密托管，丢失可用助记词找回。</p>
+              <button class="set-btn ok play-btn" :disabled="identityBusy" @click="createIdentityFlow">{{ identityBusy ? '创建中…' : '🔑 创建身份密钥' }}</button>
+            </template>
+            <template v-else>
+              <p class="set-tip">输入你的 12 词助记词，用私钥签名验证身份。若助记词与当前身份不匹配或想更换钥匙，可点「重置身份」用本助记词重新生成身份。</p>
+              <textarea v-model="identityMnemonic" class="set-input" rows="3" placeholder="输入助记词（12 个英文词）" style="resize:none"></textarea>
+              <button class="set-btn ok play-btn" :disabled="identityBusy" @click="verifyIdentityFlow">{{ identityBusy ? '验证中…' : '✅ 验证身份' }}</button>
+              <button class="set-btn ok play-btn" style="background:#8b6914" :disabled="identityBusy" @click="resetIdentityFlow">{{ identityBusy ? '处理中…' : '🔄 重置身份（用本助记词）' }}</button>
+            </template>
+            <p v-if="identityMsg" class="set-msg" :class="{ ok: identityMsgOk }" style="white-space:pre-line">{{ identityMsg }}</p>
+            <div class="set-sheet-btns"><button class="set-btn cancel" @click="closeIdentity">关闭</button></div>
+          </div>
+        </div>
         <div class="mine-assets">
           <div class="asset-cell" @click="openMobilePage('wallet')">
             <div class="asset-num">{{ walletBalance }}</div>
             <div class="asset-label">余额</div>
           </div>
-          <div class="asset-cell" @click="openMobilePage('credits')">
-            <div class="asset-num">{{ credits }}</div>
-            <div class="asset-label">积分</div>
+          <div class="asset-cell" @click="openMobilePage('gifts')">
+            <div class="asset-num">{{ goldCoins ?? 0 }}</div>
+            <div class="asset-label">我的礼物</div>
           </div>
           <div class="asset-cell" @click="openMobilePage('diamonds')">
             <div class="asset-num">{{ diamonds }}</div>
             <div class="asset-label">钻石</div>
           </div>
         </div>
-
         <div class="mine-grid">
-          <div v-for="it in mineEntries" :key="it.label" class="mine-entry" @click="openMobilePage(it.page)">
+          <div v-for="it in mineEntries" :key="it.label" class="mine-entry" @click="handleMineEntry(it)">
             <div class="mine-entry-icon">{{ it.icon }}</div>
             <div class="mine-entry-label">{{ it.label }}</div>
           </div>
         </div>
-
         <button v-if="isLoggedIn" class="mine-logout" @click="doLogout">退出登录</button>
       </section>
     </main>
-
     <!-- ══════════ 底部 TabBar ══════════ -->
     <nav class="tab-bar">
       <div v-for="t in tabs" :key="t.key" class="tab-item" :class="{ active: activeTab === t.key }" @click="switchTab(t.key)">
@@ -289,7 +790,6 @@
         <div class="tab-label">{{ t.label }}</div>
       </div>
     </nav>
-
     <!-- 建群弹窗 -->
     <div v-if="createGroupOpen" class="tea-app-mask" @click.self="createGroupOpen = false">
       <div class="tea-app-modal">
@@ -303,7 +803,6 @@
         </div>
       </div>
     </div>
-
     <!-- 群详情弹窗（简版：成员列表） -->
     <div v-if="groupDetailOpen" class="tea-app-mask" @click.self="groupDetailOpen = false">
       <div class="tea-app-modal grp-detail-modal">
@@ -321,12 +820,160 @@
         </div>
       </div>
     </div>
+    <!-- ══ P1-4: 群管理面板 ══ -->
+    <div v-if="groupActionOpen" class="tea-app-mask" @click.self="groupActionOpen = false">
+      <div class="tea-app-modal grp-detail-modal">
+        <div class="modal-title">群管理 · {{ currentChannel?.name }}</div>
+        <div class="grp-action-tabs">
+          <button class="grp-action-tab" :class="{ on: groupActionTab === 'members' }" @click="groupActionTab = 'members'">成员</button>
+          <button class="grp-action-tab" :class="{ on: groupActionTab === 'announce' }" @click="groupActionTab = 'announce'">公告</button>
+          <button class="grp-action-tab" :class="{ on: groupActionTab === 'manage' }" @click="groupActionTab = 'manage'">设置</button>
+        </div>
+        <!-- 成员列表 -->
+        <template v-if="groupActionTab === 'members'">
+          <div v-for="gm in groupMembers" :key="gm.uid" class="grp-member-row">
+            <span class="grp-member-avatar">{{ (gm.name || '?').slice(0, 1) }}</span>
+            <span class="grp-member-name">{{ gm.name }}</span>
+            <span v-if="gm.role >= 2" class="grp-member-tag">群主</span>
+            <span v-else-if="gm.role === 1" class="grp-member-tag">管理</span>
+            <span class="grp-member-actions">
+              <button v-if="gm.role < 2" class="danger" @click="muteMember(gm.uid)">禁言</button>
+              <button v-if="gm.role < 2 && groupDetail?.role >= 2" @click="setAdmin(gm.uid)">设管理</button>
+            </span>
+          </div>
+        </template>
+        <!-- 群公告 -->
+        <template v-if="groupActionTab === 'announce'">
+          <textarea v-model="newAnnouncement" class="set-input set-textarea" rows="3" placeholder="输入群公告…"></textarea>
+          <button class="set-btn ok play-btn" @click="saveAnnouncement">发布公告</button>
+          <p v-if="groupAnnouncement" class="group-announcement">📢 {{ groupAnnouncement }}</p>
+        </template>
+        <!-- 设置 -->
+        <template v-if="groupActionTab === 'manage'">
+          <div class="im-settings-section">
+            <div class="im-settings-row">
+              <span class="im-settings-label">仅群主/管理员可发言</span>
+              <button class="im-settings-toggle" :class="{ on: adminOnlyChat }" @click="adminOnlyChat = !adminOnlyChat"></button>
+            </div>
+            <div class="im-settings-row">
+              <span class="im-settings-label">新成员需审批</span>
+              <button class="im-settings-toggle" :class="{ on: needApproval }" @click="needApproval = !needApproval"></button>
+            </div>
+          </div>
+        </template>
+        <div class="modal-actions">
+          <button class="modal-btn ok" @click="groupActionOpen = false">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ P1-2: 转发面板 ══ -->
+    <div v-if="forwardOpen" class="tea-app-mask" @click.self="forwardOpen = false">
+      <div class="tea-app-modal">
+        <div class="modal-title">转发消息</div>
+        <div style="max-height:300px;overflow-y:auto;">
+          <div v-for="ch in allConversations" :key="ch.id" class="forward-conv" @click="doForward(ch)">
+            <div class="conv-avatar" :class="ch.kind === 'group' ? 'is-group' : 'is-dm'">{{ (ch.name || '?').slice(0, 1) }}</div>
+            <div class="conv-name">{{ ch.name }}</div>
+          </div>
+          <div v-if="!allConversations.length" class="conv-empty"><p>无可转发会话</p></div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn cancel" @click="forwardOpen = false">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ P2-1: 聊天搜索面板 ══ -->
+    <div v-if="chatSearchOpen" class="chat-search-panel">
+      <div class="chat-search-header">
+        <input v-model="chatSearchKeyword" class="chat-search-input" placeholder="搜索聊天内容…" @keyup.enter="doChatSearch" />
+        <button class="modal-btn ok" @click="doChatSearch">搜索</button>
+        <button class="modal-btn cancel" @click="chatSearchOpen = false">取消</button>
+      </div>
+      <div class="chat-search-results">
+        <div v-for="r in chatSearchResults" :key="r.messageId" class="chat-search-result">
+          <div class="msg-author">{{ r.fromUid?.slice(0, 8) }}</div>
+          <div class="conv-preview">{{ r.messageId }}</div>
+        </div>
+        <div v-if="!chatSearchResults.length && chatSearchKeyword" class="conv-empty"><p>无匹配结果</p></div>
+      </div>
+    </div>
+
+    <!-- ══ P2-3: IM 设置面板 ══ -->
+    <div v-if="imSettingsOpen" class="tea-app-mask" @click.self="imSettingsOpen = false">
+      <div class="tea-app-modal">
+        <div class="modal-title">消息设置</div>
+        <div class="im-settings-section">
+          <div class="im-settings-title">聊天</div>
+          <div class="im-settings-row">
+            <span class="im-settings-label">发送已读回执</span>
+            <button class="im-settings-toggle" :class="{ on: imSettings.readReceipts }" @click="imSettings.readReceipts = !imSettings.readReceipts"></button>
+          </div>
+          <div class="im-settings-row">
+            <span class="im-settings-label">显示输入状态</span>
+            <button class="im-settings-toggle" :class="{ on: imSettings.typingIndicator }" @click="imSettings.typingIndicator = !imSettings.typingIndicator"></button>
+          </div>
+        </div>
+        <div class="im-settings-section">
+          <div class="im-settings-title">外观</div>
+          <div class="im-settings-row">
+            <span class="im-settings-label">字体大小</span>
+            <select v-model="imSettings.fontSize" class="set-input" style="width:100px">
+              <option value="small">小</option>
+              <option value="medium">中</option>
+              <option value="large">大</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn ok" @click="saveImSettings">保存</button>
+          <button class="modal-btn cancel" @click="imSettingsOpen = false">取消</button>
+        </div>
+      </div>
+    </div>
 
     <!-- 图片预览 -->
     <div v-if="previewUrl" class="tea-app-mask img-mask" @click="previewUrl = ''">
       <img :src="previewUrl" class="preview-img" />
     </div>
-
+    <!-- 文件在线预览 -->
+    <div v-if="filePrev" class="tea-app-mask" @click.self="closeFilePrev">
+      <div class="tea-app-modal file-prev-modal">
+        <div class="modal-title">📄 {{ filePrev.name }} <span class="file-prev-size">{{ filePrev.size }}</span></div>
+        <div class="file-prev-body">
+          <!-- 图片 -->
+          <img v-if="filePrev.kind === 'img'" :src="filePrev.url" class="file-prev-img" />
+          <!-- 音频 -->
+          <audio v-else-if="filePrev.kind === 'audio'" :src="filePrev.url" controls class="file-prev-av" />
+          <!-- 视频 -->
+          <video v-else-if="filePrev.kind === 'video'" :src="filePrev.url" controls class="file-prev-av" />
+          <!-- pdf: 内嵌预览 -->
+          <iframe v-else-if="filePrev.kind === 'pdf'" :src="filePrev.url" class="file-prev-iframe" />
+          <!-- 文本/代码 -->
+          <pre v-else-if="filePrev.kind === 'text'" class="file-prev-text">{{ filePrev.text }}</pre>
+          <!-- office / 其他：新窗口打开 -->
+          <div v-else class="file-prev-unsupported">
+            <p>🧩 该格式暂不支持窗口内预览</p>
+            <button class="modal-btn ok" @click="openFileNewTab(filePrev.url)">在新窗口打开</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn ok" @click="closeFilePrev">关闭</button>
+        </div>
+      </div>
+    </div>
+    <!-- 语音转文字结果弹窗 -->
+    <div v-if="asrResult" class="tea-app-mask" @click.self="asrResult = ''">
+      <div class="tea-app-modal">
+        <div class="modal-title">✍️ 语音转文字</div>
+        <pre class="asr-result">{{ asrResult }}</pre>
+        <div class="modal-actions">
+          <button class="modal-btn primary" @click="copyAsr">复制</button>
+          <button class="modal-btn ok" @click="asrResult = ''">关闭</button>
+        </div>
+      </div>
+    </div>
     <!-- ══ 发红包弹窗 ══ -->
     <div v-if="rpPanelOpen" class="tea-app-mask" @click.self="rpPanelOpen = false">
       <div class="tea-app-modal">
@@ -358,7 +1005,6 @@
         </div>
       </div>
     </div>
-
     <!-- ══ 抢红包弹窗 ══ -->
     <div v-if="rpDetail" class="tea-app-mask" @click.self="closeRpDetail">
       <div class="tea-app-modal rp-detail-modal">
@@ -378,7 +1024,6 @@
         </div>
       </div>
     </div>
-
     <!-- ══ 送礼物弹窗 ══ -->
     <div v-if="giftPanelOpen" class="tea-app-mask" @click.self="giftPanelOpen = false">
       <div class="tea-app-modal gift-modal">
@@ -408,27 +1053,25 @@
         </div>
       </div>
     </div>
-
     <!-- 礼物动画 -->
     <div v-if="giftAnimation" class="gift-anim">
       <div class="gift-anim-icon">{{ giftAnimation.icon }}</div>
       <div class="gift-anim-text">{{ giftAnimation.fromName }} 送出 {{ giftAnimation.name }} 给 {{ giftAnimation.toName }}</div>
     </div>
-
     <!-- ══ 消息长按操作菜单（复制/收藏/翻译/撤回） ══ -->
     <div v-if="msgMenu" class="msg-action-mask" @click.self="closeMsgMenu">
       <div class="msg-action-sheet">
         <div v-if="msgMenu.canCopy" class="msg-action-item" @click="copyMsg(msgMenu.msg)">📋 复制</div>
+        <div class="msg-action-item" @click="startReply(msgMenu.msg)">💬 回复</div>
+        <div class="msg-action-item" @click="openForward(msgMenu.msg)">↪ 转发</div>
         <div class="msg-action-item" @click="favMsg(msgMenu.msg)">⭐ 收藏</div>
         <div v-if="msgMenu.canTranslate" class="msg-action-item" @click="translateMsg(msgMenu.msg)">🌐 翻译</div>
         <div v-if="msgMenu.canRecall" class="msg-action-item danger" @click="recallMsg(msgMenu.msg)">↩ 撤回</div>
         <div class="msg-action-cancel" @click="closeMsgMenu">取消</div>
       </div>
     </div>
-
     <!-- 全局 toast（子页面 mobileToast 事件） -->
     <div v-if="toast" class="tea-toast">{{ toast }}</div>
-
     <!-- ══ 手机版子页面容器 ══ -->
     <component
       :is="mobilePageComp"
@@ -439,7 +1082,8 @@
       @open="openMobilePage"
       @published="onSubPublished"
     />
-
+    <!-- ══ 昆仑会议（腾讯会议式，会议中心 + 会议室） ══ -->
+    <MMeeting v-if="meetingOpen" ref="meetingEl" :tea="tea" @close="meetingOpen = false" />
     <!-- ══ R11 语音/视频 1v1 通话（手机版）══ -->
     <!-- 来电弹窗（被叫） -->
     <div v-if="rtc.state.value === 'incoming'" class="rtc-mask">
@@ -535,25 +1179,43 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
-// 昆仑茶馆手机版 — 微信式四 Tab 聚合壳（茶馆 / 好友 / 社区 / 我的）
+// 消息手机版 — 微信式四 Tab 聚合壳（茶馆 / 好友 / 社区 / 我的）
 // 复用 useKunlunTea 全部 IM 能力；社区/会员中心调原生 API；桌面版页面零改动
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, watchEffect, defineAsyncComponent } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick, watchEffect, defineAsyncComponent } from 'vue'
+import QRCode from 'qrcode'
 import { MEMBERSHIP_LABELS } from '~/constants/membership'
 import { useRtcCall } from '~/composables/useRtcCall'
+import { useSigning } from '~/composables/useSigning'
 import { useRtcInterpreter } from '~/composables/useRtcInterpreter'
-
+import MCity from '~/components/mobile/MCity.vue'
+import MClan from '~/components/mobile/MClan.vue'
+import MCommunity from '~/components/mobile/MCommunity.vue'
+import MMeeting from '~/components/mobile/MMeeting.vue'
 // 登录保护：中间件拦截（SSR cookie 检查 + 客户端 token 校验），未登录跳手机版登录页
 // /mobile-login 为公开页，由页面自身处理登录后回跳
-definePageMeta({ middleware: 'auth' })
-
+definePageMeta({})
+// Mobile viewport head
+useHead({
+  meta: [
+    { name: "viewport", content: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" }
+  ]
+})
 const tea = useKunlunTea()
 const router = useRouter()
 const route = useRoute()
-
 // ══ R11 语音/视频 1v1 + 实时同声传译（手机版，复用桌面版 composable，信令互通）══
+// ══ 消息状态映射（模板直接访问 tea.messageStatusMap） ══
+const messageStatusMap = computed(() => tea.messageStatusMap.value || {})
+
+// ══ 成员名称缓存 ══
+const memberNames = ref<Record<string, string>>({})
+function memberName(uid: string): string {
+  return memberNames.value[uid] || uid.slice(0, 8) + '…'
+}
+
 const rtc = useRtcCall(tea)
+const signing = useSigning()
 const interp = useRtcInterpreter()
 let rtcSetIdentity: (uid: string, name: string, avatar: string) => void = () => {}
 const rtcRemoteVideoRef = ref<HTMLVideoElement | null>(null)
@@ -561,12 +1223,67 @@ const rtcLocalVideoRef = ref<HTMLVideoElement | null>(null)
 const rtcDurText = ref('00:00')
 let rtcDurTimer: ReturnType<typeof setInterval> | null = null
 const rtcToast = ref('')
+
+// ══ P0-1: 消息状态 ══
+const msgStatusRefreshInterval = ref<any>(null)
+
+// ══ P0-3: 输入状态 ══
+const typingRefreshInterval = ref<any>(null)
+const currentTypingUsers = ref<string[]>([])
+
+// ══ P0-4: 引用回复 ══
+const replyingTo = ref<any>(null)
+
+// ══ P1-1: Emoji 面板 ══
+const emojiOpen = ref(false)
+const emojiList = ref<any[]>([])
+const emojiActiveTab = ref(0)
+
+// ══ P1-3: 语音波形 ══
+const voiceWaveforms = ref<Record<string, number[]>>({})
+
+// ══ P2-2: @提及 ══
+const mentionOpen = ref(false)
+const mentionKeyword = ref('')
+const mentionResults = ref<any[]>([])
+const mentionTriggerPos = ref(-1)
+
+// ══ P2-1: 聊天搜索 ══
+const chatSearchOpen = ref(false)
+const chatSearchKeyword = ref('')
+const chatSearchResults = ref<any[]>([])
+
+// ══ P2-4: 未读管理 ══
+const unreadCounts = ref<Record<string, number>>({})
+
+// ══ P1-2: 转发 ══
+const forwardOpen = ref(false)
+const forwardTarget = ref<{ messageId: string; fromChannelId: string; fromChannelType: number } | null>(null)
+
+// ══ P1-4: 群管理 ══
+const groupActionOpen = ref(false)
+const groupActionTab = ref('members')  // members | announce | manage
+
+// ══ P2-3: 设置 ══
+const imSettingsOpen = ref(false)
+const imSettings = ref<any>({ fontSize: 'medium', chatBackground: 'default', doNotDisturb: false, readReceipts: true, typingIndicator: true })
+
+// ══ P1-4: 群管理状态 ══
+const groupMembers = ref<any[]>([])
+const groupDetail = ref<any>(null)
+const groupAnnouncement = ref('')
+const newAnnouncement = ref('')
+const adminOnlyChat = ref(false)
+const needApproval = ref(false)
+
+// ══ P1-2: 转发状态 ══
+const allConversations = ref<any[]>([])
+
 // 同传语言偏好（通话前设置，持久化 localStorage；与桌面版同 key，同浏览器互认）
 const interpPanel = ref(false)
 const interpMyLang = ref('zh')
 const interpPeerLang = ref('en')
 const interpConfigured = ref(true) // 同传默认开启（用户可关闭）
-
 function langLabel(v: string): string {
   return interp.langOptions.find((o) => o.value === v)?.label || v
 }
@@ -592,6 +1309,218 @@ function saveInterpPrefs() {
     localStorage.setItem('kl_interp_configured', '1')
   } catch { /* noop */ }
 }
+
+// ══ P1-1: Emoji 面板 ══
+async function loadEmojiList() {
+  if (emojiList.value.length) return
+  emojiList.value = await tea.loadEmoji()
+}
+function toggleEmoji() {
+  emojiOpen.value = !emojiOpen.value
+  if (emojiOpen.value) loadEmojiList()
+  plusPanelOpen.value = false
+}
+function insertEmoji(e: string) {
+  draft.value += e
+  emojiOpen.value = false
+}
+
+// ══ P0-3: 输入状态 ══
+let typingStopTimer: any = null
+function onDraftChange() {
+  if (!currentChannel.value) return
+  if (imSettings.value.typingIndicator !== false) {
+    tea.sendTyping(currentChannel.value.id, currentChannel.value.kind === 'dm' ? 4 : 4, true)
+    if (typingStopTimer) clearTimeout(typingStopTimer)
+    typingStopTimer = setTimeout(() => {
+      if (currentChannel.value) tea.sendTyping(currentChannel.value.id, 4, false)
+    }, 3000)
+  }
+}
+async function refreshTypingUsers() {
+  if (!currentChannel.value || currentChannel.value.kind !== 'dm') {
+    currentTypingUsers.value = []
+    return
+  }
+  await tea.fetchTypingUsers(currentChannel.value.id, 4)
+  const uids = tea.typingUsers.value[currentChannel.value.id] || []
+  currentTypingUsers.value = uids.filter(u => u !== tea.userId.value)
+  // 解析名称
+  for (const uid of currentTypingUsers.value) {
+    if (!memberNames.value[uid]) {
+      const names = await tea.resolveNames([uid])
+      if (names[uid]) memberNames.value[uid] = names[uid]
+    }
+  }
+}
+
+// ══ P0-1: 消息状态追踪 ══
+async function refreshMessageStatus() {
+  if (!currentChannel.value) return
+  const ids = messages.value
+    .filter(m => m.fromUID === tea.userId.value)
+    .map(m => m.message_idstr || m.messageID || m.message_id)
+    .filter(Boolean)
+  if (ids.length) await tea.fetchMessageStatus(ids, currentChannel.value.id)
+}
+function observeReadReceipts() {
+  if (!currentChannel.value) return
+  // 标记当前会话已读
+  const lastMsg = messages.value[messages.value.length - 1]
+  if (lastMsg) {
+    tea.markRead(currentChannel.value.id, currentChannel.value.kind === 'dm' ? 4 : 4, lastMsg.message_idstr || lastMsg.messageID || lastMsg.message_id)
+  }
+}
+
+// ══ P0-4: 引用回复 ══
+function startReply(m: any) {
+  replyingTo.value = m
+  closeMsgMenu()
+}
+async function sendReply() {
+  if (!replyingTo.value || !currentChannel.value) return
+  const text = draft.value.trim()
+  if (!text) return
+  const replyToId = replyingTo.value.message_idstr || replyingTo.value.messageID || replyingTo.value.message_id
+  try {
+    await tea.sendReply(text, currentChannel.value.id, currentChannel.value.kind === 'dm' ? 4 : 4, replyToId)
+    draft.value = ''
+    replyingTo.value = null
+  } catch (e) {
+    showToast('回复发送失败')
+  }
+}
+
+// ══ P1-3: 语音波形 ══
+async function loadVoiceWaveform(m: any) {
+  const mid = m.message_idstr || m.messageID || m.message_id
+  if (!mid || voiceWaveforms.value[mid]) return
+  const wf = await tea.getVoiceWaveform(mid)
+  if (wf.length) voiceWaveforms.value[mid] = wf
+}
+
+// ══ P1-2: 消息转发 ══
+function openForward(m: any) {
+  forwardTarget.value = { messageId: m.message_idstr || m.messageID || m.message_id, fromChannelId: currentChannel.value?.id || '', fromChannelType: 4 }
+  forwardOpen.value = true
+  closeMsgMenu()
+}
+
+// ══ P2-1: 聊天搜索 ══
+async function doChatSearch() {
+  if (!chatSearchKeyword.value.trim() || !currentChannel.value) return
+  try {
+    const r = await authFetch(`/api/im/search?channelId=${encodeURIComponent(currentChannel.value.id)}&keyword=${encodeURIComponent(chatSearchKeyword.value)}`)
+    const j = await r.json()
+    chatSearchResults.value = j.data || []
+  } catch { chatSearchResults.value = [] }
+}
+
+// ══ P2-2: @提及 ══
+async function checkMentionTrigger() {
+  const text = draft.value
+  const pos = text.lastIndexOf('@')
+  if (pos < 0 || pos < mentionTriggerPos.value) {
+    mentionOpen.value = false
+    return
+  }
+  const after = text.slice(pos + 1)
+  if (after.includes(' ') || after.length > 10) {
+    mentionOpen.value = false
+    return
+  }
+  mentionKeyword.value = after
+  mentionTriggerPos.value = pos
+  if (currentChannel.value) {
+    mentionResults.value = await tea.searchMention(currentChannel.value.id, after)
+    mentionOpen.value = mentionResults.value.length > 0
+  }
+}
+function selectMention(u: any) {
+  const text = draft.value
+  const pos = mentionTriggerPos.value
+  draft.value = text.slice(0, pos) + '@' + u.name + ' ' + text.slice(pos + 1 + mentionKeyword.value.length)
+  mentionOpen.value = false
+  mentionTriggerPos.value = -1
+}
+
+// ══ P1-4: 群管理 ══
+async function openGroupManagement() {
+  groupActionOpen.value = true
+  groupActionTab.value = 'members'
+  if (currentChannel.value) {
+    await loadGroupMembers()
+  }
+}
+async function loadGroupMembers() {
+  if (!currentChannel.value) return
+  const members = await tea.loadMembers(currentChannel.value.id, 4)
+  groupMembers.value = members
+  for (const m of members) {
+    memberNames.value[m.uid] = m.name || m.uid.slice(0, 8)
+  }
+}
+
+// ══ P1-4: 群管理函数 ══
+async function setAdmin(uid: string) {
+  if (!currentChannel.value) return
+  const ok = await tea.setMemberRole(currentChannel.value.id, 4, uid, 1)
+  if (ok) { showToast('✅ 已设为管理员'); loadGroupMembers() }
+  else showToast('❌ 操作失败')
+}
+
+async function muteMember(uid: string) {
+  if (!currentChannel.value) return
+  const ok = await tea.muteMember(currentChannel.value.id, 4, uid, 3600)
+  if (ok) showToast('✅ 已禁言 1 小时')
+  else showToast('❌ 操作失败')
+}
+
+async function saveAnnouncement() {
+  if (!currentChannel.value || !newAnnouncement.value.trim()) return
+  const ok = await tea.setGroupAnnouncement(currentChannel.value.id, 4, newAnnouncement.value.trim())
+  if (ok) {
+    groupAnnouncement.value = newAnnouncement.value.trim()
+    newAnnouncement.value = ''
+    showToast('✅ 公告已发布')
+  } else showToast('❌ 发布失败')
+}
+
+// ══ P1-2: 转发函数 ══
+async function doForward(target: any) {
+  if (!forwardTarget.value || !currentChannel.value) return
+  const ok = await tea.forwardMessage(
+    forwardTarget.value.messageId,
+    forwardTarget.value.fromChannelId,
+    forwardTarget.value.fromChannelType,
+    target.id, 4
+  )
+  if (ok) { showToast('✅ 已转发'); forwardOpen.value = false }
+  else showToast('❌ 转发失败')
+}
+
+// ══ P2-3: 设置保存 ══
+function saveImSettings() {
+  localStorage.setItem('kl_im_settings', JSON.stringify(imSettings.value))
+  imSettingsOpen.value = false
+  showToast('✅ 设置已保存')
+}
+function loadImSettings() {
+  try {
+    const saved = localStorage.getItem('kl_im_settings')
+    if (saved) imSettings.value = { ...imSettings.value, ...JSON.parse(saved) }
+  } catch { /* ignore */ }
+}
+
+// ══ P2-4: 加载所有会话（用于转发） ══
+async function loadAllConversations() {
+  const channels = await tea.loadChannels()
+  const all: any[] = []
+  if (channels.public) all.push(...channels.public.map((c: any) => ({ ...c, kind: 'public' })))
+  if (channels.groups) all.push(...channels.groups.map((c: any) => ({ ...c, kind: 'group' })))
+  if (channels.dms) all.push(...channels.dms.map((c: any) => ({ ...c, kind: 'dm' })))
+  allConversations.value = all
+}
 const interpPairLabel = computed(() => ` · ${langShort(interpMyLang.value)}→${langShort(interpPeerLang.value)}`)
 const interpPanelHint = computed(() => {
   const inCall = rtc.state.value === 'active'
@@ -602,7 +1531,6 @@ const interpConfirmLabel = computed(() => {
   if (rtc.state.value === 'active') return interp.state.value === 'on' ? '✓ 应用语言' : '✓ 开启同传'
   return '✓ 保存设置'
 })
-
 // 视频流绑定（watchEffect：ref 挂载/流/状态变化都重试绑定，主叫/被叫时序都覆盖）
 watchEffect(() => {
   if (rtcRemoteVideoRef.value && rtc.remoteStream.value) rtcRemoteVideoRef.value.srcObject = rtc.remoteStream.value
@@ -641,7 +1569,6 @@ watch(
     if (s === 'idle') { interp.stop(); _interpRetryCount = 0 }
   }
 )
-
 /** 通话入口（仅私聊） */
 function callPeer(mode: 'audio' | 'video') {
   if (!currentChannel.value || currentChannel.value.kind !== 'dm') return
@@ -689,15 +1616,65 @@ function applyInterp() {
     rtcToast.value = e?.message || '同传开启失败'
   })
 }
+// ══ 生命周期：打开/离开聊天窗时的消息状态 + 输入状态追踪 ══
+watch(groupActionTab, async (tab) => {
+  if (tab === 'announce' && currentChannel.value) {
+    // Load existing announcement
+    try {
+      const r = await authFetch(`/api/im/channels/${currentChannel.value.id}/announcement`)
+      const j = await r.json()
+      if (j.success && j.data) groupAnnouncement.value = j.data.announcement || ''
+    } catch { /* ignore */ }
+  }
+})
 
 // ── 基础状态 ──
 const tabs = [
-  { key: 'chat', icon: '🍵', label: '茶馆' },
-  { key: 'contacts', icon: '👥', label: '好友' },
-  { key: 'community', icon: '🏘️', label: '社区' },
+  { key: 'chat', icon: '🍵', label: '消息' },
+  { key: 'discover', icon: '👥', label: '发现' },
+  { key: 'city', icon: '🏘️', label: '城市' },
+  { key: 'family', icon: '🏯', label: '宗亲' },
   { key: 'mine', icon: '👤', label: '我的' },
 ]
 const activeTab = ref('chat')
+// ── 城市空间 ──
+const cities = ref<any[]>([])
+const citiesLoading = ref(false)
+const citySearch = ref('')
+const filteredCities = computed(() => {
+  if (!citySearch.value) return cities.value
+  const q = citySearch.value.toLowerCase()
+  return cities.value.filter((c: any) => c.name?.toLowerCase().includes(q))
+})
+async function loadCities() {
+  if (!isLoggedIn.value) return
+  citiesLoading.value = true
+  try {
+    const r = await authFetch('/api/city/list')
+    const j = await r.json()
+    if (j.success) cities.value = j.data.cities || []
+  } catch (e) { console.log('loadCities failed', e) }
+  citiesLoading.value = false
+}
+function roleLabel(role: string) {
+  return { agent: '代理商', admin: '管理员', member: '会员', pending: '待审核' }[role] || role
+}
+function openCity(c: any) {
+  openMobilePage('cityHome', { cityId: c.id, cityName: c.name })
+}
+// ── 宗亲 ──
+const familyGroups = ref<any[]>([])
+async function loadFamily() {
+  if (!isLoggedIn.value) return
+  try {
+    const r = await authFetch('/api/tea/family/groups')
+    const j = await r.json()
+    if (j.success) familyGroups.value = j.data.groups || []
+  } catch (e) { console.log('loadFamily failed', e) }
+}
+function openFamily(g: any) {
+  openMobilePage('familyHome', { groupId: g.id, groupName: g.name })
+}
 const toast = ref('')
 let toastTimer: any = null
 function showToast(msg: string) {
@@ -712,7 +1689,6 @@ if (typeof window !== 'undefined') {
 function go(path: string) {
   window.location.href = path
 }
-
 // ══ 手机版子页面系统（微信式：全屏覆盖，栈式返回） ══
 const mobilePage = ref<string | null>(null)
 const mobilePageProps = ref<any>({})
@@ -725,6 +1701,9 @@ const mobilePageComp = computed(() => {
     diamonds: defineAsyncComponent(() => import('~/components/mobile/MDiamonds.vue')),
     orders: defineAsyncComponent(() => import('~/components/mobile/MOrders.vue')),
     team: defineAsyncComponent(() => import('~/components/mobile/MTeam.vue')),
+    'space-images': defineAsyncComponent(() => import('~/components/mobile/MSpaceImages.vue')),
+    'space-videos': defineAsyncComponent(() => import('~/components/mobile/MSpaceVideos.vue')),
+    'space-files': defineAsyncComponent(() => import('~/components/mobile/MSpaceFiles.vue')),
     settings: defineAsyncComponent(() => import('~/components/mobile/MSettings.vue')),
     messages: defineAsyncComponent(() => import('~/components/mobile/MMessages.vue')),
     referral: defineAsyncComponent(() => import('~/components/mobile/MReferral.vue')),
@@ -732,6 +1711,8 @@ const mobilePageComp = computed(() => {
     gifts: defineAsyncComponent(() => import('~/components/mobile/MGifts.vue')),
     'post': defineAsyncComponent(() => import('~/components/mobile/MPostDetail.vue')),
     'post-new': defineAsyncComponent(() => import('~/components/mobile/MCommunityNew.vue')),
+    tickets: defineAsyncComponent(() => import('~/components/mobile/MTickets.vue')),
+    myposts: defineAsyncComponent(() => import('~/components/mobile/MMyPosts.vue')),
   }
   return mobilePage.value ? map[mobilePage.value] : null
 })
@@ -758,7 +1739,6 @@ function onSubPublished() {
   closeMobilePage()
   loadPosts()
 }
-
 // ── 登录态 ──
 const isLoggedIn = computed(() => {
   try { return !!(window.localStorage?.getItem('auth_token') || document.cookie.includes('auth_token=')) } catch { return false }
@@ -769,8 +1749,755 @@ const myEmail = ref('')
 const tierLabel = ref('')
 const tierExpiry = ref('')
 const walletBalance = ref('0')
+const teaWallet = ref<any>(null)
+const teaWalletSyncTime = ref('')
+// 第2期：关注/粉丝 + 身份 + 数字分身
+const myStats = ref<any>({ followingCount: 0, followerCount: 0 })
+const myHasIdentity = ref(false)
+const myIdentityHash = ref('')
+const avatarInfo = ref<any>(null)
+const followOpen = ref(false)
+const followType = ref('following')
+const followList = ref<any[]>([])
+const followLoading = ref(false)
+function openFollowTarget(type: 'following' | 'follower') {
+  followType.value = type
+  followOpen.value = true
+  loadFollowList()
+}
+async function loadFollowList() {
+  followLoading.value = true
+  followList.value = []
+  try {
+    const r = await authFetch('/api/user/follow/list?type=' + followType.value)
+    const j = await r.json()
+    const list = j.data?.list || j.data?.users || []
+    followList.value = list
+  } catch { /* ignore */ } finally { followLoading.value = false }
+}
+function closeFollow() { followOpen.value = false }
+
+// 👥 邀请好友（参照桌面：邀请链接二维码 + 复制）
+const inviteOpen = ref(false)
+const inviteUrl = ref('')
+const inviteQr = ref('')
+const inviteLoading = ref(false)
+function openInvite() {
+  inviteOpen.value = true; inviteUrl.value = ''; inviteQr.value = ''; inviteLoading.value = true
+  loadInvite()
+}
+async function loadInvite() {
+  try {
+    const r = await authFetch('/api/user/referral-code')
+    const j = await r.json()
+    const url = j.data?.referralUrl || j.referralUrl || ''
+    if (url) {
+      inviteUrl.value = url
+      const q = await QRCode.toDataURL(url, { width: 180, margin: 1 })
+      inviteQr.value = q
+    }
+  } catch { /* ignore */ } finally { inviteLoading.value = false }
+}
+function copyInvite() {
+  if (!inviteUrl.value) return
+  try { navigator.clipboard.writeText(inviteUrl.value); showToast('✅ 邀请链接已复制') }
+  catch { prompt('邀请链接：', inviteUrl.value) }
+}
+function openAvatarSettings() {
+  avatarOpen.value = true
+  avMsg.value = ''
+  avTestIn.value = ''
+  avTestOut.value = ''
+  loadAvatar()
+}
+// 🤖 数字分身（完全移植桌面版：启用/托管/社区互动/话术/时段/学习/测试/保存）
+const avatarOpen = ref(false)
+const avName = ref('')
+const avPersona = ref('')
+const avKnowledge = ref('')
+const avSaving = ref(false)
+const avMsg = ref('')
+const avMsgOk = ref(false)
+const avSettings = ref<any>({
+  enabled: false, communities: [], autoCommentReply: false, autoWelcome: false, autoFollowBack: false,
+  timeStart: '09:00', timeEnd: '22:00',
+})
+const avCommunities = [
+  { v: 'public', n: '🌍 公共社区' },
+  { v: 'friend', n: '👫 好友世界' },
+  { v: 'clan', n: '🏮 宗亲社区' },
+  { v: 'city', n: '🏙 城市空间' },
+]
+const avSamples = ref(0)
+const avLearning = ref(false)
+const avTestIn = ref('')
+const avTestOut = ref('')
+const avTestErr = ref(false)
+const avTesting = ref(false)
+
+function toggleCommunity(v: string) {
+  const c = avSettings.value.communities || []
+  const i = c.indexOf(v)
+  if (i >= 0) c.splice(i, 1)
+  else c.push(v)
+  avSettings.value.communities = c
+}
+async function loadAvatar() {
+  try {
+    const r = await authFetch('/api/avatar/status')
+    const j = await r.json()
+    if (j.success) {
+      avatarInfo.value = j.data
+      avName.value = j.data?.name || ''
+      avPersona.value = j.data?.persona || ''
+      avKnowledge.value = j.data?.knowledgeBase || ''
+      const s = j.data?.settings || {}
+      avSettings.value = {
+        enabled: !!s.enabled, communities: s.communities || [], autoCommentReply: !!s.autoCommentReply,
+        autoWelcome: !!s.autoWelcome, autoFollowBack: !!s.autoFollowBack,
+        timeStart: s.timeStart || '09:00', timeEnd: s.timeEnd || '22:00',
+      }
+      avSamples.value = j.data?.memory?.samples || 0
+    }
+  } catch { /* ignore */ }
+}
+async function saveAvatar() {
+  avSaving.value = true; avMsg.value = ''
+  try {
+    const payload = { name: avName.value.trim() || '我的分身', persona: avPersona.value.trim(), knowledgeBase: avKnowledge.value.trim(), settings: avSettings.value }
+    if (avatarInfo.value?.exists) {
+      const r = await authFetch('/api/avatar/settings', { method: 'POST', body: JSON.stringify(payload) })
+      const j = await r.json()
+      if (j.success) { avMsg.value = '✅ 分身设置已保存'; avMsgOk.value = true; loadAvatar() }
+      else { avMsg.value = '❌ ' + (j.error || '保存失败'); avMsgOk.value = false }
+    } else {
+      // 首次创建：learn
+      const r = await authFetch('/api/avatar/learn', { method: 'POST', body: JSON.stringify(payload) })
+      const j = await r.json()
+      if (j.success) { avMsg.value = '✅ 分身已创建'; avMsgOk.value = true; avatarInfo.value = { ...(avatarInfo.value || {}), exists: true }; loadAvatar() }
+      else { avMsg.value = '❌ ' + (j.error || '创建失败'); avMsgOk.value = false }
+    }
+  } catch { avMsg.value = '❌ 网络错误'; avMsgOk.value = false } finally { avSaving.value = false }
+}
+async function sweepAvatar() {
+  if (!confirm('确定清除数字分身数据？')) return
+  try {
+    const r = await authFetch('/api/avatar/sweep', { method: 'POST' })
+    const j = await r.json()
+    if (j.success) { avMsg.value = '✅ 分身已清除'; avMsgOk.value = true; avatarInfo.value = { exists: false, settings: {}, memory: {} }; avName.value = ''; avPersona.value = ''; avKnowledge.value = ''; avSamples.value = 0 }
+    else { avMsg.value = '❌ ' + (j.error || '清除失败'); avMsgOk.value = false }
+  } catch { avMsg.value = '❌ 网络错误'; avMsgOk.value = false }
+}
+function uploadTalkbook() {
+  const input = document.createElement('input')
+  input.type = 'file'; input.accept = '.txt,text/plain'
+  input.onchange = async () => {
+    const f = input.files?.[0]
+    if (!f) return
+    try {
+      const txt = await f.text()
+      // 确保分身存在
+      if (!avatarInfo.value?.exists) await saveAvatar()
+      const r = await authFetch('/api/avatar/scripts', { method: 'POST', body: JSON.stringify({ content: txt, mode: 'replace' }) })
+      const j = await r.json()
+      if (j.success) { avMsg.value = '✅ 话术已更新（' + (j.data?.chars ?? txt.length) + ' 字）'; avMsgOk.value = true; loadAvatar() }
+      else { avMsg.value = '❌ ' + (j.error || '上传失败'); avMsgOk.value = false }
+    } catch (e: any) { avMsg.value = '❌ ' + e.message; avMsgOk.value = false }
+  }
+  input.click()
+}
+async function doLearnNow() {
+  avLearning.value = true
+  try {
+    const r = await authFetch('/api/avatar/learn', { method: 'POST', body: JSON.stringify({}) })
+    const j = await r.json()
+    avMsgOk.value = true
+    avMsg.value = '✅ ' + (j.data?.message || '已学习')
+    loadAvatar()
+  } catch { avMsg.value = '❌ 学习失败'; avMsgOk.value = false } finally { avLearning.value = false }
+}
+async function doTestReply() {
+  const msg = avTestIn.value.trim()
+  if (!msg) return
+  avTesting.value = true; avTestOut.value = '🤖 思考中…'; avTestErr.value = false
+  try {
+    const r = await authFetch('/api/avatar/reply', { method: 'POST', body: JSON.stringify({ message: msg, peerName: '朋友' }) })
+    const j = await r.json()
+    if (j.success) { avTestOut.value = '🤖 ' + (j.data?.reply || ''); avTestErr.value = false }
+    else { avTestOut.value = '❌ ' + (j.error || '测试失败'); avTestErr.value = true }
+  } catch { avTestOut.value = '❌ 网络错误'; avTestErr.value = true } finally { avTesting.value = false }
+}
+function closeAvatar() { avatarOpen.value = false }
+
+// ═══ 大模型设置（用户自配 API Key）═══
+const llmOpen = ref(false)
+const llmProviders = ref<Record<string, any>>({})
+const llmProvider = ref('deepseek')
+const llmModel = ref('')
+const llmKey = ref('')
+const llmBase = ref('')
+const llmMsg = ref('')
+const llmMsgOk = ref(false)
+const llmBusy = ref(false)
+const llmHasKey = ref(false)
+const llmModels = computed(() => llmProviders.value[llmProvider.value]?.models || ['deepseek-v4-flash'])
+const llmKeyPlaceholder = computed(() => llmHasKey.value ? ('已配置 ' + (llmKeyMasked.value || '') + '，留空不修改') : 'API Key（sk-...）')
+const llmKeyMasked = ref('')
+function providerLabel(k: string) {
+  const map: Record<string, string> = { deepseek: 'DeepSeek', volcengine: '火山引擎/豆包', openai: 'OpenAI', aliyun: '阿里云百炼', longcat: 'LongCat' }
+  return map[k] || k
+}
+function openLlm() {
+  llmOpen.value = true
+  llmMsg.value = ''
+  loadLlmConfig()
+}
+async function loadLlmConfig() {
+  try {
+    const r = await authFetch('/api/tea/llm/config')
+    const j = await r.json()
+    if (j.success && j.data) {
+      llmProviders.value = j.data.providers || {}
+      llmProvider.value = j.data.provider || 'deepseek'
+      llmModel.value = j.data.model || (llmProviders.value[llmProvider.value]?.models?.[0] || 'deepseek-v4-flash')
+      llmBase.value = j.data.baseUrl || ''
+      llmHasKey.value = !!j.data.hasKey
+      llmKeyMasked.value = j.data.keyMasked || ''
+    }
+  } catch { /* ignore */ }
+}
+async function saveLlm() {
+  llmBusy.value = true; llmMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/llm/config', { method: 'POST', body: JSON.stringify({ provider: llmProvider.value, model: llmModel.value, baseUrl: llmBase.value, apiKey: llmKey.value }) })
+    const j = await r.json()
+    if (j.success) { llmMsg.value = '✅ ' + (j.data?.message || '已保存'); llmMsgOk.value = true; llmKey.value = ''; loadLlmConfig() }
+    else { llmMsg.value = '❌ ' + (j.error || '保存失败'); llmMsgOk.value = false }
+  } catch { llmMsg.value = '❌ 网络错误'; llmMsgOk.value = false } finally { llmBusy.value = false }
+}
+async function testLlm() {
+  llmBusy.value = true; llmMsg.value = '🧪 测试中…'; llmMsgOk.value = false
+  try {
+    const r = await authFetch('/api/tea/llm/chat', { method: 'POST', body: JSON.stringify({ messages: [{ role: 'user', content: '你好，请回复连接成功的四个字' }], temperature: 0.3 }) })
+    const j = await r.json()
+    if (j.success) { llmMsg.value = '✅ 连接成功：' + String(j.data?.text || '').slice(0, 60); llmMsgOk.value = true }
+    else { llmMsg.value = '❌ ' + (j.error || '连接失败'); llmMsgOk.value = false }
+  } catch { llmMsg.value = '❌ 网络错误'; llmMsgOk.value = false } finally { llmBusy.value = false }
+}
+
+// ═══ 数据备份 / 助记词找回（对齐桌面）═══
+const backupOpen = ref(false)
+const backupMode = ref('backup')
+const storageInfo = ref<any>(null)
+const backupDoing = ref(false)
+const backupMsg = ref('')
+const backupMsgOk = ref(false)
+const myMnemonic = ref('')
+const restoreMnemonic = ref('')
+const backupsList = ref<any[]>([])
+const genDoing = ref(false)
+function openBackup() {
+  backupMode.value = 'backup'; backupOpen.value = true; backupMsg.value = ''; myMnemonic.value = ''
+  loadStorageStatus()
+}
+function openStorageRestore() {
+  backupMode.value = 'storage'; backupOpen.value = true; backupMsg.value = ''; myMnemonic.value = ''
+  loadStorageStatus()
+}
+async function loadStorageStatus() {
+  storageInfo.value = null; backupsList.value = []; restoreMnemonic.value = ''
+  try {
+    const r = await authFetch('/api/tea/storage/status')
+    const j = await r.json()
+    if (j.success) storageInfo.value = j.data
+  } catch { /* ignore */ }
+  try {
+    const r = await authFetch('/api/tea/storage/backups')
+    const j = await r.json()
+    if (j.success) backupsList.value = j.data?.backups || []
+  } catch { /* ignore */ }
+}
+async function genMnemonic() {
+  genDoing.value = true; backupMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/storage/mnemonic', { method: 'POST' })
+    const j = await r.json()
+    if (j.success) { myMnemonic.value = j.data?.mnemonic || ''; backupMsg.value = '⚠️ 请立即抄好助记词（仅显示一次，关闭后不再显示）'; backupMsgOk.value = false; }
+    else { backupMsg.value = '❌ ' + (j.error || '生成失败'); backupMsgOk.value = false }
+  } catch { backupMsg.value = '❌ 网络错误'; backupMsgOk.value = false } finally { genDoing.value = false }
+}
+async function doBackup() {
+  backupDoing.value = true; backupMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/storage/backup', { method: 'POST' })
+    const j = await r.json()
+    if (j.success) { backupMsg.value = '✅ ' + (j.data?.message || '备份完成'); backupMsgOk.value = true; loadStorageStatus() }
+    else { backupMsg.value = '❌ ' + (j.error || '备份失败'); backupMsgOk.value = false }
+  } catch { backupMsg.value = '❌ 网络错误'; backupMsgOk.value = false } finally { backupDoing.value = false }
+}
+async function doRestore() {
+  if (!restoreMnemonic.value.trim()) { backupMsg.value = '❌ 请输入助记词'; backupMsgOk.value = false; return }
+  backupDoing.value = true; backupMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/storage/restore', { method: 'POST', body: JSON.stringify({ mnemonic: restoreMnemonic.value.trim() }) })
+    const j = await r.json()
+    if (j.success) {
+      if (j.data?.data) { backupMsg.value = '✅ ' + (j.data.message || '备份已恢复'); backupMsgOk.value = true; restoredContent.value = j.data.data }
+      else { backupMsg.value = '✅ ' + (j.data?.message || '助记词正确'); backupMsgOk.value = true }
+    } else { backupMsg.value = '❌ ' + (j.error || '恢复失败'); backupMsgOk.value = false }
+  } catch { backupMsg.value = '❌ 网络错误'; backupMsgOk.value = false } finally { backupDoing.value = false }
+}
+const restoredContent = ref<any>(null)
+async function resetMnemonic() {
+  if (!confirm('重置后旧备份将无法恢复（旧密钥作废），需重新生成助记词。确认重置？')) return
+  backupDoing.value = true; backupMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/storage/mnemonic/reset', { method: 'POST' })
+    const j = await r.json()
+    if (j.success) { backupMsg.value = '✅ 已重置，请重新生成并抄好'; backupMsgOk.value = true; myMnemonic.value = ''; loadStorageStatus() }
+    else { backupMsg.value = '❌ ' + (j.error || '重置失败'); backupMsgOk.value = false }
+  } catch { backupMsg.value = '❌ 网络错误'; backupMsgOk.value = false } finally { backupDoing.value = false }
+}
+
+
+
+
+// ═══ 公链玩法面板（签到/竞猜/封神榜/飞升台/支付密码）═══
+const playOpen = ref(false)
+const playMode = ref('checkin')
+const playMsg = ref('')
+const playMsgOk = ref(false)
+function openPlay(mode: string) {
+  playMode.value = mode
+  playMsg.value = ''
+  playOpen.value = true
+  if (mode === 'checkin') loadCheckin()
+  else if (mode === 'quiz') loadQuiz()
+  else if (mode === 'leaderboard') loadLeaderboard()
+  else if (mode === 'exchange') { loadExchangeRate() }
+  else if (mode === 'paypass') { ppOld.value = ''; ppNew.value = ''; loadPaypassStatus() }
+}
+const openCheckin = () => openPlay('checkin')
+const openQuiz = () => openPlay('quiz')
+const openLeaderboard = () => openPlay('leaderboard')
+const openExchange = () => openPlay('exchange')
+const openPaypass = () => openPlay('paypass')
+
+// 签到
+const checkinData = ref<any>(null)
+const checkinDoing = ref(false)
+const checkinTree = computed(() => {
+  const s = checkinData.value?.streak || 0
+  if (s >= 30) return '🌳 金果树'
+  if (s >= 15) return '🌲 青果树'
+  if (s >= 7) return '🌸 开花'
+  return '🌱 抽芽'
+})
+async function loadCheckin() {
+  try {
+    const r = await authFetch('/api/tea/checkin/status')
+    const j = await r.json()
+    if (j.success) checkinData.value = j.data
+  } catch { /* ignore */ }
+}
+async function doCheckin() {
+  if (checkinData.value?.signedToday) return
+  checkinDoing.value = true; playMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/checkin/sign', { method: 'POST', body: '{}' })
+    const j = await r.json()
+    if (j.success) {
+      playMsg.value = j.data.milestone ? '✅ 签到成功！连续 ' + j.data.streak + ' 天（里程碑🎉）→ +' + j.data.reward + ' 工分' : '✅ 签到成功！连续 ' + j.data.streak + ' 天 → +' + j.data.reward + ' 工分'
+      playMsgOk.value = true
+      loadCheckin(); loadTeaWallet()
+    } else { playMsg.value = '❌ ' + (j.error || '签到失败'); playMsgOk.value = false }
+  } catch { playMsg.value = '❌ 网络错误'; playMsgOk.value = false } finally { checkinDoing.value = false }
+}
+async function doMakeup() {
+  const day = prompt('补签日期（YYYY-MM-DD，需 10 工分）')
+  if (!day) return
+  playMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/checkin/makeup', { method: 'POST', body: JSON.stringify({ day }) })
+    const j = await r.json()
+    if (j.success) { playMsg.value = '✅ 补签成功'; playMsgOk.value = true; loadCheckin(); loadTeaWallet() }
+    else { playMsg.value = '❌ ' + (j.error || '补签失败'); playMsgOk.value = false }
+  } catch { playMsg.value = '❌ 网络错误'; playMsgOk.value = false }
+}
+
+// 竞猜
+const quizData = ref<any>(null)
+const quizSel = ref<number | null>(null)
+const quizAmt = ref<number>(5)
+const quizDoing = ref(false)
+async function loadQuiz() {
+  quizData.value = null
+  try {
+    const r = await authFetch('/api/tea/quiz/today')
+    const j = await r.json()
+    if (j.success) quizData.value = j.data
+  } catch { /* ignore */ }
+}
+async function doQuizBet() {
+  if (quizSel.value === null) { playMsg.value = '❌ 请先选择答案'; playMsgOk.value = false; return }
+  const amt = Math.floor(Number(quizAmt.value))
+  if (!amt || amt <= 0) { playMsg.value = '❌ 请输入下注工分'; playMsgOk.value = false; return }
+  quizDoing.value = true; playMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/quiz/bet', { method: 'POST', body: JSON.stringify({ quizId: quizData.value.quiz.id, option: quizSel.value, amount: amt }) })
+    const j = await r.json()
+    if (j.success) { playMsg.value = '✅ 下注成功！' + amt + ' 工分'; playMsgOk.value = true; loadQuiz(); loadTeaWallet() }
+    else { playMsg.value = '❌ ' + (j.error || '下注失败'); playMsgOk.value = false }
+  } catch { playMsg.value = '❌ 网络错误'; playMsgOk.value = false } finally { quizDoing.value = false }
+}
+
+// 封神榜
+const lbList = ref<any[]>([])
+async function loadLeaderboard() {
+  lbList.value = []
+  try {
+    const r = await authFetch('/api/tea/leaderboard?limit=20')
+    const j = await r.json()
+    if (j.success) lbList.value = j.data.list || []
+  } catch { /* ignore */ }
+}
+
+// 飞升台
+const exchAmt = ref<number>(10)
+const exchDoing = ref(false)
+const exchRate = ref<number>(1)
+const exchBurned = ref<number>(0)
+const exchRateNum = computed(() => {
+  const p = exchRate.value
+  if (p <= 0) return '…'
+  if (p === 1) return '1'
+  return p.toFixed(8).replace(/\.?0+$/, '')
+})
+async function loadExchangeRate() {
+  try {
+    const r = await authFetch('/api/tea/exchange/rate')
+    const j = await r.json()
+    if (j.success && j.data) { exchRate.value = j.data.price || 1; exchBurned.value = j.data.burnedTotal || 0 }
+  } catch { /* ignore */ }
+}
+async function doExchange(dir: string) {
+  const amt = Math.floor(Number(exchAmt.value))
+  if (!amt || amt <= 0) { playMsg.value = '❌ 请输入数量'; playMsgOk.value = false; return }
+  if (dir === 'gongfen_to_chapiao' && amt > (teaWallet.value?.gongfen ?? 0)) { playMsg.value = '❌ 工分不足'; playMsgOk.value = false; return }
+  if (dir === 'chapiao_to_gongfen' && amt > (teaWallet.value?.chapiao ?? 0)) { playMsg.value = '❌ 茶票不足'; playMsgOk.value = false; return }
+  exchDoing.value = true; playMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/exchange/do', { method: 'POST', body: JSON.stringify({ direction: dir, amount: amt }) })
+    const j = await r.json()
+    if (j.success) { playMsg.value = dir === 'gongfen_to_chapiao' ? '✅ 兑换成功：茶票 +' + (j.data?.gotChapiao ?? 0) : '✅ 兑换成功：工分 +' + (j.data?.gotGongfen ?? 0); playMsgOk.value = true; loadTeaWallet() }
+    else { playMsg.value = '❌ ' + (j.error || '兑换失败'); playMsgOk.value = false }
+  } catch { playMsg.value = '❌ 网络错误'; playMsgOk.value = false } finally { exchDoing.value = false }
+}
+
+// 🏦 联邦银行（质押茶票借工分）
+const bankOpen = ref(false)
+const bankPledge = ref<number>(10)
+const bankDays = ref<number>(30)
+const bankPlans = ref<any[]>([])
+const depPlans = ref<any[]>([])
+const bankLoans = ref<any[]>([])
+const bankDeposits = ref<any[]>([])
+const bankDoing = ref(false)
+const bankMsg = ref('')
+const bankMsgOk = ref(false)
+const bankDepositDays = ref<number>(30)
+const bankDepositAmt = ref<number>(10)
+const bankMktRate = ref<number>(1)
+function openBank() {
+  bankOpen.value = true; bankMsg.value = ''; bankPledge.value = 10; bankDays.value = 30; bankDepositDays.value = 30; bankDepositAmt.value = 10
+  bankLoans.value = []; bankDeposits.value = []; bankPlans.value = []; depPlans.value = []; bankMktRate.value = 1
+  loadBankInfo()
+}
+async function loadBankInfo() {
+  bankMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/bank/status')
+    const j = await r.json()
+    if (j.success) {
+      bankPlans.value = j.data?.loanPlans || []
+      depPlans.value = j.data?.depPlans || []
+      bankLoans.value = j.data?.loans || []
+      bankDeposits.value = j.data?.deposits || []
+      if (j.data?.rate) bankMktRate.value = Number(j.data.rate) || 1
+    }
+  } catch { /* ignore */ }
+}
+function bankSelPlan() { return bankPlans.value.find((p: any) => Number(p.days) === Number(bankDays.value)) }
+const bankLoanPreview = computed(() => { const p = bankSelPlan(); return p ? Math.floor((Number(bankPledge.value) || 0) * bankMktRate.value * (p.mult || 1)) : 0 })
+const bankDepPlan = computed(() => depPlans.value.find((p: any) => Number(p.days) === Number(bankDepositDays.value)))
+async function doLoan() {
+  const amt = Math.floor(Number(bankPledge.value))
+  const d = Number(bankDays.value)
+  if (!amt || amt <= 0) { bankMsg.value = '❌ 请输入质押茶票数'; bankMsgOk.value = false; return }
+  if (amt < 10) { bankMsg.value = '❌ 质押茶票至少 10 张'; bankMsgOk.value = false; return }
+  if (amt > (teaWallet.value?.chapiao ?? 0)) { bankMsg.value = '❌ 茶票不足'; bankMsgOk.value = false; return }
+  bankDoing.value = true; bankMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/bank/loan', { method: 'POST', body: JSON.stringify({ pledgeChapiao: amt, days: d }) })
+    const j = await r.json()
+    if (j.success) { bankMsg.value = '✅ 质押成功：借得 ' + (j.data?.loanGongfen ?? 0) + ' 工分（' + d + '天，汇率 ×' + (j.data?.rate || 1) + '）'; bankMsgOk.value = true; loadBankInfo(); loadTeaWallet() }
+    else { bankMsg.value = '❌ ' + (j.error || '质押失败'); bankMsgOk.value = false }
+  } catch { bankMsg.value = '❌ 网络错误'; bankMsgOk.value = false } finally { bankDoing.value = false }
+}
+async function doDeposit() {
+  const amt = Math.floor(Number(bankDepositAmt.value))
+  const d = Number(bankDepositDays.value)
+  if (!amt || amt < 10) { bankMsg.value = '❌ 存款至少 10 工分'; bankMsgOk.value = false; return }
+  if (amt > (teaWallet.value?.gongfen ?? 0)) { bankMsg.value = '❌ 工分不足'; bankMsgOk.value = false; return }
+  bankDoing.value = true; bankMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/bank/deposit', { method: 'POST', body: JSON.stringify({ amount: amt, days: d }) })
+    const j = await r.json()
+    if (j.success) { bankMsg.value = '✅ 存款成功：' + amt + ' 工分（' + d + '天，年化 ' + Math.round((j.data?.annualRate || 0) * 100) + '%）'; bankMsgOk.value = true; loadBankInfo(); loadTeaWallet() }
+    else { bankMsg.value = '❌ ' + (j.error || '存款失败'); bankMsgOk.value = false }
+  } catch { bankMsg.value = '❌ 网络错误'; bankMsgOk.value = false } finally { bankDoing.value = false }
+}
+async function doWithdraw(dep: any) {
+  if (!confirm('取款这笔存款（' + dep.amount + ' 工分）？')) return
+  bankDoing.value = true; bankMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/bank/deposit/withdraw', { method: 'POST', body: JSON.stringify({ depositId: dep.id }) })
+    const j = await r.json()
+    if (j.success) { bankMsg.value = dep.matured ? '✅ 到账本金+利息 ' + (j.data?.total ?? 0) + ' 工分' : '✅ 已取出本金 ' + (j.data?.principal ?? 0) + ' 工分'; bankMsgOk.value = true; loadBankInfo(); loadTeaWallet() }
+    else { bankMsg.value = '❌ ' + (j.error || '取款失败'); bankMsgOk.value = false }
+  } catch { bankMsg.value = '❌ 网络错误'; bankMsgOk.value = false } finally { bankDoing.value = false }
+}
+async function doRepay(loan: any) {
+  if (!confirm('还款 ' + (loan.loanGongfen ?? 0) + ' 工分（含利息），赎回 ' + (loan.pledgeChapiao ?? 0) + ' 茶票？')) return
+  bankDoing.value = true; bankMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/bank/repay', { method: 'POST', body: JSON.stringify({ loanId: loan.id }) })
+    const j = await r.json()
+    if (j.success) { bankMsg.value = '✅ 还款成功，茶票已赎回（返还 ' + (j.data?.pledgeChapiao ?? 0) + '）'; bankMsgOk.value = true; loadBankInfo(); loadTeaWallet() }
+    else { bankMsg.value = '❌ ' + (j.error || '还款失败'); bankMsgOk.value = false }
+  } catch { bankMsg.value = '❌ 网络错误'; bankMsgOk.value = false } finally { bankDoing.value = false }
+}
+
+// 支付密码
+const ppOld = ref('')
+const ppNew = ref('')
+const ppDoing = ref(false)
+const ppSet = ref(false)
+async function loadPaypassStatus() {
+  try {
+    const r = await authFetch('/api/tea/paypass/status')
+    const j = await r.json()
+    if (j.success) ppSet.value = !!j.data?.set
+  } catch { /* ignore */ }
+}
+async function doSetPaypass() {
+  ppDoing.value = true; playMsg.value = ''
+  try {
+    const r = await authFetch('/api/tea/paypass/set', { method: 'POST', body: JSON.stringify({ pass: ppNew.value, oldPass: ppOld.value || undefined }) })
+    const j = await r.json()
+    if (j.success) { playMsg.value = '✅ ' + (j.data?.message || '支付密码已保存'); playMsgOk.value = true; ppOld.value = ''; ppNew.value = ''; loadPaypassStatus() }
+    else { playMsg.value = '❌ ' + (j.error || '保存失败'); playMsgOk.value = false }
+  } catch { playMsg.value = '❌ 网络错误'; playMsgOk.value = false } finally { ppDoing.value = false }
+}
+function txSummary(t: any) {
+  const dir = (t.amount || 0) >= 0 ? '+收入' : '-支出'
+  const typ = t.tx_type === 'mint' ? '发放' : t.tx_type === 'transfer' ? '转账' : t.tx_type === 'burn' ? '销毁' : t.tx_type === 'market' ? '市场' : t.tx_type === 'bank_loan' ? '银行' : t.tx_type
+  return `${dir}${Math.abs(t.amount || 0)} 点 ${typ}`
+}
+async function loadTeaWallet() {
+  if (!isLoggedIn.value) { teaWallet.value = null; return }
+  try {
+    const r = await authFetch('/api/tea/wallet')
+    const j = await r.json()
+    if (j.success) {
+      teaWallet.value = j.data
+      teaWalletSyncTime.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    }
+  } catch (e) { console.log('loadTeaWallet failed', e) }
+}
+function openTeaWallet() {
+  walletOpen.value = true
+  twMode.value = 'main'
+}
+
+// ══ 通证钱包面板：转账 / 收款码 / 扫码 / 流水 ══
+const walletOpen = ref(false)
+const twMode = ref<'main' | 'transfer' | 'receive' | 'tx'>('main')
+const twUid = ref('')
+const twAmt = ref('')
+const twRemark = ref('')
+const twDoing = ref(false)
+const myQrCode = ref('')
+const myUid = ref('')
+const scanOpen = ref(false)
+const scanVideoEl = ref<HTMLVideoElement | null>(null)
+let scanStream: MediaStream | null = null
+let scanTimer: any = null
+let scanDetector: any = null
+
+function fmtTime(ts: number): string {
+  if (!ts) return ''
+  const d = new Date(ts * 1000)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getMonth() + 1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+// 获取当前登录用户 uid + 昵称（收款码要用）
+async function ensureMyUid() {
+  if (myUid.value) return myUid.value
+  try {
+    const r = await authFetch('/api/auth/me')
+    const j = await r.json()
+    const u = j.user || j.data?.user || j
+    if (u?.id) myUid.value = u.id
+    if (!myName.value) myName.value = u?.nickname || u?.username || '茶客'
+  } catch { /* ignore */ }
+  return myUid.value
+}
+
+// 收款：生成自己的收款码（含 UID + 通证类型 + 昵称）
+async function openReceive() {
+  twMode.value = 'receive'
+  const uid = await ensureMyUid()
+  if (!uid) { showToast('❌ 获取账号信息失败'); return }
+  if (myQrCode.value) return
+  myQrCode.value = ''
+  try {
+    const payload = `KLTEA|gongfen|${uid}|${myName.value || ''}`
+    const url = await QRCode.toDataURL(payload, { width: 220, margin: 1, color: { dark: '#1a1a1a', light: '#ffffff' } })
+    myQrCode.value = url
+  } catch (e: any) { showToast('❌ 生成收款码失败: ' + e.message) }
+}
+
+// 解析收款码内容
+function parseQrText(text: string): string {
+  const s = (text || '').trim()
+  if (s.startsWith('KLTEA|')) {
+    const parts = s.split('|')
+    return parts[2] || '' // uid
+  }
+  // 兼容纯 UID / 含协议头
+  const m = s.match(/[0-9a-f-]{36}/i)
+  if (m) return m[0]
+  return s
+}
+
+// 转账：调用云端通证接口
+async function doTransfer() {
+  const uid = twUid.value.trim()
+  const amount = parseFloat(twAmt.value)
+  if (!uid) { showToast('❌ 请输入收款 UID 或扫码', false); return }
+  if (!amount || amount <= 0) { showToast('❌ 请输入工分数量', false); return }
+  if (amount > (teaWallet.value?.gongfen ?? 0)) { showToast('❌ 工分余额不足', false); return }
+  twDoing.value = true
+  try {
+    const r = await authFetch('/api/tea/token/transfer', {
+      method: 'POST',
+      body: JSON.stringify({ to: uid, tokenType: 'gongfen', amount, remark: twRemark.value.trim() || '工分转账' }),
+    })
+    const j = await r.json()
+    if (!r.ok) throw new Error(j?.error || j?.message || ('转账失败 ' + r.status))
+    showToast('✅ 转账成功')
+    twMode.value = 'main'
+    twUid.value = ''; twAmt.value = ''; twRemark.value = ''
+    loadTeaWallet()
+  } catch (e: any) {
+    showToast('❌ ' + e.message, false)
+  } finally { twDoing.value = false }
+}
+
+// ══ 扫码（BarcodeDetector + 摄像头；回退选图） ══
+async function openScan() {
+  scanOpen.value = true
+  await nextTick()
+  try {
+    if ('BarcodeDetector' in window) {
+      scanDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
+    }
+  } catch { scanDetector = null }
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+    if (scanVideoEl.value) { scanVideoEl.value.srcObject = scanStream; await scanVideoEl.value.play() }
+    scanLoop()
+  } catch (e) {
+    showToast('📷 无法开启摄像头，请选择二维码图片', false)
+  }
+}
+async function scanLoop() {
+  if (!scanOpen.value) return
+  if (scanDetector && scanVideoEl.value) {
+    try {
+      const codes = await scanDetector.detect(scanVideoEl.value)
+      for (const c of codes) {
+        if (c?.rawValue) { onScanResult(c.rawValue); return }
+      }
+    } catch { /* 帧未就绪 */ }
+  }
+  scanTimer = setTimeout(scanLoop, 320)
+}
+function onScanResult(text: string) {
+  const uid = parseQrText(text)
+  if (!uid) { showToast('❌ 未识别到有效收款码', false); return }
+  twUid.value = uid
+  closeScan()
+  twMode.value = 'transfer'
+  showToast('✅ 已识别收款人')
+}
+async function onScanFile(e: any) {
+  const file = e.target?.files?.[0]
+  if (!file) return
+  try {
+    const img = new Image()
+    img.src = URL.createObjectURL(file)
+    await new Promise((res) => (img.onload = res))
+    let text = ''
+    if (scanDetector) {
+      const codes = await scanDetector.detect(img)
+      text = codes?.[0]?.rawValue || ''
+    } else if ((window as any).jsQR) {
+      // 无 BarcodeDetector 时临时用 jsQR（若已引入）
+    }
+    if (!text && (window as any).jsQR) {
+      const cv = document.createElement('canvas'); const ctx = cv.getContext('2d')!
+      cv.width = img.width; cv.height = img.height; ctx.drawImage(img, 0, 0)
+      const data = ctx.getImageData(0, 0, cv.width, cv.height)
+      text = (window as any).jsQR(data.data, data.width, data.height)?.data || ''
+    }
+    if (text) onScanResult(text)
+    else showToast('❌ 图片中未识别到二维码', false)
+  } catch (err: any) { showToast('❌ 识别失败: ' + err.message, false) }
+  e.target.value = ''
+}
+function closeScan() {
+  scanOpen.value = false
+  if (scanTimer) { clearTimeout(scanTimer); scanTimer = null }
+  if (scanStream) { scanStream.getTracks().forEach((t) => t.stop()); scanStream = null }
+  scanDetector = null
+}
+
 const credits = ref('0')
 const diamonds = ref('0')
+const giftsCount = ref(0)
+const goldCoins = ref(0)
+// ═══ 真APP：本地资源壳，所有相对请求转为云端绝对地址（不再依赖同源 H5 服务器）═══
+const CLOUD_BASE = 'https://aigc.fushtn.com'
+if (typeof window !== 'undefined') {
+  const ofetch = window.fetch.bind(window)
+  ;(window as any).fetch = (input: any, init?: RequestInit) => {
+    const rebase = (u: any): any => {
+      if (typeof u === 'string' && u.startsWith('/')) return CLOUD_BASE + u
+      if (u instanceof Request) {
+        const nu = u.url.startsWith('/') ? CLOUD_BASE + u.url : u.url
+        if (nu === u.url) return u
+        return new Request(nu, u)
+      }
+      return u
+    }
+    return ofetch(rebase(input), init)
+  }
+}
+// 取当前CLOUD_BASE供子页面/绝对URL用
+function apiBase(): string { return CLOUD_BASE }
 function readMyProfile(): any {
   try {
     const m = document.cookie.match(/(?:^|;\s*)auth_user=([^;]+)/)
@@ -791,7 +2518,6 @@ function authFetch(input: string, init?: RequestInit): Promise<Response> {
   if (t) headers['Authorization'] = `Bearer ${t}`
   return fetch(input, { ...init, headers, credentials: 'include' })
 }
-
 // ═══════════════ Tab1 茶馆 ═══════════════
 const chatSearch = ref('')
 const chatPanel = ref('') // '' 会话列表 | 'friends' 好友选择
@@ -801,12 +2527,144 @@ const dms = ref<any[]>([])
 const friends = ref<any[]>([])
 const currentChannel = ref<any>(null)
 const messages = ref<any[]>([])
+
+watch(currentChannel, async (ch, prev) => {
+  // 离开旧频道 → 停止输入状态
+  if (prev) tea.sendTyping(prev.id, 4, false)
+  // 清理定时器
+  if (typingRefreshInterval.value) { clearInterval(typingRefreshInterval.value); typingRefreshInterval.value = null }
+  if (msgStatusRefreshInterval.value) { clearInterval(msgStatusRefreshInterval.value); msgStatusRefreshInterval.value = null }
+  currentTypingUsers.value = []
+  // 进入新频道
+  if (ch) {
+    // 加载 emoji
+    loadEmojiList()
+    // 标记已读
+    observeReadReceipts()
+    // 定时刷新输入状态（每 4s）
+    typingRefreshInterval.value = setInterval(refreshTypingUsers, 4000)
+    refreshTypingUsers()
+    // 定时刷新消息状态（每 10s）
+    msgStatusRefreshInterval.value = setInterval(refreshMessageStatus, 10000)
+    refreshMessageStatus()
+    // 加载群成员名称
+    if (ch.kind === 'group') loadGroupMembers()
+  }
+})
+// 🔒 消息去重：服务端 id/seq + 本地乐观插入 三路重复 -> 发一次看两次修复
+function msgDedupId(m: any): string {
+  const id = m?.messageID || m?.message_id || m?.messageId || ''
+  if (id) return 'i:' + id
+  const seq = m?.messageSeq ?? m?.seq ?? ''
+  const ts = m?.timestamp ?? ''
+  const from = m?.fromUID || m?.from_uid || ''
+  return (seq !== '' ? 's:' + from + ':' + seq : '') + 't:' + ts
+}
+// ═══ 手机APP本地持久化：收到图片/视频/文件自动存到本地指定文件夹（Capacitor Filesystem）═══
+const isNativeApp = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.()
+const capsFS = () => { try { return (window as any).Capacitor?.Filesystem || (window as any).Capacitor?.Plugins?.Filesystem } catch { return null } }
+function nativeFolder(): string {
+  try { return localStorage.getItem('kl_local_folder') || '昆仑茶馆' } catch { return '昆仑茶馆' }
+}
+// 云端URL -> 本地文件路径映射（云端6h销毁后，聊天里的图片/视频/文件仍能从本地打开）
+const localMediaMap = new Map<string, string>()
+function localSubOf(type: string): string { return type === 'image' ? '图片' : type === 'video' ? '视频' : '文件' }
+async function saveMediaLocal(url: string, filename: string, type: 'image' | 'video' | 'file') {
+  const fs = capsFS()
+  if (!fs) return false // 非原生 APP，跳过
+  try {
+    const absU = absUrl(url)
+    const safeName = (filename || ('file_' + Date.now() + '.' + (absU.split('.').pop() || 'bin')))
+        .replace(/[\\/:*?"<>|]/g, '_').slice(0, 120)
+    const sub = localSubOf(type)
+    const dir = nativeFolder() + '/' + sub
+    // 先请求存储权限（Android 10+ 公共 Downloads/相册）
+    try { await fs.requestPermissions?.() } catch {}
+    const blob = await fetch(absU, { headers: { Authorization: '***' + authToken() } }).then((r) => r.blob())
+    const b64 = await blobToB64(blob)
+    // 保存到手机公共 Download/昆仑茶馆/...（用户可见，非应用私有沙盒）
+    let savedPath = ''
+    try { await fs.mkdir({ path: dir, directory: 'DOWNLOAD', recursive: true }); const p = dir + '/' + safeName; await fs.writeFile({ path: p, directory: 'DOWNLOAD', data: b64 }); savedPath = 'DOWNLOAD:' + p } catch {}
+    if (!savedPath) { try { await fs.mkdir({ path: dir, directory: 'DOCUMENTS', recursive: true }); const p = dir + '/' + safeName; await fs.writeFile({ path: p, directory: 'DOCUMENTS', data: b64 }); savedPath = 'DOCUMENTS:' + p } catch {} }
+    if (savedPath) localMediaMap.set(absU, savedPath)
+    return !!savedPath
+  } catch { return false }
+}
+// 从本地读取媒体为 data URL（云端已销毁/无法打开时兜底）
+async function loadLocalMedia(url: string): Promise<string> {
+  const fs = capsFS()
+  const absU = absUrl(url)
+  const ref = localMediaMap.get(absU)
+  if (!fs || !ref) return ''
+  try {
+    const [dir, path] = ref.split(':')
+    const r = await fs.readFile({ path, directory: dir === 'DOWNLOAD' ? 'DOWNLOAD' : 'DOCUMENTS' })
+    const data = r?.data || ''
+    const mime = data.startsWith('/9j/') ? 'image/jpeg' : data.startsWith('iVBOR') ? 'image/png' : data.startsWith('AAAA') ? 'video/mp4' : 'application/octet-stream'
+    return 'data:' + mime + ';base64,' + data
+  } catch { return '' }
+}
+
+function blobToB64(blob: Blob): Promise<string> {
+  return new Promise((res, rej) => {
+    const fr = new FileReader()
+    fr.onload = () => { const r = String(fr.result || ''); res(r.indexOf(',') >= 0 ? r.slice(r.indexOf(',') + 1) : r) }
+    fr.onerror = rej
+    fr.readAsDataURL(blob)
+  })
+}
+function pushMessage(m: any) {
+  const id = msgDedupId(m)
+  if (id && messages.value.some((x) => msgDedupId(x) === id)) return
+  messages.value.push(m)
+  scrollToBottom()
+  // 手机APP本地持久化：收到图片/视频/文件 → 自动存到本地指定文件夹
+  autoSaveIncomingMedia(m)
+}
+// 收到媒体消息时自动保存本地（仅原生APP内生效）
+async function autoSaveIncomingMedia(m: any) {
+  if (!isNativeApp) return
+  try {
+    const c = m?.content
+    let url = '', name = '', type: 'image' | 'video' | 'file' = 'file'
+    if (typeof c === 'object' && c?.content?.url) { url = c.content.url; name = c.content.name || ''; const ct = c.contentType ?? c.type; type = ct === 2 ? 'image' : ct === 4 ? 'video' : ct === 3 ? 'file' : /video/i.test(c.content.mimeType || c.mimeType || '') ? 'video' : /image/i.test(c.content.mimeType || c.mimeType || '') ? 'image' : 'file' }
+    else if (typeof c === 'object' && c?.url) { url = c.url; name = c.name || ''; type = /video/i.test(String(c.mimeType || c.type || '')) ? 'video' : /image/i.test(String(c.mimeType || c.type || '')) ? 'image' : 'file' }
+    if (!url) return
+    await saveMediaLocal(url, name, type)
+  } catch { /* 非致命 */ }
+}
+// 🔔 新消息 → 该会话自动顶到列表最前（群聊/私聊按最近消息排序）
+function bumpConversation(chId: string, chType: number, m: any) {
+  const preview = convPreviewFromMsg(m)
+  for (const list of [dms.value, groups.value, channels.value]) {
+    const i = list.findIndex((c: any) => c.id === chId && c.type === chType)
+    if (i >= 0) {
+      const ch = list[i]
+      ch.lastMsg = preview
+      ch.lastTs = (m?.timestamp || 0) * 1000 || Date.now()
+      list.splice(i, 1)
+      list.unshift(ch)
+      break
+    }
+  }
+}
+function convPreviewFromMsg(m: any): string {
+  const c = m?.content
+  if (typeof c === 'string') { try { const o = JSON.parse(c); const t = o?.content?.text || o?.text; if (t) return t; switch (o?.content?.url) { case '...': break } } catch { return c } return c }
+  if (c?.content?.text) return c.content.text
+  if (c?.url) return '[图片]'
+  const ct = (m as any).contentType ?? (c?.contentType)
+  if (ct === 2) return '[图片]'
+  if (ct === 3) return '[文件]'
+  if (ct === 4) return '[视频]'
+  if (ct === 5) return '[语音]'
+  return c?.kind === 'red_packet' ? '[红包]' : c?.kind === 'gift' ? '[礼物]' : ''
+}
 const draft = ref('')
 const msgListEl = ref<any>(null)
 const connLabel = computed(() => tea.statusLabel.value || '连接中…')
 const connClass = computed(() => tea.connected.value ? 'is-on' : tea.connecting.value ? 'is-connecting' : 'is-off')
 const unreadMap = ref<Record<string, number>>({})
-
 const filteredConvs = computed(() => {
   const all = [...channels.value, ...groups.value, ...dms.value]
   const q = chatSearch.value.trim()
@@ -814,10 +2672,128 @@ const filteredConvs = computed(() => {
   return list.map((c) => ({ ...c, unread: unreadMap.value[c.id + ':' + c.type] || 0 }))
 })
 
+// ═══ 消息页三栏：群聊(收起3) / 会议 / 私聊(置顶) ═══
+const groupsExpanded = ref(false)
+const pinKey = () => 'kl_pin_conv_' + (tea.userId.value || 'anon')
+const pinnedSet = ref<Set<string>>(new Set())
+function loadPins() { try { const v = JSON.parse(localStorage.getItem(pinKey()) || '[]') || []; pinnedSet.value = new Set(v) } catch { pinnedSet.value = new Set() } }
+function savePins() { try { localStorage.setItem(pinKey(), JSON.stringify([...pinnedSet.value])) } catch {} }
+const pinId = (c: any) => c.id + ':' + c.type
+function peerUidOf(ch: any): string {
+  // DM 频道 id 形如 uid@uid，或从 dms/friends 里找对方
+  if (!ch) return ''
+  const me = tea.userId.value
+  if (ch.peerUid) return ch.peerUid
+  const s = String(ch.id || '')
+  if (s.includes('@')) {
+    const parts = s.split('@').filter(Boolean)
+    if (parts.length >= 2) return parts[0] === me ? parts[1] : parts[0]
+  }
+  if (ch.uid && ch.uid !== me) return ch.uid
+  return ''
+}
+const withMeta = (c: any) => ({ ...c, unread: unreadMap.value[c.id + ':' + c.type] || 0, pinned: pinnedSet.value.has(pinId(c)) })
+const searchMode = computed(() => !!chatSearch.value.trim())
+const byRecent = (a: any, b: any) => ((b.lastTs || 0) - (a.lastTs || 0))
+const msgPublic = computed(() => (searchMode.value ? [] : channels.value.map(withMeta)))
+const msgGroups = computed(() => (searchMode.value ? [] : groups.value.map(withMeta).slice().sort(byRecent)))
+const msgDmsAll = computed(() => dms.value.map(withMeta).filter((d) => !d.pinned))
+const msgDms = computed(() => {
+  const prov: any[] = []
+  for (const ch of dms.value.filter((d) => { if (searchMode.value) return (d.name||'').includes(chatSearch.value.trim()); return true })) {
+    const m = withMeta(ch)
+    prov.push(m)
+  }
+  const pinned = prov.filter((c) => c.pinned)
+  const rest = prov.filter((c) => !c.pinned)
+  // 按最近消息时间排序（新版优先；置顶也按时间排在最前）——修复“私聊新消息不置顶到前列”
+  pinned.sort(byRecent); rest.sort(byRecent)
+  return [...pinned, ...rest]
+})
+// 搜索时：把所有频道打平显示
+const msgSearchAll = computed(() => {
+  if (!searchMode.value) return []
+  return [...channels.value, ...groups.value, ...dms.value].map(withMeta).filter((c) => (c.name || '').includes(chatSearch.value.trim()))
+})
+function togglePin(c: any) {
+  const k = pinId(c)
+  if (pinnedSet.value.has(k)) pinnedSet.value.delete(k); else pinnedSet.value.add(k)
+  savePins()
+}
+const convMenuOn = ref<any>(null)
+const convMenuX = ref(0)
+const convMenuY = ref(0)
+function convMenu(c: any) {
+  // 长按/右键弹出会话操作（置顶/取消置顶/拉黑好友）
+  if (c.kind === 'group') { togglePin(c); return }
+  convMenuOn.value = c
+}
+// 拉黑
+const blockList = ref<Set<string>>(new Set())
+async function loadBlockList() {
+  if (!isLoggedIn.value) return
+  try { const r = await authFetch('/api/user/block/list'); const j = await r.json(); blockList.value = new Set((j.data?.blocked||[]).map((b:any)=>b.uid)) } catch {}
+}
+async function toggleBlockUser(uid: string) {
+  try {
+    if (blockList.value.has(uid)) { await authFetch('/api/user/block/' + uid, { method: 'DELETE' }); blockList.value.delete(uid) }
+    else { await authFetch('/api/user/block', { method: 'POST', body: JSON.stringify({ targetId: uid }) }); blockList.value.add(uid) }
+    showToast(blockList.value.has(uid) ? '🚫 已拉黑' : '✅ 已取消拉黑')
+  } catch { showToast('操作失败') }
+}
+// 会议
+const activeMeetings = ref<any[]>([])
+async function loadActiveMeetings() {
+  try { const r = await authFetch('/api/meeting/list?status=active&limit=20'); const j = await r.json(); activeMeetings.value = j.data?.meetings || [] } catch {}
+}
+function openMeeting() {
+  // 先挂载会议组件（v-if），再打开（不能先判 ref，首次挂载前为 null）
+  meetingOpen.value = true
+  loadActiveMeetings()
+}
+function openMeetingRoom(m: any) {
+  meetingOpen.value = true
+  // 等待组件挂载后再打开会议室（nextTick 确保 DOM 更新）
+  setTimeout(() => { if (meetingEl.value) meetingEl.value.openRoomById(String(m.id)) }, 120)
+}
+// 会议邀请卡片解析与加入
+function meetingInviteRaw(m: any): string {
+  const t = extractMsgText(m)
+  return typeof t === 'string' && t.startsWith('[meeting]') ? t : ''
+}
+function isMeetingInvite(m: any): boolean { return !!meetingInviteRaw(m) }
+function meetingInviteId(m: any): string { return meetingInviteRaw(m).replace(/^\[meeting\]/, '').split('|')[0] || '' }
+function meetingInviteTitle(m: any): string {
+  const parts = meetingInviteRaw(m).replace(/^\[meeting\]/, '').split('|')
+  return parts[1] || '昆仑会议'
+}
+function openFromInvite(m: any) {
+  const id = meetingInviteId(m)
+  if (!id) return
+  meetingOpen.value = true
+  setTimeout(() => { if (meetingEl.value) meetingEl.value.openRoomById(id) }, 120)
+}
+const meetingOpen = ref(false)
+const meetingEl = ref<any>(null)
+// 邀请链接进入：/mobile-app?joinMeeting=<6位会议号> → 直接打开会议中心并加入
+function handleMeetingIntent() {
+  try {
+    const q = new URLSearchParams(location.search)
+    const no = q.get('joinMeeting')
+    if (no && /^\d{6}$/.test(no)) {
+      meetingOpen.value = true
+      // 等待组件挂载后再加入会议
+      setTimeout(() => {
+        if (meetingEl.value) (meetingEl.value as any).openRoomById(no)
+      }, 300)
+      // 清掉地址栏参数，避免刷新重复弹
+      try { history.replaceState(null, '', location.pathname + location.hash) } catch {}
+    }
+  } catch {}
+}
 function convPreview(ch: any) {
   return ch.lastMsg || (ch.kind === 'group' ? (ch.memberCount ? `共 ${ch.memberCount} 位群友` : '群聊') : ch.desc || '')
 }
-
 async function loadChannels() {
   const data = await tea.loadChannels()
   if (!data) return
@@ -829,18 +2805,16 @@ async function loadChannels() {
   }
   // 微信式：进 App 停在会话列表，不自动打开聊天窗
 }
-
 async function loadFriends() {
+  if (!isLoggedIn.value) return
   friends.value = await tea.loadUsers()
 }
-
 const filteredFriends = computed(() => {
   const q = friendSearch.value.trim()
   return q ? friends.value.filter((u) => (u.name || '').includes(q) || (u.email || '').includes(q)) : friends.value
 })
-
 async function openChannel(ch: any, silent = false) {
-  // 通讯录/好友列表点进聊天 → 切到茶馆 tab（原 bug：停留通讯录页看不到聊天窗）
+  // 发现/好友列表点进聊天 → 切到茶馆 tab（原 bug：停留发现页看不到聊天窗）
   if (activeTab.value !== 'chat') activeTab.value = 'chat'
   currentChannel.value = ch
   chatPanel.value = ''
@@ -849,6 +2823,25 @@ async function openChannel(ch: any, silent = false) {
   await loadHistory()
   if (ch.kind === 'group' && ch.groupId) loadGroupDetail()
   if (!silent) scrollToBottom()
+}
+function openChannelFromClan(g: any) {
+  // 宗亲·群聊 点群 → 切茶馆 tab 进群聊
+  if (g && g.id) {
+    activeTab.value = 'chat'
+    openChannel(g)
+  }
+}
+function openChannelFromCity(g: any) {
+  // 城市·群聊 点群 → 切茶馆 tab 进聊天
+  activeTab.value = 'chat'
+  openChannel(g)
+}
+function openChannelFromRoom(r: any) {
+  // 城市·私域 点群 → 切茶馆 tab 进聊天
+  if (r.channelId) {
+    activeTab.value = 'chat'
+    openChannel({ id: r.channelId, type: r.type || 4, name: '🔒 ' + r.name, kind: 'cityroom', roomId: r.id, memberCount: r.memberCount })
+  }
 }
 function closeChannel() {
   currentChannel.value = null
@@ -873,7 +2866,6 @@ const chatHeadSub = computed(() => {
   if (currentChannel.value.kind === 'dm') return '私聊'
   return '公共频道'
 })
-
 async function startDm(u: any) {
   const data = await tea.ensurePrivate(u.id)
   if (!data) { showToast('发起私聊失败'); return }
@@ -890,7 +2882,6 @@ async function startDm(u: any) {
   chatPanel.value = ''
   await openChannel(ch)
 }
-
 function sendDraft() {
   const text = draft.value.trim()
   if (!text || !currentChannel.value) return
@@ -898,7 +2889,6 @@ function sendDraft() {
   draft.value = ''
   // 自己消息由 SDK 回显触发 onMessage 渲染（不乐观追加，避免重复）
 }
-
 // ═══ 图片 / 视频 / 文件发送 ═══
 const fileInputRef = ref<any>(null)
 const pendingPickKind = ref<'image' | 'video' | 'file'>('image')
@@ -923,7 +2913,7 @@ async function onFilePicked(e: Event) {
   await sendMedia(file, kind)
 }
 async function sendMedia(file: File, kind: 'image' | 'video' | 'file') {
-  if (!currentChannel.value || !tea.connected.value) return showToast('⚠ 请先连接茶馆')
+  if (!currentChannel.value) return showToast('⚠ 未选中会话')
   sendingMedia.value = true
   try {
     const fd = new FormData()
@@ -956,13 +2946,13 @@ async function sendMedia(file: File, kind: 'image' | 'video' | 'file') {
       }),
     }).then((r) => r.json())
     if (!res.success) throw new Error(res.error || '发送失败')
-    messages.value.push({
-      fromUID: tea.userId.value,
-      timestamp: Math.floor(Date.now() / 1000),
-      content: { type: contentType, content: { url, name, size, width, height, thumbUrl: thumbUrl || '', ttlHours: ttlHours || 0 } },
-      key: 'media-' + Math.random().toString(36).slice(2, 8),
-    })
-    scrollToBottom()
+    // 🔒 图片/视频：身份签名上链（密钥+签名，桌面/手机共用 tea_media_sign 链）
+    if (kind === 'image' || kind === 'video') {
+      const absU = /^https?:\/\//i.test(url) ? url : ('https://aigc.fushtn.com' + (url.startsWith('/') ? url : '/' + url))
+      const sigRes = await signing.signMedia(absU, 'send').catch(() => ({ ok: false, err: 'no_identity' }))
+      if (!sigRes.ok) showToast(sigRes.err === 'no_identity' ? '🔐 未创建身份，图片无签名（我的→创建身份密钥）' : '⚠ 签名上链失败')
+    }
+    // 消息由服务端经 SDK onMessage echo 回显（pushMessage 已按 id 去重），此处不做本地乐观插入，避免「发一次看两次」
     showToast(kind === 'image' ? '📷 图片已发送' : kind === 'video' ? '🎬 视频已发送' : '📄 文件已发送')
   } catch (err) {
     showToast('⚠ ' + ((err as Error).message || '发送失败'))
@@ -970,7 +2960,6 @@ async function sendMedia(file: File, kind: 'image' | 'video' | 'file') {
     sendingMedia.value = false
   }
 }
-
 // ═══ 语音录制发送 ═══
 const recording = ref(false)
 const recordingSeconds = ref(0)
@@ -984,7 +2973,7 @@ function toggleRecord() {
 }
 async function startRecord() {
   if (recording.value || sendingMedia.value) return
-  if (!currentChannel.value || !tea.connected.value) return showToast('⚠ 请先连接茶馆')
+  if (!currentChannel.value) return showToast('⚠ 未选中会话')
   if (!navigator.mediaDevices?.getUserMedia) return showToast('⚠ 当前浏览器不支持录音')
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -1016,7 +3005,7 @@ function stopRecord() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop()
 }
 async function sendVoiceMsg(blob: Blob, duration: number) {
-  if (!currentChannel.value || !tea.connected.value) return
+  if (!currentChannel.value) return
   sendingMedia.value = true
   try {
     const ext = /mp4|aac|m4a/.test(blob.type) ? '.m4a' : '.webm'
@@ -1037,13 +3026,7 @@ async function sendVoiceMsg(blob: Blob, duration: number) {
       channelId: currentChannel.value.id,
       channelType: currentChannel.value.type,
     })
-    messages.value.push({
-      fromUID: tea.userId.value,
-      clientMsgNo: sent?.clientMsgNo || '',
-      timestamp: Math.floor(Date.now() / 1000),
-      content: { type: 5, content: { url, duration, name: '语音', ttlHours: ttlHours || 168 } },
-      key: 'voice-' + Math.random().toString(36).slice(2, 8),
-    })
+    // 语音消息由服务端经 SDK onMessage echo 回显（pushMessage 去重），不做本地乐观插入，避免重复
     scrollToBottom()
   } catch (err) {
     showToast('⚠ ' + ((err as Error).message || '语音发送失败'))
@@ -1061,7 +3044,6 @@ function playVoice(m: any) {
   const audio = new Audio(url)
   audio.play().catch(() => showToast('⚠ 语音播放失败'))
 }
-
 // ═══ 红包体系 ═══
 const plusPanelOpen = ref(false)
 const diamondBalance = ref(0)
@@ -1111,13 +3093,7 @@ async function sendRedPacket() {
     const j = await r.json()
     if (j.success) {
       diamondBalance.value = Math.max(0, diamondBalance.value - amount * finalCount)
-      messages.value.push({
-        fromUID: tea.userId.value,
-        authorName: '我',
-        timestamp: Math.floor(Date.now() / 1000),
-        content: { kind: 'red_packet', id: j.data.id, note, totalDiamonds: amount * finalCount, count: finalCount, mode: finalMode, dm: isDm },
-        key: 'rp-' + Date.now(),
-      })
+      // 红包气泡由服务端经 SDK onMessage echo 回显（pushMessage 去重），不做本地乐观插入，避免重复
       scrollToBottom()
       rpPanelOpen.value = false
       showToast(`🧧 红包已发出（${amount * finalCount} 钻石）`)
@@ -1189,7 +3165,6 @@ async function grabRedPacket() {
   }
 }
 function closeRpDetail() { rpDetail.value = null }
-
 // ═══ 礼物体系 ═══
 const giftPanelOpen = ref(false)
 const giftGroups = ref<any[]>([])
@@ -1238,13 +3213,7 @@ async function sendGift() {
       giftAnimation.value = { icon: giftSelected.value.iconUrl || '🎁', name: giftSelected.value.giftName || giftSelected.value.name, fromName: '我', toName }
       if (giftAnimTimer) clearTimeout(giftAnimTimer)
       giftAnimTimer = setTimeout(() => { giftAnimation.value = null }, 3200)
-      messages.value.push({
-        fromUID: tea.userId.value,
-        authorName: '我',
-        timestamp: Math.floor(Date.now() / 1000),
-        content: { kind: 'gift', giftName: giftSelected.value.giftName || giftSelected.value.name, giftIcon: giftSelected.value.iconUrl || '🎁', priceDiamonds: giftSelected.value.priceDiamonds, receiverUid },
-        key: 'gift-' + Date.now(),
-      })
+      // 礼物气泡由服务端经 SDK onMessage echo 回显（pushMessage 去重），不做本地乐观插入，避免重复
       scrollToBottom()
       giftPanelOpen.value = false
       showToast(`🎁 已送出「${giftSelected.value.giftName || giftSelected.value.name}」`)
@@ -1274,7 +3243,6 @@ function giftText(m: any) {
   const receiver = g?.receiverUid === tea.userId.value ? '我' : (groupMembers.value.find((x) => x.uid === g?.receiverUid)?.name || '茶友')
   return `🎁 ${m.fromUID === tea.userId.value ? '我' : msgName(m)} 送出「${g?.giftName || '礼物'}」给 ${receiver}`
 }
-
 // ═══ 视频 / 语音消息判定 ═══
 function isVideo(m: any) {
   const parsed = parseContent(m)
@@ -1292,7 +3260,6 @@ function voiceDur(m: any) {
   const parsed = parseContent(m)
   return parsed?.content?.duration ? Math.round(Number(parsed.content.duration)) : ''
 }
-
 // 消息渲染（对齐 chat/index.vue parseContentObj：contentType/type/string/payload 全形态）
 function parseContent(msg: any): { type: number; content: any } | null {
   if (msg.content) {
@@ -1355,6 +3322,24 @@ function imgUrl(m: any) {
   const parsed = parseContent(m)
   return parsed?.content?.url ? absUrl(parsed.content.url) : ''
 }
+// 图片加载失败回退：①云端 /uploads/im/ 同文件名 ②本地已自动保存的副本(data URL)
+async function onImgError(ev: any, m: any) {
+  const el = ev?.target as any
+  if (!el) return
+  if (el.__retried) return
+  el.__retried = true
+  const cur = el.src || ''
+  if (cur.includes('/uploads/im/')) { if (localMediaMap.has(cur)) loadLocalDataUrlInto(el, cur); return }
+  const mm = /\/([a-f0-9-]+\.(?:png|jpe?g|gif|webp))(\?.*)?$/i.exec(cur)
+  if (mm && !localMediaMap.has(cur)) { el.src = 'https://aigc.fushtn.com/uploads/im/' + mm[1] }
+  if (localMediaMap.has(cur) || localMediaMap.has('https://aigc.fushtn.com/uploads/im/' + (mm?.[1] || ''))) loadLocalDataUrlInto(el, cur)
+}
+async function loadLocalDataUrlInto(el: any, srcUrl: string) {
+  for (const u of [srcUrl, 'https://aigc.fushtn.com' + (srcUrl.startsWith('/') ? srcUrl : '/' + srcUrl)]) {
+    const data = await loadLocalMedia(u).catch(() => '')
+    if (data) { try { el.src = data; (el as any).__retried = true } catch {} return }
+  }
+}
 function msgName(m: any) {
   if (m.fromUID === tea.userId.value) return '我'
   if (m.authorName) return m.authorName
@@ -1373,14 +3358,121 @@ function msgKey(m: any) {
   return `${m.clientMsgNo || ''}-${m.messageSeq || ''}-${m.timestamp || ''}-${Math.random().toString(36).slice(2, 5)}`
 }
 const previewUrl = ref('')
+const filePrev = ref<{ url: string; name: string; size: string; kind: string; text?: string } | null>(null)
+const asrResult = ref('')
+const voiceBusy = ref(false)
+const voiceText = reactive<Record<string, string>>({})
+const asrCache = reactive<Record<string, string>>({})
 function previewImg(url: string) { previewUrl.value = url }
-
+// ═══ 文件在线预览（对齐桌面版 9 类格式） ═══
+const FILE_KINDS: Record<string, string> = {
+  png: 'img', jpg: 'img', jpeg: 'img', gif: 'img', webp: 'img', bmp: 'img', svg: 'img', ico: 'img',
+  mp4: 'video', mov: 'video', webm: 'video', mkv: 'video', avi: 'video',
+  mp3: 'audio', wav: 'audio', ogg: 'audio', m4a: 'audio', flac: 'audio', amr: 'audio', aac: 'audio',
+  pdf: 'pdf',
+  txt: 'text', md: 'text', log: 'text', json: 'text', js: 'text', ts: 'text', py: 'text', html: 'text', css: 'text', c: 'text', cpp: 'text', java: 'text', go: 'text', rs: 'text', sql: 'text', xml: 'text', yml: 'text', yaml: 'text',
+  doc: 'office', docx: 'office', xls: 'office', xlsx: 'office', ppt: 'office', pptx: 'office', csv: 'office',
+  zip: 'other', rar: 'other', '7z': 'other', tar: 'other', gz: 'other', apk: 'other',
+}
+function fileExt(m: any): string {
+  const parsed = parseContent(m)
+  const url = typeof parsed?.content?.url === 'string' ? parsed.content.url : ''
+  const name = typeof parsed?.content?.name === 'string' ? parsed.content.name : ''
+  const src = url || name || ''
+  const mm = src.match(/\.([a-z0-9]{1,8})(\?|$)/i)
+  return mm ? mm[1].toLowerCase() : ''
+}
+function fileName(m: any): string {
+  const parsed = parseContent(m)
+  return (typeof parsed?.content?.name === 'string' && parsed.content.name) ? parsed.content.name : ('文件.' + (fileExt(m) || 'bin'))
+}
+function fileIcon(m: any): string {
+  const e = fileExt(m)
+  if (['png','jpg','jpeg','gif','webp','svg'].includes(e)) return '🖼'
+  if (e === 'pdf') return '📕'
+  if (['doc','docx'].includes(e)) return '📘'
+  if (['xls','xlsx','csv'].includes(e)) return '📗'
+  if (['ppt','pptx'].includes(e)) return '📙'
+  if (['zip','rar','7z','tar','gz'].includes(e)) return '🗜'
+  if (['mp3','wav','ogg','m4a','flac','amr','aac'].includes(e)) return '🎵'
+  if (['mp4','mov','webm','mkv','avi'].includes(e)) return '🎬'
+  if (['txt','md','json','js','html'].includes(e)) return '📄'
+  return '📦'
+}
+function fileMeta(m: any): string {
+  const parsed = parseContent(m)
+  const size = parsed?.content?.size || parsed?.content?.bytes || ''
+  const e = fileExt(m)
+  return (e ? e.toUpperCase() + ' · ' : '') + (size ? fmtSize(size) : '在线文件')
+}
+function fmtSize(n: any): string {
+  const v = Number(n)
+  if (!isFinite(v) || v <= 0) return ''
+  if (v < 1024) return v + ' B'
+  if (v < 1048576) return (v / 1024).toFixed(1) + ' KB'
+  if (v < 1073741824) return (v / 1048576).toFixed(1) + ' MB'
+  return (v / 1073741824).toFixed(2) + ' GB'
+}
+function isFile(m: any): boolean {
+  const parsed = parseContent(m)
+  return parsed?.type === 3
+}
+function fileUrl(m: any): string {
+  const parsed = parseContent(m)
+  return typeof parsed?.content?.url === 'string' ? absUrl(parsed.content.url) : ''
+}
+async function openFilePreview(m: any) {
+  const url = fileUrl(m)
+  const name = fileName(m)
+  if (!url) return showToast('⚠ 无法获取文件地址', false)
+  const e = fileExt(m)
+  const kind = FILE_KINDS[e] || 'other'
+  if (kind === 'img') { previewUrl.value = url; return }
+  const base: any = { url, name, size: fileMeta(m).split(' · ')[1] || '', kind }
+  if (kind === 'text') {
+    try {
+      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + authToken() } })
+      base.text = (await r.text()).slice(0, 60000)
+    } catch { base.kind = 'other' }
+  }
+  filePrev.value = base
+}
+function closeFilePrev() { filePrev.value = null }
+function openFileNewTab(url: string) { window.open(url, '_blank') }
+// ═══ 语音转文字（对齐桌面版 ASR） ═══
+async function transcribeVoice(m: any) {
+  const url = voiceUrl(m)
+  const id = m.message_idstr || m.messageID || m.message_id || ''
+  if (!url) return showToast('⚠ 无法获取语音', false)
+  if (asrCache[id]) { voiceText[id] = asrCache[id]; showToast('🗣 ' + asrCache[id]); return }
+  if (voiceBusy.value) return showToast('⏳ 正在识别，请稍候', false)
+  voiceBusy.value = true
+  try {
+    const blob = await (await fetch(url, { headers: { Authorization: 'Bearer ' + authToken() } })).blob()
+    const fd = new FormData()
+    fd.append('file', blob, 'voice' + (extOf(url) || '.amr'))
+    const r = await fetch('/api/v1/asr/transcribe', { method: 'POST', headers: { Authorization: 'Bearer ' + authToken() }, body: fd })
+    const j = await r.json()
+    const segs = j?.data?.segments || j?.segments || []
+    const text = Array.isArray(segs) ? segs.map((x: any) => x.text || '').join('').trim() : ''
+    if (!r.ok || !text) { showToast('❌ ' + (j.error || '识别失败（请管理员配置语音识别引擎）'), false); return }
+    asrCache[id] = text
+    voiceText[id] = text
+    showToast('🗣 ' + text)
+  } catch { showToast('⚠ 语音识别失败', false) } finally { voiceBusy.value = false }
+}
+function extOf(url: string): string {
+  const m = url.match(/\.([a-z0-9]{2,4})(\?|$)/i)
+  return m ? '.' + m[1].toLowerCase() : ''
+}
+function copyAsr() {
+  try { navigator.clipboard.writeText(asrResult.value || ''); showToast('✅ 已复制') } catch { showToast('⚠ 复制失败', false) }
+}
 // ═══ 消息长按操作菜单（复制/收藏/翻译/撤回）— 对齐桌面版 chat/index.vue ═══
 const msgMenu = ref<{ msg: any; canCopy: boolean; canTranslate: boolean; canRecall: boolean } | null>(null)
 let msgHoldTimer: ReturnType<typeof setTimeout> | null = null
 let msgHoldFired = false
 let msgTouchStartPos: { x: number; y: number } | null = null
-
 function msgMessageId(m: any): string {
   return String(m?.message_idstr || m?.messageID || m?.message_id || m?.clientMsgNo || '')
 }
@@ -1530,11 +3622,8 @@ async function recallMsg(m: any) {
     }
   } catch { showToast('⚠ 撤回失败，请重试') }
 }
-
 // ── 群详情 ──
 const groupDetailOpen = ref(false)
-const groupDetail = ref<any>(null)
-const groupMembers = ref<any[]>([])
 async function loadGroupDetail() {
   const ch = currentChannel.value
   if (!ch?.groupId) return
@@ -1548,14 +3637,12 @@ async function loadGroupDetail() {
   } catch { /* ignore */ }
 }
 function openGroupDetail() { loadGroupDetail(); groupDetailOpen.value = true }
-
 // ═══════════════ Tab2 好友 ═══════════════
 const friendSearch = ref('')
 const filteredGroups = computed(() => {
   const q = friendSearch.value.trim()
   return q ? groups.value.filter((g) => (g.name || '').includes(q)) : groups.value
 })
-
 // 建群
 const createGroupOpen = ref(false)
 const createGroupName = ref('')
@@ -1590,13 +3677,13 @@ async function createGroup() {
     createGroupBusy.value = false
   }
 }
-
 // ═══════════════ Tab3 社区 ═══════════════
 const categories = ref<any[]>([])
 const posts = ref<any[]>([])
 const communityCat = ref('')
 const postsLoading = ref(false)
 async function loadCategories() {
+  if (!isLoggedIn.value) return
   try {
     const r = await authFetch('/api/community/categories')
     const j = await r.json()
@@ -1604,6 +3691,7 @@ async function loadCategories() {
   } catch { categories.value = [{ name: '全部', slug: '' }] }
 }
 async function loadPosts() {
+  if (!isLoggedIn.value) return
   postsLoading.value = true
   try {
     const params = new URLSearchParams()
@@ -1630,18 +3718,322 @@ function timeAgo(iso: string) {
   const d = Math.floor(h / 24)
   return `${d} 天前`
 }
-
-// ═══════════════ Tab4 我的 ═══════════════
+// ═══════════════ Tab5 我的 ═══════════════
 const mineEntries = [
-  { icon: '📦', label: '我的订单', page: 'orders' },
-  { icon: '👥', label: '我的团队', page: 'team' },
-  { icon: '💬', label: '我的消息', page: 'messages' },
-  { icon: '🎟️', label: '邀请有礼', page: 'referral' },
-  { icon: '🖼️', label: '我的作品', page: 'gallery' },
-  { icon: '🎁', label: '礼物记录', page: 'gifts' },
-  { icon: '⚙️', label: '设置', page: 'settings' },
+  { icon: '🖼', label: '影像空间', page: 'space-images' },
+  { icon: '👥', label: '我的伙伴', page: 'team' },
+  { icon: '🎬', label: '我的视频', page: 'space-videos' },
+  { icon: '📁', label: '我的文件', page: 'space-files' },
+  { icon: '📝', label: '我的作品', page: 'myposts' },
+  { icon: '✅', label: '验证身份', fn: 'verifyId' },
+  { icon: '📦', label: '数据备份', fn: 'backup' },
+  { icon: '🗂', label: '备份与找回', fn: 'storage' },
+  { icon: '📷', label: '扫码核销', fn: 'scan' },
+  { icon: '🎫', label: '银票', page: 'tickets' },
+  { icon: '⛓️', label: '链上节点', fn: 'nodes' },
+  { icon: '🌱', label: '签到', fn: 'checkin' },
+  { icon: '📊', label: '竞猜', fn: 'quiz' },
+  { icon: '🏆', label: '封神榜', fn: 'leaderboard' },
+  { icon: '⚡', label: '飞升台', fn: 'exchange' },
+  { icon: '🏦', label: '联邦银行', fn: 'bank' },
+  { icon: '🔐', label: '支付密码', fn: 'paypass' },
+  { icon: '🤖', label: '大模型', fn: 'llm' },
 ]
+
+function handleMineEntry(it: any) {
+  if (it.fn === 'scan') openMobilePage('tickets', { tab: 'scan' })
+  else if (it.fn === 'tickets') openMobilePage('tickets')
+  else if (it.fn === 'nodes') openChainNodes()
+  else if (it.fn === 'verifyId') verifyMyIdentity()
+  else if (it.fn === 'checkin') openCheckin()
+  else if (it.fn === 'quiz') openQuiz()
+  else if (it.fn === 'leaderboard') openLeaderboard()
+  else if (it.fn === 'exchange') openExchange()
+  else if (it.fn === 'bank') openBank()
+  else if (it.fn === 'paypass') openPaypass()
+  else if (it.fn === 'llm') openLlm()
+  else if (it.fn === 'invite') openInvite()
+  else if (it.fn === 'backup') openBackup()
+  else if (it.fn === 'storage') openStorageRestore()
+  else if (it.page) openMobilePage(it.page)
+}
+// ═════ ⛓️ 身份密钥（助记词派生私钥 · 私钥验证身份）═════
+const identityOpen = ref(false)
+const identityStep = ref<'none'|'create'|'verify'|'restore'>('none')
+const identityMnemonic = ref('')
+const identityBusy = ref(false)
+const identityMsg = ref('')
+const identityMsgOk = ref(false)
+
+// ---- 密码学工具：助记词 → AES 派生密钥（与桌面 identity 一致：sha256(mnemonic) 无前缀，返回 32 字节）----
+async function idMnemonicKey(mnemonic: string): Promise<Uint8Array> {
+  const data = new TextEncoder().encode(String(mnemonic).trim().toLowerCase())
+  const d = await crypto.subtle.digest('SHA-256', data)
+  return new Uint8Array(d)
+}
+// ---- 稳健 ArrayBuffer/Uint8Array ↔ base64（避免 String.fromCharCode/atob 二进制陷阱）----
+function bufToB64(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
+  let bin = ''
+  const CH = 0x8000
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CH)))
+  return btoa(bin)
+}
+function b64ToBuf(b64: string): Uint8Array {
+  if (!b64) throw new Error('托管私钥为空')
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(b64)) b64 = b64.replace(/\s/g, '')
+  const bin = atob(b64)
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out
+}
+async function aeadIv(): Promise<Uint8Array> { return crypto.getRandomValues(new Uint8Array(12)) }
+
+// ---- 生成 ECDSA P-256 密钥对（可导出，私钥用助记词 AES 加密托管）----
+async function genEcdsaKeys(): Promise<{ pubPem: string; encKey: string; pubDer: string; privateKey: CryptoKey }> {
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])
+  const spki = await crypto.subtle.exportKey('spki', kp.publicKey)
+  const pkcs8 = await crypto.subtle.exportKey('pkcs8', kp.privateKey)
+  const pubB64 = bufToB64(spki)
+  const pubPem = '-----BEGIN PUBLIC KEY-----\n' + pubB64.match(/.{1,64}/g)!.join('\n') + '\n-----END PUBLIC KEY-----'
+  // 私钥用助记词派生密钥 AES-GCM 加密（encKey）
+  const aesRaw = await crypto.subtle.importKey('raw', await idMnemonicKey(identityMnemonic.value), 'AES-GCM', false, ['encrypt'])
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesRaw, pkcs8)
+  const encBuf = new Uint8Array(iv.length + ct.byteLength)
+  encBuf.set(iv, 0); encBuf.set(new Uint8Array(ct), iv.length)
+  const encKey = bufToB64(encBuf)
+  return { pubPem, encKey, pubDer: pubB64, privateKey: kp.privateKey }
+}
+
+// ---- ECDSA 签名 P1363(r||s) → DER(b64)，后端 Node crypto.verify 需 DER 格式 ----
+function derInt(b: Uint8Array): number[] {
+  let i = 0; while (i < b.length && b[i] === 0) i++
+  let int = Array.from(b.slice(i)); if (int.length === 0) int = [0]
+  if (int[0] & 0x80) int = [0, ...int]
+  const L = int.length; let hdr: number[]
+  if (L < 128) hdr = [L]
+  else { const hb: number[] = []; let l = L; while (l > 0) { hb.unshift(l & 0xff); l >>= 8 } hdr = [0x80 | hb.length, ...hb] }
+  return [0x02, ...hdr, ...int]
+}
+function ecdsaSigToB64(sigBytes: Uint8Array): string {
+  if (sigBytes.length === 64) {
+    const r = sigBytes.slice(0, 32), s = sigBytes.slice(32)
+    const body = [...derInt(r), ...derInt(s)]
+    const BL = body.length; let bhdr: number[]
+    if (BL < 128) bhdr = [BL]
+    else { const hb: number[] = []; let l = BL; while (l > 0) { hb.unshift(l & 0xff); l >>= 8 } bhdr = [0x80 | hb.length, ...hb] }
+    return bufToB64(new Uint8Array([0x30, ...bhdr, ...body]))
+  }
+  return bufToB64(sigBytes)
+}
+// ---- 用本地 CryptoKey 对文本签名（ECDSA-SHA256）返回 base64 ----
+async function signWithLocalKey(key: CryptoKey, text: string): Promise<string> {
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(text))
+  return ecdsaSigToB64(new Uint8Array(sig))
+}
+
+// ---- 用私钥对文本签名（ECDSA-SHA256）返回 base64 ----
+async function signWithMnemonic(mnemonic: string, text: string): Promise<string> {
+  // 取托管私钥（encKey）
+  const r = await authFetch('/api/auth/identity/key')
+  const j = await r.json()
+  if (!j.success || !j.data?.encKey) throw new Error('未找到托管私钥，请先创建身份密钥')
+  const encKeyStr = String(j.data.encKey)
+  let pkcs8: ArrayBuffer
+  const aesRaw = await crypto.subtle.importKey('raw', await idMnemonicKey(mnemonic), 'AES-GCM', false, ['decrypt'])
+  // 兼容旧格式 {iv,tag,data}（桌面 identity 体系）与新格式 base64(iv||ct)
+  try {
+    if (encKeyStr.trim().startsWith('{')) {
+      // 旧格式：JSON {iv,tag,data}（base64），AES-GCM 解密出 pkcs8 PEM
+      const obj = JSON.parse(encKeyStr)
+      const iv = b64ToBuf(obj.iv)
+      const tag = b64ToBuf(obj.tag)
+      const data = b64ToBuf(obj.data)
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesRaw, concatUint8(data, tag))
+      // pt 是 pkcs8 PEM 文本 → 转 PKCS8 DER（WebCrypto 需要 DER）
+      pkcs8 = pemToDer(pt as Uint8Array)
+    } else {
+      // 新格式：base64(iv(12)||ct)
+      const raw = b64ToBuf(encKeyStr)
+      const iv = raw.slice(0, 12)
+      const ct = raw.slice(12)
+      pkcs8 = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesRaw, ct)
+    }
+  } catch (e: any) {
+    throw new Error('助记词与当前身份密钥不匹配：请确认输入的助记词正确；若想改用新助记词，点下方【重置身份】重新生成')
+  }
+  const key = await crypto.subtle.importKey('pkcs8', pkcs8, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'])
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(text))
+  return ecdsaSigToB64(new Uint8Array(sig))
+}
+function concatUint8(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const out = new Uint8Array(a.length + b.length)
+  out.set(a, 0); out.set(b, a.length)
+  return out
+}
+function pemToDer(pemBytes: Uint8Array): ArrayBuffer {
+  // 旧格式存的私钥是 PEM 文本（utf8），去除头和换行后 base64 解码回 DER
+  let s = new TextDecoder().decode(pemBytes)
+  s = s.replace(/-----BEGIN PRIVATE KEY-----/, '').replace(/-----END PRIVATE KEY-----/, '').replace(/\s+/g, '')
+  return b64ToBuf(s).buffer as ArrayBuffer
+}
+
+function openIdentity() {
+  identityOpen.value = true; identityMsg.value = ''; identityMsgOk.value = false; identityMnemonic.value = ''
+  identityStep.value = myHasIdentity.value ? 'verify' : 'create'
+}
+function closeIdentity() { identityOpen.value = false }
+
+// ---- 创建身份密钥（首次自动）：生成 ECDSA + 助记词 + 绑定 + 托管 ----
+async function createIdentityFlow() {
+  if (identityBusy.value) return
+  identityBusy.value = true; identityMsg.value = ''
+  try {
+    // 1) 生成助记词（后端返回明文一次）
+    const mr = await authFetch('/api/tea/storage/mnemonic', { method: 'POST' })
+    const mj = await mr.json()
+    if (!mj.success || !mj.data?.mnemonic) throw new Error('助记词生成失败：' + (mj.error || ''))
+    identityMnemonic.value = mj.data.mnemonic
+    // 2) 生成 ECDSA + 用助记词加密私钥
+    const { pubPem, encKey, privateKey } = await genEcdsaKeys()
+    // 3) 绑定公钥：取 challenge，本地私钥签名后 bind
+    let challenge = ''
+    try { const ch = await authFetch('/api/auth/identity/challenge', { method: 'POST' }); const chj = await ch.json(); challenge = chj.success ? (chj.data?.challenge || '') : '' } catch (e) {}
+    const sigTxt = challenge || pubPem
+    const sig = await signWithLocalKey(privateKey, sigTxt)
+    const br = await authFetch('/api/auth/identity/bind', { method: 'POST', body: JSON.stringify({ publicKey: pubPem, challenge, signature: sigTxt === pubPem ? '' : sig }) })
+    const bj = await br.json()
+    if (!bj.success) throw new Error('绑定失败：' + (bj.error || ''))
+    // 4) 托管私钥
+    const kr = await authFetch('/api/auth/identity/key', { method: 'PUT', body: JSON.stringify({ encKey }) })
+    const kj = await kr.json()
+    if (!kj.success) throw new Error('私钥托管失败：' + (kj.error || ''))
+    myHasIdentity.value = true
+    // 本地缓存这份助记词（本机免输入验证）
+    try { localStorage.setItem('kunlun_idme', identityMnemonic.value) } catch (e) {}
+    identityMsg.value = '✅ 身份密钥已创建！请立即抄录助记词（找回身份/数据的唯一钥匙）：\n\n' + identityMnemonic.value + '\n\n即将用于验证身份。'
+    identityMsgOk.value = true
+  } catch (e: any) {
+    identityMsg.value = '❌ ' + (e?.message || '创建失败'); identityMsgOk.value = false
+  } finally { identityBusy.value = false }
+}
+
+// ---- 验证身份：输入助记词 → 解密私钥 → 签名挑战 → verify ----
+async function verifyIdentityFlow() {
+  const mn = identityMnemonic.value.trim()
+  if (!mn) { identityMsg.value = '❌ 请输入助记词'; identityMsgOk.value = false; return }
+  if (identityBusy.value) return
+  identityBusy.value = true; identityMsg.value = ''
+  try {
+    const ch = await authFetch('/api/auth/identity/challenge', { method: 'POST' })
+    const chj = await ch.json()
+    if (!chj.success) throw new Error('获取挑战失败')
+    const challenge = chj.data.challenge
+    const sig = await signWithMnemonic(mn, challenge)
+    const vr = await authFetch('/api/auth/identity/verify', { method: 'POST', body: JSON.stringify({ challenge, signature: sig }) })
+    const vj = await vr.json()
+    if (vj.success) { identityMsg.value = '✅ 身份验证通过（私钥签名有效）'; identityMsgOk.value = true; try { localStorage.setItem('kunlun_idme', mn) } catch (e) {} }
+    else { identityMsg.value = '❌ ' + (vj.error || '验证失败'); identityMsgOk.value = false }
+  } catch (e: any) {
+    identityMsg.value = '❌ ' + (e?.message || '网络错误'); identityMsgOk.value = false
+  } finally { identityBusy.value = false }
+}
+
+// ---- 重置身份密钥：用本助记词生成新私钥 + 覆盖绑定 + 覆盖托管 ----
+async function resetIdentityFlow() {
+  const mn = identityMnemonic.value.trim()
+  if (!mn) { identityMsg.value = '❌ 请输入助记词'; identityMsgOk.value = false; return }
+  if (!confirm('将用这份助记词生成新身份密钥并覆盖当前绑定（旧身份钥匙作废）。确定？')) return
+  if (identityBusy.value) return
+  identityBusy.value = true; identityMsg.value = ''
+  try {
+    // 1) 用本助记词生成新 ECDSA + encKey
+    identityMnemonic.value = mn
+    const { pubPem, encKey, privateKey } = await genEcdsaKeys()
+    // 2) 取 challenge 并用新私钥签名，bind 覆盖
+    let challenge = ''
+    try { const ch = await authFetch('/api/auth/identity/challenge', { method: 'POST' }); const chj = await ch.json(); challenge = chj.success ? (chj.data?.challenge || '') : '' } catch (e) {}
+    const sigTxt = challenge || pubPem
+    const sig = await signWithLocalKey(privateKey, sigTxt)
+    const br = await authFetch('/api/auth/identity/bind', { method: 'POST', body: JSON.stringify({ publicKey: pubPem, challenge, signature: sigTxt === pubPem ? '' : sig }) })
+    const bj = await br.json()
+    if (!bj.success) throw new Error('绑定失败：' + (bj.error || ''))
+    // 3) 覆盖托管 encKey
+    const kr = await authFetch('/api/auth/identity/key', { method: 'PUT', body: JSON.stringify({ encKey }) })
+    const kj = await kr.json()
+    if (!kj.success) throw new Error('托管失败：' + (kj.error || ''))
+    myHasIdentity.value = true
+    try { localStorage.setItem('kunlun_idme', mn) } catch (e) {}
+    identityMsg.value = '✅ 身份密钥已重置！请抄录这份助记词（新身份钥匙）：\n\n' + mn + '\n\n以后用这份助记词验证身份。'
+    identityMsgOk.value = true
+  } catch (e: any) {
+    identityMsg.value = '❌ ' + (e?.message || '重置失败'); identityMsgOk.value = false
+  } finally { identityBusy.value = false }
+}
+
+// ---- 入口：若未创建身份 → 自动创建；已创建 → 打开验证弹窗 ----
+async function verifyMyIdentity() {
+  if (!myHasIdentity.value) {
+    // 首次：自动创建身份（生成助记词 + 私钥 + 绑定 + 托管）
+    openIdentity(); identityStep.value = 'create'
+    createIdentityFlow()
+  } else {
+    openIdentity()
+  }
+}
+function openChainNodes() {
+  nodesOpen.value = true
+  loadChain()
+}
+// ⛓️ 链上节点查询（区块链浏览器式：茶票分布 + 区块列表 + 区块详情）
+const nodesOpen = ref(false)
+const chainInfo = ref<any>(null)
+const chainBlocks = ref<any[]>([])
+const chainOk = ref<boolean | null>(null)
+const chainBlockOpen = ref(false)
+const chainBlock = ref<any>(null)
+const chainLoaded = ref(false)
+const distData = ref<any>(null)
+const distList = computed(() => (distData.value?.list || []).slice(0, 50))
+
+async function loadChain() {
+  chainBlocks.value = []
+  chainInfo.value = null
+  chainLoaded.value = false
+  try {
+    const r = await authFetch('/api/tea/chain')
+    const j = await r.json()
+    if (j.success) chainInfo.value = j.data
+  } catch { /* ignore */ }
+  try {
+    const r = await authFetch('/api/tea/chain/verify')
+    const j = await r.json()
+    if (j.success) chainOk.value = j.data?.chainOk ?? null
+  } catch { /* ignore */ }
+  try {
+    const r = await authFetch('/api/tea/chain/distribution')
+    const j = await r.json()
+    if (j.success) distData.value = j.data
+  } catch { /* ignore */ }
+  try {
+    const r = await authFetch('/api/tea/chain/blocks?limit=20')
+    const j = await r.json()
+    if (j.success) chainBlocks.value = (j.data?.blocks || []).slice(0, 20)
+  } catch { /* ignore */ }
+  chainLoaded.value = true
+}
+async function openChainBlock(hash: string) {
+  try {
+    const r = await authFetch('/api/tea/chain/block?hash=' + encodeURIComponent(hash))
+    const j = await r.json()
+    if (j.success) { chainBlock.value = j.data; chainBlockOpen.value = true }
+    else showToast('❌ ' + (j.error || '查询失败'), false)
+  } catch { showToast('❌ 查询失败', false) }
+}
+function closeNodes() { nodesOpen.value = false }
 async function loadMine() {
+  if (!isLoggedIn.value) return
   try {
     const r = await authFetch('/api/auth/me')
     const j = await r.json()
@@ -1660,21 +4052,60 @@ async function loadMine() {
       tierLabel.value = MEMBERSHIP_LABELS.free || '体验版'
     }
   } catch { /* 未登录 */ }
-  const p = readMyProfile()
-  if (p) { if (p.nickname) myName.value = p.nickname; else if (p.username) myName.value = p.username }
+  // 昵称以云端 /api/auth/me 为准（不同步本地缓存，避免旧昵称覆盖）
   try {
     const r = await authFetch('/api/wallet')
     const j = await r.json()
     if (j.walletBalance !== undefined) walletBalance.value = String(j.walletBalance)
     else if (j.data?.walletBalance !== undefined) walletBalance.value = String(j.data.walletBalance)
   } catch { /* ignore */ }
-  // 积分/钻石：从 auth_user 或 me 兜底
+  // 积分/钻石：积分从 auth/me 或 me 兜底；钻石走权威接口 /api/user/diamonds（与线上/桌面同步 = membership.credits）
   try {
     const r = await authFetch('/api/auth/me')
     const j = await r.json()
     const u = j.user || j.data?.user || j
     if (u?.credits !== undefined) credits.value = String(u.credits)
-    if (u?.diamonds !== undefined) diamonds.value = String(u.diamonds)
+  } catch { /* ignore */ }
+  try {
+    const r = await authFetch('/api/user/diamonds')
+    const j = await r.json()
+    const d = j.data
+    if (d?.totalDiamonds !== undefined) diamonds.value = String(d.totalDiamonds)
+  } catch { /* ignore */ }
+  // 礼物记录数
+  try {
+    const r = await authFetch('/api/gifts/received')
+    const j = await r.json()
+    const recs = j.data?.records || j.data?.gifts || j.data?.list || (Array.isArray(j.data) ? j.data : [])
+    giftsCount.value = recs.length || 0
+  } catch { /* ignore */ }
+  // 我的礼物：金币数（对齐线上我的礼物入口）
+  try {
+    const r = await authFetch('/api/user/gold-coins')
+    const j = await r.json()
+    const d = j.data || j
+    goldCoins.value = d.goldCoins ?? 0
+  } catch { /* ignore */ }
+  // 关注/粉丝统计
+  try {
+    const r = await authFetch('/api/user/follow/stats')
+    const j = await r.json()
+    const d = j.data || j
+    if (d?.followingCount !== undefined) myStats.value = { followingCount: d.followingCount, followerCount: d.followerCount }
+  } catch { /* ignore */ }
+  // 身份密钥状态（有 encKey = 已创建）
+  myHasIdentity.value = false
+  myIdentityHash.value = ''
+  try {
+    const r = await authFetch('/api/auth/identity/key')
+    const j = await r.json()
+    if (j.success && j.data?.encKey) { myHasIdentity.value = true; myIdentityHash.value = String(j.data.encKey).slice(0, 12) }
+  } catch { /* 未创建身份 */ }
+  // 数字分身状态
+  try {
+    const r = await authFetch('/api/avatar/status')
+    const j = await r.json()
+    if (j.success) avatarInfo.value = j.data
   } catch { /* ignore */ }
 }
 function doLogout() {
@@ -1689,18 +4120,17 @@ function doLogout() {
   showToast('已退出登录')
   setTimeout(() => { window.location.href = '/' }, 600)
 }
-
 // ═══════════════ Tab 切换 & 实时消息 ═══════════════
 function switchTab(key: string) {
   if (activeTab.value === key) return
   activeTab.value = key
-  if (key === 'contacts' && !friends.value.length) loadFriends()
-  if (key === 'community' && !posts.value.length) { loadCategories(); loadPosts() }
+  if (key === 'discover' && !friends.value.length) loadFriends()
+  if (key === 'city' && !posts.value.length) { loadCategories(); loadPosts() }
   if (key === 'mine') loadMine()
+  if (key === 'mine') loadTeaWallet()
   // 离开茶馆 tab 时关闭聊天窗
   if (key !== 'chat' && currentChannel.value) closeChannel()
 }
-
 // ══ 充值回跳轮询：H5 支付完成后 returnUrl 回手机版，检测待支付订单并轮询到账 ══
 function pollPendingRecharge() {
   try {
@@ -1730,11 +4160,19 @@ function pollPendingRecharge() {
     }, 2000)
   } catch { /* ignore */ }
 }
-
 // 实时消息：当前频道追加，其他频道累计未读
-watch(() => tea.connected.value, (v) => { if (v) { loadChannels(); loadFriends() } })
+watch(() => tea.connected.value, (v) => { if (v) { loadChannels(); loadFriends(); loadPins(); loadBlockList(); loadActiveMeetings() } })
 onMounted(async () => {
+  // ══ 应用主题（夜间模式）＋老年模式（大字体） ══
+  try {
+    const appRoot = document.querySelector('.tea-app')
+    if (localStorage.getItem('kunlun_theme') === 'dark') { document.documentElement.classList.add('mp-dark'); appRoot?.classList.add('mp-dark') }
+    else { document.documentElement.classList.remove('mp-dark'); appRoot?.classList.remove('mp-dark') }
+    if (localStorage.getItem('kunlun_elder') === '1') { document.documentElement.classList.add('mp-elder'); appRoot?.classList.add('mp-elder') }
+    else { document.documentElement.classList.remove('mp-elder'); appRoot?.classList.remove('mp-elder') }
+  } catch { /* ignore */ }
   loadInterpPrefs() // ══ R11：恢复同传语言偏好（通话前设置持久化）══
+  handleMeetingIntent() // 邀请链接/会议号直达：?joinMeeting=XXXXXX 自动打开会议
   const p = readMyProfile()
   if (p) { myName.value = p.nickname || p.username || '' }
   loadMine()
@@ -1751,6 +4189,18 @@ onMounted(async () => {
     console.warn('[RTC] 初始化失败（非致命）', e)
   }
   tea.connect()
+  // ══ 连接脆弱修复：APP 退后台再回前台时，若断线则自动重新连接 ══
+  try {
+    const cap: any = (window as any).Capacitor
+    if (cap?.App?.addListener) {
+      cap.App.addListener('appStateChange', (s: any) => {
+        if (s?.isActive && !tea.connected.value) {
+          tea.suppressReconnect?.(false)
+          tea.rejoin?.().catch(() => {})
+        }
+      })
+    }
+  } catch {}
   // ══ R11：连接后注入本人身份（来电显示用）══
   try {
     const me = readMyProfile()
@@ -1761,11 +4211,12 @@ onMounted(async () => {
     const chId = msgChannel?.channelID
     const chType = msgChannel?.channelType ?? 4
     if (currentChannel.value && chId === currentChannel.value.id && chType === currentChannel.value.type) {
-      messages.value.push(msg)
-      scrollToBottom()
+      pushMessage(msg)
     } else {
       const key = chId + ':' + chType
       unreadMap.value[key] = (unreadMap.value[key] || 0) + 1
+      // 新消息 → 该会话顶到列表最前
+      bumpConversation(chId, chType, msg)
     }
   })
   // 定时刷新会话/好友
@@ -1774,7 +4225,6 @@ onMounted(async () => {
   // 充值回跳轮询：微信/支付宝 H5 支付完成后 returnUrl 回手机版，检测待支付订单并轮询到账
   pollPendingRecharge()
 })
-
 // 全局消息事件（chat 页同款桥接：CLIENT_MSG 等）
 if (typeof window !== 'undefined') {
   const onGlobal = (e: any) => {
@@ -1783,16 +4233,15 @@ if (typeof window !== 'undefined') {
       const chId = d.msg.channelID || d.msg.channel_id
       const chType = d.msg.channelType ?? d.msg.channel_type ?? 4
       if (currentChannel.value && chId === currentChannel.value.id && chType === currentChannel.value.type) {
-        messages.value.push(d.msg)
-        scrollToBottom()
+        pushMessage(d.msg)
       }
     }
   }
   window.addEventListener('tea:client-msg', onGlobal)
   onBeforeUnmount(() => window.removeEventListener('tea:client-msg', onGlobal))
+  onBeforeUnmount(() => { if (scanTimer) clearTimeout(scanTimer); if (scanStream) scanStream.getTracks().forEach((t) => t.stop()) })
 }
 </script>
-
 <style scoped>
 /* ═══ 手机壳 ═══ */
 .tea-app {
@@ -1824,7 +4273,6 @@ if (typeof window !== 'undefined') {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 /* ═══ 顶栏 ═══ */
 .app-header {
   display: flex;
@@ -1852,11 +4300,9 @@ if (typeof window !== 'undefined') {
   font-size: 16px; cursor: pointer;
   color: #576b95;
 }
-
 /* ═══ 主体 ═══ */
 .app-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 .tab-pane { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-
 /* ═══ 茶馆-会话列表 ═══ */
 .chat-search {
   display: flex; align-items: center; gap: 8px;
@@ -1893,6 +4339,30 @@ if (typeof window !== 'undefined') {
 }
 .conv-empty { text-align: center; color: #999; padding: 60px 20px; font-size: 14px; }
 .conv-empty-sub { font-size: 12px; margin-top: 8px; }
+/* ═══ 消息页三栏：群聊 / 会议 / 私聊 ═══ */
+.msg-sec { margin-top: 8px; background: #fff; }
+.msg-sec-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; }
+.msg-sec-title { font-size: 14px; font-weight: 700; color: #333; }
+.msg-sec-meta { font-size: 12px; color: #999; }
+.msg-sec-arrow { display: inline-block; margin-left: 4px; color: #bbb; font-size: 12px; }
+.msg-more { text-align: center; color: #4f7df9; font-size: 13px; padding: 10px 0; cursor: pointer; }
+.conv-item.pinned { background: #f7f9ff; border-left: 3px solid #f0b429; }
+.conv-unpin { border: none; background: #fdecec; color: #e04545; border-radius: 12px; width: 22px; height: 22px; font-size: 12px; line-height: 1; flex-shrink: 0; cursor: pointer; }
+.chat-head-act.block { background: #fdecec; color: #e04545; }
+/* 会议区 */
+.mtg-sec { box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.mtg-empty { text-align: center; color: #999; font-size: 12px; padding: 10px 14px 14px; }
+.mtg-quick { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 12px; }
+.mtg-chip { display: flex; align-items: center; gap: 8px; background: #f2f7ff; border: 1px solid #cfe1ff; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #2b5fd9; cursor: pointer; }
+.mtg-dot { width: 8px; height: 8px; border-radius: 50%; background: #23c743; box-shadow: 0 0 0 3px rgba(35,199,67,.2); flex-shrink: 0; }
+/* 会议邀请卡片（私聊/群聊气泡内） */
+.mtg-card { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg,#fff8e6,#fff3d0); border: 1px solid #f0cf7a; border-radius: 12px; padding: 10px 12px; max-width: 280px; cursor: pointer; }
+.mtg-card-icon { font-size: 26px; flex-shrink: 0; }
+.mtg-card-info { flex: 1; min-width: 0; }
+.mtg-card-title { font-size: 14px; font-weight: 700; color: #b45309; }
+.mtg-card-sub { font-size: 12px; color: #8a5a00; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mtg-card-meta { font-size: 11px; color: #b98800; margin-top: 2px; }
+.mtg-card-btn { font-size: 12px; color: #2b7cf0; font-weight: 600; flex-shrink: 0; }
 
 /* ═══ 茶馆-好友选择 ═══ */
 .picker-pane { display: flex; flex-direction: column; height: 100%; }
@@ -1910,7 +4380,6 @@ if (typeof window !== 'undefined') {
 .picker-name { flex: 1; font-size: 15px; }
 .picker-online { font-size: 11px; color: #bbb; margin-left: 8px; }
 .picker-online.on { color: #07c160; }
-
 /* ═══ 茶馆-聊天窗 ═══ */
 .chat-window { display: flex; flex-direction: column; height: 100%; }
 .chat-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fff; border-bottom: 1px solid #ececec; flex-shrink: 0; }
@@ -1960,9 +4429,8 @@ if (typeof window !== 'undefined') {
   flex-shrink: 0;
 }
 .chat-send:disabled { opacity: 0.4; }
-
 /* ═══ 好友 tab ═══ */
-.contacts-pane { padding-bottom: 12px; }
+.discover-pane { padding-bottom: 12px; }
 .contact-group { background: #fff; margin: 10px 12px 0; border-radius: 10px; overflow: hidden; }
 .contact-group-title {
   display: flex; align-items: center; gap: 6px;
@@ -1976,9 +4444,8 @@ if (typeof window !== 'undefined') {
 .contact-sub { font-size: 12px; color: #999; margin-top: 2px; }
 .contact-arrow { color: #ccc; font-size: 18px; }
 .contact-empty { padding: 14px; font-size: 13px; color: #999; text-align: center; }
-
 /* ═══ 社区 tab ═══ */
-.community-pane { padding-bottom: 70px; }
+.city-pane { padding-bottom: 70px; }
 .community-tabs {
   display: flex; gap: 8px; overflow-x: auto; padding: 10px 12px;
   background: #fff; border-bottom: 1px solid #ececec;
@@ -2008,7 +4475,6 @@ if (typeof window !== 'undefined') {
   box-shadow: 0 4px 12px rgba(7, 193, 96, 0.35);
   z-index: 20;
 }
-
 /* ═══ 我的 tab ═══ */
 .mine-pane { padding: 12px; }
 .mine-hero {
@@ -2027,6 +4493,188 @@ if (typeof window !== 'undefined') {
 .mine-tier { font-size: 12px; opacity: 0.8; margin-top: 3px; }
 .mine-tier-exp { opacity: 0.65; margin-left: 4px; font-size: 11px; }
 .mine-arrow { font-size: 20px; opacity: 0.6; }
+.mine-badge { display: inline-block; margin-left: 6px; font-size: 13px; vertical-align: middle; }
+.mine-idhash { font-size: 10px; opacity: 0.6; margin-left: 4px; font-family: ui-monospace, monospace; }
+/* 关注/粉丝/数字分身 统计行 */
+.mine-stats { display: flex; align-items: center; background: #fff; border-radius: 12px; margin-top: 8px; padding: 12px 8px; }
+.ms-cell { flex: 1; text-align: center; cursor: pointer; }
+.ms-cell:active { opacity: 0.6; }
+.ms-num { font-size: 17px; font-weight: 700; color: #1a1a1a; }
+.ms-label { font-size: 11px; color: #999; margin-top: 3px; }
+.ms-div { width: 1px; height: 26px; background: #f0f0f0; }
+/* 通证钱包卡片 (Mobile) */
+.tea-wallet-card {
+  position: relative; overflow: hidden; margin: 12px 0; padding: 14px 16px 12px;
+  border-radius: 18px; color: #fff; cursor: pointer;
+  border: 1px solid rgba(255, 214, 120, 0.45);
+  background: linear-gradient(135deg, #6e4400 0%, #a06a00 38%, #d19a16 72%, #eec05c 100%);
+  box-shadow: 0 8px 22px rgba(120, 74, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+/* 顶部弧形高光 */
+.tea-wallet-card::before {
+  content: ''; position: absolute; top: -46px; left: -20px; right: -20px; height: 90px;
+  background: radial-gradient(ellipse at 30% 0%, rgba(255, 236, 180, 0.55), transparent 60%);
+  pointer-events: none;
+}
+/* 科技网格纹理（细密发丝线） */
+.tw-grid {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; opacity: 0.16;
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.35) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 9px);
+}
+/* 右上角科技光点 */
+.tw-glow {
+  position: absolute; top: -14px; right: -10px; width: 72px; height: 72px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,244,200,0.55), transparent 65%); filter: blur(1px);
+  pointer-events: none;
+}
+.tw-head { position: relative; display: flex; justify-content: space-between; align-items: center; }
+.tw-title { font-size: 16px; font-weight: 800; letter-spacing: 1.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+.tw-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  padding: 3px 8px; border-radius: 10px;
+  background: rgba(30, 18, 0, 0.35); border: 1px solid rgba(255, 232, 170, 0.5);
+}
+.tw-dot { width: 6px; height: 6px; border-radius: 50%; background: #a7ffa7; box-shadow: 0 0 6px #7dff7d; }
+.tw-balances { position: relative; display: flex; align-items: center; gap: 8px; margin: 12px 0 10px; }
+.tw-item { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+.tw-icon { font-size: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+.tw-c { min-width: 0; }
+.tw-num { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.tw-label { font-size: 10px; opacity: 0.9; margin-top: 2px; letter-spacing: 0.4px; }
+.tw-divider { width: 1px; height: 32px; flex-shrink: 0; background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.55), transparent); }
+.tw-foot { position: relative; display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 236, 180, 0.28); font-size: 11px; opacity: 0.92; }
+.tw-last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tw-refresh {
+  background: rgba(30, 18, 0, 0.3); border: 1px solid rgba(255, 232, 170, 0.45); color: #fff;
+  width: 26px; height: 26px; border-radius: 50%; font-size: 15px; cursor: pointer; flex-shrink: 0;
+  line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+}
+.tw-refresh:active { background: rgba(255,255,255,0.25); transform: rotate(180deg); transition: transform 0.3s; }
+/* ── 通证钱包底部面板 ── */
+.tw-sheet-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; justify-content: center; z-index: 400; }
+.tw-sheet { background: #fff; border-radius: 18px 18px 0 0; width: 100%; max-width: 640px; padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); max-height: 82vh; overflow-y: auto; box-shadow: 0 -6px 30px rgba(0,0,0,0.18); }
+.tw-sheet-head { display: flex; align-items: center; gap: 8px; }
+.tw-sheet-title { font-size: 17px; font-weight: 800; letter-spacing: 0.5px; color: #1a1a1a; flex: 1; }
+.tw-sheet-close { background: #f2f2f2; border: none; border-radius: 50%; color: #666; font-size: 14px; width: 28px; height: 28px; cursor: pointer; }
+.tw-sheet-bal { display: flex; gap: 12px; margin: 14px 0 4px; }
+.tw-sb-item { flex: 1; background: linear-gradient(135deg, #6e4400, #d19a16); border-radius: 14px; color: #fff; padding: 14px; box-shadow: 0 4px 14px rgba(120,74,0,0.25); }
+.tw-sb-num { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tw-sb-label { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+.tw-actions { display: flex; gap: 10px; margin: 12px 0; }
+.tw-act { flex: 1; background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; font-size: 14px; font-weight: 600; padding: 12px 0; cursor: pointer; color: #333; }
+.tw-act:active { background: #f7f7f7; }
+.tw-sheet-tx { border-top: 1px solid #f2f2f2; padding-top: 6px; }
+.tw-stx-row { display: flex; justify-content: space-between; padding: 8px 2px; font-size: 13px; border-bottom: 1px solid #f7f7f7; }
+.tw-stx-typ { color: #555; }
+.tw-stx-amt.in { color: #07c160; font-weight: 600; } .tw-stx-amt.out { color: #fa5151; font-weight: 600; }
+.tw-sheet-empty { color: #bbb; font-size: 13px; text-align: center; padding: 18px 0; }
+.tw-view-title { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 12px; text-align: center; }
+.tw-view-back { color: #576b95; font-size: 13px; font-weight: 400; margin-left: 8px; cursor: pointer; }
+.tw-field { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; justify-content: center; max-width: 380px; margin-left: auto; margin-right: auto; }
+.tw-field-lb { color: #666; font-size: 13px; width: 52px; flex-shrink: 0; }
+.tw-input { flex: 1; background: #f7f8fa; border: 1px solid #e5e5e5; border-radius: 10px; font-size: 14px; padding: 10px 12px; outline: none; min-width: 0; }
+.tw-input:focus { border-color: #d19a16; }
+.tw-unit { color: #999; font-size: 12px; }
+.tw-mini-btn { background: linear-gradient(135deg, #6e4400, #d19a16); border: none; border-radius: 10px; color: #fff; font-size: 13px; padding: 9px 14px; cursor: pointer; flex-shrink: 0; }
+.tw-cta { width: 100%; max-width: 300px; background: linear-gradient(135deg, #6e4400, #d19a16); border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; padding: 13px 0; margin: 6px auto 0; cursor: pointer; box-shadow: 0 4px 12px rgba(120,74,0,0.25); }
+.tw-cta:disabled { opacity: 0.5; }
+.tw-tip { color: #999; font-size: 11px; margin-top: 8px; text-align: center; }
+.tw-receive-box { text-align: center; padding: 8px 0; }
+.tw-qr { width: 210px; height: 210px; border-radius: 12px; border: 1px solid #eee; background: #fff; display: block; margin: 0 auto; }
+.tw-qr-loading { width: 210px; height: 210px; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #bbb; font-size: 13px; }
+.tw-receive-name { font-size: 16px; font-weight: 700; margin-top: 10px; }
+.tw-receive-uid { color: #999; font-size: 11px; margin-top: 3px; word-break: break-all; padding: 0 24px; }
+.tw-receive-tip { color: #b8860b; font-size: 12px; margin-top: 8px; }
+.tw-tx-list { max-height: 46vh; overflow-y: auto; }
+.tw-tx-row { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid #f6f6f6; }
+.tw-tx-typ { font-size: 13px; color: #333; }
+.tw-tx-rem { color: #999; font-size: 11px; margin-left: 6px; }
+.tw-tx-time { color: #bbb; font-size: 11px; margin-top: 3px; }
+.tw-tx-r { font-size: 14px; font-weight: 700; }
+.tw-tx-r.in { color: #07c160; } .tw-tx-r.out { color: #fa5151; }
+.tw-sheet-enter-active, .tw-sheet-leave-active { transition: transform 0.28s cubic-bezier(0.2,0.9,0.3,1); }
+.tw-sheet-enter-from, .tw-sheet-leave-to { transform: translateY(100%); }
+/* ── 扫码层 ── */
+.tw-scan-mask { position: fixed; inset: 0; background: #000; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.tw-scan-video { width: 100%; height: 100%; object-fit: cover; }
+.tw-scan-frame { position: absolute; width: 240px; height: 240px; border: 3px solid rgba(209,154,22,0.9); border-radius: 16px; box-shadow: 0 0 0 100vmax rgba(0,0,0,0.35); top: 50%; left: 50%; transform: translate(-50%,-50%); }
+.tw-scan-tip { position: absolute; bottom: -34px; left: 0; right: 0; text-align: center; color: #fff; font-size: 13px; }
+.tw-scan-ops { position: absolute; bottom: calc(36px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.tw-scan-close { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.4); border-radius: 22px; color: #fff; font-size: 14px; padding: 10px 34px; cursor: pointer; }
+.tw-scan-upload { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.4); border-radius: 22px; color: #fff; font-size: 13px; padding: 9px 26px; cursor: pointer; }
+.tw-scan-or { color: rgba(255,255,255,0.6); font-size: 12px; }
+/* ── 链上节点查询 ── */
+.nodes-overview { background: #f8f6f0; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; }
+.no-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+.no-row span { color: #999; }
+.no-row b.ok { color: #22c55e; }
+.no-row b.bad { color: #e5484d; }
+.no-title { font-size: 12px; color: #999; margin-bottom: 6px; }
+.no-list { max-height: 40vh; overflow-y: auto; }
+.no-block { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 2px; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+.no-block:active { background: #fafafa; }
+.no-b-l { flex: 1; min-width: 0; }
+.no-b-h { font-size: 13px; color: #333; }
+.no-b-amt { font-weight: 700; }
+.no-b-amt.in { color: #07c160; }
+.no-b-amt.out { color: #fa5151; }
+.no-b-rem { font-size: 11px; color: #999; margin-top: 2px; }
+.no-b-hash.mono { font-size: 11px; color: #999; }
+.bl-valid { color: #22c55e; font-size: 13px; font-weight: 600; margin-left: 6px; }
+.bl-detail { }
+.bl-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 2px; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+.bl-row span { color: #999; flex-shrink: 0; }
+.bl-row b { word-break: break-all; text-align: right; }
+.mono { font-family: ui-monospace, monospace; }
+.mono.small { font-size: 11px; }
+.set-sheet-empty { color: #bbb; font-size: 13px; text-align: center; padding: 16px 0; }
+.set-textarea { resize: none; }
+/* ── 公链玩法面板 ── */
+.play-btn { width: 100%; margin-top: 10px; }
+.play-checkin { background: #f8f6f0; border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 10px; }
+.checkin-tree { font-size: 30px; margin-bottom: 6px; }
+.checkin-streak { font-size: 16px; font-weight: 700; color: #6e4400; }
+.checkin-streak b { font-size: 22px; }
+.checkin-meta { font-size: 11px; color: #999; margin-top: 6px; }
+.quiz-box { }
+.quiz-q { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 10px; line-height: 1.4; }
+.quiz-opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.quiz-opt { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border: 1px solid #e5e5e5; border-radius: 10px; font-size: 14px; cursor: pointer; }
+.quiz-opt.sel { border-color: #6e4400; background: #faf5e8; }
+.quiz-opt-idx { background: #f2f2f2; border-radius: 6px; font-size: 11px; font-weight: 700; padding: 2px 7px; color: #666; }
+.quiz-opt.sel .quiz-opt-idx { background: #6e4400; color: #fff; }
+.quiz-betrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.quiz-betlb { color: #666; font-size: 13px; flex-shrink: 0; }
+.quiz-amt { margin-bottom: 0; flex: 1; }
+.lb-list { }
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+.lb-rank { width: 22px; height: 22px; border-radius: 50%; background: #f0f0f0; color: #666; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.lb-rank.top { background: linear-gradient(135deg, #ffd700, #f5a623); color: #4a3000; }
+.lb-uid { flex: 1; color: #666; }
+.lb-gf { font-weight: 600; color: #6e4400; }
+.exch-rate { text-align: center; font-size: 15px; color: #6e4400; margin-bottom: 8px; }
+.exch-rate-sub { display: block; font-size: 11px; color: #999; margin-top: 2px; }
+.exch-bal { text-align: center; font-size: 12px; color: #999; margin-bottom: 12px; }
+.quiz-tip { font-size: 11px; color: #999; margin-bottom: 10px; }
+.quiz-tip b { color: #6e4400; }
+.exch-tip { font-size: 11px; color: #999; text-align: center; margin-bottom: 10px; }
+.exch-tip b { color: #e5484d; }
+.llm-sel { appearance: none; -webkit-appearance: none; }
+/* 茶票分布节点 */
+.dist-tip { font-size: 12px; color: #666; margin-bottom: 8px; }
+.dist-sum { display: flex; justify-content: space-between; font-size: 11px; color: #999; margin-bottom: 8px; }
+.dist-list { max-height: 34vh; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 10px; }
+.dist-row { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-bottom: 1px solid #f5f5f5; font-size: 12px; }
+.dist-row:last-child { border-bottom: none; }
+.dist-rank { width: 20px; height: 20px; border-radius: 50%; background: #f0f0f0; color: #666; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dist-rank.founder { background: linear-gradient(135deg, #ffd700, #f5a623); color: #4a3000; font-size: 12px; }
+.dist-name { flex: 1; color: #666; }
+.dist-val { color: #6e4400; font-weight: 600; }
+.dist-val em { font-style: normal; color: #999; font-size: 11px; margin-left: 4px; }
+
 .mine-assets {
   display: flex; background: #fff; border-radius: 12px; margin-top: 10px;
   padding: 14px 0;
@@ -2042,12 +4690,12 @@ if (typeof window !== 'undefined') {
 .mine-entry:active { background: #f5f5f5; }
 .mine-entry-icon { font-size: 22px; }
 .mine-entry-label { font-size: 12px; color: #555; margin-top: 6px; }
+.mine-login { width: 100%; margin-top: 20px; padding: 12px; background: #07c160; border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
 .mine-logout {
   width: 100%; margin-top: 16px; padding: 12px;
   border: none; border-radius: 10px; background: #fff; color: #fa5151;
   font-size: 15px; cursor: pointer;
 }
-
 /* ═══ 底部 TabBar ═══ */
 .tab-bar {
   display: flex; background: #fff; border-top: 1px solid #e5e5e5;
@@ -2061,7 +4709,26 @@ if (typeof window !== 'undefined') {
 .tab-item.active { color: #07c160; }
 .tab-icon { font-size: 21px; line-height: 1.1; }
 .tab-label { font-size: 10px; margin-top: 2px; }
-
+/* ═══ 城市 ═══ */
+.city-search { padding: 10px 14px; background: #f7f7f7; display: flex; align-items: center; gap: 8px; }
+.city-search .chat-search-input { flex: 1; }
+.city-list { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.city-item { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; }
+.city-banner { height: 110px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-size: cover; background-position: center; position: relative; }
+.city-banner-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%); display: flex; flex-direction: column; justify-content: flex-end; padding: 12px; }
+.city-name { color: #fff; font-size: 18px; font-weight: 600; }
+.city-meta { color: rgba(255,255,255,0.8); font-size: 12px; margin-top: 2px; }
+.city-role { position: absolute; top: 10px; right: 10px; background: rgba(7,193,96,0.9); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+/* ═══ 宗亲 ═══ */
+.family-header { padding: 14px; background: #f7f7f7; }
+.family-title { font-size: 16px; font-weight: 600; }
+.family-list { padding: 10px 14px; display: flex; flex-direction: column; gap: 1px; }
+.family-item { display: flex; align-items: center; padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); cursor: pointer; }
+.family-avatar { width: 40px; height: 40px; border-radius: 8px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 12px; }
+.family-info { flex: 1; }
+.family-name { font-size: 15px; font-weight: 500; }
+.family-sub { font-size: 12px; color: #999; margin-top: 2px; }
+.family-arrow { color: #ccc; font-size: 18px; }
 /* ═══ 弹窗 ═══ */
 .tea-app-mask {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
@@ -2096,7 +4763,6 @@ if (typeof window !== 'undefined') {
 .grp-member-tag { font-size: 10px; color: #b8860b; background: #fdf6e3; border-radius: 4px; padding: 2px 6px; }
 .img-mask { background: rgba(0,0,0,0.85); }
 .preview-img { max-width: 90vw; max-height: 80vh; border-radius: 8px; }
-
 /* ═══ 聊天增强：+ 面板 / 红包 / 礼物 / 语音 / 视频 ═══ */
 .chat-plus { width: 34px; height: 34px; border: none; background: #fff; border-radius: 50%; font-size: 20px; color: #576b95; flex-shrink: 0; }
 .chat-plus-panel {
@@ -2111,11 +4777,35 @@ if (typeof window !== 'undefined') {
 .plus-item span { font-size: 11px; color: #666; }
 .plus-item.recording { background: #fdeaea; border-radius: 10px; color: #e5484d; }
 .plus-item.recording span { color: #e5484d; }
+.plus-item.danger { background: #fdeaea; border-radius: 10px; }
+.plus-item.danger span { color: #e5484d; }
 .hidden-file { display: none; }
 .msg-video { max-width: 200px; max-height: 240px; border-radius: 8px; background: #000; }
 .voice-bubble { display: flex; align-items: center; gap: 6px; min-width: 70px; cursor: pointer; }
 .voice-icon { font-size: 15px; }
 .voice-dur { font-size: 13px; }
+/* 语音转文字 */
+.voice-tools { margin-top: 4px; display: flex; align-items: center; gap: 6px; max-width: 240px; }
+.voice-asr-btn { border: 1px solid #4f7df9; background: #eef3ff; color: #4f7df9; font-size: 11px; border-radius: 10px; padding: 3px 8px; cursor: pointer; }
+.voice-asr-btn:active { opacity: .7; }
+.voice-asr-text { font-size: 12px; color: #374151; background: #f3f4f6; border-radius: 8px; padding: 3px 8px; line-height: 1.5; word-break: break-word; }
+/* 文件气泡 */
+.file-bubble { display: flex; align-items: center; gap: 8px; min-width: 190px; max-width: 250px; cursor: pointer; }
+.file-icon { font-size: 26px; flex: none; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-size: 13px; font-weight: 600; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-meta { font-size: 11px; color: #999; margin-top: 2px; }
+.file-open { font-size: 11px; color: #4f7df9; flex: none; }
+/* 文件预览弹窗 */
+.file-prev-modal { display: flex; flex-direction: column; max-height: 82vh; }
+.file-prev-size { font-size: 12px; color: #999; font-weight: 400; margin-left: 6px; }
+.file-prev-body { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; min-height: 200px; margin: 6px 0; }
+.file-prev-img { max-width: 100%; max-height: 55vh; border-radius: 8px; }
+.file-prev-av { width: 100%; max-height: 55vh; }
+.file-prev-iframe { width: 100%; height: 55vh; border: none; border-radius: 8px; background: #fff; }
+.file-prev-text { width: 100%; font-size: 12px; line-height: 1.6; background: #f8f9fa; border-radius: 8px; padding: 10px; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow: auto; }
+.file-prev-unsupported { text-align: center; color: #999; padding: 30px 0; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.asr-result { white-space: pre-wrap; word-break: break-word; font-size: 14px; line-height: 1.7; background: #f8f9fa; border-radius: 8px; padding: 12px; max-height: 50vh; overflow: auto; }
 .rp-card {
   display: flex; align-items: center; gap: 10px;
   background: linear-gradient(135deg, #fa5151, #e64340); color: #fff;
@@ -2176,7 +4866,6 @@ if (typeof window !== 'undefined') {
 }
 .gift-anim-icon { font-size: 64px; animation: giftPop .5s ease; }
 .gift-anim-text { color: #fff; background: rgba(0,0,0,.55); border-radius: 16px; padding: 6px 14px; font-size: 13px; margin-top: 6px; white-space: nowrap; }
-
 /* ═══ 消息长按操作菜单 ═══ */
 .msg-action-mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 120; display: flex; align-items: flex-end; justify-content: center; }
 .msg-action-sheet { width: 100%; max-width: 640px; background: #fff; border-radius: 14px 14px 0 0; padding: 8px 0 calc(14px + env(safe-area-inset-bottom)); }
@@ -2193,7 +4882,6 @@ if (typeof window !== 'undefined') {
   font-size: 13px; z-index: 300; max-width: 80vw; text-align: center;
 }
 .mp-container { position: absolute; inset: 0; z-index: 90; }
-
 /* ═══ R11 通话 + 同声传译（手机版）═══ */
 .chat-head-act {
   min-width: 34px; height: 34px; margin-left: 6px; padding: 0 10px;
@@ -2326,4 +5014,315 @@ if (typeof window !== 'undefined') {
 }
 .rtc-panel-btn.cancel { background: #f2f2f2; color: #666; }
 .rtc-panel-btn.ok { background: #07c160; color: #fff; }
+/* ── 通用弹窗（set-mask/set-sheet）· 补第3期玩法面板缺失 ── */
+.set-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; flex-direction: column; justify-content: flex-end; align-items: center; z-index: 500; }
+.set-sheet { background: #fff; border-radius: 16px 16px 0 0; padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); max-width: 640px; width: 100%; max-height: 82vh; overflow-y: auto; }
+.set-sheet-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; text-align: center; }
+.set-sheet-btns { display: flex; gap: 10px; margin-top: 6px; }
+.set-input { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid #e5e5e5; border-radius: 10px; font-size: 14px; outline: none; margin-bottom: 10px; }
+.set-input:focus { border-color: #4f7df9; }
+.set-btn { flex: 1; border: none; border-radius: 10px; padding: 12px; font-size: 14px; cursor: pointer; }
+.set-btn.cancel { background: #f2f2f2; color: #666; }
+.set-btn.ok { background: #4f7df9; color: #fff; }
+.set-btn.ok:disabled { opacity: 0.5; }
+.set-msg { font-size: 13px; color: #e5484d; margin: 4px 0 8px; text-align: center; }
+.set-msg.ok { color: #22c55e; }
+.set-tip { font-size: 12px; color: #999; margin-bottom: 10px; line-height: 1.5; }
+/* 数字分身（完全移植桌面版） */
+.av-sheet { }
+.av-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.av-label { font-size: 13px; color: #333; }
+.av-sw { border: none; border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; background: #f2f2f2; color: #888; }
+.av-sw.on { background: #07c160; color: #fff; }
+.av-sec { font-size: 12px; color: #999; margin: 12px 0 6px; }
+.av-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.av-chip { background: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 14px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #666; }
+.av-chip.on { background: #6e4400; border-color: #6e4400; color: #fff; }
+.av-swgrid { display: flex; gap: 8px; margin-bottom: 10px; }
+.av-mini { flex: 1; background: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 4px; font-size: 11px; cursor: pointer; color: #666; }
+.av-mini.on { background: #6e4400; border-color: #6e4400; color: #fff; }
+.av-mini.full { width: 100%; margin: 6px 0; }
+.av-time { background: #f7f8fa; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px; font-size: 13px; }
+.av-dash { color: #999; }
+.av-stat { font-size: 11px; color: #999; }
+.av-stat.ok { color: #22c55e; }
+.av-test { display: flex; gap: 8px; margin-bottom: 8px; }
+.av-test .set-input { flex: 1; margin-bottom: 0; }
+.av-test .set-btn.ok { flex: 0 0 auto; padding: 12px 16px; }
+.av-reply { background: #f8f6f0; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #333; line-height: 1.5; margin-bottom: 8px; }
+.av-reply.err { color: #e5484d; }
+.av-reply.thinking { color: #999; }
+.av-reply.ok { color: #22c55e; }
+/* 助记词/备份 */
+.mnemonic-box { background: #fdf6e3; border: 1px solid #f5e3b0; border-radius: 10px; padding: 12px; font-family: ui-monospace, monospace; font-size: 14px; line-height: 1.7; color: #6e4400; margin-top: 8px; }
+/* 联邦银行档位 */
+.bank-plans { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.bank-chip { background: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 12px; padding: 6px 10px; font-size: 11px; cursor: pointer; color: #666; }
+.bank-chip.on { background: #6e4400; border-color: #6e4400; color: #fff; }
+.bank-preview { font-size: 12px; color: #999; margin-bottom: 8px; }
+.bank-preview b { color: #6e4400; }
+.bk-list { margin-top: 8px; }
+.bk-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid #f5f5f5; font-size: 12px; }
+.bk-name { color: #333; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-size { color: #999; font-size: 11px; }
+/* 关注/粉丝列表 */
+.fl-row { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid #f5f5f5; }
+.fl-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.fl-info { flex: 1; min-width: 0; }
+.fl-name { font-size: 14px; color: #333; }
+.fl-sub { font-size: 11px; color: #999; margin-top: 2px; }
+/* 邀请好友 */
+.inv-box { text-align: center; padding: 10px 0; }
+.inv-qr { width: 180px; height: 180px; border-radius: 10px; border: 1px solid #eee; background: #fff; display: block; margin: 0 auto; }
+.inv-qr-loading { width: 180px; height: 180px; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #bbb; font-size: 13px; }
+.inv-url { font-size: 11px; color: #999; word-break: break-all; margin-top: 8px; padding: 0 10px; text-align: center; }
+.no-b-hash.mono { font-size: 11px; color: #999; flex-shrink: 0; }
+/* ══ P0-1: 消息状态指示器 ══ */
+.msg-status-ind { font-size: 10px; margin-left: 4px; color: #999; }
+.msg-status-ind.s-0 { color: #ccc; }  /* sent: gray check */
+.msg-status-ind.s-1 { color: #999; }  /* delivered: gray double check */
+.msg-status-ind.s-2 { color: #4f7df9; }  /* read: blue double check */
+
+/* ══ P0-2: 重连按钮 ══ */
+.reconnect-btn {
+  margin-left: 6px; padding: 2px 8px; font-size: 11px;
+  background: #ff8c00; color: #fff; border: none; border-radius: 10px;
+  animation: pulse 1.5s infinite;
+}
+
+/* ══ P0-4: 引用回复条 ══ */
+.reply-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: #f0f4ff; border-left: 3px solid #4f7df9;
+  padding: 6px 10px; margin: 0 8px 4px; border-radius: 6px;
+  font-size: 12px; color: #4f7df9;
+}
+.reply-bar-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reply-bar-close { background: none; border: none; color: #999; font-size: 14px; cursor: pointer; }
+
+/* ══ P1-1: Emoji 面板 ══ */
+.emoji-panel {
+  background: #fff; border-top: 1px solid #e5e5e5;
+  padding: 8px; max-height: 240px; overflow-y: auto;
+}
+.emoji-tabs { display: flex; gap: 4px; margin-bottom: 8px; overflow-x: auto; }
+.emoji-tab {
+  padding: 4px 10px; font-size: 12px; border: 1px solid #e5e5e5;
+  border-radius: 12px; background: #fff; white-space: nowrap; cursor: pointer;
+}
+.emoji-tab.on { background: #4f7df9; color: #fff; border-color: #4f7df9; }
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.emoji-item {
+  font-size: 22px; padding: 6px 0; border: none; background: none;
+  cursor: pointer; border-radius: 6px; text-align: center;
+}
+.emoji-item:hover { background: #f0f4ff; }
+
+/* ══ P1-3: 语音波形 ══ */
+.voice-waveform {
+  display: flex; align-items: center; gap: 1px; height: 20px; margin: 4px 0;
+}
+.voice-waveform .wf-bar {
+  width: 3px; background: #4f7df9; border-radius: 2px;
+  transition: height 0.1s;
+}
+.voice-bubble.playing .voice-icon { animation: voicePulse 0.5s infinite; }
+@keyframes voicePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ══ P2-2: @提及 ══ */
+.mention-panel {
+  position: absolute; bottom: 100%; left: 8px; right: 8px;
+  background: #fff; border: 1px solid #e5e5e5; border-radius: 8px;
+  max-height: 200px; overflow-y: auto; z-index: 50;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+}
+.mention-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  cursor: pointer; border-bottom: 1px solid #f5f5f5;
+}
+.mention-item:hover { background: #f0f4ff; }
+.mention-avatar { width: 28px; height: 28px; border-radius: 50%; background: #eef3ff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.mention-name { font-size: 13px; }
+
+/* ══ P1-4: 群管理面板 ══ */
+.grp-action-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.grp-action-tab {
+  flex: 1; padding: 6px 0; font-size: 12px; text-align: center;
+  border: 1px solid #e5e5e5; border-radius: 6px; background: #fff; cursor: pointer;
+}
+.grp-action-tab.on { background: #4f7df9; color: #fff; border-color: #4f7df9; }
+.grp-member-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.grp-member-actions { margin-left: auto; display: flex; gap: 4px; }
+.grp-member-actions button {
+  padding: 2px 8px; font-size: 11px; border: 1px solid #e5e5e5;
+  border-radius: 10px; background: #fff; cursor: pointer;
+}
+.grp-member-actions button.danger { color: #e5484d; border-color: #e5484d; }
+
+/* ══ P2-1: 聊天搜索 ══ */
+.chat-search-panel {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: #fff; z-index: 60; display: flex; flex-direction: column;
+}
+.chat-search-header {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-bottom: 1px solid #e5e5e5;
+}
+.chat-search-input {
+  flex: 1; padding: 6px 10px; border: 1px solid #e5e5e5; border-radius: 14px;
+  font-size: 13px; outline: none;
+}
+.chat-search-results { flex: 1; overflow-y: auto; padding: 8px; }
+.chat-search-result {
+  padding: 8px; border-bottom: 1px solid #f5f5f5; cursor: pointer;
+}
+.chat-search-result:hover { background: #f0f4ff; }
+
+/* ══ P1-2: 转发面板 ══ */
+.forward-panel {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: #fff; border-top: 1px solid #e5e5e5;
+  max-height: 60%; overflow-y: auto; z-index: 55;
+  border-radius: 12px 12px 0 0;
+}
+.forward-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px; border-bottom: 1px solid #e5e5e5;
+  font-weight: 600;
+}
+.forward-conv {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  cursor: pointer; border-bottom: 1px solid #f5f5f5;
+}
+.forward-conv:hover { background: #f0f4ff; }
+
+/* ══ P2-3: IM 设置面板 ══ */
+.im-settings-section { margin-bottom: 16px; }
+.im-settings-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #666; }
+.im-settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid #f5f5f5;
+}
+.im-settings-label { font-size: 14px; }
+.im-settings-toggle {
+  width: 44px; height: 24px; border-radius: 12px; background: #ddd;
+  position: relative; cursor: pointer; transition: background 0.2s;
+}
+.im-settings-toggle.on { background: #4f7df9; }
+.im-settings-toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  transition: transform 0.2s;
+}
+.im-settings-toggle.on::after { transform: translateX(20px); }
+
+/* ══ 草稿保护提示 ══ */
+.draft-hint {
+  font-size: 11px; color: #999; padding: 2px 8px;
+  background: #f9f9f9; border-radius: 4px; margin: 0 8px 4px;
+}
+
+/* ══ 未读标记增强 ══ */
+.conv-unread { min-width: 18px; }
+.conv-unread.more { background: #ff4d4f; }
+
+/* ══ 群公告条 ══ */
+.group-announcement {
+  background: #fff8e1; border-left: 3px solid #ffc107;
+  padding: 6px 10px; font-size: 12px; color: #856404;
+  margin: 0 8px 4px; border-radius: 4px;
+}
+
 </style>
+/* ═══ Mobile Responsive ═══ */
+@media (max-width: 768px) {
+  .tea-app { max-width: 100vw !important; overflow-x: hidden; }
+  .app-header { padding: 8px 12px !important; height: auto !important; }
+  .header-title { font-size: 16px !important; }
+  .header-sub { font-size: 11px !important; }
+  .header-icon { font-size: 18px !important; padding: 6px; }
+  .app-body { padding: 8px !important; }
+  .tab-bar { padding-bottom: env(safe-area-inset-bottom) !important; }
+  .tab-item { padding: 5px 0 4px !important; }
+  .tab-icon { font-size: 18px !important; }
+  .tab-label { font-size: 9px !important; }
+  .chat-search { padding: 8px 10px !important; }
+  .conv-item { padding: 10px 8px !important; }
+  .conv-avatar { width: 40px !important; height: 40px !important; font-size: 16px !important; }
+  .conv-name { font-size: 14px !important; }
+  .conv-preview { font-size: 12px !important; }
+  .mine-hero { padding: 16px !important; flex-direction: column; text-align: center; }
+  .mine-avatar { width: 56px !important; height: 56px !important; font-size: 24px !important; }
+  .mine-name { font-size: 18px !important; }
+  .mine-tier { font-size: 13px !important; }
+  .mine-arrow { display: none; }
+  .asset-cell { padding: 10px !important; }
+  .asset-num { font-size: 20px !important; }
+  .asset-label { font-size: 11px !important; }
+  .mine-entry { padding: 12px !important; }
+  .mine-entry-icon { font-size: 20px !important; }
+  .mine-entry-label { font-size: 11px !important; }
+  .city-item { margin-bottom: 8px !important; }
+  .city-banner { height: 90px !important; }
+  .city-name { font-size: 16px !important; }
+  .city-meta { font-size: 11px !important; }
+  .family-item { padding: 10px !important; }
+  .family-avatar { width: 36px !important; height: 36px !important; }
+  .family-name { font-size: 14px !important; }
+  .family-sub { font-size: 11px !important; }
+  .post-item { padding: 10px !important; }
+  .post-title { font-size: 14px !important; }
+  .post-summary { font-size: 12px !important; }
+  .post-meta { font-size: 11px !important; }
+  .community-fab { bottom: 70px !important; right: 16px !important; }
+  .login-view { padding: 20px !important; }
+  .login-card { width: 100% !important; max-width: 360px !important; padding: 20px !important; }
+}
+@media (max-width: 480px) {
+  .app-header { padding: 6px 10px !important; }
+  .header-title { font-size: 15px !important; }
+  .conv-avatar { width: 36px !important; height: 36px !important; }
+  .mine-avatar { width: 48px !important; height: 48px !important; }
+  .mine-hero { padding: 12px !important; }
+  .asset-num { font-size: 18px !important; }
+}
+
+/* ═══ 全局主题（夜间模式）＋ 老年模式（大字体） ═══
+   非 scoped：穿透所有子组件生效（对齐电脑版 data-theme / data-eld） */
+.tea-app.mp-dark {
+  filter: invert(1) hue-rotate(180deg);
+  background: #121212 !important;
+  min-height: 100vh;
+}
+.tea-app.mp-dark img:not(.no-invert),
+.tea-app.mp-dark video:not(.no-invert),
+.tea-app.mp-dark .msg-img,
+.tea-app.mp-dark .voice-bubble,
+.tea-app.mp-dark .msg-video,
+.tea-app.mp-dark .msg-bubble.img,
+.tea-app.mp-dark .preview-img,
+.tea-app.mp-dark .file-prev-img {
+  filter: invert(1) hue-rotate(180deg);
+}
+.tea-app.mp-dark .tab-bar,
+.tea-app.mp-dark .app-header {
+  background: #1e1e1e !important;
+}
+
+/* 老年模式：放大字体 */
+.tea-app.mp-elder {
+  font-size: 1.15em;
+}
+.tea-app.mp-elder .header-title { font-size: 20px !important; }
+.tea-app.mp-elder .conv-name { font-size: 18px !important; }
+.tea-app.mp-elder .mine-name { font-size: 24px !important; }
+.tea-app.mp-elder .mine-entry-label { font-size: 15px !important; }
+.tea-app.mp-elder .msg-bubble { font-size: 18px !important; }
+.tea-app.mp-elder .msg-author { font-size: 13px !important; }
+.tea-app.mp-elder .tab-label { font-size: 12px !important; }
+.tea-app.mp-elder .chat-input { font-size: 17px !important; }
+.tea-app.mp-elder .post-title { font-size: 18px !important; }
+.tea-app.mp-elder .post-summary { font-size: 15px !important; }
