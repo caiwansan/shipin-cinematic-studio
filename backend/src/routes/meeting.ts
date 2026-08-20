@@ -6,8 +6,24 @@ import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { wkApi } from './im.js'
 
+const SFU_URL = process.env.SFU_URL || 'ws://localhost:3001'
+
 const chId = (id: string) => 'mtg_' + id
 let meetingNoColumnChecked = false
+
+// 会议码暴力破解防护：每 IP 每分钟最多尝试 10 次
+const codeAttempts = new Map<string, { count: number; resetAt: number }>()
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = codeAttempts.get(ip)
+  if (!entry || now > entry.resetAt) {
+    codeAttempts.set(ip, { count: 1, resetAt: now + 60000 })
+    return true
+  }
+  if (entry.count >= 10) return false
+  entry.count++
+  return true
+}
 // 生成唯一 6 位会议号（碰撞重试）
 async function genMeetingNo(): Promise<string> {
   for (let i = 0; i < 20; i++) {
@@ -75,32 +91,47 @@ export default async function meetingRoutes(fastify: FastifyInstance) {
     return { success: true, data: { id: meetingId, meetingNo, title, hostUid, channelId, channelType: 4, inviteUrl } }
   })
 
-  // POST /api/meeting/join — 加入会议（任意登录用户可入会）
+  // POST /api/meeting/join — 加入会议（必须通过会议码）
   fastify.post('/api/meeting/join', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const { meetingId } = request.body as any
-    if (!meetingId) return reply.status(400).send({ success: false, error: 'meetingId 必填' })
+    const { meetingId, meetingNo } = request.body as any
+    // 必须提供 meetingNo（6位会议码）— 安全门禁：只有知道会议码才能入会
+    const code = String(meetingNo || '').trim()
+    if (!/^\d{6}$/.test(code)) {
+      return reply.status(400).send({ success: false, error: '请输入正确的 6 位会议码' })
+    }
+    // 速率限制：防止暴力破解
+    const clientIp = request.ip || request.socket.remoteAddress || 'unknown'
+    if (!checkRateLimit(clientIp)) {
+      return reply.status(429).send({ success: false, error: '尝试次数过多，请稍后再试' })
+    }
     const userUid = request.user.id
+    // 通过会议码查找会议
     const meeting = await prisma.$queryRawUnsafe(
-      `SELECT * FROM meeting WHERE id = $1 AND status = 'active'`, String(meetingId)
+      `SELECT * FROM meeting WHERE meeting_no = $1 AND status = 'active'`, code
     ) as any[]
-    if (!meeting.length) return reply.status(404).send({ success: false, error: '会议不存在或已结束' })
+    if (!meeting.length) return reply.status(404).send({ success: false, error: '会议码不存在或会议已结束' })
+    const m = meeting[0]
+    // 兼容：如果同时传了 meetingId，验证它与 meetingNo 匹配（防伪造）
+    if (meetingId && String(meetingId) !== String(m.id)) {
+      return reply.status(403).send({ success: false, error: '会议码与会议ID不匹配' })
+    }
     const existing = await prisma.$queryRawUnsafe(
-      `SELECT id FROM meeting_participant WHERE meeting_id = $1 AND user_uid = $2`, String(meetingId), userUid
+      `SELECT id FROM meeting_participant WHERE meeting_id = $1 AND user_uid = $2`, String(m.id), userUid
     ) as any[]
     if (!existing.length) {
       await prisma.$queryRawUnsafe(
-        `INSERT INTO meeting_participant (meeting_id, user_uid) VALUES ($1, $2) ON CONFLICT (meeting_id, user_uid) DO UPDATE SET left_at=NULL`, String(meetingId), userUid
+        `INSERT INTO meeting_participant (meeting_id, user_uid) VALUES ($1, $2) ON CONFLICT (meeting_id, user_uid) DO UPDATE SET left_at=NULL`, String(m.id), userUid
       )
       await prisma.$queryRawUnsafe(
-        `UPDATE meeting SET participant_count = participant_count + 1 WHERE id = $1`, String(meetingId)
+        `UPDATE meeting SET participant_count = participant_count + 1 WHERE id = $1`, String(m.id)
       )
     } else {
-      await prisma.$queryRawUnsafe(`UPDATE meeting_participant SET left_at = NULL WHERE meeting_id = $1 AND user_uid = $2`, String(meetingId), userUid)
+      await prisma.$queryRawUnsafe(`UPDATE meeting_participant SET left_at = NULL WHERE meeting_id = $1 AND user_uid = $2`, String(m.id), userUid)
     }
-    // 加入 IM 频道订阅（mesh 信令/聊天）
-    await ensureMeetingChannel(String(meetingId), (meeting[0] as any).title?.slice(0, 40))
-    await addSub(String(meetingId), userUid)
-    return { success: true, data: { meetingId, userUid, channelId: chId(String(meetingId)), channelType: 4 } }
+    // 加入 IM 频道订阅（聊天用，媒体走 SFU）
+    await ensureMeetingChannel(String(m.id), (m as any).title?.slice(0, 40))
+    await addSub(String(m.id), userUid)
+    return { success: true, data: { meetingId: String(m.id), meetingNo: code, title: m.title, userUid, channelId: chId(String(m.id)), channelType: 4 } }
   })
 
   // POST /api/meeting/leave — 离开会议
@@ -156,6 +187,11 @@ export default async function meetingRoutes(fastify: FastifyInstance) {
     const { no } = request.query as any
     const n = String(no || '').trim()
     if (!/^\d{6}$/.test(n)) return reply.status(400).send({ success: false, error: '会议号格式不正确（6位数字）' })
+    // 速率限制：防止暴力破解会议码
+    const clientIp = request.ip || request.socket.remoteAddress || 'unknown'
+    if (!checkRateLimit(clientIp)) {
+      return reply.status(429).send({ success: false, error: '尝试次数过多，请稍后再试' })
+    }
     const meeting = await prisma.$queryRawUnsafe(`SELECT * FROM meeting WHERE meeting_no = $1`, n) as any[]
     if (!meeting.length) return reply.status(404).send({ success: false, error: '会议不存在' })
     return { success: true, data: { id: meeting[0].id, title: meeting[0].title, status: meeting[0].status, hostUid: meeting[0].host_uid, meetingNo: n, inviteUrl: `https://aigc.fushtn.com/mobile-app?joinMeeting=${n}` } }
@@ -187,6 +223,37 @@ export default async function meetingRoutes(fastify: FastifyInstance) {
     const out: any[] = []
     for (const m of meetings) { out.push({ ...m, meeting_no: await ensureMeetingNo(m) }) }
     return { success: true, data: { meetings: out } }
+  })
+
+  // POST /api/meeting/sfu-token — 获取 SFU 连接令牌（用于 WebRTC 媒体传输）
+  fastify.post('/api/meeting/sfu-token', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { meetingId, meetingNo } = request.body as any
+    let mId = meetingId
+    // 如果只提供了 meetingNo，先解析出 meetingId
+    if (!mId && meetingNo) {
+      const n = String(meetingNo).trim()
+      if (!/^\d{6}$/.test(n)) return reply.status(400).send({ success: false, error: '会议码格式不正确' })
+      const mtg = await prisma.$queryRawUnsafe(`SELECT id FROM meeting WHERE meeting_no = $1 AND status = 'active'`, n) as any[]
+      if (!mtg.length) return reply.status(404).send({ success: false, error: '会议不存在或已结束' })
+      mId = mtg[0].id
+    }
+    if (!mId) return reply.status(400).send({ success: false, error: 'meetingId 或 meetingNo 必填' })
+    // 验证用户是该会议的参与者
+    const userUid = request.user.id
+    const participant = await prisma.$queryRawUnsafe(
+      `SELECT id FROM meeting_participant WHERE meeting_id = $1 AND user_uid = $2 AND left_at IS NULL`, String(mId), userUid
+    ) as any[]
+    if (!participant.length) {
+      // 自动加入（如果会议存在且活跃）
+      const mtg = await prisma.$queryRawUnsafe(`SELECT * FROM meeting WHERE id = $1 AND status = 'active'`, String(mId)) as any[]
+      if (!mtg.length) return reply.status(404).send({ success: false, error: '会议不存在或已结束' })
+      await prisma.$queryRawUnsafe(
+        `INSERT INTO meeting_participant (meeting_id, user_uid) VALUES ($1, $2) ON CONFLICT (meeting_id, user_uid) DO UPDATE SET left_at=NULL`, String(mId), userUid
+      )
+    }
+    // 生成 SFU 连接令牌（简化：直接返回 userUid，生产环境用 JWT）
+    const sfuToken = userUid
+    return { success: true, data: { sfuUrl: SFU_URL, sfuToken, meetingId: String(mId), iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } }
   })
 
   // GET /api/meeting/summary — AI纪要

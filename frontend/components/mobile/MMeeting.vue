@@ -33,7 +33,7 @@
           <span class="mtg-dot"></span>
           <div class="mmc-row-i">
             <div class="mmc-row-t">{{ m.title || ('会议 ' + shortId(m.id)) }}</div>
-            <div class="mmc-row-s">会议号 {{ shortId(m.id) }} · {{ m.participant_count || 0 }} 人 · {{ fmtTime(m.started_at) }}</div>
+            <div class="mmc-row-s">会议码 <b class="mmc-row-code">{{ m.meeting_no || shortId(m.id) }}</b> · {{ m.participant_count || 0 }} 人 · {{ fmtTime(m.started_at) }}</div>
           </div>
           <span class="mmc-row-go">进入 ›</span>
         </div>
@@ -63,14 +63,15 @@
         </div>
       </div>
 
-      <!-- 加入会议弹窗 -->
+      <!-- 加入会议弹窗（必须输入6位会议码） -->
       <div v-if="joinOpen" class="mmc-mask" @click.self="joinOpen = false">
         <div class="mmc-sheet">
           <div class="mmc-sheet-t">🔑 加入会议</div>
-          <input v-model="joinNo" class="mmc-input" maxlength="12" placeholder="输入会议号（ID 或 6位码）" @keyup.enter="doJoin" />
+          <div class="mmc-sheet-sub">请输入 6 位会议码</div>
+          <input v-model="joinNo" class="mmc-input" maxlength="6" placeholder="6位会议号" @keyup.enter="doJoin" />
           <div class="mmc-sheet-btns">
             <button class="mmc-btn cancel" @click="joinOpen = false">取消</button>
-            <button class="mmc-btn primary" :disabled="joining" @click="doJoin">{{ joining ? '加入中…' : '加入' }}</button>
+            <button class="mmc-btn primary" :disabled="joining || joinNo.length !== 6" @click="doJoin">{{ joining ? '加入中…' : '加入' }}</button>
           </div>
         </div>
       </div>
@@ -82,7 +83,7 @@
         <span class="mmr-back" @click="leaveRoom">‹</span>
         <div class="mmr-ti">
           <div class="mmr-name">{{ meet.title || ('会议 ' + roomNo) }} <span class="mmr-code">#{{ roomNo }}</span></div>
-          <div class="mmr-sub"><span v-if="timer" class="mmr-timer">⏱ {{ timer }}</span> · {{ participants.filter(p=>!p.left_at).length }} 人在会</div>
+          <div class="mmr-sub"><span v-if="timer" class="mmr-timer">⏱ {{ timer }}</span> · {{ participants.filter(p=>!p.left_at).length }} 人在会 <span v-if="sfu.connected.value" class="mmr-sfu-ok">🟢 SFU</span><span v-else-if="sfuConnecting" class="mmr-sfu-ing">🟡 连接中</span><span v-else-if="sfuError" class="mmr-sfu-err">🔴 {{ sfuError }}</span></div>
         </div>
       </div>
 
@@ -163,11 +164,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watchEffect } from 'vue'
 import { mobileAuthFetch, mobileToast } from '~/composables/useMobileApi'
+import { useSfuMeeting } from '~/composables/useSfuMeeting'
 
 const props = defineProps<{ tea: any }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 const tea = props.tea
 const authTok = () => localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
+
+// ── SFU 媒体引擎（千人会议室）──
+const sfu = useSfuMeeting()
+const sfuConnecting = ref(false)
+const sfuError = ref('')
 
 // ── 会议中心状态 ──
 const inRoom = ref(false)
@@ -293,9 +300,10 @@ function copyInvite(m: any) {
 function enterCreated() { if (createdMeeting.value) joinById(String(createdMeeting.value.id)); }
 async function doJoin() {
   const no = joinNo.value.trim()
-  if (!no) { mobileToast('请输入会议号'); return }
+  // 必须输入6位数字会议码
+  if (!/^\d{6}$/.test(no)) { mobileToast('请输入正确的 6 位会议码'); return }
   joining.value = true
-  try { await joinById(no) } finally { joining.value = false }
+  try { await joinByCode(no) } finally { joining.value = false }
 }
 function openSummary(id: string) {
   if (id) joinById(id)
@@ -303,6 +311,26 @@ function openSummary(id: string) {
 // 对外暴露（消息页快捷进入）
 function openRoomById(id: string) { joinById(id) }
 defineExpose({ openRoomById })
+
+async function joinByCode(code: string) {
+  joinOpen.value = false
+  try {
+    // 必须通过 6 位会议码加入（安全门禁）
+    const n = String(code || '').trim()
+    if (!/^\d{6}$/.test(n)) { mobileToast('请输入正确的 6 位会议码'); return }
+    // 1. 通过会议码解析会议信息
+    const br = await mobileAuthFetch('/api/meeting/by-no?no=' + encodeURIComponent(n))
+    const bj = await br.json()
+    if (!bj.success) { mobileToast(bj.error || '会议码不存在'); return }
+    if (bj.data.status !== 'active') { mobileToast('会议不存在或已结束'); return }
+    // 2. 加入会议（后端验证会议码）
+    const jr = await mobileAuthFetch('/api/meeting/join', { method: 'POST', body: JSON.stringify({ meetingNo: n, meetingId: bj.data.id }) })
+    const jj = await jr.json()
+    if (!jj.success) { mobileToast(jj.error || '加入失败'); return }
+    // 3. 进入会议室（SFU 媒体）
+    await enterRoom(String(bj.data.id), bj.data.title || '', false)
+  } catch { mobileToast('加入失败') }
+}
 
 async function joinById(idOrNo: string) {
   joinOpen.value = false
@@ -321,12 +349,13 @@ async function joinById(idOrNo: string) {
     if (!ij.success) { mobileToast(ij.error || '会议不存在'); return }
     const m = ij.data
     if (m.status !== 'active') { mobileToast('会议不存在或已结束'); return }
-    await mobileAuthFetch('/api/meeting/join', { method: 'POST', body: JSON.stringify({ meetingId: m.id }) })
+    // 加入时也要传 meetingNo（安全门禁）
+    await mobileAuthFetch('/api/meeting/join', { method: 'POST', body: JSON.stringify({ meetingId: m.id, meetingNo: m.meeting_no }) })
     await enterRoom(String(m.id), m.title || '', false)
   } catch { mobileToast('加入失败') }
 }
 
-// ── 进入会议室 ──
+// ── 进入会议室（SFU 媒体 + IM 聊天）──
 async function enterRoom(id: string, title: string, isHostCreate: boolean) {
   meUid.value = tea.userId.value
   meetId.value = id
@@ -336,10 +365,6 @@ async function enterRoom(id: string, title: string, isHostCreate: boolean) {
   camOff.value = false
   // 订阅会议频道（聊天用）
   try { await tea.subscribeChannel('mtg_' + id, 4) } catch {}
-  // 拉取 ICE 配置
-  try { const r = await mobileAuthFetch('/api/im/rtc/config'); const j = await r.json(); if (j.success && j.data?.iceServers?.length) iceServers = j.data.iceServers } catch {}
-  // 注册 CMD 信令（幂等，避免重复）
-  if (!cmdRegistered.value) { tea.onCMD(handleCmd); cmdRegistered.value = true }
   // 刷新详情
   try {
     const r = await mobileAuthFetch('/api/meeting/info?meetingId=' + encodeURIComponent(id))
@@ -348,16 +373,40 @@ async function enterRoom(id: string, title: string, isHostCreate: boolean) {
   } catch {}
   loadParticipantNames()
   startTimer()
-  // 获取本地媒体
-  try { localStream.value = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true }, video: { width: { ideal: 640 }, height: { ideal: 480 } } }) } catch {}
+
+  // ── SFU 媒体连接（千人会议室）──
+  sfuConnecting.value = true
+  sfuError.value = ''
+  try {
+    // 1. 获取 SFU 连接令牌
+    const tr = await mobileAuthFetch('/api/meeting/sfu-token', { method: 'POST', body: JSON.stringify({ meetingId: id }) })
+    const tj = await tr.json()
+    if (!tj.success) { sfuError.value = tj.error || '获取媒体服务失败'; sfuConnecting.value = false }
+    else {
+      // 2. 连接 SFU
+      const ok = await sfu.connect({
+        sfuUrl: tj.data.sfuUrl,
+        sfuToken: tj.data.sfuToken,
+        meetingId: id,
+        iceServers: tj.data.iceServers || [{ urls: 'stun:stun.l.google.com:19302' }]
+      })
+      if (ok) {
+        localStream.value = sfu.localStream.value
+        console.log('[Meeting] SFU 媒体连接成功')
+      } else {
+        sfuError.value = sfu.error.value || '媒体连接失败'
+      }
+      sfuConnecting.value = false
+    }
+  } catch (e) {
+    sfuError.value = '媒体连接失败'
+    sfuConnecting.value = false
+  }
+
   addSelfParticipant()
-  // 广播加入（mesh：其他成员收到后主动建连）
-  announceJoin()
-  // 启动会话消息轮询 + 信令
+  // 启动聊天消息轮询
   signalPollIv = setInterval(pollRoom, 2500)
   pollRoom()
-  // 注册 CMD 信令
-  tea.onCMD(handleCmd)
 }
 function addSelfParticipant() {
   const me = { uid: meUid.value, name: (readMyName()), role: isHost.value ? 'host' : 'member', left_at: null, isHost: isHost.value, stream: localStream.value, video: !camOff.value, muted: false, mine: true }
@@ -603,7 +652,7 @@ function announceJoin() {
 }
 async function leaveRoom() {
   try { await mobileAuthFetch('/api/meeting/leave', { method: 'POST', body: JSON.stringify({ meetingId: meetId.value }) }) } catch {}
-  tea.sendCMD('mtg', { action: 'leave', meetingId: meetId.value }, 'mtg_' + meetId.value, 4).catch(() => {})
+  sfu.disconnect()
   cleanupRoom()
   inRoom.value = false
   cmdRegistered.value = false
@@ -611,7 +660,7 @@ async function leaveRoom() {
 }
 async function endMeeting() {
   try { await mobileAuthFetch('/api/meeting/end', { method: 'POST', body: JSON.stringify({ meetingId: meetId.value }) }) } catch {}
-  tea.sendCMD('mtg', { action: 'end', meetingId: meetId.value }, 'mtg_' + meetId.value, 4).catch(() => {})
+  sfu.disconnect()
   cleanupRoom()
   inRoom.value = false
   cmdRegistered.value = false
@@ -620,7 +669,8 @@ async function endMeeting() {
 function cleanupRoom() {
   if (timerIv) clearInterval(timerIv)
   if (signalPollIv) clearInterval(signalPollIv); signalPollIv = null
-  localStream.value?.getTracks().forEach((t) => t.stop()); localStream.value = null
+  sfu.disconnect()
+  localStream.value = null
   peers.forEach((pc) => { try { pc.close() } catch {} })
   peers.clear()
   videoElMap.clear()
@@ -650,11 +700,16 @@ onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); cleanupRoom() }
 .mmc-row-i { flex: 1; min-width: 0; }
 .mmc-row-t { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mmc-row-s { font-size: 12px; color: #8b94a3; margin-top: 2px; }
+.mmc-row-code { color: #2bd576; font-weight: 700; letter-spacing: 1px; }
 .mmc-row-go { color: #2b7cf0; font-size: 14px; flex-shrink: 0; }
 .mmc-ended { color: #f0a030; }
 .mmc-mask { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; }
 .mmc-sheet { background: #1b2029; border-radius: 18px 18px 0 0; width: 100%; max-width: 640px; margin: 0 auto; padding: 18px 16px 24px; }
 .mmc-sheet-t { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+.mmc-sheet-sub { font-size: 13px; color: #8b94a3; margin-bottom: 10px; }
+.mmr-sfu-ok { color: #2bd576; font-size: 11px; }
+.mmr-sfu-ing { color: #f0a030; font-size: 11px; }
+.mmr-sfu-err { color: #e04545; font-size: 11px; }
 .mmc-input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid #2f3743; background: #12161e; color: #fff; font-size: 15px; }
 .mmc-sheet-btns { display: flex; gap: 10px; margin-top: 14px; }
 /* 会议室 */
