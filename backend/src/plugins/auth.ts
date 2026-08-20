@@ -28,6 +28,8 @@ const GEO_PUBLIC_PATHS: string[] = [
   '/api/geo/workspace/mission-control',  // GET mission control（dashboard 首页用）
   '/api/geo/projects/',           // GET 单项目详情
   '/api/geo/recommendation/',     // GET recommendation 相关
+  '/api/geo/dashboard/stats',     // GET dashboard 统计数据
+  '/api/geo/dashboard/provider-status',  // GET provider 配置状态
 ]
 
 export default fp(async function authPlugin(fastify: FastifyInstance) {

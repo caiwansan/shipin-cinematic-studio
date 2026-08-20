@@ -157,7 +157,21 @@ function startOAuth(authUrl: string, onSuccess: (token: string) => void, onError
   const pollClose = setInterval(() => {
     if (w.closed) {
       clearInterval(pollClose)
-      if (oauthListener) { window.removeEventListener('message', oauthListener); oauthListener = null; qqLoading.value = false }
+      if (oauthListener) { window.removeEventListener('message', oauthListener); oauthListener = null }
+      // Mobile fallback: popup may not have window.opener, but localStorage is shared (same-origin)
+      const storedToken = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || localStorage.getItem('token')
+      const storedUser = localStorage.getItem('auth_user')
+      if (storedToken && !oauthListener) {
+        try {
+          const { setToken, setUser } = require('~/utils/token-cache') as typeof import('~/utils/token-cache')
+          setToken(storedToken)
+          const user = storedUser ? JSON.parse(storedUser) : { username: '用户' }
+          setUser(user)
+          onSuccess(storedToken)
+        } catch { qqLoading.value = false }
+      } else {
+        qqLoading.value = false
+      }
     }
   }, 1000)
 }

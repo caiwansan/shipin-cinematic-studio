@@ -1,0 +1,175 @@
+import fp from 'fastify-plugin'
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import { prisma } from '../utils/index.js'
+import { getClientIp } from '../utils/session.js'
+
+// AI 相关 API 路径前缀，VIP 会员必须有私有 key
+const AI_API_PREFIXES = [
+  '/images/generate',
+  '/videos/generate',
+  '/api/tts/generate',
+  '/api/v1/pipeline',
+  '/api/v1/narrative',
+  '/api/v1/customer-service',
+  '/api/storyboards/generate',
+  '/api/images/optimize',
+  '/api/images/evaluate',
+  '/api/projects/create',
+  '/api/characters',
+]
+
+// GEO workspace — 要求 JWT 认证
+const GEO_REQUIRED_PREFIXES = [
+  '/api/geo/',
+]
+
+// GEO 路由白名单 — 不需要 JWT 认证
+const GEO_PUBLIC_PATHS: string[] = [
+  '/api/geo/projects',            // GET 列表（dashboard 首页展示品牌用）
+  '/api/geo/workspace/mission-control',  // GET mission control（dashboard 首页用）
+  '/api/geo/projects/',           // GET 单项目详情
+  '/api/geo/recommendation/',     // GET recommendation 相关
+  '/api/geo/dashboard/stats',     // GET dashboard 统计数据
+  '/api/geo/dashboard/provider-status',  // GET provider 配置状态
+]
+
+export default fp(async function authPlugin(fastify: FastifyInstance) {
+  fastify.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
+    try {
+      await request.jwtVerify()
+      // 单设备登录检查：token 中的 tokenVersion 必须与数据库一致
+      const decoded = request.user as any
+      if (decoded && decoded.id && decoded.tokenVersion !== undefined) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: decoded.id },
+          select: { tokenVersion: true },
+        })
+        if (dbUser && dbUser.tokenVersion !== decoded.tokenVersion) {
+          reply.status(401).send({ error: '未授权', message: '账号已在其他设备登录，请重新登录' })
+          return reply
+        }
+      }
+      // IP 绑定检查：token 签发 IP 与当前请求 IP 不一致 → 拒绝（同 IP 多端共存，跨 IP 互踢）
+      if (decoded && decoded.id && decoded.ip) {
+        const currentIp = getClientIp(request)
+        if (currentIp && decoded.ip !== currentIp) {
+          reply.status(401).send({ error: '未授权', message: '账号已在其他设备登录，请重新登录' })
+          return reply
+        }
+      }
+      // 更新用户最后活跃时间（不 await，不阻塞请求）
+      const userId = decoded?.id
+      if (userId) {
+        prisma.user.update({
+          where: { id: userId },
+          data: { lastActiveAt: new Date() },
+        }).catch(() => {}) // 静默失败，不影响业务
+      }
+    } catch (err: any) {
+      const errMsg = err.message || String(err)
+      const errCode = err.code || ''
+      console.log(`[Auth] ❌ POST ${request.url} auth failed: code=${errCode}, message="${errMsg}", hasAuthHeader=${!!request.headers.authorization}, authPrefix=${request.headers.authorization?.substring(0, 10) || 'none'}`)
+      reply.status(401).send({ error: '未授权', message: 'token 无效或已过期，请重新登录' })
+      return reply
+    }
+  })
+
+  /**
+   * 全局拦截：VIP 会员必须配置私有 API Key 才能使用 AI 功能
+   * 免费/基础会员不受限制
+   */
+  fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+    const url = request.url
+
+    // ── GEO 工作台 — 强制 JWT 认证（白名单路径跳过） ──
+    const isGeoRequest = GEO_REQUIRED_PREFIXES.some(prefix => url.startsWith(prefix))
+    if (isGeoRequest) {
+      // 白名单路径跳过认证
+      if (GEO_PUBLIC_PATHS.some(p => url.startsWith(p))) {
+        return
+      }
+      try {
+        await request.jwtVerify()
+        const decoded = request.user as any
+        if (decoded && decoded.id && decoded.tokenVersion !== undefined) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: { tokenVersion: true },
+          })
+          if (dbUser && dbUser.tokenVersion !== decoded.tokenVersion) {
+            reply.status(401).send({ error: '未授权', message: '账号已在其他设备登录，请重新登录' })
+            return reply
+          }
+        }
+        // IP 绑定检查：同 IP 多端共存，跨 IP 互踢
+        if (decoded && decoded.id && decoded.ip) {
+          const currentIp = getClientIp(request)
+          if (currentIp && decoded.ip !== currentIp) {
+            reply.status(401).send({ error: '未授权', message: '账号已在其他设备登录，请重新登录' })
+            return reply
+          }
+        }
+        const userId = decoded?.id
+        if (userId) {
+          prisma.user.update({
+            where: { id: userId },
+            data: { lastActiveAt: new Date() },
+          }).catch(() => {})
+        }
+        return // 认证通过
+      } catch (err: any) {
+        const hasAuth = !!request.headers.authorization
+        console.log('[Auth.GEO] ❌ 401 url=' + url + ' hasAuth=' + hasAuth + ' prefix=' + (request.headers.authorization?.substring(0, 15) || 'none'))
+        reply.status(401).send({ error: '未授权', message: '请先登录后再使用 GEO 工作台' })
+        return reply
+      }
+    }
+
+    // ── AI 功能 — VIP 会员必须配置私有 API Key ──
+    const isAiRequest = AI_API_PREFIXES.some(prefix => url.startsWith(prefix))
+    if (!isAiRequest) return
+
+    // 尝试解析 JWT，没有 token 则跳过（未登录用户走平台 key）
+    let userId: string | undefined
+    try {
+      await request.jwtVerify()
+      userId = (request.user as any)?.id
+    } catch {
+      // 未认证请求不拦截
+      return
+    }
+
+    if (!userId) return
+
+    // 查询用户等级
+    // SPRINT-COMMERCE-SSOT-02: Entitlement 优先判定（PersonalEntitlement 权威 → 存量兼容）
+    const { resolveEffectiveTierAsync } = await import('../utils/membership-tier.js')
+    const tier = await resolveEffectiveTierAsync(userId)
+    // 只有 VIP 会员需要检查私有 key
+    if (tier === 'free' || tier === 'basic') return
+
+    // VIP 会员必须有至少一个私有 API Key（V2 配置）
+    const v2Config = await prisma.userModelConfigV2.findUnique({ where: { userId } })
+    const hasV2Key = !!(v2Config?.llmApiKey || v2Config?.imageApiKey || v2Config?.videoApiKey || v2Config?.ttsApiKey)
+    if (!hasV2Key) {
+      reply.status(403).send({
+        code: 403,
+        message: 'VIP 会员必须配置自己的 API Key 才能使用 AI 功能，请在「用户设置」中接入 API Key',
+      })
+    }
+  })
+})
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
+  }
+}
+
+// @phase4-owner
+
+export const __RUNTIME_OWNER__ = {
+  "entry": "narrative-gateway",
+  "mode": "SYNC"
+};
+

@@ -37,11 +37,14 @@ model User {
   alipayBoundAt         DateTime?              @map("alipay_bound_at") // MEMBER-CENTER-02 支付宝绑定时间
   memberTier            String                 @default("free")
   memberExpiresAt       DateTime?
+  voiceTranslatePrefs   String?   @map("voice_translate_prefs") @db.Text // VOICE-XLAT-01 语音译音偏好 JSON {enabled,tgtLang,myLang}
   walletBalance         Float                  @default(0) @map("wallet_balance") // MEMBER-CENTER-03 可提现余额（推广佣金）
   goldCoins             Int                    @default(0) @map("gold_coins") // GIFT-GOLD-ECO-01 金币（礼物收益，10:1 兑余额）
   createdAt             DateTime               @default(now())
   wechatOpenId          String?                @unique
   tokenVersion          Int                    @default(1)
+  activeIp              String?                @map("active_ip") // 会话绑定 IP：同 IP 多端共存，跨 IP 互踢
+  knownIps              String?                @map("known_ips") // 30天内已知登录 IP 列表 JSON [{ip,at}]：列表内 IP 共存
   qqOpenId              String?                @unique
   marketAgentId         String?
   agentPlanId           String?
@@ -6783,6 +6786,7 @@ model LegalCase {
   category         String?  @db.VarChar(100)
   status           String   @default("pending") @db.VarChar(50)
   analysisProgress Int      @default(0)
+  summary          String?
   userId           String   @db.Uuid
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -6790,6 +6794,105 @@ model LegalCase {
   @@index([userId])
   @@index([status])
   @@map("legal_case")
+}
+
+model LegalCaseAnalysis {
+  id              String   @id @default(uuid()) @db.Uuid
+  caseId          String   @db.Uuid
+  version         Int
+  status          String   @default("processing") @db.VarChar(50)
+  summary         String?
+  riskAnalysis    String?
+  missingEvidence String?
+  aiSuggestion    String?
+  confidence      Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([caseId])
+  @@map("legal_case_analysis")
+}
+
+model LegalCaseChatSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  caseId    String   @db.Uuid
+  title     String   @db.VarChar(200)
+  status    String   @default("active") @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages  LegalCaseChatMessage[]
+
+  @@index([caseId])
+  @@map("legal_case_chat_session")
+}
+
+model LegalCaseChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @db.Uuid
+  role      String   @db.VarChar(20)
+  content   String
+  createdAt DateTime @default(now())
+
+  session   LegalCaseChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("legal_case_chat_message")
+}
+
+model LegalEvidence {
+  id           String   @id @default(uuid()) @db.Uuid
+  caseId       String   @db.Uuid
+  title        String   @db.VarChar(200)
+  description  String?
+  evidenceDate DateTime?
+  category     String?  @db.VarChar(100)
+  fileId       String?  @db.Uuid
+  status       String   @default("collected") @db.VarChar(50)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([caseId])
+  @@map("legal_evidence")
+}
+
+model LegalContract {
+  id        String   @id @default(uuid()) @db.Uuid
+  caseId    String   @db.Uuid
+  title     String   @db.VarChar(200)
+  content   String?
+  category  String?  @db.VarChar(100)
+  status    String   @default("draft") @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@map("legal_contract")
+}
+
+model LegalLegalDocument {
+  id        String   @id @default(uuid()) @db.Uuid
+  caseId    String   @db.Uuid
+  title     String   @db.VarChar(200)
+  docType   String?  @db.VarChar(100)
+  content   String?
+  status    String   @default("draft") @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@map("legal_legal_document")
+}
+
+model LegalCaseFile {
+  id        String   @id @default(uuid()) @db.Uuid
+  caseId    String   @db.Uuid
+  fileName  String   @db.VarChar(500)
+  fileType  String?  @db.VarChar(100)
+  createdAt DateTime @default(now())
+
+  @@index([caseId])
+  @@map("legal_case_file")
 }
 
 model LegalContractTemplate {
@@ -10939,4 +11042,557 @@ model ChatGroupApply {
   @@index([groupId, status])
   @@index([uid, status])
   @@map("chat_group_apply")
+}
+
+// ============================================
+// VOICE-XLAT-01 私聊语音译音（2026-08-10 掌柜指令）
+// 接收方偏好：语音消息译成目标语言语音（复用 ASR→DeepSeek→edge-tts 链路），按 messageId+tgtLang 缓存防重复翻译
+// ============================================
+
+model VoiceTranslation {
+  id        String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  messageId String    @map("message_id") @db.Text // WuKongIM message_idstr
+  srcLang   String    @default("zh") @map("src_lang") @db.Text
+  tgtLang   String    @map("tgt_lang") @db.Text
+  text      String    @db.Text // 译文文本
+  audioUrl  String?   @map("audio_url") @db.Text // 译音 mp3 URL（无 edge-tts 音色语种为 null）
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@unique([messageId, tgtLang])
+  @@index([tgtLang])
+  @@map("voice_translation")
+}
+
+model TeaPost {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  uid       String   @db.Text
+  content   String   @db.Text
+  images    String   @default("[]") @db.Text
+  sig       String   @default("") @db.Text
+  pubKey    String   @default("") @map("pub_key") @db.Text
+  scope     String   @default("public") @db.Text
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("tea_post")
+}
+
+
+model FamilyPost {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  groupId   String   @map("group_id") @db.Text
+  uid       String   @db.Text
+  content   String   @db.Text
+  images    String   @default("[]") @db.Text
+  likes     String   @default("[]") @db.Text
+  comments  String   @default("[]") @db.Text
+  gifts     Int      @default(0)
+  sig       String   @default("") @db.Text
+  pubKey    String   @default("") @map("pub_key") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("family_post")
+}
+
+
+model TeaAdmin {
+  uid       String   @id @db.Text
+  by        String   @default("") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("tea_admin")
+}
+
+model TeaBan {
+  uid       String   @id @db.Text
+  reason    String   @default("") @db.Text
+  by        String   @default("") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("tea_ban")
+}
+
+
+model CityAgentApply {
+  id             String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  uid            String   @db.Text
+  companyName    String   @map("company_name") @db.Text
+  companyLoc     String   @map("company_location") @db.Text
+  companyScale   String   @map("company_scale") @db.Text
+  cityName       String   @map("city_name") @db.Text
+  contactName    String   @map("contact_name") @db.Text
+  contactPhone   String   @map("contact_phone") @db.Text
+  status         String   @default("pending") @db.Text
+  note           String   @default("") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  @@map("city_agent_apply")
+}
+
+
+model City {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  name      String   @db.Text
+  banner    String   @default("") @db.Text
+  agentUid  String   @map("agent_uid") @db.Text
+  status    String   @default("active") @db.Text
+  pubAllMuted   Boolean  @default(false) @map("pub_all_muted")
+  pubAllowImage Boolean  @default(true) @map("pub_allow_image")
+  pubAllowVideo Boolean  @default(true) @map("pub_allow_video")
+  pubAllowFile  Boolean  @default(true) @map("pub_allow_file")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("city")
+}
+
+model CityAdmin {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId    String   @map("city_id") @db.Text
+  uid       String   @db.Text
+  pubKey    String   @default("") @map("pub_key") @db.Text
+  status    String   @default("active") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([cityId, uid])
+  @@map("city_admin")
+}
+
+model CityMember {
+  id           String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId       String    @map("city_id") @db.Text
+  uid          String    @db.Text
+  hash         String    @default("") @db.Text
+  inviterHash  String    @default("") @map("inviter_hash") @db.Text
+  inviteHash   String    @default("") @map("invite_hash") @db.Text
+  status       String    @default("pending") @db.Text
+  lastActiveAt DateTime? @map("last_active_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  @@unique([cityId, uid])
+  @@map("city_member")
+}
+
+model CityInvite {
+  id         String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId     String   @map("city_id") @db.Text
+  inviterUid String   @map("inviter_uid") @db.Text
+  hash       String   @unique @db.Text
+  code       String   @unique @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  @@map("city_invite")
+}
+
+model CityCloseVote {
+  id         String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId     String   @map("city_id") @db.Text
+  initiator  String   @db.Text
+  status     String   @default("open") @db.Text
+  signatures String   @default("[]") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  @@map("city_close_vote")
+}
+
+model CityRoom {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId    String   @map("city_id") @db.Text
+  name      String   @db.Text
+  ownerUid  String   @map("owner_uid") @db.Text
+  channelId String   @map("channel_id") @db.Text
+  status    String   @default("active") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  allowImage Boolean  @default(true) @map("allow_image")
+  allowVideo Boolean  @default(true) @map("allow_video")
+  allowFile  Boolean  @default(true) @map("allow_file")
+  allMuted   Boolean  @default(false) @map("all_muted")
+  @@map("city_room")
+}
+
+model CityRoomMember {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  roomId    String   @map("room_id") @db.Text
+  uid       String   @db.Text
+  status    String   @default("pending") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([roomId, uid])
+  muted    Boolean  @default(false)
+  @@map("city_room_member")
+}
+
+
+model CityRoomClaim {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId    String   @map("city_id") @db.Text
+  name      String   @db.Text
+  uid       String   @db.Text
+  status    String   @default("pending") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("city_room_claim")
+}
+
+model CityPost {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId    String   @map("city_id") @db.Text
+  uid       String   @db.Text
+  content   String   @db.Text
+  title     String   @default("") @db.Text
+  images    String   @default("[]") @db.Text
+  pinned    Int      @default(0)
+  featured  Boolean  @default(false)
+  boldTitle Boolean  @default(false) @map("bold_title")
+  pushed    Boolean  @default(false)
+  sig       String   @default("") @db.Text
+  pubKey    String   @default("") @map("pub_key") @db.Text
+  status    String   @default("active") @db.Text
+
+  likes     String   @default("[]") @db.Text
+  comments  String   @default("[]") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("city_post")
+}
+
+model CityBiz {
+  id         String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId     String   @map("city_id") @db.Text
+  uid        String   @db.Text
+  licensePic String   @default("") @map("license_pic") @db.Text
+  venuePic   String   @default("") @map("venue_pic") @db.Text
+  shopName   String   @default("") @map("shop_name") @db.Text
+  banner     String   @default("") @db.Text
+  phone      String   @default("") @db.Text
+  intro      String   @default("") @db.Text
+  lat        Float    @default(0)
+  lng        Float    @default(0)
+  address    String   @default("") @db.Text
+  bizDesc    String   @default("") @map("biz_desc") @db.Text
+  status     String   @default("pending") @db.Text
+  heat       Float    @default(0)
+  downgraded Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+  @@unique([cityId, uid])
+  @@map("city_biz")
+}
+
+model CityBizProduct {
+  id           String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  bizId        String   @map("biz_id") @db.Text
+  name         String   @db.Text
+  cover        String   @default("") @db.Text
+  images       String   @default("[]") @db.Text
+  detailImages String   @default("[]") @map("detail_images") @db.Text
+  prodDesc     String   @default("") @map("prod_desc") @db.Text
+  priceTea     Int      @default(0) @map("price_tea")
+  stock        Int      @default(0)
+  status       String   @default("active") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  // 行业标准化字段
+  standard     String   @default("") @map("standard")       // 执行标准（如 GB/T 19001）
+  licenseNo    String   @default("") @map("license_no")     // 生产许可证号
+  manufacturer String   @default("") @map("manufacturer")   // 生产厂家
+  barcode      String   @default("") @map("barcode")       // 产品条码
+  origin       String   @default("") @map("origin")        // 产地
+  netWeight    String   @default("") @map("net_weight")    // 净含量
+  shelfLife    String   @default("") @map("shelf_life")    // 保质期
+  storage      String   @default("") @map("storage")       // 储存条件
+  commissionRate Int     @default(0) @map("commission_rate") // 推荐佣金比例(0-100, 百分比)
+  @@map("city_biz_product")
+}
+
+model CityBizPost {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  bizId     String   @map("biz_id") @db.Text
+  content   String   @db.Text
+  images    String   @default("[]") @db.Text
+  status    String   @default("active") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("city_biz_post")
+}
+
+model CityReview {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  bizId     String   @map("biz_id") @db.Text
+  uid       String   @db.Text
+  type      String   @db.Text
+  content   String   @default("") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([bizId, uid, type])
+  @@map("city_review")
+}
+
+model CityVote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId    String   @map("city_id") @db.Text
+  type      String   @db.Text
+  subject   String   @default("") @db.Text
+  initiator String   @db.Text
+  status    String   @default("open") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("city_vote")
+}
+
+model CityBallot {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  voteId    String   @map("vote_id") @db.Text
+  uid       String   @db.Text
+  option    String   @default("yes") @db.Text
+  hash      String   @default("") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([voteId, uid])
+  @@map("city_ballot")
+}
+
+
+model CityElection {
+  id              String    @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  cityId          String    @map("city_id") @db.Text
+  type            String    @default("annual") @db.Text
+  status          String    @default("primary") @db.Text
+  targetAdminUid  String    @default("") @map("target_admin_uid") @db.Text
+  creatorUid      String    @default("") @map("creator_uid") @db.Text
+  primaryEndAt    DateTime? @map("primary_end_at")
+  voteEndAt       DateTime? @map("vote_end_at")
+  winnerUid       String    @default("") @map("winner_uid") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  @@map("city_election")
+}
+
+model CityElectionCandidate {
+  id            String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  electionId    String   @map("election_id") @db.Text
+  uid           String   @db.Text
+  status        String   @default("applied") @db.Text
+  supportCount  Int      @default(0) @map("support_count")
+  votes         Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+  @@unique([electionId, uid])
+  @@map("city_election_candidate")
+}
+
+model CityElectionSupport {
+  id            String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  electionId    String   @map("election_id") @db.Text
+  candidateUid  String   @map("candidate_uid") @db.Text
+  uid           String   @db.Text
+  type          String   @default("primary") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  @@unique([electionId, uid, type, candidateUid])
+  @@map("city_election_support")
+}
+
+// 昆仑茶馆 — Phase 1: 数据库表 + API 路由
+// Prisma schema 追加（放在 schema.prisma 末尾）
+
+// ============================================================
+// 1. 茶票市场 (Market)
+// ============================================================
+model MarketItem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  sellerUid     String   @map("seller_uid") @db.Text
+  itemType      String   @map("item_type") @db.Text // 'tea_ticket' | 'nft' | 'goods'
+  title         String   @db.Text
+  description   String   @default("") @db.Text
+  priceCents    Int      @map("price_cents")
+  currency      String   @default("CNY") @db.Text
+  status        String   @default("on_sale") @db.Text // on_sale | sold | cancelled
+  buyerUid      String?  @map("buyer_uid") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  soldAt        DateTime? @map("sold_at")
+
+  @@index([status, createdAt])
+  @@map("market_item")
+}
+
+// ============================================================
+// 2. 联邦银行 (Bank)
+// ============================================================
+model BankAccount {
+  id              String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  userUid         String   @unique @map("user_uid") @db.Text
+  balanceCents    BigInt   @default(0) @map("balance_cents")
+  loanBalanceCents BigInt  @default(0) @map("loan_balance_cents")
+  loanDueDate     DateTime? @map("loan_due_date")
+  interestRate    Decimal  @default(0.05) @map("interest_rate") @db.Decimal(5, 4)
+  status          String   @default("active") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("bank_account")
+}
+
+model BankTransaction {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  accountId   String   @map("account_id") @db.Text
+  txType      String   @map("tx_type") @db.Text // deposit | withdraw | loan | repay | interest
+  amountCents BigInt   @map("amount_cents")
+  feeCents    Int      @default(0) @map("fee_cents")
+  description String   @default("") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([accountId, createdAt])
+  @@map("bank_transaction")
+}
+
+// ============================================================
+// 3. 昆仑会议 (Meeting)
+// ============================================================
+model Meeting {
+  id                String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  title             String   @db.Text
+  hostUid           String   @map("host_uid") @db.Text
+  channelId         String?  @map("channel_id") @db.Text
+  status            String   @default("active") @db.Text // active | ended
+  startedAt         DateTime @default(now()) @map("started_at")
+  endedAt           DateTime? @map("ended_at")
+  participantCount  Int      @default(0) @map("participant_count")
+  summary           String?  @db.Text
+
+  @@index([hostUid, status])
+  @@map("meeting")
+}
+
+model MeetingParticipant {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  meetingId   String   @map("meeting_id") @db.Text
+  userUid     String   @map("user_uid") @db.Text
+  role        String   @default("participant") @db.Text // host | participant
+  joinedAt    DateTime @default(now()) @map("joined_at")
+  leftAt      DateTime? @map("left_at")
+
+  @@unique([meetingId, userUid])
+  @@map("meeting_participant")
+}
+
+// ============================================================
+// 4. 行业热点 (News)
+// ============================================================
+model NewsItem {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  day         DateTime @db.Date
+  industry    String   @db.Text
+  type        String   @default("news") @db.Text
+  title       String   @db.Text
+  summary     String?  @db.Text
+  sourceUrl   String?  @map("source_url") @db.Text
+  sourceName  String?  @map("source_name") @db.Text
+  score       Decimal  @default(0) @db.Decimal(5, 2)
+  isHot       Boolean  @default(false) @map("is_hot")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([day, industry])
+  @@map("news_item")
+}
+
+// ============================================================
+// 5. 数字分身 (Avatar)
+// ============================================================
+model AvatarProfile {
+  id              String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  userUid         String   @unique @map("user_uid") @db.Text
+  name            String?  @db.Text
+  persona         String?  @db.Text
+  knowledgeBase   String?  @map("knowledge_base") @db.Text
+  styleConfig     String?  @map("style_config") @db.Text
+  learningStatus  String   @default("pending") @map("learning_status")
+  lastLearnedAt   DateTime? @map("last_learned_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("avatar_profile")
+}
+
+model AvatarScript {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  avatarId    String   @map("avatar_id") @db.Text
+  scriptType  String   @map("script_type") @db.Text
+  content     String   @db.Text
+  status      String   @default("active") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([avatarId])
+  @@map("avatar_script")
+}
+
+// ============================================================
+// 6. 用户设置 (Settings) — 扩展 User 表
+// 改为独立设置表，避免 User 表过大
+// ============================================================
+model UserSetting {
+  id              String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  userUid         String   @unique @map("user_uid") @db.Text
+  profileData     String?  @map("profile_data") @db.Text // JSON
+  privacyData     String?  @map("privacy_data") @db.Text // JSON
+  notificationData String? @map("notification_data") @db.Text // JSON
+  securityData    String?  @map("security_data") @db.Text // JSON
+  backupData      String?  @map("backup_data") @db.Text // JSON
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("user_setting")
+}
+
+// ============================================================
+// 7. 搜索历史 (SearchHistory)
+// ============================================================
+model SearchHistory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  userUid     String   @map("user_uid") @db.Text
+  query       String   @db.Text
+  searchType  String   @default("all") @map("search_type") // all | user | post | family | city
+  resultCount Int      @default(0) @map("result_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userUid, createdAt])
+  @@map("search_history")
+}
+
+// ============================================================
+// 8. 文件存储 (FileStorage)
+// ============================================================
+model FileRecord {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  uploaderUid String   @map("uploader_uid") @db.Text
+  fileName    String   @map("file_name") @db.Text
+  fileSize    Int      @map("file_size")
+  mimeType    String   @map("mime_type") @db.Text
+  storagePath String   @map("storage_path") @db.Text
+  checksum    String?  @db.Text
+  ttlHours    Int?     @map("ttl_hours")
+  status      String   @default("active") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([uploaderUid, createdAt])
+  @@map("file_record")
+}
+
+model ImMessageStatus {
+  messageId   String   @db.Text
+  channelId   String   @db.Text
+  channelType Int      @default(4)
+  senderUid   String   @map("sender_uid") @db.Text
+  status      Int16    @default(0)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamp(3)
+
+  @@id([messageId, channelId])
+  @@index([channelId, channelType, updated_at])
+  @@index([senderUid, status])
+  @@map("im_message_status")
+}
+
+model ImConversationRead {
+  uid               String    @db.Text
+  channelId         String    @db.Text
+  channelType       Int       @default(4)
+  lastReadMessageId String?   @map("last_read_message_id") @db.Text
+  lastReadAt        DateTime  @default(now()) @map("last_read_at") @db.Timestamp(3)
+
+  @@id([uid, channelId, channelType])
+  @@index([uid])
+  @@map("im_conversation_read")
+}
+
+model CityBizReferral {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  bizId       String   @map("biz_id") @db.Text
+  productId   String   @map("product_id") @db.Text
+  referrerId  String   @map("referrer_id") @db.Text  // 推荐人（其他用户）
+  buyerId     String   @map("buyer_id") @db.Text     // 购买人
+  orderId     String   @map("order_id") @db.Text
+  commission  Int      @default(0) @map("commission") // 佣金工分
+  status      String   @default("pending") @db.Text   // pending/confirmed/paid
+  verifiedBy  String?  @map("verified_by") @db.Text   // 核销人（商家）
+  verifiedAt  DateTime? @map("verified_at") @db.DateTime
+  createdAt   DateTime @default(now()) @map("created_at")
+  @@map("city_biz_referral")
 }

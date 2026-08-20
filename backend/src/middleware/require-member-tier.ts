@@ -22,6 +22,7 @@ const TIER_MAP: Record<string, MemberTier> = {
   'vip_season': MemberTier.Pro,  // vip_season → Pro
   'vip_year': MemberTier.Pro,    // vip_year → Pro
   'director': MemberTier.Pro,    // director → Pro
+  'local_vip': MemberTier.Pro,   // 本地版VIP → Pro（双端通用）
 }
 
 export function toMemberTier(tier: string | number | undefined | null): MemberTier {

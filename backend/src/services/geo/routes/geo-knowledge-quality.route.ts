@@ -12,7 +12,7 @@
 // P0: Route NEVER accesses DB/Prisma directly
 // ============================================================
 
-import { genericLLM } from '../../../deepseek-llm.provider.js'
+import { genericLLM } from '../../deepseek-llm.provider.js'
 import { workflowDispatcher, type WorkflowContext } from '../registry/geo-workflow'
 import { resolvePrompt } from '../registry/geo-prompt-registry'
 import type { AgentOutput } from '../types'

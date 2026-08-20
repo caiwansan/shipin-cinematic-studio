@@ -179,7 +179,7 @@ const tierBadge = computed(() => {
   if (!profile.value) return { label: '免费用户', cls: 'bg-white/5 border-white/10 text-gray-400' }
   const t = profile.value.membership.tier
   const label = profile.value.membership.name || getTierLabel(t)
-  const cls = t === 'basic' || t === 'pro' || t.startsWith('enterprise') || t === 'gold' || t === 'premium' || t === 'vip' || t === 'vip_season' || t === 'vip_year' || t === 'Pro' || t === 'director'
+  const cls = t === 'basic' || t === 'pro' || t.startsWith('enterprise') || t === 'gold' || t === 'premium' || t === 'vip' || t === 'vip_season' || t === 'vip_year' || t === 'Pro' || t === 'director' || t === 'local_vip' || t === 'smartws' || t === 'vips'
     ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30 text-yellow-400'
     : 'bg-white/5 border-white/10 text-gray-400'
   return { label, cls }

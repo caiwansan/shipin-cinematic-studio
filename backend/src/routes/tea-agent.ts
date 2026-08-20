@@ -1,0 +1,46 @@
+import { prisma } from '../utils/index.js'
+
+// ═══ 城市代理申请（申请表留言） ═══
+const AGENT_CITIES = ['北京','上海','广州','深圳','杭州','成都','重庆','武汉','西安','南京','苏州','天津','长沙','郑州','青岛','宁波','昆明','贵阳','福州','厦门','济南','合肥','南昌','太原','石家庄','哈尔滨','长春','沈阳','大连','兰州','西宁','银川','乌鲁木齐','拉萨','海口','三亚','洛阳','无锡','佛山','东莞']
+
+export default async function teaAgentRoutes(fastify: any) {
+  // 可选城市（未开通）
+  fastify.get('/api/tea/agent/cities', async () => {
+    const opened = await prisma.city.findMany({ select: { name: true } })
+    const openedSet = new Set(opened.map((c) => String(c.name || '').trim()))
+    const free = AGENT_CITIES.filter((c) => !openedSet.has(c))
+    return { success: true, data: { cities: free } }
+  })
+
+  // 提交代理申请
+  fastify.post('/api/tea/agent/apply', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
+    const { id: uid } = request.user
+    const { companyName, companyLocation, companyScale, cityName, contactName, contactPhone } = (request.body as any) || {}
+    if (!companyName || !companyLocation || !companyScale || !cityName || !contactName || !contactPhone) {
+      return reply.status(400).send({ error: '请完整填写申请表' })
+    }
+    const opened = await prisma.city.findMany({ select: { name: true } })
+    const openedSet = new Set(opened.map((c) => String(c.name || '').trim()))
+    if (openedSet.has(String(cityName).trim())) return reply.status(400).send({ error: '该城市已开通，不可重复申请' })
+    const apply = await prisma.cityAgentApply.create({
+      data: {
+        uid,
+        companyName: String(companyName).slice(0, 100),
+        companyLoc: String(companyLocation).slice(0, 200),
+        companyScale: String(companyScale).slice(0, 50),
+        cityName: String(cityName).slice(0, 50),
+        contactName: String(contactName).slice(0, 50),
+        contactPhone: String(contactPhone).slice(0, 30),
+      },
+    })
+    return { success: true, data: { id: String(apply.id) } }
+  })
+
+  // 客户端 AMap 配置（登录用户可读：JS API key 客户端渲染必需）
+  fastify.get('/api/tea/config/amap', { preHandler: [fastify.authenticate] }, async () => {
+    const row = await prisma.routeConfig.findUnique({ where: { scope_key: { scope: 'tea', key: 'config' } } })
+    const v: any = row?.value || {}
+    return { success: true, data: { key: v.amapKey || '', securityJsCode: v.amapSecurityJsCode || '' } }
+  })
+
+}

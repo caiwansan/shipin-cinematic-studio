@@ -1,0 +1,91 @@
+// 数字分身路由 — Avatar Routes
+// 功能：分身状态、学习、回复、脚本管理
+
+import { FastifyInstance } from 'fastify'
+import { prisma } from '../utils/index.js'
+
+export default async function avatarRoutes(fastify: FastifyInstance) {
+  // GET /api/avatar/status — 分身状态
+  fastify.get('/api/avatar/status', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userUid = request.user.id
+    const profile = await prisma.$queryRawUnsafe(
+      `SELECT * FROM avatar_profile WHERE user_uid = $1`, userUid
+    ) as any[]
+    if (!profile.length) return { success: true, data: { exists: false, learningStatus: 'none' } }
+    return { success: true, data: { exists: true, ...profile[0] } }
+  })
+
+  // POST /api/avatar/learn — 开始学习
+  fastify.post('/api/avatar/learn', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userUid = request.user.id
+    const { name, persona, knowledgeBase, styleConfig } = request.body as any
+    const existing = await prisma.$queryRawUnsafe(
+      `SELECT id FROM avatar_profile WHERE user_uid = $1`, userUid
+    ) as any[]
+    if (existing.length) {
+      await prisma.$queryRawUnsafe(
+        `UPDATE avatar_profile SET name = $1, persona = $2, knowledge_base = $3, style_config = $4, learning_status = 'learning', last_learned_at = NOW() WHERE user_uid = $5`,
+        name || '我的分身', persona || '', knowledgeBase || '', styleConfig ? JSON.stringify(styleConfig) : null, userUid
+      )
+    } else {
+      await prisma.$queryRawUnsafe(
+        `INSERT INTO avatar_profile (user_uid, name, persona, knowledge_base, style_config, learning_status, last_learned_at) VALUES ($1, $2, $3, $4, $5, 'learning', NOW())`,
+        userUid, name || '我的分身', persona || '', knowledgeBase || '', styleConfig ? JSON.stringify(styleConfig) : null
+      )
+    }
+    return { success: true, data: { message: '分身已开始学习' } }
+  })
+
+  // POST /api/avatar/sweep — 清除数据
+  fastify.post('/api/avatar/sweep', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userUid = request.user.id
+    await prisma.$queryRawUnsafe(`DELETE FROM avatar_script WHERE avatar_id IN (SELECT id FROM avatar_profile WHERE user_uid = $1)`, userUid)
+    await prisma.$queryRawUnsafe(`DELETE FROM avatar_profile WHERE user_uid = $1`, userUid)
+    return { success: true, data: { message: '分身数据已清除' } }
+  })
+
+  // POST /api/avatar/reply — 分身回复
+  fastify.post('/api/avatar/reply', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userUid = request.user.id
+    const { message } = request.body as any
+    if (!message) return reply.status(400).send({ success: false, error: 'message 必填' })
+    const profile = await prisma.$queryRawUnsafe(
+      `SELECT * FROM avatar_profile WHERE user_uid = $1`, userUid
+    ) as any[]
+    if (!profile.length) return reply.status(404).send({ success: false, error: '分身不存在，请先学习' })
+    // 简化版：返回基于 persona 的模拟回复
+    const persona = profile[0].persona || ''
+    const reply_text = persona ? `根据你的分身设定：「${persona.slice(0, 50)}...」\n\n针对「${message}」的回复：这是分身自动回复功能，需要接入 LLM 服务。` : '请先设置分身人格。'
+    return { success: true, data: { reply: reply_text } }
+  })
+
+  // GET /api/avatar/scripts — 脚本列表
+  fastify.get('/api/avatar/scripts', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userUid = request.user.id
+    const profile = await prisma.$queryRawUnsafe(
+      `SELECT id FROM avatar_profile WHERE user_uid = $1`, userUid
+    ) as any[]
+    if (!profile.length) return { success: true, data: { scripts: [] } }
+    const scripts = await prisma.$queryRawUnsafe(
+      `SELECT * FROM avatar_script WHERE avatar_id = $1 ORDER BY created_at DESC`, profile[0].id
+    )
+    return { success: true, data: { scripts } }
+  })
+
+  // POST /api/avatar/settings — 保存设置
+  fastify.post('/api/avatar/settings', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userUid = request.user.id
+    const { name, persona, knowledgeBase, styleConfig } = request.body as any
+    const existing = await prisma.$queryRawUnsafe(
+      `SELECT id FROM avatar_profile WHERE user_uid = $1`, userUid
+    ) as any[]
+    if (existing.length) {
+      await prisma.$queryRawUnsafe(
+        `UPDATE avatar_profile SET name = COALESCE($1, name), persona = COALESCE($2, persona), knowledge_base = COALESCE($3, knowledge_base), style_config = COALESCE($4, style_config), updated_at = NOW() WHERE user_uid = $5`,
+        name, persona, knowledgeBase, styleConfig ? JSON.stringify(styleConfig) : null, userUid
+      )
+      return { success: true, data: { message: '设置已更新' } }
+    }
+    return reply.status(404).send({ success: false, error: '分身不存在' })
+  })
+}

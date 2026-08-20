@@ -9,6 +9,7 @@ import { sensitiveEngine, loadSensitiveWordsIntoEngine } from '../im/sensitive-e
 import { SENSITIVE_WORD_SEED, SENSITIVE_CATEGORIES, seedSensitiveWordsIfEmpty } from '../im/sensitive-word-seed.js'
 import { decodeMessagePayload, PUBLIC_CHANNEL_ID, PUBLIC_CHANNEL_TYPE } from './im.js'
 import { indexMessage } from '../im/im-recall.service.js'
+import { updateMessageStatus } from '../im/im-message-status.service.js'
 
 // ── 配置 ───────────────────────────────────────────────────
 const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
@@ -277,6 +278,10 @@ export default async function imModerationRoutes(fastify: FastifyInstance) {
         if (msg) {
           // IM-CHA-M10 消息归属索引（撤回校验用；幂等 upsert，不阻塞）
           indexMessage(msg).catch(() => {})
+          // P0-1: 消息状态追踪 — 服务端已收到 = sent
+          if (msg.messageId) {
+            updateMessageStatus(msg.messageId, msg.channelId, 0, msg.fromUid).catch(() => {})
+          }
           // 敏感词复核（处置）优先，AI 客服（@小管家）其次，均异步不阻塞 webhook 响应
           handleWebhookMessage(msg).catch((e) => console.warn('[昆仑茶馆] webhook 复核异常:', (e as Error).message))
           handleBotMention(msg).catch((e) => console.warn('[昆仑茶馆] AI 客服异常:', (e as Error).message))

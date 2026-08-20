@@ -1,0 +1,420 @@
+/* ═══════════════════════════════════════════════════════════════
+   昆仑镜社区 · 未来科技主题（Quantum Cyan × Holographic）
+   COMMUNITY-SCI-FI-01 — 世界级未来科技感配色 / 玻璃辉光 / 粒子动效
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* 深空底色 */
+  --sf-bg-void: #06070a;
+  --sf-bg-deep: #0a0c14;
+  --sf-bg-surface: #0f1220;
+  --sf-bg-elevated: #141830;
+  --sf-bg-card: rgba(20, 24, 48, 0.65);
+
+  /* 电光青（主色） */
+  --sf-cyan: #00e5ff;
+  --sf-cyan-bright: #33ffff;
+  --sf-cyan-deep: #009db3;
+  --sf-cyan-glow: rgba(0, 229, 255, 0.35);
+  --sf-cyan-subtle: rgba(0, 229, 255, 0.08);
+
+  /* 全息紫（辅色） */
+  --sf-purple: #a855f7;
+  --sf-purple-bright: #c084fc;
+  --sf-purple-deep: #7c3aed;
+  --sf-purple-glow: rgba(168, 85, 247, 0.30);
+
+  /* 量子粉（强调） */
+  --sf-magenta: #f472b6;
+  --sf-magenta-glow: rgba(244, 114, 182, 0.25);
+
+  /* 能量金（高亮） */
+  --sf-gold: #fbbf24;
+  --sf-gold-glow: rgba(251, 191, 36, 0.30);
+
+  /* 文本层级 */
+  --sf-text-primary: #f0f4ff;
+  --sf-text-secondary: rgba(200, 210, 240, 0.72);
+  --sf-text-tertiary: rgba(160, 170, 200, 0.50);
+  --sf-text-disabled: rgba(120, 130, 160, 0.35);
+
+  /* 边框与分隔 */
+  --sf-border-subtle: rgba(100, 140, 200, 0.10);
+  --sf-border-default: rgba(100, 140, 200, 0.18);
+  --sf-border-glow: rgba(0, 229, 255, 0.30);
+
+  /* 辉光层级 */
+  --glow-sm: 0 0 8px rgba(0, 229, 255, 0.15);
+  --glow-md: 0 0 20px rgba(0, 229, 255, 0.20);
+  --glow-lg: 0 0 40px rgba(0, 229, 255, 0.15);
+  --glow-purple: 0 0 20px rgba(168, 85, 247, 0.25);
+
+  /* 字体 */
+  --sf-sans: 'Inter', 'SF Pro Display', -apple-system, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --sf-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  /* 动效 */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+}
+
+/* ─── 页面根（深空底 + 网格 + 粒子） ─── */
+.cn-page {
+  min-height: 100vh;
+  color: var(--sf-text-primary);
+  font-family: var(--sf-sans);
+  background-color: var(--sf-bg-void);
+  background-image:
+    /* 精密网格线 */
+    linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    /* 大网格 */
+    linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+    /* 深空晕染 */
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 229, 255, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(0, 229, 255, 0.03) 0%, transparent 50%);
+  background-size:
+    20px 20px,
+    20px 20px,
+    80px 80px,
+    80px 80px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-attachment: fixed;
+}
+
+/* ─── 玻璃辉光按钮（主色） ─── */
+.cn-seal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--sf-cyan), var(--sf-cyan-deep));
+  color: var(--sf-bg-void);
+  font-family: var(--sf-sans);
+  font-weight: 700;
+  font-size: 0.86rem;
+  letter-spacing: 1.5px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--sf-border-glow);
+  box-shadow: var(--glow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+.cn-seal-btn:hover {
+  background: linear-gradient(135deg, var(--sf-cyan-bright), var(--sf-cyan));
+  box-shadow: var(--glow-md), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+.cn-seal-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* 描边按钮 */
+.cn-ink-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--sf-cyan-subtle);
+  color: var(--sf-cyan);
+  font-family: var(--sf-sans);
+  font-weight: 600;
+  font-size: 0.84rem;
+  letter-spacing: 1px;
+  padding: 7px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--sf-border-glow);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+.cn-ink-btn:hover {
+  background: rgba(0, 229, 255, 0.14);
+  box-shadow: var(--glow-sm);
+  border-color: var(--sf-cyan);
+}
+
+/* ─── 玻璃辉光卡片 ─── */
+.cn-card {
+  background: var(--sf-bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--sf-border-default);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+.cn-card:hover {
+  border-color: var(--sf-border-glow);
+  box-shadow: 0 8px 40px rgba(0, 229, 255, 0.08), 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+/* ─── 标签徽章 ─── */
+.cn-stamp {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--sf-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  line-height: 1.6;
+  background: transparent;
+}
+.cn-stamp--red { color: var(--sf-magenta); background: var(--sf-magenta-glow); }
+.cn-stamp--blue { color: var(--sf-cyan); background: var(--sf-cyan-subtle); }
+.cn-stamp--gold { color: var(--sf-gold); background: var(--sf-gold-glow); }
+
+/* ─── 匾额标题（全息风格） ─── */
+.cn-plaque {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--sf-sans);
+  color: var(--sf-text-primary);
+  font-weight: 700;
+  letter-spacing: 3px;
+  font-size: 0.88rem;
+  padding: 2px 0 12px;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.cn-plaque::before,
+.cn-plaque::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, var(--sf-border-glow), transparent);
+}
+
+/* ─── 回纹分隔线（替换为能量线） ─── */
+.cn-huiwen {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--sf-border-glow), transparent);
+  opacity: 0.6;
+}
+
+/* ─── 云纹（替换为全息光斑） ─── */
+.cn-cloud {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background: radial-gradient(circle, var(--sf-cyan-glow) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(1px);
+}
+
+/* ─── 滚动条 ─── */
+.cn-page ::selection { background: rgba(0, 229, 255, 0.25); }
+
+/* ─── 全局滚动条 ─── */
+.cn-page ::-webkit-scrollbar { width: 6px; }
+.cn-page ::-webkit-scrollbar-track { background: transparent; }
+.cn-page ::-webkit-scrollbar-thumb {
+  background: var(--sf-border-default);
+  border-radius: 3px;
+}
+.cn-page ::-webkit-scrollbar-thumb:hover {
+  background: var(--sf-border-glow);
+}
+
+/* ─── 动画 ─── */
+@keyframes sf-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes sf-glow-pulse {
+  0%, 100% { box-shadow: var(--glow-sm); }
+  50% { box-shadow: var(--glow-md); }
+}
+
+@keyframes sf-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes sf-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes sf-scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+
+/* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?   鏄嗕粦闀滅ぞ鍖?路 v2 PREMIUM 澧炲己锛?026-08-10锛?   TOP-TIER-01 鈥?娓愬彉鎻忚竟鍗＄墖 / 鍏夋壂鎸夐挳 / 鍣偣璐ㄦ劅 / 鏃犻殰纰嶇劍鐐圭幆
+   杩藉姞娈碉細瑕嗙洊鍩虹瀹氫箟锛屼繚鎸佷笌鏃㈡湁椤甸潰鍏煎
+   鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?*/
+
+:root {
+  /* 琛ュ厖璐ㄦ劅鍙橀噺 */
+  --sf-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  --sf-focus-ring: 0 0 0 2px var(--sf-bg-void), 0 0 0 4px var(--sf-cyan);
+  --sf-radius-sm: 8px;
+  --sf-radius-md: 14px;
+  --sf-radius-lg: 20px;
+  --sf-gradient-brand: linear-gradient(135deg, var(--sf-cyan) 0%, var(--sf-purple) 100%);
+  --sf-gradient-text: linear-gradient(120deg, #f0f4ff 0%, var(--sf-cyan-bright) 45%, var(--sf-purple-bright) 100%);
+}
+
+/* 鈹€鈹€鈹€ 椤甸潰鏍?v2锛氬彔鍔犲櫔鐐?+ 鏆楄锛岃川鎰熷崌绾?鈹€鈹€鈹€ */
+.cn-page {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+.cn-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: var(--sf-noise);
+  background-size: 120px 120px;
+  opacity: 0.5;
+}
+.cn-page::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 120% 90% at 50% -10%, transparent 60%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+/* 鈹€鈹€鈹€ 鏃犻殰纰嶏細閿洏鐒︾偣鐜紙椤剁骇绔欑偣鏍囬厤锛?鈹€鈹€鈹€ */
+.cn-page a:focus-visible,
+.cn-page button:focus-visible,
+.cn-page input:focus-visible,
+.cn-page [tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--sf-focus-ring);
+  border-radius: var(--sf-radius-sm);
+}
+
+/* 鈹€鈹€鈹€ 鎸夐挳 v2锛氭笎鍙樻弿杈?+ 鍏夋壂 鈹€鈹€鈹€ */
+.cn-seal-btn {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--sf-cyan), var(--sf-cyan-deep));
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transform: translateZ(0);
+}
+.cn-seal-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s var(--ease-out-expo);
+}
+.cn-seal-btn:hover::after { left: 120%; }
+.cn-seal-btn:hover {
+  background: linear-gradient(135deg, var(--sf-cyan-bright), var(--sf-cyan));
+  box-shadow: 0 8px 32px rgba(0, 229, 255, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+}
+.cn-seal-btn:active { transform: translateY(0) scale(0.98); }
+
+.cn-ink-btn {
+  border-radius: 10px;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  background: rgba(0, 229, 255, 0.05);
+  backdrop-filter: blur(8px);
+}
+.cn-ink-btn:hover {
+  background: rgba(0, 229, 255, 0.12);
+  box-shadow: 0 0 24px rgba(0, 229, 255, 0.15);
+}
+
+/* 鈹€鈹€鈹€ 鍗＄墖 v2锛氭笎鍙樻弿杈圭幓鐠冨崱 鈹€鈹€鈹€ */
+.cn-card {
+  position: relative;
+  background:
+    linear-gradient(var(--sf-bg-card), var(--sf-bg-card)) padding-box,
+    linear-gradient(160deg, rgba(0, 229, 255, 0.35), rgba(168, 85, 247, 0.18) 50%, rgba(0, 229, 255, 0.08)) border-box;
+  border: 1px solid transparent;
+  border-radius: var(--sf-radius-md);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 0.35s var(--ease-out-expo), box-shadow 0.35s var(--ease-out-expo), border-color 0.35s;
+}
+.cn-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 229, 255, 0.10), 0 4px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* 鈹€鈹€鈹€ 鍖鹃 v2锛氭笎鍙樺瓧 鈹€鈹€鈹€ */
+.cn-plaque {
+  background: var(--sf-gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  letter-spacing: 4px;
+}
+
+/* 鈹€鈹€鈹€ 鍗扮珷 v2 鈹€鈹€鈹€ */
+.cn-stamp {
+  border-radius: 5px;
+  backdrop-filter: blur(4px);
+  letter-spacing: 1.8px;
+}
+
+/* 鈹€鈹€鈹€ 鍥炵汗绾?v2锛氳兘閲忔祦鍏?鈹€鈹€鈹€ */
+.cn-huiwen {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sf-cyan-glow) 20%, var(--sf-purple-glow) 80%, transparent);
+  opacity: 1;
+}
+
+/* 鈹€鈹€鈹€ 婊氬姩鏉?v2锛氭笎鍙樻粦鍧?鈹€鈹€鈹€ */
+.cn-page ::-webkit-scrollbar { width: 8px; height: 8px; }
+.cn-page ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0, 229, 255, 0.25), rgba(168, 85, 247, 0.25));
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.cn-page ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--sf-cyan), var(--sf-purple)); }
+
+/* 鈹€鈹€鈹€ 鍏ュ満鍔ㄦ晥 v2 鈹€鈹€鈹€ */
+@keyframes sf-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes sf-border-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* 鈹€鈹€鈹€ 鍔ㄦ晥闄嶇骇锛氬皧閲嶇郴缁熻缃?鈹€鈹€鈹€ */
+@media (prefers-reduced-motion: reduce) {
+  .cn-page *, .cn-page *::before, .cn-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 鈹€鈹€鈹€ 绉诲姩绔細鍐呭鍖哄畨鍏ㄨ竟璺?鈹€鈹€鈹€ */
+@media (max-width: 768px) {
+  .cn-card { border-radius: 12px; }
+  .cn-seal-btn, .cn-ink-btn { letter-spacing: 1px; }
+}
+

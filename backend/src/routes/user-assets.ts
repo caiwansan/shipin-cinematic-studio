@@ -132,31 +132,49 @@ export default async function userAssetsRoutes(fastify: FastifyInstance) {
 
     // 团队总人数（含间接下级 —— 递归太深，先统计两级）
     let teamTotal = total
+    let secondAll: any[] = []
     try {
-      const secondLevel = await prisma.membership.findMany({
-        where: { parentId: userId },
-        select: { userId: true },
-        take: 500,
-      })
-      if (secondLevel.length > 0) {
-        const ids = secondLevel.map(m => m.userId)
-        const secondCount = await prisma.membership.count({
-          where: { parentId: { in: ids } },
+      const firstIds = children.map(c => c.user.id)
+      if (firstIds.length) {
+        const secondMembers = await prisma.membership.findMany({
+          where: { parentId: { in: firstIds } },
+          orderBy: { createdAt: 'desc' } as any,
+          take: Math.min(Number(limit) || 50, 200),
+          skip: Number(offset) || 0,
+          select: {
+            parentId: true,
+            user: { select: { id: true, username: true, email: true, avatarUrl: true, memberTier: true, createdAt: true, lastActiveAt: true } },
+          },
         })
-        teamTotal += secondCount
+        secondAll = secondMembers
+        const secondCount = await prisma.membership.count({ where: { parentId: { in: firstIds } } })
+        teamTotal = total + secondCount
       }
     } catch { /* non-fatal */ }
 
     // 我的推广码
     const referralUrl = `https://aigc.fushtn.com/register?ref=${userId}`
 
+    const l1 = children.map(c => ({
+      id: c.user.id,
+      username: c.user.username,
+      email: c.user.email,
+      avatarUrl: c.user.avatarUrl,
+      memberTier: c.user.memberTier,
+      joinedAt: c.user.createdAt,
+      lastActiveAt: c.user.lastActiveAt,
+    }))
+
     return toApiResponse({
       directCount: total,
+      indirectCount: secondAll.length,
       teamTotal,
       referralCode: userId,
       referralUrl,
-      members: children.map(c => ({
+      level1: l1,
+      level2: secondAll.map(c => ({
         id: c.user.id,
+        parentId: c.parentId,
         username: c.user.username,
         email: c.user.email,
         avatarUrl: c.user.avatarUrl,
@@ -164,6 +182,7 @@ export default async function userAssetsRoutes(fastify: FastifyInstance) {
         joinedAt: c.user.createdAt,
         lastActiveAt: c.user.lastActiveAt,
       })),
+      members: l1,
     }) satisfies ApiResponse<unknown>
   })
 }

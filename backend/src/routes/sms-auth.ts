@@ -3,6 +3,7 @@
 import type { ApiResponse } from '../contracts/api/base.js';
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { getClientIp, nextTokenVersion } from '../utils/session.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js';
 import { verifyToken } from './admin-auth.js'
 import { requireAdmin } from '../middleware/require-admin.js'
@@ -247,12 +248,12 @@ export default async function smsAuthRoutes(fastify: FastifyInstance) {
       }
     }
 
-    // 生成 JWT token
+    // 生成 JWT token（同 IP 多端共存；跨 IP 互踢）
     const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
-    const newVer = (user.tokenVersion || 1) + 1
-    await prisma.user.update({ where: { id: user.id }, data: { tokenVersion: newVer } }).catch(() => {})
+    const clientIp = getClientIp(request)
+    const newVer = await nextTokenVersion(user, clientIp)
     const token = fastify.jwt.sign(
-      { id: user.id, email: user.email, role: 'user', tokenVersion: newVer },
+      { id: user.id, email: user.email, role: 'user', tokenVersion: newVer, ip: clientIp },
       { expiresIn: '30d' }
     )
 

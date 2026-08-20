@@ -5,6 +5,8 @@
 // ============================================================
 
 import { genericLLM } from '../../deepseek-llm.provider.js'
+import { knowledgeObjectRepository } from '../repositories/knowledge-object.repository.js'
+import { geoScanHistoryRepository } from '../repositories/geo-scan-history.repository.js'
 
 // ── Types ──
 
@@ -52,6 +54,22 @@ interface BrandData {
     website: number
     knowledge: number
   }
+  /** 知识条目真实内容（用于 LLM 分析） */
+  knowledgeContents?: KnowledgeContentItem[]
+  /** 官网扫描提取的内容 */
+  websiteContent?: string
+  /** 竞品对比数据 */
+  competitorData?: {
+    competitors: string[]
+    brandMentionRate: number
+    avgCompetitorMentionRate: number
+  }
+}
+
+interface KnowledgeContentItem {
+  topic: string
+  content: string
+  confidence: number
 }
 
 // ── Helpers ──
@@ -155,11 +173,17 @@ function heuristicAnalysis(data: BrandData): AIBrandAnalysis {
 async function aiAnalysis(data: BrandData): Promise<AIBrandAnalysis> {
   const startTime = Date.now()
 
-  const systemPrompt = `你是一个专业的 AI 品牌分析引擎。根据提供的品牌数据，给出：
-1. 品牌健康度总结（2-3句话）
-2. 按优先级排列的改进建议（3-5条，具体可执行）
-3. 每个评分维度的简要洞察（每项1句话）
-4. 可选的分数微调（如果认为计数评分不够准确）
+  const systemPrompt = `你是一个专业的 AI 品牌分析引擎。根据提供的品牌真实内容（而非仅仅计数数据），给出：
+1. 品牌健康度总结（2-3句话，基于内容质量而非数量）
+2. 按优先级排列的改进建议（3-5条，具体可执行，针对内容缺陷而非数量不足）
+3. 每个评分维度的简要洞察（每项1句话，基于实际内容分析）
+4. 如果品牌有竞品对比数据，分析品牌的相对优劣势
+
+重点关注：
+- 知识条目是否包含具体数据、事实、数字（而非空话套话）
+- 品牌描述是否有差异化定位（而非泛泛而谈）
+- 官网内容是否丰富、是否有结构化数据
+- 品牌在 AI 引擎中的实际可见度
 
 请以 JSON 格式返回：
 {
@@ -171,31 +195,36 @@ async function aiAnalysis(data: BrandData): Promise<AIBrandAnalysis> {
     "content": "洞察",
     "website": "洞察",
     "knowledge": "洞察"
-  },
-  "adjustedScores": {
-    "overall": 0-100,
-    "visibility": 0-100,
-    "authority": 0-100,
-    "content": 0-100,
-    "website": 0-100,
-    "knowledge": 0-100
   }
-}
+}`
 
-adjustedScores 仅在您认为计数评分有明显偏差时提供，否则省略。`
+  // 构建真实内容摘要
+  const knowledgeSummary = data.knowledgeContents && data.knowledgeContents.length > 0
+    ? data.knowledgeContents.map(k => `  - ${k.topic}: ${k.content.slice(0, 100)}${k.content.length > 100 ? '...' : ''}`).join('\n')
+    : '  （无知识条目内容）'
+
+  const websiteSummary = data.websiteContent
+    ? data.websiteContent.slice(0, 300)
+    : '（未提取官网内容）'
+
+  const competitorSummary = data.competitorData
+    ? `品牌提及率: ${(data.competitorData.brandMentionRate * 100).toFixed(0)}%, 竞品平均提及率: ${(data.competitorData.avgCompetitorMentionRate * 100).toFixed(0)}%, 竞品: ${data.competitorData.competitors.join(', ')}`
+    : '（无竞品数据）'
 
   const userPrompt = `品牌数据：
 - 品牌名称：${data.brandName || '未设置'}
 - 官网：${data.website || '未配置'}
 - 行业：${data.industry || '未设置'}
 - 描述：${data.description || '未填写'}
-- 品牌资料：${data.brandProfiles} 份
-- 知识条目：${data.knowledgeCount} 条
-- 品牌实体：${data.entityCount} 个
-- 事实声明：${data.claimCount} 条
-- 引用证据：${data.evidenceCount} 条
-- 实体关系：${data.relationCount} 条
-- 最近扫描状态：${data.lastScanStatus || '未扫描'}
+
+知识条目真实内容（${data.knowledgeContents?.length || 0} 条）：
+${knowledgeSummary}
+
+官网内容摘要：
+${websiteSummary}
+
+竞品对比：
+${competitorSummary}
 
 当前计数评分：
 - 综合：${data.currentScores.overall}
@@ -208,16 +237,25 @@ adjustedScores 仅在您认为计数评分有明显偏差时提供，否则省�
   const provider = 'longcat'
   const apiKey = process.env.LONGCAT_API_KEY
 
+  // ★ P0-Fix: Add timeout to LLM call to prevent mission-control from hanging
+  const TIMEOUT_MS = 8000  // 8s timeout for LLM call
+
   try {
-    const resp = await genericLLM.chat({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      provider,
-      apiKey,
-      model: 'LongCat-2.0',
-    })
+    // Race between LLM call and timeout
+    const resp = await Promise.race([
+      genericLLM.chat({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        provider,
+        apiKey,
+        model: 'LongCat-2.0',
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('LLM_TIMEOUT')), TIMEOUT_MS)
+      ),
+    ])
 
     const text = resp.text || ''
     // Extract JSON from response (handle ```json fence)

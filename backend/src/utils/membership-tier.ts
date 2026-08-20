@@ -28,6 +28,7 @@ const VIP_PLAN_TIER: Record<string, string> = {
   vip_pro: 'pro',
   vip_vips: 'vips',
   vip_director: 'director',
+  local_vip: 'local_vip', // 本地版VIP 套餐
 }
 
 /**

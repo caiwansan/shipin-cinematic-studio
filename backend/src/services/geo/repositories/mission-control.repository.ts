@@ -35,8 +35,9 @@ export const missionControlRepository = {
   /**
    * Load all Dashboard data from DB in one go.
    * Uses the provided projectId, or falls back to the most recent project.
+   * If userId is provided, only shows projects owned by that user.
    */
-  async loadDashboard(projectId?: string): Promise<DashboardData> {
+  async loadDashboard(projectId?: string, userId?: string): Promise<DashboardData> {
     let pid = projectId || ''
     let entityName: string | null = null
 
@@ -44,7 +45,7 @@ export const missionControlRepository = {
     if (!pid) {
       try {
         const projects = await geoProjectRepository.findMany(
-          { deletedAt: null },
+          { deletedAt: null, ...(userId ? { userId } : {}) },
           { createdAt: 'desc' }
         )
         if (projects.length > 0) {

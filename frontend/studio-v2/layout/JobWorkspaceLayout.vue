@@ -710,6 +710,7 @@ import { getAuthToken } from '~/utils/auth/token'
  */
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { getPipelineStages } from '~/studio-v2/config/workspace-config'
+import type { PipelineStage } from '~/studio-v2/types/runtime/index'
 import { chatWithCareerAgent, getJobRecommendations, submitJobFeedback, getCareerProfileCenter } from '~/studio-v2/api/job/candidate-api'
 import { getCareerAgentStatus, activateAndExecuteCareerAgent, executeCareerWorkflow, toBackendWorkflowType, type CareerAgentStatus, type CareerWorkflowResult } from '~/studio-v2/api/job/career-agent-api'
 import ModelSettingsLauncher from '~/components/ai-model/ModelSettingsLauncher.vue'
@@ -936,8 +937,14 @@ const careerAdvice = ref<any>(null)
 // 推荐岗位
 const recommendations = ref<any[]>([])
 
-const pipelineStages = computed(() =>
-  getPipelineStages('JOB')
+const pipelineStages = computed<PipelineStage[]>(() =>
+  getPipelineStages('JOB').map(def => ({
+    id: def.key,
+    title: def.label,
+    icon: def.icon,
+    status: 'idle' as const,
+    progress: 0,
+  }))
 )
 
 function goToStage(stageKey: string) {

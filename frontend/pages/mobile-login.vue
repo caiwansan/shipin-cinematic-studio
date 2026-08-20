@@ -2,9 +2,9 @@
   <div class="ml-page">
     <!-- 品牌区 -->
     <div class="ml-brand">
-      <div class="ml-logo">🏮</div>
-      <div class="ml-name">昆仑镜</div>
-      <div class="ml-slogan">AI 员工数字办公空间</div>
+      <div class="ml-logo">🍵</div>
+      <div class="ml-name">昆仑茶馆</div>
+      <div class="ml-slogan">云端茶馆 · 谈天论道</div>
     </div>
 
     <!-- 登录卡片 -->
@@ -63,6 +63,10 @@
           <span class="ml-qq-icon">🐧</span>
           <span>{{ qqLoading ? '跳转中…' : 'QQ 登录' }}</span>
         </button>
+        <button v-if="hasQqPending" type="button" class="ml-qq-btn ml-qq-btn-alt" :disabled="qqLoading" @click.stop.prevent="qqManualComplete">
+          <span>{{ qqLoading ? '登录中…' : '✅ 我在QQ已完成授权，点此登录' }}</span>
+        </button>
+        <div v-if="hasQqPending" class="ml-qq-hint">在QQ完成授权后，点击上方按钮即可登录（也可稍候自动登录）。</div>
       </div>
     </div>
 
@@ -77,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { safeRedirect } from '~/utils/mobile-detect'
 
@@ -100,7 +104,32 @@ const qqStatus = ref({ enabled: false, appId: '' })
 const qqLoading = ref(false)
 let oauthListener: ((e: MessageEvent) => void) | null = null
 
-function startOAuth(authUrl: string, onSuccess: (token: string, user: any) => void, onError: (err: string) => void) {
+// 原生APP：用 Capacitor Browser 插件在外部浏览器打开 QQ 授权，保持 WebView 在你本地壳上
+async function openQqBrowser(url: string) {
+  try {
+    const cap: any = (window as any).Capacitor
+    if (cap?.Plugins?.Browser?.open) {
+      await cap.Plugins.Browser.open({ url })
+      return
+    }
+  } catch (e) { console.warn('[QQ] Browser.open 失败，回退 window.open', e) }
+  window.open(url, '_blank')
+}
+
+function startOAuth(authUrl: string, state: string, onSuccess: (token: string, user: any) => void, onError: (err: string) => void) {
+  const isNative = !!(window as any).Capacitor?.isNativePlatform?.()
+  const isMobileUA = /mobile|android|iphone|ipad/i.test(navigator.userAgent || '')
+  const needServerRelay = isNative || isMobileUA
+  // 手机/原生APP：用 Capacitor Browser 插件在【系统外部浏览器】打开 QQ 授权
+  //   ——用 window.open 会在 WebView 内跳走，离开本地壳 origin(https://localhost)，token 落不到APP → 登录不成功
+  //   ——Browser.open 在外部浏览器完成，APP 的 WebView 始终停在壳上；返回后轮询服务端取回 token
+  if (needServerRelay) {
+    qqActiveState.value = state
+    try { localStorage.setItem('kl_qq_state', state) } catch {}
+    completeQqLogin(state, onSuccess, onError)   // 服务端中继轮询（一直在壳上跑，APP 后台恢复也继续）
+    openQqBrowser(authUrl)
+    return
+  }
   const w = window.open(authUrl, '_blank', 'width=600,height=700')
   if (!w) { window.location.href = authUrl; return }
   if (oauthListener) window.removeEventListener('message', oauthListener)
@@ -113,33 +142,124 @@ function startOAuth(authUrl: string, onSuccess: (token: string, user: any) => vo
   const pollClose = setInterval(() => {
     if (w.closed) {
       clearInterval(pollClose)
-      if (oauthListener) { window.removeEventListener('message', oauthListener); oauthListener = null; qqLoading.value = false }
+      if (oauthListener) { window.removeEventListener('message', oauthListener); oauthListener = null }
+      // 桌面 Web fallback: popup 关闭后检查 localStorage（同源共享）
+      const storedToken = localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || localStorage.getItem('token')
+      const storedUser = localStorage.getItem('auth_user')
+      if (storedToken && !oauthListener) {
+        try {
+          const { setToken, setUser } = require('~/utils/token-cache') as typeof import('~/utils/token-cache')
+          setToken(storedToken)
+          const user = storedUser ? JSON.parse(storedUser) : { username: '用户' }
+          setUser(user)
+          onSuccess(storedToken, user)
+        } catch { qqLoading.value = false }
+      } else {
+        qqLoading.value = false
+      }
     }
   }, 1000)
 }
+
+// 服务端中继取回：QQ 授权在浏览器/QQApp 完成后，token 经 /api/auth/qq/desktop-result 取回（结果保留 180s，可重复取）
+let qqPollTimer: any = null
+let qqPollTimers: any[] = []
+const qqActiveState = ref('')
+const qqDone = ref(false)
+const hasQqPending = computed(() => {
+  if (qqDone.value) return false
+  if (qqActiveState.value) return true
+  try { return !!localStorage.getItem('kl_qq_state') } catch { return false }
+})
+function stopQqPoll() { (qqPollTimers||[]).forEach(t=>{try{clearInterval(t)}catch{}}); qqPollTimers = []; qqPollTimer = null }
+function completeQqLogin(state: string, onSuccess: (token: string, user: any) => void, onError: (err: string) => void) {
+  if (qqDone.value) return
+  if (qqActiveState.value && qqActiveState.value !== state) { /* 换新登录，先停掉旧的 */ stopQqPoll() }
+  if (qqPollTimer && qqActiveState.value === state) return // 同 state 已在轮询，不重复起
+  qqActiveState.value = state
+  let elapsed = 0
+  const poll = async () => {
+    elapsed += 1500
+    if (qqDone.value) { stopQqPoll(); return }
+    if (elapsed > 180000) { stopQqPoll(); qqLoading.value = false; onError('QQ 登录超时，请在QQ完成授权后点下方按钮') ; return }
+    try {
+      const r = await fetch('/api/auth/qq/desktop-result?state=' + encodeURIComponent(state))
+      const j = await r.json()
+      const d = j.data || j
+      if (d && d.token) {
+        qqDone.value = true; stopQqPoll()
+        onSuccess(d.token, d.user || { username: 'QQ用户' })
+      } else if (d && d.bindToken) {
+        qqDone.value = true; stopQqPoll()
+        onError('need_bind')
+      }
+    } catch { /* 网络抖动忽略，继续 */ }
+  }
+  const iv = setInterval(poll, 1500)
+  qqPollTimers.push(iv); qqPollTimer = iv
+  poll()
+}
+
+// 手动“我已完成授权”按钮：用户从QQ返回后再次确认，主动取token（对APP后台暂停JS最稳）
+async function qqManualComplete() {
+  // 取当前state：内存或localStorage兜底（页面可能重载过）
+  const st = qqActiveState.value || (() => { try { return localStorage.getItem('kl_qq_state') || '' } catch { return '' } })()
+  qqActiveState.value = st
+  qqLoading.value = true
+  error.value = ''
+  try {
+    if (!st) { qqLoading.value = false; error.value = '未找到QQ登录记录，请重新点QQ登录'; return }
+    const r = await fetch('/api/auth/qq/desktop-result?state=' + encodeURIComponent(st))
+    const j = await r.json()
+    const d = j.data || j
+    if (d && d.token) {
+      qqDone.value = true; stopQqPoll()
+      await doQqLoginSuccess(d.token, d.user || { username: 'QQ用户' })
+    } else if (d && d.bindToken) {
+      qqDone.value = true; stopQqPoll(); qqLoading.value = false
+      error.value = '该QQ需先绑定手机号'
+    } else {
+      qqLoading.value = false
+      error.value = '尚未检测到授权完成，请先在QQ完成授权后再试'
+    }
+  } catch (e: any) { qqLoading.value = false; error.value = '网络错误：' + ((e && e.message) || '请重试') }
+}
+
 
 async function qqLogin() {
   if (!qqStatus.value.enabled) return
   qqLoading.value = true; error.value = ''
   try {
-    const r = await fetch('/api/auth/qq/authorize')
+    // 手机/APP：mobile=1 → QQ 移动端授权（唤起手机QQ），不再跳 PC 浏览器扫码
+    const isNative = !!(window as any).Capacitor?.isNativePlatform?.()
+    const isMobileUA = /mobile|android|iphone|ipad/i.test(navigator.userAgent || '')
+    const q = (isNative || isMobileUA) ? '?mobile=1' : ''
+    const r = await fetch('/api/auth/qq/authorize' + q)
     const data = await r.json()
     const authUrl = data.data?.authUrl || data.authUrl
     if (!authUrl) { error.value = data.error || 'QQ 登录启动失败'; qqLoading.value = false; return }
-    startOAuth(authUrl, async (token) => {
-      // 同步 token：localStorage + cookie + token-cache（mobile-app 用 localStorage auth_token）
-      window.localStorage?.setItem('auth_token', token)
-      document.cookie = `auth_token=${token}; path=/; max-age=86400; samesite=lax`
-      const { setToken, setUser } = await import('~/utils/token-cache')
-      setToken(token)
-      setUser({ username: token.split('.')[0] || '用户' })
-      qqLoading.value = false
-      const target = safeRedirect(route.query.redirect, '/mobile-app')
-      await router.replace(target)
-    }, (err) => { error.value = err; qqLoading.value = false })
+    const oauthState = data.data?.state || data.state || ''
+    startOAuth(authUrl, oauthState, (token, user) => { doQqLoginSuccess(token, user) }, (err) => { error.value = err === 'need_bind' ? '该QQ需先绑定手机号' : err; qqLoading.value = false })
   } catch {
     error.value = 'QQ 登录暂时不可用'; qqLoading.value = false
   }
+}
+
+// QQ 登录成功后的统一处理：先落 localStorage（最可靠），再同步硬跳转进手机APP
+async function doQqLoginSuccess(token: string, user: any) {
+  try { window.localStorage?.setItem('auth_token', token) } catch {}
+  try { window.localStorage?.setItem('auth_user', JSON.stringify(user || {})) } catch {}
+  try { document.cookie = `auth_token=${token}; path=/; max-age=604800; samesite=lax` } catch {}
+  // 立即停止轮询并清掉状态，随后【同步】硬跳转（不等任何 await，避免卡“登录中”/重复轮询）
+  try { stopQqPoll(); window.localStorage?.removeItem('kl_qq_state') } catch {}
+  try {
+    const { setToken, setUser } = await import('~/utils/token-cache')
+    setToken(token); setUser(user || { username: 'QQ用户' })
+  } catch {}
+  qqLoading.value = false
+  // 重新加载当前 SPA 文档：启动后 native 中间件自动进 /mobile-app 并读 auth_token 免登录
+  // 不能用 location.replace('/mobile-app')：那是客户端路由，原生静态包 WebView 硬跳会 404/乱码
+  try { window.location.reload() } catch {}
 }
 
 function goRegister() {
@@ -151,6 +271,24 @@ onMounted(() => {
     .then(r => r.json())
     .then(d => { if (d.data) qqStatus.value = d.data })
     .catch(() => {})
+  // 从QQ/浏览器返回APP时：若仍有未完成的QQ登录，恢复轮询并在取得token后自动登录
+  try {
+    const saved = localStorage.getItem('kl_qq_state')
+    if (saved && !qqActiveState.value) { qqActiveState.value = saved; completeQqLogin(saved, (t, u) => doQqLoginSuccess(t, u), () => {}) }
+  } catch {}
+  try {
+    const cap: any = (window as any).Capacitor
+    if (cap?.App?.addListener) {
+      cap.App.addListener('appStateChange', (s: any) => {
+        if (s?.isActive && qqActiveState.value && !qqDone.value) qqManualComplete()
+      })
+    }
+    if (cap?.Plugins?.Browser?.addListener) {
+      cap.Plugins.Browser.addListener('browserFinished', () => {
+        if (qqActiveState.value && !qqDone.value) qqManualComplete()
+      })
+    }
+  } catch {}
 })
 
 async function doLogin() {
@@ -301,6 +439,8 @@ function goHome() {
 }
 .ml-qq-btn:active { background: #f8fafc; }
 .ml-qq-btn:disabled { opacity: 0.6; }
+.ml-qq-btn-alt { margin-top: 10px; border-color: #4ade80; background: #f0fdf4; color: #15803d; }
+.ml-qq-hint { font-size: 12px; color: #64748b; text-align: center; margin-top: 8px; line-height: 1.5; }
 .ml-qq-icon { font-size: 18px; }
 
 /* ── 注册入口 ── */

@@ -12,9 +12,48 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '../utils/index.js'
 import { authService } from '../services/auth.service.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js'
+import { getClientIp, nextTokenVersion } from '../utils/session.js'
+
+// 邀请绑定列：启动时幂等确保存在（推荐人永久锁定，写入后不可篡改）
+async function ensureInviterColumn() {
+  try {
+    const { prisma } = await import('../utils/index.js')
+    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS inviter_id TEXT')
+  } catch (e) { console.error('[Invite] ensure column failed:', (e as any)?.message) }
+}
+ensureInviterColumn()
 
 export default async function authRoutes(fastify: FastifyInstance) {
   // POST /api/auth/register — 统一注册（仅支持手机号）
+  // ── 邀请注册制：邀请人信息查询（注册页免登录调用）──
+  fastify.get('/api/auth/invite/info', async (request, reply) => {
+    const ref = String((request.query as any)?.ref || '').trim()
+    if (!ref) return reply.code(400).send({ success: false, error: '缺少邀请码' })
+    const isUuid = /^[0-9a-fA-F-]{36}$/.test(ref)
+    const agent = await prisma.user.findFirst({
+      where: { OR: [{ ...(isUuid ? { id: ref } : {}) }, { username: ref }, { email: ref }] },
+      select: { id: true, username: true, avatarUrl: true, memberTier: true },
+    })
+    if (!agent) return reply.code(404).send({ success: false, error: '邀请人不存在' })
+    return { success: true, data: { inviter: { id: agent.id, username: agent.username, avatar: agent.avatarUrl || null } } }
+  })
+
+  // ── 我的推荐人（登录态，永久不可篡改展示）──
+  fastify.get('/api/auth/inviter', async (request, reply) => {
+    const uid = (request as any).user?.id
+    if (!uid) return reply.code(401).send({ success: false, error: '未登录' })
+    const me = await prisma.user.findUnique({
+      where: { id: uid },
+      select: { inviter_id: true },
+    })
+    if (!me?.inviter_id) return { success: true, data: { inviter: null } }
+    const inv = await prisma.user.findUnique({
+      where: { id: me.inviter_id },
+      select: { id: true, username: true, avatarUrl: true },
+    })
+    return { success: true, data: { inviter: inv ? { id: inv.id, username: inv.username, avatar: inv.avatarUrl || null } : null } }
+  })
+
   fastify.post('/api/auth/register', async (request: FastifyRequest, reply: FastifyReply) => {
     const { phone, username, password, code, refCode, qqBindToken } = request.body as any
 
@@ -87,8 +126,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       }
     }
 
-    // 处理推荐码：查找上级推荐人
+    // 处理推荐码：查找上级推荐人（邀请绑定 inviter_id 写入后永久锁定）
     let marketAgentId: string | undefined = undefined
+    let inviterId: string | undefined = undefined
     if (refCode) {
       const agent = await prisma.user.findFirst({
         where: {
@@ -102,6 +142,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       })
       if (agent) {
         marketAgentId = agent.id
+        inviterId = agent.id
       }
     }
 
@@ -122,6 +163,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
       select: { id: true, email: true, username: true, phone: true, qqOpenId: true, createdAt: true, membership: { select: { credits: true } } },
     })
+
+    // 邀请绑定锁定：inviter_id 只允许写入一次（AND inviter_id IS NULL），此后任何接口都无法篡改
+    if (inviterId) {
+      try {
+        await prisma.$executeRaw`UPDATE "User" SET inviter_id = ${inviterId} WHERE id = ${user.id}::uuid AND inviter_id IS NULL`
+      } catch (e: any) {
+        console.error('[Invite] lock inviter failed: name=' + (e?.name || '?') + ' msg=' + (e?.message || '?') + ' full=' + JSON.stringify(e)?.slice(0, 300) + ' inviterId=' + inviterId + ' userId=' + (user as any)?.id)
+      }
+    }
 
     // Personal Tenant (Phase 1.0): 自动创建
     let personalTenantId: string | undefined
@@ -152,7 +202,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
       registerOrgId = (await getOrganizationIdForUser(user.id)) || undefined
     } catch { /* non-fatal */ }
-    const accessToken = fastify.jwt.sign({ id: user.id, email: user.email, tokenVersion: 1, organizationId: registerOrgId })
+    const accessToken = fastify.jwt.sign({ id: user.id, email: user.email, tokenVersion: 1, organizationId: registerOrgId, ip: getClientIp(request) })
 
     // 注册奖励后重新读取钻石余额（user 创建时的 select 为旧值）
     let freshCredits: number = u.membership?.credits ?? 0
@@ -172,7 +222,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     let { email, phone, account, password } = request.body as any
 
     // IP 限速防护：同一 IP+账号 5 次失败后封禁 15 分钟
-    const ip = request.ip || (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown'
+    const ip = getClientIp(request)
     const key = `${ip}:${account || email || phone}`
     const attempt = loginAttempts.get(key)
     if (attempt && Date.now() < attempt.blockedUntil) {
@@ -229,7 +279,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const result = await authService.login(email, password, fastify)
+      const result = await authService.login(email, password, fastify, ip)
       // 登录成功，清除限速计数
       loginAttempts.delete(key)
       return result
@@ -258,18 +308,23 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // 生成新的 accessToken（注入 organizationId，兼容老 token 由后端读取处 fallback 查库）
       const { getOrganizationIdForUser } = await import('../services/enterprise/organization/identity-bootstrap.service.js')
       const refreshOrgId = (await getOrganizationIdForUser(decoded.id)) || undefined
-      const newTokenVersion = (decoded.tokenVersion || 0) + 1
-      // 单设备一致性：新 tokenVersion 必须写回 DB，否则后续请求全 401「账号已在其他设备登录」（MODERATOR-UX-01 实锤）
-      await prisma.user.update({ where: { id: decoded.id }, data: { tokenVersion: newTokenVersion } }).catch(() => {})
+      const clientIp = getClientIp(request)
+      // 同 IP/已知 IP 刷新不递增版本（多端共存）；全新 IP 刷新视为新环境（互踢）
+      const dbUser = await prisma.user.findUnique({ where: { id: decoded.id }, select: { tokenVersion: true, activeIp: true, knownIps: true } }).catch(() => null)
+      const newTokenVersion = await nextTokenVersion(
+        { id: decoded.id, tokenVersion: dbUser?.tokenVersion ?? decoded.tokenVersion ?? 1, activeIp: dbUser?.activeIp ?? null, knownIps: dbUser?.knownIps ?? null },
+        clientIp
+      )
       const newAccessToken = fastify.jwt.sign({
         id: decoded.id,
         email: decoded.email,
         tokenVersion: newTokenVersion,
+        ip: clientIp,
         organizationId: refreshOrgId,
       })
       // 生成新的 refreshToken（用 refreshSecret，更长过期时间）
       const newRefreshToken = jwt.default.sign(
-        { id: decoded.id, email: decoded.email, tokenVersion: newTokenVersion },
+        { id: decoded.id, email: decoded.email, tokenVersion: newTokenVersion, ip: clientIp },
         refreshSecret,
         { expiresIn: '7d' }
       )

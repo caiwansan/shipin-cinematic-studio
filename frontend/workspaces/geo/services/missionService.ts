@@ -111,3 +111,151 @@ export async function fetchMissionWorkspace(): Promise<MissionWorkspaceResponse>
   const res = await geoApi.get<{ success: boolean; data: MissionWorkspaceResponse }>('/workspace/missions')
   return res.data
 }
+
+// ── AI Probe — 真实 AI 可见度探测 ──
+
+export interface AIVisibilityResult {
+  overall: number
+  engines: { engine: string; label: string; mentionRate: number; mentionCount: number; totalQuestions: number }[]
+  contentQuality: number
+  probedAt: string | null
+}
+
+export interface KnowledgeQualityResult {
+  overallScore: number
+  totalKnowledge: number
+  qualifiedKnowledge: number
+  topIssues: { type: string; message: string }[]
+}
+
+export interface ClosedLoopResult {
+  optimizationType: string
+  executionResult: { success: boolean; itemsCreated: number; details: string; error?: string }
+  beforeScore: number
+  afterScore: number
+  actualImprovement: number
+}
+
+// ── Full Closed-Loop Orchestrator ──
+
+export interface ClosedLoopPhase {
+  durationMs: number
+  score?: number
+  mentionRate?: number
+  result?: any
+}
+
+export interface FullClosedLoopReport {
+  success: boolean
+  projectId: string
+  executedAt: string
+  totalDurationMs: number
+  phase1_probe: ClosedLoopPhase
+  phase2_diagnose: { durationMs: number; report: any }
+  phase3_rewrite: { durationMs: number; result: any }
+  phase4_reprobe: ClosedLoopPhase
+  comparison: {
+    beforeScore: number
+    afterScore: number
+    scoreChange: number
+    beforeMentionRate: number
+    afterMentionRate: number
+    mentionRateChange: number
+    knowledgeAdded: number
+    knowledgeUpdated: number
+  }
+  summary: string
+}
+
+// ── Diagnosis ──
+
+export interface DiagnosisResult {
+  summary: {
+    totalQuestions: number
+    mentionCount: number
+    missCount: number
+    overallMentionRate: number
+  }
+  missedQuestions: Array<{
+    question: string
+    reason: string
+    reasonDetail: string
+    confidence: number
+  }>
+  knowledgeGaps: Array<{
+    topic: string
+    description: string
+    relatedQuestions: string[]
+    priority: number
+  }>
+  contentIssues: Array<{
+    type: string
+    description: string
+    suggestion: string
+  }>
+  recommendations: Array<{
+    action: string
+    targetTopic: string
+    detail: string
+    priority: number
+  }>
+}
+
+/**
+ * 执行 AI 可见度探测
+ * POST /api/geo/projects/:id/ai-probe
+ */
+export async function runAIProbe(brandId: string): Promise<AIVisibilityResult> {
+  const res = await geoApi.post<{ success: boolean; data: AIVisibilityResult }>(
+    `/projects/${encodeURIComponent(brandId)}/ai-probe`, {}
+  )
+  return res.data
+}
+
+/**
+ * 获取知识内容质量检测报告
+ * GET /api/geo/projects/:id/knowledge-quality
+ */
+export async function fetchKnowledgeQuality(brandId: string): Promise<KnowledgeQualityResult> {
+  const res = await geoApi.get<{ success: boolean; data: KnowledgeQualityResult }>(
+    `/projects/${encodeURIComponent(brandId)}/knowledge-quality`
+  )
+  return res.data
+}
+
+/**
+ * 执行闭环优化（Probe→优化→再Probe）
+ * POST /api/geo/projects/:id/closed-loop-optimization
+ */
+export async function runClosedLoopOptimization(
+  brandId: string,
+  optimizationType: 'knowledge_generation' | 'entity_expansion'
+): Promise<ClosedLoopResult> {
+  const res = await geoApi.post<{ success: boolean; data: ClosedLoopResult }>(
+    `/projects/${encodeURIComponent(brandId)}/closed-loop-optimization`,
+    { optimizationType }
+  )
+  return res.data
+}
+
+/**
+ * 一键闭环优化（探测→诊断→改写→再探测）
+ * POST /api/geo/projects/:id/full-closed-loop
+ */
+export async function runFullClosedLoop(brandId: string): Promise<FullClosedLoopReport> {
+  const res = await geoApi.post<{ success: boolean; data: FullClosedLoopReport }>(
+    `/projects/${encodeURIComponent(brandId)}/full-closed-loop`, {}
+  )
+  return res.data
+}
+
+/**
+ * 诊断 AI 可见度失败原因
+ * POST /api/geo/projects/:id/diagnose
+ */
+export async function runDiagnosis(brandId: string): Promise<{ probe: AIVisibilityResult; diagnosis: DiagnosisResult }> {
+  const res = await geoApi.post<{ success: boolean; data: { probe: AIVisibilityResult; diagnosis: DiagnosisResult } }>(
+    `/projects/${encodeURIComponent(brandId)}/diagnose`, {}
+  )
+  return res.data
+}

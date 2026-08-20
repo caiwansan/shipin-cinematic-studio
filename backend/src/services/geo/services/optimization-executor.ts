@@ -5,6 +5,8 @@
 
 import { prisma } from '../../../utils/index.js'
 import { genericLLM } from '../../deepseek-llm.provider.js'
+import { runAIProbe, isAIProbeAvailable } from './ai-probe.service.js'
+import type { AIProbeResult } from './ai-probe.service.js'
 
 // ── Types ──
 
@@ -22,14 +24,13 @@ function isLLMAvailable(): boolean {
 }
 
 async function getBrandData(projectId: string) {
-  const [brandSetting, brandProfile, entities, claims, existingKOs] = await Promise.all([
+  const [brandSetting, brandProfile, graphNodes, existingKOs] = await Promise.all([
     prisma.geoBrandSetting.findFirst({ where: { projectId } }).catch(() => null),
     prisma.geoBrandProfile.findFirst({ where: { projectId } }).catch(() => null),
-    prisma.gEOEntity.findMany({ where: { projectId }, take: 10 }).catch(() => []),
-    prisma.gEOClaim.findMany({ where: { projectId }, take: 10 }).catch(() => []),
+    prisma.geoGraphNode.findMany({ where: { projectId }, take: 20 }).catch(() => []),
     prisma.knowledgeObject.findMany({ where: { projectId }, take: 20 }).catch(() => []),
   ])
-  return { brandSetting, brandProfile, entities, claims, existingKOs }
+  return { brandSetting, brandProfile, graphNodes, existingKOs }
 }
 
 // ── Knowledge Generation ──
@@ -40,16 +41,16 @@ async function executeKnowledgeGeneration(projectId: string): Promise<ExecutionR
   const website = data.brandSetting?.website || data.brandProfile?.website || ''
   const industry = data.brandSetting?.industry || data.brandProfile?.industry || ''
   const description = data.brandSetting?.description || data.brandProfile?.brandDesc || ''
-  const entityNames = (data.entities || []).map((e: any) => e.name)
+  const entityNames = (data.graphNodes || []).map((n: any) => n.label)
   const existingTopics = (data.existingKOs || []).map((k: any) => k.topic).filter(Boolean)
 
   let generatedTopics: string[] = []
 
   if (isLLMAvailable()) {
     try {
+      const provider = process.env.LONGCAT_API_KEY ? 'longcat' : process.env.SILICONFLOW_API_KEY ? 'siliconflow' : 'deepseek'
+      const apiKey = process.env.LONGCAT_API_KEY || process.env.SILICONFLOW_API_KEY || process.env.DEEPSEEK_API_KEY
       const resp = await genericLLM.chat({
-        provider: 'longcat',
-        apiKey: process.env.LONGCAT_API_KEY,
         messages: [
           {
             role: 'system',
@@ -69,7 +70,9 @@ async function executeKnowledgeGeneration(projectId: string): Promise<ExecutionR
 请生成 3-5 个全新的知识主题（不要重复已有的）。`,
           },
         ],
-        provider: process.env.SILICONFLOW_API_KEY ? 'siliconflow' : 'deepseek',
+        provider,
+        apiKey,
+        model: provider === 'longcat' ? 'LongCat-2.0' : undefined,
       })
 
       const jsonMatch = resp.text.match(/\{[\s\S]*\}/)
@@ -133,16 +136,16 @@ async function executeEntityExpansion(projectId: string): Promise<ExecutionResul
   const data = await getBrandData(projectId)
   const brandName = data.brandSetting?.brandName || data.brandProfile?.brandName || 'Brand'
   const industry = data.brandSetting?.industry || data.brandProfile?.industry || ''
-  const existingNames = new Set((data.entities || []).map((e: any) => e.name))
+  const existingNames = new Set((data.graphNodes || []).map((n: any) => n.label))
   const existingNamesList = Array.from(existingNames)
 
-  let newEntities: Array<{ name: string; type: string; description: string }> = []
+  let newNodes: Array<{ label: string; type: string; description: string }> = []
 
   if (isLLMAvailable()) {
     try {
+      const provider = process.env.LONGCAT_API_KEY ? 'longcat' : process.env.SILICONFLOW_API_KEY ? 'siliconflow' : 'deepseek'
+      const apiKey = process.env.LONGCAT_API_KEY || process.env.SILICONFLOW_API_KEY || process.env.DEEPSEEK_API_KEY
       const resp = await genericLLM.chat({
-        provider: 'longcat',
-        apiKey: process.env.LONGCAT_API_KEY,
         messages: [
           {
             role: 'system',
@@ -159,14 +162,18 @@ async function executeEntityExpansion(projectId: string): Promise<ExecutionResul
 请生成 3-5 个全新的品牌实体（不要重复已有的）。`,
           },
         ],
-        provider: process.env.SILICONFLOW_API_KEY ? 'siliconflow' : 'deepseek',
+        provider,
+        apiKey,
+        model: provider === 'longcat' ? 'LongCat-2.0' : undefined,
       })
 
       const jsonMatch = resp.text.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0])
         if (Array.isArray(parsed.entities)) {
-          newEntities = parsed.entities.filter((e: any) => !existingNames.has(e.name))
+          newNodes = parsed.entities
+            .filter((e: any) => !existingNames.has(e.name))
+            .map((e: any) => ({ label: e.name, type: e.type || 'concept', description: e.description }))
         }
       }
     } catch {
@@ -175,24 +182,27 @@ async function executeEntityExpansion(projectId: string): Promise<ExecutionResul
   }
 
   // Fallback
-  if (newEntities.length === 0) {
+  if (newNodes.length === 0) {
     const templates = [
-      { name: `${brandName} 产品线`, type: 'product', description: `${brandName}的核心产品` },
-      { name: `${brandName} 创始人`, type: 'person', description: `${brandName}的创始人` },
+      { label: `${brandName} 产品线`, type: 'product', description: `${brandName}的核心产品` },
+      { label: `${brandName} 创始人`, type: 'person', description: `${brandName}的创始人` },
     ]
-    newEntities = templates.filter((e) => !existingNames.has(e.name))
+    newNodes = templates.filter((e) => !existingNames.has(e.label))
   }
 
   let created = 0
-  for (const ent of newEntities) {
+  for (const node of newNodes) {
     try {
-      await prisma.gEOEntity.create({
+      await prisma.geoGraphNode.create({
         data: {
           projectId,
-          name: ent.name,
-          type: ent.type || 'concept',
-          description: ent.description,
-          metadata: { source: 'optimization_executor', method: isLLMAvailable() ? 'llm' : 'heuristic' },
+          type: node.type || 'concept',
+          label: node.label,
+          properties: JSON.stringify({
+            source: 'optimization_executor',
+            method: isLLMAvailable() ? 'llm' : 'heuristic',
+            description: node.description,
+          }),
         },
       })
       created++
@@ -204,7 +214,74 @@ async function executeEntityExpansion(projectId: string): Promise<ExecutionResul
   return {
     success: created > 0,
     itemsCreated: created,
-    details: `为「${brandName}」新增 ${created} 个品牌实体`,
+    details: `为「${brandName}」新增 ${created} 个品牌实体（知识图谱节点）`,
+  }
+}
+
+// ── P2: Closed-Loop Optimization (Probe → Optimize → Re-Probe) ──
+
+export interface ClosedLoopResult {
+  optimizationType: string
+  executionResult: ExecutionResult
+  /** 优化前 AI 可见度 */
+  beforeScore: number
+  /** 优化后 AI 可见度 */
+  afterScore: number
+  /** 实际提升 */
+  actualImprovement: number
+  /** 探测详情 */
+  probeDetails: {
+    before: AIProbeResult | null
+    after: AIProbeResult | null
+  }
+}
+
+/**
+ * 执行闭环优化：先 Probe 获取基线分数，执行优化，再 Probe 验证效果
+ */
+export async function executeClosedLoopOptimization(
+  projectId: string,
+  optimizationType: string
+): Promise<ClosedLoopResult> {
+  // Step 1: Probe 优化前基线
+  let beforeProbe: AIProbeResult | null = null
+  let beforeScore = 0
+  if (isAIProbeAvailable()) {
+    try {
+      beforeProbe = await runAIProbe(projectId, { maxQuestionsPerEngine: 3 })
+      beforeScore = beforeProbe.overall
+    } catch {
+      // probe failed — continue without baseline
+    }
+  }
+
+  // Step 2: 执行优化
+  const executionResult = await executeOptimization(projectId, optimizationType)
+
+  // Step 3: Probe 优化后效果
+  let afterProbe: AIProbeResult | null = null
+  let afterScore = 0
+  if (isAIProbeAvailable() && executionResult.success) {
+    try {
+      // 等待 2s 让 AI 引擎有时间索引新内容（实际场景可能需要更长时间）
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      afterProbe = await runAIProbe(projectId, { maxQuestionsPerEngine: 3 })
+      afterScore = afterProbe.overall
+    } catch {
+      // probe failed — continue without after measurement
+    }
+  }
+
+  return {
+    optimizationType,
+    executionResult,
+    beforeScore,
+    afterScore,
+    actualImprovement: afterScore - beforeScore,
+    probeDetails: {
+      before: beforeProbe,
+      after: afterProbe,
+    },
   }
 }
 

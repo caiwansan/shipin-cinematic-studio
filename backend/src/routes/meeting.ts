@@ -6,7 +6,7 @@ import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { wkApi } from './im.js'
 
-const SFU_URL = process.env.SFU_URL || 'ws://localhost:3001'
+const SFU_URL = process.env.SFU_URL || 'ws://localhost:3002'
 
 const chId = (id: string) => 'mtg_' + id
 let meetingNoColumnChecked = false

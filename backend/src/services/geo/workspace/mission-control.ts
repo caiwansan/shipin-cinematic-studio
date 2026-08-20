@@ -11,6 +11,9 @@
 
 import { missionControlRepository } from '../repositories/mission-control.repository.js'
 import type { MissionControlDTO } from '../../../../../shared/dto/mission-control.dto.js'
+import { runAIProbe, isAIProbeAvailable } from '../services/ai-probe.service.js'
+import { analyzeKnowledgeQuality } from '../services/knowledge-quality.service.js'
+import { geoBrandSettingRepository } from '../repositories/geo-brand-setting.repository.js'
 
 const ENGINE_INFO: Record<string, { label: string; icon: string }> = {
   discovery: { label: '品牌识别', icon: '🔍' },
@@ -22,9 +25,9 @@ const ENGINE_INFO: Record<string, { label: string; icon: string }> = {
   learning: { label: '持续学习', icon: '🧠' },
 }
 
-export async function getMissionControl(projectId?: string): Promise<MissionControlDTO> {
-  // ★ P0-6: Single call to MissionControlRepository
-  const dash = await missionControlRepository.loadDashboard(projectId)
+export async function getMissionControl(projectId?: string, userId?: string): Promise<MissionControlDTO> {
+  // ★ P0-Fix: Pass userId for tenant isolation
+  const dash = await missionControlRepository.loadDashboard(projectId, userId)
 
   // ── Engine states derived from ScoreSnapshot presence ──
   const hasSnapshot = dash.snapshotCount > 0
@@ -95,11 +98,54 @@ export async function getMissionControl(projectId?: string): Promise<MissionCont
     .filter((e: any) => e.title?.includes('完善') || e.title?.includes('创建'))
     .slice(0, 3)
 
+  // ★ P0: AI 实测可见度（non-blocking，超时降级）
+  let aiVisibilityReal: MissionControlDTO['aiVisibilityReal']
+  if (isAIProbeAvailable() && dash.projectId) {
+    try {
+      const brandSetting = await geoBrandSettingRepository.findFirst({ where: { projectId: dash.projectId } })
+      if (brandSetting?.brandName) {
+        const probeResult = await runAIProbe(dash.projectId, { maxQuestionsPerEngine: 3 })
+        aiVisibilityReal = {
+          overall: probeResult.overall,
+          engines: probeResult.engineResults.map(e => ({
+            engine: e.engine,
+            label: e.label,
+            mentionRate: e.mentionRate,
+            mentionCount: e.mentionCount,
+            totalQuestions: e.totalQuestions,
+          })),
+          contentQuality: probeResult.contentQuality.score,
+          probedAt: probeResult.probedAt,
+        }
+      }
+    } catch {
+      // AI probe failed — skip
+    }
+  }
+
+  // ★ P0: 知识内容质量检测（non-blocking）
+  let knowledgeQuality: MissionControlDTO['knowledgeQuality']
+  if (dash.projectId) {
+    try {
+      const kqReport = await analyzeKnowledgeQuality(dash.projectId)
+      knowledgeQuality = {
+        overallScore: kqReport.overallScore,
+        totalKnowledge: kqReport.totalKnowledge,
+        qualifiedKnowledge: kqReport.qualifiedKnowledge,
+        topIssues: kqReport.issues.slice(0, 5).map(i => ({ type: i.type, message: i.message })),
+      }
+    } catch {
+      // skip
+    }
+  }
+
   // ── Return ──
   return {
     projectId: dash.projectId,
     entityName: dash.entityName,
     aiVisibility: dash.aiVisibility,
+    aiVisibilityReal,
+    knowledgeQuality,
     todayGoal: dash.todayGoal,
     engines,
     lastExecution: dash.latestSnapshot

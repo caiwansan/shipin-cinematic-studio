@@ -257,7 +257,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+
+// ====== 历史记录持久化 ======
+const HISTORY_STORAGE_KEY = 'music_gen_history'
+function loadHistory(): any[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+function saveHistory(items: any[]) {
+  try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(items)) } catch { /* quota */ }
+}
 
 // ====== 状态 ======
 const selectedStyle = ref('epic')
@@ -317,7 +329,8 @@ const moods = [
 
 const instruments = ['钢琴', '吉他', '古筝', '笛子', '小提琴', '鼓', '贝斯', '琵琶', '二胡', '箫', '合成器', '大提琴']
 
-const history = ref<any[]>([])
+const history = ref<any[]>(loadHistory())
+watch(history, (val) => saveHistory(val), { deep: true })
 
 // ====== 解析歌词为段落 ======
 const parsedSections = computed(() => {

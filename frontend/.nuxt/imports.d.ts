@@ -29,6 +29,7 @@ export { withCtx, withDirectives, withKeys, withMemo, withModifiers, withScopeId
 export { requestIdleCallback, cancelIdleCallback } from '#app/compat/idle-callback';
 export { setInterval } from '#app/compat/interval';
 export { useAIDepartment } from '../composables/useAIDepartment';
+export { useAiSecretary, TranscriptItem, SecretaryStatus, MeetingMinutes } from '../composables/useAiSecretary';
 export { useEnterpriseAgents } from '../composables/useEnterpriseAgents';
 export { useEnterpriseContext } from '../composables/useEnterpriseContext';
 export { useEnterpriseDashboard } from '../composables/useEnterpriseDashboard';
@@ -45,6 +46,8 @@ export { useReplayFrame } from '../composables/useReplayFrame';
 export { useRtcCall, RtcMode, RtcState } from '../composables/useRtcCall';
 export { LANG_GROUPS, LANG_OPTIONS, useRtcInterpreter, InterpSubtitle, InterpState, InterpAudioMsg, InterpLangOption, InterpDiagnostic } from '../composables/useRtcInterpreter';
 export { useSSEStream } from '../composables/useSSEStream';
+export { useSfuMeeting, SfuConfig, RemotePeer } from '../composables/useSfuMeeting';
+export { useSigning } from '../composables/useSigning';
 export { useToastState, toastSuccess, toastWarning, toastError, toastInfo, toastEngineCompleted, toastEngineQueued, toastEngineFailed, ToastMessage } from '../composables/useToast';
 export { authFetch } from '../utils/auth-fetch';
 export { getStepDefs, getBuiltinRecipes, getRecipesByGoal, getAccessibleRecipes, getAvailableModes, serializeRecipeConfig, goalDisplayName, goalDescription, ExecutionStepId, ExecutionMode, GoalType, OutputType, RecipeStep, ExecutionRecipe } from '../utils/executionRecipe';

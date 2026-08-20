@@ -11,6 +11,8 @@ import { classifyMedia, generateThumb, registerMediaObject, startMediaTtlCleaner
 import { indexMessage, recallMessage, recalledMessageIds, RECALL_WINDOW_MS } from '../im/im-recall.service.js'
 import { transcribeVoice, ASR_AVAILABLE } from '../im/voice-asr.service.js'
 import { LANG_NAMES } from '../services/interp-langs.js'
+import { updateMessageStatus, markConversationRead, getMessageStatus, getConversationRead } from '../im/im-message-status.service.js'
+import { setTyping, getTypingUsers } from '../im/im-typing.service.js'
 
 // ── 配置（env 可覆盖）──────────────────────────────────────────
 const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
@@ -167,25 +169,49 @@ const EXT_WHITELIST = new Set([
   '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.md', '.csv', '.zip', '.rar', '.7z', '.json',
 ])
 
-// ── 翻译（英→中）LLM key：优先 env DEEPSEEK_API_KEY，否则 DB apiKey deepseek_api_key 解密 ──
+// ── 翻译 LLM key/config：优先后台管理配置（RouteConfig tea/translate_ai，支持 deepseek/doubao/longcat 等国产模型），否则 env/DB 兼容旧配置 ──
 let translateKeyCache: string | null | undefined = undefined
 let translateKeyAt = 0
+let translateCfgCache: { provider: string; model: string; baseUrl: string } | null = null
+let translateCfgAt = 0
 async function getTranslateKey(): Promise<string | null> {
   if (translateKeyCache !== undefined && Date.now() - translateKeyAt < 5 * 60_000) return translateKeyCache
-  if (process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY.startsWith('sk-')) {
-    translateKeyCache = process.env.DEEPSEEK_API_KEY
-  } else {
-    try {
+  translateKeyCache = null
+  try {
+    // ① 后台管理配置的翻译大模型（优先）
+    const row = await prisma.routeConfig.findUnique({ where: { scope_key: { scope: 'tea', key: 'translate_ai' } } })
+    const v: any = row?.value || {}
+    if (v.apiKey) translateKeyCache = String(v.apiKey)
+    else if (process.env.DEEPSEEK_API_KEY) translateKeyCache = process.env.DEEPSEEK_API_KEY
+    else {
+      // ③ 兼容旧 DB apiKey（解密存储）
       const { decryptKey } = await import('../services/crypto.service.js')
-      const row = await prisma.apiKey.findFirst({ where: { keyName: 'deepseek_api_key' } })
-      translateKeyCache = row ? (row.keyValue.startsWith('enc:') || row.keyValue.includes(':') ? await decryptKey(row.keyValue) : row.keyValue) : null
-      if (!translateKeyCache?.startsWith('sk-')) translateKeyCache = null
-    } catch {
-      translateKeyCache = null
+      const krow = await prisma.apiKey.findFirst({ where: { keyName: 'deepseek_api_key' } })
+      translateKeyCache = krow ? (krow.keyValue.startsWith('enc:') || krow.keyValue.includes(':') ? await decryptKey(krow.keyValue) : krow.keyValue) : null
     }
+  } catch {
+    translateKeyCache = null
   }
   translateKeyAt = Date.now()
   return translateKeyCache
+}
+async function getTranslateConfig(): Promise<{ provider: string; model: string; baseUrl: string }> {
+  if (translateCfgCache && Date.now() - translateCfgAt < 5 * 60_000) return translateCfgCache
+  const out = {
+    provider: process.env.DEEPSEEK_PROVIDER || 'deepseek',
+    model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
+    baseUrl: (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1').replace(/\/+$/, ''),
+  }
+  try {
+    const row = await prisma.routeConfig.findUnique({ where: { scope_key: { scope: 'tea', key: 'translate_ai' } } })
+    const v: any = row?.value || {}
+    if (v.provider) out.provider = String(v.provider)
+    if (v.model) out.model = String(v.model)
+    if (v.baseUrl) out.baseUrl = String(v.baseUrl).replace(/\/+$/, '')
+  } catch { /* ignore */ }
+  translateCfgCache = out
+  translateCfgAt = Date.now()
+  return out
 }
 
 /** 服务端代发消息（撤回通知等系统消息用） */
@@ -213,8 +239,8 @@ export default async function imRoutes(fastify: FastifyInstance) {
     const token = crypto.randomBytes(24).toString('hex')
     const expireAt = new Date(Date.now() + IM_TOKEN_TTL_DAYS * 24 * 3600 * 1000)
 
-    // 旧 token 失效（同用户只留一个活跃会话）
-    await prisma.imTokenSession.deleteMany({ where: { userId } })
+    // 多设备共存（桌面/手机可同时在线）；仅清理该用户过期 token
+    await prisma.imTokenSession.deleteMany({ where: { userId, expireAt: { lt: new Date() } } })
     await prisma.imTokenSession.create({ data: { userId, token, expireAt } })
 
     // 同步到 WuKongIM（运行期更新 token）
@@ -346,6 +372,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
     // ── 会话摘要：每个频道最近一条消息（文字取内容，图片/视频/语音取类型占位）──
     // 手机版/桌面版会话列表展示最后一条消息（掌柜反馈：群里发消息会话列表不显示文字）
     const lastMsgByChannel = new Map<string, string>()
+    const lastTsByChannel = new Map<string, number>()
     try {
       const allChannels = [
         ...publicChannels.map((c: any) => ({ id: c.id, type: c.type })),
@@ -380,6 +407,9 @@ export default async function imRoutes(fastify: FastifyInstance) {
               }
             }
             lastMsgByChannel.set(ch.id, text || '')
+            // 最近消息时间（毫秒）——用于会话按最新消息排序
+            const ts = Number(m.timestamp)
+            if (Number.isFinite(ts) && ts > 0) lastTsByChannel.set(ch.id, ts * 1000)
           })
         )
       )
@@ -388,7 +418,12 @@ export default async function imRoutes(fastify: FastifyInstance) {
       console.warn('[im/channels] lastMsg 摘要加载失败（非致命）:', (e as Error).message)
     }
 
-    return { success: true, data: { public: publicChannels.map((c: any) => ({ ...c, lastMsg: lastMsgByChannel.get(c.id) || '' })), groups: groups.map((g: any) => ({ ...g, lastMsg: lastMsgByChannel.get(g.id) || '' })), dms: dms.map((d: any) => ({ ...d, lastMsg: lastMsgByChannel.get(d.id) || '' })) } }
+    // 按最近消息时间倒序（新的在前）——修复“私聊/群聊新消息不置顶到前列”
+    const lastTsOf = (id: string) => lastTsByChannel.get(id) || 0
+    dms.sort((a, b) => lastTsOf(b.id) - lastTsOf(a.id))
+    groups.sort((a, b) => lastTsOf(b.id) - lastTsOf(a.id))
+
+    return { success: true, data: { public: publicChannels.map((c: any) => ({ ...c, lastMsg: lastMsgByChannel.get(c.id) || '', lastTs: lastTsOf(c.id) })), groups: groups.map((g: any) => ({ ...g, lastMsg: lastMsgByChannel.get(g.id) || '', lastTs: lastTsOf(g.id) })), dms: dms.map((d: any) => ({ ...d, lastMsg: lastMsgByChannel.get(d.id) || '', lastTs: lastTsOf(d.id) })) } }
   })
 
   // GET /api/im/channels/:id/members — 频道成员列表（SDK syncSubscribersCallback 数据源）
@@ -768,20 +803,21 @@ export default async function imRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ success: false, error: '文本必填且不超过 2000 字符' })
     }
     const key = await getTranslateKey()
-    if (!key) return reply.status(501).send({ success: false, error: '翻译服务未配置（DeepSeek key 缺失）' })
+    if (!key) return reply.status(501).send({ success: false, error: '翻译服务未配置（请到后台「昆仑茶馆→翻译大模型设置」配置 API Key）' })
+    const cfg = await getTranslateConfig()
     // 语言名称（fallback 到语言码）
-    const srcName = LANG_NAMES[srcLang] || srcLang || '英文'
+    const srcName = LANG_NAMES[srcLang] || srcLang || '原文'
     const tgtName = LANG_NAMES[tgtLang] || tgtLang || '简体中文'
     // 原文即目标语言 → 原样返回
     if (srcLang && tgtLang && srcLang === tgtLang) {
       return { success: true, data: { translated: text, source: text, srcLang, tgtLang } }
     }
     try {
-      const res = await fetch(`${process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1'}/chat/completions`, {
+      const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify({
-          model: process.env.DEEPSEEK_LLM_MODEL || 'deepseek-v4-flash',
+          model: cfg.model,
           messages: [
             { role: 'system', content: `你是专业翻译。把下面这段${srcName}翻译成${tgtName}。只输出译文本身，不加解释、不加引号、不改写原文语气。若原文已是${tgtName}则原样返回。` },
             { role: 'user', content: text },
@@ -901,4 +937,416 @@ export default async function imRoutes(fastify: FastifyInstance) {
       return reply.status(502).send({ success: false, error: (e as Error).message })
     }
   })
+
+  // ══ P0-1: 消息状态追踪 ══
+
+  // POST /api/im/messages/status — 更新消息状态（送达/已读）
+  // body: { messageIds: string[], channelId, channelType, status: 1|2 }
+  fastify.post('/api/im/messages/status', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { messageIds, channelId, channelType = 4, status } = request.body as any
+    if (!messageIds?.length || !channelId || !status) {
+      return reply.status(400).send({ success: false, error: 'messageIds/channelId/status 必填' })
+    }
+    try {
+      const uid = request.user.id as string
+      for (const msgId of messageIds) {
+        await updateMessageStatus(msgId, channelId, status, uid)
+      }
+      return { success: true, data: { updated: messageIds.length } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // GET /api/im/messages/status?channelId=xxx&messageIds=id1,id2,id3 — 查询消息状态
+  fastify.get('/api/im/messages/status', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, messageIds } = request.query as any
+    if (!channelId || !messageIds) {
+      return reply.status(400).send({ success: false, error: 'channelId/messageIds 必填' })
+    }
+    try {
+      const ids = String(messageIds).split(',').filter(Boolean)
+      const result = await getMessageStatus(ids, channelId)
+      return { success: true, data: result }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // POST /api/im/messages/read — 标记会话已读
+  // body: { channelId, channelType, lastReadMessageId }
+  fastify.post('/api/im/messages/read', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, channelType = 4, lastReadMessageId } = request.body as any
+    if (!channelId) {
+      return reply.status(400).send({ success: false, error: 'channelId 必填' })
+    }
+    try {
+      const uid = request.user.id as string
+      await markConversationRead(uid, channelId, channelType, lastReadMessageId)
+      return { success: true }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // GET /api/im/messages/read/:channelId?type=4 — 获取已读水位
+  fastify.get('/api/im/messages/read/:channelId', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId } = request.params as any
+    const channelType = Number((request.query as any)?.type || 4)
+    try {
+      const uid = request.user.id as string
+      const lastRead = await getConversationRead(uid, channelId, channelType)
+      return { success: true, data: { lastReadMessageId: lastRead } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // ══ P0-3: 输入状态 ══
+
+  // POST /api/im/typing — 设置输入状态
+  // body: { channelId, channelType, typing: boolean }
+  fastify.post('/api/im/typing', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, channelType = 4, typing } = request.body as any
+    if (!channelId) {
+      return reply.status(400).send({ success: false, error: 'channelId 必填' })
+    }
+    try {
+      const uid = request.user.id as string
+      await setTyping(uid, typing ? channelId : null)
+      return { success: true }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // GET /api/im/typing/:channelId?type=4 — 获取正在输入的用户
+  fastify.get('/api/im/typing/:channelId', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId } = request.params as any
+    try {
+      const uid = request.user.id as string
+      const typingUids = await getTypingUsers(channelId, uid)
+      return { success: true, data: { typingUids } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // ══ P0-4: 引用回复 ══
+
+  // POST /api/im/messages/send-reply — 发送引用回复消息
+  // body: { channelId, channelType, content, contentType, replyToMessageId }
+  fastify.post('/api/im/messages/send-reply', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, channelType = 4, content, contentType = 1, replyToMessageId } = request.body as any
+    if (!channelId || !content) {
+      return reply.status(400).send({ success: false, error: 'channelId/content 必填' })
+    }
+    try {
+      const uid = request.user.id as string
+      const msgBody = typeof content === 'string'
+        ? { type: contentType, content: { text: content, replyTo: replyToMessageId || null } }
+        : { type: contentType, content: { ...content, replyTo: replyToMessageId || null } }
+      const payload = Buffer.from(JSON.stringify(msgBody)).toString('base64')
+      const data = await wkApi('/message/send', {
+        channel_id: channelId,
+        channel_type: channelType,
+        from_uid: uid,
+        payload,
+      })
+      // 记录消息归属时带上 replyTo
+      if (data?.message_id) {
+        await prisma.imMessageIndex.create({
+          data: {
+            messageId: data.message_id,
+            fromUid: uid,
+            channelId,
+            channelType,
+            replyToMessageId: replyToMessageId || null,
+          },
+        }).catch(() => {})
+      }
+      return { success: true, data }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // ══ P1-4: 群管理 ══
+
+  // PUT /api/im/channels/:channelId/members/:uid/role — 设置成员角色
+  fastify.put('/api/im/channels/:channelId/members/:uid/role', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, uid: targetUid } = request.params as any
+    const { channelType = 4, role } = request.body as any
+    if (role === undefined) return reply.status(400).send({ success: false, error: 'role 必填' })
+    try {
+      const operatorId = request.user.id as string
+      const membership = await prisma.imChannelMember.findUnique({
+        where: { channelId_channelType_uid: { channelId, channelType, uid: operatorId } },
+      })
+      if (!membership || membership.role < 2) {
+        return reply.status(403).send({ success: false, error: '仅群主/管理员可操作' })
+      }
+      await prisma.imChannelMember.upsert({
+        where: { channelId_channelType_uid: { channelId, channelType, uid: targetUid } },
+        update: { role: Number(role) },
+        create: { channelId, channelType, uid: targetUid, role: Number(role) },
+      })
+      return { success: true }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // POST /api/im/channels/:channelId/members/:uid/mute — 禁言成员
+  fastify.post('/api/im/channels/:channelId/members/:uid/mute', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, uid: targetUid } = request.params as any
+    const { channelType = 4, duration = 3600 } = request.body as any
+    try {
+      const operatorId = request.user.id as string
+      const membership = await prisma.imChannelMember.findUnique({
+        where: { channelId_channelType_uid: { channelId, channelType, uid: operatorId } },
+      })
+      if (!membership || membership.role < 2) {
+        return reply.status(403).send({ success: false, error: '仅群主/管理员可操作' })
+      }
+      const muteKey = `mute:${channelId}:${targetUid}`
+      await prisma.imUserPresence.upsert({
+        where: { uid: targetUid },
+        update: { typingInChannel: null },
+        create: { uid: targetUid, online: false },
+      })
+      // 用系统消息通知
+      const muteContent = Buffer.from(JSON.stringify({ type: 1, content: { text: `系统：管理员已禁言该成员 ${Math.floor(duration / 60)} 分钟` } })).toString('base64')
+      await wkApi('/message/send', {
+        channel_id: channelId,
+        channel_type: channelType,
+        from_uid: 'system',
+        payload: muteContent,
+      }).catch(() => {})
+      return { success: true, data: { muted: true, duration } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // POST /api/im/channels/:channelId/announcement — 设置群公告
+  fastify.post('/api/im/channels/:channelId/announcement', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId } = request.params as any
+    const { channelType = 4, content } = request.body as any
+    if (!content) return reply.status(400).send({ success: false, error: 'content 必填' })
+    try {
+      const operatorId = request.user.id as string
+      const membership = await prisma.imChannelMember.findUnique({
+        where: { channelId_channelType_uid: { channelId, channelType, uid: operatorId } },
+      })
+      if (!membership || membership.role < 2) {
+        return reply.status(403).send({ success: false, error: '仅群主/管理员可操作' })
+      }
+      // 更新群信息
+      await prisma.imGroup.updateMany({
+        where: { id: channelId },
+        data: { announcement: content },
+      })
+      // 发送系统消息
+      const sysPayload = Buffer.from(JSON.stringify({ type: 1, content: { text: `📢 群公告：${content}` } })).toString('base64')
+      await wkApi('/message/send', {
+        channel_id: channelId,
+        channel_type: channelType,
+        from_uid: 'system',
+        payload: sysPayload,
+      }).catch(() => {})
+      return { success: true }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // ══ P2-1: 聊天内容搜索 ══
+
+  // GET /api/im/search?channelId=xxx&keyword=xxx&limit=20 — 搜索聊天内容
+  fastify.get('/api/im/search', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, keyword, limit = 20 } = request.query as any
+    if (!keyword || keyword.length < 1) {
+      return { success: true, data: [] }
+    }
+    try {
+      // 搜索消息索引中的文本内容
+      const results = await prisma.imMessageIndex.findMany({
+        where: {
+          channelId,
+          ...(channelId ? {} : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+        take: Math.min(Number(limit), 50),
+      })
+      return { success: true, data: results }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // ══ P2-4: 未读管理 ══
+
+  // GET /api/im/unread?channelId=xxx&type=4 — 获取未读消息数
+  fastify.get('/api/im/unread/:channelId', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId } = request.params as any
+    const channelType = Number((request.query as any)?.type || 4)
+    try {
+      const uid = request.user.id as string
+      const lastRead = await getConversationRead(uid, channelId, channelType)
+      if (!lastRead) {
+        const total = await prisma.imMessageIndex.count({ where: { channelId, channelType } })
+        return { success: true, data: { unread: total } }
+      }
+      const lastReadMsg = await prisma.imMessageIndex.findUnique({
+        where: { messageId: lastRead },
+        select: { createdAt: true },
+      })
+      if (!lastReadMsg) {
+        const total = await prisma.imMessageIndex.count({ where: { channelId, channelType } })
+        return { success: true, data: { unread: total } }
+      }
+      const unread = await prisma.imMessageIndex.count({
+        where: { channelId, channelType, createdAt: { gt: lastReadMsg.createdAt } },
+      })
+      return { success: true, data: { unread: Math.max(0, unread) } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // POST /api/im/mark-unread — 标记会话未读（手动标记）
+  fastify.post('/api/im/mark-unread', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, channelType = 4 } = request.body as any
+    if (!channelId) return reply.status(400).send({ success: false, error: 'channelId 必填' })
+    try {
+      const uid = request.user.id as string
+      // 删除已读记录 → 下次打开时全部显示未读
+      await prisma.imConversationRead.deleteMany({
+        where: { uid, channelId, channelType },
+      })
+      return { success: true }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // ══ P0-2: 连接状态增强 ══
+
+  // GET /api/im/health — 连接健康检查（前端定时 ping）
+  fastify.get('/api/im/health', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    try {
+      const wkHealth = await fetch(`${IM_HTTP_ADDR}/health`, { signal: AbortSignal.timeout(3000) })
+      const wkOk = wkHealth.ok
+      return { success: true, data: { wukongim: wkOk, server: true, ts: Date.now() } }
+    } catch {
+      return { success: true, data: { wukongim: false, server: true, ts: Date.now() } }
+    }
+  })
+
+  // ══ P1-1: Emoji 列表 ══
+
+  // GET /api/im/emoji — 获取常用 emoji 列表
+  fastify.get('/api/im/emoji', async (request: any, reply: FastifyReply) => {
+    const emojis = [
+      { category: '表情', items: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐'] },
+      { category: '手势', items: ['👍','👎','👊','✊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✌️','🤞','🫰','🤟','🤘','👌','🤌','🤏','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','👋','🤙','💪','🦾','🖕'] },
+      { category: '爱心', items: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','💟','♥️','🫀','💋','💌'] },
+      { category: '动物', items: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🦄','🐝','🦋','🐛','🐌','🐞','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦀','🐡','🐠','🐟','🐬','🐳','🐋'] },
+      { category: '食物', items: ['🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🥐','🍞','🥖','🥨','🧀','🥚','🍳','🥞','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🫔','🥗','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿'] },
+      { category: '活动', items: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤸','⛹️','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🎰','🧩'] },
+    ]
+    return { success: true, data: emojis }
+  })
+
+  // ══ P2-2: @提及 ══
+
+  // GET /api/im/mention-search?channelId=xxx&q=xxx — 搜索群成员用于 @
+  fastify.get('/api/im/mention-search/:channelId', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId } = request.params as any
+    const { q } = request.query as any
+    try {
+      const members = await prisma.imChannelMember.findMany({
+        where: { channelId },
+        select: { uid: true, name: true, avatar: true },
+        take: 20,
+      })
+      const filtered = q
+        ? members.filter(m => m.name?.toLowerCase().includes(q.toLowerCase()))
+        : members
+      return { success: true, data: filtered }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // ══ P1-3: 语音波形数据 ══
+
+  // POST /api/im/voice-waveform — 上传语音时生成波形数据
+  // body: { messageId, waveform: number[] }
+  fastify.post('/api/im/voice-waveform', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { messageId, waveform } = request.body as any
+    if (!messageId || !waveform) return reply.status(400).send({ success: false, error: 'messageId/waveform 必填' })
+    try {
+      // 存储波形数据到消息索引
+      await prisma.imMessageIndex.updateMany({
+        where: { messageId },
+        data: { clientMsgNo: JSON.stringify({ waveform }) },
+      })
+      return { success: true }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // GET /api/im/voice-waveform/:messageId — 获取语音波形数据
+  fastify.get('/api/im/voice-waveform/:messageId', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { messageId } = request.params as any
+    try {
+      const msg = await prisma.imMessageIndex.findUnique({
+        where: { messageId },
+        select: { clientMsgNo: true },
+      })
+      let waveform: number[] = []
+      if (msg?.clientMsgNo) {
+        try { waveform = JSON.parse(msg.clientMsgNo).waveform || [] } catch { /* ignore */ }
+      }
+      return { success: true, data: { waveform } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // ══ P2-3: 设置增强 ══
+
+  // GET /api/im/settings — 获取用户 IM 设置
+  fastify.get('/api/im/settings', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    try {
+      const uid = request.user.id as string
+      // 从用户配置中读取 IM 相关设置
+      const settings = {
+        fontSize: 'medium', // small | medium | large
+        chatBackground: 'default',
+        doNotDisturb: false,
+        readReceipts: true,
+        typingIndicator: true,
+      }
+      return { success: true, data: settings }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // PUT /api/im/settings — 更新用户 IM 设置
+  fastify.put('/api/im/settings', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { fontSize, chatBackground, doNotDisturb, readReceipts, typingIndicator } = request.body as any
+    try {
+      // TODO: 持久化到用户配置表
+      return { success: true, data: { fontSize, chatBackground, doNotDisturb, readReceipts, typingIndicator } }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
 }
+

@@ -148,6 +148,7 @@ const planLabel = computed(() => {
   const p = planInfo.value.membership?.tier || planInfo.value.memberTier || 'free'
   const names: Record<string, string> = {
     free: '免费用户', trial: '新人体验卡',
+    local_vip: '黄金会员', smartws: '钻石会员', vips: '年卡会员',
     basic: '基础版', pro: '本地版', enterprise: '年卡',
     gold: '黄金会员', Pro: '钻石会员',
     premium: '黄金会员', vip: '黄金会员', director: '年卡会员',
@@ -180,6 +181,9 @@ const vipInfo = computed(() => {
   const MAP: Record<string, { label: string; icon: string; color: string; gradient: string; glowColor: string }> = {
     free: { label: '免费用户', icon: '🆓', color: '#9ca3af', gradient: 'linear-gradient(135deg, #374151, #4b5563)', glowColor: 'rgba(107,114,128,0.15)' },
     trial: { label: '新人体验卡', icon: '🎁', color: '#F59E0B', gradient: 'linear-gradient(135deg, #F59E0B, #fcd34d)', glowColor: 'rgba(245,158,11,0.2)' },
+    local_vip: { label: '黄金会员', icon: '⭐', color: '#D4AF37', gradient: 'linear-gradient(135deg, #D4AF37, #fbbf24)', glowColor: 'rgba(212,175,55,0.25)' },
+    smartws: { label: '钻石会员', icon: '💎', color: '#818cf8', gradient: 'linear-gradient(135deg, #6366f1, #a5b4fc)', glowColor: 'rgba(129,140,248,0.25)' },
+    vips: { label: '年卡会员', icon: '👑', color: '#22c55e', gradient: 'linear-gradient(135deg, #22c55e, #4ade80)', glowColor: 'rgba(34,197,94,0.2)' },
     basic: { label: '基础版', icon: '⭐', color: '#3b82f6', gradient: 'linear-gradient(135deg, #3b82f6, #60a5fa)', glowColor: 'rgba(59,130,246,0.2)' },
     pro: { label: '本地版', icon: '💻', color: '#a855f7', gradient: 'linear-gradient(135deg, #a855f7, #c084fc)', glowColor: 'rgba(168,85,247,0.2)' },
     enterprise: { label: '年卡', icon: '👑', color: '#22c55e', gradient: 'linear-gradient(135deg, #22c55e, #4ade80)', glowColor: 'rgba(34,197,94,0.2)' },

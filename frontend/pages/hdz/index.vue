@@ -306,7 +306,7 @@ const isVip = computed(() => {
 })
 const displayMemberName = computed(() => {
   const map: Record<string, string> = {
-    free: '体验版', basic: '基础版', pro: '本地版', enterprise: '年卡',
+    free: '体验版', basic: '基础版', pro: '本地版', enterprise: '年卡', local_vip: '黄金会员', smartws: '钻石会员', vips: '年卡会员',
   }
   return map[memberTier.value] || memberTier.value || '体验版'
 })

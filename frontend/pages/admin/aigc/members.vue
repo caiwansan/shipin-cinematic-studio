@@ -99,9 +99,9 @@
             </div>
             <select v-model="editNewTier" class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50">
               <option value="free">普通用户（免费 / 体验版）</option>
-              <option value="basic">基础版（29元/月）</option>
-              <option value="pro">本地版（199元）</option>
-              <option value="enterprise">年卡（299元/年）</option>
+              <option v-for="p in plans" :key="p.id" :value="p.level">
+                {{ p.name }}（¥{{ p.price }} / {{ p.months }}天）
+              </option>
             </select>
             <div class="text-xs text-gray-400 mt-3 mb-1">市场代理</div>
             <select v-model="editMarketAgent" class="w-full bg-[#0B1020] border border-[#1A2240] rounded-lg px-3 py-2 text-xs text-white/70 outline-none focus:border-blue-500/50">
@@ -170,6 +170,7 @@ const editMarketAgent = ref('')
 const editError = ref('')
 const saving = ref(false)
 const marketAgents = ref<any[]>([])
+const plans = ref<any[]>([])
 
 // ── 增减钻石 ──
 const creditsUser = ref<any>(null)
@@ -247,6 +248,11 @@ watch(searchQuery, () => { page.value = 1 })
 import { getTierLabel, getTierColorClass, MEMBERSHIP_COLORS } from '~/constants/membership'
 
 function tierLabel(tier: string | undefined | null): string {
+  if (!tier) return '普通用户'
+  // 优先从动态套餐列表获取显示名称
+  const plan = plans.value.find((p: any) => p.level === tier)
+  if (plan) return plan.name
+  // fallback 到静态映射
   return getTierLabel(tier)
 }
 
@@ -281,6 +287,22 @@ function openEdit(u: any) {
   editError.value = ''
   // 加载市场代理列表
   fetchMarketAgents()
+  // 加载 VIP 套餐列表
+  fetchPlans()
+}
+
+async function fetchPlans() {
+  if (plans.value.length) return // 已缓存则跳过
+  try {
+    const token = getToken()
+    const res = await fetch('/api/admin/member-plans', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    if (res.ok) {
+      const d = await res.json()
+      plans.value = Array.isArray(d) ? d : []
+    }
+  } catch {}
 }
 
 async function fetchMarketAgents() {
@@ -346,7 +368,10 @@ async function fetchData() {
   loading.value = false
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  fetchPlans()
+})
 </script>
 
 <style scoped>

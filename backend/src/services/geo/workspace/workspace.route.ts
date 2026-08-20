@@ -12,7 +12,9 @@ export async function workspaceRoutes(app: FastifyInstance) {
   // Mission Control — GEO 首页
   app.get('/api/geo/workspace/mission-control', { preHandler: [] }, async (req, reply) => {
     const { projectId } = req.query as { projectId?: string }
-    const control = await getMissionControl(projectId)
+    const user = req.user as any
+    const userId = user?.id  // May be undefined for public access
+    const control = await getMissionControl(projectId, userId)
     return { success: true, data: control }
   })
 }

@@ -1,0 +1,365 @@
+// tea-play.ts — 昆仑茶馆 公链玩法（签到/每日竞猜/封神榜/支付密码/飞升台）云端版
+// 路由前缀 /api/tea/play/* 与 /api/tea/checkin/* /api/tea/quiz/* /api/tea/leaderboard/* /api/tea/paypass/* /api/tea/exchange/*
+// 通证账本：复用 tea_wallet / tea_wallet_tx（与 token-wallet.ts 同链）
+import { FastifyInstance } from 'fastify'
+import { prisma } from '../utils/index.js'
+import { createHash } from 'crypto'
+
+const FOUNDER_UID = '0ba5bf98-7005-4019-a431-6a0fb4b2d28d' // 创始节点（掌柜）
+
+// ── 通证账本工具（与 token-wallet.ts 同规则）──
+function txHash(p: any): string {
+  return createHash('sha256')
+    .update(`${p.prev_hash || ''}|${p.uid}|${p.token_type}|${p.amount}|${p.tx_type}|${p.from_uid || ''}|${p.to_uid || ''}|${p.remark || ''}|${p.created_at}`)
+    .digest('hex')
+}
+async function getWallet(uid: string) {
+  let rows: any = await prisma.$queryRawUnsafe(`SELECT gongfen, chapiao FROM tea_wallet WHERE uid=$1`, uid)
+  if (!rows.length) {
+    await prisma.$queryRawUnsafe(`INSERT INTO tea_wallet (uid, gongfen, chapiao, updated_at) VALUES ($1,0,0,$2)`, uid, Math.floor(Date.now() / 1000))
+    rows = await prisma.$queryRawUnsafe(`SELECT gongfen, chapiao FROM tea_wallet WHERE uid=$1`, uid)
+  }
+  return rows[0]
+}
+async function appendTx(uid: string, token_type: string, amount: number, tx_type: string, from_uid: string | null, to_uid: string | null, remark: string, balance_after: number) {
+  const ts = Math.floor(Date.now() / 1000)
+  const prev: any = await prisma.$queryRawUnsafe(`SELECT hash FROM tea_wallet_tx WHERE uid=$1 ORDER BY id DESC LIMIT 1`, uid)
+  const prevHash = prev.length ? prev[0].hash : 'genesis'
+  const hash = txHash({ prev_hash: prevHash, uid, token_type, amount, tx_type, from_uid, to_uid, remark, created_at: ts, balance_after })
+  await prisma.$queryRawUnsafe(
+    `INSERT INTO tea_wallet_tx (uid, token_type, amount, balance_after, tx_type, from_uid, to_uid, remark, prev_hash, hash, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    uid, token_type, amount, balance_after, tx_type, from_uid, to_uid, remark, prevHash, hash, ts
+  )
+  return hash
+}
+// 更新余额（按 token 类型）并追加流水
+async function bumpWallet(uid: string, token_type: string, delta: number, tx_type: string, from: string | null, to: string | null, remark: string) {
+  const w = await getWallet(uid)
+  const cur = token_type === 'gongfen' ? Number(w.gongfen || 0) : Number(w.chapiao || 0)
+  const after = cur + delta
+  if (after < 0) throw new Error('余额不足')
+  const ns = Math.floor(Date.now() / 1000)
+  await prisma.$queryRawUnsafe(`UPDATE tea_wallet SET gongfen=$1, chapiao=$2, updated_at=$3 WHERE uid=$4`,
+    token_type === 'gongfen' ? after : Number(w.gongfen || 0),
+    token_type === 'chapiao' ? after : Number(w.chapiao || 0),
+    ns, uid)
+  await appendTx(uid, token_type, delta, tx_type, from, to, remark, after)
+  return after
+}
+// 发行工分（创始节点 mint → 目标用户）
+async function mintTo(uid: string, amount: number, remark: string) {
+  return bumpWallet(uid, 'gongfen', amount, 'mint', FOUNDER_UID, uid, remark)
+}
+// 扣除工分（支付：补签/竞猜/飞升台消耗）
+async function payGongfen(uid: string, amount: number, remark: string) {
+  return bumpWallet(uid, 'gongfen', -amount, 'play_pay', uid, FOUNDER_UID, remark)
+}
+
+// ── 工具 ──
+const todayStr = () => new Date().toISOString().slice(0, 10)
+const nowTs = () => Math.floor(Date.now() / 1000)
+
+export default async function teaPlayRoutes(fastify: FastifyInstance) {
+  const auth = { preHandler: [fastify.authenticate as any] }
+
+  // ═══ 签到（悟道茶树）═══
+  // GET /api/tea/checkin/status
+  fastify.get('/api/tea/checkin/status', auth, async (request: any) => {
+    const uid = request.user.id
+    const today = todayStr()
+    const rows: any = await prisma.$queryRawUnsafe(`SELECT day, streak, reward FROM tea_checkin WHERE uid=$1 ORDER BY day DESC LIMIT 8`, uid)
+    const signedSet = new Set(rows.map((r: any) => r.day))
+    let streak = 0
+    if (signedSet.has(today)) {
+      streak = rows.find((r: any) => r.day === today)?.streak || 0
+    } else {
+      const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+      const yrow = rows.find((r: any) => r.day === y)
+      streak = yrow ? (yrow.streak || 0) : 0
+    }
+    const month = today.slice(0, 7)
+    const monthSigned = rows.filter((r: any) => r.day.startsWith(month)).length
+    return {
+      success: true, data: {
+        today, streak, signedToday: signedSet.has(today), monthSigned,
+        canMakeup: !signedSet.has(today), makeupPrice: 10,
+        milestoneStreak: [7, 15, 30],
+      },
+    }
+  })
+  // POST /api/tea/checkin/sign
+  fastify.post('/api/tea/checkin/sign', auth, async (request: any, reply: any) => {
+    const uid = request.user.id
+    const today = todayStr()
+    const exist: any = await prisma.$queryRawUnsafe(`SELECT 1 FROM tea_checkin WHERE uid=$1 AND day=$2`, uid, today)
+    if (exist.length) return reply.status(400).send({ success: false, error: '今日已签到' })
+    // 算连续天数
+    const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    const rows: any = await prisma.$queryRawUnsafe(`SELECT streak FROM tea_checkin WHERE uid=$1 AND day=$2`, uid, y)
+    const streak = (rows.length ? rows[0].streak : 0) + 1
+    // 奖励：日常 +1，里程碑 7/15/30 随机 10-30
+    let reward = 1, milestone = ''
+    if (streak === 7) { reward = 10; milestone = '7' }
+    else if (streak === 15) { reward = 20; milestone = '15' }
+    else if (streak === 30) { reward = 30; milestone = '30' }
+    else if (streak > 30 && streak % 30 === 0) { reward = 30; milestone = String(streak) }
+    await prisma.$queryRawUnsafe(`INSERT INTO tea_checkin (uid, day, streak, reward, created_at) VALUES ($1,$2,$3,$4,$5)`,
+      uid, today, streak, reward, nowTs())
+    // 发放工分（通证链）
+    try { await mintTo(uid, reward, milestone ? ('签到连续' + milestone + '天') : '签到') } catch (e) { /* 账本异常不影响签到记录 */ }
+    return { success: true, data: { streak, reward, milestone } }
+  })
+  // POST /api/tea/checkin/makeup — 补签（扣 10 工分）
+  fastify.post('/api/tea/checkin/makeup', auth, async (request: any, reply: any) => {
+    const uid = request.user.id
+    const { day } = (request.body as any) || {}
+    const target = String(day || '').slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(target)) return reply.status(400).send({ success: false, error: '日期格式错误' })
+    if (target >= todayStr()) return reply.status(400).send({ success: false, error: '只能补签过去的日期' })
+    const exist: any = await prisma.$queryRawUnsafe(`SELECT 1 FROM tea_checkin WHERE uid=$1 AND day=$2`, uid, target)
+    if (exist.length) return reply.status(400).send({ success: false, error: '该日期已有记录' })
+    const w = await getWallet(uid)
+    if (Number(w.gongfen || 0) < 10) return reply.status(400).send({ success: false, error: '工分不足（补签需 10 工分）' })
+    await payGongfen(uid, 10, '补签卡')
+    await prisma.$queryRawUnsafe(`INSERT INTO tea_checkin (uid, day, streak, reward, created_at) VALUES ($1,$2,0,$3,$4)`, uid, target, -10, nowTs())
+    return { success: true, data: { message: '补签成功' } }
+  })
+
+  // ═══ 支付密码（存 user_setting.security_data）═══
+  // POST /api/tea/paypass/set — 设置/修改（首次免旧；修改需旧）
+  fastify.post('/api/tea/paypass/set', auth, async (request: any, reply: any) => {
+    const uid = request.user.id
+    const { pass, oldPass } = (request.body as any) || {}
+    if (!pass || String(pass).length < 6) return reply.status(400).send({ success: false, error: '支付密码至少 6 位' })
+    const d = await getPaypass(uid)
+    if (d && d.set) {
+      if (!oldPass || hashPass(oldPass) !== d.pass) return reply.status(403).send({ success: false, error: '旧支付密码不正确' })
+    }
+    await savePaypass(uid, String(pass))
+    return { success: true, data: { message: d?.set ? '支付密码已修改' : '支付密码已设置' } }
+  })
+  // POST /api/tea/paypass/verify — 校验
+  fastify.post('/api/tea/paypass/verify', auth, async (request: any, reply: any) => {
+    const uid = request.user.id
+    const { pass } = (request.body as any) || {}
+    const d = await getPaypass(uid)
+    if (!d?.set) return reply.status(400).send({ success: false, error: '未设置支付密码' })
+    if (hashPass(String(pass || '')) !== d.pass) return reply.status(403).send({ success: false, error: '支付密码错误' })
+    return { success: true }
+  })
+  // GET /api/tea/paypass/status
+  fastify.get('/api/tea/paypass/status', auth, async (request: any) => {
+    const uid = request.user.id
+    const d = await getPaypass(uid)
+    return { success: true, data: { set: !!d?.set } }
+  })
+
+  // ═══ 每日竞猜 ═══
+  // GET /api/tea/quiz/today — 今日题目（内置题库按日期轮换）
+  fastify.get('/api/tea/quiz/today', auth, async (request: any) => {
+    const today = todayStr()
+    let rows: any = await prisma.$queryRawUnsafe(`SELECT * FROM tea_quiz WHERE day=$1 LIMIT 1`, today)
+    if (!rows.length) {
+      const q = dailyQuestion(today)
+      await prisma.$queryRawUnsafe(
+        `INSERT INTO tea_quiz (day, question, options, reward_rate, status, created_at) VALUES ($1,$2,$3::jsonb,$4,'open',$5) RETURNING id`,
+        today, q.q, JSON.stringify(q.opts), 2, nowTs())
+      rows = await prisma.$queryRawUnsafe(`SELECT * FROM tea_quiz WHERE day=$1 LIMIT 1`, today)
+    }
+    const qu = rows[0]
+    const uid = request.user.id
+    const bet: any = await prisma.$queryRawUnsafe(`SELECT * FROM tea_quiz_bet WHERE uid=$1 AND quiz_id=$2 LIMIT 1`, uid, Number(qu.id))
+    return {
+      success: true, data: {
+        quiz: { id: Number(qu.id), day: qu.day, question: qu.question, options: qu.options, reward_rate: Number(qu.reward_rate), status: qu.status },
+        myBet: bet.length ? { option: bet[0].option, amount: Number(bet[0].amount), status: bet[0].status, reward: Number(bet[0].reward) } : null,
+      },
+    }
+  })
+  // POST /api/tea/quiz/bet — 下注（扣工分）
+  fastify.post('/api/tea/quiz/bet', auth, async (request: any, reply: any) => {
+    const uid = request.user.id
+    const { quizId, option, amount } = (request.body as any) || {}
+    const qid = Number(quizId); const opt = Number(option); const amt = Math.floor(Number(amount))
+    if (!qid || isNaN(opt) || !amt || amt <= 0) return reply.status(400).send({ success: false, error: '参数错误' })
+    if (amt > 10) return reply.status(400).send({ success: false, error: '每次下注最多 10 工分' })
+    const quiz: any = await prisma.$queryRawUnsafe(`SELECT * FROM tea_quiz WHERE id=$1 AND status='open'`, qid)
+    if (!quiz.length) return reply.status(404).send({ success: false, error: '题目不存在或已截止' })
+    const opts = quiz[0].options || []
+    if (opt >= opts.length) return reply.status(400).send({ success: false, error: '选项越界' })
+    const exist: any = await prisma.$queryRawUnsafe(`SELECT 1 FROM tea_quiz_bet WHERE uid=$1 AND quiz_id=$2`, uid, qid)
+    if (exist.length) return reply.status(400).send({ success: false, error: '已下注，不可重复' })
+    const w = await getWallet(uid)
+    if (Number(w.gongfen || 0) < amt) return reply.status(400).send({ success: false, error: '工分不足' })
+    await payGongfen(uid, amt, '每日竞猜下注')
+    await prisma.$queryRawUnsafe(`INSERT INTO tea_quiz_bet (uid, quiz_id, option, amount, status, created_at) VALUES ($1,$2,$3,$4,'pending',$5)`,
+      uid, qid, opt, amt, nowTs())
+    return { success: true, data: { message: '下注成功' } }
+  })
+  // GET /api/tea/quiz/result?quizId= — 开奖（answer 已设定时结算；未开奖则查我的押注待开）
+  fastify.get('/api/tea/quiz/result', auth, async (request: any) => {
+    const uid = request.user.id
+    const qid = Number((request.query as any)?.quizId || 0)
+    if (qid) {
+      const quiz: any = await prisma.$queryRawUnsafe(`SELECT * FROM tea_quiz WHERE id=$1`, qid)
+      if (!quiz.length) return { success: true, data: { settled: false } }
+      const bets: any = await prisma.$queryRawUnsafe(`SELECT * FROM tea_quiz_bet WHERE quiz_id=$1`, qid)
+      const answer = quiz[0].answer
+      if (answer === null) return { success: true, data: { settled: false } }
+      // 结算未结算的中奖注
+      const pending = bets.filter((b: any) => b.status === 'pending')
+      for (const b of pending) {
+        const win = Number(b.option) === Number(answer)
+        const reward = win ? Number(b.amount) * Number(quiz[0].reward_rate || 2) : 0
+        if (reward > 0) { try { await mintTo(b.uid, reward, '竞猜中奖') } catch (e) {} }
+        await prisma.$queryRawUnsafe(`UPDATE tea_quiz_bet SET status=$1, reward=$2 WHERE id=$3`, win ? 'won' : 'lost', reward, Number(b.id))
+      }
+      const my = bets.find((b: any) => b.uid === uid)
+      return { success: true, data: { settled: true, answer, myBet: my ? { option: Number(my.option), amount: Number(my.amount), status: my.status, reward: Number(my.reward) } : null, answerLabel: quiz[0].options[Number(answer)] } }
+    }
+    return { success: true, data: { settled: false } }
+  })
+
+  // ═══ 封神榜 ═══
+  // GET /api/tea/leaderboard — 按工分余额排名
+  fastify.get('/api/tea/leaderboard', auth, async (request: any) => {
+    const limit = Math.min(50, Math.max(1, Number((request.query as any)?.limit || 20)))
+    const rows: any = await prisma.$queryRawUnsafe(`SELECT uid, gongfen, chapiao FROM tea_wallet ORDER BY gongfen DESC LIMIT $1`, limit)
+    return {
+      success: true, data: {
+        list: rows.map((r: any, i: number) => ({ rank: i + 1, uid: r.uid, gongfen: Number(r.gongfen || 0), chapiao: Number(r.chapiao || 0) })),
+      },
+    }
+  })
+
+  // ═══ 茶票分布节点（股东分布总览）═══
+  // GET /api/tea/chain/distribution — 以创始节点为锚，列出全部持有茶票>0 的节点分布（持股/占比/累计流通）
+  fastify.get('/api/tea/chain/distribution', auth, async () => {
+    const all: any = await prisma.$queryRawUnsafe(`SELECT uid, gongfen, chapiao FROM tea_wallet ORDER BY chapiao DESC`)
+    const holders = all.filter((r: any) => Number(r.chapiao || 0) > 0)
+    const total = holders.reduce((s: number, r: any) => s + Number(r.chapiao || 0), 0)
+    // 全网茶票总量 = 初始 10 亿 - 已销毁（通缩）
+    const TOTAL_SUPPLY = await currentSupply()
+    const burned = await getBurnedTotal()
+    const list = holders.map((r: any, i: number) => ({
+      rank: i + 1,
+      uid: r.uid,
+      chapiao: Number(r.chapiao || 0),
+      isFounder: r.uid === FOUNDER_UID,
+      pct: TOTAL_SUPPLY > 0 ? Number(((Number(r.chapiao || 0) / TOTAL_SUPPLY) * 100).toFixed(4)) : 0,
+    }))
+    return {
+      success: true, data: {
+        founderUid: FOUNDER_UID,
+        initialSupply: 1000000000,
+        totalSupply: TOTAL_SUPPLY,
+        burnedTotal: burned,
+        totalHeld: total,
+        holderCount: holders.length,
+        circulatingPct: TOTAL_SUPPLY > 0 ? Number(((total / TOTAL_SUPPLY) * 100).toFixed(4)) : 0,
+        list,
+      },
+    }
+  })
+
+  // ═══ 飞升台（工分⇄茶票）═══
+  // GET /api/tea/exchange/rate — 当前通货动态价（随销毁单边上扬）
+  fastify.get('/api/tea/exchange/rate', auth, async () => {
+    const price = await currentPrice()
+    const burned = await getBurnedTotal()
+    return { success: true, data: { price, rate: price, chapiaoPerGongfen: price, burnedTotal: burned, totalSupply: 1000000000 - burned, remark: '动态价：销毁越多越高' } }
+  })
+  // POST /api/tea/exchange/do — 飞升台：仅工分→茶票（单向；10% 销毁通缩，对齐桌面版）
+  fastify.post('/api/tea/exchange/do', auth, async (request: any, reply: any) => {
+    const uid = request.user.id
+    const { direction, amount } = (request.body as any) || {}
+    const amt = Math.floor(Number(amount))
+    if (!direction || !amt || amt <= 0) return reply.status(400).send({ success: false, error: '参数错误' })
+    if (direction !== 'gongfen_to_chapiao') {
+      return reply.status(400).send({ success: false, error: '茶票为股权凭证，禁止兑换工分（仅支持工分→茶票）' })
+    }
+    const w = await getWallet(uid)
+    if (Number(w.gongfen || 0) < amt) return reply.status(400).send({ success: false, error: '工分不足' })
+    // 通缩动态定价：初始 1 工分=1 茶票；随销毁单边上扬（price = 总发行/剩余流通），按当前动态价兑换
+    const price = await currentPrice()
+    const gross = Math.floor(amt / price)          // 当前价下应得茶票
+    const burn = Math.floor(gross * 0.1)           // 10% 销毁
+    const got = gross - burn                       // 用户实得（90%）
+    if (got <= 0) return reply.status(400).send({ success: false, error: '兑换额度过小，请增加工分' })
+    // 创始节点总钱包兑付：茶票池扣应得全额(gross)，其中 burn 部分销毁（全网总量减少）
+    const fw = await getWallet(FOUNDER_UID)
+    if (Number(fw.chapiao || 0) < gross) return reply.status(400).send({ success: false, error: '创始节点茶票池不足' })
+    await bumpWallet(FOUNDER_UID, 'chapiao', -gross, 'exchange', FOUNDER_UID, uid, '飞升台兑付茶票')
+    await bumpWallet(uid, 'chapiao', got, 'exchange', FOUNDER_UID, uid, '飞升台兑换·得茶票(90%)')
+    // 工分销毁：兑换花掉的工分退出全网流通（工分总量减少，防通胀）
+    await bumpWallet(uid, 'gongfen', -amt, 'exchange_burn', uid, 'BURN', '飞升台·工分销毁')
+    if (burn > 0) await addBurned(burn)
+    const burned = await getBurnedTotal()
+    return {
+      success: true, data: {
+        gotChapiao: got, costGongfen: amt, burnChapiao: burn, price,
+        totalSupply: 1000000000 - burned,
+        burnedTotal: burned,
+        remark: '工分→茶票；按当前动态价兑换，10% 销毁通缩',
+      },
+    }
+  })
+}
+
+// ── 支付密码存取（user_setting.security_data）──
+async function getPaypass(uid: string) {
+  const rows: any = await prisma.$queryRawUnsafe(`SELECT security_data FROM user_setting WHERE user_uid=$1`, uid)
+  if (!rows.length || !rows[0].security_data) return null
+  try { return JSON.parse(rows[0].security_data) } catch { return null }
+}
+function hashPass(p: string) { return createHash('sha256').update('tea-paypass|' + p).digest('hex') }
+async function savePaypass(uid: string, pass: string) {
+  const existing: any = await prisma.$queryRawUnsafe(`SELECT id FROM user_setting WHERE user_uid=$1`, uid)
+  const data = JSON.stringify({ set: true, pass: hashPass(pass), updatedAt: Date.now() })
+  if (existing.length) await prisma.$queryRawUnsafe(`UPDATE user_setting SET security_data=$1, updated_at=NOW() WHERE id=$2`, data, existing[0].id)
+  else await prisma.$queryRawUnsafe(`INSERT INTO user_setting (user_uid, security_data) VALUES ($1,$2)`, uid, data)
+}
+
+// ── 茶票销毁（通缩）累计 ──
+const CHAIN_INITIAL_SUPPLY = 1000000000
+async function getBurnedTotal(): Promise<number> {
+  try {
+    const r: any = await prisma.$queryRawUnsafe(`SELECT v FROM tea_chain_meta WHERE k='burned_total'`)
+    return r.length ? Number(r[0].v || 0) : 0
+  } catch (e) { return 0 }
+}
+async function addBurned(n: number) {
+  try {
+    await prisma.$queryRawUnsafe(`INSERT INTO tea_chain_meta (k, v, updated_at) VALUES ('burned_total', $1, $2)
+      ON CONFLICT (k) DO UPDATE SET v = tea_chain_meta.v + $1, updated_at = $2`, n, Math.floor(Date.now() / 1000))
+  } catch (e) { /* ignore */ }
+}
+async function currentSupply(): Promise<number> {
+  return CHAIN_INITIAL_SUPPLY - (await getBurnedTotal())
+}
+async function currentPrice(): Promise<number> {
+  // 全网汇率 = Σ工分存量 / Σ茶票存量（实时，工分产出/质押变多、茶票销毁变少 → 波动）
+  try {
+    const agg: any = await prisma.$queryRawUnsafe(`SELECT COALESCE(SUM(gongfen::bigint),0)::text AS g, COALESCE(SUM(chapiao::bigint),0)::text AS c FROM tea_wallet`)
+    const g = Number(agg[0].g || 0)
+    const c = Number(agg[0].c || 0)
+    if (c > 0) return Math.round((g / c) * 10000) / 10000
+  } catch (e) { /* ignore */ }
+  return 1
+}
+
+// ── 每日竞猜题库（按日期轮换）──
+function dailyQuestion(day: string) {
+  const bank = [
+    { q: '今天金价（沪金期货主力）相比昨天，收盘价是涨还是跌？', opts: ['📈 涨', '📉 跌'] },
+    { q: '明天会不会下雨？', opts: ['☔ 会', '☀️ 不会'] },
+    { q: '当前比特币价格相比 24 小时前是涨是跌？', opts: ['📈 涨', '📉 跌'] },
+    { q: '今日 A 股上证指数收盘相比昨日是涨是跌？', opts: ['📈 涨', '📉 跌'] },
+    { q: '本周五茶票汇率相比本周一是升是降？', opts: ['📈 升', '📉 降'] },
+  ]
+  // 按日期哈希取题（稳定轮换）
+  const h = createHash('sha256').update('quiz|' + day).digest().readUInt32BE(0)
+  const idx = h % bank.length
+  return bank[idx]
+}

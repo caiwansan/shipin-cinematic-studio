@@ -4,6 +4,13 @@
       <!-- ═══ 顶部控制栏（时间范围联动） ═══ -->
       <TimeRangeBar :model-value="range" :loading="loading" @change="onRangeChange" @refresh="loadAll" />
 
+      <!-- ═══ 昆仑茶馆·会员密钥管理入口（监管合规）═══ -->
+      <a href="/admin-identity.html" target="_blank"
+         class="block rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-950/50 via-amber-900/20 to-transparent px-4 py-3 text-xs text-amber-200/90 hover:border-amber-400/50 hover:text-amber-100 transition">
+        🔐 昆仑茶馆 · 会员密钥管理（监管合规）
+        <span class="ml-2 text-amber-400/60">→ 打开管理页（需 admin 账号 + 监管私钥签名解锁；可调取会员密钥/助记词备份/登录IP/备份分片）</span>
+      </a>
+
       <div v-if="error" class="bg-red-900/20 border border-red-800/30 rounded-xl p-4 text-red-400 text-xs">
         ⚠️ {{ error }}
         <button @click="loadAll" class="ml-2 underline cursor-pointer">重试</button>

@@ -15,6 +15,7 @@ interface _GlobalComponents {
       'AppFooter': typeof import("../components/AppFooter.vue")['default']
     'EnterpriseWorkspaceShell': typeof import("../components/EnterpriseWorkspaceShell.vue")['default']
     'LibraryReaderPanel': typeof import("../components/LibraryReaderPanel.vue")['default']
+    'MCommunity': typeof import("../components/MCommunity.vue")['default']
     'MPageShell': typeof import("../components/MPageShell.vue")['default']
     'RegionPicker': typeof import("../components/RegionPicker.vue")['default']
     'WorkspaceSwitcher': typeof import("../components/WorkspaceSwitcher.vue")['default']
@@ -208,18 +209,30 @@ interface _GlobalComponents {
     'MediaPanel': typeof import("../components/media/MediaPanel.vue")['default']
     'MediaPlannedPage': typeof import("../components/media/MediaPlannedPage.vue")['default']
     'MediaWorkspaceShell': typeof import("../components/media/MediaWorkspaceShell.vue")['default']
+    'MobileMAiSecretary': typeof import("../components/mobile/MAiSecretary.vue")['default']
+    'MobileMCity': typeof import("../components/mobile/MCity.vue")['default']
+    'MobileMCityAutonomy': typeof import("../components/mobile/MCityAutonomy.vue")['default']
+    'MobileMClan': typeof import("../components/mobile/MClan.vue")['default']
+    'MobileMCommunity': typeof import("../components/mobile/MCommunity.vue")['default']
     'MobileMCommunityNew': typeof import("../components/mobile/MCommunityNew.vue")['default']
     'MobileMCredits': typeof import("../components/mobile/MCredits.vue")['default']
     'MobileMDiamonds': typeof import("../components/mobile/MDiamonds.vue")['default']
     'MobileMGallery': typeof import("../components/mobile/MGallery.vue")['default']
     'MobileMGifts': typeof import("../components/mobile/MGifts.vue")['default']
+    'MobileMLogin': typeof import("../components/mobile/MLogin.vue")['default']
+    'MobileMMeeting': typeof import("../components/mobile/MMeeting.vue")['default']
     'MobileMMessages': typeof import("../components/mobile/MMessages.vue")['default']
+    'MobileMMyPosts': typeof import("../components/mobile/MMyPosts.vue")['default']
     'MobileMOrders': typeof import("../components/mobile/MOrders.vue")['default']
     'MobileMPostDetail': typeof import("../components/mobile/MPostDetail.vue")['default']
     'MobileMProfile': typeof import("../components/mobile/MProfile.vue")['default']
     'MobileMReferral': typeof import("../components/mobile/MReferral.vue")['default']
     'MobileMSettings': typeof import("../components/mobile/MSettings.vue")['default']
+    'MobileMSpaceFiles': typeof import("../components/mobile/MSpaceFiles.vue")['default']
+    'MobileMSpaceImages': typeof import("../components/mobile/MSpaceImages.vue")['default']
+    'MobileMSpaceVideos': typeof import("../components/mobile/MSpaceVideos.vue")['default']
     'MobileMTeam': typeof import("../components/mobile/MTeam.vue")['default']
+    'MobileMTickets': typeof import("../components/mobile/MTickets.vue")['default']
     'MobileMWallet': typeof import("../components/mobile/MWallet.vue")['default']
     'R11CausePanel': typeof import("../components/r11/CausePanel.vue")['default']
     'R11DiffTimeline': typeof import("../components/r11/DiffTimeline.vue")['default']
@@ -274,6 +287,7 @@ interface _GlobalComponents {
       'LazyAppFooter': LazyComponent<typeof import("../components/AppFooter.vue")['default']>
     'LazyEnterpriseWorkspaceShell': LazyComponent<typeof import("../components/EnterpriseWorkspaceShell.vue")['default']>
     'LazyLibraryReaderPanel': LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
+    'LazyMCommunity': LazyComponent<typeof import("../components/MCommunity.vue")['default']>
     'LazyMPageShell': LazyComponent<typeof import("../components/MPageShell.vue")['default']>
     'LazyRegionPicker': LazyComponent<typeof import("../components/RegionPicker.vue")['default']>
     'LazyWorkspaceSwitcher': LazyComponent<typeof import("../components/WorkspaceSwitcher.vue")['default']>
@@ -467,18 +481,30 @@ interface _GlobalComponents {
     'LazyMediaPanel': LazyComponent<typeof import("../components/media/MediaPanel.vue")['default']>
     'LazyMediaPlannedPage': LazyComponent<typeof import("../components/media/MediaPlannedPage.vue")['default']>
     'LazyMediaWorkspaceShell': LazyComponent<typeof import("../components/media/MediaWorkspaceShell.vue")['default']>
+    'LazyMobileMAiSecretary': LazyComponent<typeof import("../components/mobile/MAiSecretary.vue")['default']>
+    'LazyMobileMCity': LazyComponent<typeof import("../components/mobile/MCity.vue")['default']>
+    'LazyMobileMCityAutonomy': LazyComponent<typeof import("../components/mobile/MCityAutonomy.vue")['default']>
+    'LazyMobileMClan': LazyComponent<typeof import("../components/mobile/MClan.vue")['default']>
+    'LazyMobileMCommunity': LazyComponent<typeof import("../components/mobile/MCommunity.vue")['default']>
     'LazyMobileMCommunityNew': LazyComponent<typeof import("../components/mobile/MCommunityNew.vue")['default']>
     'LazyMobileMCredits': LazyComponent<typeof import("../components/mobile/MCredits.vue")['default']>
     'LazyMobileMDiamonds': LazyComponent<typeof import("../components/mobile/MDiamonds.vue")['default']>
     'LazyMobileMGallery': LazyComponent<typeof import("../components/mobile/MGallery.vue")['default']>
     'LazyMobileMGifts': LazyComponent<typeof import("../components/mobile/MGifts.vue")['default']>
+    'LazyMobileMLogin': LazyComponent<typeof import("../components/mobile/MLogin.vue")['default']>
+    'LazyMobileMMeeting': LazyComponent<typeof import("../components/mobile/MMeeting.vue")['default']>
     'LazyMobileMMessages': LazyComponent<typeof import("../components/mobile/MMessages.vue")['default']>
+    'LazyMobileMMyPosts': LazyComponent<typeof import("../components/mobile/MMyPosts.vue")['default']>
     'LazyMobileMOrders': LazyComponent<typeof import("../components/mobile/MOrders.vue")['default']>
     'LazyMobileMPostDetail': LazyComponent<typeof import("../components/mobile/MPostDetail.vue")['default']>
     'LazyMobileMProfile': LazyComponent<typeof import("../components/mobile/MProfile.vue")['default']>
     'LazyMobileMReferral': LazyComponent<typeof import("../components/mobile/MReferral.vue")['default']>
     'LazyMobileMSettings': LazyComponent<typeof import("../components/mobile/MSettings.vue")['default']>
+    'LazyMobileMSpaceFiles': LazyComponent<typeof import("../components/mobile/MSpaceFiles.vue")['default']>
+    'LazyMobileMSpaceImages': LazyComponent<typeof import("../components/mobile/MSpaceImages.vue")['default']>
+    'LazyMobileMSpaceVideos': LazyComponent<typeof import("../components/mobile/MSpaceVideos.vue")['default']>
     'LazyMobileMTeam': LazyComponent<typeof import("../components/mobile/MTeam.vue")['default']>
+    'LazyMobileMTickets': LazyComponent<typeof import("../components/mobile/MTickets.vue")['default']>
     'LazyMobileMWallet': LazyComponent<typeof import("../components/mobile/MWallet.vue")['default']>
     'LazyR11CausePanel': LazyComponent<typeof import("../components/r11/CausePanel.vue")['default']>
     'LazyR11DiffTimeline': LazyComponent<typeof import("../components/r11/DiffTimeline.vue")['default']>
@@ -539,6 +565,7 @@ declare module 'vue' {
 export const AppFooter: typeof import("../components/AppFooter.vue")['default']
 export const EnterpriseWorkspaceShell: typeof import("../components/EnterpriseWorkspaceShell.vue")['default']
 export const LibraryReaderPanel: typeof import("../components/LibraryReaderPanel.vue")['default']
+export const MCommunity: typeof import("../components/MCommunity.vue")['default']
 export const MPageShell: typeof import("../components/MPageShell.vue")['default']
 export const RegionPicker: typeof import("../components/RegionPicker.vue")['default']
 export const WorkspaceSwitcher: typeof import("../components/WorkspaceSwitcher.vue")['default']
@@ -732,18 +759,30 @@ export const MediaPageHeader: typeof import("../components/media/MediaPageHeader
 export const MediaPanel: typeof import("../components/media/MediaPanel.vue")['default']
 export const MediaPlannedPage: typeof import("../components/media/MediaPlannedPage.vue")['default']
 export const MediaWorkspaceShell: typeof import("../components/media/MediaWorkspaceShell.vue")['default']
+export const MobileMAiSecretary: typeof import("../components/mobile/MAiSecretary.vue")['default']
+export const MobileMCity: typeof import("../components/mobile/MCity.vue")['default']
+export const MobileMCityAutonomy: typeof import("../components/mobile/MCityAutonomy.vue")['default']
+export const MobileMClan: typeof import("../components/mobile/MClan.vue")['default']
+export const MobileMCommunity: typeof import("../components/mobile/MCommunity.vue")['default']
 export const MobileMCommunityNew: typeof import("../components/mobile/MCommunityNew.vue")['default']
 export const MobileMCredits: typeof import("../components/mobile/MCredits.vue")['default']
 export const MobileMDiamonds: typeof import("../components/mobile/MDiamonds.vue")['default']
 export const MobileMGallery: typeof import("../components/mobile/MGallery.vue")['default']
 export const MobileMGifts: typeof import("../components/mobile/MGifts.vue")['default']
+export const MobileMLogin: typeof import("../components/mobile/MLogin.vue")['default']
+export const MobileMMeeting: typeof import("../components/mobile/MMeeting.vue")['default']
 export const MobileMMessages: typeof import("../components/mobile/MMessages.vue")['default']
+export const MobileMMyPosts: typeof import("../components/mobile/MMyPosts.vue")['default']
 export const MobileMOrders: typeof import("../components/mobile/MOrders.vue")['default']
 export const MobileMPostDetail: typeof import("../components/mobile/MPostDetail.vue")['default']
 export const MobileMProfile: typeof import("../components/mobile/MProfile.vue")['default']
 export const MobileMReferral: typeof import("../components/mobile/MReferral.vue")['default']
 export const MobileMSettings: typeof import("../components/mobile/MSettings.vue")['default']
+export const MobileMSpaceFiles: typeof import("../components/mobile/MSpaceFiles.vue")['default']
+export const MobileMSpaceImages: typeof import("../components/mobile/MSpaceImages.vue")['default']
+export const MobileMSpaceVideos: typeof import("../components/mobile/MSpaceVideos.vue")['default']
 export const MobileMTeam: typeof import("../components/mobile/MTeam.vue")['default']
+export const MobileMTickets: typeof import("../components/mobile/MTickets.vue")['default']
 export const MobileMWallet: typeof import("../components/mobile/MWallet.vue")['default']
 export const R11CausePanel: typeof import("../components/r11/CausePanel.vue")['default']
 export const R11DiffTimeline: typeof import("../components/r11/DiffTimeline.vue")['default']
@@ -798,6 +837,7 @@ export const NuxtRouteAnnouncer: IslandComponent<typeof import("../node_modules/
 export const LazyAppFooter: LazyComponent<typeof import("../components/AppFooter.vue")['default']>
 export const LazyEnterpriseWorkspaceShell: LazyComponent<typeof import("../components/EnterpriseWorkspaceShell.vue")['default']>
 export const LazyLibraryReaderPanel: LazyComponent<typeof import("../components/LibraryReaderPanel.vue")['default']>
+export const LazyMCommunity: LazyComponent<typeof import("../components/MCommunity.vue")['default']>
 export const LazyMPageShell: LazyComponent<typeof import("../components/MPageShell.vue")['default']>
 export const LazyRegionPicker: LazyComponent<typeof import("../components/RegionPicker.vue")['default']>
 export const LazyWorkspaceSwitcher: LazyComponent<typeof import("../components/WorkspaceSwitcher.vue")['default']>
@@ -991,18 +1031,30 @@ export const LazyMediaPageHeader: LazyComponent<typeof import("../components/med
 export const LazyMediaPanel: LazyComponent<typeof import("../components/media/MediaPanel.vue")['default']>
 export const LazyMediaPlannedPage: LazyComponent<typeof import("../components/media/MediaPlannedPage.vue")['default']>
 export const LazyMediaWorkspaceShell: LazyComponent<typeof import("../components/media/MediaWorkspaceShell.vue")['default']>
+export const LazyMobileMAiSecretary: LazyComponent<typeof import("../components/mobile/MAiSecretary.vue")['default']>
+export const LazyMobileMCity: LazyComponent<typeof import("../components/mobile/MCity.vue")['default']>
+export const LazyMobileMCityAutonomy: LazyComponent<typeof import("../components/mobile/MCityAutonomy.vue")['default']>
+export const LazyMobileMClan: LazyComponent<typeof import("../components/mobile/MClan.vue")['default']>
+export const LazyMobileMCommunity: LazyComponent<typeof import("../components/mobile/MCommunity.vue")['default']>
 export const LazyMobileMCommunityNew: LazyComponent<typeof import("../components/mobile/MCommunityNew.vue")['default']>
 export const LazyMobileMCredits: LazyComponent<typeof import("../components/mobile/MCredits.vue")['default']>
 export const LazyMobileMDiamonds: LazyComponent<typeof import("../components/mobile/MDiamonds.vue")['default']>
 export const LazyMobileMGallery: LazyComponent<typeof import("../components/mobile/MGallery.vue")['default']>
 export const LazyMobileMGifts: LazyComponent<typeof import("../components/mobile/MGifts.vue")['default']>
+export const LazyMobileMLogin: LazyComponent<typeof import("../components/mobile/MLogin.vue")['default']>
+export const LazyMobileMMeeting: LazyComponent<typeof import("../components/mobile/MMeeting.vue")['default']>
 export const LazyMobileMMessages: LazyComponent<typeof import("../components/mobile/MMessages.vue")['default']>
+export const LazyMobileMMyPosts: LazyComponent<typeof import("../components/mobile/MMyPosts.vue")['default']>
 export const LazyMobileMOrders: LazyComponent<typeof import("../components/mobile/MOrders.vue")['default']>
 export const LazyMobileMPostDetail: LazyComponent<typeof import("../components/mobile/MPostDetail.vue")['default']>
 export const LazyMobileMProfile: LazyComponent<typeof import("../components/mobile/MProfile.vue")['default']>
 export const LazyMobileMReferral: LazyComponent<typeof import("../components/mobile/MReferral.vue")['default']>
 export const LazyMobileMSettings: LazyComponent<typeof import("../components/mobile/MSettings.vue")['default']>
+export const LazyMobileMSpaceFiles: LazyComponent<typeof import("../components/mobile/MSpaceFiles.vue")['default']>
+export const LazyMobileMSpaceImages: LazyComponent<typeof import("../components/mobile/MSpaceImages.vue")['default']>
+export const LazyMobileMSpaceVideos: LazyComponent<typeof import("../components/mobile/MSpaceVideos.vue")['default']>
 export const LazyMobileMTeam: LazyComponent<typeof import("../components/mobile/MTeam.vue")['default']>
+export const LazyMobileMTickets: LazyComponent<typeof import("../components/mobile/MTickets.vue")['default']>
 export const LazyMobileMWallet: LazyComponent<typeof import("../components/mobile/MWallet.vue")['default']>
 export const LazyR11CausePanel: LazyComponent<typeof import("../components/r11/CausePanel.vue")['default']>
 export const LazyR11DiffTimeline: LazyComponent<typeof import("../components/r11/DiffTimeline.vue")['default']>

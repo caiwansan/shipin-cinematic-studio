@@ -36,7 +36,7 @@
 
     <div class="mp-menu">
       <div class="mp-menu-item" @click="$emit('open', 'orders')"><span class="mp-menu-icon">📦</span>我的订单<span class="mp-arrow">›</span></div>
-      <div class="mp-menu-item" @click="$emit('open', 'team')"><span class="mp-menu-icon">👥</span>我的团队<span class="mp-arrow">›</span></div>
+      <div class="mp-menu-item" @click="$emit('open', 'team')"><span class="mp-menu-icon">👥</span>我的伙伴<span class="mp-arrow">›</span></div>
       <div class="mp-menu-item" @click="$emit('open', 'gifts')"><span class="mp-menu-icon">🎁</span>礼物记录<span class="mp-arrow">›</span></div>
       <div class="mp-menu-item" @click="$emit('open', 'messages')"><span class="mp-menu-icon">💬</span>我的消息<span class="mp-arrow">›</span></div>
       <div class="mp-menu-item" @click="$emit('open', 'referral')"><span class="mp-menu-icon">🎟️</span>邀请有礼<span class="mp-arrow">›</span></div>

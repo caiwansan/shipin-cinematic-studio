@@ -3,6 +3,7 @@ import type { ApiResponse } from '../contracts/api/base.js';
 // ─── 微信授权登录 ───
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { getClientIp, nextTokenVersion } from '../utils/session.js'
 import { verifyToken } from './admin-auth.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js';
 import bcrypt from 'bcryptjs'
@@ -136,9 +137,9 @@ export default async function wechatOAuthRoutes(fastify: FastifyInstance) {
       }
       const jwt = await import('jsonwebtoken')
       const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
-      const newVer = (user.tokenVersion || 1) + 1
-      await prisma.user.update({ where: { id: user.id }, data: { tokenVersion: newVer } }).catch(() => {})
-      const token = jwt.default.sign({ id: user.id, email: user.email, role: 'user', tokenVersion: newVer }, JWT_SECRET, { expiresIn: '30d' })
+      const clientIp = getClientIp(request)
+      const newVer = await nextTokenVersion(user, clientIp)
+      const token = jwt.default.sign({ id: user.id, email: user.email, role: 'user', tokenVersion: newVer, ip: clientIp }, JWT_SECRET, { expiresIn: '30d' })
       
       // postMessage 方式返回（弹窗内使用 postMessage 通知原窗口，原窗口保持不动）
             const safeUser = JSON.stringify({ id: user.id, nickname }).replace(/</g, '\\u003C')
@@ -149,6 +150,7 @@ export default async function wechatOAuthRoutes(fastify: FastifyInstance) {
         "try { localStorage.setItem('auth_user','" + safeUser.replace(/'/g, "\\'") + "'); } catch(e){}\n" +
         "try { localStorage.setItem('oauth_login_at',Date.now()+''); } catch(e){}\n" +
         "try { document.cookie = 'auth_token=" + token + "; path=/; max-age=2592000'; } catch(e){}\n" +
+        "try { if (window.opener) { window.opener.postMessage({ type: 'OAUTH_LOGIN', token: '" + token + "', user: " + safeUser + " }, window.location.origin); } } catch(e){}\n" +
         "try { window.close(); } catch(e){}\n" +
         "setTimeout(function(){ window.location.href='/'; }, 500);\n" +
         '</script></body></html>')
@@ -165,6 +167,7 @@ export default async function wechatOAuthRoutes(fastify: FastifyInstance) {
     return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
       "try { localStorage.setItem('oauth_error', '" + safeMsg + "'); } catch(e){}\n" +
       "try { localStorage.setItem('oauth_error_at', Date.now()+''); } catch(e){}\n" +
+      "try { if (window.opener) { window.opener.postMessage({ type: 'OAUTH_ERROR', error: '" + safeMsg + "' }, window.location.origin); } } catch(e){}\n" +
       "try { window.close(); } catch(e){}\n" +
       "setTimeout(function(){ window.location.href = '/?error=" + safeMsg + "'; }, 500);\n" +
       '</script></body></html>')
@@ -259,10 +262,10 @@ export default async function wechatOAuthRoutes(fastify: FastifyInstance) {
       // 生成 JWT token（复用 auth.service 的逻辑，简单生成）
       const jwt = await import('jsonwebtoken')
       const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
-      const newVer = (user.tokenVersion || 1) + 1
-      await prisma.user.update({ where: { id: user.id }, data: { tokenVersion: newVer } }).catch(() => {})
+      const clientIp = getClientIp(request)
+      const newVer = await nextTokenVersion(user, clientIp)
       const token = jwt.default.sign(
-        { id: user.id, email: user.email, role: 'user', tokenVersion: newVer },
+        { id: user.id, email: user.email, role: 'user', tokenVersion: newVer, ip: clientIp },
         JWT_SECRET,
         { expiresIn: '30d' }
       )

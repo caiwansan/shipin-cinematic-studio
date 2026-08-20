@@ -67,18 +67,18 @@ export function useKunlunTea() {
   })
 
   let sdk: any = null
-  let messageHandler: ((msg: any) => void) | null = null
-  let cmdHandler: ((msg: any) => void) | null = null
+  const cmdHandlers: ((msg: any) => void)[] = []
+  const messageHandlers: ((msg: any) => void)[] = []
   let sendStatusHandler: ((p: any) => void) | null = null
 
   function ensureSdkListeners() {
     if (!sdk) return
     if (!sdkMessageListener) {
-      sdkMessageListener = (msg: any) => { messageHandler?.(msg) }
+      sdkMessageListener = (msg: any) => { messageHandlers.forEach((h) => { try { h(msg) } catch {} }) }
       sdk.chatManager.addMessageListener(sdkMessageListener)
     }
     if (!sdkCmdListener) {
-      sdkCmdListener = (msg: any) => { cmdHandler?.(msg) }
+      sdkCmdListener = (msg: any) => { cmdHandlers.forEach((h) => { try { h(msg) } catch {} }) }
       sdk.chatManager.addCMDListener(sdkCmdListener)
     }
     if (!sdkStatusListener) {
@@ -162,6 +162,7 @@ export function useKunlunTea() {
       // 连接/断开 → 上报在线状态（fire-and-forget）
       if (st === CONNECT_STATUS.Connected) reportPresence(true)
       if (st === CONNECT_STATUS.Disconnect) reportPresence(false)
+      scheduleReconnect(st)
     })
     // 消息监听（单例包装：防重复注册双发）
     ensureSdkListeners()
@@ -174,6 +175,29 @@ export function useKunlunTea() {
     sdk.disconnect()
     status.value = 0
   }
+
+  // ── 连接脆弱修复：断线/连接失败时自动重连（指数退避 + 刷新 token + 恢复订阅）──
+  let reconnectTimer: any = null
+  let reconnectAttempts = 0
+  let reconnectSuppress = false
+  function scheduleReconnect(st: number) {
+    if (reconnectSuppress) return                      // 用户主动断开/切走时不自动重连
+    const shouldRetry = st === CONNECT_STATUS.Disconnect || st === CONNECT_STATUS.ConnectFail
+    if (!shouldRetry) return
+    if (st === CONNECT_STATUS.Connected) { reconnectAttempts = 0; return }
+    if (reconnectAttempts >= 6) { console.warn('[昆仑茶馆] 重连已达上限，停止自动重连'); return }
+    const backoff = Math.min(2000 * Math.pow(1.6, reconnectAttempts), 20000)
+    reconnectAttempts++
+    if (reconnectTimer) { try { clearTimeout(reconnectTimer) } catch {} }
+    reconnectTimer = setTimeout(async () => {
+      try {
+        if (reconnectSuppress) return
+        status.value = 2 // connecting
+        await rejoin()   // 刷新 token + 重连（内部 sdk.disconnect + connect）
+      } catch (e) { console.warn('[昆仑茶馆] 重连失败，稍后再试:', (e as Error).message) }
+    }, backoff)
+  }
+  function suppressReconnect(v: boolean) { reconnectSuppress = v }
 
   /** 频道订阅丢失（容器重启/订阅被清）→ 重新签发 token（幂等 subscriber_add 恢复订阅）+ 重连 */
   async function rejoin() {
@@ -193,13 +217,13 @@ export function useKunlunTea() {
   }
 
   function onMessage(handler: (msg: any) => void) {
-    messageHandler = handler
+    if (!messageHandlers.includes(handler)) messageHandlers.push(handler)
     if (sdk) ensureSdkListeners()
   }
 
   /** CMD 信令监听（RTC 通话信令；WuKongIM 命令消息 contentType=99，不落历史） */
   function onCMD(handler: (msg: any) => void) {
-    cmdHandler = handler
+    if (!cmdHandlers.includes(handler)) cmdHandlers.push(handler)
     if (sdk) ensureSdkListeners()
   }
 
@@ -343,5 +367,187 @@ export function useKunlunTea() {
     }
   }
 
-  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, onMessage, onCMD, sendCMD, onSendStatus, sendText, sendVoice, subscribeChannel, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence }
+  // ── P0-1: 消息状态追踪 ──
+  const messageStatusMap = ref<Record<string, number>>({})  // messageId -> 0=sent 1=delivered 2=read
+
+  /** 更新消息状态（送达/已读） */
+  async function updateMessageStatus(messageIds: string[], channelId: string, channelType: number, status: number) {
+    if (!messageIds.length) return
+    try {
+      await authFetch('/api/im/messages/status', {
+        method: 'POST',
+        body: JSON.stringify({ messageIds, channelId, channelType, status }),
+      })
+      // 更新本地缓存
+      messageIds.forEach(id => { messageStatusMap.value[id] = status })
+    } catch (e) { /* 非致命 */ }
+  }
+
+  /** 标记会话已读 */
+  async function markRead(channelId: string, channelType: number, lastReadMessageId?: string) {
+    try {
+      await authFetch('/api/im/messages/read', {
+        method: 'POST',
+        body: JSON.stringify({ channelId, channelType, lastReadMessageId }),
+      })
+    } catch (e) { /* 非致命 */ }
+  }
+
+  /** 查询消息状态 */
+  async function fetchMessageStatus(messageIds: string[], channelId: string) {
+    if (!messageIds.length) return
+    try {
+      const ids = messageIds.join(',')
+      const res = await authFetch(`/api/im/messages/status?channelId=${encodeURIComponent(channelId)}&messageIds=${encodeURIComponent(ids)}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        Object.assign(messageStatusMap.value, json.data)
+      }
+    } catch (e) { /* 非致命 */ }
+  }
+
+  // ── P0-3: 输入状态 ──
+  const typingUsers = ref<Record<string, string[]>>({})  // channelId -> typing uids
+  let typingDebounce: any = null
+
+  /** 发送输入状态 */
+  function sendTyping(channelId: string, channelType: number, isTyping: boolean) {
+    if (typingDebounce) clearTimeout(typingDebounce)
+    typingDebounce = setTimeout(async () => {
+      try {
+        await authFetch('/api/im/typing', {
+          method: 'POST',
+          body: JSON.stringify({ channelId, channelType, typing: isTyping }),
+        })
+      } catch (e) { /* 非致命 */ }
+    }, isTyping ? 300 : 50)  // 输入时防抖 300ms，停止时立即发送
+  }
+
+  /** 获取正在输入的用户 */
+  async function fetchTypingUsers(channelId: string, channelType: number) {
+    try {
+      const res = await authFetch(`/api/im/typing/${channelId}?type=${channelType}`)
+      const json = await res.json()
+      if (json.success) {
+        typingUsers.value[channelId] = json.data?.typingUids || []
+      }
+    } catch (e) { /* 非致命 */ }
+  }
+
+  // ── P0-4: 引用回复 ──
+  async function sendReply(content: string, channelId: string, channelType: number, replyToMessageId: string) {
+    if (!sdk) throw new Error('SDK 未初始化')
+    const channel = sdk.newChannel(channelId, channelType)
+    const msgBody = { type: 1, content: { text: content, replyTo: replyToMessageId } }
+    const payload = Buffer.from(JSON.stringify(msgBody)).toString('base64')
+    // 走服务端代发（确保 replyTo 元数据落库）
+    const res = await authFetch('/api/im/messages/send-reply', {
+      method: 'POST',
+      body: JSON.stringify({ channelId, channelType, content, contentType: 1, replyToMessageId }),
+    })
+    const json = await res.json()
+    return json.success ? json.data : null
+  }
+
+  // ── P1-2: 消息转发 ──
+  async function forwardMessage(messageId: string, fromChannelId: string, fromChannelType: number, targetChannelId: string, targetChannelType: number) {
+    try {
+      const res = await authFetch('/api/im/messages/forward', {
+        method: 'POST',
+        body: JSON.stringify({ messageId, fromChannelId, fromChannelType, targetChannelId, targetChannelType }),
+      })
+      const json = await res.json()
+      return json.success
+    } catch { return false }
+  }
+
+  // ── P2-4: 未读管理 ──
+  async function getUnreadCount(channelId: string, channelType: number): Promise<number> {
+    try {
+      const res = await authFetch(`/api/im/unread/${channelId}?type=${channelType}`)
+      const json = await res.json()
+      return json.success ? (json.data?.unread || 0) : 0
+    } catch { return 0 }
+  }
+
+  async function markUnread(channelId: string, channelType: number) {
+    try {
+      await authFetch('/api/im/mark-unread', {
+        method: 'POST',
+        body: JSON.stringify({ channelId, channelType }),
+      })
+    } catch (e) { /* 非致命 */ }
+  }
+
+  // ── P1-4: 群管理 ──
+  async function setMemberRole(channelId: string, channelType: number, targetUid: string, role: number) {
+    try {
+      const res = await authFetch(`/api/im/channels/${channelId}/members/${targetUid}/role`, {
+        method: 'PUT',
+        body: JSON.stringify({ channelType, role }),
+      })
+      const json = await res.json()
+      return json.success
+    } catch { return false }
+  }
+
+  async function muteMember(channelId: string, channelType: number, targetUid: string, duration: number) {
+    try {
+      const res = await authFetch(`/api/im/channels/${channelId}/members/${targetUid}/mute`, {
+        method: 'POST',
+        body: JSON.stringify({ channelType, duration }),
+      })
+      const json = await res.json()
+      return json.success
+    } catch { return false }
+  }
+
+  async function setGroupAnnouncement(channelId: string, channelType: number, content: string) {
+    try {
+      const res = await authFetch(`/api/im/channels/${channelId}/announcement`, {
+        method: 'POST',
+        body: JSON.stringify({ channelType, content }),
+      })
+      const json = await res.json()
+      return json.success
+    } catch { return false }
+  }
+
+  // ── P2-2: @提及搜索 ──
+  async function searchMention(channelId: string, keyword: string) {
+    try {
+      const res = await authFetch(`/api/im/mention-search/${channelId}?q=${encodeURIComponent(keyword)}`)
+      const json = await res.json()
+      return json.success ? (json.data || []) : []
+    } catch { return [] }
+  }
+
+  // ── P1-3: 语音波形 ──
+  async function saveVoiceWaveform(messageId: string, waveform: number[]) {
+    try {
+      await authFetch('/api/im/voice-waveform', {
+        method: 'POST',
+        body: JSON.stringify({ messageId, waveform }),
+      })
+    } catch (e) { /* 非致命 */ }
+  }
+
+  async function getVoiceWaveform(messageId: string): Promise<number[]> {
+    try {
+      const res = await authFetch(`/api/im/voice-waveform/${messageId}`)
+      const json = await res.json()
+      return json.success ? (json.data?.waveform || []) : []
+    } catch { return [] }
+  }
+
+  // ── P1-1: Emoji 列表 ──
+  async function loadEmoji(): Promise<any[]> {
+    try {
+      const res = await fetch('/api/im/emoji')
+      const json = await res.json()
+      return json.success ? (json.data || []) : []
+    } catch { return [] }
+  }
+
+  return { status, userId, connected, connecting, statusLabel, connect, disconnect, rejoin, suppressReconnect, onMessage, onCMD, sendCMD, onSendStatus, sendText, sendVoice, subscribeChannel, loadHistory, loadChannels, loadMembers, ensurePrivate, loadUsers, resolveNames, reportPresence, messageStatusMap, updateMessageStatus, markRead, fetchMessageStatus, typingUsers, sendTyping, fetchTypingUsers, sendReply, forwardMessage, getUnreadCount, markUnread, setMemberRole, muteMember, setGroupAnnouncement, searchMention, saveVoiceWaveform, getVoiceWaveform, loadEmoji }
 }

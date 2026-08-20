@@ -135,8 +135,16 @@
         <button class="mmr-ctl" @click="roomTab = roomTab === 'chat' ? '' : 'chat'">💬<br><small>聊天</small></button>
         <button class="mmr-ctl" @click="roomTab = roomTab === 'members' ? '' : 'members'">👥<br><small>成员</small></button>
         <button class="mmr-ctl" @click="inviteOpen = true">✉️<br><small>邀请</small></button>
+        <button class="mmr-ctl" @click="aiSecOpen = true">🤖<br><small>AI秘书</small></button>
         <button v-if="isHost" class="mmr-ctl end" @click="endMeeting">⏹<br><small>结束</small></button>
         <button v-else class="mmr-ctl leave" @click="leaveRoom">🚪<br><small>离开</small></button>
+      </div>
+
+      <!-- AI 秘书面板 -->
+      <div v-if="aiSecOpen" class="mmr-mask" @click.self="aiSecOpen = false">
+        <div class="mmi ai-sec-panel">
+          <MAiSecretary :meeting-id="meetId" :user-uid="meUid" @close="aiSecOpen = false" />
+        </div>
       </div>
 
       <!-- 邀请好友面板 -->
@@ -165,6 +173,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watchEffect } from 'vue'
 import { mobileAuthFetch, mobileToast } from '~/composables/useMobileApi'
 import { useSfuMeeting } from '~/composables/useSfuMeeting'
+import MAiSecretary from '~/components/mobile/MAiSecretary.vue'
 
 const props = defineProps<{ tea: any }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -210,7 +219,15 @@ const videoElMap = new Map<string, HTMLVideoElement>()
 let signalPollIv: any = null
 // 邀请
 const inviteOpen = ref(false)
+const aiSecOpen = ref(false)
 const friendList = ref<any[]>([])
+
+// ── AI 秘书：在线视频音频捕获 ──
+// 当检测到用户播放在线视频时，自动捕获音频并转写
+let videoAudioCtx: AudioContext | null = null
+let videoAudioSource: MediaStreamAudioSourceNode | null = null
+let videoAudioWorklet: AudioWorkletNode | null = null
+let currentRecordingId: string | null = null
 async function openInvite() {
   inviteOpen.value = true
   try {
@@ -678,8 +695,92 @@ function cleanupRoom() {
   timer.value = ''
 }
 
+// ── 在线视频/屏幕共享音频捕获 ──
+// 当检测到会议中有视频播放或屏幕共享时，自动捕获音频并转写
+async function captureVideoAudio(stream: MediaStream, label: string) {
+  try {
+    const audioTracks = stream.getAudioTracks()
+    if (!audioTracks.length) return
+    const audioStream = new MediaStream(audioTracks)
+    videoAudioCtx = new AudioContext({ sampleRate: 16000 })
+    await videoAudioCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([`
+      class VideoPcmProcessor extends AudioWorkletProcessor {
+        constructor() { super(); this.buffer = []; this.frameSize = 4800; }
+        process(inputs) {
+          const input = inputs[0];
+          if (!input || !input[0]) return true;
+          const samples = input[0];
+          const int16 = new Int16Array(samples.length);
+          for (let i = 0; i < samples.length; i++) {
+            const s = Math.max(-1, Math.min(1, samples[i]));
+            int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+          this.buffer.push(...int16);
+          while (this.buffer.length >= this.frameSize) {
+            const frame = this.buffer.splice(0, this.frameSize);
+            this.port.postMessage({ pcm: frame });
+          }
+          return true;
+        }
+      }
+      registerProcessor('video-pcm-processor', VideoPcmProcessor);
+    `], { type: 'application/javascript' })))
+    videoAudioSource = videoAudioCtx.createMediaStreamSource(audioStream)
+    videoAudioWorklet = new AudioWorkletNode(videoAudioCtx, 'video-pcm-processor')
+    videoAudioWorklet.port.onmessage = async (event) => {
+      if (event.data.pcm && aiSecWs?.readyState === WebSocket.OPEN) {
+        const pcm = new Uint8Array(event.data.pcm.buffer)
+        let binary = ''
+        for (let i = 0; i < pcm.length; i++) binary += String.fromCharCode(pcm[i])
+        aiSecWs.send(JSON.stringify({
+          type: 'video-audio',
+          label,
+          pcm: btoa(binary),
+          lang: 'auto'
+        }))
+      }
+    }
+    videoAudioSource.connect(videoAudioWorklet)
+    console.log(`[AI秘书] 开始捕获${label}音频`)
+  } catch (e) {
+    console.warn('[AI秘书] 视频音频捕获失败:', e)
+  }
+}
+
+function stopVideoAudioCapture() {
+  try {
+    videoAudioWorklet?.disconnect()
+    videoAudioSource?.disconnect()
+    videoAudioCtx?.close()
+  } catch {}
+  videoAudioWorklet = null
+  videoAudioSource = null
+  videoAudioCtx = null
+}
+
+// AI 秘书 WebSocket 引用
+let aiSecWs: WebSocket | null = null
+
+function connectAiSecWs() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const host = window.location.host
+  aiSecWs = new WebSocket(
+    `${protocol}//${host}/ws/ai-secretary/audio?uid=${encodeURIComponent(meUid.value)}&meetingId=${encodeURIComponent(meetId.value)}&token=${encodeURIComponent(meUid.value)}`
+  )
+  aiSecWs.onopen = () => {
+    console.log('[AI秘书] WebSocket 已连接')
+    try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}')
+      const name = user.nickname || user.username || meUid.value.slice(0, 6)
+      aiSecWs?.send(JSON.stringify({ type: 'speaker-name', name }))
+    } catch {}
+  }
+  aiSecWs.onerror = () => console.warn('[AI秘书] WebSocket 错误')
+  aiSecWs.onclose = () => { aiSecWs = null }
+}
+
 onMounted(() => { meUid.value = tea.userId.value; loadMeetings(); pollTimer = setInterval(loadMeetings, 20000) })
-onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); cleanupRoom() })
+onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); cleanupRoom(); stopVideoAudioCapture(); aiSecWs?.close() })
 </script>
 
 <style scoped>
@@ -770,6 +871,8 @@ onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); cleanupRoom() }
 .mmi-online { font-size: 11px; color: #8b94a3; }
 .mmi-online.on { color: #2bd576; }
 .mmi-close { width: 100%; margin-top: 14px; padding: 11px; border: none; border-radius: 10px; background: #232a35; color: #e8eaed; font-size: 15px; }
+/* AI 秘书面板 */
+.ai-sec-panel { height: 80vh; max-height: 80vh; padding: 0; display: flex; flex-direction: column; border-radius: 18px 18px 0 0; overflow: hidden; }
 /* 创建成功面板 */
 .mmc-created { background: linear-gradient(135deg,#17243a,#101a29); border: 1px solid #2b7cf0; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
 .mc-c-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; }

@@ -1,0 +1,431 @@
+server {
+    listen 80;
+    server_name aigc.fushtn.com;
+  # Hermes 员工服务（本地版 AI 员工 → Hermes 子代理）
+  location /api/hermes/ {
+    proxy_pass http://127.0.0.1:9458/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+  }
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl ;
+    # http2 off — 修复 HTTP/2 protocol error (upstream content-length 跟实际 body 不匹配)
+    server_name aigc.fushtn.com;
+  # Hermes 员工服务（本地版 AI 员工 → Hermes 子代理）
+      # 茶馆翻译 AI 管理卡片（精确匹配静态直服，绕开 Nuxt）
+    location = /admin-identity.html {
+        root /www/wwwroot/aigc.fushtn.com;
+        try_files $uri =404;
+    }
+    location = /register.html {
+        root /www/wwwroot/aigc.fushtn.com;
+        try_files $uri =404;
+    }
+    location = /admin-tea.html {
+        try_files $uri =404;
+    }
+
+    location = /admin-tea-translate.html {
+        root /www/wwwroot/aigc.fushtn.com;
+        try_files $uri =404;
+    }
+
+location /api/hermes/ {
+    proxy_pass http://127.0.0.1:9458/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+  }
+
+    # 禁用宝塔全局 proxy_cache（proxy.conf cache_one）：否则首页 HTML 被 nginx 缓存，
+    # 新 build 更新 _nuxt 后旧 HTML 引用已删 chunk → 404 → 登录按钮/路由失效（2026-08-06 事故）
+    proxy_cache off;
+
+    ssl_certificate    /www/server/panel/vhost/ssl/aigc.fushtn.com/fullchain.pem;
+    ssl_certificate_key    /www/server/panel/vhost/ssl/aigc.fushtn.com/privkey.pem;
+    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
+
+    root /www/wwwroot/aigc.fushtn.com;
+    index index.html;
+
+
+    # ── _nuxt/ static assets (hash-based) ──
+    # nginx 直服，不走 Nitro proxy，消除 chunked encoding 截断风险
+    # ⚠️ 不能用 immutable：每次 build 后 hash 会变，immutable 会让浏览器永远吃旧缓存
+    # 策略：JS/CSS 文件用 no-cache（每次重新验证），其他静态资源用短期缓存
+    location /_nuxt/ {
+        root /www/wwwroot/aigc.fushtn.com;
+        expires -1;
+        add_header Cache-Control "no-cache, must-revalidate";
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # HTML 永不缓存：每次回源校验，避免旧 HTML 引用已删除的旧哈希 js → 白屏/500
+    location ~* \.html$ {
+        root /www/wwwroot/aigc.fushtn.com;
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        try_files $uri =404;
+    }
+
+    # tea-app (昆仑茶馆手机版预览)
+    location ^~ /tea-app/ {
+        root /www/wwwroot/aigc.fushtn.com;
+        index index.html;
+        try_files $uri $uri/ /tea-app/index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # 根路径 HTML 同样禁缓存（Nitro 默认 max-age=3600 会缓存旧 HTML）
+    # 必须覆盖 Nitro 上游的 Cache-Control: public, max-age=3600
+    location = / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_hide_header Cache-Control;
+        proxy_hide_header Expires;
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # Kunlun Workspace → Client-only SPA (SSR disabled due to Nitro/Rollup bug)
+    # proxy_buffering off — 防止 Nitro 重启/部署时 chunked encoding 截断
+    # 必须覆盖 Nitro 上游的 Cache-Control: public, max-age=3600
+    location ^~ /workspace {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        # SPA fallback 直接交给 Nuxt（try_files /index.html 会 internal redirect
+        # 到不存在路由 → Nitro 渲染 /index.html → Page not found: /index.html）
+        proxy_hide_header Cache-Control;
+        proxy_hide_header Expires;
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # File upload routes → aigc backend (port 4002)
+    # 必须放在通用 /api/v1/ 之前，防止被代理到 3000
+    location ^~ /api/v1/upload/ {
+        client_max_body_size 50m;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location ^~ /api/v1/uploads/ {
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        expires 1d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Kunlun Backend API
+    location ^~ /api/v1/ {
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # API proxy to api-server (port 4002)
+    # GEO API: /api/geo/* → backend (port 4002)
+    location ~ ^/api/geo/ {
+        client_max_body_size 50m;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Enterprise API → backend (port 4002)
+    location ^~ /enterprise/ {
+        client_max_body_size 50m;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # ── 昆仑茶馆 IM WebSocket 反代（WuKongIM WS 5200）──
+    location /im-ws {
+        proxy_pass http://127.0.0.1:5200;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+    # 其他 API（非 GEO）直接透传 — 必须放在 location / 之前
+    location /api/ {
+        client_max_body_size 50m;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # WebSocket 升级透传（同传 /api/im/rtc/translate 等 WS 路由必需；普通请求无 Upgrade 头时 connection_upgrade=close 无副作用）
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+
+    # ── Kunlun Mirror Artifact Repository（昆仑镜应用发布仓库）──
+    # 用户下载入口：仅 aigc.fushtn.com/releases/desktop/*（禁止 GitHub 直链）
+    # autoindex off：不暴露目录结构；octet-stream：强制下载语义
+    location ^~ /releases/ {
+        root /www/wwwroot/aigc.fushtn.com;
+        autoindex off;
+        default_type application/octet-stream;
+        add_header X-Content-Type-Options nosniff;
+        access_log off;
+        try_files $uri =404;
+        # 仅安装包强制下载语义；latest.json / *.sha256 正常可读（updater/API）
+        location ~ \.(exe|msi|zip|dmg|AppImage)$ {
+            add_header Content-Disposition 'attachment';
+        }
+    }
+
+    # Serve existing static files directly, proxy rest to Nuxt
+    # 必须覆盖 Nitro 上游的 Cache-Control: public, max-age=3600
+    location = /oauth-desktop-done {
+        default_type text/html;
+        return 200 '<html><body style="font-family:system-ui;text-align:center;padding-top:15vh;color:#2b4c7e"><h2>QQ 授权成功</h2><p>请回到昆仑工坊应用，正在自动完成登录…</p><p style="font-size:13px;color:#999">（本页面 2 秒后自动关闭，可直接手动关闭）</p><script>setTimeout(function(){ try{window.close()}catch(e){} }, 2000);</script></body></html>';
+    }
+
+    location / {
+        try_files $uri @nuxt;
+        proxy_hide_header Cache-Control;
+        proxy_hide_header Expires;
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # Client-only SPA — proxy to Nitro server (port 3000)
+    # proxy_buffering off — 防止大 chunk 传输时 ERR_INCOMPLETE_CHUNKED_ENCODING
+    # proxy_buffer_size/proxy_buffers — 补救 buffer，防零星截断
+    # 必须覆盖 Nitro 上游的 Cache-Control: public, max-age=3600
+    location @nuxt {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_buffering off;
+        proxy_read_timeout 60s;
+        proxy_hide_header Cache-Control;
+        proxy_hide_header Expires;
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # Video / Image endpoints (non-/api/ prefix routes)
+    location /videos/ {
+        client_max_body_size 50m;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /images/ {
+        client_max_body_size 50m;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Health
+    # tea distributed storage center (metadata + transient relay, no content)
+    # tea storage node direct (P3 直连：走 443 无需开放新端口)
+    location /storage-node/ {
+        proxy_pass http://127.0.0.1:9461/;
+        proxy_set_header Host $host;
+        proxy_read_timeout 600s;
+        client_max_body_size 400m;
+    }
+
+    location /storage/ {
+        proxy_pass http://127.0.0.1:9460/;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        client_max_body_size 400m;
+    }
+
+    location = /health {
+        proxy_pass http://127.0.0.1:4002;
+    }
+
+    # SSE
+    location = /events {
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Connection '';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding on;
+    }
+
+    # Uploads static files — 先尝试本地 static，没有就走后端 proxy
+    location /uploads/ {
+        # 后端 4002 的 @fastify/static 托管 public/uploads
+        proxy_pass http://127.0.0.1:4002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        expires 1d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Capabilities & OpenAPI
+    location = /capabilities {
+        proxy_pass http://127.0.0.1:4002;
+    }
+    location = /openapi.yaml {
+        proxy_pass http://127.0.0.1:4002;
+    }
+    location = /api/v1/info {
+        proxy_pass http://127.0.0.1:4002;
+    }
+    location = /api/v1/system/health {
+        proxy_pass http://127.0.0.1:4002;
+    }
+
+    # ===== 混淆后台入口 =====
+    # /admin/enterprise/* 企业数字部门后台
+    location ~ ^/admin/enterprise/ {
+        proxy_pass http://127.0.0.1:4002$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    # /admin/enterprises 企业管控台
+    location ~ ^/admin/enterprises {
+        proxy_pass http://127.0.0.1:4002$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    # /admin/* → Nitro SSR (招聘管理等后台页面)
+    location ~ ^/admin/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # PPT API 路由（/ppt/api/ → Flask 后端 5011，路径剥离 /ppt 前缀）
+    location /ppt/api/ {
+        client_max_body_size 200m;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_pass http://127.0.0.1:5011/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # PPT 上传/文件服务
+    location /ppt/files/ {
+        proxy_pass http://127.0.0.1:5011/files/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # PPT 上传文件存储（直接访问文件）
+    # /admin/* → Nitro SSR (重复 location，proxy 到 4001)
+    location ^~ /admin {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /ppt/uploads/ {
+        alias /root/banana-slides/uploads/;
+        expires 1d;
+    }
+
+    # PPT 预设模板图片
+    location /templates/ {
+        alias /www/wwwroot/aigc.fushtn.com/ppt-banana/templates/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location ^~ /ppt/ {
+        alias /www/wwwroot/aigc.fushtn.com/ppt-banana/;
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        try_files $uri $uri/ /index.html =404;
+    }
+
+    access_log  /www/wwwlogs/aigc.fushtn.com.log;
+    error_log  /www/wwwlogs/aigc.fushtn.com.error.log;
+}

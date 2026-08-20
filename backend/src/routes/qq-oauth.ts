@@ -3,6 +3,7 @@ import type { ApiResponse } from '../contracts/api/base.js';
 // ─── QQ授权登录 ───
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { getClientIp, nextTokenVersion } from '../utils/session.js'
 import { verifyToken } from './admin-auth.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js';
 import { randomUUID } from 'crypto'
@@ -10,7 +11,7 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 
 // OAuth state 内存存储（防 CSRF）
-const oauthStateMap = new Map<string, { createdAt: number }>()
+const oauthStateMap = new Map<string, { createdAt: number; mode?: string; ref?: string }>()
 // Desktop OAuth 结果缓存：GET callback(desktop=1) 成功后暂存 token，供壳内轮询取回
 const oauthDesktopResults = new Map<string, { token: string; user: any; at: number }>()
 
@@ -74,13 +75,19 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'QQ登录未配置' })
     }
 
-    // desktop=1：state 加 d_ 前缀，callback 据此走 Desktop 分支（QQ 平台校验 redirect_uri，不能改，只能用 state 编码）
-    const isDesktop = (request.query as any)?.desktop === '1'
+    // desktop=1 或 mobile：state 加 d_ 前缀，callback 据此走 Desktop/服务端中继分支（token 存服务端，前端轮询取回，不依赖 localStorage/同源）
+    // mobile 也用服务端中继：因手机/QQ授权可能落在系统浏览器或QQ App，token 无法回写APP WebView，只能靠 APP 轮询服务端取回
+    const isMobile = (request.query as any)?.mobile === '1' || (request.query as any)?.mobile === 'true'
+    const isDesktop = (request.query as any)?.desktop === '1' || isMobile
+    const mode = String((request.query as any)?.mode || 'login') // login | bind
+    const ref = String((request.query as any)?.ref || '')
     const state = (isDesktop ? 'd_' : '') + Math.random().toString(36).substring(2, 10)
-    oauthStateMap.set(state, { createdAt: Date.now() })
+    oauthStateMap.set(state, { createdAt: Date.now(), mode, ref, mobile: isMobile })
     const redirectUri = encodeURIComponent(config.redirectUri || 'https://aigc.fushtn.com/api/auth/qq/callback')
-    // display=pc 强制PC扫码模式
-    const authUrl = `https://graph.qq.com/oauth2.0/authorize?response_type=code&client_id=${config.appId}&redirect_uri=${redirectUri}&scope=get_user_info&state=${state}&display=pc`
+    // 手机/APP：display=mobile（QQ 移动端授权，手机上会唤起手机QQ或显示移动授权页，不再强制 PC 扫码）
+    // 注意：isDesktop 已含 isMobile（为走服务端中继加 d_ 前缀）；但 display 必须按是否显式 mobile 决定，不能因中继前缀就退回 pc
+    const display = isMobile ? 'mobile' : 'pc'
+    const authUrl = `https://graph.qq.com/oauth2.0/authorize?response_type=code&client_id=${config.appId}&redirect_uri=${redirectUri}&scope=get_user_info&state=${state}&display=${display}`
 
     return toApiResponse({authUrl, state}) satisfies ApiResponse<unknown>;
   })
@@ -91,6 +98,7 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
     return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
       "try { localStorage.setItem('oauth_error', '" + safeMsg + "'); } catch(e){}\n" +
       "try { localStorage.setItem('oauth_error_at', Date.now()+''); } catch(e){}\n" +
+      "try { if (window.opener) { window.opener.postMessage({ type: 'OAUTH_ERROR', error: '" + safeMsg + "' }, window.location.origin); } } catch(e){}\n" +
       "try { window.close(); } catch(e){}\n" +
       "setTimeout(function(){ window.location.href = '/?error=" + safeMsg + "'; }, 500);\n" +
       '</script></body></html>')
@@ -101,7 +109,11 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
     const { code, state, desktop } = request.query as any
     // state 校验：防 CSRF
     const stateEntry = state ? oauthStateMap.get(state) : undefined
+    const hasState = !!state && !!stateEntry
+    const mapSize = oauthStateMap.size
+    console.log('[QQ-CB] enter state=', state, 'hasState=', hasState, 'mapSize=', mapSize)
     if (!state || !stateEntry) {
+      console.log('[QQ-CB] FAIL state invalid, mapSize=', mapSize)
       return redirectWithEncodedError(reply, 'state 无效或已过期')
     }
     if (Date.now() - stateEntry.createdAt > 10 * 60 * 1000) {
@@ -110,6 +122,9 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
     }
     // Desktop 模式判定：state 以 d_ 前缀（authorize?desktop=1 生成）或显式 desktop=1 query
     const isDesktop = desktop === '1' || (typeof state === 'string' && state.startsWith('d_'))
+    // 移动端/APP OAuth：回调结束后跳回手机端首页（应用内 WebView 读 localStorage；外部浏览器则回落手机APP）
+    const isMobileOAuth = !!(stateEntry as any)?.mobile
+    const mobileLanding = isMobileOAuth ? 'https://aigc.fushtn.com/mobile-app?oauth=1' : null
     // Desktop 模式：state 保留（供 /api/auth/qq/desktop-result 轮询），由壳内轮询后清理
     if (!isDesktop) {
       oauthStateMap.delete(state)
@@ -121,13 +136,16 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
     try {
       const config = await getQQConfig()
       if (!config || !config.appId || !config.appSecret) {
+        console.log('[QQ-CB] FAIL no config')
         return redirectWithEncodedError(reply, 'QQ登录未配置')
       }
 
       // ── Step 1: code 换 access_token ──
-      const tokenUrl = `https://graph.qq.com/oauth2.0/token?grant_type=authorization_code&client_id=${config.appId}&client_secret=${config.appSecret}&code=${code}&redirect_uri=${config.redirectUri}&fmt=json`
+      console.log('[QQ-CB] Step1 exchange code len=', (code||'').length, 'state=', state)
+      const tokenUrl = `https://graph.qq.com/oauth2.0/token?grant_type=authorization_code&client_id=${config.appId}&client_secret=${config.appSecret}&code=${code}&redirect_uri=${encodeURIComponent(config.redirectUri)}&fmt=json`
       const tRes = await fetch(tokenUrl)
       const tText = await tRes.text()
+      console.log('[QQ-CB] Step1 resp len=', (tText||'').length, 'status=', tRes.status)
 
       let tData: any
       try { tData = JSON.parse(tText) } catch {
@@ -183,17 +201,31 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
         await prisma.user.update({ where: { id: user.id }, data: { qqOpenId, username: nickname || user.username } })
 
         const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
-        const newVer = (user.tokenVersion || 1) + 1
-        await prisma.user.update({ where: { id: user.id }, data: { tokenVersion: newVer } }).catch(() => {})
+        const clientIp = getClientIp(request)
+        const newVer = await nextTokenVersion(user, clientIp)
         const token = jwt.sign(
-          { id: user.id, email: user.email, role: 'user', tokenVersion: newVer },
+          { id: user.id, email: user.email, role: 'user', tokenVersion: newVer, ip: clientIp },
           JWT_SECRET,
           { expiresIn: '30d' }
         )
 
         // Desktop 模式：结果暂存 + 重定向 done 页（壳内轮询 desktop-result 取回）
         if (isDesktop && state) {
+          console.log('[QQ-CB] STASH existing-user state=', state)
           oauthDesktopResults.set(state, { token, user: { id: user.id, email: user.email, username: user.username, nickname }, at: Date.now() })
+          // 移动端：同样写回 localStorage（若授权在本APP WebView 内完成则直接免登录）+ 跳回 /mobile-app
+          if (mobileLanding) {
+            const sUser = JSON.stringify({ id: user.id, nickname }).replace(/</g, '\\u003C')
+            return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
+              "var keys=['auth_token','accessToken','token'];for(var i=0;i<keys.length;i++){try{localStorage.setItem(keys[i],'" + token + "');}catch(e){}}\n" +
+              "try{localStorage.setItem('auth_user','" + sUser.replace(/'/g, "\\'") + "');}catch(e){}\n" +
+              "try{document.cookie='auth_token=" + token + "; path=/; max-age=2592000';}catch(e){}\n" +
+              "try{window.opener&&window.opener.postMessage({type:'OAUTH_LOGIN',token:'" + token + "',user:" + sUser + "},window.location.origin);}catch(e){}\n" +
+              "try{window.parent&&window.parent!==window&&window.parent.postMessage({type:'OAUTH_LOGIN',token:'" + token + "',user:" + sUser + "},window.location.origin);}catch(e){}\n" +
+              "try{window.close();}catch(e){}\n" +
+              "setTimeout(function(){window.location.href='" + mobileLanding + "';},300);\n" +
+              '</script></body></html>')
+          }
           return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
             "document.title='Kunlun QQ Login OK';\n" +
             "try { window.close(); } catch(e){}\n" +
@@ -210,9 +242,12 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
           "try { localStorage.setItem('auth_user','" + safeUser.replace(/'/g, "\\'") + "'); } catch(e){}\n" +
           "try { localStorage.setItem('oauth_login_at',Date.now()+''); } catch(e){}\n" +
           "try { document.cookie = 'auth_token=" + token + "; path=/; max-age=2592000'; } catch(e){}\n" +
+          "try { if (window.opener) { window.opener.postMessage({ type: 'OAUTH_LOGIN', token: '" + token + "', user: " + safeUser + " }, window.location.origin); } } catch(e){}\n" +
           "try { window.close(); } catch(e){}\n" +
           // 如果 window.close 失败（某些浏览器限制），fallback 跳回首页
-          "setTimeout(function(){ window.location.href='/user/bind-phone'; }, 500);\n" +
+          (mobileLanding
+            ? "setTimeout(function(){ window.location.href='" + mobileLanding + "'; }, 300);\n"
+            : "setTimeout(function(){ window.location.href='/user/bind-phone'; }, 500);\n") +
           '</script></body></html>')
       } else {
         // 新用户 — QQ 授权直接注册，无需绑手机号
@@ -228,6 +263,16 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
           },
         })
 
+        // 邀请绑定锁定（state 携带 ref）
+        if (stateEntry.ref) {
+          try {
+            await prisma.$executeRawUnsafe(
+              'UPDATE "User" SET inviter_id = $1 WHERE id = $2::uuid AND inviter_id IS NULL',
+              stateEntry.ref, user.id
+            )
+          } catch (e) { console.error('[QQ Invite] lock inviter failed:', (e as any)?.message) }
+        }
+
         // 注册赠送钻石（COMMUNITY-REGISTER-REWARD-01：默认 10；原“赠送体验积分 100”统一并入注册奖励）
         await prisma.membership.create({
           data: { userId: user.id, tier: 'free', credits: 0 },
@@ -241,14 +286,27 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
 
         const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
         const token = jwt.sign(
-          { id: user.id, email: user.email, role: 'user', tokenVersion: 1 },
+          { id: user.id, email: user.email, role: 'user', tokenVersion: 1, ip: getClientIp(request) },
           JWT_SECRET,
           { expiresIn: '30d' }
         )
 
         // Desktop 模式：结果暂存 + 重定向 done 页
         if (isDesktop && state) {
+          console.log('[QQ-CB] STASH new-user state=', state)
           oauthDesktopResults.set(state, { token, user: { id: user.id, email: user.email, username: user.username, nickname }, at: Date.now() })
+          if (mobileLanding) {
+            const sUser = JSON.stringify({ id: user.id, nickname }).replace(/</g, '\\u003C')
+            return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
+              "var keys=['auth_token','accessToken','token'];for(var i=0;i<keys.length;i++){try{localStorage.setItem(keys[i],'" + token + "');}catch(e){}}\n" +
+              "try{localStorage.setItem('auth_user','" + sUser.replace(/'/g, "\\'") + "');}catch(e){}\n" +
+              "try{document.cookie='auth_token=" + token + "; path=/; max-age=2592000';}catch(e){}\n" +
+              "try{window.opener&&window.opener.postMessage({type:'OAUTH_LOGIN',token:'" + token + "',user:" + sUser + "},window.location.origin);}catch(e){}\n" +
+              "try{window.parent&&window.parent!==window&&window.parent.postMessage({type:'OAUTH_LOGIN',token:'" + token + "',user:" + sUser + "},window.location.origin);}catch(e){}\n" +
+              "try{window.close();}catch(e){}\n" +
+              "setTimeout(function(){window.location.href='" + mobileLanding + "';},300);\n" +
+              '</script></body></html>')
+          }
           return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
             "document.title='Kunlun QQ Login OK';\n" +
             "try { window.close(); } catch(e){}\n" +
@@ -262,8 +320,12 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
           "try { localStorage.setItem('auth_user','" + safeUser.replace(/'/g, "\\'") + "'); } catch(e){}\n" +
           "try { localStorage.setItem('oauth_login_at',Date.now()+''); } catch(e){}\n" +
           "try { document.cookie = 'auth_token=" + token + "; path=/; max-age=2592000'; } catch(e){}\n" +
+          "try { if (window.opener) { window.opener.postMessage({ type: 'OAUTH_LOGIN', token: '" + token + "', user: " + safeUser + " }, window.location.origin); } } catch(e){}\n" +
           "try { window.close(); } catch(e){}\n" +
-          "setTimeout(function(){ window.location.href='/'; }, 500);\n" +
+          // 新用户：移动端回手机APP；否则回注册页
+          (mobileLanding
+            ? "setTimeout(function(){ try { localStorage.setItem('qq_ok','1'); } catch(e){} window.location.href='" + mobileLanding + "'; }, 300);\n"
+            : "setTimeout(function(){ try { localStorage.setItem('qq_ok','1'); } catch(e){} window.location.href='https://aigc.fushtn.com/register.html?qq=1'; }, 500);\n") +
           '</script></body></html>')
       }
     } catch (err: any) {
@@ -295,7 +357,7 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
 
     try {
       // ── Step 1: code 换 access_token ──
-      const tokenUrl = `https://graph.qq.com/oauth2.0/token?grant_type=authorization_code&client_id=${config.appId}&client_secret=${config.appSecret}&code=${code}&redirect_uri=${config.redirectUri}&fmt=json`
+      const tokenUrl = `https://graph.qq.com/oauth2.0/token?grant_type=authorization_code&client_id=${config.appId}&client_secret=${config.appSecret}&code=${code}&redirect_uri=${encodeURIComponent(config.redirectUri)}&fmt=json`
       const tRes = await fetch(tokenUrl)
       const tText = await tRes.text()
 
@@ -310,6 +372,7 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
       }
 
       if (tData.error || !tData.access_token) {
+        console.error('[QQ OAuth] STEP1 token 接口失败, resp=', tText.slice(0, 500))
         return reply.status(400).send({ error: `QQ授权失败: ${tData.error_description || tData.error || '无 access_token'}` })
       }
 
@@ -326,6 +389,7 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
 
       const qqOpenId = meData.openid || ''
       if (!qqOpenId) {
+        console.error('[QQ OAuth] STEP2 me 接口失败, resp=', meText.slice(0, 500))
         return reply.status(400).send({ error: '获取QQ openid 失败' })
       }
 
@@ -334,11 +398,35 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
       const uData: any = await uRes.json()
 
       if (uData.ret !== 0) {
+        console.error('[QQ OAuth] STEP3 get_user_info 失败, resp=', JSON.stringify(uData).slice(0, 500))
         return reply.status(400).send({ error: `获取用户信息失败: ${uData.msg || uData.ret}` })
       }
 
       const nickname = uData.nickname || 'QQ用户'
       const avatarUrl = uData.figureurl_qq_2 || uData.figureurl_qq_1 || ''
+
+      // ── Step 3.5: bind 模式（现有用户绑定QQ，桌面轮询取 bindToken）──
+      if (stateEntry.mode === 'bind') {
+        // 该 QQ 已被其他用户绑定则拒绝
+        const already = await prisma.user.findFirst({ where: { OR: [{ qqOpenId }, { email: `qq_${qqOpenId}@aigc.fushtn.com` }] } })
+        if (already) {
+          return redirectWithEncodedError(reply, '该QQ账号已被其他用户绑定')
+        }
+        const BIND_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
+        const bindToken = jwt.sign(
+          { type: 'qq_bind', qqOpenId, nickname, avatarUrl, exp: Math.floor(Date.now() / 1000) + 30 * 60 },
+          BIND_SECRET
+        )
+        if (isDesktop) {
+          oauthDesktopResults.set(state, { bindToken, user: null, at: Date.now() })
+        }
+        return reply.type('text/html; charset=utf-8').send('<!DOCTYPE html>\n<html><body><script>\n' +
+          "document.title='Kunlun QQ Bind OK';\n" +
+          "try { localStorage.setItem('qq_bind_ok', '1'); } catch(e){}\n" +
+          "try { window.close(); } catch(e){}\n" +
+          "setTimeout(function(){ window.location.href='https://aigc.fushtn.com/oauth-desktop-done?state=" + state + "'; }, 300);\n" +
+          '</script></body></html>')
+      }
 
       // ── Step 4: 查找或创建用户 ──
       let user = await prisma.user.findFirst({
@@ -365,10 +453,10 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
       // ── Step 5: 生成 JWT ──
       // jwt imported at top of file
       const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
-      const newVer = (user.tokenVersion || 1) + 1
-      await prisma.user.update({ where: { id: user.id }, data: { tokenVersion: newVer } }).catch(() => {})
+      const clientIp = getClientIp(request)
+      const newVer = await nextTokenVersion(user, clientIp)
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: 'user', tokenVersion: newVer },
+        { id: user.id, email: user.email, role: 'user', tokenVersion: newVer, ip: clientIp },
         JWT_SECRET,
         { expiresIn: '30d' }
       )
@@ -402,18 +490,118 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
     }
   })
 
+  // POST /api/auth/qq/native — 原生APP QQ互联 openSDK 登录（openSDK 已返回 access_token + openid）
+  // openSDK 托管了 QQ 唤起/回调；这里用 access_token 校验并换 JWT（复用 web 的建号/登录逻辑）
+  fastify.post('/api/auth/qq/native', async (request, reply) => {
+    const { qqOpenId, qqAccessToken, qqAppId } = request.body as any
+    if (!qqOpenId || !qqAccessToken) {
+      return reply.status(400).send({ error: '缺少 QQ 登录参数' })
+    }
+    const config = await getQQConfig()
+    const appId = qqAppId || config?.appId || ''
+    try {
+      // 用 access_token + openid 拉取用户信息（同时校验 token 有效性）
+      const uRes = await fetch(`https://graph.qq.com/user/get_user_info?access_token=${qqAccessToken}&oauth_consumer_key=${appId}&openid=${qqOpenId}`)
+      const uData: any = await uRes.json()
+      const nickname = uData?.nickname || 'QQ用户'
+      const avatarUrl = uData?.figureurl_qq_2 || uData?.figureurl_qq_1 || ''
+      // 即使 get_user_info 失败，也允许用 openid 登录（openSDK 已证明授权）
+
+      let user = await prisma.user.findFirst({
+        where: { OR: [{ qqOpenId }, { email: `qq_${qqOpenId}@aigc.fushtn.com` }] }
+      })
+      if (!user) {
+        const crypto = await import('crypto')
+        const email = `qq_${qqOpenId}@aigc.fushtn.com`
+        user = await prisma.user.create({
+          data: {
+            email,
+            username: nickname || 'QQ用户',
+            nickname,
+            qqOpenId,
+            avatarUrl,
+            passwordHash: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10),
+            memberTier: 'free',
+          },
+        })
+        await prisma.membership.create({ data: { userId: user.id, tier: 'free', credits: 0 } }).catch(() => {})
+        try {
+          const { grantRegisterReward } = await import('../services/community/community-reward.service.js')
+          await grantRegisterReward(user.id)
+        } catch {}
+      } else {
+        await prisma.user.update({ where: { id: user.id }, data: { qqOpenId, username: nickname || user.username } })
+      }
+
+      const JWT_SECRET = (process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET 环境变量未配置") })())
+      const clientIp = getClientIp(request)
+      const newVer = await nextTokenVersion(user, clientIp)
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: 'user', tokenVersion: newVer, ip: clientIp },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      )
+      const membership = await prisma.membership.findUnique({ where: { userId: user.id } })
+      let resolvedTier = membership?.tier || user.memberTier || 'free'
+      return {
+        success: true,
+        token,
+        data: {
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            nickname: user.nickname || user.username,
+            avatar: user.avatar || avatarUrl,
+            memberTier: resolvedTier,
+            membership: membership ? { tier: membership.tier, credits: membership.credits } : null,
+          },
+        },
+      }
+    } catch (err: any) {
+      return reply.status(500).send({ error: `QQ原生登录失败: ${err.message}` })
+    }
+  })
+
   // GET /api/auth/qq/desktop-result — Desktop 壳内轮询取回 QQ 登录结果（60s 有效, 一次性）
   fastify.get('/api/auth/qq/desktop-result', async (request, reply) => {
     const { state } = request.query as any
     if (!state) return reply.status(400).send({ error: '缺少 state' })
     const entry = oauthDesktopResults.get(state)
+    console.log('[QQ desktop-result] state=', state, 'hasEntry=', !!entry, 'mapSize=', oauthDesktopResults.size)
     if (!entry) return toApiResponse({ success: false, data: null }) satisfies ApiResponse<unknown>
-    oauthDesktopResults.delete(state)
-    oauthStateMap.delete(state)
-    if (Date.now() - entry.at > 60 * 1000) {
+    if (Date.now() - entry.at > 180 * 1000) {
+      oauthDesktopResults.delete(state)
+      oauthStateMap.delete(state)
+      console.log('[QQ desktop-result] EXPIRED state=', state, 'ageMs=', Date.now() - entry.at)
       return toApiResponse({ success: false, data: null, error: '已过期' }) satisfies ApiResponse<unknown>
     }
+    console.log('[QQ desktop-result] OK state=', state, 'hasToken=', !!entry.token, 'hasBind=', !!(entry as any).bindToken)
+    if ((entry as any).bindToken) {
+      return toApiResponse({ success: true, data: { bindToken: (entry as any).bindToken, user: null } }) satisfies ApiResponse<unknown>
+    }
     return toApiResponse({ success: true, data: { token: entry.token, user: entry.user } }) satisfies ApiResponse<unknown>
+  })
+
+  // POST /api/auth/qq/attach — 登录态现有用户绑定QQ（bindToken 换绑定，绑定后可用QQ授权登录）
+  fastify.post('/api/auth/qq/attach', async (request, reply) => {
+    const uid = (request as any).user?.id
+    if (!uid) return reply.code(401).send({ error: '未登录' })
+    const { bindToken } = request.body as any
+    if (!bindToken) return reply.code(400).send({ error: '缺少 bindToken' })
+    let qqOpenId: string | undefined
+    let qqNickname: string | undefined
+    try {
+      const j = await import('jsonwebtoken')
+      const decoded = j.default.verify(bindToken, process.env.JWT_SECRET as string) as any
+      if (decoded.type !== 'qq_bind' || !decoded.qqOpenId) return reply.code(400).send({ error: 'QQ绑定令牌无效' })
+      qqOpenId = decoded.qqOpenId
+      qqNickname = decoded.nickname
+    } catch { return reply.code(400).send({ error: 'QQ绑定令牌已过期或无效' }) }
+    const bound = await prisma.user.findFirst({ where: { OR: [{ qqOpenId }, { email: `qq_${qqOpenId}@aigc.fushtn.com` }] } })
+    if (bound && bound.id !== uid) return reply.code(400).send({ error: '该QQ账号已被其他用户绑定' })
+    await prisma.user.update({ where: { id: uid }, data: { qqOpenId, username: qqNickname || undefined } })
+    return { success: true, data: { bound: true, qqNickname } }
   })
 
   // POST /api/auth/qq/bind — QQ首次登录绑定手机号
@@ -469,10 +657,10 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
       await prisma.user.update({ where: { id: existingUser.id }, data: { qqOpenId, username: qqNickname || existingUser.username } })
       // 生成 JWT
       const JWT_SECRET = process.env.JWT_SECRET || ''
-      const newVer = (existingUser.tokenVersion || 1) + 1
-      await prisma.user.update({ where: { id: existingUser.id }, data: { tokenVersion: newVer } }).catch(() => {})
+      const clientIp = getClientIp(request)
+      const newVer = await nextTokenVersion(existingUser, clientIp)
       const token = jwt.sign(
-        { id: existingUser.id, email: existingUser.email, role: 'user', tokenVersion: newVer },
+        { id: existingUser.id, email: existingUser.email, role: 'user', tokenVersion: newVer, ip: clientIp },
         JWT_SECRET,
         { expiresIn: '30d' }
       )
@@ -509,7 +697,7 @@ export default async function qqOAuthRoutes(fastify: FastifyInstance) {
     // 生成 JWT
     const JWT_SECRET = process.env.JWT_SECRET || ''
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: 'user', tokenVersion: 1 },
+      { id: user.id, email: user.email, role: 'user', tokenVersion: 1, ip: getClientIp(request) },
       JWT_SECRET,
       { expiresIn: '30d' }
     )

@@ -29,6 +29,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPipelineStages } from '~/studio-v2/config/workspace-config'
+import type { PipelineStage } from '~/studio-v2/types/runtime/index'
 import PipelineSidebar from '~/studio-v2/pipeline/PipelineSidebar.vue'
 import AdvertisementWorkspace from '~/studio-v2/workspace/advertisement/AdvertisementWorkspace.vue'
 
@@ -38,8 +39,14 @@ const projectId = ref<string>('')
 const projectType = ref<string>('AD')
 const activeStageId = ref<string>('storyboard')
 
-const pipelineStages = computed(() =>
-  getPipelineStages(projectType.value)
+const pipelineStages = computed<PipelineStage[]>(() =>
+  getPipelineStages(projectType.value).map(def => ({
+    id: def.key,
+    title: def.label,
+    icon: def.icon,
+    status: 'idle' as const,
+    progress: 0,
+  }))
 )
 
 function goToStage(stageKey: string) {

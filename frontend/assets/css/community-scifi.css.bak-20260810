@@ -1,0 +1,252 @@
+/* ═══════════════════════════════════════════════════════════════
+   昆仑镜社区 · 未来科技主题（Quantum Cyan × Holographic）
+   COMMUNITY-SCI-FI-01 — 世界级未来科技感配色 / 玻璃辉光 / 粒子动效
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* 深空底色 */
+  --sf-bg-void: #06070a;
+  --sf-bg-deep: #0a0c14;
+  --sf-bg-surface: #0f1220;
+  --sf-bg-elevated: #141830;
+  --sf-bg-card: rgba(20, 24, 48, 0.65);
+
+  /* 电光青（主色） */
+  --sf-cyan: #00e5ff;
+  --sf-cyan-bright: #33ffff;
+  --sf-cyan-deep: #009db3;
+  --sf-cyan-glow: rgba(0, 229, 255, 0.35);
+  --sf-cyan-subtle: rgba(0, 229, 255, 0.08);
+
+  /* 全息紫（辅色） */
+  --sf-purple: #a855f7;
+  --sf-purple-bright: #c084fc;
+  --sf-purple-deep: #7c3aed;
+  --sf-purple-glow: rgba(168, 85, 247, 0.30);
+
+  /* 量子粉（强调） */
+  --sf-magenta: #f472b6;
+  --sf-magenta-glow: rgba(244, 114, 182, 0.25);
+
+  /* 能量金（高亮） */
+  --sf-gold: #fbbf24;
+  --sf-gold-glow: rgba(251, 191, 36, 0.30);
+
+  /* 文本层级 */
+  --sf-text-primary: #f0f4ff;
+  --sf-text-secondary: rgba(200, 210, 240, 0.72);
+  --sf-text-tertiary: rgba(160, 170, 200, 0.50);
+  --sf-text-disabled: rgba(120, 130, 160, 0.35);
+
+  /* 边框与分隔 */
+  --sf-border-subtle: rgba(100, 140, 200, 0.10);
+  --sf-border-default: rgba(100, 140, 200, 0.18);
+  --sf-border-glow: rgba(0, 229, 255, 0.30);
+
+  /* 辉光层级 */
+  --glow-sm: 0 0 8px rgba(0, 229, 255, 0.15);
+  --glow-md: 0 0 20px rgba(0, 229, 255, 0.20);
+  --glow-lg: 0 0 40px rgba(0, 229, 255, 0.15);
+  --glow-purple: 0 0 20px rgba(168, 85, 247, 0.25);
+
+  /* 字体 */
+  --sf-sans: 'Inter', 'SF Pro Display', -apple-system, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --sf-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  /* 动效 */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+}
+
+/* ─── 页面根（深空底 + 网格 + 粒子） ─── */
+.cn-page {
+  min-height: 100vh;
+  color: var(--sf-text-primary);
+  font-family: var(--sf-sans);
+  background-color: var(--sf-bg-void);
+  background-image:
+    /* 精密网格线 */
+    linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    /* 大网格 */
+    linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+    /* 深空晕染 */
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 229, 255, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(0, 229, 255, 0.03) 0%, transparent 50%);
+  background-size:
+    20px 20px,
+    20px 20px,
+    80px 80px,
+    80px 80px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-attachment: fixed;
+}
+
+/* ─── 玻璃辉光按钮（主色） ─── */
+.cn-seal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--sf-cyan), var(--sf-cyan-deep));
+  color: var(--sf-bg-void);
+  font-family: var(--sf-sans);
+  font-weight: 700;
+  font-size: 0.86rem;
+  letter-spacing: 1.5px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--sf-border-glow);
+  box-shadow: var(--glow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+.cn-seal-btn:hover {
+  background: linear-gradient(135deg, var(--sf-cyan-bright), var(--sf-cyan));
+  box-shadow: var(--glow-md), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+.cn-seal-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* 描边按钮 */
+.cn-ink-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--sf-cyan-subtle);
+  color: var(--sf-cyan);
+  font-family: var(--sf-sans);
+  font-weight: 600;
+  font-size: 0.84rem;
+  letter-spacing: 1px;
+  padding: 7px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--sf-border-glow);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+.cn-ink-btn:hover {
+  background: rgba(0, 229, 255, 0.14);
+  box-shadow: var(--glow-sm);
+  border-color: var(--sf-cyan);
+}
+
+/* ─── 玻璃辉光卡片 ─── */
+.cn-card {
+  background: var(--sf-bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--sf-border-default);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+.cn-card:hover {
+  border-color: var(--sf-border-glow);
+  box-shadow: 0 8px 40px rgba(0, 229, 255, 0.08), 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+/* ─── 标签徽章 ─── */
+.cn-stamp {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--sf-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  line-height: 1.6;
+  background: transparent;
+}
+.cn-stamp--red { color: var(--sf-magenta); background: var(--sf-magenta-glow); }
+.cn-stamp--blue { color: var(--sf-cyan); background: var(--sf-cyan-subtle); }
+.cn-stamp--gold { color: var(--sf-gold); background: var(--sf-gold-glow); }
+
+/* ─── 匾额标题（全息风格） ─── */
+.cn-plaque {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--sf-sans);
+  color: var(--sf-text-primary);
+  font-weight: 700;
+  letter-spacing: 3px;
+  font-size: 0.88rem;
+  padding: 2px 0 12px;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.cn-plaque::before,
+.cn-plaque::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, var(--sf-border-glow), transparent);
+}
+
+/* ─── 回纹分隔线（替换为能量线） ─── */
+.cn-huiwen {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--sf-border-glow), transparent);
+  opacity: 0.6;
+}
+
+/* ─── 云纹（替换为全息光斑） ─── */
+.cn-cloud {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background: radial-gradient(circle, var(--sf-cyan-glow) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(1px);
+}
+
+/* ─── 滚动条 ─── */
+.cn-page ::selection { background: rgba(0, 229, 255, 0.25); }
+
+/* ─── 全局滚动条 ─── */
+.cn-page ::-webkit-scrollbar { width: 6px; }
+.cn-page ::-webkit-scrollbar-track { background: transparent; }
+.cn-page ::-webkit-scrollbar-thumb {
+  background: var(--sf-border-default);
+  border-radius: 3px;
+}
+.cn-page ::-webkit-scrollbar-thumb:hover {
+  background: var(--sf-border-glow);
+}
+
+/* ─── 动画 ─── */
+@keyframes sf-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes sf-glow-pulse {
+  0%, 100% { box-shadow: var(--glow-sm); }
+  50% { box-shadow: var(--glow-md); }
+}
+
+@keyframes sf-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes sf-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes sf-scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}

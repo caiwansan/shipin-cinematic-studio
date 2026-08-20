@@ -17,6 +17,9 @@ export const MEMBERSHIP_LABELS: Record<string, string> = {
   // 旧等级兼容（保留原名称）
   vip: 'VIP',
   vip_season: 'VIP季卡',
+  local_vip: '黄金会员',
+  smartws: '钻石会员',
+  vips: '年卡会员',
   vip_year: 'VIP年卡',
   gold: '黄金会员',
   premium: '黄金会员',
@@ -36,6 +39,9 @@ export const MEMBERSHIP_COLORS: Record<string, string> = {
   // 旧等级
   vip: 'yellow',
   premium: 'yellow',
+  local_vip: 'amber',
+  smartws: 'purple',
+  vips: 'green',
   gold: 'amber',
   Pro: 'purple',
   director: 'rose',
@@ -44,7 +50,7 @@ export const MEMBERSHIP_COLORS: Record<string, string> = {
 /** 会员等级 → 标签过滤组（用于 COS 页面筛选） */
 export const MEMBER_FILTER_GROUPS: Record<string, string[]> = {
   free: ['free'],
-  vip: ['vip', 'premium', 'enterprise', 'pro', 'basic', 'gold', 'Pro', 'director'],
+  vip: ['vip', 'premium', 'enterprise', 'pro', 'basic', 'gold', 'Pro', 'director', 'local_vip', 'smartws', 'vips'],
   all: [],
 }
 
@@ -79,4 +85,7 @@ export const TIER_LEGACY_MAP: Record<string, string> = {
   vip_season: 'enterprise',
   Pro: 'enterprise',
   director: 'enterprise',
+  local_vip: 'enterprise',
+  smartws: 'enterprise',
+  vips: 'enterprise',
 }

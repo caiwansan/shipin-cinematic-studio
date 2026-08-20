@@ -13,6 +13,8 @@ import { geoEvidenceRepository } from '../repositories/geo-evidence.repository.j
 import { geoEntityRelationRepository } from '../repositories/geo-entity-relation.repository.js'
 import { geoScoreSnapshotRepository } from '../repositories/geo-score-snapshot.repository.js'
 import { analyzeBrand, isAIAnalysisAvailable, type AIBrandAnalysis } from './ai-brand-analyzer.js'
+import { runAIProbe, isAIProbeAvailable, type AIProbeResult } from '../services/ai-probe.service.js'
+import { analyzeKnowledgeQuality, type KnowledgeQualityReport } from '../services/knowledge-quality.service.js'
 
 // ── Types ──
 
@@ -31,6 +33,10 @@ export interface ScoreDimension {
 
 export interface ScoreExplainability {
   overall: number
+  /** AI 实测可见度（真实 AI 引用率） */
+  aiVisibility?: AIProbeResult
+  /** 知识内容质量检测报告 */
+  knowledgeQuality?: KnowledgeQualityReport
   breakdown: {
     visibility: ScoreDimension
     authority: ScoreDimension
@@ -361,7 +367,36 @@ export async function calculateScore(
   const knowledgeScore = Math.min(100, knowledgeDetails.reduce((s, d) => s + d.points, 0))
 
   // ── Overall ──
-  const overall = Math.round((visibilityScore + authorityScore + contentScore + websiteScore + knowledgeScore) / 5)
+  // ── AI Probe: 真实 AI 可见度实测（non-blocking）──
+  let aiVisibility: AIProbeResult | undefined
+  if (isAIProbeAvailable() && settings?.brandName) {
+    try {
+      aiVisibility = await runAIProbe(projectId, { maxQuestionsPerEngine: 3 })
+    } catch {
+      // AI probe failed — fall back to count-based scoring
+    }
+  }
+
+  // ── Knowledge Quality: 内容质量检测（non-blocking）──
+  let knowledgeQuality: KnowledgeQualityReport | undefined
+  try {
+    knowledgeQuality = await analyzeKnowledgeQuality(projectId)
+  } catch {
+    // Quality analysis failed — fall back to count-based
+  }
+
+  // ── Overall: 混合评分 ──
+  // 有 AI Probe 时：计数分(50%) + AI实测(30%) + 内容质量(20%)
+  // 无 AI Probe 时：计数分(80%) + 内容质量(20%)
+  let overall: number
+  const countScore = (visibilityScore + authorityScore + contentScore + websiteScore + knowledgeScore) / 5
+
+  if (aiVisibility && aiVisibility.overall > 0) {
+    const kqScore = knowledgeQuality?.overallScore || knowledgeScore
+    overall = Math.round(countScore * 0.5 + aiVisibility.overall * 0.3 + kqScore * 0.2)
+  } else {
+    overall = Math.round(countScore * 0.8 + (knowledgeQuality?.overallScore || knowledgeScore) * 0.2)
+  }
 
   // ── Auto-save snapshot ──
   await saveSnapshot(projectId, { overall, visibility: visibilityScore, authority: authorityScore, content: contentScore, website: websiteScore, knowledge: knowledgeScore })
@@ -388,6 +423,19 @@ export async function calculateScore(
       ? await geoEntityRelationRepository.count({ where: { projectId } })
       : 0
 
+    // ★ P1: 获取知识条目真实内容，喂给 LLM 做内容质量分析
+    const knowledgeObjects = await knowledgeObjectRepository.findMany({ projectId }, { take: 10 })
+    const knowledgeContents = knowledgeObjects.map((ko: any) => ({
+      topic: ko.topic || '未命名',
+      content: ko.metadata?.content || ko.metadata?.text || ko.metadata?.body || '',
+      confidence: ko.confidence ?? 0.5,
+    }))
+
+    // 获取官网扫描内容
+    const lastWebsiteScan = lastScan?.scanType === 'website' && lastScan?.result
+      ? (typeof lastScan.result === 'object' ? JSON.stringify(lastScan.result).slice(0, 500) : String(lastScan.result).slice(0, 500))
+      : ''
+
     aiAnalysis = await analyzeBrand({
       brandName: settings?.brandName || '',
       website: settings?.website || '',
@@ -409,6 +457,13 @@ export async function calculateScore(
         website: websiteScore,
         knowledge: knowledgeScore,
       },
+      knowledgeContents: knowledgeContents.length > 0 ? knowledgeContents : undefined,
+      websiteContent: lastWebsiteScan || undefined,
+      competitorData: aiVisibility ? {
+        competitors: aiVisibility.engineResults.map(e => e.label),
+        brandMentionRate: aiVisibility.overall / 100,
+        avgCompetitorMentionRate: 0,
+      } : undefined,
     })
   } catch {
     // AI analysis is optional — don't break scoring if it fails
@@ -416,6 +471,8 @@ export async function calculateScore(
 
   return {
     overall,
+    aiVisibility,
+    knowledgeQuality,
     breakdown: {
       visibility: { score: visibilityScore, details: visibilityDetails },
       authority: { score: authorityScore, details: authorityDetails },

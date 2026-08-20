@@ -1,0 +1,1843 @@
+import 'dotenv/config'
+import path from 'path'
+import { createReadStream, statSync, existsSync } from 'fs'
+import Fastify from 'fastify'
+import jwt from '@fastify/jwt'
+import multipart from '@fastify/multipart'
+
+// Plugin imports
+import corsPlugin from './plugins/cors.js'
+import authPlugin from './plugins/auth.js'
+import runtimeContextPlugin from './plugins/runtime-context.js'
+
+import projectV2Routes from './routes/projects-v2.js'
+import systemVersionRoutes from './routes/system-version.js'
+import workbenchProjectRoutes from './routes/workbench-project.js'
+// Platform Governance routes (KMKI-PLAT-012) — dynamic import to avoid tsx path alias issue
+let governanceMainRoute: any = undefined
+// Route imports
+import communityCategoryRoutes from './routes/community/categories.js'
+import cityRoutes from './routes/city.routes.js'
+import shopOrderRoutes from './routes/shop-order.routes.js'
+import adminTeaClanRoutes from './routes/admin-tea-clan.routes.js'
+import communityPostRoutes from './routes/community/posts.js'
+import teaPostRoutes from './routes/tea-posts.js'
+import teaMediaRoutes from './routes/tea-media.js'
+import familyPostRoutes from './routes/family-post.js'
+import teaAgentRoutes from './routes/tea-agent.js'
+import teaMediaSignRoutes from './routes/tea-media-sign.js'
+import marketRoutes from './routes/market.js'
+import bankRoutes from './routes/bank.js'
+import meetingRoutes from './routes/meeting.js'
+import newsRoutes from './routes/news.js'
+import avatarRoutes from './routes/avatar.js'
+import settingsRoutes from './routes/settings.js'
+import searchRoutes from './routes/search.js'
+import communityCommentRoutes from './routes/community/comments.js'
+import communityLikeRoutes from './routes/community/likes.js'
+import communityTipRoutes from './routes/community/tips.js'
+import communityModeratorRoutes from './routes/community/moderators.js'
+import communityFavoriteRoutes from './routes/community/favorites.js'
+import communityShareRoutes from './routes/community/shares.js'
+import communityReadTrackingRoutes from './routes/community/read-tracking.js'
+import authRoutes from './routes/auth.js'
+import walletRoutes from './routes/wallet.js'
+import captchaRoutes from './routes/captcha.js'
+import smsRoutes from './routes/sms.js'
+import smsAuthRoutes from './routes/sms-auth.js'
+import projectRoutes from './routes/projects.js'
+import storyboardRoutes from './routes/storyboards.js'
+import aiTaskRoutes from './routes/ai-tasks.js'
+import jobRoutes from './routes/job.routes.js'
+import apiKeyRoutes from './routes/api-keys.js'
+import systemHealthRoutes from './routes/system-health.js'
+// autograph imports removed — code pruned per audit recommendation (2026-05-21)
+import desktopUpdateRoutes from './routes/desktop-update.js'
+import desktopOllamaRoutes from './routes/desktop-ollama.js'
+import desktopTtsRoutes from './routes/desktop-tts.js'
+import desktopComfyRoutes from './routes/desktop-comfy.js'
+import desktopVideoRoutes from './routes/desktop-video.js'
+import desktopTicketRoutes from './routes/desktop-ticket.js'
+import ticketExchangeRoutes from './routes/ticket-exchange.js'
+import pluginTicketRoutes from './routes/plugin-ticket.js'
+import healthRoutes from './routes/health.js'
+import imRoutes from './routes/im.js'
+import imGroupRoutes from './routes/im-groups.js'
+import imRtcInterpreterRoutes from './routes/im-rtc-interpreter.js'
+import voiceTranslateRoutes from './routes/im-voice-translate.js'
+import imModerationRoutes from './routes/im-moderation.routes.js'
+import { prisma } from './utils/index.js'
+import siteConfigRoutes from './routes/site-config.js'
+import observabilityRoutes from './routes/observability.js'
+import providerRoutes from './routes/providers.js'
+import { OGESSafetyGuard } from './infra/oges/ogesSafetyGuard.js'
+import customerServiceRoutes from './routes/customer-service.js'
+import paymentRoutes from './routes/payment.js'
+import scriptSubmitRoutes from './routes/script-submit.js'
+import adminAuthRoutes from './routes/admin-auth.js'
+import adminImagePromptRoutes from './routes/admin-image-prompts.js'
+import adminGlobalConfigRoutes from './routes/admin-global-config.js'
+import adminStorageConfigRoutes from './routes/admin-storage-config.js'
+import adminMembersStorageRoutes from './routes/admin-members-storage.js'
+import adminAgentRoutes from './routes/admin-agents.js'
+import adminAiEmployeesRoutes from './routes/admin-ai-employees.js'
+import adminEnterpriseRoutes from './routes/admin-enterprises.js'
+import adminEnterprisePlanRoutes from './routes/admin-enterprise-plans.js'
+import adminMarketAgentRoutes from './routes/admin-market-agents.js'
+import adminRecruitmentRoutes from './routes/admin-recruitment.js'
+import adminRevenueDashboardRoutes from './routes/admin-revenue-dashboard.js'
+import { enterpriseHomeRoutes } from './routes/enterprise-home.js'
+import agentPlanRoutes from './routes/agent-plan.js'
+// Platform Agent routes (KMKI-PLAT-010) — dynamic to avoid tsx @platform alias issue
+let agentDefinitionRoutes: any = undefined
+// Platform Agent routes (KMKI-PLAT-010) — dynamic to avoid tsx @platform alias issue
+let agentSessionRoutes: any = undefined
+let agentDispatchRoutes: any = undefined
+let agentScheduleRoutes: any = undefined
+let agentMemoryRoutes: any = undefined
+let agentToolRoutes: any = undefined
+import adminCustomerServiceRoutes from './routes/admin-customer-service.js'
+import adminSubscriptionV2Routes from './routes/admin-subscription-v2.js'
+import adminLlmHealthRoutes from './routes/admin-llm-health.routes.js'
+import adminAgentActivityRoutes from './routes/admin-agent-activity.routes.js'
+import adminQuotaRoutes from './routes/admin-quota.routes.js'
+import adminCustomerValidationRoutes from './routes/admin-customer-validation.js'
+
+// Legal routes
+import legalConfigRoutes from './routes/legal/legal-config.route.js'
+import legalCaseRoutes from './routes/legal/legal-case.route.js'
+import legalCaseTemplateRoutes from './routes/legal/legal-case-template.route.js'
+import legalCaseWorkspaceRoutes from './routes/legal/legal-case-workspace.route.js'
+import legalContractTemplateRoutes from './routes/legal/legal-contract-template.route.js'
+import legalDocumentTemplateRoutes from './routes/legal/legal-document-template.route.js'
+import legalKnowledgeRoutes from './routes/legal/legal-knowledge.route.js'
+import legalRegulationRoutes from './routes/legal/legal-regulation.route.js'
+import legalRegulationFetchRoutes from './routes/legal/legal-regulation-fetch.route.js'
+import legalRagRoutes from './routes/legal/legal-rag.route.js'
+import legalAiPromptRoutes from './routes/legal/legal-ai-prompt.route.js'
+import legalAgentChatRoutes from './routes/legal/legal-agent-chat.route.js'
+import legalAgentUploadRoutes from './routes/legal/legal-agent-upload.route.js'
+import modelRoutes from './routes/models.js'
+import styleProfileRoutes from './routes/style-profiles.js'
+import adminModelRoutes from './routes/admin-models.js'
+import adminModelV2Routes from './routes/admin-models-v2.js'
+import adminAiProviderRoutes from './routes/admin-ai-provider.routes.js'
+import aiProviderDirectoryRoutes from './routes/ai-provider-directory.routes.js'
+import aiRecommendationsRoutes from './routes/ai-recommendations.routes.js'
+import agentRecommendationRoutes from './routes/agent-recommendation.routes.js'
+import agentWorkflowTemplateRoutes from './routes/agent-workflow-templates.routes.js'
+import aiCenterConsumerRoutes from './routes/ai-center-consumer.routes.js'
+import adminPlatformDefaultModelsRoutes from './routes/admin-platform-default-models.routes.js'
+import adminUsageStatsRoutes from './routes/admin-usage-stats.routes.js'
+import adminDashboardCenterRoutes from './routes/admin-dashboard-center.routes.js'
+import voiceRoutes from './routes/voice.js'
+import { initializeRuntimeSafety, timerRegistry, getLifecycleStatus } from './services/lifecycle-manager.js'
+// character routes loaded dynamically below
+import sceneRoutes from './routes/scenes.js'
+import imageRoutes from './routes/images.js'
+import executionImageRoutes from './routes/execution-images.js'
+import uploadRoutes from './routes/upload.js'
+import wechatOAuthRoutes from './routes/wechat-oauth.js'
+import qqOAuthRoutes from './routes/qq-oauth.js'
+import memberRoutes from './routes/member.js'
+import userCenterRoutes from './routes/user-center.js'
+import userFollowRoutes from './routes/user-follow.js'
+import userAvatarRoutes from './routes/user-avatar.js'
+import userSecurityRoutes from './routes/user-security.js'
+import userAssetsRoutes from './routes/user-assets.js'
+import giftRoutes from './routes/gifts.js'
+import tokenWalletRoutes from './routes/token-wallet.js'
+import teaPlayRoutes from './routes/tea-play.js'
+import teaLLMRoutes from './routes/tea-llm.js'
+import teaStorageRoutes from './routes/tea-storage.js'
+import goldCoinRoutes from './routes/gold-coins.js'
+import redPacketRoutes, { startRedPacketSweeper } from './routes/red-packets.js'
+
+import pipelineRoutes from './routes/pipeline.js'
+import pipelineJobRoutes from './routes/pipeline-jobs.js'
+import narrativeLLMRoutes from './routes/narrative-llm.js'
+import aigcSpecDbRoutes from './routes/aigc-spec-db.js'
+import tasksTelemetryRoutes from './routes/tasks-telemetry.js'
+import directorV2Routes from './routes/director-v2.js'
+import directorExecutionRoutes from './routes/director-execution.route.js'
+import directorSpecExecutionRoutes from './routes/director-spec-execution.route.js'
+import directorAssetQualityRoutes from './routes/director-asset-quality.route.js'
+import directorDecisionRoutes from './routes/director-decision.route.js'
+import { careerConfirmationRoutes } from './routes/career-confirmation.routes.js'
+import careerIdentityRoutes from './routes/career-identity.routes.js'
+import unifiedModelConfigRoutes from './routes/unified-model-config.js'
+import administrativeRegionRoutes from './routes/regions.js'
+import balanceRoutes from './routes/balance.route.js'
+import geoRoutes from './routes/geo.routes.js'
+import amapRoutes from './routes/amap.routes.js'
+import identityRoutes from './routes/identity.routes.js'
+import translateRoutes from './routes/translate.routes.js'
+import adminTeaTranslateRoutes from './routes/admin-tea-translate.routes.js'
+import adminTeaAgentRoutes from './routes/admin-tea-agent.routes.js'
+import adminTeaConfigRoutes from './routes/admin-tea-config.routes.js'
+import adminIdentityRoutes from './routes/admin-identity.routes.js'
+import { registerSSEStream } from './runtime/task-stream.js'
+
+import { env } from './config/env.js'
+import { registerRuntimeGuard } from './runtime/runtime-guard.js'
+import { providerRegistry } from './providers/core/provider-registry.js'
+import { openAICompatibleAdapter } from './providers/adapters/openai-compatible.adapter.js'
+import { Capability } from './core/runtime/capabilities.js'
+
+async function main() {
+  const app = Fastify({ logger: true })
+  // 允许空 JSON body（DELETE 请求不带 body 时不被 reject）
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req: any, body: string, done: any) => {
+    try { done(null, body ? JSON.parse(body) : {}) } catch (e: any) { done(e) }
+  })
+
+  // Bootstrap real LLM executors
+
+  // ═══ P0: Config Sovereignty Layer — ENV freeze ═══
+  const { bootstrapSystemConfig } = await import('./config-runtime/index.js')
+  bootstrapSystemConfig()
+  console.log('[startup] ✅ Config Sovereignty Layer initialized')
+
+  // 世界语言池预取：后台下载常用 Vosk 模型（不阻塞启动；zh/en/es/ru 已就位）
+  try {
+    const { prefetchVoskModels } = await import('./services/vosk-model.service.js')
+    prefetchVoskModels(['fr', 'de', 'ja', 'ko', 'pt', 'it', 'ar', 'vi', 'tr', 'nl'])
+  } catch (e: any) {
+    console.warn('[startup] ⚠️ Vosk 语言池预取失败（不影响启动）:', e?.message)
+  }
+
+  // 初始化 AI Router 配置（从 RouteConfig 表读取魔数并缓存）
+  try {
+    console.log('[startup] ✅ AI Router configs loaded from RouteConfig')
+  } catch (e: any) {
+    console.warn('[startup] ⚠️  AI Router configs not loaded (table may not exist):', e.message)
+  }
+
+  // ═══ P1: 注册 Provider Adapter ═══
+  console.log('[startup] 🏗️ 注册 Provider Adapter...')
+  providerRegistry.register({
+    name: 'deepseek',
+    capabilities: [
+      Capability.SCRIPT_ANALYSIS,
+      Capability.PROMPT_OPTIMIZATION,
+      Capability.STORY_EXPANSION,
+      Capability.DIRECTOR_REASONING,
+      Capability.CINEMATIC_PROMPT,
+    ],
+    adapter: openAICompatibleAdapter,
+  })
+  providerRegistry.register({
+    name: 'siliconflow',
+    capabilities: [
+      Capability.SCRIPT_ANALYSIS,
+      Capability.PROMPT_OPTIMIZATION,
+      Capability.STORY_EXPANSION,
+      Capability.DIRECTOR_REASONING,
+      Capability.CINEMATIC_PROMPT,
+    ],
+    adapter: openAICompatibleAdapter,
+  })
+  console.log(`[startup] ✅ ${providerRegistry.listProviders().length} 个 Provider 已注册: ${providerRegistry.listProviders().join(', ')}`)
+
+  // 从数据库加载持久化的 API Keys 到 process.env
+  try {
+    const { prisma } = await import('./utils/index.js')
+
+    // Provider State Layer v1.2 Final: 初始化持久化状态服务
+    const { initProviderStateService } = await import('./runtime/provider-state/index.js')
+    initProviderStateService(prisma as any)
+    console.log('[startup] ✅ ProviderStateService v1.2 Final initialized')
+
+    // Workflow Execution Graph v1
+    const { initWorkflowEngine } = await import('./workflow/index.js')
+    const { modelAdapterRegistry } = await import('./model-adapters/index.js')
+    initWorkflowEngine(modelAdapterRegistry)
+    console.log('[startup] ✅ WorkflowEngine v1 initialized')
+
+    const savedKeys = await prisma.apiKey.findMany()
+    console.log(`[startup] ✅ 加密系统已初始化`) // CRYPTO_ENCRYPTION_KEY 检查已通过
+    const { decryptKey } = await import('./services/crypto.service.js')
+    for (const key of savedKeys) {
+      // 如果 process.env 已有该 key 且看起来像真实的 API key（不以密文格式开头），则不覆盖
+      const existing = process.env[key.keyName]
+      if (existing && (existing.startsWith('sk-') || existing.startsWith('Sk-') || existing.length > 30)) {
+        console.log(`[startup] Skipped override for ${key.keyName} (${key.provider}) — already valid`)
+        continue
+      }
+      try {
+        const decrypted = decryptKey(key.keyValue)
+        process.env[key.keyName] = decrypted
+        console.log(`[startup] Loaded API key: ${key.keyName} (${key.provider})`)
+      } catch {
+        process.env[key.keyName] = key.keyValue
+        console.log(`[startup] Loaded API key: ${key.keyName} (${key.provider}) [direct, not encrypted]`)
+      }
+    }
+    if (savedKeys.length > 0) {
+      console.log(`[startup] Loaded ${savedKeys.length} API keys from database`)
+    }
+  } catch (err) {
+    console.warn('[startup] Could not load API keys from database (table may not exist yet):', (err as Error).message)
+  }
+
+  // Register plugins
+  await app.register(corsPlugin)
+
+  // 🛡 安全层：速率限制 + 安全头
+  await app.register((await import('@fastify/rate-limit')).default, {
+    max: 600,
+    timeWindow: '1 minute',
+    keyGenerator: (req: any) => {
+      // 优先真实客户端 IP（X-Forwarded-For），避免 nginx 代理后全站共用 127.0.0.1 桶
+      const xff = req.headers['x-forwarded-for']
+      const ip = typeof xff === 'string' ? xff.split(',')[0].trim() : ''
+      return ip || req.ip || 'unknown'
+    },
+  })
+
+  await app.register((await import('@fastify/helmet')).default, {
+    contentSecurityPolicy: false, // Nuxt SPA 需要内联脚本
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // 茶馆 App 跨域加载 /uploads/ 图片视频（CORP same-origin 会拦 video）
+  })
+
+  await app.register(jwt, { secret: env.JWT_SECRET })
+
+  // 全局钩子：如果请求没有 Authorization header 但 Cookie 中有 auth_token，自动补上
+  app.addHook('onRequest', async (request) => {
+    if (!request.headers.authorization) {
+      const cookieHeader = request.headers.cookie
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)auth_token=([^;]*)/)
+        if (match && match[1]) {
+          request.headers.authorization = `Bearer ${match[1]}`
+        }
+      }
+    }
+  })
+
+  await app.register(authPlugin)
+  await app.register(runtimeContextPlugin)
+  await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } })
+  await app.register((await import('@fastify/formbody')).default)
+  // 实时同声传译 WebSocket 网关（阶段一 字幕同传）
+  await app.register((await import('@fastify/websocket')).default)
+
+  // ⭐ 静态文件服务（托管 public/uploads 下的本地下载图片）
+  // 用 __dirname 确定路径（兼容 CJS 和 ESM）
+  const __uploadsRoot = path.resolve(process.cwd(), 'public', 'uploads')
+  // 🎬 自定义 /uploads/ 静态服务：完整 Range 支持（视频播放必需；fastify-static 的 206 缺 Content-Range 会被浏览器拒绝）
+  const UPLOAD_MIME: Record<string, string> = {
+    '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm', '.ogg': 'video/ogg',
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp',
+    '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.pdf': 'application/pdf', '.zip': 'application/zip',
+    '.txt': 'text/plain', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+  }
+  const uploadStatic = async (request: any, reply: any) => {
+    const url = String(request.raw.url || '')
+    if (!url.startsWith('/uploads/')) return
+    const qIdx = url.indexOf('?')
+    const clean = qIdx >= 0 ? url.slice(0, qIdx) : url
+    let rel = ''
+    try { rel = decodeURIComponent(clean.slice('/uploads/'.length)) } catch { rel = clean.slice('/uploads/'.length) }
+    const file = path.resolve(__uploadsRoot, rel)
+    if (!file.startsWith(__uploadsRoot + path.sep) || !existsSync(file) || !statSync(file).isFile()) {
+      return reply.code(404).send({ error: 'Not Found' })
+    }
+    const stat = statSync(file)
+    const mime = UPLOAD_MIME[path.extname(file).toLowerCase()] || 'application/octet-stream'
+    const range = request.headers.range as string | undefined
+    if (range) {
+      const m = /bytes=(\d*)-(\d*)/.exec(range)
+      let start = m && m[1] ? parseInt(m[1], 10) : 0
+      let end = m && m[2] ? parseInt(m[2], 10) : stat.size - 1
+      if (Number.isNaN(start)) start = 0
+      if (Number.isNaN(end) || end >= stat.size) end = stat.size - 1
+      if (start > end || start >= stat.size) {
+        return reply.code(416).header('Content-Range', 'bytes */' + stat.size).send()
+      }
+      reply.code(206)
+        .header('Content-Type', mime)
+        .header('Content-Length', String(end - start + 1))
+        .header('Content-Range', 'bytes ' + start + '-' + end + '/' + stat.size)
+        .header('Accept-Ranges', 'bytes')
+        .header('Cache-Control', 'public, max-age=86400, immutable')
+      return reply.send(createReadStream(file, { start, end }))
+    }
+    reply.code(200)
+      .header('Content-Type', mime)
+      .header('Content-Length', String(stat.size))
+      .header('Accept-Ranges', 'bytes')
+      .header('Cache-Control', 'public, max-age=86400, immutable')
+    return reply.send(createReadStream(file))
+  }
+  await app.addHook('onRequest', uploadStatic)
+  await app.register((await import('@fastify/static')).default, {
+    root: __uploadsRoot,
+    prefix: '/uploads/',
+    decorateReply: false,
+  })
+  // 同时兼容 /api/v1/uploads/ 前缀（数据库历史 URL 带此前缀）
+  await app.register((await import('@fastify/static')).default, {
+    root: __uploadsRoot,
+    prefix: '/api/v1/uploads/',
+    decorateReply: false,
+  })
+
+
+// Register routes
+  await app.register(authRoutes)
+  await app.register(identityRoutes)
+  await app.register(adminIdentityRoutes)
+  await app.register(walletRoutes)
+  registerSSEStream(app)
+  await app.register(systemVersionRoutes)
+  await app.register(imRoutes)
+  await app.register(imGroupRoutes)
+  await app.register(imRtcInterpreterRoutes)
+  await app.register(voiceTranslateRoutes)
+  await app.register(imModerationRoutes)
+  await app.register(redPacketRoutes)
+  await app.register(geoRoutes)
+  await app.register(amapRoutes)
+  await app.register(translateRoutes)
+  await app.register(adminTeaTranslateRoutes)
+await app.register(adminTeaAgentRoutes)
+await app.register(adminTeaConfigRoutes)
+await app.register(teaMediaSignRoutes)
+  // 启动红包过期退回定时器（24h 未领完自动退回）
+  try {
+    startRedPacketSweeper()
+    console.log('[红包] 过期退回定时器已启动')
+  } catch (e) {
+    console.warn('[红包] 定时器启动失败:', (e as Error).message)
+  }
+  // 启动时恢复公共频道订阅（WuKongIM 容器重启后订阅丢失的自愈；非致命）
+  try {
+    const { restorePublicChannelSubscriptions } = await import('./routes/im.js')
+    restorePublicChannelSubscriptions()
+    const { restoreGroupSubscriptions } = await import('./routes/im-groups.js')
+    restoreGroupSubscriptions()
+  } catch (e) {
+    console.warn('[昆仑茶馆] 启动恢复订阅未执行:', (e as Error).message)
+  }
+  // 启动时初始化 M3 内容治理：内置词库（表空时导入）+ 引擎重建 + 机器人入公共频道
+  try {
+    const { seedSensitiveWordsIfEmpty } = await import('./im/sensitive-word-seed.js')
+    const { loadSensitiveWordsIntoEngine } = await import('./im/sensitive-engine.js')
+    const { ensureBotInPublicChannel } = await import('./routes/im-moderation.routes.js')
+    const seeded = await seedSensitiveWordsIfEmpty()
+    const size = await loadSensitiveWordsIntoEngine(prisma)
+    await ensureBotInPublicChannel()
+    console.log(`[昆仑茶馆] M3 内容治理就绪：内置词库 ${seeded.seeded ? '已导入' : '已存在'}，引擎生效 ${size} 词，机器人管理员已入公共频道`)
+  } catch (e) {
+    console.warn('[昆仑茶馆] M3 初始化未执行:', (e as Error).message)
+  }
+  await app.register(captchaRoutes)
+  await app.register(smsRoutes)
+  await app.register(smsAuthRoutes)
+  await app.register(projectRoutes)
+  // REMOVED: projectDecompositionRoutes
+  await app.register(storyboardRoutes)
+  // REMOVED: taskRoutes
+  await app.register(aiTaskRoutes)
+  // REMOVED: sandboxRoutes
+  // REMOVED: shadowRoutes
+  // Showrunner Core routes (总导演大脑)
+  // Director Simulation Layer (导演预演层)
+  // Job routes (AI 求职招聘工作台)
+  await app.register(jobRoutes)
+  await app.register(careerConfirmationRoutes)
+  await app.register(careerIdentityRoutes)
+  await app.register((await import('./routes/career-planning-api.js')).careerPlanningRoutes)
+  // autograph registration removed — code pruned (2026-05-21)
+
+  // ExecutionGraph routes (Graph Runtime 前端客户端 API)
+  // REMOVED: executionGraphRoutes
+  await app.register(sceneRoutes, { prefix: '/api' })
+  await app.register(imageRoutes, { prefix: '/api' })
+  await app.register(executionImageRoutes, { prefix: '/api' })
+  await app.register(uploadRoutes)
+    await app.register(adminAuthRoutes)
+  await app.register(adminStorageConfigRoutes)
+  await app.register(adminMembersStorageRoutes)
+  await app.register(memberRoutes)
+  await app.register(userCenterRoutes)
+  await app.register(userFollowRoutes)
+  await app.register(userAvatarRoutes)
+  await app.register(userSecurityRoutes)
+  await app.register(userAssetsRoutes)
+  await app.register(giftRoutes)
+  await app.register(goldCoinRoutes)
+  await app.register((await import('./routes/admin-wallet.js')).default)
+  // REMOVED: analyticsRoutes
+  // REMOVED: optimizeRoutes
+
+  // REMOVED: featuredRoutes
+
+  // Online AI routes (云端大模型 API)
+  // REMOVED: registerOnlineAIRoutes
+  // REMOVED: registerModelProviderRoutes
+// REMOVED: queueRuntimeRoutes
+
+// OGES v1 Observability (observe-only, no production impact)
+await app.register(observabilityRoutes)
+
+// Provider Routes (FRE v1: Provider Verify API + Registry)
+await app.register(providerRoutes)
+
+  // Pipeline routes (AI 生产流水线)
+  await app.register(pipelineRoutes)
+  await app.register(pipelineJobRoutes)
+  // REMOVED: executionJournalRoutes
+
+  // Scheduler routes (Multi-Graph 调度系统)
+  // REMOVED: runtimeCheckpointRoutes
+
+    await app.register(communityCategoryRoutes)
+  await app.register(communityPostRoutes)
+  await app.register(teaPostRoutes)
+await app.register(teaMediaRoutes)
+await app.register(familyPostRoutes)
+await app.register(teaAgentRoutes)
+
+await app.register(tokenWalletRoutes)
+    await app.register(teaPlayRoutes)
+    await app.register(teaLLMRoutes)
+    await app.register(teaStorageRoutes)
+  await app.register(cityRoutes)
+  await app.register(shopOrderRoutes)
+  await app.register(adminTeaClanRoutes)
+  await app.register(marketRoutes)
+  await app.register(bankRoutes)
+  await app.register(meetingRoutes)
+  await app.register(newsRoutes)
+  await app.register(avatarRoutes)
+  await app.register(settingsRoutes)
+  await app.register(searchRoutes)
+
+  await app.register(communityCommentRoutes)
+  await app.register(communityLikeRoutes)
+  await app.register(communityTipRoutes)
+  await app.register(communityModeratorRoutes)
+  await app.register(communityFavoriteRoutes)
+  await app.register(communityShareRoutes)
+  await app.register(communityReadTrackingRoutes)
+await app.register(projectV2Routes)
+
+  // Narrative LLM routes (LLM 叙事分析)
+  await app.register(narrativeLLMRoutes)
+  // ScriptBreakdown routes (固定指令剧本拆解任务)
+  await app.register(await import('./routes/script-breakdown.js').then(m => m.default))
+  // HDZ — 混沌珠小说工作台（独立子路由，不走 studio-v2 体系）
+  await app.register(await import('./routes/hdz/index.js').then(m => m.default))
+  // Enterprise AI Workforce（企业数字部门）
+  await app.register((await import('./routes/enterprise.js')).enterpriseRoutes)
+  // Enterprise CEO Dashboard（企业数字部门控制台）
+  await app.register((await import('./routes/enterprise-dashboard.js')).enterpriseDashboardRoutes)
+  // Enterprise Intelligence（KM-AI-JOB-AGENT-04 AI招聘经理 Intelligence Layer）
+  await app.register((await import('./routes/enterprise-intelligence.js')).registerEnterpriseIntelligenceRoutes)
+  // Enterprise Action（KM-AI-JOB-AGENT-05 AI招聘官 Copilot Action Layer）
+  await app.register((await import('./routes/enterprise-action.js')).registerEnterpriseActionRoutes)
+  // Agent Daily Report（AI员工日报）
+  await app.register((await import('./routes/agent-daily-report.js')).agentDailyReportRoutes)
+  // P4.2.5.2 — WeCom Real SDK Callback (IMP-01.1)
+  await app.register((await import('./enterprise/channel/wecom-callback.controller.js')).registerWeComCallbackRoutes, { prefix: '/api/enterprise/wecom' })
+  // Enterprise Report（招聘报告 MVP）
+  await app.register((await import('./routes/enterprise-report.js')).enterpriseReportRoutes)
+  // Agent Activity（AI 员工工作日志 — Sprint 8）
+  await app.register((await import('./routes/enterprise-agent-activity.js')).default)
+  // SPRINT-AGENT-OPERATIONS-01 T01: 企业价值参数（ROI 前置，企业自定，平台禁估算）
+  await app.register((await import('./routes/enterprise-value-params.js')).default)
+  // Agent Schedule（定时任务 + 目标追踪）
+  await app.register((await import('./routes/agent-schedule.js')).agentScheduleRoutes)
+  // Enterprise Channel Gateway（渠道管理 + 内容发布 + 互动）
+  await app.register((await import('./routes/enterprise-channel')).channelRoutes)
+  // Enterprise Sprint 1 v1.1 — CEO Task Center + AI Employee Management
+  await app.register((await import('./routes/enterprise-command.js')).registerEnterpriseCommandRoutes, { prefix: '/api/enterprise/commands' })
+  await app.register((await import('./routes/enterprise-agent-profiles.js')).registerEnterpriseAgentProfileRoutes, { prefix: '/api/enterprise/agent-profiles' })
+  // Sprint-MEDIA-UX-01: 企业侧只读执行结果/成本（agent_outcome + usage_logs 真实数据源）
+  await app.register((await import('./routes/enterprise-readonly.routes.js')).registerEnterpriseOutcomeRoutes, { prefix: '/api/enterprise/outcomes' })
+  // Sprint-MEDIA-UX-02: 新媒体运营中心聚合视图（AgentInstance + AgentSchedule + Outcome + Usage 真实数据源）
+  await app.register((await import('./routes/enterprise-readonly.routes.js')).registerMediaOverviewRoutes, { prefix: '/api/enterprise/media/overview' })
+  // Enterprise AI 员工实例管理 (media-department)
+  // Phase 1: 路由前缀统一为 /api/enterprise，与 enterprise domain 保持一致
+  await app.register((await import('./routes/enterprise-agents.js')).default, { prefix: '/api/enterprise' })
+  // TASK-AI-WORKFORCE-PRODUCT-01: Employee Profile View Layer
+  await app.register((await import('./routes/employee-profile.js')).employeeProfileRoutes, { prefix: '/api/enterprise/agent-profiles' })
+  // Enterprise Sprint 2 — Knowledge Hub + Approval Center (v2.0, 含6项修正)
+  await app.register((await import('./routes/enterprise-knowledge.js')).registerEnterpriseKnowledgeRoutes, { prefix: '/api/enterprise/knowledge' })
+  await app.register((await import('./routes/enterprise-approval.js')).registerEnterpriseApprovalRoutes, { prefix: '/api/enterprise/approvals' })
+  // Enterprise Phase 4 — Revenue Intelligence (Lead智能 + 销售参谋 + ROI驾驶舱)
+  await app.register((await import('./routes/enterprise-leads.js')).default, { prefix: '/api/enterprise/leads' })
+  await app.register((await import('./routes/enterprise-sales.js')).default, { prefix: '/api/enterprise/sales' })
+  await app.register((await import('./routes/enterprise-roi.js')).default, { prefix: '/api/enterprise/roi' })
+
+  // Sprint 4.2.7 — Enterprise Foundation Layer (企业资料 + AI模型 + Onboarding)
+  await app.register((await import('./routes/enterprise-foundation.js')).enterpriseFoundationRoutes, { prefix: '/api' })
+  // Sprint 4.2.8 — Enterprise Billing (订阅中心 + 套餐管理)
+  await app.register((await import('./routes/enterprise-billing.js')).enterpriseBillingRoutes, { prefix: '/api' })
+  // Enterprise Subscription Billing — 企业订阅支付路由（替代旧的 enterprise-subscription.ts）
+  await app.register((await import('./routes/enterprise-subscription-billing.js')).default)
+  // BETA-08.1: Subscription & Entitlement API
+  await app.register((await import('./routes/subscription.js')).registerSubscriptionRoutes)
+  // Sprint-09.7: Commerce Control Plane (SSOT for plan/subscription admin)
+  await app.register((await import('./routes/admin-commerce.js')).default)
+  // Sprint-11C.5: Admin Capability Commerce Authority
+  await app.register((await import('./routes/admin-capabilities.js')).default, { prefix: '/api/admin/commerce' })
+  // TASK-AI-WORKFORCE-PRODUCT-01: Provider Credential Management
+  await app.register((await import('./routes/provider-management.js')).default)
+  // Sprint 4.2.8 Step 5 — Agent Identity Layer
+  await app.register((await import('./routes/agent-identity.js')).registerAgentIdentityRoutes, { prefix: '/api/enterprise/agent-identity' })
+  // Sprint-08 — Identity Context (统一身份上下文)
+  await app.register((await import('./routes/identity-context.routes.js')).default)
+  // BETA-06.1 — Enterprise Agent Runtime (激活/执行/生命周期)
+  await app.register((await import('./routes/enterprise-agent-runtime.js')).registerEnterpriseAgentRuntimeRoutes, { prefix: '/api/enterprise' })
+  // Sprint-11C.1 — Enterprise Capability Authority
+  await app.register((await import('./routes/enterprise-capability.routes.js')).enterpriseCapabilityRoutes, { prefix: '/api/enterprise' })
+  await app.register((await import('./routes/marketplace.js')).marketplaceRoutes, { prefix: '/api/enterprise/marketplace' })
+  // Phase 5-A1 — Enterprise AI Recruitment Onboarding
+  await app.register((await import('./routes/enterprise-onboarding.routes.js')).enterpriseOnboardingRoutes, { prefix: '/api' })
+  // Enterprise Home — 企业招聘中心首页 (CTO Directive: Domain Separation)
+  await app.register(enterpriseHomeRoutes)
+  // Sprint-09 — Hermes Profile Binding (Identity Layer)
+  await app.register((await import('./routes/hermes-profile.js')).hermesProfileRoutes, { prefix: '/api/enterprise/hermes-profiles' })
+  // Sprint-09 — Enterprise Timeline (View Layer)
+  await app.register((await import('./routes/enterprise-timeline.js')).enterpriseTimelineRoutes, { prefix: '/api/enterprise' })
+  // Sprint-09 — Enterprise Outcome (Outcome Truth Layer)
+  await app.register((await import('./routes/enterprise-outcome.js')).enterpriseOutcomeRoutes, { prefix: '/api/enterprise/outcomes' })
+  // Phase 5-B1 — Resume Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/resume.routes.js')).resumeRoutes, { prefix: '/api' })
+  // Sprint-Resume-Form — 在线简历表单（创建简历 + 提交人才市场）
+  await app.register((await import('./routes/resume-form.routes.js')).resumeFormRoutes)
+  // Phase 5-B2 — Pipeline Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/pipeline.routes.js')).pipelineRoutes, { prefix: '/api' })
+  // Phase 5-B3 — Interview Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/interview.routes.js')).interviewRoutes, { prefix: '/api' })
+  // Phase 5-B4 — Dashboard Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/dashboard.routes.js')).dashboardRoutes, { prefix: '/api' })
+  // Phase 5-B5 — Job Posting Center (skeleton: read-only + maintenance gates)
+  await app.register((await import('./routes/job-posting.routes.js')).jobPostingRoutes)
+  // Sprint-RECRUITMENT-CHANNEL-CENTER-01 — 招聘渠道中心（Phase 1: 渠道模型/统计/手动导入）
+  await app.register((await import('./routes/enterprise-channel-center.routes.js')).enterpriseChannelCenterRoutes)
+  await app.register((await import('./routes/enterprise-job-intelligence.routes.js')).enterpriseJobIntelligenceRoutes)
+  await app.register((await import('./routes/recruitment-department.routes.js')).recruitmentDepartmentRoutes)
+  // Sprint 10 — AI Recruitment Director (AI 招聘主管)
+  await app.register((await import('./routes/recruitment-director.routes.js')).recruitmentDirectorRoutes)
+  // Sprint-08B — Recruitment Conversation Domain
+  await app.register((await import('./routes/recruitment-conversation.routes.js')).default, { prefix: '/api/enterprise/recruitment-conversation' })
+  // Sprint-07B-2 — Talent Agent (AI 猎聘顾问)
+  await app.register((await import('./routes/enterprise-talent-agent.js')).registerTalentAgentRoutes)
+  // Sprint-07B-3 — Interview Agent (AI 面试官)
+  await app.register((await import('./routes/enterprise-interview-agent.js')).registerInterviewAgentRoutes)
+  // KM-AI-JOB-AGENT-07 — Hermes AI招聘经理 Workflow Engine
+  await app.register((await import('./routes/workflow.js')).workflowRoutes)
+  // KM-AI-JOB-AGENT-08 — AI 职业助理 Career Workflow
+  await app.register((await import('./routes/career-workflow.js')).careerWorkflowRoutes)
+  await app.register((await import('./routes/career-activation.js')).careerActivationRoutes)
+  // Sprint-10 Step 3B — Career Agent Autonomous Task
+  await app.register((await import('./routes/career-agent-task.routes.js')).careerAgentTaskRoutes)
+  await app.register((await import('./routes/career-llm-config.js')).careerLlmConfigRoutes)
+  // Sprint-07A.2-AI-03: 统一能力级 LLM 配置
+  await app.register((await import('./routes/capability-llm-config.js')).capabilityLlmConfigRoutes)
+  await app.register((await import('./routes/llm-config.js')).llmConfigRoutes)
+  // Sprint-08C — Recruitment Campaign Domain
+  await app.register((await import('./routes/recruitment-campaign.routes.js')).default, { prefix: '/api/enterprise/recruitment-campaign' })
+  // Sprint-08D — Interview Agent Domain
+  await app.register((await import('./routes/recruitment-interview.routes.js')).default, { prefix: '/api/enterprise/recruitment-interview' })
+  // Sprint-09: Recruitment Analytics (ROI Dashboard, Capability Center, Automation, Renewal)
+  await app.register((await import('./routes/recruitment-analytics.routes.js')).recruitmentAnalyticsRoutes)
+  // Phase 5-B6 — Enterprise Pipeline Center (Kanban + Timeline + Notes + Tags + AI Actions)
+  await app.register((await import('./routes/enterprise-pipeline.routes.js')).enterprisePipelineRoutes)
+  // Sprint-08 — Hiring Intelligence (招聘洞察 + 决策记录)
+  await app.register((await import('./routes/hiring-intelligence.routes.js')).hiringIntelligenceRoutes)
+  // Phase 5-B7 — Enterprise Recruitment (workspace + JD generate + match)
+  await app.register((await import('./routes/enterprise.routes.js')).enterpriseRoutes)
+  // Enterprise Governance (audit trail, code governance)
+  await app.register((await import('./routes/governance.js')).governanceRoutes, { prefix: '/api/enterprise/governance' })
+  ;(await import('./services/enterprise/agent-scheduler.runtime.js')).agentScheduler.start()
+
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-01 — Application Adapter Layer（应用身份抽象层）
+  // 生态身份证：9 内置应用幂等注册 + 应用目录只读 API
+  // 纪律：只挂载身份，不碰工作台业务，不做商城
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-application.routes.js')).registerEcologyApplicationRoutes, { prefix: '/api/ecosystem' })
+  const { ensureEcologySeed } = await import('./routes/ecology-application.routes.js')
+  const ecologySeed = await ensureEcologySeed()
+  app.log.info(`[ECO-01] 内置应用注册完成: ${ecologySeed.registered} 新增 / ${ecologySeed.skipped} 已存在`)
+
+  // SPRINT-ECO-10 — 官方内置插件种子（插件发现中心首批商品）
+  try {
+    const { seedBuiltinPlugins } = await import('./ecosystem/builtin-plugins.js')
+    const { prisma } = await import('./utils/index.js')
+    const pluginSeed = await seedBuiltinPlugins(prisma)
+    app.log.info(`[ECO-10] 官方内置插件注册完成: ${pluginSeed.plugins} 插件 / ${pluginSeed.items} 商品`)
+  } catch (e: any) {
+    app.log.warn(`[ECO-10] 内置插件种子跳过（不影响启动）: ${e.message}`)
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-02 — Plugin Manifest Runtime（插件身份系统）
+  // 只登记身份 / 只读目录 / 登记安装，不执行插件代码
+  // 纪律：不执行插件 / 不运行第三方代码 / 不接入支付 / 不做商城 UI
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-plugin.routes.js')).registerEcologyPluginRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-02] Plugin Manifest Runtime 路由已注册')
+
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-03 — KAOR Runtime Boundary（生态 Runtime 契约）
+  // Plugin → KAOR Adapter → Existing Hermes 桥梁；不改 Hermes / 不迁移 Agent
+  // 纪律：只登记 Runtime 身份+能力+映射；不接插件执行；不开发本地执行
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-runtime.routes.js')).registerEcologyRuntimeRoutes, { prefix: '/api/ecosystem' })
+  try {
+    const { prisma } = await import('./utils/index.js')
+    const { ensureKaorRuntimeSeed } = await import('./ecosystem/runtime-registry.service.js')
+    const kaorRuntime = await ensureKaorRuntimeSeed(prisma)
+    app.log.info(`[ECO-03] KAOR Runtime seed 完成: ${kaorRuntime.runtimeId} v${kaorRuntime.version}（6 能力声明）`)
+  } catch (e: any) {
+    app.log.warn(`[ECO-03] KAOR Runtime seed 失败（不影响启动）: ${e.message}`)
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-04 — License & Entitlement Boundary（生态商业授权）
+  // 只登记授权 / 只校验不执行 / 全事件审计；不碰现有商业系统 / Agent / Hermes
+  // 状态机（掌柜冻结）：subscribe→ACTIVE；renew→ACTIVE；expire→EXPIRED；
+  //                    suspend→SUSPENDED；restore→ACTIVE；支持本地 App 授权链路
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-license.routes.js')).registerEcologyLicenseRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-04] License & Entitlement Boundary 路由已注册')
+  try {
+    const { prisma } = await import('./utils/index.js')
+    const { LicenseService } = await import('./ecosystem/license.service.js')
+    const expired = await new LicenseService(prisma).expireDueLicenses()
+    if (expired > 0) app.log.info(`[ECO-04] 启动到期扫描: ${expired} 个许可已自动 EXPIRED`)
+  } catch (e: any) {
+    app.log.warn(`[ECO-04] 启动到期扫描失败（不影响启动）: ${e.message}`)
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-05 — Developer Center Foundation（开发者身份 + 插件发布基础）
+  // 链路：Developer → Plugin Author → Plugin Version → Review Status → Marketplace Ready
+  // 纪律：不做开发者商城 / 不做收益提现 / 不做推广系统 / 不做审核后台 UI
+  // 边界：G1 Author Ownership / G2 Permission Intersection / G3 Version Ownership
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-developer.routes.js')).registerEcologyDeveloperRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-05] Developer Center Foundation 路由已注册')
+
+  // SPRINT-ECO-06 — Marketplace Foundation（生态商品与交易基础设施）
+  await app.register((await import('./routes/ecology-marketplace.routes.js')).registerEcologyMarketplaceRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-06] Marketplace Foundation 路由已注册')
+
+  // SPRINT-ECO-07 — Revenue Settlement Foundation（收入计算基础设施，非财务系统）
+  await app.register((await import('./routes/ecology-settlement.routes.js')).registerEcologySettlementRoutes, { prefix: '/api/ecosystem' })
+
+  // ═══════════════════════════════════════════════════════════
+  // ECO-08 Partner Revenue Share：等级配置只读 / 伙伴概况 / 业绩重算（幂等）
+  // 纪律：收益来源唯一 = ecology_settlements；只新增 ecology_partner* 表；
+  //       不做推广页面/邀请系统/裂变/发放（仅 ACCRUED 应计）
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-partner.routes.js')).registerEcologyPartnerRoutes, { prefix: '/api/ecosystem' })
+  await app.register((await import('./routes/ecology-registry.routes.js')).registerEcologyRegistryRoutes, { prefix: '/api/ecosystem' })
+  await app.register((await import('./routes/hermes-audit.routes.js')).registerHermesAuditRoutes)
+  await app.register((await import('./routes/skill-catalog.routes.js')).registerSkillCatalogRoutes)
+  await app.register((await import('./routes/skill-lifecycle.routes.js')).registerSkillLifecycleRoutes)
+  await app.register((await import('./routes/skill-execution.routes.js')).registerSkillExecutionRoutes)
+  await app.register((await import('./routes/skill-orchestrator.routes.js')).registerSkillOrchestratorRoutes)
+  await app.register((await import('./routes/skill-planner.routes.js')).registerSkillPlannerRoutes)
+  await app.register((await import('./routes/skill-assets.routes.js')).registerSkillAssetsRoutes)
+  await app.register((await import('./routes/skill-tools-internal.routes.js')).registerSkillToolsInternalRoutes)
+  await app.register((await import('./routes/enterprise-admin.routes.js')).registerEnterpriseAdminRoutes)
+  await app.register((await import('./routes/marketplace.routes.js')).registerMarketplaceRoutes)
+  app.log.info('[ECO-07] Revenue Settlement Foundation 路由已注册')
+
+  // ═══════════════════════════════════════════════════════════
+  // SPRINT-ECO-11.2 — Kunlun Desktop Shell（本地应用生态 · 设备层）
+  // 掌柜冻结：B 设备级授权 MVP；设备指纹 = 随机 device_id + 签名 token + 用户确认
+  // Gate：G3 设备注册 / G4 重启恢复 / G5 License 预演（设备隔离）/ G6 工作台回归
+  // 纪律：只新增 ecology_* 表；不碰 PaymentOrder/Subscription/User/Organization/Agent/Hermes
+  // ═══════════════════════════════════════════════════════════
+  await app.register((await import('./routes/ecology-device.routes.js')).registerEcologyDeviceRoutes, { prefix: '/api/ecosystem' })
+  app.log.info('[ECO-11.2] Kunlun Desktop Shell 设备层路由已注册（devices/register, heartbeat, revoke, local-apps, authorized-plugins, launch-check）')
+
+  // 注册渠道适配器
+  const { channelService } = await import('./services/enterprise/channel.service.js')
+  const { VideoAccountAdapter, WeiboAdapter, BilibiliAdapter, QQAdapter } = await import('./enterprise/channel/extended.adapter.js')
+  const { DouyinBrowserAdapter } = await import('./enterprise/channel/adapters/douyin-browser.adapter.js')
+  // TASK03.2.2 — 注册抖音身份探针（ChannelIdentityProbe，模块加载即注册 registry）
+  await import('./enterprise/channel/adapters/douyin-identity.probe.js')
+  // REGISTRY-SSOT-01 — 抖音探针就绪标记（探针模块加载即注册）
+  const { channelPlatformRegistry } = await import('./enterprise/channel/platform-registry.js')
+  channelPlatformRegistry.markProbeReady('douyin')
+  // 2026-08-02 — 多平台浏览器渠道（快手/小红书/视频号）：同抖音范式，配置驱动
+  const { registerBrowserChannels } = await import('./enterprise/channel/adapters/browser-channels.js')
+  // P4.2.5.2: WeCom 不再使用 Mock（CTO: No Mock in Production）
+  // 其他渠道继续使用 Mock（开发测试用）
+  channelService.registerAdapter(new VideoAccountAdapter())
+  channelService.registerAdapter(new WeiboAdapter())
+  channelService.registerAdapter(new BilibiliAdapter())
+  channelService.registerAdapter(new QQAdapter())
+  // SPRINT-MEDIA-CHANNEL-01 Task03.1 — 抖音真实 Runtime（浏览器自动化）
+  // Credential 流程：adapter 不保存凭证，经注入回调走 EnterpriseChannelService.getCredential/updateCredential（AES）
+  channelService.registerAdapter(new DouyinBrowserAdapter({
+    getCredential: (accountId) => channelService.getCredential(accountId),
+    persistCredential: (accountId, credential) => channelService.updateCredential(accountId, credential),
+  }))
+  // REGISTRY-SSOT-01 — 抖音 adapter 就绪标记（与探针就绪 → connectable=true）
+  channelPlatformRegistry.markAdapterReady('douyin')
+  // 2026-08-02 — 多平台浏览器渠道注册（快手/小红书/视频号 + 探针）
+  const browserAdapters = registerBrowserChannels({
+    getCredential: (accountId) => channelService.getCredential(accountId),
+    persistCredential: (accountId, credential) => channelService.updateCredential(accountId, credential),
+  })
+  for (const a of browserAdapters) channelService.registerAdapter(a)
+  // SPRINT-MEDIA-CHANNEL-01 Task03.1.3 — Enterprise Channel Runtime 链路（真实执行，非模拟授权）
+  await app.register((await import('./routes/enterprise-channel-runtime.js')).enterpriseChannelRuntimeRoutes)
+  // SPRINT-MEDIA-BROWSER-WORKSPACE-01 Task 01/02 — Browser Workspace 生命周期（AI 员工数字办公环境）
+  await app.register((await import('./routes/browser-workspace.routes.js')).browserWorkspaceRoutes)
+  // SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 05 — Channel Reality API（四层真实状态）
+  await app.register((await import('./routes/channel-reality.routes.js')).channelRealityRoutes)
+  // SPRINT-MEDIA-AI-EMPLOYEE-OPERATION-REALITY-01 Task02/03/05 — Channel Metrics（AI 员工真实读取指标）
+  await app.register((await import('./routes/channel-metrics.routes.js')).channelMetricsRoutes)
+  await app.register((await import('./routes/channel-health.routes.js')).channelHealthRoutes)
+  // P1.7 — V3 Schema 三层审计系统（只读观测路由）
+  await app.register(await import('./routes/v3-metrics.js').then(m => m.default))
+  // P1.8 — 生产切换决策模型（只读评估，不修改任何系统状态）
+  await app.register(await import('./routes/p1.8-evaluate.js').then(m => m.default))
+  // P1.8 — Data Activation Layer（双轨采样系统）
+  await app.register(await import('./routes/p18-data-activation.js').then(m => m.default))
+  // REMOVED: quickCreationRoutes
+
+  // Anchor routes (多模态角色/场景/道具锚定系统)
+  // REMOVED: anchorRoutes
+
+  // Costume routes (服装持续化系统)
+  // REMOVED: costumeRoutes
+
+  // Character State routes (角色状态系统)
+  // REMOVED: characterStateRoutes
+
+  // Story Graph routes (剧情图谱引擎 + 自动分镜系统)
+  // REMOVED: storyGraphRoutes
+
+  // Director Engine routes (导演级镜头决策引擎)
+  // REMOVED: directorEngineRoutes
+
+  // Director Intelligence Layer routes (导演智能层 API)
+
+  // Director V2 routes (Director OS observability layer, /api/v2/director/*)
+  await app.register(directorV2Routes)
+
+  // Director Execution routes (/api/director/execution/*) — 昆仑镜 → 火麒麟 执行计划
+  await app.register(directorExecutionRoutes)
+  await app.register(directorSpecExecutionRoutes)
+
+  // Director Asset Quality routes (/api/director/assets/:assetId/quality) — AI导演质量观察
+  await app.register(directorAssetQualityRoutes)
+  await app.register(directorDecisionRoutes)
+
+  // Desktop Runtime routes（跨平台桌面运行时）
+  // REMOVED: desktopRuntimeRoutes
+
+  // User API Key management (VIP 会员接入自己的大模型)
+
+  // User Model Config (BYO API Key + 自选模型)
+  // User Model Config V2 (Single Source of Truth)
+  await app.register(unifiedModelConfigRoutes)
+  // MSAL — Single Authority Model Selection
+  // REMOVED: assetRegistryRoutes
+  // REMOVED: aiGatewayRoutes
+  // REMOVED: continuityRoutes
+  // REMOVED: jobManagerRoutes
+
+  // AI 资产经济体系（Asset Economy System）
+
+  // Studio V1 API routes (control panel)
+  // Health check
+  await app.register(wechatOAuthRoutes)
+  await app.register(qqOAuthRoutes)
+  // Customer Service routes (AI 智能客服)
+  await app.register(customerServiceRoutes)
+  await app.register(paymentRoutes)
+  await app.register(scriptSubmitRoutes)
+
+  // REMOVED: agentOrchestratorRoutes
+  // REMOVED: stabilityRoutes
+
+  // AIGC spec DB routes（AI 规格表持久化）
+  await app.register(aigcSpecDbRoutes)
+
+  // Telemetry 接收端点（前端 FRE 埋点静默接收）
+  await app.register(tasksTelemetryRoutes)
+
+  // Stage model config routes（各阶段模型配置 CRUD）
+  // REMOVED: stageModelConfigRoutes
+
+  // Model available routes (公共 API，无需认证)
+  await app.register(modelRoutes)
+  await app.register(styleProfileRoutes)
+
+  // Admin model routes (管理员 API Key 管理)
+  await app.register(adminModelRoutes)
+  await app.register(adminModelV2Routes)
+  await app.register(adminAiProviderRoutes)
+  await app.register(aiProviderDirectoryRoutes)
+  await app.register(agentRecommendationRoutes)
+  await app.register(agentWorkflowTemplateRoutes)
+  await app.register(aiCenterConsumerRoutes)
+  await app.register(aiRecommendationsRoutes)
+  await app.register(adminPlatformDefaultModelsRoutes)
+  await app.register(adminUsageStatsRoutes)
+  await app.register(adminDashboardCenterRoutes)
+
+  // Admin Image Prompt Templates (提示词模板管理)
+  await app.register(adminImagePromptRoutes)
+
+  // Admin global model config (切换默认 LLM/图片/视频/语音模型)
+  await app.register(adminGlobalConfigRoutes)
+
+  // Admin Agent management
+  await app.register(adminAgentRoutes)
+  await app.register(adminAiEmployeesRoutes)
+
+  // Admin Enterprise Console
+  await app.register(adminEnterpriseRoutes)
+
+  // Admin Enterprise Plan Management
+  await app.register(adminEnterprisePlanRoutes)
+
+  // Admin Market Agents
+  await app.register(adminMarketAgentRoutes)
+  await app.register(adminRecruitmentRoutes)
+  await app.register(adminRevenueDashboardRoutes)
+
+  // Admin Subscription V2 (pause/resume/cancel/change-plan + stats)
+  await app.register(adminSubscriptionV2Routes)
+  await app.register(adminLlmHealthRoutes)
+  await app.register(adminAgentActivityRoutes)
+  await app.register(adminQuotaRoutes)
+
+  // Admin Customer Validation Dashboard
+  await app.register(adminCustomerValidationRoutes)
+
+  // Candidate Domain routes (P3)
+  const { default: candidateProfileRoutes } = await import('./services/candidate/routes/candidate-profile.routes.js')
+  const { default: candidateResumeRoutes } = await import('./services/candidate/routes/candidate-resume.routes.js')
+  const { default: candidateSkillRoutes } = await import('./services/candidate/routes/candidate-skill.routes.js')
+  const { default: jobAgentConfigRoutes } = await import('./services/candidate/routes/job-agent-config.routes.js')
+  await app.register(candidateProfileRoutes)
+  await app.register(candidateResumeRoutes)
+  await app.register(candidateSkillRoutes)
+  await app.register(jobAgentConfigRoutes)
+
+  // Candidate Card + Career Timeline routes (P3-Implement-04)
+  const { candidateCardRoutes } = await import('./services/candidate/routes/candidate-card.routes.js')
+  const { careerTimelineRoutes } = await import('./services/candidate/routes/career-timeline.routes.js')
+  await app.register(candidateCardRoutes)
+  await app.register(careerTimelineRoutes)
+
+  // Talent Matching Engine routes (P4-01)
+  const { talentMatchingRoutes } = await import('./services/matching/routes/talent-matching.routes.js')
+  await app.register(talentMatchingRoutes, { prefix: '/api' })
+
+  const { matchExplanationRoutes } = await import('./services/matching/routes/match-explanation.routes.js')
+  await app.register(matchExplanationRoutes, { prefix: '/api' })
+
+  const { jobUnderstandingRoutes } = await import('./services/matching/routes/job-understanding.routes.js')
+  await app.register(jobUnderstandingRoutes, { prefix: '/api' })
+
+  const { batchMatchingRoutes } = await import('./services/matching/routes/batch-matching.routes.js')
+  await app.register(batchMatchingRoutes, { prefix: '/api' })
+
+  // Mall (商城) routes
+  const { adminMallRoutes } = await import('./routes/mall-admin.js')
+  const { default: mallPublicRoutes } = await import('./routes/mall-public.js')
+  await app.register(adminMallRoutes)
+  await app.register(mallPublicRoutes)
+
+  // Legal routes
+  await app.register(legalConfigRoutes)
+  await app.register(legalCaseRoutes)
+  await app.register(legalCaseTemplateRoutes)
+  await app.register(legalCaseWorkspaceRoutes)
+  await app.register(legalContractTemplateRoutes)
+  await app.register(legalDocumentTemplateRoutes)
+  await app.register(legalKnowledgeRoutes)
+  await app.register(legalRegulationRoutes)
+  await app.register(legalRegulationFetchRoutes)
+  await app.register(legalRagRoutes)
+  await app.register(legalAiPromptRoutes)
+  await app.register(legalAgentChatRoutes)
+  await app.register(legalAgentUploadRoutes)
+
+  // Agent Plans (前台+后台)
+  await app.register(agentPlanRoutes)
+  // Agent Runtime routes (KMKI-PLAT-010)
+  try {
+    const mod = await import('./routes/platform/agent/agent.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/session.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent session route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/dispatch.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent dispatch route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/schedule.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent schedule route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/memory.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent memory route skipped:', (err as Error).message)
+  }
+  try {
+    const mod = await import('./routes/platform/agent/tool.route.js')
+    await app.register(mod.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Agent tool route skipped:', (err as Error).message)
+  }
+
+  // GEO Agent registration (Sprint 1A Knowledge Skeleton)
+  try {
+    await (await import('./services/geo/agents/research.agent.js')).registerResearchAgent()
+    await (await import('./services/geo/agents/entity.agent.js')).registerEntityAgent()
+    await (await import('./services/geo/agents/knowledge-graph.agent.js')).registerKGAgent()
+    console.log('[startup] ✅ 3 GEO agents registered (research, entity, knowledge-graph)')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO agent registration skipped (non-fatal):', (err as Error).message)
+  }
+
+  // Sprint 1B — Register KQ Workflow + Agents
+  try {
+    await (await import('./services/geo/registry/geo-workflow-registration.js')).registerGEOWorkflows()
+    console.log('[startup] ✅ GEO KQ Workflow registered (geo.knowledge-quality)')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO KQ Workflow registration skipped:', (err as Error).message)
+  }
+
+  // Workflow Runtime routes (KMKI-PLAT-011)
+  await app.register(await import('./routes/platform/workflow/definition.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/instance.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/execution.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/checkpoint.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/replay.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/template.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/workflow/human.route.js').then(m => m.default))
+
+  // Initialize Workflow Runtime
+  try {
+    const { workflowRuntime } = await import('./services/platform/workflow/runtime/workflow.runtime.js')
+    await workflowRuntime.init({})
+    console.log('[WorkflowRuntime] ✅ Workflow Runtime initialized (KMKI-PLAT-011)')
+  } catch (err) {
+    console.warn('[WorkflowRuntime] Failed to initialize:', (err as Error).message)
+  }
+
+  // Admin Customer Service settings
+  await app.register(adminCustomerServiceRoutes)
+
+  // Runtime Observability Dashboard v1 (只读观测)
+
+  // Phase 4.2: Runtime Trace (invocation source of truth)
+  // REMOVED: runtimeTraceRoutes
+
+  // Phase 5.1: Self-verification kernel
+
+  // EPVH — Execution Plane 验证
+  // REMOVED: verificationRoutes
+
+  // Legacy Bridge — 受控收敛迁移控制
+  // REMOVED: bridgeRoutes
+
+  // PSC-1 — Phase 1 Safe Convergence 控制器
+  // REMOVED: psc1Routes
+
+  // 歌曲创作
+  const musicRoutes = (await import('./routes/music.js')).default
+  await app.register(musicRoutes)
+
+  // TTS 语音合成
+  const ttsRoutes = (await import('./routes/tts.js')).default
+  await app.register(ttsRoutes)
+
+  // ASR 语音识别（语音转字幕）
+  const asrRoutes = (await import('./routes/asr.js')).default
+  await app.register(asrRoutes)
+
+  // 音色管理路由（voice records/save, voice/design 等）
+  await app.register(voiceRoutes)
+
+  // AI 优化视频脚本（导演级逐秒优化）
+  const aiOptimizeShotRoutes = (await import('./routes/ai-optimize-shot.js')).default
+  await app.register(aiOptimizeShotRoutes)
+
+  // 世界感知（World Model）占位 API
+  // REMOVED: worldModelRoutes
+
+  // 参考图系统（Reference-Driven Generation）
+  // REMOVED: referenceRoutes
+
+  // 帧图提示词优化
+  const aiOptimizeFramePromptRoutes = (await import('./routes/ai-optimize-frame-prompt.js')).default
+  await app.register(aiOptimizeFramePromptRoutes)
+
+  // 视频 prompt 优化（镜头语言）
+  const aiOptimizeVideoPromptRoutes = (await import('./routes/ai-optimize-video-prompt.js')).default
+  await app.register(aiOptimizeVideoPromptRoutes)
+
+  // 广告脚本优化
+  const aiOptimizeAdScriptRoutes = (await import('./routes/ai-optimize-ad-script.js')).default
+  await app.register(aiOptimizeAdScriptRoutes)
+
+  // 广告视频生成
+  const aiGenerateAdVideoRoutes = (await import('./routes/ai-generate-ad-video.js')).default
+  await app.register(aiGenerateAdVideoRoutes)
+
+  // 图片提示词优化
+  const aiOptimizeImagePromptRoutes = (await import('./routes/ai-optimize-image-prompt.js')).default
+  await app.register(aiOptimizeImagePromptRoutes)
+
+  // 用户模型配置查询（广告页面使用）
+  const userLLMConfigRoutes = (await import('./routes/user-llm-config.js')).default
+  await app.register(userLLMConfigRoutes)
+
+  // 视频合成拼接（AI 视频段 → 完整 MP4）
+  const videoMergeRoutes = (await import('./routes/video-merge.js')).default
+  await app.register(videoMergeRoutes)
+
+  // 视频段编辑状态持久化
+  const projectSegmentStateRoutes = (await import('./routes/project-segment-state.js')).default
+  await app.register(projectSegmentStateRoutes)
+
+  // 图片代理（解决火山 TOS CORS）
+  const proxyImageRoutes = (await import('./routes/proxy-image.js')).default
+  await app.register(proxyImageRoutes)
+
+  // OMS World Runtime Routes（世界运行内核 + 叙事 + 观测者经济）
+  // REMOVED: worldRuntimeRoutes
+
+  // OMS Dashboard Routes（可视化仪表盘 V1）
+  // REMOVED: omsDashboardRoutes
+
+  // OMS V2 Routes（三层认知可视化系统）
+  // REMOVED: omsV2Routes
+
+  // Character System V1 Routes（角色系统）
+
+  // Character-OMS Graph Fusion V1（角色图谱融合）
+  // REMOVED: omsFusionRoutes
+
+  // Universe Images（作品宇宙图片引用）
+  // REMOVED: universeImageRoutes
+
+  // References（角色/场景参考图一致性系统）
+  await app.register(apiKeyRoutes)
+  // Workflow Execution Graph v1
+  // REMOVED: workflowRoutes
+  // Workflow Visualizer v1
+  // 管理员资产管理（图片上传管理）
+  // REMOVED: adminAssetRoutes
+  // REMOVED: executionTraceRoutes
+  // REMOVED: executionDebugRoutes
+  await app.register(systemHealthRoutes)
+  // Desktop update routes（桌面端升级）
+  await app.register(desktopUpdateRoutes)
+  // Desktop Ollama routes（本地大模型检测）
+  await app.register(desktopOllamaRoutes)
+  // Desktop TTS routes（本地语音合成）
+  await app.register(desktopTtsRoutes)
+  // Desktop ComfyUI routes（本地图片引擎）
+  await app.register(desktopComfyRoutes)
+  // Desktop video routes（本地视频引擎检测）
+  await app.register(desktopVideoRoutes)
+  // S1.1 Identity Ticket Bridge（ADR-021 身份边界，一次性 ticket）
+  await app.register(desktopTicketRoutes)
+  await app.register(ticketExchangeRoutes)
+  // S2.2 Plugin Invocation Ticket（复用 ticket 机制, 不执行）
+  await app.register(pluginTicketRoutes)
+  // S2.1 Plugin Registry Adapter（只读）
+  // Brand GEO routes (Phase 2) / Sprint 1A Knowledge Skeleton
+  await app.register(await import('./services/geo/routes/geo-project.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-entity.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-graph.route.js').then(m => m.default))
+  // Stage 3.2.1 Watcher Events API
+  await app.register(await import('./services/geo/routes/geo-watcher.route.js').then(m => m.default))
+  // Sprint 1B Knowledge Quality Route (B4A Runtime)
+  await app.register(await import('./services/geo/routes/geo-knowledge-quality.route.js').then(m => m.default))
+  // KMKI-RUNTIME-010 — Execution Trace Route
+  await app.register(await import('./services/geo/routes/geo-trace.route.js').then(m => m.default))
+  // Sprint KO-1 — Knowledge Object CRUD API
+  await app.register(await import('./services/geo/routes/geo-knowledge.route.js').then(m => m.default))
+  // Sprint P1 — Brand GEO MVP Routes
+  await app.register(await import('./services/geo/routes/geo-brand.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-keyword.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-scan.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-dashboard.route.js').then(m => m.default))
+  // RC1-T002 — Dashboard Mission Control
+  await app.register(await import('./services/geo/routes/geo-dashboard-mission.route.js').then(m => m.default))
+  // RC-D1-004 — Workspace Mission Control (PageShell Dashboard)
+  try {
+    await app.register(await import('./services/geo/workspace/workspace.route.js').then(m => m.workspaceRoutes))
+    console.log('[startup] ✅ GEO Workspace route registered at /api/geo/workspace/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Workspace route skipped:', (err as Error).message)
+  }
+  // RC1-T003 — Progressive Walkthrough
+  try {
+    await app.register(await import('./services/geo/routes/geo-walkthrough.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Walkthrough route registered at /api/geo/walkthrough/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Walkthrough route skipped:', (err as Error).message)
+  }
+  // P0: AI Probe — 真实 AI 可见度探测
+  try {
+    await app.register(await import('./services/geo/routes/geo-ai-probe.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO AI Probe route registered at /api/geo/projects/:id/ai-probe')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO AI Probe route skipped:', (err as Error).message)
+  }
+  // P1: Competitor Benchmark — 竞品对标
+  try {
+    await app.register(await import('./services/geo/routes/geo-competitor-benchmark.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Competitor Benchmark route registered at /api/geo/projects/:id/competitor-benchmark')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Competitor Benchmark route skipped:', (err as Error).message)
+  }
+  // Sprint 3 — GEO Recommendation Engine (GEO v2 MVP)
+  await app.register(await import('./services/geo/recommendation/recommendation.route.js').then(m => m.geoRecommendationRoutes))
+  // DI A1.1 — Decision Intelligence Issue Graph Routes
+  await app.register(await import('./services/geo/decision-intelligence/routes.js').then(m => m.registerDIIssueGraphRoutes))
+  // GEO v3 — Growth Engine Routes
+  await app.register(await import('./services/geo/growth/growth.route.js').then(m => m.geoGrowthRoutes))
+  // Sprint 4 — Data Integration Routes
+  await app.register(await import('./services/geo/routes/geo-evidence.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-claim.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-history.route.js').then(m => m.default))
+  await app.register(await import('./services/geo/routes/geo-report.route.js').then(m => m.default))
+  // GEO v4 Verification routes — Truth Layer MVP
+  await app.register(await import('./services/geo/verification/verification.route.js').then(m => m.geoVerificationRoutes))
+  // P0-T006: Verification MVP — Brand Verify API
+  await app.register(await import('./services/geo/routes/geo-verification.route.js').then(m => m.geoVerificationRoutes))
+  // GEO v4 Publishing routes — Publishing Pipeline
+  await app.register(await import('./services/geo/publishing/publishing.route.js').then(m => m.default))
+  // GEO v4 Monitor routes — Observation Runtime
+  try {
+    await app.register(await import('./services/geo/monitor/monitor.route.js').then(m => m.geoMonitorRoutes))
+  } catch (err) {
+    console.warn('[startup] ⚠️ Monitor route skipped:', (err as Error).message)
+  }
+  // GEO v4 Learning routes — Learning Engine
+  try {
+    await app.register(await import('./services/geo/growth/learning.route.js').then(m => m.geoLearningRoutes))
+  } catch (err) {
+    console.warn('[startup] ⚠️ Learning route skipped:', (err as Error).message)
+  }
+
+  // P1-C — Deliverable Center Route (Report + Export)
+  try {
+    await app.register(await import('./services/geo/routes/geo-deliverable.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Deliverable route registered at /api/geo/report/:projectId')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Deliverable route skipped:', (err as Error).message)
+  }
+
+  // P0-T005 — AI Discovery Lab Route
+  try {
+    await app.register(await import('./services/geo/routes/geo-discovery.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Discovery route registered at /api/v1/geo/discovery/report')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Discovery route skipped:', (err as Error).message)
+  }
+
+  // GEO MVP Routes — 10 endpoints for 4-step workflow (register first to claim /ping)
+  try {
+    await app.register(await import('./services/geo/v1/geo-mvp.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO MVP route registered at /api/v1/geo/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO MVP route skipped:', (err as Error).message)
+  }
+
+  // GEO V1 Product Routes — RC1 Product Freeze (deprecated, kept for backward compat)
+  try {
+    await app.register(await import('./services/geo/v1/geo-v1-product.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO V1 Product API registered at /api/v1/geo/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO V1 Product route skipped:', (err as Error).message)
+  }
+
+  // P0-T003 — Explain Everywhere MVP
+  try {
+    await app.register(await import('./services/geo/routes/geo-explain.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Explain route registered at /api/geo/brands/:id/explain')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Explain route skipped:', (err as Error).message)
+  }
+  // RC1-T004 — Explain Engine Route (统一 /api/geo/explain/:type/:id)
+  try {
+    await app.register(await import('./services/geo/routes/geo-explain-engine.route.js').then(m => m.geoExplainEngineRoutes))
+    console.log('[startup] ✅ GEO Explain Engine route registered at /api/geo/explain/:type/:id')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Explain Engine route skipped:', (err as Error).message)
+  }
+  // P0-T004 — Optimization Center MVP (v1 — brand-specific, kept for backward compat)
+  try {
+    await app.register(await import('./services/geo/routes/geo-optimization.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Optimization v1 route registered at /api/geo/brands/:id/optimizations')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Optimization v1 route skipped:', (err as Error).message)
+  }
+  // P0-T004 — Optimization Center v2 (task queue + batch operations — frontend active)
+  try {
+    await app.register(await import('./services/geo/routes/geo-optimization-v2.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Optimization v2 route registered at /api/geo/optimization/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Optimization v2 route skipped:', (err as Error).message)
+  }
+  // P0-T005 — AI Presence Engine Route
+  try {
+    await app.register(await import('./services/geo/routes/geo-presence.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Presence route registered at /api/geo/brands/:id/presence')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Presence route skipped:', (err as Error).message)
+  }
+  // P0-T007 — Action Plan Engine Route
+  try {
+    await app.register(await import('./services/geo/routes/geo-action-plan.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Action Plan route registered at /api/geo/brands/:id/action-plans')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Action Plan route skipped:', (err as Error).message)
+  }
+  // Frontend path aliases — map frontend paths to backend handlers
+  try {
+    await app.register(await import('./services/geo/routes/geo-frontend-aliases.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Frontend Aliases route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Frontend Aliases route skipped:', (err as Error).message)
+  }
+  // GEO Execution routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-execution.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Execution route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Execution route skipped:', (err as Error).message)
+  }
+  // GEO Showcase routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-showcase.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Showcase route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Showcase route skipped:', (err as Error).message)
+  }
+  // GEO Customer Success routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-customer-success.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Customer Success route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Customer Success route skipped:', (err as Error).message)
+  }
+  // GEO Truth Trace routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-truth-trace.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Truth Trace route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Truth Trace route skipped:', (err as Error).message)
+  }
+  // GEO ROI routes
+  try {
+    await app.register(await import('./services/geo/routes/geo-roi.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO ROI route registered')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO ROI route skipped:', (err as Error).message)
+  }
+
+  // Unified Asset Runtime routes — wrapped to avoid tsx @platform alias issue
+  try { await app.register(await import('./routes/asset/asset.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/asset/asset-version.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset version route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/asset/asset-scanner.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Asset scanner route skipped:', (err as Error).message) }
+  // Knowledge Hub — Platform Runtime (KH1)
+  try {
+    const { registerKnowledgeHubRoutes } = await import('./platform/knowledge-hub/api/routes.js')
+    const { VersionEngine } = await import('./platform/knowledge-hub/core/version-engine.js')
+    const { ProviderRuntime } = await import('./platform/knowledge-hub/core/provider-runtime.js')
+    const { GeoKnowledgeProvider } = await import('./platform/knowledge-hub/providers/geo/geo-knowledge.provider.js')
+    const { NovelKnowledgeProvider } = await import('./platform/knowledge-hub/providers/stubs/novel.provider.js')
+    const { StoryKnowledgeProvider } = await import('./platform/knowledge-hub/providers/story.provider.js')
+    const { PresentationKnowledgeProvider } = await import('./platform/knowledge-hub/providers/stubs/presentation.provider.js')
+
+    const versionEngine = new VersionEngine()
+    const providerRuntime = new ProviderRuntime()
+    providerRuntime.register(new GeoKnowledgeProvider())
+    providerRuntime.register(new NovelKnowledgeProvider())
+    const { PrismaClient } = await import('@prisma/client')
+    const khPrisma = new PrismaClient()
+    providerRuntime.register(new StoryKnowledgeProvider(khPrisma))
+    providerRuntime.register(new PresentationKnowledgeProvider())
+
+    registerKnowledgeHubRoutes(app, { versionEngine, providerRuntime })
+    // KH2 — Publishing Engine
+    const { PublishingEngine } = await import('./platform/knowledge-hub/publishing/publishing-engine.js')
+    const { PublisherRegistry } = await import('./platform/knowledge-hub/publishing/publisher-registry.js')
+    const { PublishingQueue } = await import('./platform/knowledge-hub/publishing/publishing-queue.js')
+    const { registerPublishingRoutes } = await import('./platform/knowledge-hub/publishing/api.js')
+    const { WebsitePublisher } = await import('./platform/knowledge-hub/publishing/adapters/website.publisher.js')
+    const { CMSPublisher } = await import('./platform/knowledge-hub/publishing/adapters/cms.publisher.js')
+    const { WebhookPublisher } = await import('./platform/knowledge-hub/publishing/adapters/webhook.publisher.js')
+    const { ExportPublisher } = await import('./platform/knowledge-hub/publishing/adapters/export.publisher.js')
+
+    const publisherRegistry = new PublisherRegistry()
+    publisherRegistry.register(new WebsitePublisher())
+    publisherRegistry.register(new CMSPublisher())
+    publisherRegistry.register(new WebhookPublisher())
+    publisherRegistry.register(new ExportPublisher())
+
+    const publishingQueue = new PublishingQueue()
+    const prisma = new (await import('@prisma/client')).PrismaClient()
+    const { KnowledgePackageRepository } = await import('./platform/knowledge-hub/repository/package-repository.js')
+    const pkgRepo = new KnowledgePackageRepository(prisma as any)
+    const publishingEngine = new PublishingEngine(publisherRegistry, publishingQueue, pkgRepo)
+
+    registerPublishingRoutes(app, { registry: publisherRegistry, engine: publishingEngine })
+
+    console.log('[startup] ✅ Knowledge Hub v1 routes registered at /api/knowledge/*')
+    console.log('[startup] ✅ Knowledge Hub KH2 (Publishing Engine) registered at /api/knowledge/publish/*')
+
+    // KH3 — Review / Approval
+    const { ReviewEngine } = await import('./platform/knowledge-hub/review/review-engine.js')
+    const { ApprovalEngine } = await import('./platform/knowledge-hub/review/approval-engine.js')
+    const { ReviewPolicyEngine } = await import('./platform/knowledge-hub/review/review-policy.js')
+    const { AuditTimeline } = await import('./platform/knowledge-hub/review/audit-timeline.js')
+    const { registerReviewRoutes } = await import('./platform/knowledge-hub/review/api.js')
+
+    const reviewEngine = new ReviewEngine()
+    const reviewPolicy = new ReviewPolicyEngine()
+    const auditTimeline = new AuditTimeline()
+    const approvalEngine = new ApprovalEngine(reviewEngine, reviewPolicy)
+
+    registerReviewRoutes(app, {
+      reviewEngine,
+      approvalEngine,
+      policyEngine: reviewPolicy,
+      audit: auditTimeline,
+    })
+
+    console.log('[startup] ✅ Knowledge Hub KH3 (Review/Approval) registered at /api/knowledge/reviews/*')
+    console.log('[startup] ✅ Knowledge Hub KH3 (Audit Timeline) registered at /api/knowledge/audit/*')
+
+    // KH4 — Distribution
+    const { DistributionEngine } = await import('./platform/knowledge-hub/distribution/distribution-engine.js')
+    const { DistributionPlanner } = await import('./platform/knowledge-hub/distribution/distribution-planner.js')
+    const { DistributionRegistry } = await import('./platform/knowledge-hub/distribution/distribution-registry.js')
+    const { ExecutionGraph } = await import('./platform/knowledge-hub/distribution/execution-graph.js')
+    const { registerDistributionRoutes } = await import('./platform/knowledge-hub/distribution/api.js')
+    const { WebsiteDistributionTarget } = await import('./platform/knowledge-hub/distribution/adapters/website.target.js')
+    const { CMSDistributionTarget } = await import('./platform/knowledge-hub/distribution/adapters/cms.target.js')
+    const { WebhookDistributionTarget } = await import('./platform/knowledge-hub/distribution/adapters/webhook.target.js')
+    const { ExportDistributionTarget } = await import('./platform/knowledge-hub/distribution/adapters/export.target.js')
+
+    const distRegistry = new DistributionRegistry()
+    distRegistry.register(new WebsiteDistributionTarget())
+    distRegistry.register(new CMSDistributionTarget())
+    distRegistry.register(new WebhookDistributionTarget())
+    distRegistry.register(new ExportDistributionTarget())
+
+    const distPlanner = new DistributionPlanner()
+    const execGraph = new ExecutionGraph()
+    const distEngine = new DistributionEngine(distPlanner, distRegistry, execGraph)
+
+    registerDistributionRoutes(app, { engine: distEngine, registry: distRegistry })
+
+    console.log('[startup] ✅ Knowledge Hub KH4 (Distribution) registered at /api/knowledge/distribution/*')
+
+    // KH5 — Monitoring & Observability
+    const { ObservabilityEngine } = await import('./platform/knowledge-hub/monitoring/observability-engine.js')
+    const { HealthEngine } = await import('./platform/knowledge-hub/monitoring/health-engine.js')
+    const { MetricsRegistry } = await import('./platform/knowledge-hub/monitoring/metrics-registry.js')
+    const { AuditExplorer } = await import('./platform/knowledge-hub/monitoring/audit-explorer.js')
+    const { AlertManager } = await import('./platform/knowledge-hub/monitoring/alert-manager.js')
+    const { registerMonitoringRoutes } = await import('./platform/knowledge-hub/monitoring/api.js')
+
+    const healthEngine = new HealthEngine()
+    const metricsRegistry = new MetricsRegistry()
+    const observabilityEngine = new ObservabilityEngine(healthEngine, metricsRegistry)
+    const auditExplorer = new AuditExplorer(auditTimeline)
+    const alertManager = new AlertManager()
+
+    registerMonitoringRoutes(app, {
+      obs: observabilityEngine,
+      health: healthEngine,
+      metrics: metricsRegistry,
+      audit: auditExplorer,
+      alerts: alertManager,
+      timeline: auditTimeline,
+      distribution: distEngine,
+    })
+
+    console.log('[startup] ✅ Knowledge Hub KH5 (Observability) registered at /api/knowledge/monitoring/*')
+  } catch (err) {
+    console.warn('[startup] ⚠️ Knowledge Hub routes skipped:', (err as Error).message)
+  }
+
+  // Production health / monitoring routes
+  await app.register(healthRoutes)
+  await app.register(siteConfigRoutes)
+  // REMOVED: observabilityRoutes
+  // REMOVED: optimizationRoutes
+  // 编排 Agent 路由（统筹分析 → 分发各专业 agent）
+  // REMOVED: orchestratorRoutes
+
+  // Voice Management（音色管理）
+
+  // Cognition Loop (认知循环)
+  // REMOVED: worldMemoryRoutes
+
+  // Export Runtime (导出打包系统)
+  // REMOVED: exportRoutes
+  // F1 Control Plane (v2 unified)
+  // REMOVED: controlPlaneV2Routes
+  // REMOVED: clusterRoutes
+  // REMOVED: globalRoutes
+  // REMOVED: autonomousRoutes
+  // Platform Governance routes (KMKI-PLAT-012)
+  try {
+    const govModule = await import('./routes/platform/governance/governance-main.route.js')
+    await app.register(govModule.default)
+  } catch (err) {
+    console.warn('[startup] ⚠️ Governance routes skipped (non-fatal):', (err as Error).message)
+  }
+  await app.register(workbenchProjectRoutes)
+
+  // ⭐ 行政区划 API
+  await app.register(administrativeRegionRoutes)
+  await app.register(balanceRoutes)
+
+  // 启动进化引擎（P7）
+  try {
+    const { runtimeEvolutionEngine } = await import('./core/autonomous/runtime-evolution-engine.js')
+    runtimeEvolutionEngine.start(60000)
+    console.log('[Autonomous] P7 EvolutionEngine started (every 60s)')
+  } catch (err) {
+    console.warn('[Autonomous] Failed to start:', (err as Error).message)
+  }
+
+  // 初始化 Asset Runtime（Phase 2.5 平台级基础设施）
+  try {
+    const { assetRuntime } = await import('./services/asset/runtime/asset.runtime.js')
+    await assetRuntime.init()
+    console.log('[AssetRuntime] ✅ Unified Asset Runtime initialized')
+  } catch (err) {
+    console.warn('[AssetRuntime] Failed to initialize:', (err as Error).message)
+  }
+
+  // Semantic Runtime routes (Phase 3 — Platform Level Unified Semantic Layer)
+  await app.register(await import('./routes/semantic/entity.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/topic.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/taxonomy.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/alias.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/keyword.route.js').then(m => m.default))
+  await app.register(await import('./routes/semantic/semantic.route.js').then(m => m.default))
+
+  // 初始化 Semantic Runtime（Phase 3 平台级语义层）
+  try {
+    const { semanticRuntime } = await import('./services/semantic/runtime/semantic.runtime.js')
+    await semanticRuntime.init()
+    console.log('[SemanticRuntime] ✅ Unified Semantic Runtime initialized')
+  } catch (err) {
+    console.warn('[SemanticRuntime] Failed to initialize:', (err as Error).message)
+  }
+
+  // Capability Platform routes — wrapped for tsx @platform compatibility
+  try { await app.register(await import('./routes/platform/capability/contract.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability contract route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/registry.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability registry route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/resolver.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability resolver route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/validator.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability validator route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/catalog.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability catalog route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/capability/capability-main.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Capability main route skipped:', (err as Error).message) }
+
+  // Resource Platform routes (KMKI-PLAT-008 — AI Resource Runtime)
+    // Resource Runtime routes (KMKI-PLAT-008) — wrapped for tsx @platform compatibility
+  try { await app.register(await import('./routes/platform/resource/contract.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource contract route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/resource/credential.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource credential route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/resource/resolver.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource resolver route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/resource/health.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource health route skipped:', (err as Error).message) }
+  try { await app.register(await import('./routes/platform/resource/usage.route.js').then(m => m.default)) } catch (err) { console.warn('[startup] ⚠️ Resource usage route skipped:', (err as Error).message) }
+  await app.register(await import('./routes/platform/resource/cost.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/matrix.route.js').then(m => m.default))
+  await app.register(await import('./routes/platform/resource/resource-main.route.js').then(m => m.default))
+
+  // 初始化 Capability Runtime（Phase 6 平台级能力契约层）
+  try {
+    const { capabilityRuntime } = await import('./services/platform/capability/runtime/capability.runtime.js')
+    await capabilityRuntime.init()
+
+    // Register routing strategies
+    const { capabilityResolver } = await import('./services/platform/capability/resolver/capability-resolver.js')
+    const { qualityFirstStrategy } = await import('./services/platform/capability/resolver/routing-strategies/quality-first.js')
+    const { costFirstStrategy } = await import('./services/platform/capability/resolver/routing-strategies/cost-first.js')
+    const { latencyFirstStrategy } = await import('./services/platform/capability/resolver/routing-strategies/latency-first.js')
+    const { balancedStrategy } = await import('./services/platform/capability/resolver/routing-strategies/balanced.js')
+
+    capabilityResolver.registerStrategy(qualityFirstStrategy)
+    capabilityResolver.registerStrategy(costFirstStrategy)
+    capabilityResolver.registerStrategy(latencyFirstStrategy)
+    capabilityResolver.registerStrategy(balancedStrategy)
+    console.log('[CapabilityRuntime] ✅ Capability Runtime initialized with 4 routing strategies')
+  } catch (err) {
+    console.warn('[CapabilityRuntime] Failed to initialize:', (err as Error).message)
+  }
+
+  // 初始化 Resource Runtime（KMKI-PLAT-008 — AI Resource Runtime）
+  try {
+    const { resourceRuntime } = await import('./services/platform/resource/runtime/resource.runtime.js')
+    await resourceRuntime.init({})
+    // Register default streaming adapters
+    const { registerDefaultAdapters } = await import('./services/platform/resource/streaming/streaming-adapter.js')
+    registerDefaultAdapters()
+    console.log('[ResourceRuntime] ✅ AI Resource Runtime initialized with streaming adapters')
+  } catch (err) {
+    console.warn('[ResourceRuntime] Failed to initialize:', (err as Error).message)
+  }
+
+  // Goal Runtime routes (Phase 4 — Platform Level Growth Execution Layer)
+  await app.register(await import('./routes/goal/goal.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/strategy.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/workflow.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/task.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/action.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/execution.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/review.route.js').then(m => m.default))
+  await app.register(await import('./routes/goal/goal-main.route.js').then(m => m.default))
+
+  // Execution Runtime routes (KMKI-PLAT-007 — Platform Execution Kernel)
+  try {
+    await app.register(await import('./routes/platform/execution/execution-main.route.js').then(m => m.default))
+  } catch (err) {
+    console.warn('[startup] ⚠️ Execution runtime routes skipped:', (err as Error).message)
+  }
+
+  // Initialize Execution Runtime (KMKI-PLAT-007 — Platform Execution Kernel)
+  try {
+    const { executionRuntime } = await import('./services/platform/execution/runtime/execution.runtime.js')
+    await executionRuntime.init({})
+    console.log('[ExecutionRuntime] ✅ Execution Runtime initialized')
+  } catch (err) {
+    console.warn('[ExecutionRuntime] Failed to initialize:', (err as Error).message)
+  }
+
+  // 初始化 Goal Runtime（Phase 4 平台级增长执行层）
+  try {
+    const { goalRuntime } = await import('./services/goal/runtime/goal.runtime.js')
+    await goalRuntime.init()
+    console.log('[GoalRuntime] ✅ Goal Runtime initialized')
+
+    // Register placeholder action handlers
+    await import('./services/goal/registry/actions/generate-faq.js')
+    await import('./services/goal/registry/actions/publish-cms.js')
+    await import('./services/goal/registry/actions/update-knowledge-graph.js')
+    console.log('[GoalRuntime] ✅ Registered placeholder action handlers')
+  } catch (err) {
+    console.warn('[GoalRuntime] Failed to initialize:', (err as Error).message)
+  }
+
+  // F6 System Dashboard
+  // REMOVED: systemDashboardRoutes
+
+  // F4/F5 Multi-Tenant
+  // REMOVED: tenantRoutes
+
+  // G Product Layer
+  // REMOVED: productRoutes
+
+  // S3 Route Redirect (deprecated routes)
+
+  // HITL Human-in-the-Loop (昆仑镜 v2)
+  // REMOVED: hitlRoutes
+
+  // Schema Runtime v1 — Phase A shadow observe layer
+  // REMOVED: schemaRuntimeRoutes
+
+  // LLM Execution Graph Trace API
+  // REMOVED: llmExecutionTraceRoutes
+
+  // Community System
+  // REMOVED: communityCategoryRoutes
+  // REMOVED: communityPostRoutes
+  // REMOVED: communityCommentRoutes
+  // REMOVED: communityLikeRoutes
+  // REMOVED: messageRoutes
+
+  app.get('/api/health', async () => {
+    return { status: 'ok', timestamp: new Date().toISOString(), lifecycle: getLifecycleStatus() }
+  })
+
+  // 🔍 版本指纹接口 — 用于前端确认当前加载的是哪一版
+  app.get('/api/version', async () => {
+    return {
+      build: '20260624-LAST',
+      time: new Date().toISOString(),
+      frontend: 'aigc.fushtn.com',
+      note: '部署后清除浏览器缓存 / Ctrl+Shift+R 强制刷新'
+    }
+  })
+
+  // Phase 2: Runtime Boot Pipeline — 替代 import side-effect 初始化
+  try {
+    const { runtimeBoot } = await import('./bootstrap/runtime-boot.js')
+    await runtimeBoot()
+    console.log('[startup] ✅ Runtime boot complete')
+  } catch (err) {
+    console.error('[startup] ❌ Runtime boot failed:', (err as Error).message)
+    // Phase 2, Rule 7: boot 失败 = 系统不启动
+    process.exit(1)
+  }
+
+  // ═══ Stage 3: Dual Write Manager Init ═══
+  try {
+    const { PrismaClient } = await import('@prisma/client')
+    const { createDualWriteManager, featureFlagService } = await import('./services/platform/dualwrite/index.js')
+    const { PrismaEventSink } = await import('./services/platform/dualwrite/prisma-event-sink.js')
+    const dualWriteManager = createDualWriteManager(featureFlagService)
+    dualWriteManager.setEventSink(new PrismaEventSink(new PrismaClient()))
+    // Store on app for runtime access
+    app.decorate('dualWriteManager', dualWriteManager)
+    console.log('[startup] ✅ DualWriteManager initialized (Stage 3)')
+  } catch (err) {
+    console.warn('[startup] ⚠️ DualWriteManager init skipped:', (err as Error).message)
+  }
+
+  // 启动服务前注册全局 404 handler（API 路径返回 JSON）
+  app.setNotFoundHandler((_req, reply) => {
+    reply.code(404).send({ success: false, error: 'Not Found' })
+  })
+
+  // Kernel v1: Canonical Kernel 路由（唯一写入口 + 唯一读入口）
+  try {
+    console.log('[Kernel] ✅ v1 routes registered (command / read / rebuild)')
+  } catch (err) {
+    console.warn('[Kernel] Failed to register:', (err as Error).message)
+  }
+
+  // Kernel v1.1: Causal Layer 路由
+  try {
+    console.log('[Kernel] ✅ v1.1 causal routes registered (causal / trace / replay)')
+  } catch (err) {
+    console.warn('[Kernel] Failed to register causal routes:', (err as Error).message)
+  }
+
+  // RFVL: 注册运行时证明验证路由（必须在 listen 前注册）
+  try {
+    console.log('[RFVL] ✅ Runtime proof verification routes registered')
+  } catch (err) {
+    console.warn('[RFVL] Failed to register:', (err as Error).message)
+  }
+
+  try {
+    registerRuntimeGuard(app)
+    // ★ 02-B Task 3：混沌珠生产队列（常驻 Worker + DB Sweeper）——后台化百万字生产
+    try {
+      const { startHdzProductionQueue } = await import('./services/hdz/production-queue.service.js')
+      startHdzProductionQueue()
+    } catch (qErr) {
+      console.warn('[HDZ/Queue] 生产队列启动失败（不影响主服务）:', (qErr as Error).message)
+    }
+    await app.listen({ port: env.PORT, host: '0.0.0.0' })
+    console.log(`🚀 API Server running at http://localhost:${env.PORT}`)
+  } catch (err) {
+    app.log.error(err)
+    process.exit(1)
+  }
+
+  // Hardening-01: Startup Recovery — PM2 重启后自动恢复 Agent 状态
+  try {
+    const { enterpriseAgentRuntime } = await import('./services/enterprise/enterprise-agent-runtime.service.js')
+    const recoveryResult = await enterpriseAgentRuntime.startupRecovery()
+    console.log(`[Hardening-01] ✅ Startup Recovery: ${recoveryResult.recovered} agents recovered, ${recoveryResult.emergencyReset} emergency→paused`)
+  } catch (err: any) {
+    console.warn(`[Hardening-01] ⚠️ Startup Recovery failed: ${err.message}`)
+  }
+
+  // SPRINT-MEDIA-IDENTITY-PERSISTENCE-FIX-01 Task 02 — Browser Workspace 启动恢复
+  // 后端重启后：重新拉起持久化 profile → IdentityProbe → 恢复/降级 ChannelAccount 状态
+  // （延迟 8s 执行：等待 HTTP 服务就绪 + 不阻塞启动路径；失败不影响主服务）
+  setTimeout(async () => {
+    try {
+      const { browserWorkspaceRecoveryService } = await import('./services/enterprise/browser-workspace-recovery.service.js')
+      const r = await browserWorkspaceRecoveryService.recoverAll({ businessType: 'media', verbose: true })
+      console.log(`[IdentityPersistence] ✅ 启动恢复完成: 扫描 ${r.scanned} / 保持连接 ${r.keptConnected} / 降级 ${r.demoted} / 失败 ${r.failed}`)
+    } catch (err: any) {
+      console.warn(`[IdentityPersistence] ⚠️ Browser Workspace 启动恢复失败: ${err.message}`)
+    }
+  }, 8000)
+
+  // 启动统一 Worker Runtime（替代旧的 mock-worker）
+  try {
+    const { workerPool } = await import('./queue/worker-runtime.js')
+    await workerPool.start()
+    console.log('[WorkerPool] Unified worker runtime started')
+  } catch (err) {
+    console.warn('[WorkerPool] Failed to start:', (err as Error).message)
+  }
+
+  // 启动 CTBL Decision Engine（自动 CSIP 门控）
+  try {
+    console.log('[CTBL] ⏳ Booting decision engine...')
+    const { startDecisionScheduler } = await import('./observability/ctblScheduler.js')
+    await startDecisionScheduler()
+    console.log('[CTBL] ✅ Decision engine booted at', new Date().toISOString())
+  } catch (err) {
+    console.warn('[CTBL] Failed to start decision engine:', (err as Error).message)
+  }
+
+  // 初始化 Unified Orchestrator Agent (UOA)
+  try {
+    const { uoa } = await import('./agents/orchestrator/UOA.js')
+    console.log('[UOA] ✅ Orchestrator Agent online')
+    // Baseline v1.0 safety check
+    OGESSafetyGuard.assertReadOnlyMode()
+    console.log('[OGES] ✅ Baseline v1.0 immutable — safety guard active:', JSON.stringify(OGESSafetyGuard.runtimeCheck()))
+  } catch (err) {
+    console.warn('[UOA] Failed to init:', (err as Error).message)
+  }
+
+  // 初始化集群（P5）
+  try {
+    const { clusterManager } = await import('./core/cluster/cluster-manager.js')
+    const nodeId = `node-${env.PORT || 4002}-${Date.now().toString(36)}`
+    clusterManager.initialize(nodeId, 'localhost', env.PORT || 4002)
+    console.log('[Cluster] P5 Cluster initialized')
+  } catch (err) {
+    console.warn('[Cluster] Failed to init:', (err as Error).message)
+  }
+
+  // 初始化全球调度（P6）
+  try {
+    const { latencyRouter } = await import('./core/global/latency-router.js')
+    latencyRouter.registerDefaults()
+    console.log('[Global] P6 LatencyRouter initialized')
+  } catch (err) {
+    console.warn('[Global] Failed to init:', (err as Error).message)
+  }
+
+  // 启动 E 层 Async Worker Pool
+  try {
+    const { asyncPipelineService } = await import('./services/async-pipeline.service.js')
+    asyncPipelineService.initWorkers()
+    console.log('[AsyncPipeline] E-layer workers initialized')
+  } catch (err) {
+    console.warn('[AsyncPipeline] Failed to init:', (err as Error).message)
+  }
+}
+
+main()

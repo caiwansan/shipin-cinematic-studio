@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS city_biz_order (
+  id TEXT PRIMARY KEY DEFAULT (gen_random_uuid()::text),
+  code TEXT UNIQUE NOT NULL,
+  city_id TEXT NOT NULL,
+  biz_id TEXT NOT NULL,
+  product_id TEXT NOT NULL,
+  product_name TEXT NOT NULL DEFAULT '',
+  cover TEXT NOT NULL DEFAULT '',
+  amount INT NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'earned',
+  buyer_uid TEXT NOT NULL,
+  seller_uid TEXT NOT NULL,
+  agent_uid TEXT NOT NULL DEFAULT '',
+  referrer_uid TEXT NOT NULL DEFAULT '',
+  agent_reward INT NOT NULL DEFAULT 0,
+  referrer_reward INT NOT NULL DEFAULT 0,
+  seller_reward INT NOT NULL DEFAULT 0,
+  tx_deduct TEXT NOT NULL DEFAULT '',
+  tx_settle TEXT NOT NULL DEFAULT '',
+  created_at BIGINT NOT NULL DEFAULT 0,
+  redeemed_at BIGINT NOT NULL DEFAULT 0
+);

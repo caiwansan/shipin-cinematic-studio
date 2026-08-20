@@ -204,6 +204,25 @@ export const ADMIN_LLM_GROUP: AdminPlatformGroup = {
  * ─── 🧠 AI Agent 管理 ───
  * Agent列表 / 模板 / 能力 / Runtime状态 / 使用统计。
  */
+
+/**
+ * ─── 🏮 昆仑茶馆 ───
+ * 昆仑茶馆平台管理：城市代理申请等。
+ */
+export const ADMIN_TEA_GROUP: AdminPlatformGroup = {
+  id: 'tea',
+  label: '昆仑茶馆',
+  icon: '🏮',
+  children: [
+    { id: 'tea-agent-applies', label: '城市代理申请管理', to: '/admin/tea/agent-applies' },
+    { id: 'tea-clan-applies', label: '宗亲群申请管理', to: '/admin/tea/clan-applies' },
+    { id: 'tea-identity', label: '会员密钥管理（监管合规）', to: '/admin/tea/identity' },
+    { id: 'tea-config', label: 'API 密钥配置', to: '/admin/tea/config' },
+    { id: 'tea-translate', label: '翻译大模型设置', to: '/admin/tea/translate' },
+    { id: 'tea-admins', label: '社区管理员设置', to: '/admin/tea/admins' },
+  ],
+}
+
 export const ADMIN_AGENT_GROUP: AdminPlatformGroup = {
   id: 'agents',
   label: 'AI Agent管理',
@@ -224,8 +243,7 @@ export const ADMIN_SYSTEM_GROUP: AdminPlatformGroup = {
   label: '系统设置',
   icon: '⚙️',
   children: [
-    { id: 'sys-base', label: '基础信息 + SEO', to: '/admin/aigc/system' },
-    // P2: SEO收录配置（robots/sitemap/验证独立页，当前合并于 system.vue）
+    { id: 'sys-base', label: '基础信息 + SEO + GEO', to: '/admin/aigc/system' },
   ],
 }
 
@@ -284,6 +302,14 @@ export function buildAdminNav(): AdminNavSection[] {
       label: ADMIN_AGENT_GROUP.label,
       icon: ADMIN_AGENT_GROUP.icon,
       children: ADMIN_AGENT_GROUP.children,
+    },
+    // 🏮 昆仑茶馆
+    {
+      kind: 'group',
+      id: ADMIN_TEA_GROUP.id,
+      label: ADMIN_TEA_GROUP.label,
+      icon: ADMIN_TEA_GROUP.icon,
+      children: ADMIN_TEA_GROUP.children,
     },
     // 🏭 Workspace 工作台管理（全部 Workspace 折叠在此）
     {

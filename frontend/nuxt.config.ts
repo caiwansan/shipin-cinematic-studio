@@ -13,7 +13,10 @@ export default defineNuxtConfig({
     '~/assets/styles/enterprise-tokens.css',
     '~/assets/styles/recruitment-tokens.css',
     '~/assets/styles/media-tokens.css',
+    // 社区主题（2026-08-10 修复：此前未注册导致社区页无样式/变量缺失）
+    // cn 先加载（中式变量），scifi 后加载（同名列类以科幻风生效）
     '~/assets/css/community-cn.css',
+    '~/assets/css/community-scifi.css',
   ],
   alias: {
     'shared': resolve(fileURLToPath(import.meta.url), '..', '..', 'shared'),
@@ -55,7 +58,7 @@ export default defineNuxtConfig({
           'X-Frame-Options': 'DENY',
           'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
           'Referrer-Policy': 'no-referrer-when-downgrade',
-          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https: https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com https://dashscope-result-wlcb.oss-cn-wulanchabu.aliyuncs.com; connect-src 'self' https://aigc.fushtn.com http://127.0.0.1:* ws://127.0.0.1:*; font-src 'self' data:; object-src 'none'; frame-ancestors 'none';",
+          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https: https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com https://dashscope-result-wlcb.oss-cn-wulanchabu.aliyuncs.com; connect-src 'self' https://aigc.fushtn.com wss://aigc.fushtn.com http://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:*; font-src 'self' data:; object-src 'none'; frame-ancestors 'none';",
         },
       },
       // 📄 HTML 页面 — 允许爬虫缓存

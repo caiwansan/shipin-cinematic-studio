@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import path from 'path'
+import { createReadStream, statSync, existsSync } from 'fs'
 import Fastify from 'fastify'
 import jwt from '@fastify/jwt'
 import multipart from '@fastify/multipart'
@@ -16,7 +17,23 @@ import workbenchProjectRoutes from './routes/workbench-project.js'
 let governanceMainRoute: any = undefined
 // Route imports
 import communityCategoryRoutes from './routes/community/categories.js'
+import cityRoutes from './routes/city.routes.js'
+import shopOrderRoutes from './routes/shop-order.routes.js'
+import adminTeaClanRoutes from './routes/admin-tea-clan.routes.js'
 import communityPostRoutes from './routes/community/posts.js'
+import teaPostRoutes from './routes/tea-posts.js'
+import teaMediaRoutes from './routes/tea-media.js'
+import familyPostRoutes from './routes/family-post.js'
+import teaAgentRoutes from './routes/tea-agent.js'
+import teaMediaSignRoutes from './routes/tea-media-sign.js'
+import marketRoutes from './routes/market.js'
+import bankRoutes from './routes/bank.js'
+import meetingRoutes from './routes/meeting.js'
+import aiSecretaryRoutes from './routes/ai-secretary.routes.js'
+import newsRoutes from './routes/news.js'
+import avatarRoutes from './routes/avatar.js'
+import settingsRoutes from './routes/settings.js'
+import searchRoutes from './routes/search.js'
 import communityCommentRoutes from './routes/community/comments.js'
 import communityLikeRoutes from './routes/community/likes.js'
 import communityTipRoutes from './routes/community/tips.js'
@@ -48,6 +65,7 @@ import healthRoutes from './routes/health.js'
 import imRoutes from './routes/im.js'
 import imGroupRoutes from './routes/im-groups.js'
 import imRtcInterpreterRoutes from './routes/im-rtc-interpreter.js'
+import voiceTranslateRoutes from './routes/im-voice-translate.js'
 import imModerationRoutes from './routes/im-moderation.routes.js'
 import { prisma } from './utils/index.js'
 import siteConfigRoutes from './routes/site-config.js'
@@ -125,10 +143,17 @@ import qqOAuthRoutes from './routes/qq-oauth.js'
 import memberRoutes from './routes/member.js'
 import userCenterRoutes from './routes/user-center.js'
 import userFollowRoutes from './routes/user-follow.js'
+import userBlockRoutes from './routes/user-block.js'
 import userAvatarRoutes from './routes/user-avatar.js'
 import userSecurityRoutes from './routes/user-security.js'
 import userAssetsRoutes from './routes/user-assets.js'
 import giftRoutes from './routes/gifts.js'
+import tokenWalletRoutes from './routes/token-wallet.js'
+import teaPlayRoutes from './routes/tea-play.js'
+import teaLLMRoutes from './routes/tea-llm.js'
+import teaNewsRoutes from './routes/tea-news.js'
+import teaStorageRoutes from './routes/tea-storage.js'
+import teaSpaceRoutes from './routes/tea-space.js'
 import goldCoinRoutes from './routes/gold-coins.js'
 import redPacketRoutes, { startRedPacketSweeper } from './routes/red-packets.js'
 
@@ -147,6 +172,14 @@ import careerIdentityRoutes from './routes/career-identity.routes.js'
 import unifiedModelConfigRoutes from './routes/unified-model-config.js'
 import administrativeRegionRoutes from './routes/regions.js'
 import balanceRoutes from './routes/balance.route.js'
+import geoRoutes from './routes/geo.routes.js'
+import amapRoutes from './routes/amap.routes.js'
+import identityRoutes from './routes/identity.routes.js'
+import translateRoutes from './routes/translate.routes.js'
+import adminTeaTranslateRoutes from './routes/admin-tea-translate.routes.js'
+import adminTeaAgentRoutes from './routes/admin-tea-agent.routes.js'
+import adminTeaConfigRoutes from './routes/admin-tea-config.routes.js'
+import adminIdentityRoutes from './routes/admin-identity.routes.js'
 import { registerSSEStream } from './runtime/task-stream.js'
 
 import { env } from './config/env.js'
@@ -258,13 +291,17 @@ async function main() {
   await app.register((await import('@fastify/rate-limit')).default, {
     max: 600,
     timeWindow: '1 minute',
-    keyGenerator: (req) => {
-      return req.ip || req.headers['x-forwarded-for'] as string || 'unknown'
+    keyGenerator: (req: any) => {
+      // 优先真实客户端 IP（X-Forwarded-For），避免 nginx 代理后全站共用 127.0.0.1 桶
+      const xff = req.headers['x-forwarded-for']
+      const ip = typeof xff === 'string' ? xff.split(',')[0].trim() : ''
+      return ip || req.ip || 'unknown'
     },
   })
 
   await app.register((await import('@fastify/helmet')).default, {
     contentSecurityPolicy: false, // Nuxt SPA 需要内联脚本
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // 茶馆 App 跨域加载 /uploads/ 图片视频（CORP same-origin 会拦 video）
   })
 
   await app.register(jwt, { secret: env.JWT_SECRET })
@@ -292,6 +329,57 @@ async function main() {
   // ⭐ 静态文件服务（托管 public/uploads 下的本地下载图片）
   // 用 __dirname 确定路径（兼容 CJS 和 ESM）
   const __uploadsRoot = path.resolve(process.cwd(), 'public', 'uploads')
+  // 🎬 自定义 /uploads/ 静态服务：完整 Range 支持（视频播放必需；fastify-static 的 206 缺 Content-Range 会被浏览器拒绝）
+  const UPLOAD_MIME: Record<string, string> = {
+    '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm', '.ogg': 'video/ogg',
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp',
+    '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.pdf': 'application/pdf', '.zip': 'application/zip',
+    '.txt': 'text/plain', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+  }
+  const uploadStatic = async (request: any, reply: any) => {
+    const url = String(request.raw.url || '')
+    if (!url.startsWith('/uploads/')) return
+    // 🔒 安全加固[audit]: 个人空间媒体(影像/视频/文件)仅能通过鉴权端点 /api/tea/space/raw|download/:id 读取，
+    // 禁止经公开静态 /uploads/ 直连（否则绕过"仅本人可见"；UUID 混淆≠访问控制）
+    if (url.startsWith('/uploads/tea/space/')) {
+      return reply.code(404).send({ error: 'Not Found' })
+    }
+    const qIdx = url.indexOf('?')
+    const clean = qIdx >= 0 ? url.slice(0, qIdx) : url
+    let rel = ''
+    try { rel = decodeURIComponent(clean.slice('/uploads/'.length)) } catch { rel = clean.slice('/uploads/'.length) }
+    const file = path.resolve(__uploadsRoot, rel)
+    if (!file.startsWith(__uploadsRoot + path.sep) || !existsSync(file) || !statSync(file).isFile()) {
+      return reply.code(404).send({ error: 'Not Found' })
+    }
+    const stat = statSync(file)
+    const mime = UPLOAD_MIME[path.extname(file).toLowerCase()] || 'application/octet-stream'
+    const range = request.headers.range as string | undefined
+    if (range) {
+      const m = /bytes=(\d*)-(\d*)/.exec(range)
+      let start = m && m[1] ? parseInt(m[1], 10) : 0
+      let end = m && m[2] ? parseInt(m[2], 10) : stat.size - 1
+      if (Number.isNaN(start)) start = 0
+      if (Number.isNaN(end) || end >= stat.size) end = stat.size - 1
+      if (start > end || start >= stat.size) {
+        return reply.code(416).header('Content-Range', 'bytes */' + stat.size).send()
+      }
+      reply.code(206)
+        .header('Content-Type', mime)
+        .header('Content-Length', String(end - start + 1))
+        .header('Content-Range', 'bytes ' + start + '-' + end + '/' + stat.size)
+        .header('Accept-Ranges', 'bytes')
+        .header('Cache-Control', 'public, max-age=86400, immutable')
+      return reply.send(createReadStream(file, { start, end }))
+    }
+    reply.code(200)
+      .header('Content-Type', mime)
+      .header('Content-Length', String(stat.size))
+      .header('Accept-Ranges', 'bytes')
+      .header('Cache-Control', 'public, max-age=86400, immutable')
+    return reply.send(createReadStream(file))
+  }
+  await app.addHook('onRequest', uploadStatic)
   await app.register((await import('@fastify/static')).default, {
     root: __uploadsRoot,
     prefix: '/uploads/',
@@ -304,16 +392,27 @@ async function main() {
     decorateReply: false,
   })
 
-  // Register routes
+
+// Register routes
   await app.register(authRoutes)
+  await app.register(identityRoutes)
+  await app.register(adminIdentityRoutes)
   await app.register(walletRoutes)
   registerSSEStream(app)
   await app.register(systemVersionRoutes)
   await app.register(imRoutes)
   await app.register(imGroupRoutes)
   await app.register(imRtcInterpreterRoutes)
+  await app.register(voiceTranslateRoutes)
   await app.register(imModerationRoutes)
   await app.register(redPacketRoutes)
+  await app.register(geoRoutes)
+  await app.register(amapRoutes)
+  await app.register(translateRoutes)
+  await app.register(adminTeaTranslateRoutes)
+await app.register(adminTeaAgentRoutes)
+await app.register(adminTeaConfigRoutes)
+await app.register(teaMediaSignRoutes)
   // 启动红包过期退回定时器（24h 未领完自动退回）
   try {
     startRedPacketSweeper()
@@ -373,6 +472,7 @@ async function main() {
   await app.register(memberRoutes)
   await app.register(userCenterRoutes)
   await app.register(userFollowRoutes)
+  await app.register(userBlockRoutes)
   await app.register(userAvatarRoutes)
   await app.register(userSecurityRoutes)
   await app.register(userAssetsRoutes)
@@ -405,6 +505,29 @@ await app.register(providerRoutes)
 
     await app.register(communityCategoryRoutes)
   await app.register(communityPostRoutes)
+  await app.register(teaPostRoutes)
+await app.register(teaMediaRoutes)
+await app.register(familyPostRoutes)
+await app.register(teaAgentRoutes)
+
+await app.register(tokenWalletRoutes)
+    await app.register(teaPlayRoutes)
+    await app.register(teaLLMRoutes)
+    await app.register(teaNewsRoutes)
+    await app.register(teaStorageRoutes)
+  await app.register(teaSpaceRoutes)
+  await app.register(cityRoutes)
+  await app.register(shopOrderRoutes)
+  await app.register(adminTeaClanRoutes)
+  await app.register(marketRoutes)
+  await app.register(bankRoutes)
+  await app.register(meetingRoutes)
+  await app.register(aiSecretaryRoutes)
+  await app.register(newsRoutes)
+  await app.register(avatarRoutes)
+  await app.register(settingsRoutes)
+  await app.register(searchRoutes)
+
   await app.register(communityCommentRoutes)
   await app.register(communityLikeRoutes)
   await app.register(communityTipRoutes)
@@ -1092,6 +1215,20 @@ await app.register(projectV2Routes)
   } catch (err) {
     console.warn('[startup] ⚠️ GEO Walkthrough route skipped:', (err as Error).message)
   }
+  // P0: AI Probe — 真实 AI 可见度探测
+  try {
+    await app.register(await import('./services/geo/routes/geo-ai-probe.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO AI Probe route registered at /api/geo/projects/:id/ai-probe')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO AI Probe route skipped:', (err as Error).message)
+  }
+  // P1: Competitor Benchmark — 竞品对标
+  try {
+    await app.register(await import('./services/geo/routes/geo-competitor-benchmark.route.js').then(m => m.default))
+    console.log('[startup] ✅ GEO Competitor Benchmark route registered at /api/geo/projects/:id/competitor-benchmark')
+  } catch (err) {
+    console.warn('[startup] ⚠️ GEO Competitor Benchmark route skipped:', (err as Error).message)
+  }
   // Sprint 3 — GEO Recommendation Engine (GEO v2 MVP)
   await app.register(await import('./services/geo/recommendation/recommendation.route.js').then(m => m.geoRecommendationRoutes))
   // DI A1.1 — Decision Intelligence Issue Graph Routes
@@ -1628,6 +1765,26 @@ await app.register(projectV2Routes)
     } catch (qErr) {
       console.warn('[HDZ/Queue] 生产队列启动失败（不影响主服务）:', (qErr as Error).message)
     }
+    // AI 秘书实时音频 WebSocket（浏览器 → 服务端 Whisper 转写）
+    app.get('/ws/ai-secretary/audio', { websocket: true }, (connection, req) => {
+      const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`)
+      const uid = url.searchParams.get('uid') || ''
+      const meetingId = url.searchParams.get('meetingId') || ''
+      const token = url.searchParams.get('token') || ''
+      if (!uid || !meetingId) { connection.socket.close(4001, '缺少参数'); return }
+      // 简化：token 就是 uid（生产环境需要 JWT 验证）
+      if (token !== uid) { connection.socket.close(4001, '认证失败'); return }
+      import('./services/ai-secretary/ai-secretary-ws.js').then(mod => {
+        const { registerAudioWebSocket, handleAudioMessage, removeAudioWebSocket } = mod
+        registerAudioWebSocket(connection.socket, uid, meetingId)
+        connection.socket.on('message', (data: Buffer) => {
+          try { handleAudioMessage(connection.socket, JSON.parse(data.toString())) } catch {}
+        })
+        connection.socket.on('close', () => { removeAudioWebSocket(connection.socket) })
+        connection.socket.on('error', () => { removeAudioWebSocket(connection.socket) })
+      }).catch(console.error)
+    })
+
     await app.listen({ port: env.PORT, host: '0.0.0.0' })
     console.log(`🚀 API Server running at http://localhost:${env.PORT}`)
   } catch (err) {

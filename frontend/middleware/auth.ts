@@ -35,7 +35,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // Protected routes: /studio/*, /dashboard/*, /user/*, /workspace/*, /mobile-app
   const isProtected = to.path.startsWith('/studio') || to.path.startsWith('/dashboard/') || to.path.startsWith('/user/') || to.path.startsWith('/workspace/') || to.path === '/mobile-app'
   if (isProtected && !auth.isAuthenticated && !auth.token) {
-    const isMobile = detectMobile()
+        const isMobile = detectMobile() || (import.meta.client && !!((window as any).Capacitor?.isNativePlatform?.()))
     if (import.meta.server) {
       // SSR：/workspace/* 为 client-only（SSR 只渲染空壳），SSR 端不做完整鉴权。
       // 仅做 cookie 存在性检查 —— 避免访问 document（SSR 无）导致 500，

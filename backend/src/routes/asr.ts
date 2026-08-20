@@ -14,6 +14,7 @@ import { createReadStream, existsSync } from 'fs'
 import { randomUUID } from 'crypto'
 import { resolve, extname } from 'path'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js'
+import { transcribeWavFile, ASR_AVAILABLE } from '../im/voice-asr.service.js'
 
 const UPLOAD_DIR = '/root/shipin-cinematic-studio/backend/public/uploads/audio'
 const BASE_URL = '/api/v1/uploads/audio'
@@ -26,6 +27,37 @@ const DASHSCOPE_ASR_URL = 'https://dashscope.aliyuncs.com/api/v1/services/audio/
 const ALLOWED_AUDIO_TYPES = ['.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac']
 
 export default async function asrRoutes(fastify: FastifyInstance) {
+
+  // POST /api/v1/asr/internal - local tea proxy (faster-whisper)
+  fastify.post('/api/v1/asr/internal', async (request: any, reply: FastifyReply) => {
+    const key = (request.headers['x-internal-key'] || '') as string
+    if (key !== (process.env.INTERNAL_ASR_KEY || 'tea-asr-internal-2026')) {
+      return reply.status(403).send({ error: 'forbidden' })
+    }
+    if (!ASR_AVAILABLE) return reply.status(501).send({ error: 'ASR disabled' })
+    const data = await request.file()
+    if (!data) return reply.status(400).send({ error: 'audio required' })
+    const ext = extname(data.filename || 'audio.webm').toLowerCase() || '.webm'
+    await mkdir(UPLOAD_DIR, { recursive: true })
+    const filePath = resolve(UPLOAD_DIR, randomUUID() + ext)
+    const chunks: Buffer[] = []
+    for await (const chunk of data.file) chunks.push(chunk)
+    await writeFile(filePath, Buffer.concat(chunks))
+    const wavPath = resolve(UPLOAD_DIR, randomUUID() + '.wav')
+    try {
+      const { execFile } = await import('child_process')
+      const { promisify } = await import('util')
+      const execFileP = promisify(execFile)
+      await execFileP('ffmpeg', ['-y', '-i', filePath, '-ar', '16000', '-ac', '1', wavPath])
+      const text = await transcribeWavFile(wavPath, 'zh')
+      return { success: true, data: { text } }
+    } catch (e: any) {
+      return reply.status(502).send({ error: 'asr failed: ' + (e.message || e) })
+    } finally {
+      unlink(filePath).catch(() => {})
+      unlink(wavPath).catch(() => {})
+    }
+  })
 
   // POST /api/v1/asr/transcribe — 语音识别
   fastify.post('/api/v1/asr/transcribe', {

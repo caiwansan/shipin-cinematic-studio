@@ -641,6 +641,9 @@ const tierConfig: Record<string, { label: string; icon: string; color: string }>
   director: { label: '年卡会员', icon: '👑', color: '#9333EA' },
   vip_year: { label: '钻石会员', icon: '💎', color: '#E53E3E' },
   vip_season: { label: '钻石会员', icon: '💎', color: '#E53E3E' },
+  local_vip: { label: '黄金会员', icon: '⭐', color: '#D4AF37' },
+  smartws: { label: '钻石会员', icon: '💎', color: '#818cf8' },
+  vips: { label: '年卡会员', icon: '👑', color: '#22c55e' },
   vip_platinum: { label: '至尊会员', icon: '👑', color: '#9333EA' },
 }
 

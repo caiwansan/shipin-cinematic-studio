@@ -11,7 +11,7 @@ import { randomUUID } from 'crypto'
 
 export default async function legalAgentUploadRoutes(app: FastifyInstance) {
   // POST /api/legal/agent/upload — 上传文件（图片/文档）
-  app.post('/api/legal/agent/upload', async (request, reply) => {
+  app.post('/api/legal/agent/upload', { preHandler: [app.authenticate] }, async (request, reply) => {
     try {
       // Fastify 的 multipart 通过 @fastify/multipart 插件
       const data = await request.file()
@@ -55,10 +55,10 @@ export default async function legalAgentUploadRoutes(app: FastifyInstance) {
         url = `/uploads/legal-agent/${localName}`
       }
 
-      // 对于图片，返回 base64 预览供 AI 分析
+      // 对于图片，返回 base64 预览供 AI 分析（完整 base64，不截断）
       let base64 = ''
       if (mimeType.startsWith('image/')) {
-        base64 = `data:${mimeType};base64,${buffer.toString('base64').slice(0, 500)}...`
+        base64 = `data:${mimeType};base64,${buffer.toString('base64')}`
       }
 
       return {

@@ -6,7 +6,8 @@
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/root/shipin-cinematic-studio/backups"
 PROJECT_DIR="/root/shipin-cinematic-studio"
-KEEP_COUNT=10
+KEEP_CODE=3
+KEEP_DB=7
 PG_CONTAINER="scs-postgres"
 DB_NAME="aigc_scs"
 
@@ -69,9 +70,9 @@ backup_code() {
 
 # 3. 清理过期备份（保留最近 KEEP_COUNT 份，超出自动删除）
 cleanup_old() {
-  echo "[$(date)] 🧹 清理旧备份（保留最近 ${KEEP_COUNT} 份）..."
-  ls -t "${BACKUP_DIR}"/kunlunjing_code_*.tar.gz 2>/dev/null | tail -n +$((KEEP_COUNT + 1)) | xargs -r rm -f
-  ls -t "${BACKUP_DIR}"/kunlunjing_db_*.sql.gz 2>/dev/null | tail -n +$((KEEP_COUNT + 1)) | xargs -r rm -f
+  echo "[$(date)] 🧹 清理旧备份（代码留 ${KEEP_CODE} 份，数据库留 ${KEEP_DB} 份）..."
+  ls -t "${BACKUP_DIR}"/kunlunjing_code_*.tar.gz 2>/dev/null | tail -n +$((KEEP_CODE + 1)) | xargs -r rm -f
+  ls -t "${BACKUP_DIR}"/kunlunjing_db_*.sql.gz 2>/dev/null | tail -n +$((KEEP_DB + 1)) | xargs -r rm -f
   echo "[$(date)] ✅ 清理完成"
 }
 

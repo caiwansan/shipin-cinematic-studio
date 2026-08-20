@@ -14,7 +14,7 @@ export default async function userFollowRoutes(fastify: FastifyInstance) {
   async function userDisplay(userId: string) {
     const u = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true },
+      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true, nickname: true, memberTier: true, memberExpiresAt: true },
     })
     if (!u) return null
     const presence = await prisma.imUserPresence.findUnique({ where: { uid: u.id } })
@@ -95,7 +95,7 @@ export default async function userFollowRoutes(fastify: FastifyInstance) {
     }
     const users = await prisma.user.findMany({
       where: { id: { in: [...idSet] } },
-      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true },
+      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true, nickname: true, memberTier: true, memberExpiresAt: true },
     })
     const presences = await prisma.imUserPresence.findMany({ where: { uid: { in: [...idSet] } } })
     const presenceMap = new Map(presences.map((p) => [p.uid, p.online]))
@@ -158,7 +158,7 @@ export default async function userFollowRoutes(fastify: FastifyInstance) {
     if (!uuidRe.test(targetId)) return reply.code(400).send(toApiResponse({ error: '无效用户' }) satisfies unknown)
     const u = await prisma.user.findUnique({
       where: { id: targetId },
-      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true },
+      select: { id: true, username: true, email: true, avatarUrl: true, lastActiveAt: true, nickname: true, memberTier: true, memberExpiresAt: true },
     })
     if (!u) return reply.code(404).send(toApiResponse({ error: '用户不存在' }) satisfies unknown)
     const [followingCount, followerCount, presence] = await Promise.all([
@@ -187,9 +187,11 @@ export default async function userFollowRoutes(fastify: FastifyInstance) {
     }
     return toApiResponse({
       id: u.id,
-      name: u.username || u.email.split('@')[0],
+      name: u.nickname || u.username || u.email.split('@')[0],
       avatar: u.avatarUrl || '',
       online: presence?.online ?? false,
+      memberTier: u.memberTier || '',
+      memberExpiresAt: u.memberExpiresAt || null,
       followingCount,
       followerCount,
       isSelf,

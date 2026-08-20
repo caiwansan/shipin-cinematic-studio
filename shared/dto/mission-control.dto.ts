@@ -52,6 +52,26 @@ export interface RuntimeHealthDTO {
   message: string
 }
 
+/** AI 可见度探测结果摘要 */
+export interface AIVisibilitySummaryDTO {
+  /** 综合 AI 可见度评分 (0-100) */
+  overall: number
+  /** 探测过的 AI 引擎列表 */
+  engines: { engine: string; label: string; mentionRate: number; mentionCount: number; totalQuestions: number }[]
+  /** 内容质量评分 */
+  contentQuality: number
+  /** 探测时间 */
+  probedAt: string | null
+}
+
+/** 知识质量摘要 */
+export interface KnowledgeQualitySummaryDTO {
+  overallScore: number
+  totalKnowledge: number
+  qualifiedKnowledge: number
+  topIssues: { type: string; message: string }[]
+}
+
 /**
  * MissionControl — Dashboard 唯一数据合约
  *
@@ -61,6 +81,10 @@ export interface MissionControlDTO {
   projectId: string | null
   entityName: string | null
   aiVisibility: number
+  /** AI 实测可见度（真实 AI 引用率） */
+  aiVisibilityReal?: AIVisibilitySummaryDTO
+  /** 知识内容质量检测 */
+  knowledgeQuality?: KnowledgeQualitySummaryDTO
   todayGoal: number
   engines: EngineStateDTO[]
   lastExecution: LastExecutionDTO | null

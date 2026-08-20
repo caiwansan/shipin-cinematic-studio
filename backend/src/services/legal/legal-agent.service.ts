@@ -263,7 +263,7 @@ async function buildCaseMemory(caseId: string): Promise<string> {
     const evidence = await prisma.legalEvidence.findMany({
       where: { caseId },
       take: 10,
-      select: { name: true, status: true, category: true },
+      select: { title: true, status: true, category: true },
     })
 
     // 获取最新分析
@@ -289,7 +289,7 @@ async function buildCaseMemory(caseId: string): Promise<string> {
     ).join('\n')
 
     const filesSummary = files.map(f => `- ${f.fileName} (${f.fileType})`).join('\n') || '暂无文件'
-    const evidenceSummary = evidence.map(e => `- ${e.name} [${e.status}] ${e.category ? '('+e.category+')' : ''}`).join('\n') || '暂无证据'
+    const evidenceSummary = evidence.map(e => `- ${e.title} [${e.status}] ${e.category ? '('+e.category+')' : ''}`).join('\n') || '暂无证据'
 
     const latestAnalysisText = latestAnalysis
       ? `结论：${latestAnalysis.conclusion?.slice(0, 300) || '无'}\n风险评估：${latestAnalysis.riskAssessment || '无'}`

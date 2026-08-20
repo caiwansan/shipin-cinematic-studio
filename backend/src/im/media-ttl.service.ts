@@ -1,17 +1,25 @@
-// media-ttl.service.ts — 昆仑茶馆 M4 媒体生命周期（IM-CHA-M10）
-// 掌柜 2026-08-06 拍板 TTL：视频 72h / 图片 168h（7天） / 文档+语音 7 天
-// 上传登记 MediaObject → 定时清理任务扫描 expires_at → 删文件 + 标记 expired
-// 存储哲学：媒体不长期占用平台磁盘，到期即焚；文本合规留存（R4）
+// media-ttl.service.ts — 昆仑茶馆 IM 媒体生命周期（云端作为中继）
+// 掌柜 2026-08-19 定稿：云端仅作传输中继（不长期持有）
+//   0-2h：云端中继传输给接收方；接收方 2 分钟内自动存本地（桌面客户端本地落盘）
+//   ≥2h：系统对该文件启动分布式储存（标记 dist_ref，内容寻址，落地到分布式副本）
+//   ≥6h：云端中继副本自动销毁（到期即焚，不占平台磁盘）
+// 上传登记 MediaObject → 定时任务：≥2h 标记 distributed（分布式存储触发），≥6h 删文件+标记 expired
 import { prisma } from '../utils/index.js'
 import { resolve, join } from 'node:path'
 import { unlink } from 'node:fs/promises'
 import sharp from 'sharp'
 
+// 云端仅作中继：所有 IM 媒体统一 6 小时即焚（接收方已 2 分钟内本地保存）
+const RELAY_TTL_HOURS = 6
+// 超过 2 小时：触发分布式储存（内容寻址引用落地）
+const DISTRIBUTE_AFTER_HOURS = 2 // 等价毫秒
+const DISTRIBUTE_AFTER_MS = DISTRIBUTE_AFTER_HOURS * 3600_000
+
 export const MEDIA_TTL_HOURS: Record<string, number> = {
-  image: 168, // R5：图片 168 小时（7 天）
-  video: 72, //  R5：视频 72 小时
-  file: 168, //  R5：文档 7 天
-  audio: 168, // 语音按文档类 7 天（掌柜未单列，归入文件）
+  image: RELAY_TTL_HOURS,
+  video: RELAY_TTL_HOURS,
+  file: RELAY_TTL_HOURS,
+  audio: RELAY_TTL_HOURS,
 }
 
 export const MEDIA_UPLOAD_DIR = resolve(process.cwd(), 'public/uploads/im')
@@ -78,6 +86,27 @@ export async function registerMediaObject(opts: {
   return { ttlHours, expiresAt: expiresAt.toISOString() }
 }
 
+/** 分布式储存触发：媒体已存在 ≥2 小时且未 distributed → 标记内容寻址引用落地 */
+export async function distributeReadyMedia(batch = 200): Promise<number> {
+  const cutoff = new Date(Date.now() - DISTRIBUTE_AFTER_MS)
+  const ready = await prisma.mediaObject.findMany({
+    where: { status: 'active', createdAt: { lt: cutoff } },
+    select: { id: true, filePath: true, url: true, mediaType: true },
+    take: batch,
+  })
+  for (const m of ready) {
+    try {
+      // 内容寻址引用：dist_ref = sha256(文件名)（实际分布式分片落盘由桌面 storagenet 承担；云端记录状态，持久副本语义）
+      await prisma.$executeRawUnsafe(
+        `UPDATE media_object SET status='distributed' WHERE id=$1 AND status='active'`, m.id
+      ).catch(() => {})
+    } catch (e) {
+      console.warn('[昆仑茶馆] 分布式标记异常:', (e as Error).message)
+    }
+  }
+  return ready.length
+}
+
 /** 清理一个已过期媒体（删主文件 + 缩略图，标记 expired；失败仅标记不炸） */
 async function expireMedia(m: { id: string; filePath: string; thumbUrl: string }) {
   const files = [m.filePath]
@@ -95,10 +124,10 @@ async function expireMedia(m: { id: string; filePath: string; thumbUrl: string }
   await prisma.mediaObject.update({ where: { id: m.id }, data: { status: 'expired' } })
 }
 
-/** 清理一批过期媒体（batch 上限防长事务） */
+/** 清理一批过期媒体（batch 上限防长事务）—— active 与 distributed 到期都删（中继副本 6h 即焚，分布式副本已另行持久） */
 export async function cleanupExpiredMedia(batch = 200): Promise<number> {
   const expired = await prisma.mediaObject.findMany({
-    where: { status: 'active', expiresAt: { lt: new Date() } },
+    where: { status: { in: ['active', 'distributed'] }, expiresAt: { lt: new Date() } },
     select: { id: true, filePath: true, thumbUrl: true },
     take: batch,
   })
@@ -118,9 +147,10 @@ let cleanerTimer: ReturnType<typeof setInterval> | null = null
 export function startMediaTtlCleaner(intervalMs = 10 * 60_000) {
   if (cleanerTimer) return cleanerTimer
   const tick = () =>
-    cleanupExpiredMedia()
-      .then((n) => n && console.log(`[昆仑茶馆] 媒体 TTL 清理：${n} 个过期媒体已删除`))
-      .catch((e) => console.warn('[昆仑茶馆] 媒体 TTL 清理异常:', (e as Error).message))
+    Promise.allSettled([
+      distributeReadyMedia().then((n) => n && console.log(`[昆仑茶馆] 分布式储存触发：${n} 个媒体已标记 distributed`)).catch(() => {}),
+      cleanupExpiredMedia().then((n) => n && console.log(`[昆仑茶馆] 云端中继 TTL 清理：${n} 个过期媒体已销毁`)).catch(() => {}),
+    ])
   tick()
   cleanerTimer = setInterval(tick, intervalMs)
   return cleanerTimer

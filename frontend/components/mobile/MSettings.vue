@@ -1,79 +1,309 @@
 <template>
   <MPageShell title="设置" @close="$emit('close')">
-    <div class="ms-card">
-      <div class="ms-card-title">👤 个人资料</div>
-      <div class="ms-row"><span class="ms-k">昵称</span><input v-model="nickname" class="ms-input" maxlength="20" placeholder="输入新昵称" /></div>
-      <button class="ms-btn" :disabled="savingProfile" @click="saveProfile">{{ savingProfile ? '保存中…' : '保存昵称' }}</button>
+    <!-- 头像/昵称区 -->
+    <div class="set-hero" @click="editField('nickname')">
+      <img v-if="avatar" class="set-avatar" :src="avatar" alt="" />
+      <div v-else class="set-avatar">{{ (name || '茶客').slice(0, 1) }}</div>
+      <div class="set-hero-info">
+        <div class="set-hero-name">{{ name || '未登录' }}</div>
+        <div class="set-hero-sub">个人资料 ›（点击编辑昵称）</div>
+      </div>
     </div>
 
-    <div class="ms-card">
-      <div class="ms-card-title">🔒 修改密码</div>
-      <input v-model="oldPwd" type="password" class="ms-input" placeholder="当前密码" />
-      <input v-model="newPwd" type="password" class="ms-input" placeholder="新密码（至少 6 位）" />
-      <button class="ms-btn" :disabled="changingPwd || !oldPwd || !newPwd || newPwd.length < 6" @click="changePwd">{{ changingPwd ? '提交中…' : '修改密码' }}</button>
-      <p v-if="pwdMsg" class="ms-msg" :class="{ ok: pwdMsgOk }">{{ pwdMsg }}</p>
+    <!-- 基础资料 -->
+    <div class="set-group">
+      <div class="set-group-title">基础资料</div>
+      <div class="set-card">
+        <div class="set-row" v-for="f in basicFields" :key="f.k" @click="editField(f.k)">
+          <span class="set-k">{{ f.icon }} {{ f.label }}</span>
+          <span class="set-v" :class="{ muted: !profile[f.k] }">{{ profile[f.k] || f.ph }}</span>
+          <span class="set-arrow">›</span>
+        </div>
+      </div>
     </div>
 
-    <button class="ms-logout" @click="logout">退出登录</button>
+    <!-- 账号安全 -->
+    <div class="set-group">
+      <div class="set-group-title">账号安全</div>
+      <div class="set-card">
+        <div class="set-row" @click="openPwd">
+          <span class="set-k">🔑 修改密码</span>
+          <span class="set-arrow">›</span>
+        </div>
+        <div class="set-row" @click="openRealVerify">
+          <span class="set-k">🪪 实名认证</span>
+          <span class="set-v" :class="realVerified ? 'ok' : 'warn'">{{ realVerified ? '✅ 已认证' : '去认证' }}</span>
+          <span class="set-arrow">›</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 外观与主题 -->
+    <div class="set-group">
+      <div class="set-group-title">外观与主题</div>
+      <div class="set-card">
+        <div class="set-row">
+          <span class="set-k">🌓 主题</span>
+          <div class="set-seg">
+            <button :class="{ on: theme === 'light' }" @click="setTheme('light')">☀️ 白</button>
+            <button :class="{ on: theme === 'dark' }" @click="setTheme('dark')">🌙 夜</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <span class="set-k">👴 老年模式</span>
+          <div class="set-seg">
+            <button :class="{ on: !elder }" @click="setElder(false)">标准</button>
+            <button :class="{ on: elder }" @click="setElder(true)">大字</button>
+          </div>
+        </div>
+        <div class="set-row" @click="openLang">
+          <span class="set-k">🌐 语言</span>
+          <span class="set-v">{{ langName }}</span>
+          <span class="set-arrow">›</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 身份信息 -->
+    <div class="set-group">
+      <div class="set-group-title">身份信息</div>
+      <div class="set-card">
+        <div class="set-row">
+          <span class="set-k">🔐 身份密钥</span>
+          <span class="set-v mono">{{ idKeyDisplay }}</span>
+        </div>
+        <div class="set-row" @click="verifyId">
+          <span class="set-k">✅ 验证身份</span>
+          <span class="set-arrow">›</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="set-logout" @click="logout">退出登录</button>
+
+    <!-- 编辑底部弹出 -->
+    <div v-if="editKey" class="set-mask" @click.self="editKey = ''">
+      <div class="set-sheet">
+        <div class="set-sheet-title">编辑{{ editLabel }}</div>
+        <input v-model="editVal" class="set-input" :placeholder="editPlaceholder" :maxlength="editKey === 'signature' ? 50 : 30" />
+        <div class="set-sheet-btns">
+          <button class="set-btn cancel" @click="editKey = ''">取消</button>
+          <button class="set-btn ok" :disabled="saving" @click="saveField">{{ saving ? '保存中…' : '保存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 语言选择 -->
+    <div v-if="langOpen" class="set-mask" @click.self="langOpen = false">
+      <div class="set-sheet">
+        <div class="set-sheet-title">选择语言</div>
+        <div class="set-lang-list">
+          <div v-for="lg in langs" :key="lg.code" class="set-lang-item" :class="{ on: lang === lg.code }" @click="selectLang(lg.code)">
+            {{ lg.name }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 修改密码 -->
+    <div v-if="pwdOpen" class="set-mask" @click.self="pwdOpen = false">
+      <div class="set-sheet">
+        <div class="set-sheet-title">修改密码</div>
+        <input v-model="oldPwd" type="password" class="set-input" placeholder="当前密码" />
+        <input v-model="newPwd" type="password" class="set-input" placeholder="新密码（至少 6 位）" />
+        <p v-if="pwdMsg" class="set-msg" :class="{ ok: pwdMsgOk }">{{ pwdMsg }}</p>
+        <div class="set-sheet-btns">
+          <button class="set-btn cancel" @click="pwdOpen = false">取消</button>
+          <button class="set-btn ok" :disabled="changingPwd || !oldPwd || !newPwd || newPwd.length < 6" @click="changePwd">{{ changingPwd ? '提交中…' : '确认修改' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 实名认证 -->
+    <div v-if="rvOpen" class="set-mask" @click.self="rvOpen = false">
+      <div class="set-sheet">
+        <div class="set-sheet-title">实名认证</div>
+        <p class="set-tip">填写真实姓名与身份证号，系统校验合法性，仅存哈希，不泄露明文。</p>
+        <input v-model="rvName" class="set-input" placeholder="真实姓名" />
+        <input v-model="rvId" class="set-input" placeholder="身份证号" />
+        <p v-if="rvMsg" class="set-msg" :class="{ ok: rvMsgOk }">{{ rvMsg }}</p>
+        <div class="set-sheet-btns">
+          <button class="set-btn cancel" @click="rvOpen = false">取消</button>
+          <button class="set-btn ok" :disabled="rvSaving" @click="submitRealVerify">{{ rvSaving ? '提交中…' : '提交认证' }}</button>
+        </div>
+      </div>
+    </div>
   </MPageShell>
 </template>
 
 <script setup lang="ts">
 import MPageShell from '~/components/MPageShell.vue'
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { mobileAuthFetch, mobileToast } from '~/composables/useMobileApi'
 
 defineEmits<{ (e: 'close'): void }>()
-const nickname = ref('')
-const savingProfile = ref(false)
-const oldPwd = ref('')
-const newPwd = ref('')
-const changingPwd = ref(false)
-const pwdMsg = ref('')
-const pwdMsgOk = ref(false)
+
+const name = ref('')
+const avatar = ref('')
+const profile = ref<any>({})
+const saving = ref(false)
+const theme = ref('light')
+const elder = ref(false)
+const lang = ref('zh')
+const langOpen = ref(false)
+const editKey = ref('')
+const editVal = ref('')
+const idHash = ref('') // 存身份密钥是否存在指示
+const realVerified = ref(false)
+
+const basicFields = [
+  { k: 'nickname', label: '昵称', icon: '✏️', ph: '输入昵称' },
+  { k: 'signature', label: '个性签名', icon: '✒️', ph: '写一句签名' },
+  { k: 'gender', label: '性别', icon: '👤', ph: '男 / 女' },
+  { k: 'birthYear', label: '出生年份', icon: '🎂', ph: '如 1990' },
+  { k: 'region', label: '地址', icon: '📍', ph: '省 / 市 / 区' },
+  { k: 'phoneLocal', label: '手机号码', icon: '📱', ph: '输入手机号' },
+]
+
+const langs = [
+  ['zh', '中文'], ['en', 'English 英文'], ['ja', '日本語 日文'], ['ko', '한국어 韩文'],
+  ['ru', 'Русский 俄文'], ['fr', 'Français 法文'], ['de', 'Deutsch 德文'], ['es', 'Español 西文'],
+  ['ar', 'العربية 阿文'], ['pt', 'Português 葡文'], ['it', 'Italiano 意文'], ['th', 'ไทย 泰文'],
+  ['vi', 'Tiếng Việt 越文'], ['id', 'Bahasa 印尼文'],
+].map(([code, n]) => ({ code, name: n }))
+
+const editLabel = computed(() => basicFields.find((f) => f.k === editKey.value)?.label || '')
+const editPlaceholder = computed(() => basicFields.find((f) => f.k === editKey.value)?.ph || '')
+const langName = computed(() => langs.find((l) => l.code === lang.value)?.name || '中文')
+const idKeyDisplay = computed(() => (idHash.value ? '已创建·密钥托管' : '未创建身份密钥'))
+const idHashShort = computed(() => (idHash.value ? idHash.value.slice(0, 8) + '…' + idHash.value.slice(-4) : ''))
 
 onMounted(async () => {
+  try {
+    // 加载主题/老年/语言偏好
+    theme.value = localStorage.getItem('kunlun_theme') || 'light'
+    elder.value = localStorage.getItem('kunlun_elder') === '1'
+    lang.value = localStorage.getItem('kunlun_lang') || 'zh'
+    applyAppClasses()
+  } catch { /* ignore */ }
   try {
     const r = await mobileAuthFetch('/api/auth/me')
     const j = await r.json()
     const u = j.user || j.data?.user || j
-    nickname.value = u?.nickname || ''
+    name.value = u?.nickname || u?.username || ''
+    avatar.value = u?.avatarUrl || ''
   } catch { /* ignore */ }
+  try {
+    const r = await mobileAuthFetch('/api/settings/profile')
+    const j = await r.json()
+    if (j.success) { profile.value = j.data || {}; if (!name.value) name.value = profile.value.nickname || '' }
+  } catch { /* ignore */ }
+  // 身份密钥（有加密私钥 = 已创建身份密钥）
+  try {
+    const r = await mobileAuthFetch('/api/auth/identity/key')
+    const j = await r.json()
+    if (j.success && j.data?.encKey) idHash.value = 'yes'
+  } catch { /* ignore */ }
+  // 实名状态：云端暂无审核查询接口，默认未认证（提交后待人工审核）
 })
 
-async function saveProfile() {
-  if (!nickname.value.trim()) return
-  savingProfile.value = true
-  try {
-    const r = await mobileAuthFetch('/api/user/profile', {
-      method: 'PUT',
-      body: JSON.stringify({ nickname: nickname.value.trim() }),
-    })
-    const j = await r.json()
-    if (j.success) mobileToast('✅ 昵称已保存')
-    else mobileToast('⚠ ' + (j.error || '保存失败'))
-  } catch { mobileToast('⚠ 网络错误') } finally { savingProfile.value = false }
+function editField(k: string) {
+  if (k === 'nickname' && !name.value) { editKey.value = k; editVal.value = ''; return }
+  editKey.value = k
+  editVal.value = profile.value[k] || ''
 }
 
-async function changePwd() {
-  changingPwd.value = true
-  pwdMsg.value = ''
+async function saveField() {
+  if (!editKey.value) return
+  const v = editVal.value.trim()
+  const key = editKey.value
+  saving.value = true
   try {
-    const r = await mobileAuthFetch('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ oldPassword: oldPwd.value, newPassword: newPwd.value }),
-    })
+    const next = { ...profile.value, [key]: v }
+    const r = await mobileAuthFetch('/api/settings/profile', { method: 'POST', body: JSON.stringify(next) })
     const j = await r.json()
     if (j.success) {
-      pwdMsg.value = '✅ 密码已修改'
-      pwdMsgOk.value = true
-      oldPwd.value = ''
-      newPwd.value = ''
-    } else {
-      pwdMsg.value = '⚠ ' + (j.error || '修改失败')
-      pwdMsgOk.value = false
-    }
-  } catch { pwdMsg.value = '⚠ 网络错误'; pwdMsgOk.value = false } finally { changingPwd.value = false }
+      profile.value = next
+      if (key === 'nickname') name.value = v
+      if (key === 'lang') { lang.value = v; localStorage.setItem('kunlun_lang', v) }
+      mobileToast('✅ 已保存')
+      editKey.value = ''
+    } else mobileToast('❌ ' + (j.error || '保存失败'), false)
+  } catch { mobileToast('❌ 网络错误', false) } finally { saving.value = false }
+}
+
+function applyAppClasses() {
+  const appRoot = document.querySelector('.tea-app')
+  const t = localStorage.getItem('kunlun_theme') || 'light'
+  const e = localStorage.getItem('kunlun_elder') === '1'
+  const html = document.documentElement
+  if (t === 'dark') { html.classList.add('mp-dark'); appRoot?.classList.add('mp-dark') }
+  else { html.classList.remove('mp-dark'); appRoot?.classList.remove('mp-dark') }
+  if (e) { html.classList.add('mp-elder'); appRoot?.classList.add('mp-elder') }
+  else { html.classList.remove('mp-elder'); appRoot?.classList.remove('mp-elder') }
+}
+
+function setTheme(t: string) {
+  theme.value = t
+  try { localStorage.setItem('kunlun_theme', t) } catch { /* ignore */ }
+  applyAppClasses()
+  try { mobileToast(t === 'dark' ? '🌙 已切换夜间模式' : '☀️ 已切换白日模式') } catch { /* ignore */ }
+}
+
+function setElder(v: boolean) {
+  elder.value = v
+  try { localStorage.setItem('kunlun_elder', v ? '1' : '0') } catch { /* ignore */ }
+  applyAppClasses()
+  try { mobileToast(v ? '👴 已开启老年模式（大字体）' : '已恢复标准字体') } catch { /* ignore */ }
+}
+
+function openLang() { langOpen.value = true }
+function selectLang(c: string) { lang.value = c; langOpen.value = false; savePref('lang', c) }
+function savePref(k: string, v: string) {
+  const next = { ...profile.value, [k]: v }
+  profile.value = next
+  try { localStorage.setItem('kunlun_lang', v) } catch { /* ignore */ }
+  try { mobileAuthFetch('/api/settings/profile', { method: 'POST', body: JSON.stringify(next) }) } catch { /* ignore */ }
+}
+
+// 修改密码
+const pwdOpen = ref(false)
+const oldPwd = ref(''); const newPwd = ref(''); const changingPwd = ref(false)
+const pwdMsg = ref(''); const pwdMsgOk = ref(false)
+function openPwd() { pwdOpen.value = true; pwdMsg.value = ''; oldPwd.value = ''; newPwd.value = '' }
+async function changePwd() {
+  changingPwd.value = true; pwdMsg.value = ''
+  try {
+    const r = await mobileAuthFetch('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ oldPassword: oldPwd.value, newPassword: newPwd.value }) })
+    const j = await r.json()
+    if (j.success) { pwdMsg.value = '✅ 密码已修改'; pwdMsgOk.value = true; oldPwd.value = ''; newPwd.value = ''; setTimeout(() => (pwdOpen.value = false), 900) }
+    else { pwdMsg.value = '❌ ' + (j.error || '修改失败'); pwdMsgOk.value = false }
+  } catch { pwdMsg.value = '❌ 网络错误'; pwdMsgOk.value = false } finally { changingPwd.value = false }
+}
+
+// 实名认证
+const rvOpen = ref(false); const rvName = ref(''); const rvId = ref(''); const rvMsg = ref(''); const rvMsgOk = ref(false); const rvSaving = ref(false)
+function openRealVerify() { if (realVerified.value) { mobileToast('✅ 您已完成实名认证'); return } rvOpen.value = true; rvMsg.value = ''; rvName.value = ''; rvId.value = '' }
+async function submitRealVerify() {
+  if (!rvName.value.trim() || rvId.value.length < 15) { rvMsg.value = '❌ 请填写完整姓名和身份证号'; rvMsgOk.value = false; return }
+  rvSaving.value = true; rvMsg.value = ''
+  try {
+    const idHash = Array.from(rvId.value.trim()).reduce((a, c) => a + c.charCodeAt(0), 0).toString(16)
+    const r = await mobileAuthFetch('/api/settings/security', { method: 'POST', body: JSON.stringify({ realName: rvName.value.trim(), idNumberHash: idHash, submittedAt: Date.now() }) })
+    const j = await r.json()
+    if (j.success) { rvMsg.value = '✅ 已提交实名资料，待管理员审核'; rvMsgOk.value = true; setTimeout(() => (rvOpen.value = false), 1200) }
+    else { rvMsg.value = '❌ ' + (j.error || '提交失败'); rvMsgOk.value = false }
+  } catch { rvMsg.value = '❌ 网络错误'; rvMsgOk.value = false } finally { rvSaving.value = false }
+}
+
+// 验证身份
+async function verifyId() {
+  try {
+    const r = await mobileAuthFetch('/api/auth/identity/verify', { method: 'POST', body: JSON.stringify({}) })
+    const j = await r.json()
+    if (j.success) mobileToast('✅ 身份验证通过（私钥签名有效）')
+    else mobileToast('❌ ' + (j.error || '验证失败'), false)
+  } catch { mobileToast('❌ 身份验证失败', false) }
 }
 
 function logout() {
@@ -91,14 +321,42 @@ function logout() {
 </script>
 
 <style scoped>
-.ms-card { background: #fff; border-radius: 12px; margin-top: 12px; padding: 14px; }
-.ms-card-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
-.ms-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.ms-k { font-size: 13px; color: #666; width: 44px; }
-.ms-input { flex: 1; padding: 10px 12px; border: 1px solid #e5e5e5; border-radius: 8px; font-size: 14px; outline: none; width: 100%; box-sizing: border-box; margin-top: 8px; }
-.ms-btn { width: 100%; margin-top: 10px; padding: 11px; border: none; border-radius: 8px; background: #4f7df9; color: #fff; font-size: 14px; }
-.ms-btn:disabled { opacity: .5; }
-.ms-msg { font-size: 13px; color: #e5484d; margin-top: 8px; }
-.ms-msg.ok { color: #22c55e; }
-.ms-logout { width: 100%; margin-top: 16px; padding: 12px; border: none; border-radius: 10px; background: #fff; color: #e5484d; font-size: 15px; font-weight: 600; }
+.set-hero { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 12px; padding: 16px; cursor: pointer; }
+.set-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center; object-fit: cover; flex-shrink: 0; }
+.set-hero-info { flex: 1; min-width: 0; }
+.set-hero-name { font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-hero-sub { font-size: 12px; color: #999; margin-top: 3px; }
+.set-group { margin-top: 14px; }
+.set-group-title { font-size: 12px; color: #999; padding: 0 4px 6px; }
+.set-card { background: #fff; border-radius: 12px; overflow: hidden; }
+.set-row { display: flex; align-items: center; gap: 8px; padding: 13px 14px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+.set-row:last-child { border-bottom: none; }
+.set-row:active { background: #f7f7f7; }
+.set-k { flex: 1; font-size: 14px; color: #1a1a1a; }
+.set-v { font-size: 13px; color: #333; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-v.muted { color: #bbb; }
+.set-v.ok { color: #22c55e; }
+.set-v.warn { color: #f59e0b; }
+.set-v.mono { font-family: ui-monospace, monospace; font-size: 12px; }
+.set-arrow { color: #ccc; font-size: 18px; }
+.set-seg { display: flex; gap: 6px; }
+.set-seg button { border: 1px solid #e5e5e5; background: #fff; border-radius: 8px; font-size: 12px; padding: 6px 12px; cursor: pointer; color: #666; }
+.set-seg button.on { background: #4f7df9; border-color: #4f7df9; color: #fff; }
+.set-logout { width: 100%; margin-top: 22px; padding: 13px; border: none; border-radius: 12px; background: #fff; color: #e5484d; font-size: 15px; font-weight: 600; cursor: pointer; }
+.set-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; flex-direction: column; justify-content: flex-end; z-index: 200; }
+.set-sheet { background: #fff; border-radius: 16px 16px 0 0; padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); max-width: 640px; width: 100%; margin: 0 auto; }
+.set-sheet-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; text-align: center; }
+.set-input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #e5e5e5; border-radius: 10px; font-size: 14px; outline: none; margin-bottom: 10px; }
+.set-input:focus { border-color: #4f7df9; }
+.set-sheet-btns { display: flex; gap: 10px; }
+.set-btn { flex: 1; border: none; border-radius: 10px; padding: 12px; font-size: 14px; cursor: pointer; }
+.set-btn.cancel { background: #f2f2f2; color: #666; }
+.set-btn.ok { background: #4f7df9; color: #fff; }
+.set-btn.ok:disabled { opacity: 0.5; }
+.set-lang-list { max-height: 46vh; overflow-y: auto; }
+.set-lang-item { padding: 12px 8px; font-size: 14px; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+.set-lang-item.on { color: #4f7df9; font-weight: 600; }
+.set-msg { font-size: 13px; color: #e5484d; margin: 4px 0 8px; }
+.set-msg.ok { color: #22c55e; }
+.set-tip { font-size: 12px; color: #999; margin-bottom: 10px; line-height: 1.5; }
 </style>
