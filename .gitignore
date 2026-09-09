@@ -78,3 +78,4 @@ __pycache__/
 
 # Tauri/Rust build outputs
 desktop/src-tauri/target/
+models/
