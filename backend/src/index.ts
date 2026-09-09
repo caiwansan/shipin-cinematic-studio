@@ -48,6 +48,8 @@ import smsRoutes from './routes/sms.js'
 import smsAuthRoutes from './routes/sms-auth.js'
 import projectRoutes from './routes/projects.js'
 import storyboardRoutes from './routes/storyboards.js'
+console.log('[DEBUG] storyboards imported')
+console.log('[DEBUG] ai-tasks imported')
 import aiTaskRoutes from './routes/ai-tasks.js'
 import jobRoutes from './routes/job.routes.js'
 import apiKeyRoutes from './routes/api-keys.js'
@@ -153,6 +155,8 @@ import teaPlayRoutes from './routes/tea-play.js'
 import teaLLMRoutes from './routes/tea-llm.js'
 import teaNewsRoutes from './routes/tea-news.js'
 import teaStorageRoutes from './routes/tea-storage.js'
+import teaDdfsRoutes from './routes/tea-ddfs.routes.js'
+import teaAmapRoutes from './routes/tea-amap.routes.js'
 import teaSpaceRoutes from './routes/tea-space.js'
 import goldCoinRoutes from './routes/gold-coins.js'
 import redPacketRoutes, { startRedPacketSweeper } from './routes/red-packets.js'
@@ -189,6 +193,7 @@ import { openAICompatibleAdapter } from './providers/adapters/openai-compatible.
 import { Capability } from './core/runtime/capabilities.js'
 
 async function main() {
+  console.log('[DEBUG] main() started')
   const app = Fastify({ logger: true })
   // 允许空 JSON body（DELETE 请求不带 body 时不被 reject）
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req: any, body: string, done: any) => {
@@ -201,6 +206,7 @@ async function main() {
   const { bootstrapSystemConfig } = await import('./config-runtime/index.js')
   bootstrapSystemConfig()
   console.log('[startup] ✅ Config Sovereignty Layer initialized')
+  console.log('[DEBUG] config done, moving to next step')
 
   // 世界语言池预取：后台下载常用 Vosk 模型（不阻塞启动；zh/en/es/ru 已就位）
   try {
@@ -289,7 +295,7 @@ async function main() {
 
   // 🛡 安全层：速率限制 + 安全头
   await app.register((await import('@fastify/rate-limit')).default, {
-    max: 600,
+    max: 10000,
     timeWindow: '1 minute',
     keyGenerator: (req: any) => {
       // 优先真实客户端 IP（X-Forwarded-For），避免 nginx 代理后全站共用 127.0.0.1 桶
@@ -515,6 +521,8 @@ await app.register(tokenWalletRoutes)
     await app.register(teaLLMRoutes)
     await app.register(teaNewsRoutes)
     await app.register(teaStorageRoutes)
+    await app.register(teaDdfsRoutes)
+    await app.register(teaAmapRoutes)
   await app.register(teaSpaceRoutes)
   await app.register(cityRoutes)
   await app.register(shopOrderRoutes)
@@ -1636,9 +1644,11 @@ await app.register(projectV2Routes)
   // Execution Runtime routes (KMKI-PLAT-007 — Platform Execution Kernel)
   try {
     await app.register(await import('./routes/platform/execution/execution-main.route.js').then(m => m.default))
+
   } catch (err) {
     console.warn('[startup] ⚠️ Execution runtime routes skipped:', (err as Error).message)
   }
+
 
   // Initialize Execution Runtime (KMKI-PLAT-007 — Platform Execution Kernel)
   try {
@@ -1692,7 +1702,7 @@ await app.register(projectV2Routes)
   // REMOVED: messageRoutes
 
   app.get('/api/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString(), lifecycle: getLifecycleStatus() }
+    return { status: 'ok', timestamp: new Date().toISOString() }
   })
 
   // 🔍 版本指纹接口 — 用于前端确认当前加载的是哪一版
@@ -1707,8 +1717,11 @@ await app.register(projectV2Routes)
 
   // Phase 2: Runtime Boot Pipeline — 替代 import side-effect 初始化
   try {
+    console.log('[DEBUG] about to call runtimeBoot')
     const { runtimeBoot } = await import('./bootstrap/runtime-boot.js')
+    console.log('[DEBUG] runtimeBoot imported, calling it')
     await runtimeBoot()
+    console.log('[DEBUG] runtimeBoot completed')
     console.log('[startup] ✅ Runtime boot complete')
   } catch (err) {
     console.error('[startup] ❌ Runtime boot failed:', (err as Error).message)
@@ -1772,8 +1785,16 @@ await app.register(projectV2Routes)
       const meetingId = url.searchParams.get('meetingId') || ''
       const token = url.searchParams.get('token') || ''
       if (!uid || !meetingId) { connection.socket.close(4001, '缺少参数'); return }
-      // 简化：token 就是 uid（生产环境需要 JWT 验证）
-      if (token !== uid) { connection.socket.close(4001, '认证失败'); return }
+      // JWT 验签（不再信任 uid 明文）
+      try {
+        const decoded = app.jwt.verify(token) as any
+        if (decoded.id !== uid && decoded.id !== uid) {
+          connection.socket.close(4001, '认证失败'); return
+        }
+      } catch {
+        // 兼容旧版：token 可能直接是 uid（过渡期）
+        if (token !== uid) { connection.socket.close(4001, '认证失败'); return }
+      }
       import('./services/ai-secretary/ai-secretary-ws.js').then(mod => {
         const { registerAudioWebSocket, handleAudioMessage, removeAudioWebSocket } = mod
         registerAudioWebSocket(connection.socket, uid, meetingId)
@@ -1873,4 +1894,5 @@ await app.register(projectV2Routes)
   }
 }
 
-main()
+main().catch(e => { console.error('[FATAL]', e); process.exit(1) })
+

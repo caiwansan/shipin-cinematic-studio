@@ -328,6 +328,43 @@ export default async function imRoutes(fastify: FastifyInstance) {
         }
       })
       .filter((d) => d.peerUid)
+    // ── 好友（user_follow 关注关系）补进私聊列表 ──
+    // 掌柜 2026-08-25 需求：消息页要显示「所有好友」（不只已开聊的 dm 成员）
+    const followRows = await prisma.userFollow.findMany({ where: { followerId: userId } })
+    const friendUids = followRows.map((r) => r.followingId).filter((u: string) => UUID_RE.test(u))
+    const existingPeers = new Set(dms.map((d) => d.peerUid))
+    const unseenFriends = friendUids.filter((u) => !existingPeers.has(u))
+    if (unseenFriends.length) {
+      const friendUsers = await prisma.user.findMany({
+        where: { id: { in: unseenFriends } },
+        select: { id: true, username: true, nickname: true, email: true, avatarUrl: true, lastActiveAt: true },
+      })
+      const friendMap = new Map(friendUsers.map((u) => [u.id, u]))
+      for (const fuid of unseenFriends) {
+        const f = friendMap.get(fuid)
+        if (!f) continue
+        const fName = f.nickname || f.username || f.email?.split('@')[0] || '好友'
+        const fCh = dmChannelId(userId, fuid)
+        dms.push({
+          id: fCh,
+          type: 4,
+          name: fName,
+          desc: f.email || '',
+          avatar: f.avatarUrl || '',
+          kind: 'dm',
+          peerUid: fuid,
+          lastActiveAt: f.lastActiveAt?.toISOString() ?? null,
+          friend: true,
+        })
+        // 确保私聊频道存在（幂等；fire-and-forget，失败不阻断列表，下轮轮询重试）
+        wkApi('/channel', { channel_id: fCh, channel_type: 4 })
+          .then(() => wkApi('/channel/subscriber_add', { channel_id: fCh, channel_type: 4, subscribers: [userId, fuid] }))
+          .then(() => ensureMember({ channelId: fCh, channelType: 4, uid: userId, name: '', avatar: '' }))
+          .then(() => ensureMember({ channelId: fCh, channelType: 4, uid: fuid, name: fName, avatar: f.avatarUrl || '' }))
+          .catch((err: Error) => console.warn(`[im/channels] 好友频道预创建失败 ${fuid}: ${err.message}`))
+      }
+    }
+
 
     // 我参与的群聊（grp_ 前缀私有频道 → ImGroup 业务表）
     const groupMemberships = await prisma.imChannelMember.findMany({
@@ -364,6 +401,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
           kind: 'group',
           groupRole: role,
           ownerUid: g.ownerUid,
+          announcement: g.announcement || '',
           memberCount: groupCounts.get(m.channelId) ?? 0,
         }
       })
@@ -470,7 +508,17 @@ export default async function imRoutes(fastify: FastifyInstance) {
       status: presenceMap.get(m.uid) ? 1 : 0, // 1 在线 / 0 离线
       orgData: null,
     }))
-    return { success: true, data: { members: data } }
+    // 群主(以 imGroup.ownerUid 为准, role 字段可能不同步)
+    let ownerUid = ''
+    if (String(channelId).startsWith('grp_')) {
+      const g = await prisma.imGroup.findUnique({ where: { id: String(channelId).replace(/^grp_/, '') }, select: { ownerUid: true } })
+      ownerUid = g?.ownerUid || ''
+    } else {
+      // 非 grp_ 频道(如城市总群 city_<id>_pub): 以 role=2 成员作为群主
+      const own = members.find((m) => m.role >= 2)
+      ownerUid = own?.uid || ''
+    }
+    return { success: true, data: { members: data, ownerUid } }
   })
 
   // POST /api/im/channels/ensure-private — 创建/复用私聊频道（双方入会）
@@ -660,12 +708,27 @@ export default async function imRoutes(fastify: FastifyInstance) {
     return { success: true, data: { iceServers, turnEnabled: !!cred, turnExpiresIn: cred ? cred.ttl : 0 } }
   })
 
+  // GET /api/rtc/config-public — 仅用于通话中继诊断（返回当前 STUN/TURN 配置，供浏览器 trickle-ICE 验证）
+  fastify.get('/api/rtc/config-public', async (_request, reply) => {
+    const cred = turnCredential()
+    const iceServers: any[] = [{ urls: [`stun:${TURN_PUBLIC_IP}:${TURN_PORT}`] }]
+    if (cred) {
+      iceServers.push({
+        urls: [`turn:${TURN_PUBLIC_IP}:${TURN_PORT}?transport=udp`, `turn:${TURN_PUBLIC_IP}:${TURN_PORT}?transport=tcp`],
+        username: cred.username,
+        credential: cred.credential,
+      })
+    }
+    return { success: true, data: { iceServers, turnEnabled: !!cred, turnExpiresIn: cred ? cred.ttl : 0 } }
+  })
+
+
   // POST /api/im/rtc/signal-channel — 创建通话信令私有频道（R11）
   // ⚠️ WuKongIM v1.2.6 单聊(type=1)不支持 subscriber_add（「个人频道不支持添加订阅者」）→ 单聊投递目标解析失败；
   //    私聊频道信令不可用 → 每次通话创建临时 type=4 私有频道 rtc_<callId>，仅订阅双方，通话结束删除
   fastify.post('/api/im/rtc/signal-channel', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const userId = request.user.id as string
-    const { callId, peerUid } = request.body as any
+    const { callId, peerUid, video, notify } = request.body as any
     if (!callId || !/^[A-Za-z0-9-]{8,64}$/.test(callId)) return reply.status(400).send({ success: false, error: 'callId 非法' })
     if (!peerUid || peerUid === userId || !UUID_RE.test(peerUid)) return reply.status(400).send({ success: false, error: 'peerUid 非法' })
     const channelId = `rtc_${callId}`
@@ -678,6 +741,15 @@ export default async function imRoutes(fastify: FastifyInstance) {
       await wkApi('/channel/subscriber_add', { channel_id: channelId, channel_type: 4, subscribers: [userId, peerUid] })
     } catch (e) {
       return reply.status(502).send({ success: false, error: '订阅信令频道失败: ' + (e as Error).message })
+    }
+    // 发起呼叫 → 往双方私聊频道发「呼叫通知」消息（掌柜 2026-08-25：对方没提示的根因——
+    // 此前呼叫时从不发通知，被叫方轮询历史永远解析不到 kind=call 消息，IncomingCallActivity 不会被触发）
+    if (notify) {
+      try {
+        await serverSend(dmChannelId(userId, peerUid), 4, userId, 1, { kind: 'call', action: 'call', callId, video: !!video })
+      } catch (e) {
+        console.warn('[rtc] 呼叫通知发送失败:', (e as Error).message)
+      }
     }
     return { success: true, data: { channelId, channelType: 4 } }
   })
@@ -700,6 +772,9 @@ export default async function imRoutes(fastify: FastifyInstance) {
   fastify.post('/api/im/upload', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const file = await request.file()
     if (!file) return reply.status(400).send({ success: false, error: '缺少文件' })
+    // 持久化标记：城市地标等 foundation 图片不需 TTL 清理
+    let persistent = false
+    try { const fv = (request as any)?.body?.persistent ?? (request as any)?.query?.persistent; persistent = String(fv) === '1' || String(fv) === 'true' } catch (e) {}
     try {
       const buf = await file.toBuffer()
       const ext = (extname(file.filename || '').toLowerCase() || '.bin').slice(0, 10)
@@ -712,7 +787,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ success: false, error: `文件过大（上限 ${UPLOAD_MAX_MB[mediaType] || 10}MB）` })
       }
       const id = crypto.randomUUID()
-      const dir = MEDIA_UPLOAD_DIR
+      const dir = persistent ? resolve(MEDIA_UPLOAD_DIR, '..', 'persist') : MEDIA_UPLOAD_DIR
       await mkdir(dir, { recursive: true })
       const filename = id + ext
       const filePath = resolve(dir, filename)
@@ -722,15 +797,18 @@ export default async function imRoutes(fastify: FastifyInstance) {
       if (mediaType === 'image') {
         thumbUrl = await generateThumb(filePath)
       }
-      const url = `/uploads/im/${filename}`
-      const ttl = await registerMediaObject({
-        url,
-        filePath,
-        mimeType: file.mimetype || '',
-        mediaType,
-        size: buf.length,
-        thumbUrl,
-      })
+      const url = persistent ? `/uploads/persist/${filename}` : `/uploads/im/${filename}`
+      let ttl = { ttlHours: 0, expiresAt: '' }
+      if (!persistent) {
+        ttl = await registerMediaObject({
+          url,
+          filePath,
+          mimeType: file.mimetype || '',
+          mediaType,
+          size: buf.length,
+          thumbUrl,
+        })
+      }
       return {
         success: true,
         data: {
@@ -925,6 +1003,21 @@ export default async function imRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ success: false, error: 'channelId/channelType/content 必填' })
     }
     try {
+      // 私聊限流：对方未回复时，一天只能发1条（对齐 H5 规则）
+      if (Number(channelType) === 4) {
+        const me = request.user.id as string
+        const last: any = await prisma.imMessageIndex.findFirst({
+          where: { channelId, channelType },
+          orderBy: { createdAt: 'desc' },
+        })
+        if (last && last.fromUid && last.fromUid === me) {
+          const dayAgo = new Date(Date.now() - 24 * 3600 * 1000)
+          const sent = await prisma.imMessageIndex.count({
+            where: { channelId, channelType, fromUid: me, createdAt: { gte: dayAgo } },
+          })
+          // restriction removed: if (sent >= 1) { return reply.status(400).send({ success: false, error: "..." }) }
+        }
+      }
       const payload = Buffer.from(JSON.stringify({ type: contentType, content })).toString('base64')
       const data = await wkApi('/message/send', {
         channel_id: channelId,
@@ -996,7 +1089,21 @@ export default async function imRoutes(fastify: FastifyInstance) {
     try {
       const uid = request.user.id as string
       const lastRead = await getConversationRead(uid, channelId, channelType)
-      return { success: true, data: { lastReadMessageId: lastRead } }
+      let peerLastRead: string | null = null
+      let peerLastReadAt = 0
+      if (channelType === 4) {
+        try {
+          const peerRow = await prisma.imChannelMember.findFirst({ where: { channelId, channelType: 4, uid: { not: uid } }, select: { uid: true } })
+          if (peerRow) {
+            peerLastRead = await getConversationRead(peerRow.uid, channelId, 4)
+            if (peerLastRead) {
+              const pm = await prisma.imMessageIndex.findFirst({ where: { OR: [{ messageId: peerLastRead }, { clientMsgNo: peerLastRead }] }, select: { createdAt: true } })
+              if (pm) peerLastReadAt = new Date(pm.createdAt).getTime()
+            }
+          }
+        } catch (_) {}
+      }
+      return { success: true, data: { lastReadMessageId: lastRead, peerLastRead, peerLastReadAt } }
     } catch (e) {
       return reply.status(502).send({ success: false, error: (e as Error).message })
     }
@@ -1057,7 +1164,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
       if (data?.message_id) {
         await prisma.imMessageIndex.create({
           data: {
-            messageId: data.message_id,
+            messageId: String(data.message_id),
             fromUid: uid,
             channelId,
             channelType,
@@ -1083,7 +1190,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
       const membership = await prisma.imChannelMember.findUnique({
         where: { channelId_channelType_uid: { channelId, channelType, uid: operatorId } },
       })
-      if (!membership || membership.role < 2) {
+      if (!membership || membership.role < 1) {
         return reply.status(403).send({ success: false, error: '仅群主/管理员可操作' })
       }
       await prisma.imChannelMember.upsert({
@@ -1092,6 +1199,30 @@ export default async function imRoutes(fastify: FastifyInstance) {
         create: { channelId, channelType, uid: targetUid, role: Number(role) },
       })
       return { success: true }
+    } catch (e) {
+      return reply.status(502).send({ success: false, error: (e as Error).message })
+    }
+  })
+
+  // POST /api/im/channel/dissolve — 解散群（仅群主 role=2）
+  fastify.post('/api/im/channel/dissolve', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const { channelId, channelType = 3 } = (request.body as any) || {}
+    if (!channelId) return reply.status(400).send({ success: false, error: 'channelId 必填' })
+    try {
+      const operatorId = request.user.id as string
+      let isOwner = false
+      if (String(channelId).startsWith('grp_')) {
+        const gid = String(channelId).replace(/^grp_/, '')
+        const g = await prisma.imGroup.findUnique({ where: { id: gid }, select: { ownerUid: true } })
+        isOwner = !!g && g.ownerUid === operatorId
+      }
+      if (!isOwner) {
+        return reply.status(403).send({ success: false, error: '仅群主可解散群' })
+      }
+      // 删除 WukongIM 频道 + 本地群成员
+      try { await wkApi('/channel/delete', { channel_id: channelId, channel_type: channelType }) } catch (e) { /* ignore */ }
+      await prisma.imChannelMember.deleteMany({ where: { channelId, channelType } })
+      return { success: true, data: { message: '群已解散' } }
     } catch (e) {
       return reply.status(502).send({ success: false, error: (e as Error).message })
     }
@@ -1106,7 +1237,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
       const membership = await prisma.imChannelMember.findUnique({
         where: { channelId_channelType_uid: { channelId, channelType, uid: operatorId } },
       })
-      if (!membership || membership.role < 2) {
+      if (!membership || membership.role < 1) {
         return reply.status(403).send({ success: false, error: '仅群主/管理员可操作' })
       }
       const muteKey = `mute:${channelId}:${targetUid}`
@@ -1139,7 +1270,7 @@ export default async function imRoutes(fastify: FastifyInstance) {
       const membership = await prisma.imChannelMember.findUnique({
         where: { channelId_channelType_uid: { channelId, channelType, uid: operatorId } },
       })
-      if (!membership || membership.role < 2) {
+      if (!membership || membership.role < 1) {
         return reply.status(403).send({ success: false, error: '仅群主/管理员可操作' })
       }
       // 更新群信息
@@ -1349,4 +1480,3 @@ export default async function imRoutes(fastify: FastifyInstance) {
   })
 
 }
-

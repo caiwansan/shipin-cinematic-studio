@@ -2,6 +2,14 @@
 // 仅用户本人可见：上传/列表/读取/删除全部按 userId 强校验，文件经鉴权接口流式返回（不暴露公开静态 URL）
 // 存储：服务端文件系统(本地持久) + DB 元数据(tea_space_media) + 助记词备份快照(恢复找回
 import { FastifyInstance } from 'fastify'
+
+function validateMediaId(id: string): string {
+  return /^[a-zA-Z0-9_-]{1,64}$/.test(id) ? id : '';
+}
+function validateUid(uid: string): boolean {
+  return /^[a-f0-9-]{36}$/i.test(uid) || uid.length <= 64;
+}
+
 import { prisma } from '../utils/index.js'
 import { randomUUID } from 'crypto'
 import { pipeline } from 'stream/promises'

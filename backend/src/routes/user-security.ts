@@ -73,7 +73,7 @@ export default async function userSecurityRoutes(fastify: FastifyInstance) {
 
     const bcryptMod = await import('bcryptjs')
     const bcrypt = bcryptMod.default || bcryptMod
-    const hash = await bcrypt.hash(String(payPassword), 10)
+    const hash = await bcrypt.hash(String(payPassword), 12)
 
     await prisma.user.update({
       where: { id: userId },
@@ -161,7 +161,7 @@ export default async function userSecurityRoutes(fastify: FastifyInstance) {
 
     const bcryptMod = await import('bcryptjs')
     const bcrypt = bcryptMod.default || bcryptMod
-    const passwordHash = await bcrypt.hash(String(newPassword), 10)
+    const passwordHash = await bcrypt.hash(String(newPassword), 12)
 
     // 重置密码 + 提升 tokenVersion 使旧 token 全部失效
     await prisma.user.update({

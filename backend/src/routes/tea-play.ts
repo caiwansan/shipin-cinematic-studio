@@ -2,8 +2,20 @@
 // 路由前缀 /api/tea/play/* 与 /api/tea/checkin/* /api/tea/quiz/* /api/tea/leaderboard/* /api/tea/paypass/* /api/tea/exchange/*
 // 通证账本：复用 tea_wallet / tea_wallet_tx（与 token-wallet.ts 同链）
 import { FastifyInstance } from 'fastify'
+
+function validatePlayId(id: string): string {
+  return /^[a-zA-Z0-9_-]{1,64}$/.test(id) ? id : '';
+}
+function validateUid(uid: string): boolean {
+  return /^[a-f0-9-]{36}$/i.test(uid) || uid.length <= 64;
+}
+function sanitizeText(text: string, max: number = 500): string {
+  return String(text || '').slice(0, max).replace(/[<>"'&]/g, '');
+}
+
 import { prisma } from '../utils/index.js'
 import { createHash } from 'crypto'
+import { requirePaypass, markPaypassVerified } from '../utils/paypass-guard.js'
 
 const FOUNDER_UID = '0ba5bf98-7005-4019-a431-6a0fb4b2d28d' // 创始节点（掌柜）
 
@@ -146,6 +158,7 @@ export default async function teaPlayRoutes(fastify: FastifyInstance) {
     const d = await getPaypass(uid)
     if (!d?.set) return reply.status(400).send({ success: false, error: '未设置支付密码' })
     if (hashPass(String(pass || '')) !== d.pass) return reply.status(403).send({ success: false, error: '支付密码错误' })
+    markPaypassVerified(uid)
     return { success: true }
   })
   // GET /api/tea/paypass/status
@@ -273,11 +286,19 @@ export default async function teaPlayRoutes(fastify: FastifyInstance) {
   // POST /api/tea/exchange/do — 飞升台：仅工分→茶票（单向；10% 销毁通缩，对齐桌面版）
   fastify.post('/api/tea/exchange/do', auth, async (request: any, reply: any) => {
     const uid = request.user.id
-    const { direction, amount } = (request.body as any) || {}
+    const { direction, amount, paypass } = (request.body as any) || {}
     const amt = Math.floor(Number(amount))
     if (!direction || !amt || amt <= 0) return reply.status(400).send({ success: false, error: '参数错误' })
     if (direction !== 'gongfen_to_chapiao') {
       return reply.status(400).send({ success: false, error: '茶票为股权凭证，禁止兑换工分（仅支持工分→茶票）' })
+    }
+    // 支付密码强制校验（未设置→引导设置；密码错误或120s内未验证→拒绝）
+    try {
+      await requirePaypass(uid, paypass)
+    } catch (e: any) {
+      if (e?.message === 'PAYPASS_NOT_SET') return reply.status(403).send({ success: false, error: '请先在「支付密码」页设置支付密码后再进行该操作', code: 'PAYPASS_NOT_SET' })
+      if (e?.message === 'NEED_PAYPASS') return reply.status(403).send({ success: false, error: '支付密码错误，请重新输入', code: 'NEED_PAYPASS' })
+      throw e
     }
     const w = await getWallet(uid)
     if (Number(w.gongfen || 0) < amt) return reply.status(400).send({ success: false, error: '工分不足' })

@@ -311,6 +311,7 @@ const agentEmoji: Record<string, string> = {
 
 const supportedProviders = [
   { id: 'deepseek', name: 'DeepSeek' },
+  { id: 'siliconflow', name: '硅基流动 SiliconFlow' },
   { id: 'openai', name: 'OpenAI' },
   { id: 'qwen', name: '通义千问' },
   { id: 'doubao', name: '豆包' },

@@ -1,5 +1,6 @@
 /**
  * providers/volcengine.provider.ts — 火山引擎 ProviderLifecycle
+ * 修复: 使用官方模型ID (2026-09-07)
  */
 
 import type { ProviderLifecycle, ProviderMetadata, ProviderHealth, ModelInfo, Capability } from '../runtime/provider-registry.js'
@@ -14,11 +15,15 @@ const METADATA: ProviderMetadata = {
   docsUrl: 'https://www.volcengine.com/docs/82379',
   description: '火山引擎大模型平台，支持豆包系列模型、SeedDream 图片和视频生成',
   models: [
-    { id: 'volcengine-llm', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 131072, description: '豆包 Pro' },
-    { id: 'deepseek-r1-250120', capabilities: ['llm'], description: 'DeepSeek R1 (火山部署)' },
-    { id: 'seedream-image', capabilities: ['image'], defaultForCapability: 'image', description: 'SeedDream 图片生成' },
-    { id: 'volcengine-video', capabilities: ['video'], defaultForCapability: 'video', description: '火山视频生成' },
-    { id: 'volcengine-tts', capabilities: ['tts'], defaultForCapability: 'tts', description: '火山语音合成' },
+    { id: 'doubao-1-5-pro-256k-250115', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 262144, description: '豆包 1.5 Pro 256K' },
+    { id: 'doubao-1-5-lite-32k-250115', capabilities: ['llm'], contextWindow: 32768, description: '豆包 1.5 Lite 32K' },
+    { id: 'doubao-pro-32k', capabilities: ['llm'], contextWindow: 32768, description: '豆包 Pro 32K' },
+    { id: 'doubao-pro-128k', capabilities: ['llm'], contextWindow: 131072, description: '豆包 Pro 128K' },
+    { id: 'doubao-lite-32k', capabilities: ['llm'], contextWindow: 32768, description: '豆包 Lite 32K' },
+    { id: 'doubao-lite-128k', capabilities: ['llm'], contextWindow: 131072, description: '豆包 Lite 128K' },
+    { id: 'deepseek-r1-250120', capabilities: ['llm'], contextWindow: 131072, description: 'DeepSeek R1 (火山部署)' },
+    { id: 'doubao-seedream-3-0-t2i-250715', capabilities: ['image'], defaultForCapability: 'image', contextWindow: 0, description: 'SeedDream 图片生成' },
+    { id: 'doubao-seedance-1-0-pro-250528', capabilities: ['video'], defaultForCapability: 'video', contextWindow: 0, description: 'Seedance 1.0 视频生成' },
   ],
 }
 
@@ -28,8 +33,7 @@ export const volcengineProvider: ProviderLifecycle = {
   metadata: METADATA,
 
   async verify(apiKey: string, baseURL?: string) {
-    // 用 LLM 轻量验证（最快最便宜）
-    const adapter = modelAdapterRegistry.findAdapter('volcengine-llm')
+    const adapter = modelAdapterRegistry.findAdapter('doubao-1-5-pro-256k-250115')
     if (!adapter) {
       return { success: false, latency: 0, availableModels: [], capabilities: [] }
     }
@@ -38,7 +42,7 @@ export const volcengineProvider: ProviderLifecycle = {
       requestId: `verify-volc-${Date.now()}`,
       userId: '__verify__',
       provider: 'volcengine',
-      model: 'volcengine-llm',
+      model: 'doubao-1-5-pro-256k-250115',
       taskType: 'llm',
       apiKey,
       baseURL,
@@ -56,14 +60,14 @@ export const volcengineProvider: ProviderLifecycle = {
         success: true,
         latency: Date.now() - start,
         availableModels: METADATA.models.map(m => m.id),
-        capabilities: ['llm', 'image', 'video', 'tts'],
+        capabilities: ['llm', 'image', 'video'],
       }
     } catch {
       return {
         success: false,
         latency: Date.now() - start,
         availableModels: [],
-        capabilities: ['llm', 'image', 'video', 'tts'],
+        capabilities: ['llm', 'image', 'video'],
       }
     }
   },
@@ -82,7 +86,7 @@ export const volcengineProvider: ProviderLifecycle = {
   },
 
   capabilities(): Capability[] {
-    return ['llm', 'image', 'video', 'tts']
+    return ['llm', 'image', 'video']
   },
 
   defaultModel(capability: Capability): string {
@@ -90,3 +94,4 @@ export const volcengineProvider: ProviderLifecycle = {
     return m?.id || ''
   },
 }
+

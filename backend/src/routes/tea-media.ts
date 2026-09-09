@@ -1,9 +1,10 @@
+import type { FastifyInstance } from 'fastify'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
 import { randomUUID } from 'crypto'
 
-export default async function teaMediaRoutes(fastify: any) {
+export default async function teaMediaRoutes(fastify: FastifyInstance) {
   // 通用媒体上传（图片/视频/文件）→ /uploads/tea/
   fastify.post('/api/tea/media/upload', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
     let data: any

@@ -2741,6 +2741,21 @@ async function checkWritingTasks() {
     hasWritingTask.value = tasks.some((t: any) =>
       t.agentType === "writer" && (t.status === "queued" || t.status === "running")
     )
+    // 检测最近是否有 blocked/failed 的 writer 任务，给用户反馈
+    const recentBlocked = tasks.find((t: any) =>
+      t.agentType === "writer" && (t.status === "blocked" || t.status === "failed")
+    )
+    if (recentBlocked && !recentBlocked._notified) {
+      recentBlocked._notified = true
+      if (recentBlocked.status === 'blocked') {
+        const gates = (recentBlocked.output as any)?.gate?.gates || []
+        const failGates = gates.filter((g: any) => g.status === 'fail').map((g: any) => g.detail).join('; ')
+        messages.value.push({ role: 'assistant', content: `⚠️ 检测到写作任务被拦截：${failGates || '上下文不完整'}。请先创建角色设定、生成总纲后再试。` })
+      } else if (recentBlocked.status === 'failed') {
+        const errMsg = (recentBlocked.output as any)?.error || '未知错误'
+        messages.value.push({ role: 'assistant', content: `❌ 写作任务失败：${errMsg}。请检查「大模型设置」中 API Key 是否配置正确。` })
+      }
+    }
   } catch {
     // 静默失败
   }
@@ -3161,6 +3176,17 @@ async function startWriting() {
   }
   const ch = firstOutline
 
+  // ★ 前置门控检查：角色和世界状态是否就绪（避免后端 Context Gate 静默拦截）
+  try {
+    const gateRes: any = await $api.get(`/api/hdz/projects/${projectId.value}`)
+    const projectData = gateRes?.data?.data
+    const chars = projectData?.characters || []
+    if (chars.length === 0) {
+      messages.value.push({ role: 'assistant', content: '⚠️ 检测到项目还没有角色设定，写正文前至少需要创建一个角色（否则 AI 会因「上下文完整性不足」被门控拦截）。请先跟文曲星聊创建角色，或手动添加角色后再试。' })
+      return
+    }
+  } catch { /* 忽略预检错误，让后端 gate 兜底 */ }
+
   // ★ 打包文曲星对话作为写作指导意见
   const chatHistory = messages.value.map(m => `[${m.role === 'user' ? '用户' : '文曲星'}]\n${m.content}`).join('\n\n---\n\n')
   const writingGuideline = chatHistory
@@ -3172,16 +3198,42 @@ async function startWriting() {
     const res: any = await $api.post('/api/hdz/agent/write', {
       projectId: projectId.value,
       chapterNo: ch.chapterNo,
+      chapterId: ch.id,
       userInput: writingGuideline || undefined,
     })
     const body = res?.data
     if (!body?.success) throw new Error(body?.error || '写作失败')
     messages.value.push({ role: 'assistant', content: `✍️ 第 ${ch.chapterNo} 章的写作任务已提交！AI 正在创作中，写完后会显示在阅读器里等待审阅。` })
     hasWritingTask.value = true
+    // 提交后轮询任务状态，检测 blocked/failed 并给予反馈
+    pollWriteTaskStatus(body?.data?.id, ch.chapterNo)
     setTimeout(refreshChapters, 5000)
   } catch (e: any) {
     messages.value.push({ role: 'assistant', content: `❌ 写作失败: ${e.message || '未知错误'}` })
   }
+}
+
+/** 轮询写作任务状态，检测 blocked/failed 并给予用户反馈 */
+async function pollWriteTaskStatus(taskId: string | undefined, chapterNo: number) {
+  if (!taskId) return
+  // 等 3 秒后端有足够时间跑 gate
+  await new Promise(r => setTimeout(r, 3000))
+  try {
+    const res: any = await $api.get(`/api/hdz/agent/tasks/${projectId.value}`)
+    const tasks: any[] = res?.data?.data || []
+    const task = tasks.find((t: any) => t.id === taskId)
+    if (!task) return
+    if (task.status === 'blocked') {
+      const gates = (task.output as any)?.gate?.gates || []
+      const failGates = gates.filter((g: any) => g.status === 'fail').map((g: any) => g.detail).join('; ')
+      hasWritingTask.value = false
+      messages.value.push({ role: 'assistant', content: `⚠️ 第 ${chapterNo} 章写作任务被 AI 一致性门控拦截：${failGates || '上下文不完整'}。请先创建角色设定、生成总纲，或修复前置章节的审核问题后再试。` })
+    } else if (task.status === 'failed') {
+      const errMsg = (task.output as any)?.error || '未知错误'
+      hasWritingTask.value = false
+      messages.value.push({ role: 'assistant', content: `❌ 第 ${chapterNo} 章写作任务失败：${errMsg}。请检查「大模型设置」中 API Key 是否配置正确。` })
+    }
+  } catch { /* 忽略轮询错误 */ }
 }
 
 async function cancelWriting() {

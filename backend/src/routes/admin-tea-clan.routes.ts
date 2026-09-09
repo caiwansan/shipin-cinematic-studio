@@ -1,10 +1,11 @@
+import type { FastifyInstance } from 'fastify'
 // admin-tea-clan.routes.ts — 后台：宗亲群聊开通申请管理
 import { prisma } from '../utils/index.js'
 import { requireAdmin } from '../middleware/require-admin.js'
 import { wkApi } from './im.js'
 
 // ═══ 后台：宗亲群申请管理（通过时建群+标clan+入谱族长）═══
-export default async function adminTeaClanRoutes(fastify: any) {
+export default async function adminTeaClanRoutes(fastify: FastifyInstance) {
   // 申请列表
   fastify.get('/api/admin/tea-clan/applies', { preHandler: [requireAdmin] }, async () => {
     const rows: any = await prisma.$queryRawUnsafe(`SELECT * FROM family_clan_apply ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, created_at DESC LIMIT 200`)

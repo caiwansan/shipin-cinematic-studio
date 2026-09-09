@@ -434,7 +434,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
     const activeVipEnts = await prisma.personalEntitlement.findMany({
       where: { status: 'active' },
       select: { productType: true, effectiveUntil: true },
-    })
+    }).catch(() => [])
     const vipEntitlementCount = activeVipEnts.filter((e: any) => e.productType === 'VIP' && (!e.effectiveUntil || new Date(e.effectiveUntil).getTime() > Date.now())).length
 
     const funnel = [
@@ -842,7 +842,7 @@ export default async function adminDashboardCenterRoutes(app: FastifyInstance) {
       }).catch(() => []),
       prisma.organization.findMany({ select: { id: true, name: true, plan: true } }).catch(() => []),
       // 实例任务统计（真实执行）
-      prisma.$queryRawUnsafe(`SELECT agent_instance_id, count(*)::int AS tasks, sum(cost)::numeric(10,2) AS cost, count(DISTINCT organization_id)::int AS orgs FROM enterprise_agent_task GROUP BY agent_instance_id`) as Promise<{ agent_instance_id: string; tasks: number; cost: number; orgs: number }[]>,
+      prisma.$queryRawUnsafe(`SELECT agent_instance_id, count(*)::int AS tasks, sum(cost)::numeric(10,2) AS cost FROM enterprise_agent_task GROUP BY agent_instance_id`) as Promise<{ agent_instance_id: string; tasks: number; cost: number }[]>,
     ])
 
     const auditMap = new Map(auditByAgent.map((r) => [r.agentId, { tasks: r._count.id, cost: r._sum.cost || 0 }]))

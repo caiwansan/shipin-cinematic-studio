@@ -3,8 +3,23 @@ import type { Serialize, Simplify } from "nitropack/types";
 declare module "nitropack/types" {
   type Awaited<T> = T extends PromiseLike<infer U> ? Awaited<U> : T
   interface InternalApi {
+    '/api/auth/qq/authorize': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/qq/authorize').default>>>>
+    }
+    '/api/auth/qq/ensure-inviter': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/qq/ensure-inviter').default>>>>
+    }
+    '/api/auth/qq/need-inviter': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/qq/need-inviter').default>>>>
+    }
+    '/api/auth/qq/status': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/auth/qq/status/index').default>>>>
+    }
     '/api/knowledge/:type/:slug': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/knowledge/[type]/[slug]').default>>>>
+    }
+    '/join/group': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/routes/join/group').default>>>>
     }
     '/llms.txt': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/routes/llms.txt').default>>>>

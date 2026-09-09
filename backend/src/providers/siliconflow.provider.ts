@@ -1,5 +1,6 @@
 /**
  * providers/siliconflow.provider.ts — 硅基流动 ProviderLifecycle
+ * 修复: 使用官方模型ID (2026-09-07)
  */
 
 import type { ProviderLifecycle, ProviderMetadata, ProviderHealth, ModelInfo, Capability } from '../runtime/provider-registry.js'
@@ -12,11 +13,19 @@ const METADATA: ProviderMetadata = {
   baseURL: 'https://api.siliconflow.cn/v1',
   icon: 'siliconflow',
   docsUrl: 'https://docs.siliconflow.cn/docs',
-  description: '硅基流动大模型平台，支持 DeepSeek 等开源模型',
+  description: '硅基流动大模型平台，支持 DeepSeek、Qwen、GLM 等开源模型',
   models: [
-    { id: 'siliconflow-llm', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 32768, description: 'DeepSeek V3 (硅基部署)' },
-    { id: 'siliconflow-image', capabilities: ['image'], defaultForCapability: 'image', description: '硅基图片生成' },
-    { id: 'siliconflow-tts', capabilities: ['tts'], defaultForCapability: 'tts', description: '硅基语音合成' },
+    { id: 'deepseek-ai/DeepSeek-V3', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 65536, description: 'DeepSeek V3 (硅基)' },
+    { id: 'deepseek-ai/DeepSeek-R1', capabilities: ['llm'], contextWindow: 65536, description: 'DeepSeek R1 (硅基)' },
+    { id: 'deepseek-ai/DeepSeek-V2.5', capabilities: ['llm'], contextWindow: 32768, description: 'DeepSeek V2.5 (硅基)' },
+    { id: 'Qwen/Qwen2.5-72B-Instruct', capabilities: ['llm'], contextWindow: 32768, description: 'Qwen 2.5 72B (硅基)' },
+    { id: 'Qwen/Qwen2.5-32B-Instruct', capabilities: ['llm'], contextWindow: 32768, description: 'Qwen 2.5 32B (硅基)' },
+    { id: 'Qwen/Qwen2.5-14B-Instruct', capabilities: ['llm'], contextWindow: 32768, description: 'Qwen 2.5 14B (硅基)' },
+    { id: 'Qwen/Qwen2.5-7B-Instruct', capabilities: ['llm'], contextWindow: 32768, description: 'Qwen 2.5 7B (硅基)' },
+    { id: 'THUDM/glm-4-9b-chat', capabilities: ['llm'], contextWindow: 8192, description: 'GLM-4 9B (硅基)' },
+    { id: 'Pro/Qwen/Qwen2.5-7B-Instruct', capabilities: ['llm'], contextWindow: 32768, description: 'Qwen 2.5 7B Pro (硅基)' },
+    { id: 'stabilityai/stable-diffusion-xl-base-1.0', capabilities: ['image'], defaultForCapability: 'image', contextWindow: 0, description: 'SDXL 图片生成' },
+    { id: 'FunAudioLLM/CosyVoice2-0.5B', capabilities: ['tts'], defaultForCapability: 'tts', contextWindow: 0, description: 'CosyVoice TTS' },
   ],
 }
 
@@ -26,7 +35,7 @@ export const siliconflowProvider: ProviderLifecycle = {
   metadata: METADATA,
 
   async verify(apiKey: string, baseURL?: string) {
-    const adapter = modelAdapterRegistry.findAdapter('siliconflow-llm')
+    const adapter = modelAdapterRegistry.findAdapter('deepseek-ai/DeepSeek-V3')
     if (!adapter) {
       return { success: false, latency: 0, availableModels: [], capabilities: [] }
     }
@@ -35,7 +44,7 @@ export const siliconflowProvider: ProviderLifecycle = {
       requestId: `verify-sf-${Date.now()}`,
       userId: '__verify__',
       provider: 'siliconflow',
-      model: 'siliconflow-llm',
+      model: 'deepseek-ai/DeepSeek-V3',
       taskType: 'llm',
       apiKey,
       baseURL,
@@ -87,3 +96,4 @@ export const siliconflowProvider: ProviderLifecycle = {
     return m?.id || ''
   },
 }
+

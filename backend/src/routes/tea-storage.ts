@@ -77,26 +77,36 @@ export default async function teaStorageRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/tea/storage/mnemonic — 生成助记词（返回明文仅一次）
-  fastify.post('/api/tea/storage/mnemonic', auth, async (request: any) => {
-    const userId = request.user.id
-    if (!WORDLIST.length) return { success: false, error: '词库加载失败' }
-    const words: string[] = []
-    for (let i = 0; i < 12; i++) words.push(WORDLIST[Math.floor(Math.random() * WORDLIST.length)])
-    const mnemonic = words.join(' ')
-    const key = deriveKey(mnemonic)
-    const ts = Math.floor(Date.now() / 1000)
-    await prisma.$queryRawUnsafe(
-      `INSERT INTO user_asset_recovery (user_id, mnemonic_hash, enc_key, updated_at) VALUES ($1,$2,$3,$4)
-       ON CONFLICT (user_id) DO UPDATE SET mnemonic_hash=$2, enc_key=$3, updated_at=$4`,
-      userId, h(mnemonic), key.toString('hex'), ts)
-    return { success: true, data: { mnemonic, words } }
+  fastify.post('/api/tea/storage/mnemonic', auth, async (request: any, reply: any) => {
+    try {
+      const userId = request.user.id
+      // 幂等：已存在则绝不覆盖/不回显明文
+      const __rec: any = await prisma.$queryRawUnsafe(`SELECT enc_key, mnemonic_hash, backup_at FROM user_asset_recovery WHERE user_id = $1`, userId)
+      if (__rec[0] && (__rec[0].enc_key || __rec[0].mnemonic_hash)) {
+        return { success: true, data: { already: true, hasMnemonic: true, backupAt: __rec[0].backup_at || 0 } }
+      }
+      if (!WORDLIST.length) return { success: false, error: '词库加载失败' }
+      const words: string[] = []
+      for (let i = 0; i < 12; i++) words.push(WORDLIST[Math.floor(Math.random() * WORDLIST.length)])
+      const mnemonic = words.join(' ')
+      const key = deriveKey(mnemonic)
+      const ts = new Date()
+      await prisma.$queryRawUnsafe(
+        `INSERT INTO user_asset_recovery (user_id, mnemonic_hash, enc_key, updated_at) VALUES ($1,$2,$3,$4)
+         ON CONFLICT (user_id) DO UPDATE SET mnemonic_hash=$2, enc_key=$3, updated_at=$4`,
+        userId, h(mnemonic), key.toString('hex'), ts)
+      return { success: true, data: { mnemonic, words, already: false } }
+    } catch (e: any) {
+      console.error('[mnemonic] error:', e.message)
+      return reply.status(500).send({ success: false, error: '助记词生成失败: ' + (e.message || '未知错误') })
+    }
   })
 
   // POST /api/tea/storage/mnemonic/reset — 重置助记词（作废旧）
   fastify.post('/api/tea/storage/mnemonic/reset', auth, async (request: any) => {
     const userId = request.user.id
     await prisma.$queryRawUnsafe(`UPDATE user_asset_recovery SET mnemonic_hash='', enc_key='', backup_data='', backup_at=0, updated_at=$1 WHERE user_id=$2`,
-      Math.floor(Date.now() / 1000), userId)
+      new Date(), userId)
     return { success: true, data: { message: '已重置，请重新生成助记词并抄好' } }
   })
 
@@ -107,7 +117,7 @@ export default async function teaStorageRoutes(fastify: FastifyInstance) {
     if (!rec?.ek) return reply.status(400).send({ success: false, error: '请先生成助记词（数据备份需助记词加密）' })
     const obj = await buildBackupObject(userId)
     const enc = encrypt(JSON.stringify(obj), Buffer.from(rec.ek, 'hex'))
-    const ts = Math.floor(Date.now() / 1000)
+    const ts = new Date()
     await prisma.$queryRawUnsafe(
       `INSERT INTO user_asset_recovery (user_id, backup_data, backup_at, updated_at) VALUES ($1,$2,$3,$4)
        ON CONFLICT (user_id) DO UPDATE SET backup_data=$2, backup_at=$3, updated_at=$4`,

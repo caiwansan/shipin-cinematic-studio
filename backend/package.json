@@ -48,6 +48,7 @@
     "mediasoup": "^3.26.0",
     "pdfkit": "^0.19.1",
     "playwright": "^1.62.1",
+    "qrcode": "^1.5.4",
     "sharp": "^0.34.5",
     "svg-captcha": "^1.4.0",
     "tencentcloud-sdk-nodejs-sms": "^4.1.239",

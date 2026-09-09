@@ -472,7 +472,7 @@ class ConsistencyVerifier {
     if (prevNo >= 1) {
       const prev = await prisma.hdzChapter.findFirst({ where: { projectId, chapterNo: prevNo } })
       if (prev) {
-        const prevNotes: any[] = (prev.reviewNotes as any[]) || []
+        const prevNotes: any[] = Array.isArray(prev.reviewNotes) ? (prev.reviewNotes as any[]) : (typeof prev.reviewNotes === 'string' ? JSON.parse(prev.reviewNotes || '[]') : [])
         const hasCritical = prevNotes.some(n => ['critical', 'major'].includes((n.severity || '').toLowerCase()))
         if (prev.status !== 'reviewed' && prev.status !== 'final') {
           if (hasCritical) {

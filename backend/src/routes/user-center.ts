@@ -368,7 +368,7 @@ export default async function userCenterRoutes(fastify: FastifyInstance) {
 
     return {
       referralCode: userId,
-      referralUrl: `https://aigc.fushtn.com/register?ref=${userId}`,
+      referralUrl: `https://aigc.fushtn.com/?showLogin=1&register=1&redirect=/download/desktop&ref=${userId}`,
       referrer: parent,
       referredUsers: (membership?.children || []).map(c => c.user),
       totalRewardCoins,
@@ -483,7 +483,7 @@ export default async function userCenterRoutes(fastify: FastifyInstance) {
     const { id: userId } = request.user as any
     return {
       referralCode: userId,
-      referralUrl: `https://aigc.fushtn.com/register?ref=${userId}`,
+      referralUrl: `https://aigc.fushtn.com/?showLogin=1&register=1&redirect=/download/desktop&ref=${userId}`,
     }
   })
 

@@ -26,43 +26,52 @@ export async function runtimeBoot() {
   // Phase 2, Rule 1: 显式初始化 adapter registry
   console.log('[boot] init model adapters...')
   await initModelAdapters()
+  console.log('[boot] [DONE] init model adapters')
 
   // Phase 5, Rule 1: init governance
   console.log('[boot] init governance...')
   await initGovernance()
+  console.log('[boot] [DONE] init governance')
 
   // Phase 6, Rule 1: init kernel
   console.log('[boot] init kernel...')
   await initKernel()
+  console.log('[boot] [DONE] init kernel')
 
   // Phase 7, Rule 1: init truth layer
   console.log('[boot] init truth layer...')
   await initTruthLayer()
+  console.log('[boot] [DONE] init truth layer')
 
   // EGIL: execution graph integrity check (removed — legacy closure deleted)
 
   // Phase 2, Rule 2: 校验 registry 完整性
   console.log('[boot] verify adapter registry...')
   verifyAdapterRegistry()
+  console.log('[boot] [DONE] verify adapter registry')
 
   // Phase 2, Rule 7: 确定性测试
   console.log('[boot] run determinism test...')
   await runDeterminismTest()
+  console.log('[boot] [DONE] run determinism test')
 
   // Phase 2, Rule 3 + Phase 4 Rule 5: freeze registry → self-test
   console.log('[boot] freeze adapter registry...')
   const { freezeRegistry } = await import('../model-adapters/registry.js')
   freezeRegistry()
+  console.log('[boot] [DONE] freeze adapter registry')
 
   // Phase 3: Self-Test Suite — 在 freeze 后执行
   console.log('[boot] run runtime self-test...')
   const { runRuntimeSelfTest } = await import('./self-test/runtime-self-test.js')
   await runRuntimeSelfTest()
+  console.log('[boot] [DONE] run runtime self-test')
 
   // Phase 3.5: Init Provider Registry (FRE v1)
   console.log('[boot] init provider registry...')
   const { initProviders } = await import('../providers/index.js')
   initProviders()
+  console.log('[boot] [DONE] init provider registry')
 
   booted = true
   console.log('[boot] ✅ Runtime deterministic READY')

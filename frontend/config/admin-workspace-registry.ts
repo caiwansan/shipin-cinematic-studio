@@ -220,6 +220,7 @@ export const ADMIN_TEA_GROUP: AdminPlatformGroup = {
     { id: 'tea-config', label: 'API 密钥配置', to: '/admin/tea/config' },
     { id: 'tea-translate', label: '翻译大模型设置', to: '/admin/tea/translate' },
     { id: 'tea-admins', label: '社区管理员设置', to: '/admin/tea/admins' },
+    { id: 'tea-salary', label: '薪资管理', to: '/admin/tea/salary' }
   ],
 }
 

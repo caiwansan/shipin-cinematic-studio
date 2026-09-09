@@ -323,6 +323,7 @@ const providerName: Record<string, string> = {
 
 const supportedProviders = [
   { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-v4-flash', 'deepseek-v4-pro'] },
+  { id: 'siliconflow', name: '硅基流动 SiliconFlow', models: ['deepseek-ai/DeepSeek-V3', 'deepseek-ai/DeepSeek-R1', 'Qwen/Qwen3-8B', 'Qwen/Qwen2.5-7B-Instruct', 'Pro/Qwen/Qwen2.5-7B-Instruct'] },
   { id: 'openai', name: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o1-preview'] },
   { id: 'qwen', name: '通义千问', models: ['qwen-max', 'qwen-plus', 'qwen-turbo'] },
   { id: 'doubao', name: '豆包', models: ['doubao-pro', 'doubao-lite'] },

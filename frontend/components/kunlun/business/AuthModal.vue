@@ -452,6 +452,17 @@ function qqLogin() {
           (token, user) => {
             setAuthToken(token)
             localStorage.setItem('auth_user', JSON.stringify(user))
+            // 邀请/扫码来源：QQ 登录成功即锁定推荐关系（后端幂等，仅首次生效）
+            try {
+              const _ref = new URLSearchParams(window.location.search).get('ref') || ''
+              if (_ref) {
+                fetch('/api/auth/qq/ensure-inviter', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                  body: JSON.stringify({ refCode: _ref })
+                }).catch(() => {})
+              }
+            } catch {}
             qqLoading.value = false
             close()
             emit('logged-in')

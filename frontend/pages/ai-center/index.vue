@@ -24,7 +24,110 @@
       </div>
     </header>
 
-    <!-- ═══ 第二屏：排行榜 ═══ -->
+    <!-- ═══ 优惠推荐注册 ═══ -->
+    <section class="aic-sec aic-promo">
+      <div class="aic-promo-inner">
+        <div class="aic-promo-header">
+          <span class="aic-promo-badge">🎁 新用户专享</span>
+          <h2 class="aic-promo-title">注册即送 · AI 平台优惠推荐</h2>
+          <p class="aic-promo-desc">通过下方专属链接注册，立享新用户福利</p>
+        </div>
+        <div class="aic-promo-cards">
+          <!-- GJAI -->
+          <div class="aic-promo-card aic-promo-card--silicon">
+            <div class="aic-promo-card-top">
+              <div class="aic-promo-card-icon">⚡</div>
+              <div>
+                <h3 class="aic-promo-card-title">GJAI</h3>
+                <p class="aic-promo-card-sub">一站式 AI 云平台</p>
+              </div>
+              <span class="aic-promo-card-tag">🔥 热门</span>
+            </div>
+            <div class="aic-promo-card-perks">
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🎁</span><span>新用户注册 <strong>送 16 元起</strong></span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">💰</span><span>DeepSeek-V4 <strong>原价 ¥0.002/千字</strong>（未涨价）</span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🚀</span><span>秒级响应 · 100+ 模型 API</span></div>
+            </div>
+            <a href="https://cloud.siliconflow.cn/i/fsPDFie2" target="_blank" rel="noopener" class="aic-promo-card-cta">立即注册领取优惠 →</a>
+            <p class="aic-promo-card-note">通过本链接注册享专属赠送额度</p>
+          </div>
+          <!-- 小盒 AI -->
+          <div class="aic-promo-card aic-promo-card--xiaohe">
+            <div class="aic-promo-card-top">
+              <div class="aic-promo-card-icon">📦</div>
+              <div>
+                <h3 class="aic-promo-card-title">小盒 AI</h3>
+                <p class="aic-promo-card-sub">ClawSocket · 轻量化 AI 助手</p>
+              </div>
+              <span class="aic-promo-card-tag aic-promo-card-tag--new">✨ 新品</span>
+            </div>
+            <div class="aic-promo-card-perks">
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🎯</span><span>注册即送体验额度</span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">⚡</span><span>开箱即用 · 零配置接入</span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🤖</span><span>多模型聚合 · 智能路由</span></div>
+            </div>
+            <a href="https://api.clawsocket.com/sign-up?aff=JJ7g" target="_blank" rel="noopener" class="aic-promo-card-cta">免费注册体验 →</a>
+            <p class="aic-promo-card-note">通过本链接注册享额外福利</p>
+          </div>
+          <!-- CUNai -->
+          <div class="aic-promo-card aic-promo-card--cunai">
+            <div class="aic-promo-card-top">
+              <div class="aic-promo-card-icon">🌐</div>
+              <div>
+                <h3 class="aic-promo-card-title">CUNai</h3>
+                <p class="aic-promo-card-sub">全球大模型聚合平台</p>
+              </div>
+              <span class="aic-promo-card-tag aic-promo-card-tag--reward">💰 最高$100</span>
+            </div>
+            <div class="aic-promo-card-perks">
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🎁</span><span>注册最高奖励 <strong>100 美元</strong></span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">💰</span><span>各类大模型只有官方 <strong>3-5 折</strong></span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🚀</span><span>聚合全球主流大模型 API</span></div>
+            </div>
+            <a href="https://www.cun.ai/sign-up?aff=fB8x" target="_blank" rel="noopener" class="aic-promo-card-cta">立即注册领取奖励 →</a>
+            <p class="aic-promo-card-note">通过本链接注册享最高 100 美元奖励</p>
+          </div>
+          <!-- MiMo -->
+          <div class="aic-promo-card aic-promo-card--mimo">
+            <div class="aic-promo-card-top">
+              <div class="aic-promo-card-icon">🤖</div>
+              <div>
+                <h3 class="aic-promo-card-title">MiMo</h3>
+                <p class="aic-promo-card-sub">小米 · 顶尖多模态大模型</p>
+              </div>
+              <span class="aic-promo-card-tag aic-promo-card-tag--new">🔥 邀请注册</span>
+            </div>
+            <div class="aic-promo-card-perks">
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">💰</span><span>双方各得 <strong>¥10 API 体验金</strong></span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🎁</span><span>首单 <strong>9 折</strong>优惠</span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🧠</span><span>MiMo V2.5 多模态 · <strong>40 天有效</strong></span></div>
+            </div>
+            <a href="https://platform.xiaomimimo.com?ref=MDTWL5" target="blank" rel="noopener" class="aic-promo-card-cta">立即注册领 ¥10 体验金 →</a>
+            <p class="aic-promo-card-note">邀请码 MDTWL5 · 注册后自动填入 · 双方各得 ¥10</p>
+          </div>
+          <!-- DeepSeek -->
+          <div class="aic-promo-card aic-promo-card--deepseek">
+            <div class="aic-promo-card-top">
+              <div class="aic-promo-card-icon">🐋</div>
+              <div>
+                <h3 class="aic-promo-card-title">DeepSeek</h3>
+                <p class="aic-promo-card-sub">深度求索 · 推理模型领导者</p>
+              </div>
+              <span class="aic-promo-card-tag aic-promo-card-tag--reward">🎁 注册送68元</span>
+            </div>
+            <div class="aic-promo-card-perks">
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">💰</span><span>DeepSeek <strong>享受原价</strong>，不涨价</span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🎁</span><span>新用户注册 <strong>送 68 元</strong>体验金</span></div>
+              <div class="aic-promo-perk"><span class="aic-promo-perk-icon">🧠</span><span>推理能力对标 GPT-4 · 开源可私有部署</span></div>
+            </div>
+            <a href="https://tokenrhythm.studio/i/rf_tr_qjOJAhuFdn4S0X4HEf6KBFEQ" target="_blank" rel="noopener" class="aic-promo-card-cta">立即注册领取68元 →</a>
+            <p class="aic-promo-card-note">通过本链接注册享 68 元赠送额度</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 排行榜 ═══ -->
     <section class="aic-sec" id="boards">
       <div class="aic-sec-title">
         <h2>今日 AI 排名</h2>
@@ -564,6 +667,57 @@ function brandBg(name: string): string {
 .aic-hist-price { font-size: 11.5px; color: #3b82f6; font-weight: 600; white-space: nowrap; }
 .aic-hist-meta { font-size: 10.5px; color: #7a86a3; margin-top: 2px; }
 .aic-hist-src { font-size: 10px; color: #5a6478; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── 优惠推荐注册 ── */
+.aic-promo { padding-top: 18px; padding-bottom: 10px; }
+.aic-promo-inner { max-width: 1280px; margin: 0 auto; }
+.aic-promo-header { text-align: center; margin-bottom: 18px; }
+.aic-promo-badge { display: inline-block; padding: 5px 16px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(249,115,22,.1); color: #f97316; border: 1px solid rgba(249,115,22,.2); margin-bottom: 8px; }
+.aic-promo-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+.aic-promo-desc { font-size: 12.5px; color: #7a86a3; margin: 0; }
+.light .aic-promo-desc { color: #6b7690; }
+.aic-promo-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+@media (max-width: 1400px) { .aic-promo-cards { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 1000px) { .aic-promo-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .aic-promo-cards { grid-template-columns: 1fr; } }
+.aic-promo-card { border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; transition: border-color .2s, transform .15s; position: relative; overflow: hidden; }
+.aic-promo-card:hover { border-color: rgba(59,130,246,.4); transform: translateY(-2px); }
+.light .aic-promo-card { border-color: #e3e7f0; background: #fff; box-shadow: 0 2px 8px rgba(16,24,40,.06); }
+.aic-promo-card--silicon { background: linear-gradient(135deg, rgba(249,115,22,.06), rgba(255,255,255,.02)); }
+.aic-promo-card--xiaohe { background: linear-gradient(135deg, rgba(99,102,241,.06), rgba(255,255,255,.02)); }
+.aic-promo-card-top { display: flex; align-items: center; gap: 10px; }
+.aic-promo-card-icon { width: 38px; height: 38px; border-radius: 10px; background: rgba(249,115,22,.15); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.aic-promo-card--xiaohe .aic-promo-card-icon { background: rgba(99,102,241,.15); }
+.aic-promo-card-title { font-size: 15px; font-weight: 700; margin: 0; }
+.aic-promo-card-sub { font-size: 11px; color: #7a86a3; margin: 2px 0 0; }
+.light .aic-promo-card-sub { color: #6b7690; }
+.aic-promo-card-tag { margin-left: auto; padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 600; background: rgba(249,115,22,.15); color: #f97316; }
+.aic-promo-card-tag--new { background: rgba(99,102,241,.12); color: #818cf8; }
+.aic-promo-card-perks { display: flex; flex-direction: column; gap: 7px; }
+.aic-promo-perk { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #c0c8d8; }
+.light .aic-promo-perk { color: #4b5563; }
+.aic-promo-perk strong { color: #f97316; }
+.aic-promo-perk-icon { font-size: 14px; flex-shrink: 0; }
+.aic-promo-card-cta { display: block; text-align: center; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all .2s; background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; }
+.aic-promo-card-cta:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(249,115,22,.25); }
+.aic-promo-card--xiaohe .aic-promo-card-cta { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+.aic-promo-card--xiaohe .aic-promo-card-cta:hover { box-shadow: 0 4px 16px rgba(99,102,241,.25); }
+.aic-promo-card--cunai { background: linear-gradient(135deg, rgba(16,185,129,.06), rgba(255,255,255,.02)); }
+.aic-promo-card--cunai .aic-promo-card-icon { background: rgba(16,185,129,.15); }
+.aic-promo-card-tag--reward { background: rgba(16,185,129,.12); color: #10b981; }
+.aic-promo-card--cunai .aic-promo-card-cta { background: linear-gradient(135deg, #10b981, #059669); }
+.aic-promo-card--cunai .aic-promo-card-cta:hover { box-shadow: 0 4px 16px rgba(16,185,129,.25); }
+.aic-promo-card--deepseek { background: linear-gradient(135deg, rgba(59,130,246,.08), rgba(255,255,255,.02)); }
+.aic-promo-card--deepseek .aic-promo-card-icon { background: rgba(59,130,246,.18); }
+.aic-promo-card--deepseek .aic-promo-card-cta { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.aic-promo-card--deepseek .aic-promo-card-cta:hover { box-shadow: 0 4px 16px rgba(59,130,246,.3); }
+.aic-promo-card--mimo { background: linear-gradient(135deg, rgba(255,107,0,.06), rgba(255,255,255,.02)); }
+.aic-promo-card--mimo .aic-promo-card-icon { background: rgba(255,107,0,.15); }
+.aic-promo-card--mimo .aic-promo-card-cta { background: linear-gradient(135deg, #ff6b00, #e55d00); }
+.aic-promo-card--mimo .aic-promo-card-cta:hover { box-shadow: 0 4px 16px rgba(255,107,0,.3); }
+.aic-promo-card--mimo .aic-promo-perk strong { color: #ff6b00; }
+.aic-promo-card-note { text-align: center; font-size: 10.5px; color: #5a6478; margin: 0; }
+.light .aic-promo-card-note { color: #9ca3af; }
 
 /* ── 页脚 ── */
 .aic-foot { max-width: 1280px; margin: 30px auto 0; padding: 16px 20px 34px; border-top: 1px solid rgba(255,255,255,.06); }

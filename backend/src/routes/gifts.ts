@@ -5,6 +5,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { requireAdmin } from '../middleware/require-admin.js'
+import { requirePaypass } from '../utils/paypass-guard.js'
 
 // 礼物 → 金币结算比例（65% 归接收人，35% 平台留成）
 export const GIFT_COIN_RATE = 0.65
@@ -46,7 +47,7 @@ export default async function giftRoutes(fastify: FastifyInstance) {
   // body: { giftId, receiverUid, channelId?, channelType? }
   fastify.post('/api/gifts/send', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const senderId = request.user.id as string
-    const { giftId, receiverUid, channelId = '', channelType = 0 } = request.body as any
+    const { giftId, receiverUid, channelId = '', channelType = 0, paypass } = request.body as any
 
     if (!giftId || !receiverUid) {
       return reply.status(400).send({ success: false, error: 'giftId 与 receiverUid 必填' })
@@ -62,6 +63,14 @@ export default async function giftRoutes(fastify: FastifyInstance) {
     const receiver = await prisma.user.findUnique({ where: { id: receiverUid }, select: { id: true, username: true } })
     if (!receiver) {
       return reply.status(404).send({ success: false, error: '接收人不存在' })
+    }
+    // 支付密码强制校验（未设置→引导设置；密码错误→拒绝；120s内已verify放行，兼容旧客户端先验后发流程）
+    try {
+      await requirePaypass(senderId, paypass)
+    } catch (e: any) {
+      if (e?.message === 'PAYPASS_NOT_SET') return reply.status(403).send({ success: false, error: '请先在「支付密码」页设置支付密码后再赠送礼物', code: 'PAYPASS_NOT_SET' })
+      if (e?.message === 'NEED_PAYPASS') return reply.status(403).send({ success: false, error: '支付密码错误，请重新输入', code: 'NEED_PAYPASS' })
+      throw e
     }
 
     const coinsAwarded = Math.floor(gift.priceDiamonds * GIFT_COIN_RATE)

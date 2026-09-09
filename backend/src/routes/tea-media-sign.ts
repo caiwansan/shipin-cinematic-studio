@@ -1,4 +1,9 @@
 import { FastifyInstance } from 'fastify'
+
+function validateMediaId(id: string): string {
+  return /^[a-zA-Z0-9_-]{1,64}$/.test(id) ? id : '';
+}
+
 import { prisma } from '../utils/index.js'
 import { verify } from 'crypto'
 

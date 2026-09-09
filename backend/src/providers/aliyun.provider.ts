@@ -1,5 +1,6 @@
 /**
  * providers/aliyun.provider.ts — 阿里百炼 ProviderLifecycle
+ * 修复: 使用官方模型ID (2026-09-07)
  */
 
 import type { ProviderLifecycle, ProviderMetadata, ProviderHealth, ModelInfo, Capability } from '../runtime/provider-registry.js'
@@ -14,13 +15,19 @@ const METADATA: ProviderMetadata = {
   docsUrl: 'https://help.aliyun.com/product/2400256.html',
   description: '阿里云百炼大模型平台，支持通义系列、Wan 视频和图片生成',
   models: [
-    { id: 'aliyun-llm', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 131072, description: '通义千问 Turbo' },
-    { id: 'qwen-turbo', capabilities: ['llm'], description: '通义千问 Turbo' },
-    { id: 'qwen-plus', capabilities: ['llm'], description: '通义千问 Plus' },
-    { id: 'wan-image', capabilities: ['image'], defaultForCapability: 'image', description: 'Wan 图片生成' },
-    { id: 'qwen-image', capabilities: ['image'], description: '通义万相图片生成' },
-    { id: 'aliyun-video', capabilities: ['video'], defaultForCapability: 'video', description: '阿里视频生成' },
-    { id: 'aliyun-tts', capabilities: ['tts'], defaultForCapability: 'tts', description: '阿里语音合成' },
+    { id: 'qwen3-max', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 131072, description: '通义千问 3 Max' },
+    { id: 'qwen3-plus', capabilities: ['llm'], contextWindow: 131072, description: '通义千问 3 Plus' },
+    { id: 'qwen3-flash', capabilities: ['llm'], contextWindow: 131072, description: '通义千问 3 Flash' },
+    { id: 'qwen3.6-plus', capabilities: ['llm'], contextWindow: 131072, description: '通义千问 3.6 Plus' },
+    { id: 'qwen3.6-flash', capabilities: ['llm'], contextWindow: 131072, description: '通义千问 3.6 Flash' },
+    { id: 'qwq-32b', capabilities: ['llm'], contextWindow: 32768, description: 'QwQ 32B 推理模型' },
+    { id: 'qvq-72b', capabilities: ['llm'], contextWindow: 131072, description: 'QVQ 72B 视觉推理' },
+    { id: 'deepseek-v4-pro', capabilities: ['llm'], contextWindow: 131072, description: 'DeepSeek V4 Pro (百炼)' },
+    { id: 'deepseek-v4-flash', capabilities: ['llm'], contextWindow: 131072, description: 'DeepSeek V4 Flash (百炼)' },
+    { id: 'wanx2.7-t2v', capabilities: ['video'], defaultForCapability: 'video', contextWindow: 0, description: 'Wan 2.7 文生视频' },
+    { id: 'wanx2.7-i2v', capabilities: ['video'], contextWindow: 0, description: 'Wan 2.7 图生视频' },
+    { id: 'wanx-v1', capabilities: ['image'], defaultForCapability: 'image', contextWindow: 0, description: '通义万相图片生成' },
+    { id: 'qwen3-tts', capabilities: ['tts'], defaultForCapability: 'tts', contextWindow: 0, description: '通义千问 TTS' },
   ],
 }
 
@@ -30,7 +37,7 @@ export const aliyunProvider: ProviderLifecycle = {
   metadata: METADATA,
 
   async verify(apiKey: string, baseURL?: string) {
-    const adapter = modelAdapterRegistry.findAdapter('aliyun-llm')
+    const adapter = modelAdapterRegistry.findAdapter('qwen3-max')
     if (!adapter) {
       return { success: false, latency: 0, availableModels: [], capabilities: [] }
     }
@@ -39,7 +46,7 @@ export const aliyunProvider: ProviderLifecycle = {
       requestId: `verify-ali-${Date.now()}`,
       userId: '__verify__',
       provider: 'aliyun',
-      model: 'aliyun-llm',
+      model: 'qwen3-max',
       taskType: 'llm',
       apiKey,
       baseURL,
@@ -91,3 +98,4 @@ export const aliyunProvider: ProviderLifecycle = {
     return m?.id || ''
   },
 }
+

@@ -19,7 +19,9 @@ if (process.client) {
 
 // Sprint-ADMIN-IA-REALITY-03 T01: 动态 SEO head（官网/前台统一读 SystemConfig）
 // 分享卡片修复：SSR 首屏也注入 og 标签（社交爬虫不执行 JS，客户端注入无效）
-const { data: systemCfg } = await useFetch('/api/system/config')
+// Fix: SSR 阶段 useFetch 必须指向后端(4002)，否则调到自己(3000) → Vue Router 404 → 首页白屏
+const apiUrl = process.server ? 'http://127.0.0.1:4002/api/system/config' : '/api/system/config'
+const { data: systemCfg } = await useFetch(apiUrl)
 const cfg: any = systemCfg.value || {}
 const siteTitle = cfg.seo_title || cfg.site_title || '昆仑镜'
 const siteDesc = cfg.seo_description || cfg.site_description || 'AI 短剧创作 · 数字办公 · 智能工作台'

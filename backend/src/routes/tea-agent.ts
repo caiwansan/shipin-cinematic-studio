@@ -3,7 +3,20 @@ import { prisma } from '../utils/index.js'
 // ═══ 城市代理申请（申请表留言） ═══
 const AGENT_CITIES = ['北京','上海','广州','深圳','杭州','成都','重庆','武汉','西安','南京','苏州','天津','长沙','郑州','青岛','宁波','昆明','贵阳','福州','厦门','济南','合肥','南昌','太原','石家庄','哈尔滨','长春','沈阳','大连','兰州','西宁','银川','乌鲁木齐','拉萨','海口','三亚','洛阳','无锡','佛山','东莞']
 
-export default async function teaAgentRoutes(fastify: any) {
+
+// Tea config cache (5 min)
+let _teaConfigCache: { value?: any; at?: number } = {}
+const TEA_CONFIG_TTL = 5 * 60 * 1000
+async function getTeaConfig() {
+  if (_teaConfigCache.value && _teaConfigCache.at && Date.now() - _teaConfigCache.at < TEA_CONFIG_TTL) {
+    return _teaConfigCache.value
+  }
+  const row = await prisma.routeConfig.findUnique({ where: { scope_key: { scope: 'tea', key: 'config' } } })
+  const v = typeof row?.value === 'string' ? JSON.parse(row.value) : (row?.value || {})
+  _teaConfigCache = { value: v, at: Date.now() }
+  return v
+}
+export default async function teaAgentRoutes(fastify: FastifyInstance) {
   // 可选城市（未开通）
   fastify.get('/api/tea/agent/cities', async () => {
     const opened = await prisma.city.findMany({ select: { name: true } })
@@ -39,8 +52,22 @@ export default async function teaAgentRoutes(fastify: any) {
   // 客户端 AMap 配置（登录用户可读：JS API key 客户端渲染必需）
   fastify.get('/api/tea/config/amap', { preHandler: [fastify.authenticate] }, async () => {
     const row = await prisma.routeConfig.findUnique({ where: { scope_key: { scope: 'tea', key: 'config' } } })
-    const v: any = row?.value || {}
+    const v: any = typeof row?.value === 'string' ? JSON.parse(row.value) : (row?.value || {})
     return { success: true, data: { key: v.amapKey || '', securityJsCode: v.amapSecurityJsCode || '' } }
+  })
+
+  // QQ 登录配置（公开可读：appId/redirectUri，secret 脱敏不给；登录页无token也能拉）
+  fastify.get("/api/tea/config/qq", { preHandler: [fastify.authenticate] }, async (request: any) => {
+    const row = await prisma.routeConfig.findUnique({ where: { scope_key: { scope: 'tea', key: 'config' } } })
+    const v: any = typeof row?.value === 'string' ? JSON.parse(row.value) : (row?.value || {})
+    return { success: true, data: { qqAppId: v.qqAppId || '', qqRedirectUri: v.qqRedirectUri || '', hasQqAppSecret: !!v.qqAppSecret } }
+  })
+
+  // 版本升级配置（公开可读：最新版本 + APK 下载地址）
+  fastify.get('/api/tea/config/version', async () => {
+    const row = await prisma.routeConfig.findUnique({ where: { scope_key: { scope: 'tea', key: 'config' } } })
+    const v: any = typeof row?.value === 'string' ? JSON.parse(row.value) : (row?.value || {})
+    return { success: true, data: { latestVersion: v.latestVersion || '', apkUrl: v.apkUrl || '', apkSha256: v.apkSha256 || '', hasUpdate: !!((v.latestVersion || '').trim()) } }
   })
 
 }

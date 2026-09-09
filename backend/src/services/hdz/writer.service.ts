@@ -56,7 +56,7 @@ class WriterService {
         // ── 批次小结（阶段性总结，最核心的记忆压缩） ──
         if (project.libraryReaderSummaries) {
           const raw = project.libraryReaderSummaries
-          const rawParsed = (typeof raw === 'string' ? JSON.parse(raw) : raw) as any
+          const rawParsed = (typeof raw === 'string' ? (() => { try { return JSON.parse(raw) } catch { return [] } })() : Array.isArray(raw) ? raw : []) as any[]
           const batches: Array<{ level: number; batchIndex: number; chapterStart: number; chapterEnd: number; summary: string }> = []
           if (Array.isArray(rawParsed)) {
             for (const d of rawParsed) {

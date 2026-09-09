@@ -44,6 +44,19 @@
 
     <!-- ==================== 登录/注册 Modal（公共组件 AuthModal，与商城等页面统一） ==================== -->
     <AuthModal v-model="showLogin" :initial-mode="authInitialMode" @logged-in="onAuthLoggedIn" />
+
+    <!-- ==================== 扫码邀请落地选择层（确定性分流，不依赖登录态猜测） ==================== -->
+    <div v-if="inviteOverlay" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:380px;background:#0b0b14;border:1px solid #23233d;border-radius:16px;padding:28px 22px;text-align:center;font-family:system-ui,-apple-system,sans-serif">
+        <div style="font-size:40px;line-height:1">🏪</div>
+        <div style="color:#fff;font-size:19px;font-weight:700;margin-top:10px">欢迎来到昆仑茶馆</div>
+        <div v-if="inviterName" style="color:#8b8fa3;font-size:13px;margin-top:6px">好友 <span style="color:#22d3ee">{{ inviterName }}</span> 邀请你加入</div>
+        <button @click="inviteRegister" style="display:block;width:100%;margin-top:22px;padding:13px 0;border:none;border-radius:10px;background:linear-gradient(90deg,#22d3ee,#3b82f6);color:#04121f;font-size:15px;font-weight:700;cursor:pointer">🎟 新用户注册（锁定推荐好友）</button>
+        <button @click="inviteLogin" style="display:block;width:100%;margin-top:10px;padding:12px 0;border:1px solid #2c2c4a;border-radius:10px;background:transparent;color:#c7cade;font-size:14px;cursor:pointer">已有账号登录</button>
+        <button @click="inviteDownload" style="display:block;width:100%;margin-top:10px;padding:12px 0;border:none;border-radius:10px;background:transparent;color:#67e8f9;font-size:14px;cursor:pointer">已是老用户？直接下载手机APPS ↓</button>
+        <div style="color:#55556e;font-size:11px;margin-top:14px">注册即自动绑定推荐关系，不可篡改</div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -71,6 +84,11 @@ const router = useRouter()
 const showLogin = ref(false)
 // 登录弹窗初始模式（登录/注册 tab），由 KunlunNav 事件或 URL 参数驱动
 const authInitialMode = ref<'login' | 'register'>('login')
+
+// 扫码邀请落地层状态
+const inviteOverlay = ref(false)
+const inviterName = ref('')
+let _inviteOAuthListener: ((e: MessageEvent) => void) | null = null
 const userDropdownOpen = ref(false)
 const isLoggedIn = ref(false)
 
@@ -82,7 +100,9 @@ function redirectAfterAuth() {
   const p = new URLSearchParams(window.location.search)
   const target = p.get('redirect')
   if (target && target.startsWith('/')) {
-    setTimeout(() => { window.location.href = target }, 200)
+    // 邀请注册闭环：注册成功后稍作停留（让用户看到成功提示）再进手机 APP 下载中心
+    const delay = target.startsWith('/download') ? 900 : 200
+    setTimeout(() => { window.location.href = target }, delay)
   } else {
     setTimeout(() => router.push('/'), 200)
   }
@@ -92,6 +112,90 @@ function redirectAfterAuth() {
 function onAuthLoggedIn() {
   isLoggedIn.value = true
   redirectAfterAuth()
+}
+
+// —— 扫码邀请落地层动作 ——
+function closeInviteOverlay() { inviteOverlay.value = false }
+
+function inviteRegister() {
+  // QQ 一键注册：QQ 身份即账号（服务端自动生成 uuid），无需再填手机号。
+  // ref/目标页写入 pending 键，回调页(auth-redirect)与首页监听双路消费（ensure-inviter 接口幂等不重复绑定）。
+  try {
+    const p = new URLSearchParams(window.location.search)
+    localStorage.setItem('invite_ref_pending', p.get('ref') || '')
+    const rawT = p.get('redirect') || '/download/desktop'
+    localStorage.setItem('invite_redirect_pending', rawT.startsWith('/') && !rawT.startsWith('//') ? rawT : '/download/desktop')
+  } catch {}
+  inviteOverlay.value = false
+  const _qp = new URLSearchParams(window.location.search)
+    const _refQ = _qp.get('ref') || localStorage.getItem('invite_ref_pending') || ''
+    fetch('/api/auth/qq/authorize' + (_refQ ? '?ref=' + encodeURIComponent(_refQ) : ''))
+    .then(r => r.json())
+    .then(data => {
+      const authUrl = data?.data?.authUrl || data?.authUrl
+      if (!authUrl) return
+      const w = window.open(authUrl, '_blank')
+      if (!w) { window.location.href = authUrl; return }
+      if (_inviteOAuthListener) window.removeEventListener('message', _inviteOAuthListener)
+      _inviteOAuthListener = (e: MessageEvent) => {
+        if (e.origin !== window.location.origin) return
+        if (e.data?.type === 'OAUTH_LOGIN') {
+          window.removeEventListener('message', _inviteOAuthListener)
+          _inviteOAuthListener = null
+          finishInviteLogin(e.data.token || localStorage.getItem('auth_token') || '')
+        }
+      }
+      window.addEventListener('message', _inviteOAuthListener)
+      const timer = setInterval(() => {
+        if (w.closed) {
+          clearInterval(timer)
+          setTimeout(() => {
+            const tk = localStorage.getItem('auth_token')
+            if (tk) finishInviteLogin(tk)
+          }, 900)
+        }
+      }, 800)
+    })
+    .catch(() => {})
+}
+
+async function finishInviteLogin(token: string) {
+  if (!token) return
+  try {
+    const mod = await import('~/utils/auth/token')
+    mod.setAuthToken(token)
+  } catch {}
+  isLoggedIn.value = true
+  let dest = '/download/desktop'
+  try {
+    const ref = localStorage.getItem('invite_ref_pending') || ''
+    if (ref) {
+      await fetch('/api/auth/qq/ensure-inviter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ refCode: ref })
+      }).catch(() => {})
+    }
+    const r = localStorage.getItem('invite_redirect_pending')
+    if (r && r.startsWith('/') && !r.startsWith('//')) dest = r
+    localStorage.removeItem('invite_ref_pending')
+    localStorage.removeItem('invite_redirect_pending')
+  } catch {}
+  window.location.href = dest
+}
+
+function inviteLogin() {
+  inviteOverlay.value = false
+  showLogin.value = true
+  authInitialMode.value = 'login'
+}
+
+function inviteDownload() {
+  // 老用户/不想注册：直接去手机APP下载中心
+  const p = new URLSearchParams(window.location.search)
+  const rawTarget = p.get('redirect') || '/download/desktop'
+  const target = rawTarget.startsWith('/') && !rawTarget.startsWith('//') ? rawTarget : '/download/desktop'
+  window.location.href = target
 }
 
 interface AuthUser {
@@ -165,8 +269,17 @@ onMounted(() => {
   // URL 参数触发登录弹窗
   const params = new URLSearchParams(window.location.search)
   if (params.get('showLogin') === '1') {
-    showLogin.value = true
-    authInitialMode.value = params.get('register') === '1' ? 'register' : 'login'
+    // 扫码邀请分流 v3（确定性方案）：不再依赖登录态自动判断——
+    // QQ/微信内置浏览器存储按域名共享，新用户常被老登录态误伤。
+    // 改为落地选择层：用户自己选[新用户注册/已有账号登录/直接下载APP]。ref 始终保留在 URL 上，
+    // 注册弹窗会自动读取并锁定推荐关系。
+    if (params.get('ref')) {
+      fetch('/api/auth/invite/info?ref=' + encodeURIComponent(params.get('ref')))
+        .then(r => r.json())
+        .then(d => { inviterName.value = d?.data?.inviter?.username || '' })
+        .catch(() => {})
+      inviteOverlay.value = true
+    }
   }
 
   // ⭐ 只要有 token，就从 /api/auth/me 获取完整用户信息（覆盖可能不完整的 QQ 登录缓存）

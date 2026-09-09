@@ -12,17 +12,26 @@ const LLM_PROVIDERS: Record<string, { base: string }> = {
 
 // 用用户自配大模型对话（未配置则报错）
 async function callUserLLM(userUid: string, messages: any[], temperature = 0.7): Promise<string> {
+  // 后端强制 VIP：数字分身(AI)仅 VIP 可用
+  const uRow: any = await prisma.user.findUnique({ where: { id: userUid }, select: { memberTier: true } })
+  const mRow: any = await prisma.membership.findUnique({ where: { userId: userUid }, select: { tier: true } })
+  const tier = (uRow?.memberTier || mRow?.tier || 'free') as string
+  if (tier === 'free' || tier === 'basic') throw new Error('数字分身为 AI 功能，仅限 VIP 会员使用')
   const k: any = await prisma.$queryRawUnsafe(`SELECT provider, model, base_url AS "baseUrl", api_key AS "apiKey" FROM user_llm_key WHERE user_id=$1`, userUid)
   if (!k.length || !k[0].apiKey) throw new Error('未配置大模型，请先到"我的-大模型设置"配置（数字分身回复需自备 API Key）')
   const cfg = k[0]
   const base = (cfg.baseUrl || LLM_PROVIDERS[cfg.provider]?.base || 'https://api.deepseek.com/v1').replace(/\/+$/, '')
   const r = await fetch(base + '/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': '***' + cfg.apiKey },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.apiKey },
     body: JSON.stringify({ model: cfg.model || 'deepseek-v4-flash', messages, max_tokens: 1024, temperature }),
     signal: AbortSignal.timeout(60000),
   })
-  if (!r.ok) throw new Error('大模型调用失败 ' + r.status)
+  if (!r.ok) {
+    const errBody = await r.text().catch(() => '')
+    console.error('[avatar/callUserLLM] upstream http', r.status, 'provider=', cfg.provider, 'model=', cfg.model, 'keyhead=', String(cfg.apiKey||'').slice(0,6), 'body=', errBody.slice(0,200))
+    throw new Error('大模型调用失败 ' + r.status)
+  }
   const j = await r.json()
   return (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || ''
 }
@@ -92,7 +101,7 @@ export default async function avatarRoutes(fastify: FastifyInstance) {
     const persona = body.persona ?? profile[0].persona
     const kb = body.knowledgeBase ?? profile[0].knowledge_base
     const styleJSON = JSON.stringify({ settings: newSettings, memory: d.memory })
-    await prisma.$queryRawUnsafe(`UPDATE avatar_profile SET name=$1, persona=$2, knowledge_base=$3, style_config=$4, updated_at=NOW() WHERE user_uid=$5`,
+    await prisma.$queryRawUnsafe(`UPDATE avatar_profile SET name=$1, persona=$2, knowledge_base=$3, style_config=$4 WHERE user_uid=$5`,
       name, persona, kb, styleJSON, userUid)
     return { success: true, data: { message: '分身设置已保存' } }
   })

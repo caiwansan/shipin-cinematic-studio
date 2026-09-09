@@ -6,6 +6,7 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { createHash } from 'crypto'
+import { requirePaypass } from '../utils/paypass-guard.js'
 
 const FOUNDER_UID = '0ba5bf98-7005-4019-a431-6a0fb4b2d28d'   // 南波万=掌柜=创始节点（线上UUID）
 const CHAIN_TOTAL_SUPPLY = 1000000000n
@@ -16,6 +17,8 @@ const BANK_LOAN_PLANS: Record<number, { mult: number; rate: number }> = {
   180: { mult: 3.0, rate: 0.09 }, 360: { mult: 5.0, rate: 0.08 },
 }
 const BANK_DEPOSIT_PLANS: Record<number, number> = { 30: 0.06, 60: 0.07, 90: 0.08, 180: 0.09, 360: 0.10 }
+
+// ── 支付密码校验已统一到 utils/paypass-guard.ts（全量强制）──
 
 // 当日工分兑换茶票的市场汇率 = 全网工分存量 / 全网茶票存量（实时自动波动，一增一减；与交换台同源）
 async function bankRate(): Promise<number> {
@@ -86,16 +89,35 @@ async function transfer(from: string, to: string, token_type: string, amount: bi
   const curT = token_type === 'gongfen' ? BigInt(wt.gongfen||0) : BigInt(wt.chapiao||0)
   const afterF = curF - amount
   const afterT = curT + amount
-  await prisma.$queryRawUnsafe(`UPDATE tea_wallet SET gongfen=$1, chapiao=$2, updated_at=$3 WHERE uid=$4`,
-    token_type==='gongfen'?Number(afterF):Number(wf.gongfen||0),
-    token_type==='chapiao'?Number(afterF):Number(wf.chapiao||0),
-    Math.floor(Date.now()/1000), from)
+  // 条件更新防并发双花：余额不足以扣减时影响行数为 0
+  const debited = await prisma.$executeRawUnsafe(
+    token_type==='gongfen'
+      ? `UPDATE tea_wallet SET gongfen=$1, updated_at=$2 WHERE uid=$3 AND gongfen >= $4`
+      : `UPDATE tea_wallet SET chapiao=$1, updated_at=$2 WHERE uid=$3 AND chapiao >= $4`,
+    Number(afterF), Math.floor(Date.now()/1000), from, Number(amount))
+  if (debited < 1) throw new Error(`${token_type==='gongfen'?'工分':'茶票'}余额不足（并发冲突，请重试）`)
   await prisma.$queryRawUnsafe(`UPDATE tea_wallet SET gongfen=$1, chapiao=$2, updated_at=$3 WHERE uid=$4`,
     token_type==='gongfen'?Number(afterT):Number(wt.gongfen||0),
     token_type==='chapiao'?Number(afterT):Number(wt.chapiao||0),
     Math.floor(Date.now()/1000), to)
   await appendTx(from, token_type, -amount, 'transfer', from, to, remark, afterF)
   await appendTx(to, token_type, amount, 'transfer', from, to, remark, afterT)
+  return { ok: true }
+}
+
+// ── 银行赎回茶票：创始节点托管账扣减 → 用户增加（保持总量守恒，绕开茶票禁止普通转账）──
+async function bankReturnChapiao(uid: string, amount: number, remark: string) {
+  const amt = BigInt(amount)
+  const wf = await getWallet(FOUNDER_UID)
+  const wu = await getWallet(uid)
+  const ts = Math.floor(Date.now() / 1000)
+  const afterF = BigInt(wf.chapiao || 0) - amt
+  const afterU = BigInt(wu.chapiao || 0) + amt
+  if (afterF < 0n) throw new Error('创始节点托管账余额不足')
+  await prisma.$queryRawUnsafe(`UPDATE tea_wallet SET chapiao=$1, updated_at=$2 WHERE uid=$3`, Number(afterF), ts, FOUNDER_UID)
+  await prisma.$queryRawUnsafe(`UPDATE tea_wallet SET chapiao=$1, updated_at=$2 WHERE uid=$3`, Number(afterU), ts, uid)
+  await appendTx(FOUNDER_UID, 'chapiao', -amt, 'transfer', FOUNDER_UID, uid, remark, afterF)
+  await appendTx(uid, 'chapiao', amt, 'transfer', FOUNDER_UID, uid, remark, afterU)
   return { ok: true }
 }
 
@@ -158,10 +180,16 @@ export default async function tokenWalletRoutes(fastify: FastifyInstance) {
   // ── POST /api/tea/token/transfer — 通证转账 ──
   fastify.post('/api/tea/token/transfer', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
     const uid = request.user.id
-    const { to, tokenType, amount, remark = '' } = (request.body as any) || {}
+    const { to, tokenType, amount, remark = '', paypass } = (request.body as any) || {}
     if (!to || !tokenType || !amount || amount <= 0) return reply.status(400).send({ error: '参数错误' })
+    if (!Number.isInteger(Number(amount))) return reply.status(400).send({ error: '转账金额必须是整数工分' })
     if (tokenType !== 'gongfen') return reply.status(400).send({ error: '仅支持工分转账；茶票为股权凭证，禁止转账（可到飞升台兑换或茶票市场流通）' })
     if (String(to) === uid) return reply.status(400).send({ error: '不能转给自己' })
+    try { await requirePaypass(uid, paypass) } catch (e: any) {
+      if (e?.message === 'PAYPASS_NOT_SET') return reply.status(403).send({ error: '请先在「支付密码」页设置支付密码后再进行转账', code: 'PAYPASS_NOT_SET' })
+      if (e?.message === 'NEED_PAYPASS') return reply.status(403).send({ error: '支付密码错误，请重新输入', code: 'NEED_PAYPASS' })
+      throw e
+    }
     try {
       await transfer(uid, String(to), tokenType, BigInt(amount), String(remark))
       return { success: true }
@@ -276,7 +304,8 @@ export default async function tokenWalletRoutes(fastify: FastifyInstance) {
     return { success: true, data: { loanId: 0, pledgeChapiao: amt, loanGongfen: loan, days: d, mult: plan.mult, annualRate: plan.rate, rate, dueAt: now + d * 86400 } }
   })
 
-  // POST /api/tea/bank/repay — 还款（本金+利息）赎押
+  // POST /api/tea/bank/repay — 到期偿还（本金+利息），混合结算：
+  //   工分优先扣光 → 不足部分按当日兑换汇率用茶票折算抵偿 → 仍不足则工分/茶票全部自动扣光（违约没收质押，不赎回）
   fastify.post('/api/tea/bank/repay', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
     const uid = request.user.id
     const { loanId } = (request.body as any) || {}
@@ -286,16 +315,60 @@ export default async function tokenWalletRoutes(fastify: FastifyInstance) {
     const now = Math.floor(Date.now() / 1000)
     const heldDays = Math.max(1, Math.ceil((now - Number(loan.created_at)) / 86400))
     const principal = Number(loan.loan_gongfen)
-    const rate = Number(loan.annual_rate || 0)
-    const interest = Math.floor(principal * rate * heldDays / 365)
-    const total = principal + interest
+    const annualRate = Number(loan.annual_rate || 0)
+    const interest = Math.floor(principal * annualRate * heldDays / 365)
+    const total = principal + interest                       // 应还总额（工分）
+    const rate = await bankRate()                            // 当日兑换汇率（1 茶票 = rate 工分）
     const w = await getWallet(uid)
-    if (Number(w.gongfen || 0) < total) return reply.status(400).send({ error: '工分不足（需还本金 ' + principal + ' + 利息 ' + interest + ' = ' + total + '）' })
-    // 还本息（工分 → 创始节点）；赎回茶票
-    await transfer(uid, FOUNDER_UID, 'gongfen', BigInt(total), '银行还款(' + loan.days + '天)')
-    await transfer(FOUNDER_UID, uid, 'chapiao', BigInt(loan.pledge_chapiao), '质押解押', true)
-    await prisma.$queryRawUnsafe(`UPDATE tea_bank_loan SET status='repaid', repaid_at=$1 WHERE id=$2`, now, loan.id)
-    return { success: true, data: { principal, interest, total, pledgeChapiao: Number(loan.pledge_chapiao) } }
+    const gongfenBal = Number(w.gongfen || 0)
+    const chapiaoBal = Number(w.chapiao || 0)
+
+    // ① 工分优先：扣光工分（不超过应还总额）
+    const gongfenPaid = Math.min(gongfenBal, total)
+    let deficit = total - gongfenPaid
+    let chapiaoUsed = 0
+    let chapiaoGongfen = 0
+    let short = 0
+
+    // ② 工分不足 → 用茶票按当日汇率折算抵偿
+    if (deficit > 0 && chapiaoBal > 0) {
+      // 折算等值茶票：需要 ceil(deficit / rate) 张茶票（向上取整保证抵足）
+      const neededChapiao = Math.ceil(deficit / (rate > 0 ? rate : 1))
+      chapiaoUsed = Math.min(chapiaoBal, neededChapiao)
+      chapiaoGongfen = Math.floor(chapiaoUsed * rate)        // 实际抵偿工分数
+      deficit = total - gongfenPaid - chapiaoGongfen
+    }
+
+    short = Math.max(0, deficit)   // 仍欠部分
+
+    // ── 执行扣款（若有）──
+    if (gongfenPaid > 0) {
+      await transfer(uid, FOUNDER_UID, 'gongfen', BigInt(gongfenPaid), '银行还款(' + loan.days + '天，工分抵扣)')
+    }
+    if (chapiaoUsed > 0) {
+      await transfer(uid, FOUNDER_UID, 'chapiao', BigInt(chapiaoUsed), '银行还款(' + loan.days + '天，茶票折算抵扣)', true)
+    }
+
+    // ── 结算：是否足额还清 ──
+    const settled = short <= 0
+    if (settled) {
+      // 足额还清：赎回质押茶票（创始节点托管账 → 用户，保持总量守恒）
+      await bankReturnChapiao(uid, Number(loan.pledge_chapiao), '质押解押')
+      await prisma.$queryRawUnsafe(`UPDATE tea_bank_loan SET status='repaid', repaid_at=$1 WHERE id=$2`, now, loan.id)
+    } else {
+      // 违约：工分/茶票已全部自动扣光，质押茶票没收（不赎回），标记逾期
+      await prisma.$queryRawUnsafe(`UPDATE tea_bank_loan SET status='overdue', settled_at=$1, short_gongfen=$2 WHERE id=$3`, now, short, loan.id)
+    }
+
+    return {
+      success: true, data: {
+        principal, interest, total,
+        gongfenPaid, chapiaoUsed, chapiaoGongfen, rate,
+        short, settled,
+        pledgeChapiao: Number(loan.pledge_chapiao),
+        redeemed: settled ? Number(loan.pledge_chapiao) : 0,
+      },
+    }
   })
 
   // POST /api/tea/bank/deposit — 存款（存工分吃利息）

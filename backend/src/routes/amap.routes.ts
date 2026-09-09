@@ -90,4 +90,20 @@ export default async function amapRoutes(fastify: FastifyInstance) {
       return reply.code(502).send({ success: false, message: e.message })
     }
   })
+
+  // GET /api/v1/amap/ip — IP 定位
+  fastify.get('/api/v1/amap/ip', async (request: any, reply: any) => {
+    try {
+      const ip = String(request.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || request.ip || '')
+      if (!ip || ip === '::1' || ip === '127.0.0.1') return reply.code(400).send({ success: false, message: '无客户端IP' })
+      const res = await fetch(amapUrl('/v3/ip', { ip }))
+      const j: any = await res.json()
+      if (String(j.status) !== '1') return reply.code(502).send({ success: false, message: j.info || 'IP定位失败' })
+      const loc = String(j.location || '').trim(); let lng = 0, lat = 0
+      if (loc) { const p = loc.split(','); lng = Number(p[0]) || 0; lat = Number(p[1]) || 0 }
+      return { success: true, data: { lng, lat, province: j.province || '', city: j.city || '', adcode: j.adcode || '' } }
+    } catch (e: any) {
+      return reply.code(502).send({ success: false, message: e.message })
+    }
+  })
 }

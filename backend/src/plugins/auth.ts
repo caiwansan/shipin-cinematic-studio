@@ -36,8 +36,13 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
   fastify.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
     try {
       await request.jwtVerify()
-      // 单设备登录检查：token 中的 tokenVersion 必须与数据库一致
+      // 检查 token 中是否有有效的 user id
       const decoded = request.user as any
+      if (!decoded || !decoded.id) {
+        reply.status(401).send({ error: '未授权', message: 'token 无效或缺少用户标识，请重新登录' })
+        return reply
+      }
+      // 单设备登录检查：token 中的 tokenVersion 必须与数据库一致
       if (decoded && decoded.id && decoded.tokenVersion !== undefined) {
         const dbUser = await prisma.user.findUnique({
           where: { id: decoded.id },
@@ -82,7 +87,9 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
       try {
         await request.jwtVerify()
         const decoded = request.user as any
-        if (decoded && decoded.id && decoded.tokenVersion !== undefined) {
+        if (!decoded || !decoded.id) {
+          // 没有有效 user id，跳过 tokenVersion 检查（但 jwtVerify 已通过，说明 token 签名有效）
+        } else if (decoded.tokenVersion !== undefined) {
           const dbUser = await prisma.user.findUnique({
             where: { id: decoded.id },
             select: { tokenVersion: true },

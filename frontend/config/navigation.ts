@@ -36,10 +36,8 @@ export const navCategories: NavCategory[] = [
       { label: '应用中心', icon: '🧩', to: '/ecosystem/applications', desc: '应用生态入口层' },
       // 插件中心：AI 能力生态入口层（掌柜指令 2026-08-04 ECO-10.1，2026-08-06 移入更多项目）
       { label: '插件中心', icon: '🔌', to: '/ecosystem/plugins', desc: 'AI 能力生态入口层' },
-      // AI Center：昆仑镜 AI 生态入口层（掌柜指令 2026-08-01，2026-08-06 移入更多项目）
-      { label: 'AI中心', icon: '🧠', to: '/ai-center', desc: '昆仑镜 AI 生态入口' },
-      // 桌面版下载入口（掌柜指令 2026-08-04 RELEASE-01.1，2026-08-06 移入更多项目）
-      { label: '下载桌面版', icon: '⬇️', to: '/download/desktop', desc: '昆仑镜桌面客户端下载' },
+      // 商城：移至更多项目（掌柜指令 2026-08-26：与 AI中心 调换位置）
+      { label: '商城', icon: '🛍️', to: '/mall', desc: '昆仑镜商城' },
     ],
   },
   {
@@ -62,8 +60,8 @@ export const navCategories: NavCategory[] = [
 ]
 
 export const primaryNav: NavItem[] = [
-  { label: '商城', icon: '🛍️', to: '/mall' },
+  { label: 'AI中心', icon: '🧠', to: '/ai-center' },
   { label: '社区', icon: '🌐', to: '/community' },
-  // 昆仑茶馆：公共聊天频道（掌柜指令 2026-08-06：移到社区后面，保持顶栏直达）
-  { label: '昆仑茶馆', icon: '🍵', to: '/chat', desc: '公共聊天频道 · 群聊 · 语音视频 · 红包礼物' },
+  // 下载桌面版（掌柜指令 2026-08-23：从更多项目移到顶栏）
+  { label: '下载桌面版', icon: '⬇️', to: '/download/desktop', desc: '昆仑镜桌面客户端下载' },
 ]

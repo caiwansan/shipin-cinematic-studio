@@ -2,6 +2,15 @@
 // 路由：GET /api/tea/news?industry=xxx&historyId= + POST /api/tea/news/fetch
 // 平台不提供大模型 API，AI 简报用发起用户的 user_llm_key 配置（未配则只出新闻列表）
 import { FastifyInstance } from 'fastify'
+
+function validateIndustry(industry: string): string {
+  const allowed = ['tea', 'agriculture', 'food', 'retail', 'tech', 'finance', 'education', 'health', 'travel', 'other'];
+  return allowed.includes(industry) ? industry : 'tea';
+}
+function validateDay(day: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : new Date().toISOString().slice(0, 10);
+}
+
 import { prisma } from '../utils/index.js'
 
 // 🔧 LLM 配置归一化（对齐 admin-tea-translate.normalizeCfg）：解析 provider 的默认 baseUrl/型号
@@ -44,8 +53,11 @@ async function ensureNewsTable() {
     day TEXT NOT NULL,
     news TEXT DEFAULT '[]',
     brief TEXT DEFAULT '',
-    created_at BIGINT DEFAULT (extract(epoch from now()) * 1000)::bigint
+    created_at BIGINT DEFAULT (extract(epoch from now()) * 1000)::bigint,
+    user_id TEXT DEFAULT ''
   )`)
+  // 兼容老表：补 user_id 列
+  await prisma.$executeRawUnsafe(`ALTER TABLE news_fetch_log ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT ''`)
   newsReady = true
 }
 
@@ -130,21 +142,35 @@ export default async function teaNewsRoutes(fastify: FastifyInstance) {
 
   // GET /api/tea/news?industry=xxx&historyId=id
   // 返回：当前行业最新抓取(或指定历史)完整内容 + 最近5条抓取历史(标签)
-  fastify.get('/api/tea/news', auth, async (request: any) => {
+  fastify.get('/api/tea/news', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
+    const userId = request.user.id
+    // 后端强制 VIP：行业热点简报属 AI，普通用户禁止
+    const meRow: any = await prisma.user.findUnique({ where: { id: userId }, select: { memberTier: true } })
+    const myMem: any = await prisma.membership.findUnique({ where: { userId }, select: { tier: true } })
+    const meTier = (meRow?.memberTier || myMem?.tier || 'free') as string
+    if (meTier === 'free' || meTier === 'basic') {
+      return reply.status(403).send({ success: false, error: '行业热点仅限 VIP 会员使用' })
+    }
     const ind = String((request.query as any).industry || '人工智能/科技')
     const historyId = String((request.query as any).historyId || '')
 
-    // 最近5条抓取历史（标签用）
+    // 想看热点必须先自己配置大模型 API（我的→大模型设置）
+    const cfgRaw: any = await prisma.$queryRawUnsafe(`SELECT provider, model, base_url AS "baseUrl", api_key AS "apiKey" FROM user_llm_key WHERE user_id=$1`, userId)
+    if (!cfgRaw || cfgRaw.length === 0 || !String(cfgRaw[0].apiKey || '').trim()) {
+      return reply.status(400).send({ success: false, error: '请先在【我的→大模型设置】配置 API Key，才能查看行业热点' })
+    }
+
+    // 最近5条抓取历史（标签用）—— 仅本人抓取
     const logs: any = await prisma.$queryRawUnsafe(
-      `SELECT id, industry, day, brief, created_at::float8 AS created_at FROM news_fetch_log ORDER BY id DESC LIMIT 5`)
+      `SELECT id, industry, day, brief, created_at::float8 AS created_at FROM news_fetch_log WHERE user_id=$1 ORDER BY id DESC LIMIT 5`, userId)
 
     let current: any = null
     if (historyId) {
-      const row: any = await prisma.$queryRawUnsafe(`SELECT id, industry, day, news, brief, created_at::float8 AS created_at FROM news_fetch_log WHERE id=$1::bigint`, historyId)
+      const row: any = await prisma.$queryRawUnsafe(`SELECT id, industry, day, news, brief, created_at::float8 AS created_at FROM news_fetch_log WHERE id=$1::bigint AND user_id=$2`, historyId, userId)
       if (row.length) current = row[0]
     } else {
-      // 当前行业最新一条
-      const row: any = await prisma.$queryRawUnsafe(`SELECT id, industry, day, news, brief, created_at::float8 AS created_at FROM news_fetch_log WHERE industry=$1 ORDER BY id DESC LIMIT 1`, ind)
+      // 当前行业最新一条（仅本人）
+      const row: any = await prisma.$queryRawUnsafe(`SELECT id, industry, day, news, brief, created_at::float8 AS created_at FROM news_fetch_log WHERE industry=$1 AND user_id=$2 ORDER BY id DESC LIMIT 1`, ind, userId)
       if (row.length) current = row[0]
     }
 
@@ -162,10 +188,17 @@ export default async function teaNewsRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/tea/news/fetch — 采集 + AI简报，upsert到抓取历史(同行业今天覆盖)，清理只留5条
-  fastify.post('/api/tea/news/fetch', auth, async (request: any, reply: any) => {
+  fastify.post('/api/tea/news/fetch', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
     const userId = request.user.id
     const ind = String((request.body as any)?.industry || '人工智能/科技')
     const day = today()
+    // 后端强制 VIP：行业热点简报属 AI，普通用户禁止
+    const meRow: any = await prisma.user.findUnique({ where: { id: userId }, select: { memberTier: true } })
+    const myMem: any = await prisma.membership.findUnique({ where: { userId }, select: { tier: true } })
+    const meTier = (meRow?.memberTier || myMem?.tier || 'free') as string
+    if (meTier === 'free' || meTier === 'basic') {
+      return reply.status(403).send({ success: false, error: '行业热点仅限 VIP 会员使用' })
+    }
     const kwAll = KEYWORDS[ind] || []
     const vert = VERTICAL[ind] || []
     const sources = [...(vert.length ? vert : []), ...GEN_SOURCES]
@@ -213,14 +246,14 @@ export default async function teaNewsRoutes(fastify: FastifyInstance) {
       await prisma.$executeRawUnsafe(`INSERT INTO news_items (industry, day, title, url, source, published_at) VALUES ($1,$2,$3,$4,$5,$6)`, ind, day, c.title, c.url, c.source, c.published_at)
     }
 
-    // upsert 抓取历史（同行业+同日覆盖为最新一次）
-    await prisma.$executeRawUnsafe(`DELETE FROM news_fetch_log WHERE industry=$1 AND day=$2`, ind, day)
+    // upsert 抓取历史（本人 · 同行业+同日覆盖为最新一次）
+    await prisma.$executeRawUnsafe(`DELETE FROM news_fetch_log WHERE industry=$1 AND day=$2 AND user_id=$3`, ind, day, userId)
     const newsJson = JSON.stringify(collected)
     const briefJson = brief ? JSON.stringify(brief) : ''
-    await prisma.$executeRawUnsafe(`INSERT INTO news_fetch_log (industry, day, news, brief, created_at) VALUES ($1,$2,$3,$4,$5)`, ind, day, newsJson, briefJson, Date.now())
+    await prisma.$executeRawUnsafe(`INSERT INTO news_fetch_log (industry, day, news, brief, created_at, user_id) VALUES ($1,$2,$3,$4,$5,$6)`, ind, day, newsJson, briefJson, Date.now(), userId)
 
-    // 只保留最近5条抓取历史
-    await prisma.$executeRawUnsafe(`DELETE FROM news_fetch_log WHERE id NOT IN (SELECT id FROM news_fetch_log ORDER BY id DESC LIMIT 5)`)
+    // 只保留该用户最近5条抓取历史
+    await prisma.$executeRawUnsafe(`DELETE FROM news_fetch_log WHERE user_id=$1 AND id NOT IN (SELECT id FROM news_fetch_log WHERE user_id=$1 ORDER BY id DESC LIMIT 5)`, userId)
 
     return { success: true, data: { industry: ind, day, news: collected, brief, briefNote } }
   })

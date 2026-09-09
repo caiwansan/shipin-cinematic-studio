@@ -55,6 +55,7 @@ export function useAiSecretary(meetingId: string, userUid: string) {
   const recordings = ref<any[]>([])
   const duration = ref(0)
   const language = ref('zh')
+  const llmConfigured = ref(false)  // 用户是否已配置 LLM
 
   let ws: WebSocket | null = null
   let audioCtx: AudioContext | null = null
@@ -66,23 +67,27 @@ export function useAiSecretary(meetingId: string, userUid: string) {
 
   const token = () => localStorage.getItem('auth_token') || localStorage.getItem('accessToken') || ''
 
-  // 检查 VIP 状态
+  // 检查 VIP 状态 + LLM 配置状态
   async function checkVip(): Promise<boolean> {
     try {
-      const r = await fetch('/api/user/llm-config', {
-        headers: { 'Authorization': `Bearer ${token()}` }
-      })
-      const j = await r.json()
-      // VIP 检查需要从用户信息获取
-      const userResp = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token()}` }
-      })
+      // 并行获取用户信息和 LLM 配置
+      const [userResp, llmResp] = await Promise.all([
+        fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token()}` } }),
+        fetch('/api/user/llm-config', { headers: { 'Authorization': `Bearer ${token()}` } }),
+      ])
       const userJson = await userResp.json()
-      const tier = userJson?.data?.memberTier || userJson?.user?.memberTier || 'free'
+      const llmJson = await llmResp.json()
+      // /api/auth/me 返回 { success, data: { user: { memberTier } } }
+      const tier = userJson?.data?.user?.memberTier || userJson?.data?.memberTier || 'free'
       isVip.value = tier === 'vip' || tier === 'pro'
+      // 检查 LLM 是否已配置（有 API Key 且已启用）
+      // /api/user/llm-config 返回 { success, data: { llm: { enabled, hasApiKey } } }
+      const llm = llmJson?.data?.llm
+      llmConfigured.value = !!(llm?.enabled && llm?.hasApiKey)
       return isVip.value
     } catch {
       isVip.value = false
+      llmConfigured.value = false
       return false
     }
   }
@@ -382,8 +387,14 @@ export function useAiSecretary(meetingId: string, userUid: string) {
         minutes.value = j.data
         return j.data
       }
+      // 显示具体错误原因
+      if (j.error) {
+        error.value = j.error
+        console.warn('[AI秘书] 纪要生成失败:', j.error)
+      }
       return null
-    } catch {
+    } catch (e: any) {
+      error.value = e.message || '纪要生成失败'
       return null
     }
   }
@@ -436,6 +447,7 @@ export function useAiSecretary(meetingId: string, userUid: string) {
     error,
     isVip,
     needUpgrade,
+    llmConfigured,
     transcripts,
     minutes,
     recordings,

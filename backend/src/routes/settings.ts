@@ -64,22 +64,32 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
     return { success: true, data: profile }
   })
 
-  // POST /api/settings/profile — 修改资料
+  // POST /api/settings/profile — 修改资料（合并更新，不覆盖已有字段）
   fastify.post('/api/settings/profile', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userUid = request.user.id
     const body = request.body as any
     const existing = await prisma.$queryRawUnsafe(
-      `SELECT id FROM user_setting WHERE user_uid = $1`, userUid
+      `SELECT id, profile_data FROM user_setting WHERE user_uid = $1`, userUid
     ) as any[]
-    if (existing.length) {
+    let mergedData = body
+    if (existing.length && existing[0].profile_data) {
+      try {
+        const oldData = JSON.parse(existing[0].profile_data)
+        mergedData = { ...oldData, ...body }
+      } catch {}
       await prisma.$queryRawUnsafe(
         `UPDATE user_setting SET profile_data = $1, updated_at = NOW() WHERE id = $2`,
-        JSON.stringify(body), existing[0].id
+        JSON.stringify(mergedData), existing[0].id
+      )
+    } else if (existing.length) {
+      await prisma.$queryRawUnsafe(
+        `UPDATE user_setting SET profile_data = $1, updated_at = NOW() WHERE id = $2`,
+        JSON.stringify(mergedData), existing[0].id
       )
     } else {
       await prisma.$queryRawUnsafe(
         `INSERT INTO user_setting (user_uid, profile_data) VALUES ($1, $2)`,
-        userUid, JSON.stringify(body)
+        userUid, JSON.stringify(mergedData)
       )
     }
     return { success: true }

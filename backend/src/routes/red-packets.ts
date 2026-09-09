@@ -4,6 +4,7 @@
 // IM 联动：发红包/抢红包结果由服务端代发自定义消息（客户端无法伪造绕过结算）
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { requirePaypass } from '../utils/paypass-guard.js'
 
 const IM_HTTP_ADDR = process.env.IM_HTTP_ADDR || 'http://127.0.0.1:5001'
 // 红包过期时间（未领完自动退回）
@@ -86,19 +87,32 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
   // body: { channelId, channelType, totalDiamonds, count, mode: 'lucky'|'normal', note }
   fastify.post('/api/im/red-packets', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const senderId = request.user.id as string
-    const { channelId, channelType, totalDiamonds, count, mode = 'lucky', note = '' } = request.body as any
+    const { channelId, channelType, totalDiamonds, count, mode = 'lucky', note = '', paypass, targetUid } = request.body as any
     const total = Number(totalDiamonds)
     const cnt = Number(count)
     if (!channelId || !channelType) return reply.status(400).send({ success: false, error: 'channelId/channelType 必填' })
     if (!Number.isInteger(total) || total < 1) return reply.status(400).send({ success: false, error: '红包金额必须 ≥ 1 钻石' })
+    if (total > 8000) return reply.status(400).send({ success: false, error: '单个红包最高 8000 钻石', code: 'RED_PACKET_TOO_LARGE' })
     if (!Number.isInteger(cnt) || cnt < 1 || cnt > 200) return reply.status(400).send({ success: false, error: '红包个数必须为 1-200' })
     if (total < cnt) return reply.status(400).send({ success: false, error: '金额不能少于个数（每人至少 1 钻石）' })
+    // 指定用户红包（mode=direct）：仅 targetUid 可领，单份固定全额
+    if (mode === 'direct') {
+      if (!targetUid || String(targetUid) === String(senderId)) return reply.status(400).send({ success: false, error: '指定红包需提供有效的目标用户（不能是自己）', code: 'INVALID_TARGET' })
+      const tu = await prisma.user.findUnique({ where: { id: String(targetUid) }, select: { id: true } }).catch(() => null)
+      if (!tu) return reply.status(400).send({ success: false, error: '指定领取人不存在', code: 'INVALID_TARGET' })
+    }
     // 私聊红包 = 直接红包（微信风格，IM-CHA-M10.3）：固定金额单个，不允许拼手气/多个
     const isDm = String(channelId).startsWith('dm_')
-    const finalCnt = isDm ? 1 : cnt
-    const m = isDm ? 'normal' : mode === 'normal' ? 'normal' : 'lucky'
+    const finalCnt = mode === 'direct' ? 1 : isDm ? 1 : cnt
+    const m = mode === 'direct' ? 'direct' : isDm ? 'normal' : mode === 'normal' ? 'normal' : 'lucky'
     if (total < finalCnt) return reply.status(400).send({ success: false, error: '金额不能少于个数（每人至少 1 钻石）' })
     const cleanNote = String(note || '').slice(0, 50)
+    // 支付密码强制校验（任何用户必须先设置并携带正确支付密码；120s内已verify放行兼容旧流程）
+    try { await requirePaypass(senderId, paypass) } catch (e: any) {
+      if (e?.message === 'PAYPASS_NOT_SET') return reply.status(403).send({ success: false, error: '请先在「支付密码」页设置支付密码后再发红包', code: 'PAYPASS_NOT_SET' })
+      if (e?.message === 'NEED_PAYPASS') return reply.status(403).send({ success: false, error: '支付密码错误，请重新输入', code: 'NEED_PAYPASS' })
+      throw e
+    }
 
     let rpId = ''
     try {
@@ -122,6 +136,7 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
             remainDiamonds: total,
             remainCount: finalCnt,
             note: cleanNote,
+            ...(m === 'direct' ? { targetUid: String(targetUid) } : {}),
             expiredAt: new Date(Date.now() + RED_PACKET_TTL_MS),
           },
         })
@@ -170,6 +185,8 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
         }
         if (rp.status === 'refunded') throw new Error('RED_PACKET_EXPIRED')
         if (rp.senderId === userId) throw new Error('CANNOT_GRAB_OWN')
+        // 指定用户红包：仅目标用户可领（targetUid 来自 SELECT * 原始行，无需 Prisma 模型字段）
+        if ((rp as any).targetUid && String((rp as any).targetUid) !== userId) throw new Error('NOT_TARGET_USER')
         if (rp.status === 'completed') throw new Error('RED_PACKET_FINISHED')
         if (rp.remainCount <= 0 || rp.remainDiamonds <= 0) throw new Error('RED_PACKET_FINISHED')
         // 一人一包
@@ -234,6 +251,7 @@ export default async function redPacketRoutes(fastify: FastifyInstance) {
         CANNOT_GRAB_OWN: '不能抢自己发的红包',
         RED_PACKET_FINISHED: '手慢了，红包被抢完了',
         ALREADY_GRABBED: '你已经抢过这个红包了',
+        NOT_TARGET_USER: '这是专属红包，只有指定用户可以领取',
       }
       const msg = map[(e as Error).message]
       if (msg) return reply.status(400).send({ success: false, error: msg, code: (e as Error).message })

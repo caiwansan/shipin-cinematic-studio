@@ -67,5 +67,5 @@ export { useIdentityStore, UserContext, EnterpriseContext, WorkspaceContext, Mem
 export { Project } from '../stores/project';
 export { PROJECT_TYPE_LABELS, PROJECT_TYPE_ICONS, useProjectStore, ProjectType, ProjectStatus, ProjectCharacter, CharacterMemory, EpisodeData, SceneData, ShotData, CostumeConfig, DirectorDecision, WorkflowState, WorkflowStep, AgentState, ProjectInfo } from '../stores/projectStore';
 export { useWorkbenchStore } from '../stores/workbench';
-export { defineStore, acceptHMRUpdate, usePinia, storeToRefs } from '../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables';
+export { defineStore, acceptHMRUpdate, usePinia, storeToRefs } from '../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables';
 export { definePageMeta } from '../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/pages/runtime/composables';

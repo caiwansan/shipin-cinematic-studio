@@ -1,8 +1,9 @@
+import type { FastifyInstance } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { requireAdmin } from '../middleware/require-admin.js'
 
 // ═══ 后台：城市代理申请管理 ═══
-export default async function adminTeaAgentRoutes(fastify: any) {
+export default async function adminTeaAgentRoutes(fastify: FastifyInstance) {
   // 申请列表
   fastify.get('/api/admin/tea-agent/applies', { preHandler: [requireAdmin] }, async () => {
     const rows = await prisma.cityAgentApply.findMany({ orderBy: [{ status: 'asc' }, { createdAt: 'desc' }], take: 200 })

@@ -10,7 +10,7 @@ import { unlink } from 'node:fs/promises'
 import sharp from 'sharp'
 
 // 云端仅作中继：所有 IM 媒体统一 6 小时即焚（接收方已 2 分钟内本地保存）
-const RELAY_TTL_HOURS = 6
+const RELAY_TTL_HOURS = 8760 // 阶段2安全期: 不再6小时删明文; 后续接入分片分布式+监管合规提取
 // 超过 2 小时：触发分布式储存（内容寻址引用落地）
 const DISTRIBUTE_AFTER_HOURS = 2 // 等价毫秒
 const DISTRIBUTE_AFTER_MS = DISTRIBUTE_AFTER_HOURS * 3600_000

@@ -1,6 +1,7 @@
 // wallet.ts — 用户钱包 API（余额查询、绑定收款码、提现申请、余额支付升级VIP）
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { prisma } from '../utils/index.js'
+import { requirePaypass } from '../utils/paypass-guard.js'
 
 export default async function walletRoutes(fastify: FastifyInstance) {
   // GET /api/wallet — 查询钱包信息
@@ -109,11 +110,24 @@ export default async function walletRoutes(fastify: FastifyInstance) {
   // POST /api/wallet/withdraw — 申请提现（GIFT-GOLD-ECO-01：手续费 5%，到账 = 金额 - 手续费）
   fastify.post('/api/wallet/withdraw', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
     const userId = request.user.id
-    const { amount } = request.body as any
+    const { amount, paypass } = request.body as any
 
-    const withdrawAmount = Number(amount)
-    if (!withdrawAmount || withdrawAmount < 100) {
+    // 支付密码强制校验（未设置→引导设置；密码错误→拒绝；120s内已verify放行，兼容旧客户端先验后发）
+    try {
+      await requirePaypass(userId, paypass)
+    } catch (e: any) {
+      if (e?.message === 'PAYPASS_NOT_SET') return reply.status(403).send({ error: '请先在「支付密码」页设置支付密码后再申请提现', code: 'PAYPASS_NOT_SET' })
+      if (e?.message === 'NEED_PAYPASS') return reply.status(403).send({ error: '支付密码错误，请重新输入', code: 'NEED_PAYPASS' })
+      throw e
+    }
+
+    let withdrawAmount = Number(amount)
+    if (!Number.isFinite(withdrawAmount) || !withdrawAmount || withdrawAmount < 100) {
       return reply.status(400).send({ error: '提现金额不能小于100元' })
+    }
+    withdrawAmount = Math.floor(withdrawAmount * 100) / 100   // 仅支持两位小数
+    if (withdrawAmount > 200000) {
+      return reply.status(400).send({ error: '单笔提现不能超过 20 万元' })
     }
 
     // 手续费 5%（四舍五入到分）；到账 = 申请金额 - 手续费

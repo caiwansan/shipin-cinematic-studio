@@ -10,6 +10,7 @@ import { FastifyInstance, FastifyReply } from 'fastify'
 import { prisma } from '../utils/index.js'
 import { wkApi, serverSend, ensureMember, UUID_RE } from './im.js'
 import { BOT_UID } from './im-moderation.routes.js'
+import QRCode from 'qrcode'
 
 const BOT_NAME = '昆仑镜小管家'
 export const GROUP_CHANNEL_TYPE = 4
@@ -30,7 +31,8 @@ async function groupRoleOf(groupId: string, uid: string): Promise<number> {
 }
 
 async function getActiveGroup(groupId: string) {
-  const g = await prisma.imGroup.findUnique({ where: { id: groupId } })
+  const raw = groupId.startsWith('grp_') ? groupId.slice(4) : groupId
+  const g = await prisma.imGroup.findUnique({ where: { id: raw } })
   if (!g || g.status !== 'active') return null
   return g
 }
@@ -218,7 +220,7 @@ export default async function imGroupRoutes(fastify: FastifyInstance) {
     const group = await getActiveGroup(request.params.id as string)
     if (!group) return reply.status(404).send({ success: false, error: '群不存在或已解散' })
     const myRole = await groupRoleOf(group.id, userId)
-    if (myRole < GROUP_ROLE_ADMIN) return reply.status(403).send({ success: false, error: '仅群主/管理员可邀请成员' })
+    if (myRole < 0) return reply.status(403).send({ success: false, error: '仅群成员可邀请好友入群' })
 
     const { uids } = (request.body as any) || {}
     if (!Array.isArray(uids) || !uids.length) return reply.status(400).send({ success: false, error: 'uids 必填' })
@@ -374,4 +376,147 @@ export default async function imGroupRoutes(fastify: FastifyInstance) {
     }
     return { success: true, data: { applyId: apply.id, status: approve ? 'approved' : 'rejected' } }
   })
+
+  // ── 邀请二维码（群成员可查看；生成 PNG，内容为入群链接；掌柜 2026-08-25 需求）──
+  fastify.get('/api/im/groups/:id/qr', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const group = await getActiveGroup(request.params.id as string)
+    if (!group) return reply.status(404).send({ success: false, error: '群不存在或已解散' })
+    const myRole = await groupRoleOf(group.id, userId)
+    if (myRole < 0) return reply.status(403).send({ success: false, error: '仅群成员可查看邀请二维码' })
+    const inviteUrl = `tea://join-group?g=${group.id}`
+    const png = await QRCode.toBuffer(inviteUrl, { type: 'png', width: 480, margin: 2, errorCorrectionLevel: 'M' })
+    reply.header('Content-Type', 'image/png')
+    reply.header('Cache-Control', 'public, max-age=3600')
+    return reply.send(png)
+  })
+
+  // ── 本群昵称（成员自己修改在群内的显示名；掌柜 2026-08-25 需求）──
+  fastify.patch('/api/im/groups/:id/members/me', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const group = await getActiveGroup(request.params.id as string)
+    if (!group) return reply.status(404).send({ success: false, error: '群不存在或已解散' })
+    const exist = await prisma.imChannelMember.findUnique({
+      where: { channelId_channelType_uid: { channelId: groupChannelId(group.id), channelType: GROUP_CHANNEL_TYPE, uid: userId } },
+    })
+    if (!exist) return reply.status(403).send({ success: false, error: '你不是该群成员' })
+    const nickname = String((request.body as any)?.nickname || '').trim()
+    if (!nickname || nickname.length > 20) return reply.status(400).send({ success: false, error: '本群昵称必填且不超过 20 字' })
+    await prisma.imChannelMember.update({ where: { id: exist.id }, data: { name: nickname } })
+    return { success: true, data: { nickname } }
+  })
+
+  // ── 退出群聊（成员主动退群；群主只能解散群；掌柜 2026-08-25 需求）──
+  fastify.delete('/api/im/groups/:id/members/me', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const group = await getActiveGroup(request.params.id as string)
+    if (!group) return reply.status(404).send({ success: false, error: '群不存在或已解散' })
+    if (group.ownerUid === userId) return reply.status(400).send({ success: false, error: '群主不能退群，可解散群' })
+    const exist = await prisma.imChannelMember.findUnique({
+      where: { channelId_channelType_uid: { channelId: groupChannelId(group.id), channelType: GROUP_CHANNEL_TYPE, uid: userId } },
+    })
+    if (!exist) return reply.status(403).send({ success: false, error: '你不是该群成员' })
+    await prisma.imChannelMember.delete({ where: { id: exist.id } })
+    try { await groupSystemSend(group.id, `👋 ${(await displayOf(userId)).name} 退出了群聊`) } catch (e) { console.warn('[im-groups] 退群通知失败:', (e as Error).message) }
+    return { success: true }
+  })
+
+  // ── 移交群主（仅群主本人；掌柜 2026-08-26 需求）──
+  fastify.post('/api/im/groups/:id/transfer', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const group = await getActiveGroup(request.params.id as string)
+    if (!group) return reply.status(404).send({ success: false, error: '群不存在或已解散' })
+    if (group.ownerUid !== userId) return reply.status(403).send({ success: false, error: '仅群主可移交群主' })
+    const targetUid = String((request.body as any)?.targetUid || '').trim()
+    if (!targetUid || targetUid === userId) return reply.status(400).send({ success: false, error: '移交对象无效' })
+    if (targetUid === BOT_UID) return reply.status(400).send({ success: false, error: '小管家不能当群主' })
+    const targetRole = await groupRoleOf(group.id, targetUid)
+    if (targetRole < GROUP_ROLE_MEMBER) return reply.status(404).send({ success: false, error: '对方不是群成员' })
+    // 原群主降为管理员，目标升为群主
+    await prisma.imChannelMember.updateMany({
+      where: { channelId: groupChannelId(group.id), channelType: GROUP_CHANNEL_TYPE, uid: userId },
+      data: { role: GROUP_ROLE_ADMIN },
+    })
+    await prisma.imChannelMember.upsert({
+      where: { channelId_channelType_uid: { channelId: groupChannelId(group.id), channelType: GROUP_CHANNEL_TYPE, uid: targetUid } },
+      update: { role: GROUP_ROLE_OWNER },
+      create: { channelId: groupChannelId(group.id), channelType: GROUP_CHANNEL_TYPE, uid: targetUid, role: GROUP_ROLE_OWNER },
+    })
+    await prisma.imGroup.update({ where: { id: group.id }, data: { ownerUid: targetUid } })
+    const op = await displayOf(userId)
+    const target = await displayOf(targetUid)
+    await groupSystemSend(group.id, `👑 ${op.name} 已将群主移交给 ${target.name}`)
+    return { success: true, data: { ownerUid: targetUid } }
+  })
+
+  // ── 全员禁言 / 解除（群主/管理员；掌柜 2026-08-26 需求）──
+  fastify.post('/api/im/groups/:id/mute-all', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const group = await getActiveGroup(request.params.id as string)
+    if (!group) return reply.status(404).send({ success: false, error: '群不存在或已解散' })
+    const myRole = await groupRoleOf(group.id, userId)
+    if (myRole < GROUP_ROLE_ADMIN) return reply.status(403).send({ success: false, error: '仅群主/管理员可全员禁言' })
+    const muted = Boolean((request.body as any)?.muted)
+    const members = await prisma.imChannelMember.findMany({
+      where: { channelId: groupChannelId(group.id), channelType: GROUP_CHANNEL_TYPE },
+      select: { uid: true, role: true },
+    })
+    let count = 0
+    for (const m of members) {
+      if (m.role >= GROUP_ROLE_ADMIN) continue // 群主/管理员不禁
+      try { await wkApi('/channel/member/update', { channel_id: groupChannelId(group.id), channel_type: GROUP_CHANNEL_TYPE, uid: m.uid, muted: muted ? 1 : 0 }) } catch (e) { /* ignore */ }
+      count++
+    }
+    await groupSystemSend(group.id, muted ? `🔇 全员禁言已开启（${count} 名成员）` : '🔊 全员禁言已解除')
+    return { success: true, data: { muted, count } }
+  })
+
+  // ── 群邀请码（6 位文本码 + 链接；掌柜 2026-08-26 需求）──
+  fastify.get('/api/im/groups/:id/invite', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const group = await getActiveGroup(request.params.id as string)
+    if (!group) return reply.status(404).send({ success: false, error: '群不存在或已解散' })
+    const myRole = await groupRoleOf(group.id, userId)
+    if (myRole < GROUP_ROLE_MEMBER) return reply.status(403).send({ success: false, error: '仅群成员可获取邀请码' })
+    // 确定性邀请码：按群 ID 生成 6 位大写字母数字
+    let seed = 0
+    const s = String(group.id)
+    for (let i = 0; i < s.length; i++) { seed = (seed * 31 + s.charCodeAt(i)) >>> 0 }
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    let code = ''
+    let n = seed
+    for (let i = 0; i < 6; i++) { code += chars[n % chars.length]; n = Math.floor(n / chars.length) }
+    const url = `https://aigc.fushtn.com/mobile-app?joinGroup=${group.id}&code=${code}`
+    return { success: true, data: { code, url, groupId: group.id, name: group.name } }
+  })
+
+  // -- scan to join group (called by scanner) --
+  fastify.post('/api/im/groups/:id/join', { preHandler: [fastify.authenticate] }, async (request: any, reply: FastifyReply) => {
+    const userId = request.user.id as string
+    const group = await getActiveGroup(request.params.id as string)
+    if (!group) return reply.status(404).send({ success: false, error: 'group not found' })
+    const chId = groupChannelId(group.id)
+    const exist = await prisma.imChannelMember.findUnique({
+      where: { channelId_channelType_uid: { channelId: chId, channelType: GROUP_CHANNEL_TYPE, uid: userId } },
+    })
+    if (exist) return reply.status(400).send({ success: false, error: 'already a member' })
+    if (group.joinVerify) {
+      const dup = await prisma.chatGroupApply.findFirst({
+        where: { groupId: group.id, uid: userId, status: 'pending' },
+      })
+      if (dup) return reply.status(400).send({ success: false, error: 'pending apply exists' })
+      await prisma.chatGroupApply.create({ data: { groupId: group.id, uid: userId, type: 'join', reason: 'scan' } })
+      const me = await displayOf(userId)
+      await groupSystemSend(group.id, `${me.name} applied to join via scan, pending approval`)
+      return reply.status(202).send({ success: true, data: { pending: true, message: 'applied, waiting for approval' } })
+    }
+    try {
+      await wkApi('/channel/subscriber_add', { channel_id: chId, channel_type: GROUP_CHANNEL_TYPE, subscribers: [userId] })
+    } catch (e) { /* ignore */ }
+    const me = await displayOf(userId)
+    await ensureMember({ channelId: chId, channelType: GROUP_CHANNEL_TYPE, uid: userId, role: GROUP_ROLE_MEMBER, name: me.name, avatar: me.avatar })
+    await groupSystemSend(group.id, `${me.name} joined the group via scan`)
+    return reply.status(200).send({ success: true, data: { pending: false, groupId: group.id, name: group.name } })
+  })
+
 }

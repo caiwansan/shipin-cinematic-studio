@@ -49,8 +49,8 @@ export default async function teaPostRoutes(fastify: FastifyInstance) {
     // 互动数据（likes/comments/tips 列，raw SQL 免 regenerate）
     const interact = new Map<string, any>()
     try {
-      const rows = await prisma.$queryRawUnsafe(`SELECT id, likes, comments, tips FROM tea_post`) as any[]
-      rows.forEach((r) => interact.set(String(r.id), r))
+      const allPosts = await prisma.teaPost.findMany({ select: { id: true, likes: true, comments: true, tips: true } })
+      allPosts.forEach((r) => interact.set(String(r.id), r))
     } catch { /* ignore */ }
     let me = ''
     try { await request.jwtVerify(); me = ((request as any).user && (request as any).user.id) || '' } catch { }
@@ -93,6 +93,14 @@ export default async function teaPostRoutes(fastify: FastifyInstance) {
     let text = String(content || '').trim().slice(0, 5000)
     text = text.replace(/&#x27;|&#39;|&apos;/g, "'").replace(/&quot;|&#34;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\uFFFD/g, '')
     if (!text) return reply.status(400).send({ error: '内容不能为空' })
+    // 后端强制 VIP 权限：普通用户发帖限 200 字，VIP 不限（前端不硬编码）
+    const meRow: any = await prisma.user.findUnique({ where: { id: userId }, select: { memberTier: true } })
+    const myMem: any = await prisma.membership.findUnique({ where: { userId }, select: { tier: true } })
+    const meTier = (meRow?.memberTier || myMem?.tier || 'free') as string
+    const isVip = meTier !== 'free' && meTier !== 'basic'
+    if (!isVip && text.length > 200) {
+      return reply.status(400).send({ error: '普通用户发帖限 200 字，升级 VIP 可发长文' })
+    }
     const postScope = scope === 'friend' ? 'friend' : 'public'
     const imgs = Array.isArray(images)
       ? images.filter((x: any) => typeof x === 'string' && /^https?:/.test(x)).slice(0, 9)
@@ -121,12 +129,12 @@ export default async function teaPostRoutes(fastify: FastifyInstance) {
     if (!post) return reply.status(404).send({ error: '帖子不存在' })
     let likes: string[] = []
     try {
-      const rows = await prisma.$queryRawUnsafe(`SELECT likes FROM tea_post WHERE id = $1`, String(postId)) as any[]
-      likes = JSON.parse((rows[0] && rows[0].likes) || '[]')
+      const rows = await prisma.teaPost.findUnique({ where: { id: String(postId) }, select: { likes: true } }) as any[]
+      likes = JSON.parse((post && post.likes) || '[]')
     } catch { }
     const idx = likes.indexOf(userId)
     if (idx >= 0) likes.splice(idx, 1); else likes.push(userId)
-    await prisma.$executeRawUnsafe(`UPDATE tea_post SET likes = $1 WHERE id = $2`, JSON.stringify(likes), String(postId))
+    await prisma.teaPost.update({ where: { id: String(postId) }, data: { likes: JSON.stringify(likes) } })
     return { success: true, data: { liked: idx < 0, likes: likes.length } }
   })
 
@@ -140,12 +148,12 @@ export default async function teaPostRoutes(fastify: FastifyInstance) {
     if (!t) return reply.status(400).send({ error: '评论不能为空' })
     const comments: any[] = []
     try {
-      const rows = await prisma.$queryRawUnsafe(`SELECT comments FROM tea_post WHERE id = $1`, String(postId)) as any[]
-      comments.push(...JSON.parse((rows[0] && rows[0].comments) || '[]'))
+      const rows = await prisma.teaPost.findUnique({ where: { id: String(postId) }, select: { comments: true } }) as any[]
+      comments.push(...JSON.parse((postComments && postComments.comments) || '[]'))
     } catch { }
     const u = await prisma.user.findUnique({ where: { id: userId }, select: { nickname: true, username: true, avatarUrl: true } })
     comments.push({ uid: userId, name: u?.nickname || u?.username || String(userId).slice(0, 8), avatar: u?.avatarUrl || '', text: t, ts: Date.now() })
-    await prisma.$executeRawUnsafe(`UPDATE tea_post SET comments = $1 WHERE id = $2`, JSON.stringify(comments.slice(-200)), String(postId))
+    await prisma.teaPost.update({ where: { id: String(postId) }, data: { comments: JSON.stringify(comments.slice(-200)) } })
     return { success: true, data: { ok: true, count: comments.length } }
   })
 
@@ -156,9 +164,9 @@ export default async function teaPostRoutes(fastify: FastifyInstance) {
     if (amount < 1 || amount > 9999) return reply.status(400).send({ error: '打赏金额需在 1-9999 金币' })
     const post = await prisma.teaPost.findUnique({ where: { id: String(postId || '') } })
     if (!post) return reply.status(404).send({ error: '帖子不存在' })
-    const rows = await prisma.$queryRawUnsafe(`SELECT tips FROM tea_post WHERE id = $1`, String(postId)) as any[]
-    const cur = Number((rows[0] && rows[0].tips) || 0)
-    await prisma.$executeRawUnsafe(`UPDATE tea_post SET tips = tips + $1 WHERE id = $2`, amount, String(postId))
+    const postTips = await prisma.teaPost.findUnique({ where: { id: String(postId) }, select: { tips: true } })
+    const cur = Number((postTips && postTips.tips) || 0)
+    await prisma.teaPost.update({ where: { id: String(postId) }, data: { tips: { increment: amount } } })
     return { success: true, data: { tipCount: cur + amount } }
   })
 

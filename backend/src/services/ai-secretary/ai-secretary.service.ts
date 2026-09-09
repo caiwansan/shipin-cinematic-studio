@@ -9,9 +9,9 @@
  * 
  * 架构：
  * - 每个会议一个 Secretary 实例
- * - 音频通过 SFU 或 WebSocket 实时传输
- * - Whisper worker 常驻，支持多语言
- * - 纪要生成使用 UserModelConfigV2 中的用户配置
+ * - 音频通过 WebSocket 实时传输到服务端 Whisper worker 池
+ * - Whisper worker 池化（多进程），支持多人同时说话并发转写
+ * - 纪要生成使用 UserModelConfigV2 中的用户配置（平台不提供大模型服务）
  */
 
 import { prisma } from '../../utils/index.js'
@@ -92,11 +92,13 @@ class AiSecretaryInstance {
     // 完成所有 Whisper 会话
     for (const [uid, session] of this.whisperSessions) {
       if (session.buffer.length > 0) {
-        // 发送最后的 finalize
         whisperStream.finalize(`${this.meetingId}-${uid}`, session.lang)
       }
     }
-    whisperStream.resetSession(`${this.meetingId}-*`)
+    // 清理所有 whisper 会话
+    for (const uid of this.whisperSessions.keys()) {
+      whisperStream.resetSession(`${this.meetingId}-${uid}`)
+    }
     this.whisperSessions.clear()
 
     await prisma.$queryRawUnsafe(
@@ -108,19 +110,15 @@ class AiSecretaryInstance {
 
   /**
    * 处理实时音频帧（来自 WebRTC track）
-   * uid: 说话人ID
-   * pcmData: 16k s16le PCM 音频数据
-   * lang: 语言代码
    */
   async feedAudio(uid: string, pcmData: Buffer, lang = 'zh') {
     if (!this.isRecording) return
     const sessionId = `${this.meetingId}-${uid}`
 
-    // 初始化 Whisper 会话
     if (!this.whisperSessions.has(uid)) {
       this.whisperSessions.set(uid, { lang, buffer: [] })
       whisperStream.initSession(sessionId, lang, {
-        onPartial: (text) => {
+        onPartial: (_text) => {
           // 中间结果：不保存到 DB，仅缓存
         },
         onFinal: (text) => {
@@ -147,13 +145,13 @@ class AiSecretaryInstance {
     const speakerName = this.getSpeakerName(uid)
 
     const entry: TranscriptEntry = {
-      id: '', // DB 生成
+      id: '',
       meetingId: this.meetingId,
       userUid: uid,
       speakerName,
       content,
       language,
-      confidence: 0.85, // Whisper 不直接给置信度，用默认值
+      confidence: 0.85,
       isFinal,
       audioDurationMs: 0,
       createdAt: new Date(),
@@ -162,7 +160,6 @@ class AiSecretaryInstance {
 
     this.transcripts.push(entry)
 
-    // 异步写入 DB
     try {
       await prisma.$queryRawUnsafe(
         `INSERT INTO meeting_transcript (id, meeting_id, user_uid, speaker_name, content, language, confidence, is_final, sort_order)
@@ -269,22 +266,27 @@ class AiSecretaryInstance {
       this.meetingId
     )
 
-    // 构建纪要 prompt
     const transcriptText = this.formatTranscriptForSummary(speakerTranscripts)
-    const summary = await this.callLlmForSummary(transcriptText)
+    const llmResult = await this.callLlmForSummary(transcriptText)
 
-    if (!summary) {
-      await prisma.$queryRawUnsafe(
-        `UPDATE meeting SET ai_secretary_status = 'error' WHERE id = $1`,
-        this.meetingId
-      )
-      return null
+    if (!llmResult) {
+      // LLM 不可用，降级为简单摘要
+      const fallback = this.generateSimpleSummary(transcriptText)
+      const content = this.parseStructuredMinutes(fallback, speakerTranscripts)
+      await this.saveMinutes(fallback, content, 0)
+      return { summary: fallback, content }
     }
 
-    // 解析结构化纪要
-    const content = this.parseStructuredMinutes(summary, speakerTranscripts)
+    const content = this.parseStructuredMinutes(llmResult.text, speakerTranscripts)
+    await this.saveMinutes(llmResult.text, content, llmResult.tokens)
 
-    // 保存到 DB
+    return { summary: llmResult.text, content }
+  }
+
+  /**
+   * 保存纪要到数据库
+   */
+  private async saveMinutes(summary: string, content: any, tokens: number) {
     await prisma.$queryRawUnsafe(
       `INSERT INTO meeting_minutes (meeting_id, summary, content, generated_at, model_used, token_count)
        VALUES ($1, $2, $3::jsonb, NOW(), $4, $5)
@@ -295,16 +297,13 @@ class AiSecretaryInstance {
          model_used = EXCLUDED.model_used,
          token_count = EXCLUDED.token_count,
          updated_at = NOW()`,
-      this.meetingId, summary, JSON.stringify(content), 'user-llm', 0
+      this.meetingId, summary, JSON.stringify(content), 'user-llm', tokens
     )
 
-    // 更新 meeting 的 summary 字段
     await prisma.$queryRawUnsafe(
       `UPDATE meeting SET summary = $1, ai_secretary_status = 'done' WHERE id = $2`,
       content.summary || summary.slice(0, 200), this.meetingId
     )
-
-    return { summary, content }
   }
 
   /**
@@ -325,28 +324,24 @@ class AiSecretaryInstance {
   }
 
   /**
-   * 调用 LLM 生成纪要
+   * 调用 LLM 生成纪要（使用用户自己配置的 API Key）
+   * 平台不提供大模型服务，全部走用户个人配置
+   * @returns { text, tokens } 或 null（LLM 不可用时）
    */
-  private async callLlmForSummary(transcriptText: string): Promise<string | null> {
-    // 获取主持人 LLM 配置
+  private async callLlmForSummary(transcriptText: string): Promise<{ text: string; tokens: number } | null> {
     const hostConfig = await prisma.userModelConfigV2.findUnique({
       where: { userId: this.hostUid }
     })
 
-    if (!hostConfig || !hostConfig.llmEnabled) {
-      console.warn('[AI秘书] 主持人未配置 LLM，使用默认摘要')
-      return this.generateSimpleSummary(transcriptText)
+    if (!hostConfig || !hostConfig.llmEnabled || !hostConfig.llmApiKey) {
+      console.warn('[AI秘书] 主持人未配置 LLM 或未启用，降级为简单摘要')
+      return null
     }
 
     const provider = hostConfig.llmProvider || 'volcengine'
     const model = hostConfig.llmModel || 'doubao-seed-2-0-plus-260428'
     const apiKey = hostConfig.llmApiKey
     const baseUrl = hostConfig.llmBaseUrl
-
-    if (!apiKey) {
-      console.warn('[AI秘书] 主持人未配置 API Key，使用默认摘要')
-      return this.generateSimpleSummary(transcriptText)
-    }
 
     const systemPrompt = `你是一个专业的会议纪要助手。请根据以下会议转写文本，生成一份结构化的会议纪要。
 
@@ -364,21 +359,7 @@ class AiSecretaryInstance {
 会议转写文本：`
 
     try {
-      // 构建请求 URL
-      let apiUrl: string
-      if (provider === 'openai' || provider === 'custom') {
-        apiUrl = baseUrl || 'https://api.openai.com/v1'
-      } else if (provider === 'deepseek') {
-        apiUrl = baseUrl || 'https://api.deepseek.com/v1'
-      } else if (provider === 'moonshot') {
-        apiUrl = baseUrl || 'https://api.moonshot.cn/v1'
-      } else if (provider === 'qwen') {
-        apiUrl = baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-      } else if (provider === 'volcengine') {
-        apiUrl = baseUrl || 'https://ark.cn-beijing.volces.com/api/v3'
-      } else {
-        apiUrl = baseUrl || 'https://api.openai.com/v1'
-      }
+      const apiUrl = this.resolveProviderUrl(provider, baseUrl)
 
       const response = await fetch(`${apiUrl}/chat/completions`, {
         method: 'POST',
@@ -398,16 +379,39 @@ class AiSecretaryInstance {
       })
 
       if (!response.ok) {
-        console.warn(`[AI秘书] LLM 调用失败: ${response.status}`)
-        return this.generateSimpleSummary(transcriptText)
+        console.warn(`[AI秘书] LLM 调用失败: ${response.status} ${response.statusText}`)
+        return null
       }
 
       const data = await response.json() as any
-      return data.choices?.[0]?.message?.content || this.generateSimpleSummary(transcriptText)
+      const text = data.choices?.[0]?.message?.content
+      if (!text) {
+        console.warn('[AI秘书] LLM 返回空内容')
+        return null
+      }
+
+      return { text, tokens: data.usage?.total_tokens || 0 }
     } catch (e) {
       console.warn('[AI秘书] LLM 调用异常:', (e as Error).message)
-      return this.generateSimpleSummary(transcriptText)
+      return null
     }
+  }
+
+  /** 根据 provider 解析 API 地址（支持全 provider + 自定义 baseUrl 覆盖） */
+  private resolveProviderUrl(provider: string, customBaseUrl?: string | null): string {
+    if (customBaseUrl) return customBaseUrl.replace(/\/$/, '')
+    const map: Record<string, string> = {
+      openai: 'https://api.openai.com/v1',
+      deepseek: 'https://api.deepseek.com/v1',
+      moonshot: 'https://api.moonshot.cn/v1',
+      qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      volcengine: 'https://ark.cn-beijing.volces.com/api/v3',
+      baidu: 'https://qianfan.baidubce.com/v2',
+      zhipu: 'https://open.bigmodel.cn/api/paas/v4',
+      siliconflow: 'https://api.siliconflow.cn/v1',
+      custom: 'https://api.openai.com/v1',
+    }
+    return map[provider] || map.openai
   }
 
   /**
@@ -440,7 +444,6 @@ ${lines.slice(0, 50).join('\n')}
    * 解析结构化纪要
    */
   private parseStructuredMinutes(summary: string, speakers: SpeakerTranscript[]): any {
-    // 简单解析：提取各段落
     const sections = summary.split('\n\n')
     return {
       summary: sections[0]?.slice(0, 500) || summary.slice(0, 500),
@@ -469,25 +472,16 @@ ${lines.slice(0, 50).join('\n')}
 const secretaries = new Map<string, AiSecretaryInstance>()
 
 export const AiSecretary = {
-  /**
-   * 创建 AI 秘书实例
-   */
   create(meetingId: string, hostUid: string): AiSecretaryInstance {
     const instance = new AiSecretaryInstance(meetingId, hostUid)
     secretaries.set(meetingId, instance)
     return instance
   },
 
-  /**
-   * 获取 AI 秘书实例
-   */
   get(meetingId: string): AiSecretaryInstance | undefined {
     return secretaries.get(meetingId)
   },
 
-  /**
-   * 销毁 AI 秘书实例
-   */
   destroy(meetingId: string) {
     const instance = secretaries.get(meetingId)
     if (instance) {
@@ -496,18 +490,13 @@ export const AiSecretary = {
     }
   },
 
-  /**
-   * 检查用户是否为 VIP
-   */
   async isVip(userId: string): Promise<boolean> {
     const user = await prisma.user.findUnique({
       where: { id: userId as string },
       select: { memberTier: true, memberExpiresAt: true }
     })
     if (!user) return false
-    // VIP 或 Pro 会员
     if (user.memberTier === 'vip' || user.memberTier === 'pro') {
-      // 检查是否过期
       if (user.memberExpiresAt && user.memberExpiresAt < new Date()) {
         return false
       }
@@ -516,9 +505,6 @@ export const AiSecretary = {
     return false
   },
 
-  /**
-   * 获取所有活跃实例
-   */
   getAll(): Map<string, AiSecretaryInstance> {
     return secretaries
   }

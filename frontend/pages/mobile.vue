@@ -443,7 +443,7 @@ onMounted(() => {
   }
 
   // 查询 OAuth 状态
-  fetch('/api/auth/qq/status')
+  fetch('/api/auth/qq/status?mobile=1')
     .then(r => r.json())
     .then(d => { if (d.data) qqStatus.value = d.data })
     .catch(() => {})

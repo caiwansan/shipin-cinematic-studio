@@ -153,7 +153,7 @@ export default async function userAssetsRoutes(fastify: FastifyInstance) {
     } catch { /* non-fatal */ }
 
     // 我的推广码
-    const referralUrl = `https://aigc.fushtn.com/register?ref=${userId}`
+    const referralUrl = `https://aigc.fushtn.com/?showLogin=1&register=1&redirect=/download/desktop&ref=${userId}`
 
     const l1 = children.map(c => ({
       id: c.user.id,

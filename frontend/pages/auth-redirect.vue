@@ -39,8 +39,28 @@ onMounted(() => {
     }
   }
 
+  // 扫码邀请闭环：有 pending 邀请任务时，由本页直接绑定推荐人 + 跳转下载中心
+  let inviteHandled = false
+  try {
+    const ref = localStorage.getItem('invite_ref_pending')
+    const destRaw = localStorage.getItem('invite_redirect_pending') || '/download/desktop'
+    const dest = destRaw.startsWith('/') && !destRaw.startsWith('//') ? destRaw : '/download/desktop'
+    if (ref && token) {
+      inviteHandled = true
+      localStorage.removeItem('invite_ref_pending')
+      fetch('/api/auth/qq/ensure-inviter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ refCode: ref })
+      }).catch(() => {}).finally(() => {
+        setTimeout(() => { window.location.href = dest }, 400)
+      })
+    }
+  } catch {}
+
   // 短暂延迟后关闭窗口
   setTimeout(() => {
+    if (inviteHandled) return
     if (window.opener) {
       window.close()
     } else if (token) {

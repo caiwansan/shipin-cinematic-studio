@@ -32,14 +32,22 @@ class HdzOrchestrator {
     const project = await prisma.hdzProject.findUnique({ where: { id: task.projectId } })
     if (!project) throw new Error('项目不存在')
 
-    // ★ Enterprise Model Router 优先（企业员工调用链）
+    // ★ 用户 BYOK 优先（文曲星对话用的同一配置，保证一致性）
     let userCfg: LLMConfig | null = null
     let routeSource = 'user_byok'
     let enterpriseCtx = await buildEnterpriseRuntimeContext(
       project.userId, task.projectId, taskId, task.agentType, 'hdz_tasks'
     )
 
-    if (enterpriseCtx) {
+    // 先查用户 BYOK（与文曲星对话一致）
+    userCfg = await getUserLLMConfig(project.userId)
+    if (userCfg) {
+      routeSource = 'user_byok'
+      console.log(`[HDZ] Task ${taskId}: LLM ${userCfg.provider}/${userCfg.modelName} (user BYOK)`)
+    }
+
+    // 用户没有 BYOK 时才走企业路由
+    if (!userCfg && enterpriseCtx) {
       const routeResult = await modelRouter.resolve({
         tenantId: enterpriseCtx.tenantId,
         agentType: task.agentType,
@@ -54,18 +62,14 @@ class HdzOrchestrator {
       }
     }
 
-    // Fallback 到个人 BYOK
-    if (!userCfg) {
-      userCfg = await getUserLLMConfig(project.userId)
-      routeSource = 'user_byok'
-      if (userCfg) console.log(`[HDZ] Task ${taskId}: LLM ${userCfg.provider}/${userCfg.modelName} (user BYOK)`)
-    }
-
     if (!userCfg) {
       console.log(`[HDZ] Task ${taskId}: 用户 ${project.userId} 未配置 LLM`)
       await this.failTask(taskId, '请先在大模型设置中配置 LLM')
       return
     }
+    console.log(`[HDZ] Task ${taskId}: LLM ${userCfg.provider}/${userCfg.modelName} (${routeSource})`)
+
+
     console.log(`[HDZ] Task ${taskId}: LLM ${userCfg.provider}/${userCfg.modelName} (${routeSource})`)
 
     await prisma.$transaction(async (tx) => {
@@ -107,20 +111,20 @@ class HdzOrchestrator {
           await plannerService.execute(ctx, userCfg)
           break
         case 'writer': {
-          // ★ 02-B Task 1：生成前 Context Gate——主动防错，在错误产生前拦截
-          // rewrite 模式跳过（重写是修复动作，且 G2 前置门会误伤）
+          // ★ 门控：用户主动点「写正文」或对话指令 → 有大纲就放行（不再死拦已有正文）
           const writerInput = (task.input as any) || {}
           if (writerInput.mode !== 'rewrite') {
             const gate = await consistencyVerifier.verifyBeforeGeneration(task.projectId, writerInput.chapterNo || 1)
-            if (!gate.ok) {
+            if (gate.gates.some((g: any) => g.check === '大纲完整性' && g.status === 'fail')) {
               await prisma.hdzAgentTask.update({
                 where: { id: taskId },
                 data: { status: 'blocked', output: { gate: { score: gate.score, gates: gate.gates, warnings: gate.warnings } } },
               })
-              console.log(`[HDZ/Gate] ch${writerInput.chapterNo}: BLOCKED 生成（score=${gate.score}）— ${gate.warnings.join('; ')}`)
+              console.log(`[HDZ/Gate] ch${writerInput.chapterNo}: BLOCKED 生成（无大纲）score=${gate.score}`)
               break
             }
-            console.log(`[HDZ/Gate] ch${writerInput.chapterNo}: PASS（score=${gate.score}）→ 放行生成`)
+            if (gate.warnings.length > 0) console.log(`[HDZ/Gate] ch${writerInput.chapterNo}: WARN（score=${gate.score}）— ${gate.warnings.join('; ')}`)
+            else console.log(`[HDZ/Gate] ch${writerInput.chapterNo}: PASS（score=${gate.score}）→ 放行生成`)
           }
           await writerService.execute(ctx, userCfg)
           break

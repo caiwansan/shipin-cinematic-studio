@@ -17,6 +17,7 @@
 import { hdzCharacterRepository } from './repositories/hdz-character.repository.js'
 import { sceneDagRepository } from './repositories/scene-dag.repository.js'
 import { hdzChapterRepository } from './repositories/hdz-chapter.repository.js'
+import { prisma } from '../../utils/index.js'
 import { getWorldState, applyStateDelta, type StateDelta } from './world-state.service.js'
 import { getEntityById, getAllEntities } from './entity-registry.service.js'
 

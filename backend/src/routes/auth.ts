@@ -9,16 +9,26 @@ function maskPhone(phone: string | null | undefined): string | null {
 const loginAttempts = new Map<string, { count: number; blockedUntil: number }>()
 
 import bcrypt from 'bcryptjs'
+import { createHash } from 'crypto'
 import { prisma } from '../utils/index.js'
 import { authService } from '../services/auth.service.js'
 import { toApiResponse } from '../contracts/runtime/toApiResponse.js'
 import { getClientIp, nextTokenVersion } from '../utils/session.js'
 
 // 邀请绑定列：启动时幂等确保存在（推荐人永久锁定，写入后不可篡改）
+let _inviterColumnChecked = false
 async function ensureInviterColumn() {
+  if (_inviterColumnChecked) return
+  _inviterColumnChecked = true
   try {
     const { prisma } = await import('../utils/index.js')
-    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS inviter_id TEXT')
+    const col = await prisma.$queryRawUnsafe(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'User' AND column_name = 'inviter_id'"
+    )
+    if (!col || col.length === 0) {
+      await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN inviter_id TEXT')
+      console.log('[Invite] inviter_id column added')
+    }
   } catch (e) { console.error('[Invite] ensure column failed:', (e as any)?.message) }
 }
 ensureInviterColumn()
@@ -44,14 +54,33 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (!uid) return reply.code(401).send({ success: false, error: '未登录' })
     const me = await prisma.user.findUnique({
       where: { id: uid },
-      select: { inviter_id: true },
+      select: { inviterId: true },
     })
-    if (!me?.inviter_id) return { success: true, data: { inviter: null } }
+    if (!me?.inviterId) return { success: true, data: { inviter: null } }
     const inv = await prisma.user.findUnique({
-      where: { id: me.inviter_id },
+      where: { id: me.inviterId },
       select: { id: true, username: true, avatarUrl: true },
     })
     return { success: true, data: { inviter: inv ? { id: inv.id, username: inv.username, avatar: inv.avatarUrl || null } : null } }
+  })
+
+  // POST /api/auth/inviter/bind — 已注册但无邀请人的用户，扫码邀请码补绑（永久锁定一次）
+  fastify.post('/api/auth/inviter/bind', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
+    const uid = request.user.id as string
+    const { refCode } = (request.body as any) || {}
+    if (!refCode) return reply.status(400).send({ success: false, error: '缺少邀请码' })
+    const me: any = await prisma.user.findUnique({ where: { id: uid }, select: { inviterId: true } })
+    if (me?.inviterId) return reply.status(400).send({ success: false, error: '你已有推荐人，无法更改' })
+    const agent = await prisma.user.findFirst({ where: { OR: [{ id: String(refCode) }, { email: String(refCode) }, { username: String(refCode) }] }, select: { id: true } })
+    if (!agent) return reply.status(400).send({ success: false, error: '邀请码无效' })
+    if (agent.id === uid) return reply.status(400).send({ success: false, error: '不能把自己设为推荐人' })
+    const r: any = await prisma.$executeRawUnsafe(`UPDATE "User" SET inviter_id = $1 WHERE id = $2::uuid AND inviter_id IS NULL`, agent.id, uid).catch((e: any) => { console.error('[Invite/bind]', e?.message); throw e })
+    try {
+      await prisma.$executeRawUnsafe(`INSERT INTO "user_follow" ("id","followerId","followingId","createdAt") VALUES (gen_random_uuid(), $1::uuid, $2::uuid, now()), (gen_random_uuid(), $2::uuid, $1::uuid, now()) ON CONFLICT ("followerId","followingId") DO NOTHING`, uid, agent.id)
+    } catch (_eAf: any) { console.error('[Invite] auto mutual follow failed:', _eAf?.message) }
+    const rowCount = (typeof r === 'object' && r !== null && 'rowCount' in r) ? (r as any).rowCount : 1
+    if (!rowCount) return reply.status(400).send({ success: false, error: '已有推荐人，无法更改' })
+    return { success: true, data: { bound: true } }
   })
 
   fastify.post('/api/auth/register', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -126,7 +155,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       }
     }
 
-    // 处理推荐码：查找上级推荐人（邀请绑定 inviter_id 写入后永久锁定）
+    // 处理推荐码：注册必须有邀请码（锁定推荐关系，inviter_id 写入后永久锁定）
     let marketAgentId: string | undefined = undefined
     let inviterId: string | undefined = undefined
     if (refCode) {
@@ -143,13 +172,17 @@ export default async function authRoutes(fastify: FastifyInstance) {
       if (agent) {
         marketAgentId = agent.id
         inviterId = agent.id
+      } else {
+        return reply.status(400).send({ error: '邀请码无效，请检查后重试' })
       }
+    } else {
+      return reply.status(400).send({ error: '注册需要邀请码（扫码或填写邀请人的邀请码）' })
     }
 
     // 创建用户
     const finalNickname = qqNickname || username?.trim() || `user_${phone.slice(-4)}`
     const emailForPhone = `${phone}@phone.local`
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await bcrypt.hash(password, 12)
     const user = await prisma.user.create({
       data: {
         email: emailForPhone,
@@ -168,6 +201,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (inviterId) {
       try {
         await prisma.$executeRaw`UPDATE "User" SET inviter_id = ${inviterId} WHERE id = ${user.id}::uuid AND inviter_id IS NULL`
+          try {
+            await prisma.$executeRawUnsafe(`INSERT INTO "user_follow" ("id","followerId","followingId","createdAt") VALUES (gen_random_uuid(), $1::uuid, $2::uuid, now()), (gen_random_uuid(), $2::uuid, $1::uuid, now()) ON CONFLICT ("followerId","followingId") DO NOTHING`, String(inviterId), String(user.id))
+          } catch (_eAf: any) { console.error('[Register] auto mutual follow failed:', _eAf?.message) }
       } catch (e: any) {
         console.error('[Invite] lock inviter failed: name=' + (e?.name || '?') + ' msg=' + (e?.message || '?') + ' full=' + JSON.stringify(e)?.slice(0, 300) + ' inviterId=' + inviterId + ' userId=' + (user as any)?.id)
       }
@@ -187,12 +223,36 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // 不阻塞注册流程
     }
 
-    // 赠送注册奖励（COMMUNITY-REGISTER-REWARD-01：注册送钻石，默认 10，后台可配）
-    try {
-      const { grantRegisterReward } = await import('../services/community/community-reward.service.js')
-      await grantRegisterReward(user.id)
-    } catch (e) {
-      console.error('Registration reward failed:', e)
+    // 推荐奖励：给邀请人 +5 工分（不再给注册用户送钻石）
+    // 创始节点 FOUNDER_UID = 南波万，所有推荐链从其下展开
+    if (inviterId) {
+      try {
+        const INVITER_REWARD = 5
+        const inviterRows: any = await prisma.$queryRawUnsafe(
+          `SELECT uid, gongfen, chapiao FROM tea_wallet WHERE uid = $1`, inviterId)
+        const curGf = inviterRows?.length ? Number(inviterRows[0].gongfen || 0) : 0
+        const afterGf = curGf + INVITER_REWARD
+        const ns = Math.floor(Date.now() / 1000)
+        if (inviterRows?.length) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE tea_wallet SET gongfen=$1, chapiao=$2, updated_at=$3 WHERE uid=$4`,
+            afterGf, (inviterRows[0].chapiao || 0), ns, inviterId)
+        } else {
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO tea_wallet (uid, gongfen, chapiao, updated_at) VALUES ($1,$2,$3,$4)`,
+            inviterId, afterGf, 0, ns)
+        }
+        let prev = ''
+        try { const p: any = await prisma.$queryRawUnsafe(`SELECT hash FROM tea_wallet_tx ORDER BY created_at DESC LIMIT 1`); prev = p?.[0]?.hash || '' } catch { /* ignore */ }
+        const body = `${inviterId}|gongfen|${INVITER_REWARD}|invite_reward|${prev}|${ns}`
+        const hash = createHash('sha256').update(body).digest('hex')
+        await prisma.$queryRawUnsafe(
+          `INSERT INTO tea_wallet_tx (uid, token_type, amount, balance_after, tx_type, from_uid, to_uid, remark, prev_hash, hash, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          inviterId, 'gongfen', INVITER_REWARD, afterGf, 'invite_reward', user.id, inviterId, '邀请新用户奖励+5工分', prev, hash, ns)
+          .catch(() => {})
+      } catch (e: any) {
+        console.error('[Invite] grant inviter gongfen failed:', e?.message || e)
+      }
     }
 
     const u = user as any
@@ -275,7 +335,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
     if (!email || !password) {
       recordFailedAttempt()
-      return reply.status(400).send({ error: '请输入邮箱和密码' })
+      return reply.status(401).send({ error: "认证失败" })
     }
 
     try {
@@ -482,6 +542,30 @@ export default async function authRoutes(fastify: FastifyInstance) {
     return toApiResponse({ ...updated, displayName: updated.nickname || updated.username }) satisfies ApiResponse<unknown>;
   })
 
+  // POST /api/auth/qq/ensure-inviter — QQ登录用户补绑推荐人（无需手机号）
+  fastify.post('/api/auth/qq/ensure-inviter', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
+    const uid = request.user.id as string
+    const { refCode } = (request.body as any) || {}
+    if (!refCode) return reply.status(400).send({ success: false, error: '缺少邀请码' })
+    const me: any = await prisma.user.findUnique({ where: { id: uid }, select: { inviterId: true } })
+    if (me?.inviterId) return reply.status(400).send({ success: false, error: '你已有推荐人，无法更改' })
+    const agent = await prisma.user.findFirst({ where: { OR: [{ id: String(refCode) }, { email: String(refCode) }, { username: String(refCode) }] }, select: { id: true } })
+    if (!agent) return reply.status(400).send({ success: false, error: '邀请码无效' })
+    if (agent.id === uid) return reply.status(400).send({ success: false, error: '不能把自己设为推荐人' })
+    await prisma.$executeRawUnsafe(`UPDATE "User" SET inviter_id = $1 WHERE id = $2::uuid AND inviter_id IS NULL`, agent.id, uid)
+    try {
+      await prisma.$executeRawUnsafe(`INSERT INTO "user_follow" ("id","followerId","followingId","createdAt") VALUES (gen_random_uuid(), $1::uuid, $2::uuid, now()), (gen_random_uuid(), $2::uuid, $1::uuid, now()) ON CONFLICT ("followerId","followingId") DO NOTHING`, uid, agent.id)
+    } catch (_eAf: any) { console.error('[Invite] auto mutual follow failed:', _eAf?.message) }
+    return { success: true, data: { bound: true, inviterId: agent.id } }
+  })
+
+  // GET /api/auth/qq/need-inviter — 检查当前用户是否需要绑定推荐人
+  fastify.get('/api/auth/qq/need-inviter', { preHandler: [fastify.authenticate] }, async (request: any, reply: any) => {
+    const uid = request.user.id as string
+    const me: any = await prisma.user.findUnique({ where: { id: uid }, select: { inviterId: true } })
+    return { success: true, data: { needBind: !me?.inviterId } }
+  })
+
   // POST /api/auth/logout — 退出登录（清除 cookie）
   fastify.post('/api/auth/logout', async (request, reply) => {
     reply.header('Set-Cookie', 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax')
@@ -495,4 +579,5 @@ export const __RUNTIME_OWNER__ = {
   "entry": "narrative-gateway",
   "mode": "SYNC"
 };
+
 

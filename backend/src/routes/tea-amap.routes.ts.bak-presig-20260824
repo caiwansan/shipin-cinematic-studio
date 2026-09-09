@@ -1,0 +1,45 @@
+// tea-amap.routes.ts — 高德地图(定位/静态图) 后端代理
+// 复用 route_config 中 amapWebKey; 让 native 发"位置"消息 + 展示静态地图, key 不暴露。
+import { FastifyInstance, FastifyReply } from 'fastify'
+import { prisma } from '../utils/index.js'
+
+async function amapWebKey(): Promise<string> {
+  const row = await prisma.routeConfig.findUnique({ where: { scope_key: { scope: 'tea', key: 'config' } } })
+  const v: any = row?.value || {}
+  return v.amapWebKey || v.amapKey || ''
+}
+
+export default async function teaAmapRoutes(fastify: FastifyInstance) {
+
+  // 地理编码: 地址 → 经纬度(高德 v3 geocode)
+  fastify.get('/api/tea/amap/geocode', { preHandler: [fastify.authenticate] }, async (req: any, reply: FastifyReply) => {
+    const addr = String((req.query as any)?.addr || '').trim()
+    if (!addr) return reply.status(400).send({ success: false, error: 'addr 必填' })
+    const key = await amapWebKey()
+    if (!key) return reply.status(400).send({ success: false, error: '未配置高德key' })
+    const q = new URLSearchParams({ key, address: addr, output: 'JSON' })
+    const gj: any = await (await fetch('https://restapi.amap.com/v3/geocode/geo?' + q)).json()
+    const g = (gj.geocodes || [])[0]
+    if (!g || !g.location) return reply.status(404).send({ success: false, error: '未找到该地址' })
+    const [lng, lat] = String(g.location).split(',')
+    return { success: true, data: { lat: Number(lat), lng: Number(lng), addr: g.formatted_address || addr, adcode: g.adcode || '' } }
+  })
+
+  // 静态地图: 按经纬度生成静态图(代理高德静态图API, 返回PNG)
+  fastify.get('/api/tea/amap/staticmap', async (req: any, reply: FastifyReply) => {
+    const lng = String((req.query as any)?.lng || ''); const lat = String((req.query as any)?.lat || '')
+    const addr = String((req.query as any)?.addr || '').trim()
+    const w = Number((req.query as any)?.w) || 560; const h = Number((req.query as any)?.h) || 200
+    if (!lng || !lat) return reply.status(400).send({ success: false, error: 'lng/lat 必填' })
+    const key = await amapWebKey()
+    if (!key) return reply.status(400).send({ success: false, error: '未配置高德key' })
+    const markers = `mid,,0,${lng},${lat}` // 中间定位标记
+    const labels = addr ? encodeURIComponent(addr) : ''
+    const q = new URLSearchParams({ key, location: `${lng},${lat}`, zoom: '16', size: `${w}*${h}`, markers, labels })
+    const resp = await fetch('https://restapi.amap.com/v3/staticmap?' + q)
+    const buf = Buffer.from(await resp.arrayBuffer())
+    reply.header('content-type', resp.headers.get('content-type') || 'image/png')
+    reply.header('cache-control', 'public, max-age=86400')
+    return reply.send(buf)
+  })
+}

@@ -242,7 +242,7 @@ export default async function hdzChatRoutes(app: FastifyInstance) {
             projectId,
             agentType: 'writer',
             status: 'running',
-            input: { chapterNo: targetChapter, mode: 'single', userInput: message.trim() },
+            input: { chapterNo: targetChapter, mode: 'single', userInput: message.trim(), force: true },
           },
         })
         const { writerService } = await import('../../services/hdz/writer.service.js')

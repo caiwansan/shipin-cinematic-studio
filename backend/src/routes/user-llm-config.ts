@@ -2,7 +2,7 @@
  * user-llm-config.ts — 用户模型配置读取 API（精简版）
  *
  * GET /api/user/llm-config
- * 返回用户当前的 LLM 和 Video 模型配置（不含 API Key）
+ * 返回用户当前的 LLM 和 Video 模型配置（不含 API Key，但包含 hasApiKey 标志）
  */
 
 import { FastifyInstance } from 'fastify'
@@ -32,6 +32,7 @@ export default async function userLLMConfigRoutes(fastify: FastifyInstance) {
         providerLabel: PROVIDER_LABELS[v2.llmProvider as string] || v2.llmProvider || '',
         modelName: v2.llmModel || '',
         enabled: v2.llmEnabled,
+        hasApiKey: !!v2.llmApiKey
       }
       data.video = {
         provider: v2.videoProvider || '',

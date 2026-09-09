@@ -10,7 +10,7 @@ declare global {
   const PermissionService: typeof import('../../utils/geoCapability')['PermissionService']
   const STORAGE_KEYS: typeof import('../../utils/storage-gateway')['STORAGE_KEYS']
   const abortNavigation: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['abortNavigation']
-  const acceptHMRUpdate: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']
+  const acceptHMRUpdate: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']
   const addRouteMiddleware: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['addRouteMiddleware']
   const authFetch: typeof import('../../utils/auth-fetch')['authFetch']
   const callOnce: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/once')['callOnce']
@@ -35,7 +35,7 @@ declare global {
   const definePayloadPlugin: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/nuxt')['definePayloadPlugin']
   const definePayloadReducer: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['definePayloadReducer']
   const definePayloadReviver: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['definePayloadReviver']
-  const defineStore: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['defineStore']
+  const defineStore: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['defineStore']
   const detectMobile: typeof import('../../utils/mobile-detect')['detectMobile']
   const effect: typeof import('vue')['effect']
   const effectScope: typeof import('vue')['effectScope']
@@ -140,7 +140,7 @@ declare global {
   const showError: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/error')['showError']
   const storageDiagnostics: typeof import('../../utils/storage-gateway')['storageDiagnostics']
   const storageGateway: typeof import('../../utils/storage-gateway')['default']
-  const storeToRefs: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['storeToRefs']
+  const storeToRefs: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['storeToRefs']
   const stripMarkdown: typeof import('../../utils/markdown')['stripMarkdown']
   const toRaw: typeof import('vue')['toRaw']
   const toRef: typeof import('vue')['toRef']
@@ -192,7 +192,7 @@ declare global {
   const useNodeControl: typeof import('../../composables/useNodeControl')['useNodeControl']
   const useNuxtApp: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/nuxt')['useNuxtApp']
   const useNuxtData: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']
-  const usePinia: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['usePinia']
+  const usePinia: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['usePinia']
   const usePipeline: typeof import('../../composables/usePipeline')['usePipeline']
   const usePreviewMode: typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']
   const useProjectStore: typeof import('../../stores/projectStore')['useProjectStore']
@@ -346,7 +346,7 @@ declare module 'vue' {
     readonly PermissionService: UnwrapRef<typeof import('../../utils/geoCapability')['PermissionService']>
     readonly STORAGE_KEYS: UnwrapRef<typeof import('../../utils/storage-gateway')['STORAGE_KEYS']>
     readonly abortNavigation: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['abortNavigation']>
-    readonly acceptHMRUpdate: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']>
+    readonly acceptHMRUpdate: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['acceptHMRUpdate']>
     readonly addRouteMiddleware: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/router')['addRouteMiddleware']>
     readonly authFetch: UnwrapRef<typeof import('../../utils/auth-fetch')['authFetch']>
     readonly callOnce: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/once')['callOnce']>
@@ -371,7 +371,7 @@ declare module 'vue' {
     readonly definePayloadPlugin: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/nuxt')['definePayloadPlugin']>
     readonly definePayloadReducer: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['definePayloadReducer']>
     readonly definePayloadReviver: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/payload')['definePayloadReviver']>
-    readonly defineStore: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['defineStore']>
+    readonly defineStore: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['defineStore']>
     readonly detectMobile: UnwrapRef<typeof import('../../utils/mobile-detect')['detectMobile']>
     readonly effect: UnwrapRef<typeof import('vue')['effect']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
@@ -476,7 +476,7 @@ declare module 'vue' {
     readonly showError: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/error')['showError']>
     readonly storageDiagnostics: UnwrapRef<typeof import('../../utils/storage-gateway')['storageDiagnostics']>
     readonly storageGateway: UnwrapRef<typeof import('../../utils/storage-gateway')['default']>
-    readonly storeToRefs: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['storeToRefs']>
+    readonly storeToRefs: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['storeToRefs']>
     readonly stripMarkdown: UnwrapRef<typeof import('../../utils/markdown')['stripMarkdown']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
@@ -528,7 +528,7 @@ declare module 'vue' {
     readonly useNodeControl: UnwrapRef<typeof import('../../composables/useNodeControl')['useNodeControl']>
     readonly useNuxtApp: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/nuxt')['useNuxtApp']>
     readonly useNuxtData: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']>
-    readonly usePinia: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@3.0.4_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['usePinia']>
+    readonly usePinia: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.11.3_magicast@0.5.3_pinia@4.0.3_@vue+devtools-api@8.1.5_typescript@6.0.3_vue@3.5.39_typescript@6.0.3__/node_modules/@pinia/nuxt/dist/runtime/composables')['usePinia']>
     readonly usePipeline: UnwrapRef<typeof import('../../composables/usePipeline')['usePipeline']>
     readonly usePreviewMode: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.16.2_@parcel+watcher@2.5.6_@types+node@26.1.1_cac@6.7.14_db0@0.3.4_ioredis@5.11._bd3785bc73d45912c59d4ac5f5e8c74c/node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']>
     readonly useProjectStore: UnwrapRef<typeof import('../../stores/projectStore')['useProjectStore']>

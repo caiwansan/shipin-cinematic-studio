@@ -34,6 +34,10 @@
           <span class="ai-sec-dur">{{ secretary.formattedDuration.value }}</span>
           <span class="ai-sec-stats">{{ secretary.transcripts.value.length }} 条转写</span>
         </div>
+        <!-- LLM 未配置提示 -->
+        <div v-if="!secretary.llmConfigured.value" class="ai-sec-llm-warn">
+          ⚠️ 未配置 AI 模型，纪将为简单摘要。<n-button size="tiny" @click="goLlmConfig">去配置</n-button>
+        </div>
         <div class="ai-sec-ctl-btns">
           <button
             v-if="!secretary.active.value"
@@ -249,6 +253,10 @@ function goUpgrade() {
   window.location.href = '/mobile-app?tab=profile&upgrade=vip'
 }
 
+function goLlmConfig() {
+  window.location.href = '/mobile-app?tab=settings&section=llm'
+}
+
 onMounted(async () => {
   await secretary.checkVip()
   await secretary.loadMinutes()
@@ -376,6 +384,24 @@ onMounted(async () => {
 .ai-sec-stats {
   font-size: 12px;
   color: #8b94a3;
+}
+
+.ai-sec-llm-warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  background: rgba(240, 160, 48, 0.1);
+  border: 1px solid rgba(240, 160, 48, 0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #f0a030;
+}
+
+.ai-sec-llm-warn .n-button {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .ai-sec-ctl-btns {

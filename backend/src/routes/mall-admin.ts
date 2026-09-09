@@ -6,23 +6,24 @@
  */
 import type { FastifyInstance } from 'fastify'
 import { PrismaClient } from '@prisma/client'
+import { requireAdmin, extractAdmin } from '../middleware/require-admin.js'
 
 const prisma = new PrismaClient()
 
-/** admin preHandler: 先认证，再检查角色 */
+/** admin preHandler: 检查角色权限 */
 async function adminOnly(request: any, reply: any) {
-  // 如果认证未通过（authenticate 已返回 401，但 Fastify 仍会执行后续 preHandler）
-  if (!request.user) {
-    return // 不重复写 response，authenticate 已经写了
+  const admin = extractAdmin(request)
+  if (!admin) {
+    return // requireAdmin 已经处理了 401
   }
-  if (!request.user.role || !['admin', 'superadmin', 'operator'].includes(request.user.role)) {
+  if (!admin.role || !['admin', 'superadmin', 'operator'].includes(admin.role)) {
     return reply.status(403).send({ success: false, error: '无权访问，仅限管理员' })
   }
 }
 
 export async function adminMallRoutes(app: FastifyInstance) {
   // 所有 admin 路由的前置钩子
-  app.addHook('preHandler', app.authenticate)
+  app.addHook('preHandler', requireAdmin)
   app.addHook('preHandler', adminOnly)
 
   // ============================================================

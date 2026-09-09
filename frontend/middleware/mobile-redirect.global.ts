@@ -12,9 +12,11 @@ export default defineNuxtRouteMiddleware((to) => {
     }
     return
   }
-  // 移动 UA 访问根路径 → 手机版落地页（/mobile）
-  if (to.path !== '/') return
-  if (!detectMobile()) return
-  const q = to.fullPath.includes('?') ? to.fullPath.slice(to.fullPath.indexOf('?')) : ''
-  return navigateTo('/mobile' + q)
+  // ⛔ 已下线（2026-08-24）：旧 H5 手机版页面废弃，移动 UA 不再跳 /mobile。
+  // 扫码邀请统一走首页注册弹窗（?showLogin=1&register=1&ref=xxx），已登录用户直达下载中心。
+  // if (to.path !== '/') return
+  // if (!detectMobile()) return
+  // const q = to.fullPath.includes('?') ? to.fullPath.slice(to.fullPath.indexOf('?')) : ''
+  // return navigateTo('/mobile' + q)
+  return
 })

@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
 // 昆仑镜桌面应用下载中心（多产品）：读 /releases/desktop/products.json，兼容回退 latest.json
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import KunlunNav from '~/components/kunlun/business/KunlunNav.vue'
 import KunlunFooter from '~/components/kunlun/business/KunlunFooter.vue'
 import { getAuthToken, setAuthToken, clearAuthToken } from '~/utils/auth/token'
@@ -160,6 +160,19 @@ function doLogout() {
   window.location.reload()
 }
 
+interface ProductMeta {
+  version: string
+  size: number
+  sizeText: string
+  publishedAt: string
+  publishedText: string
+  sha256: string
+  downloadUrl: string
+  zipUrl?: string
+  zipSize?: string
+  zipSha256?: string
+}
+
 interface ProductCard {
   id: string
   name: string
@@ -168,18 +181,15 @@ interface ProductCard {
   icon: string
   accent: string
   notes?: string
-  meta: {
-    version: string
-    size: number
-    sizeText: string
-    publishedAt: string
-    publishedText: string
-    sha256: string
-    downloadUrl: string
-  } | null
+  meta: ProductMeta | null
 }
 
-const products = ref<ProductCard[]>([])
+function formatTime(iso: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
 
 function toCard(raw: any): ProductCard {
   const mb = (raw.size / 1048576).toFixed(1)
@@ -206,7 +216,20 @@ function toCard(raw: any): ProductCard {
   }
 }
 
-onMounted(async () => {
+// useFetch 在 SSR 和客户端都会执行，保证产品卡片服务端即可渲染
+// 使用完整 URL 避免 SSR 时 Vue Router 拦截相对路径
+const PRODUCTS_URL = 'https://aigc.fushtn.com/releases/desktop/products.json'
+const { data: productsData } = useFetch(PRODUCTS_URL, {
+  key: 'download-products',
+  transform: (raw: any) => {
+    const list = Array.isArray(raw) ? raw : (raw?.products || [])
+    return list.map(toCard)
+  },
+})
+
+const products = computed<ProductCard[]>(() => productsData.value || [])
+
+onMounted(() => {
   isLoggedIn.value = !!getAuthToken()
   const raw = localStorage.getItem('auth_user')
   if (raw) {
@@ -215,35 +238,7 @@ onMounted(async () => {
       authName.value = u.name || u.username || u.phone || ''
     } catch {}
   }
-  // 优先 products.json（多产品），失败回退 latest.json（单产品）
-  try {
-    const res = await fetch('/releases/desktop/products.json', { cache: 'no-store' })
-    if (res.ok) {
-      const data = await res.json()
-      const list = Array.isArray(data) ? data : (data.products || [])
-      if (list.length) {
-        products.value = list.map(toCard)
-        return
-      }
-    }
-  } catch (e) {
-    console.error('products.json 获取失败，回退 latest.json', e)
-  }
-  try {
-    const res = await fetch('/releases/desktop/latest.json', { cache: 'no-store' })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    products.value = [toCard(await res.json())]
-  } catch (e) {
-    console.error('latest.json 获取失败', e)
-  }
 })
-
-function formatTime(iso: string): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
 </script>
 
 <style scoped>

@@ -1,5 +1,6 @@
 /**
  * providers/openai.provider.ts — OpenAI ProviderLifecycle
+ * 修复: 使用官方模型ID (2026-09-07)
  */
 
 import type { ProviderLifecycle, ProviderMetadata, ProviderHealth, ModelInfo, Capability } from '../runtime/provider-registry.js'
@@ -12,12 +13,17 @@ const METADATA: ProviderMetadata = {
   baseURL: 'https://api.openai.com/v1',
   icon: 'openai',
   docsUrl: 'https://platform.openai.com/docs',
-  description: 'OpenAI 官方 API，支持 GPT-4 系列和 DALL·E',
+  description: 'OpenAI 官方 API，支持 GPT-4 系列、o1/o3 推理和 DALL·E',
   models: [
-    { id: 'openai-compat', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 128000, description: 'GPT-4o Mini' },
-    { id: 'gpt-4o-mini', capabilities: ['llm'], description: 'GPT-4o Mini' },
-    { id: 'gpt-4o', capabilities: ['llm'], description: 'GPT-4o' },
-    { id: 'dalle-image', capabilities: ['image'], defaultForCapability: 'image', description: 'DALL·E 3' },
+    { id: 'gpt-4o-mini', capabilities: ['llm'], defaultForCapability: 'llm', contextWindow: 128000, description: 'GPT-4o Mini' },
+    { id: 'gpt-4o', capabilities: ['llm'], contextWindow: 128000, description: 'GPT-4o' },
+    { id: 'gpt-4-turbo', capabilities: ['llm'], contextWindow: 128000, description: 'GPT-4 Turbo' },
+    { id: 'gpt-4', capabilities: ['llm'], contextWindow: 8192, description: 'GPT-4' },
+    { id: 'gpt-3.5-turbo', capabilities: ['llm'], contextWindow: 16384, description: 'GPT-3.5 Turbo' },
+    { id: 'o1-preview', capabilities: ['llm'], contextWindow: 128000, description: 'o1 Preview (推理)' },
+    { id: 'o1-mini', capabilities: ['llm'], contextWindow: 128000, description: 'o1 Mini (推理)' },
+    { id: 'o3-mini', capabilities: ['llm'], contextWindow: 200000, description: 'o3 Mini (推理)' },
+    { id: 'dall-e-3', capabilities: ['image'], defaultForCapability: 'image', contextWindow: 0, description: 'DALL·E 3' },
   ],
 }
 
@@ -27,16 +33,16 @@ export const openaiProvider: ProviderLifecycle = {
   metadata: METADATA,
 
   async verify(apiKey: string, baseURL?: string) {
-    const adapter = modelAdapterRegistry.findAdapter('openai-compat')
+    const adapter = modelAdapterRegistry.findAdapter('gpt-4o-mini')
     if (!adapter) {
       return { success: false, latency: 0, availableModels: [], capabilities: [] }
     }
 
     const runtime = {
-      requestId: `verify-oa-${Date.now()}`,
+      requestId: `verify-oai-${Date.now()}`,
       userId: '__verify__',
       provider: 'openai',
-      model: 'openai-compat',
+      model: 'gpt-4o-mini',
       taskType: 'llm',
       apiKey,
       baseURL,
@@ -88,3 +94,4 @@ export const openaiProvider: ProviderLifecycle = {
     return m?.id || ''
   },
 }
+

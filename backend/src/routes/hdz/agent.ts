@@ -70,6 +70,7 @@ export default async function hdzAgentRoutes(app: FastifyInstance) {
           chapterId: chapterId || null,
           mode: finalMode,
           userInput: finalUserInput,
+          force: true,
         },
       },
     })

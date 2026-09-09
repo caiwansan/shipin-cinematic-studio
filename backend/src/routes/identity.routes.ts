@@ -239,7 +239,7 @@ export default async function identityRoutes(fastify: FastifyInstance) {
 
     const rows: any = await prisma.$queryRawUnsafe(`SELECT enc_key FROM identity_challenges_meta WHERE user_id = $1`, userId)
 
-    if (!rows?.[0]?.enc_key) return reply.status(404).send({ success: false, error: '无托管密钥' })
+    if (!rows?.[0]?.enc_key) return { success: true, data: { encKey: null } }
 
     return { success: true, data: { encKey: rows[0].enc_key } }
 
